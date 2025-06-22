@@ -245,12 +245,36 @@ html, body {
     gap: 6px;
 }
 
+.status-icon {
+  font-size: 1.1em; /* Make icons a bit bigger */
+}
+
 .sparkline-container {
-    width: 60px;
-    height: 16px;
-    border: 1px solid #4a4a4a;
-    background-color: #000;
-    margin-left: 2px;
+  width: 60px; /* Reduced width */
+  height: 18px; /* Adjusted height */
+  display: flex;
+  align-items: flex-end; /* Align bars to the bottom */
+  margin-left: 5px;
+  border: 1px solid #2c313a; 
+  background-color: #1e1e1e; 
+  overflow: hidden; /* Hide any overflow */
+  padding: 1px;
+  box-sizing: border-box;
+}
+
+.sparkline-bars {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    width: 100%;
+    height: 100%;
+    gap: 1px; /* Space between bars */
+}
+
+.sparkline-bar {
+    flex-grow: 1;
+    background-color: #40a9f3;
+    min-width: 1px;
 }
 
 .status-bar-icon {

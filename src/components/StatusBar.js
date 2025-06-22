@@ -1,9 +1,22 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
-import { Sparklines, SparklinesLine } from 'react-sparklines';
 import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
+
+const CpuSparkline = ({ history }) => (
+    <div className="sparkline-container">
+        <div className="sparkline-bars">
+            {history.map((value, index) => (
+                <div
+                    key={index}
+                    className="sparkline-bar"
+                    style={{ height: `${Math.max(value, 1)}%` }} // Ensure a minimum height of 1% for visibility
+                />
+            ))}
+        </div>
+    </div>
+);
 
 const DistroIcon = ({ distro }) => {
     switch (distro) {
@@ -60,11 +73,7 @@ const StatusBar = ({ stats }) => {
                     <div className="status-bar-section cpu-section">
                         <FontAwesomeIcon icon={faMicrochip} className="status-bar-icon" />
                         <span>{cpu}%</span>
-                        <div className="sparkline-container">
-                            <Sparklines data={cpuHistory} width={100} height={20} margin={5}>
-                                <SparklinesLine color="blue" />
-                            </Sparklines>
-                        </div>
+                        <CpuSparkline history={cpuHistory} />
                     </div>
                 )}
                 {mem && mem.total > 0 && (

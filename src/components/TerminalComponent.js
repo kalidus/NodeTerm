@@ -149,8 +149,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             // Listen for stats updates for this specific tab
             const onStatsUpdate = (stats) => {
                 setRemoteStats(prevStats => {
-                    const newCpuHistory = [...prevStats.cpuHistory, parseFloat(stats.cpu)].slice(-30); // Keep last 30 points
-                    return { ...stats, cpuHistory: newCpuHistory };
+                    // Ensure cpu value is a valid number before adding to history
+                    const cpuValue = parseFloat(stats.cpu);
+                    if (isNaN(cpuValue)) return prevStats; // Don't update if cpu is not a number
+
+                    const newHistory = [...prevStats.cpuHistory, cpuValue].slice(-50);
+                    return { ...stats, cpuHistory: newHistory };
                 });
             };
             const onStatsUnsubscribe = window.electron.ipcRenderer.on(`ssh-stats:update:${tabId}`, onStatsUpdate);
