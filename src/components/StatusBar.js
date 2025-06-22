@@ -2,16 +2,17 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { Sparklines, SparklinesLine } from 'react-sparklines';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock } from 'react-icons/fa';
 
 const StatusBar = ({ stats }) => {
     if (!stats) {
         return null;
     }
 
-    const { cpu, mem, disk, cpuHistory, uptime, network } = stats;
+    const { cpu, mem, disk, cpuHistory, uptime, network, hostname } = stats;
 
     const formatBytes = (bytes) => {
-        if (bytes === 0) return '0 B';
+        if (!bytes || bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -35,7 +36,7 @@ const StatusBar = ({ stats }) => {
                         <span>{cpu}%</span>
                         <div className="sparkline-container">
                             <Sparklines data={cpuHistory} width={100} height={20} margin={5}>
-                                <SparklinesLine color="#2cce10" />
+                                <SparklinesLine color="blue" />
                             </Sparklines>
                         </div>
                     </div>
@@ -68,6 +69,11 @@ const StatusBar = ({ stats }) => {
                     <div className="status-bar-section">
                         <FontAwesomeIcon icon={faClock} className="status-bar-icon" />
                         <span>{uptime}</span>
+                    </div>
+                )}
+                {hostname && (
+                    <div className="status-bar-section">
+                        <span>{hostname}</span>
                     </div>
                 )}
             </div>

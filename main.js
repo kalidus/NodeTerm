@@ -104,7 +104,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port}`;
   const ssh = new SSH2Promise(config);
 
-  const statsLoop = async () => {
+  const statsLoop = async (hostname) => {
     if (!sshConnections[tabId]) return; // Stop if connection is closed
 
     try {
@@ -176,7 +176,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sshConnections[tabId].previousNet = currentNet;
       sshConnections[tabId].previousTime = currentTime;
 
-      const stats = { cpu: cpuLoad, mem, disk: disks, uptime, network };
+      const stats = { 
+          cpu: cpuLoad, 
+          mem, 
+          disk: disks, 
+          uptime, 
+          network, 
+          hostname: hostname
+      };
       if (mainWindow) {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
       }
@@ -184,7 +191,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // console.error(`Error fetching stats for ${tabId}:`, e.message);
     } finally {
       if (sshConnections[tabId]) {
-        sshConnections[tabId].statsTimeout = setTimeout(statsLoop, 2000); // Loop every 2 seconds
+        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname), 2000);
       }
     }
   };
@@ -196,23 +203,16 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
 
     await ssh.connect();
+    
+    // Get the actual hostname from the server
+    const realHostname = (await ssh.exec('hostname')).trim();
+    
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
     sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
-    // Send initial stats immediately so the UI doesn't feel broken
-    if (mainWindow) {
-        mainWindow.webContents.send(`ssh-stats:update:${tabId}`, { 
-            cpu: '0.00', 
-            mem: { total: 0, used: 0 }, 
-            disk: [],
-            uptime: '...',
-            network: { rx_speed: 0, tx_speed: 0 }
-        });
-    }
-
-    // Start fetching stats
-    statsLoop();
+    // Start fetching stats and pass the real hostname
+    statsLoop(realHostname);
 
     let isFirstPacket = true;
 
@@ -267,7 +267,6 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
     }
 });
 
-
 // IPC handler to terminate an SSH connection
 ipcMain.on('ssh:disconnect', (event, tabId) => {
   const conn = sshConnections[tabId];
@@ -296,4 +295,15 @@ ipcMain.handle('clipboard:readText', () => {
 
 ipcMain.handle('clipboard:writeText', (event, text) => {
   clipboard.writeText(text);
+});
+
+// Function to safely send to mainWindow
+function sendToMainWindow(channel, ...args) {
+  if (mainWindow) {
+    mainWindow.webContents.send(channel, ...args);
+  }
+}
+
+ipcMain.handle('app:get-sessions', async () => {
+  // Implementation of getting sessions
 }); 

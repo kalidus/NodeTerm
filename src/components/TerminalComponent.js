@@ -12,7 +12,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [remoteStats, setRemoteStats] = useState({ cpu: '0.00', mem: {}, disk: [], cpuHistory: [] });
+    const [remoteStats, setRemoteStats] = useState({ cpu: '0.00', mem: {}, disk: [], cpuHistory: [], network: { rx_speed: 0, tx_speed: 0 }, uptime: '...' });
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -22,6 +22,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             } catch (e) {
                 console.log("Failed to fit terminal", e);
             }
+        },
+        focus: () => {
+            term.current?.focus();
         }
     }));
 
@@ -163,14 +166,18 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (onStatsUnsubscribe) onStatsUnsubscribe();
                 dataHandler.dispose();
                 resizeHandler.dispose();
-                term.current?.dispose();
+                if (term.current) {
+                    term.current?.dispose();
+                }
             };
         } else {
             term.current.writeln('\x1b[31mError: Electron API no disponible. El portapapeles y la comunicación no funcionarán.\x1b[0m');
             // Cleanup only the terminal if API is not ready
             return () => {
                 resizeObserver.disconnect();
-                term.current?.dispose();
+                if (term.current) {
+                    term.current?.dispose();
+                }
             };
         }
     }, [tabId, sshConfig]);
