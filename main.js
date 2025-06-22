@@ -24,12 +24,34 @@ function parseDfOutput(dfOutput) {
             const use = parseInt(parts[parts.length - 2], 10);
             const name = parts[parts.length - 1];
             // Filter out unwanted mount points
-            if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt') && !name.startsWith('/run')) {
+            if (name && name.startsWith('/') && !isNaN(use) && 
+                !name.startsWith('/sys') && 
+                !name.startsWith('/opt') && 
+                !name.startsWith('/run') && 
+                name !== '/boot/efi' && 
+                !name.startsWith('/dev')) {
                 return { fs: name, use };
             }
         }
         return null;
     }).filter(Boolean); // Filter out null entries
+}
+
+function parseNetDev(netDevOutput) {
+    const lines = netDevOutput.trim().split('\n');
+    let totalRx = 0;
+    let totalTx = 0;
+
+    lines.slice(2).forEach(line => {
+        const parts = line.trim().split(/\s+/);
+        const iface = parts[0];
+        if (iface && iface !== 'lo:') {
+            totalRx += parseInt(parts[1], 10);
+            totalTx += parseInt(parts[9], 10);
+        }
+    });
+
+    return { totalRx, totalTx };
 }
 
 function createWindow() {
@@ -107,8 +129,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
       sshConnections[tabId].previousCpu = currentCpu;
 
-      // --- Get Memory, Disk and Uptime stats ---
-      const allStatsRes = await ssh.exec("free -b && df -P && uptime");
+      // --- Get Memory, Disk, Uptime and Network stats ---
+      const allStatsRes = await ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
       const parts = allStatsRes.trim().split('\n');
 
       // Parse Memory
@@ -134,7 +156,27 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         }
       }
 
-      const stats = { cpu: cpuLoad, mem, disk: disks, uptime };
+      // Parse Network
+      const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
+      const netOutput = parts.slice(netIndex).join('\n');
+      const currentNet = parseNetDev(netOutput);
+      const previousNet = sshConnections[tabId].previousNet;
+      const previousTime = sshConnections[tabId].previousTime;
+      const currentTime = Date.now();
+      let network = { rx_speed: 0, tx_speed: 0 };
+
+      if (previousNet && previousTime) {
+          const timeDiff = (currentTime - previousTime) / 1000; // in seconds
+          const rxDiff = currentNet.totalRx - previousNet.totalRx;
+          const txDiff = currentNet.totalTx - previousNet.totalTx;
+
+          network.rx_speed = Math.max(0, rxDiff / timeDiff);
+          network.tx_speed = Math.max(0, txDiff / timeDiff);
+      }
+      sshConnections[tabId].previousNet = currentNet;
+      sshConnections[tabId].previousTime = currentTime;
+
+      const stats = { cpu: cpuLoad, mem, disk: disks, uptime, network };
       if (mainWindow) {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
       }
@@ -156,7 +198,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     await ssh.connect();
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
-    sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null };
+    sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
     // Send initial stats immediately so the UI doesn't feel broken
     if (mainWindow) {
@@ -164,7 +206,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             cpu: '0.00', 
             mem: { total: 0, used: 0 }, 
             disk: [],
-            uptime: '...'
+            uptime: '...',
+            network: { rx_speed: 0, tx_speed: 0 }
         });
     }
 
