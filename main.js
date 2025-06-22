@@ -205,24 +205,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     await ssh.connect();
     
-    // Get the actual hostname and distro from the server
-    const [realHostname, osRelease] = await Promise.all([
-        ssh.exec('hostname'),
-        ssh.exec('cat /etc/os-release || echo "ID=linux"') // fallback for systems without os-release
-    ]);
-
-    const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
-    const finalDistroId = distroId.replace(/"/g, '').toLowerCase(); // Clean up quotes and make lowercase
-
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
     sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
-    // Start fetching stats and pass the real hostname and distro
-    statsLoop(realHostname.trim(), finalDistroId);
-
+    // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
-
     stream.on('data', (data) => {
       const dataStr = data.toString('utf-8');
 
@@ -252,6 +240,16 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     });
 
     event.sender.send(`ssh:ready:${tabId}`);
+
+    // After setting up the shell, get the hostname/distro and start the stats loop
+    const [realHostname, osRelease] = await Promise.all([
+        ssh.exec('hostname'),
+        ssh.exec('cat /etc/os-release || echo "ID=linux"') // fallback for systems without os-release
+    ]);
+    const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+    const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+
+    statsLoop(realHostname.trim(), finalDistroId);
 
   } catch (err) {
     event.sender.send(`ssh:error:${tabId}`, err.message);
