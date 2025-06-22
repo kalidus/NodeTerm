@@ -212,4 +212,46 @@ html, body {
 .xterm {
     padding: 10px !important;
     box-sizing: border-box !important;
+}
+
+/* Status Bar Styles */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  background-color: #1c1c1c;
+  color: #cccccc;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  height: 22px;
+  box-sizing: border-box;
+  border-top: 1px solid #333;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.status-item, .status-item-disk {
+  display: flex;
+  align-items: center;
+}
+
+.status-item-disk {
+  gap: 4px;
+  background-color: #2a2a2a;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.disk-name {
+  white-space: nowrap;
+}
+
+.disk-usage {
+  font-weight: bold;
+  color: #82aaff;
+}
+
+.ram-text {
+  font-size: 0.9em;
 } 

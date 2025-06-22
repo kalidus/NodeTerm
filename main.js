@@ -14,6 +14,24 @@ const sshConnections = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
 
+// Helper function to parse 'df -P' command output
+function parseDfOutput(dfOutput) {
+    const lines = dfOutput.trim().split('\n');
+    lines.shift(); // Remove header line
+    return lines.map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 6) {
+            const use = parseInt(parts[parts.length - 2], 10);
+            const name = parts[parts.length - 1];
+            // Filter out unwanted mount points
+            if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt')) {
+                return { name, use };
+            }
+        }
+        return null;
+    }).filter(Boolean); // Filter out null entries
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1600,
@@ -62,8 +80,58 @@ app.on('activate', () => {
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port}`;
-  // We no longer need the debug hook. The banner comes in the main data stream.
   const ssh = new SSH2Promise(config);
+
+  const statsLoop = async () => {
+    if (!sshConnections[tabId]) return; // Stop if connection is closed
+
+    try {
+      // --- Get CPU stats first
+      const cpuStatOutput = await ssh.exec("grep 'cpu ' /proc/stat");
+      const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+      const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+
+      let cpuLoad = '0.00';
+      const previousCpu = sshConnections[tabId].previousCpu;
+
+      if (previousCpu) {
+          const prevIdle = previousCpu.idle + previousCpu.iowait;
+          const currentIdle = currentCpu.idle + currentCpu.iowait;
+          const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+          const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+          const totalDiff = currentTotal - prevTotal;
+          const idleDiff = currentIdle - prevIdle;
+          if (totalDiff > 0) {
+              cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
+          }
+      }
+      sshConnections[tabId].previousCpu = currentCpu;
+
+      // --- Get Memory and Disk stats
+      const memAndDiskRes = await ssh.exec("free -b && df -P");
+      const parts = memAndDiskRes.trim().split('\n');
+      const memLine = parts.find(line => line.startsWith('Mem:'));
+      const memParts = memLine.split(/\s+/);
+      const mem = {
+          total: (parseInt(memParts[1], 10) / 1024 / 1024 / 1024).toFixed(2),
+          used: (parseInt(memParts[2], 10) / 1024 / 1024 / 1024).toFixed(2),
+      };
+      const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
+      const dfOutput = parts.slice(dfIndex).join('\n');
+      const disks = parseDfOutput(dfOutput);
+
+      const stats = { cpu: cpuLoad, mem, disks };
+      if (mainWindow) {
+        mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
+      }
+    } catch (e) {
+      // console.error(`Error fetching stats for ${tabId}:`, e.message);
+    } finally {
+      if (sshConnections[tabId]) {
+        sshConnections[tabId].statsTimeout = setTimeout(statsLoop, 2000); // Loop every 2 seconds
+      }
+    }
+  };
 
   try {
     // For subsequent connections, send the cached MOTD immediately.
@@ -74,7 +142,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     await ssh.connect();
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
-    sshConnections[tabId] = { ssh, stream };
+    sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null };
+
+    // Start fetching stats
+    statsLoop();
 
     let isFirstPacket = true;
 
@@ -99,6 +170,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     stream.on('close', () => {
       event.sender.send(`ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+      const conn = sshConnections[tabId];
+      if (conn && conn.statsTimeout) {
+          clearTimeout(conn.statsTimeout);
+      }
       delete sshConnections[tabId];
     });
 
@@ -130,6 +205,9 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
 ipcMain.on('ssh:disconnect', (event, tabId) => {
   const conn = sshConnections[tabId];
   if (conn) {
+    if (conn.statsTimeout) {
+      clearTimeout(conn.statsTimeout);
+    }
     conn.ssh.close();
     delete sshConnections[tabId];
   }

@@ -1018,7 +1018,11 @@ const App = () => {
                   onSelectionChange={e => setSelectedNodeKey(e.value)}
                   dragdropScope="files"
                   onDragDrop={onDragDrop}
-                  onDragStart={e => setDraggedNodeKey(e.node.key)}
+                  onDragStart={e => {
+                    if (e.node) {
+                      setDraggedNodeKey(e.node.key);
+                    }
+                  }}
                   onDragEnd={() => {}}
                   className="sidebar-tree"
                   nodeTemplate={nodeTemplate}

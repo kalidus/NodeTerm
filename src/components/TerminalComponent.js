@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -6,11 +6,13 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { ImageAddon } from '@xterm/addon-image';
 import '@xterm/xterm/css/xterm.css';
+import StatusBar from './StatusBar';
 
 const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
+    const [remoteStats, setRemoteStats] = useState(null);
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -141,6 +143,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
             });
 
+            // Listen for stats updates for this specific tab
+            const onStatsUpdate = (stats) => {
+                setRemoteStats(stats);
+            };
+            const onStatsUnsubscribe = window.electron.ipcRenderer.on(`ssh-stats:update:${tabId}`, onStatsUpdate);
+
             // Cleanup on component unmount
             return () => {
                 resizeObserver.disconnect();
@@ -149,6 +157,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
+                if (onStatsUnsubscribe) onStatsUnsubscribe();
                 dataHandler.dispose();
                 resizeHandler.dispose();
                 term.current?.dispose();
@@ -188,7 +197,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         }
     }, [theme]);
 
-    return <div ref={terminalRef} style={{ width: '100%', height: '100%' }} />;
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: theme?.background }}>
+            <div ref={terminalRef} style={{ flex: 1, width: '100%', minHeight: 0 }} />
+            <StatusBar stats={remoteStats} />
+        </div>
+    );
 });
 
 export default TerminalComponent; 
