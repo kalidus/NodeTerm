@@ -14,7 +14,8 @@ contextBridge.exposeInMainWorld('electron', {
       const validChannels = [
         /^ssh:data:.*$/,
         /^ssh:ready:.*$/,
-        /^ssh:error:.*$/
+        /^ssh:error:.*$/,
+        /^ssh-stats:update:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`

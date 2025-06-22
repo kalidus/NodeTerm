@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -6,11 +6,13 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { ImageAddon } from '@xterm/addon-image';
 import '@xterm/xterm/css/xterm.css';
+import StatusBar from './StatusBar';
 
 const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
+    const [remoteStats, setRemoteStats] = useState({ cpu: '0.00', mem: {}, disk: [], cpuHistory: [], network: { rx_speed: 0, tx_speed: 0 }, uptime: '...' });
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -20,6 +22,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             } catch (e) {
                 console.log("Failed to fit terminal", e);
             }
+        },
+        focus: () => {
+            term.current?.focus();
         }
     }));
 
@@ -141,6 +146,19 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
             });
 
+            // Listen for stats updates for this specific tab
+            const onStatsUpdate = (stats) => {
+                setRemoteStats(prevStats => {
+                    // Ensure cpu value is a valid number before adding to history
+                    const cpuValue = parseFloat(stats.cpu);
+                    if (isNaN(cpuValue)) return prevStats; // Don't update if cpu is not a number
+
+                    const newHistory = [...prevStats.cpuHistory, cpuValue].slice(-50);
+                    return { ...stats, cpuHistory: newHistory };
+                });
+            };
+            const onStatsUnsubscribe = window.electron.ipcRenderer.on(`ssh-stats:update:${tabId}`, onStatsUpdate);
+
             // Cleanup on component unmount
             return () => {
                 resizeObserver.disconnect();
@@ -149,16 +167,21 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
+                if (onStatsUnsubscribe) onStatsUnsubscribe();
                 dataHandler.dispose();
                 resizeHandler.dispose();
-                term.current?.dispose();
+                if (term.current) {
+                    term.current?.dispose();
+                }
             };
         } else {
             term.current.writeln('\x1b[31mError: Electron API no disponible. El portapapeles y la comunicación no funcionarán.\x1b[0m');
             // Cleanup only the terminal if API is not ready
             return () => {
                 resizeObserver.disconnect();
-                term.current?.dispose();
+                if (term.current) {
+                    term.current?.dispose();
+                }
             };
         }
     }, [tabId, sshConfig]);
@@ -188,7 +211,12 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         }
     }, [theme]);
 
-    return <div ref={terminalRef} style={{ width: '100%', height: '100%' }} />;
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: theme?.background }}>
+            <div ref={terminalRef} style={{ flex: 1, width: '100%', minHeight: 0 }} />
+            <StatusBar stats={remoteStats} />
+        </div>
+    );
 });
 
 export default TerminalComponent; 

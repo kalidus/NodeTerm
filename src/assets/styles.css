@@ -212,4 +212,90 @@ html, body {
 .xterm {
     padding: 10px !important;
     box-sizing: border-box !important;
+}
+
+/* --- Status Bar --- */
+.status-bar {
+    display: flex;
+    align-items: center;
+    background-color: #252526;
+    color: #cccccc;
+    padding: 0 10px;
+    height: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    font-size: 12px;
+    border-top: 1px solid #333;
+}
+
+.status-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.status-bar-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-bar-section .disk-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-icon {
+  font-size: 1.1em; /* Make icons a bit bigger */
+}
+
+.sparkline-container {
+  width: 60px; /* Reduced width */
+  height: 18px; /* Adjusted height */
+  display: flex;
+  align-items: flex-end; /* Align bars to the bottom */
+  margin-left: 5px;
+  border: 1px solid #2c313a; 
+  background-color: #1e1e1e; 
+  overflow: hidden; /* Hide any overflow */
+  padding: 1px;
+  box-sizing: border-box;
+}
+
+.sparkline-bars {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    width: 100%;
+    height: 100%;
+    gap: 1px; /* Space between bars */
+}
+
+.sparkline-bar {
+    flex-grow: 1;
+    background-color: #40a9f3;
+    min-width: 1px;
+}
+
+.status-bar-icon {
+    font-size: 1.1em;
+}
+
+.disk-info {
+    margin-right: 10px;
+}
+
+.disk-section {
+    gap: 10px; /* Spacing between each disk item */
+}
+
+.disk-info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Spacing between icon and text */
+}
+
+/* Remove old/conflicting styles */
+.status-item, .status-item-disk, .disk-name, .disk-usage, .ram-text {
+    /* These classes are no longer used or have been simplified */
 } 

@@ -18,6 +18,8 @@ import { themes } from '../themes';
 
 const App = () => {
   const toast = useRef(null);
+  // Storage key for persistence
+  const STORAGE_KEY = 'basicapp2_tree_data';
   const [folderName, setFolderName] = useState('');
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [parentNodeKey, setParentNodeKey] = useState(null);
@@ -42,6 +44,7 @@ const App = () => {
   const [sshPassword, setSSHPassword] = useState('');
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
   const terminalRefs = useRef({});
+  const [nodes, setNodes] = useState([]);
 
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
@@ -71,6 +74,23 @@ const App = () => {
       return themes[savedThemeName];
   });
 
+  // Load initial nodes from localStorage or use default
+  useEffect(() => {
+    const savedNodes = localStorage.getItem(STORAGE_KEY);
+    if (savedNodes) {
+      setNodes(JSON.parse(savedNodes));
+    } else {
+      setNodes(getDefaultNodes());
+    }
+  }, []);
+
+  // Save nodes to localStorage whenever they change
+  useEffect(() => {
+    if (nodes && nodes.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
+    }
+  }, [nodes]);
+
   // Auto-save font family to localStorage
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
@@ -86,9 +106,6 @@ const App = () => {
     localStorage.setItem(THEME_STORAGE_KEY, terminalTheme.name);
   }, [terminalTheme]);
 
-  // Storage key for persistence
-  const STORAGE_KEY = 'basicapp2_tree_data';
-  
   // Menu items for the top menubar
   const menuItems = [
     {
@@ -264,40 +281,11 @@ const App = () => {
     }
   ];
 
-  // Load initial data from localStorage or use defaults
-  const loadInitialNodes = () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        console.log('📂 Datos cargados desde localStorage:', parsed);
-        return parsed;
-      }
-    } catch (error) {
-      console.error('❌ Error cargando datos guardados:', error);
-    }
-    console.log('🆕 Usando datos por defecto');
-    return getDefaultNodes();
-  };
-
-  // Tree data for the sidebar - loads from localStorage
-  const [nodes, setNodes] = useState(() => loadInitialNodes());
-
   // Selected node in the tree
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
 
   // Track the currently dragged node
   const [draggedNodeKey, setDraggedNodeKey] = useState(null);
-
-  // Auto-save to localStorage whenever nodes change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
-      console.log('✅ Datos guardados automáticamente en localStorage');
-    } catch (error) {
-      console.error('❌ Error guardando datos:', error);
-    }
-  }, [nodes]); // Se ejecuta cada vez que cambia el estado 'nodes'
 
   // Function to create a deep copy of nodes
   const deepCopy = (obj) => {
@@ -1018,7 +1006,11 @@ const App = () => {
                   onSelectionChange={e => setSelectedNodeKey(e.value)}
                   dragdropScope="files"
                   onDragDrop={onDragDrop}
-                  onDragStart={e => setDraggedNodeKey(e.node.key)}
+                  onDragStart={e => {
+                    if (e.node) {
+                      setDraggedNodeKey(e.node.key);
+                    }
+                  }}
                   onDragEnd={() => {}}
                   className="sidebar-tree"
                   nodeTemplate={nodeTemplate}
