@@ -1,15 +1,16 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
+import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
 import { Sparklines, SparklinesLine } from 'react-sparklines';
-import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaDebian, FaRedhat, FaCentos, FaFedora, FaArch } from 'react-icons/fa';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
+import { SiDebian } from 'react-icons/si';
 
 const DistroIcon = ({ distro }) => {
     switch (distro) {
         case 'ubuntu':
             return <FaUbuntu />;
         case 'debian':
-            return <FaDebian />;
+            return <SiDebian />;
         case 'rhel':
         case 'redhat':
             return <FaRedhat />;
@@ -18,7 +19,6 @@ const DistroIcon = ({ distro }) => {
         case 'fedora':
             return <FaFedora />;
         case 'arch':
-            return <FaArch />;
         default:
             return <FaLinux />;
     }
@@ -29,7 +29,7 @@ const StatusBar = ({ stats }) => {
         return null;
     }
 
-    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro } = stats;
+    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip } = stats;
 
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -50,6 +50,12 @@ const StatusBar = ({ stats }) => {
     return (
         <div className="status-bar">
             <div className="status-group">
+                {hostname && (
+                    <div className="status-bar-section">
+                        <DistroIcon distro={distro} />
+                        <span>{hostname}</span>
+                    </div>
+                )}
                 {cpu !== undefined && (
                     <div className="status-bar-section cpu-section">
                         <FontAwesomeIcon icon={faMicrochip} className="status-bar-icon" />
@@ -91,10 +97,10 @@ const StatusBar = ({ stats }) => {
                         <span>{uptime}</span>
                     </div>
                 )}
-                {hostname && (
+                {ip && (
                     <div className="status-bar-section">
-                        <DistroIcon distro={distro} />
-                        <span>{hostname}</span>
+                        <FontAwesomeIcon icon={faServer} className="status-bar-icon" />
+                        <span>{ip}</span>
                     </div>
                 )}
             </div>

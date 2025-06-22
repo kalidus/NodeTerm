@@ -18,6 +18,8 @@ import { themes } from '../themes';
 
 const App = () => {
   const toast = useRef(null);
+  // Storage key for persistence
+  const STORAGE_KEY = 'basicapp2_tree_data';
   const [folderName, setFolderName] = useState('');
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [parentNodeKey, setParentNodeKey] = useState(null);
@@ -104,9 +106,6 @@ const App = () => {
     localStorage.setItem(THEME_STORAGE_KEY, terminalTheme.name);
   }, [terminalTheme]);
 
-  // Storage key for persistence
-  const STORAGE_KEY = 'basicapp2_tree_data';
-  
   // Menu items for the top menubar
   const menuItems = [
     {

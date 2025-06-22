@@ -104,7 +104,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port}`;
   const ssh = new SSH2Promise(config);
 
-  const statsLoop = async (hostname, distro) => {
+  const statsLoop = async (hostname, distro, ip) => {
     if (!sshConnections[tabId]) return; // Stop if connection is closed
 
     try {
@@ -183,7 +183,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           uptime, 
           network, 
           hostname: hostname,
-          distro: distro
+          distro: distro,
+          ip: ip
       };
       if (mainWindow) {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
@@ -192,7 +193,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // console.error(`Error fetching stats for ${tabId}:`, e.message);
     } finally {
       if (sshConnections[tabId]) {
-        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname, distro), 2000);
+        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
       }
     }
   };
@@ -249,7 +250,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
     const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
 
-    statsLoop(realHostname.trim(), finalDistroId);
+    statsLoop(realHostname.trim(), finalDistroId, config.host);
 
   } catch (err) {
     event.sender.send(`ssh:error:${tabId}`, err.message);
