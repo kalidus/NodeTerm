@@ -12,7 +12,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [remoteStats, setRemoteStats] = useState(null);
+    const [remoteStats, setRemoteStats] = useState({ cpu: '0.00', mem: {}, disk: [], cpuHistory: [] });
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -145,7 +145,10 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
             // Listen for stats updates for this specific tab
             const onStatsUpdate = (stats) => {
-                setRemoteStats(stats);
+                setRemoteStats(prevStats => {
+                    const newCpuHistory = [...prevStats.cpuHistory, parseFloat(stats.cpu)].slice(-30); // Keep last 30 points
+                    return { ...stats, cpuHistory: newCpuHistory };
+                });
             };
             const onStatsUnsubscribe = window.electron.ipcRenderer.on(`ssh-stats:update:${tabId}`, onStatsUpdate);
 

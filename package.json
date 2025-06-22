@@ -27,6 +27,9 @@
   "license": "ISC",
   "description": "Aplicación de escritorio multiplataforma con Electron y PrimeReact",
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "@xterm/addon-clipboard": "^0.1.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-image": "^0.8.0",
@@ -39,6 +42,7 @@
     "primereact": "^10.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-sparklines": "^1.7.0",
     "ssh2-promise": "^1.0.3"
   },
   "devDependencies": {

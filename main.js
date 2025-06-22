@@ -25,7 +25,7 @@ function parseDfOutput(dfOutput) {
             const name = parts[parts.length - 1];
             // Filter out unwanted mount points
             if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt')) {
-                return { name, use };
+                return { fs: name, use };
             }
         }
         return null;
@@ -120,7 +120,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       const dfOutput = parts.slice(dfIndex).join('\n');
       const disks = parseDfOutput(dfOutput);
 
-      const stats = { cpu: cpuLoad, mem, disks };
+      const stats = { cpu: cpuLoad, mem, disk: disks };
       if (mainWindow) {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
       }
@@ -143,6 +143,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
     sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null };
+
+    // Send initial stats immediately so the UI doesn't feel broken
+    if (mainWindow) {
+        mainWindow.webContents.send(`ssh-stats:update:${tabId}`, { 
+            cpu: '0.00', 
+            mem: { total: 0, used: 0 }, 
+            disk: [] 
+        });
+    }
 
     // Start fetching stats
     statsLoop();
