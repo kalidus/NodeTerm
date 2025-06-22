@@ -24,7 +24,7 @@ function parseDfOutput(dfOutput) {
             const use = parseInt(parts[parts.length - 2], 10);
             const name = parts[parts.length - 1];
             // Filter out unwanted mount points
-            if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt')) {
+            if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt') && !name.startsWith('/run')) {
                 return { fs: name, use };
             }
         }
@@ -107,20 +107,34 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
       sshConnections[tabId].previousCpu = currentCpu;
 
-      // --- Get Memory and Disk stats
-      const memAndDiskRes = await ssh.exec("free -b && df -P");
-      const parts = memAndDiskRes.trim().split('\n');
+      // --- Get Memory, Disk and Uptime stats ---
+      const allStatsRes = await ssh.exec("free -b && df -P && uptime");
+      const parts = allStatsRes.trim().split('\n');
+
+      // Parse Memory
       const memLine = parts.find(line => line.startsWith('Mem:'));
       const memParts = memLine.split(/\s+/);
       const mem = {
-          total: (parseInt(memParts[1], 10) / 1024 / 1024 / 1024).toFixed(2),
-          used: (parseInt(memParts[2], 10) / 1024 / 1024 / 1024).toFixed(2),
+          total: parseInt(memParts[1], 10),
+          used: parseInt(memParts[2], 10),
       };
+
+      // Parse Disk
       const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
       const dfOutput = parts.slice(dfIndex).join('\n');
       const disks = parseDfOutput(dfOutput);
 
-      const stats = { cpu: cpuLoad, mem, disk: disks };
+      // Parse Uptime
+      const uptimeLine = parts.find(line => line.includes(' up '));
+      let uptime = '';
+      if (uptimeLine) {
+        const match = uptimeLine.match(/up (.*?),/);
+        if (match && match[1]) {
+          uptime = match[1].trim();
+        }
+      }
+
+      const stats = { cpu: cpuLoad, mem, disk: disks, uptime };
       if (mainWindow) {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
       }
@@ -149,7 +163,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, { 
             cpu: '0.00', 
             mem: { total: 0, used: 0 }, 
-            disk: [] 
+            disk: [],
+            uptime: '...'
         });
     }
 

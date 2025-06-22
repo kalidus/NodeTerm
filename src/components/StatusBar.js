@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrochip, faMemory, faHdd } from '@fortawesome/free-solid-svg-icons';
+import { faMicrochip, faMemory, faHdd, faClock } from '@fortawesome/free-solid-svg-icons';
 import { Sparklines, SparklinesLine } from 'react-sparklines';
 
 const StatusBar = ({ stats }) => {
@@ -8,7 +8,7 @@ const StatusBar = ({ stats }) => {
         return null;
     }
 
-    const { cpu, mem, disk, cpuHistory } = stats;
+    const { cpu, mem, disk, cpuHistory, uptime } = stats;
 
     const formatBytes = (bytes) => {
         const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -38,13 +38,19 @@ const StatusBar = ({ stats }) => {
                     </div>
                 )}
                 {disk && disk.length > 0 && (
-                    <div className="status-bar-section">
-                        <FontAwesomeIcon icon={faHdd} className="status-bar-icon" />
+                    <div className="status-bar-section disk-section">
                         {disk.map((d, index) => (
-                            <span key={index} className="disk-info">
-                                {d.fs}: {d.use}%
-                            </span>
+                            <div key={index} className="disk-info-item">
+                                <FontAwesomeIcon icon={faHdd} className="status-bar-icon" />
+                                <span className="disk-info-text">{d.fs}: {d.use}%</span>
+                            </div>
                         ))}
+                    </div>
+                )}
+                {uptime && (
+                    <div className="status-bar-section">
+                        <FontAwesomeIcon icon={faClock} className="status-bar-icon" />
+                        <span>{uptime}</span>
                     </div>
                 )}
             </div>

@@ -239,6 +239,12 @@ html, body {
     gap: 6px;
 }
 
+.status-bar-section .disk-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .sparkline-container {
     width: 60px;
     height: 16px;
@@ -253,6 +259,16 @@ html, body {
 
 .disk-info {
     margin-right: 10px;
+}
+
+.disk-section {
+    gap: 10px; /* Spacing between each disk item */
+}
+
+.disk-info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px; /* Spacing between icon and text */
 }
 
 /* Remove old/conflicting styles */
