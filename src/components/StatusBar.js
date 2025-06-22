@@ -2,14 +2,34 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { Sparklines, SparklinesLine } from 'react-sparklines';
-import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock } from 'react-icons/fa';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaDebian, FaRedhat, FaCentos, FaFedora, FaArch } from 'react-icons/fa';
+
+const DistroIcon = ({ distro }) => {
+    switch (distro) {
+        case 'ubuntu':
+            return <FaUbuntu />;
+        case 'debian':
+            return <FaDebian />;
+        case 'rhel':
+        case 'redhat':
+            return <FaRedhat />;
+        case 'centos':
+            return <FaCentos />;
+        case 'fedora':
+            return <FaFedora />;
+        case 'arch':
+            return <FaArch />;
+        default:
+            return <FaLinux />;
+    }
+};
 
 const StatusBar = ({ stats }) => {
     if (!stats) {
         return null;
     }
 
-    const { cpu, mem, disk, cpuHistory, uptime, network, hostname } = stats;
+    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro } = stats;
 
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -73,6 +93,7 @@ const StatusBar = ({ stats }) => {
                 )}
                 {hostname && (
                     <div className="status-bar-section">
+                        <DistroIcon distro={distro} />
                         <span>{hostname}</span>
                     </div>
                 )}

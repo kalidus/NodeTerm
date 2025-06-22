@@ -104,7 +104,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port}`;
   const ssh = new SSH2Promise(config);
 
-  const statsLoop = async (hostname) => {
+  const statsLoop = async (hostname, distro) => {
     if (!sshConnections[tabId]) return; // Stop if connection is closed
 
     try {
@@ -182,7 +182,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           disk: disks, 
           uptime, 
           network, 
-          hostname: hostname
+          hostname: hostname,
+          distro: distro
       };
       if (mainWindow) {
         mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
@@ -191,7 +192,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // console.error(`Error fetching stats for ${tabId}:`, e.message);
     } finally {
       if (sshConnections[tabId]) {
-        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname), 2000);
+        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname, distro), 2000);
       }
     }
   };
@@ -204,15 +205,21 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     await ssh.connect();
     
-    // Get the actual hostname from the server
-    const realHostname = (await ssh.exec('hostname')).trim();
-    
+    // Get the actual hostname and distro from the server
+    const [realHostname, osRelease] = await Promise.all([
+        ssh.exec('hostname'),
+        ssh.exec('cat /etc/os-release || echo "ID=linux"') // fallback for systems without os-release
+    ]);
+
+    const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+    const finalDistroId = distroId.replace(/"/g, '').toLowerCase(); // Clean up quotes and make lowercase
+
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
     sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
-    // Start fetching stats and pass the real hostname
-    statsLoop(realHostname);
+    // Start fetching stats and pass the real hostname and distro
+    statsLoop(realHostname.trim(), finalDistroId);
 
     let isFirstPacket = true;
 
