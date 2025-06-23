@@ -1,14 +1,16 @@
-# Desktop Application
+# NodeTerm - Terminal SSH y Explorador de Archivos
 
-Una aplicación de escritorio multiplataforma creada con Electron, React y PrimeReact.
+Una aplicación de escritorio multiplataforma para gestión de conexiones SSH con terminal integrado y explorador de archivos remoto.
 
 ## Características
 
-- Interfaz de usuario moderna con PrimeReact
-- Menú superior con Menubar
-- Panel lateral redimensionable con Splitter
-- Explorador de archivos con Tree
-- Soporte multiplataforma (Windows, macOS, Linux)
+- **Terminal SSH integrado**: Conecta y gestiona múltiples sesiones SSH simultáneamente
+- **Explorador de archivos SSH**: Navega y gestiona archivos remotos con interfaz gráfica
+- **Sistema de pestañas**: Organiza terminales y exploradores en pestañas separadas
+- **Configuración personalizable**: Temas, fuentes y tamaños de terminal ajustables
+- **Interfaz moderna**: UI responsiva con PrimeReact
+- **Gestión de conexiones**: Guarda y organiza tus conexiones SSH en un árbol de carpetas
+- **Soporte multiplataforma**: Windows, macOS, Linux
 
 ## Requisitos previos
 
@@ -35,11 +37,52 @@ Para iniciar la aplicación en modo desarrollo:
 npm run dev
 ```
 
-2. En otra terminal, inicia la aplicación Electron:
+Esto iniciará tanto el compilador webpack como la aplicación Electron automáticamente.
 
-```bash
-npm run electron-dev
-```
+## Uso
+
+### Conexiones SSH
+
+1. **Crear nueva conexión SSH**:
+   - Haz clic en el botón "Server" (🖥️) en la barra lateral
+   - O ve a Archivo > Nuevo > Nueva sesión SSH
+   - Completa los datos: nombre, host, usuario, contraseña y carpeta remota (opcional)
+   - Selecciona una carpeta de destino en el árbol lateral (opcional)
+
+2. **Abrir terminal SSH**:
+   - Haz doble clic en cualquier conexión SSH del árbol lateral
+   - Esto abrirá una nueva pestaña con el terminal conectado al servidor
+
+3. **Abrir explorador de archivos**:
+   - Haz clic en el icono de carpeta (📁) junto a cualquier conexión SSH
+   - Esto abrirá una nueva pestaña con el explorador de archivos remoto
+
+### Explorador de Archivos SSH
+
+El explorador de archivos te permite navegar por los archivos del servidor remoto con una interfaz gráfica intuitiva:
+
+- **Navegación**: Haz doble clic en carpetas para entrar, o usa el breadcrumb para navegar
+- **Botones de navegación**: 
+  - Atrás: Volver al directorio anterior
+  - Actualizar: Recargar el contenido del directorio actual
+  - Inicio: Ir al directorio raíz
+- **Información de archivos**: Muestra nombre, tamaño, permisos, propietario y fecha de modificación
+- **Selección múltiple**: Selecciona varios archivos manteniendo Ctrl/Cmd
+- **Iconos por tipo**: Diferentes iconos para carpetas, archivos de texto, scripts, imágenes, etc.
+
+### Gestión de Pestañas
+
+- **Pestañas múltiples**: Puedes tener varias pestañas de terminal y explorador abiertas simultáneamente
+- **Una pestaña por sesión**: El explorador de archivos evita crear pestañas duplicadas para la misma conexión SSH
+- **Cerrar pestañas**: Haz clic en la X de cada pestaña para cerrarla
+- **Cambiar entre pestañas**: Haz clic en las pestañas para cambiar entre terminal y explorador
+
+### Configuración
+
+Accede a la configuración haciendo clic en el engranaje (⚙️) para personalizar:
+- Fuente del terminal
+- Tamaño de fuente
+- Tema del terminal
 
 ## Compilación
 
