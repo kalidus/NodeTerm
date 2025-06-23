@@ -615,9 +615,6 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             
             {/* Toast para notificaciones */}
             <Toast ref={toast} />
-            
-            {/* Diálogo de confirmación */}
-            <ConfirmDialog />
         </div>
     );
 };
