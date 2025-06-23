@@ -23,28 +23,57 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const [newFolderDialog, setNewFolderDialog] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [transferProgress, setTransferProgress] = useState(null);
+    const [sshReady, setSshReady] = useState(false);
     const toast = React.useRef(null);
 
-    // Cargar directorio inicial (home del usuario)
+    // Escuchar cuando la conexión SSH esté lista
+    useEffect(() => {
+        if (!window.electron || !tabId) return;
+
+        const handleSSHReady = () => {
+            setSshReady(true);
+        };
+
+        const handleSSHError = (error) => {
+            setError(`Error de conexión SSH: ${error}`);
+            setLoading(false);
+        };
+
+        // Configurar listeners
+        const readyUnsubscribe = window.electron.ipcRenderer.on(`ssh:ready:${tabId}`, handleSSHReady);
+        const errorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, handleSSHError);
+
+        return () => {
+            if (readyUnsubscribe) readyUnsubscribe();
+            if (errorUnsubscribe) errorUnsubscribe();
+        };
+    }, [tabId]);
+
+    // Cargar directorio inicial cuando SSH esté listo
     useEffect(() => {
         const initializeExplorer = async () => {
-            if (!window.electron || !tabId) return;
+            if (!window.electron || !tabId || !sshReady) return;
             
             setLoading(true);
+            setError(null);
+            
             try {
                 // Obtener el directorio home del usuario
                 const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId);
                 setCurrentPath(homeDir || '/');
             } catch (err) {
                 console.error('Error getting home directory:', err);
+                setError('No se pudo obtener el directorio home del usuario.');
                 setCurrentPath('/'); // Fallback al root
             } finally {
                 setLoading(false);
             }
         };
 
-        initializeExplorer();
-    }, [tabId]);
+        if (sshReady) {
+            initializeExplorer();
+        }
+    }, [tabId, sshReady]);
 
     // Cargar archivos cuando cambia el path
     useEffect(() => {
@@ -364,21 +393,21 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
                     navigateToPath(parentPath);
                 }}
-                disabled={!currentPath || currentPath === '/'}
+                disabled={!sshReady || !currentPath || currentPath === '/'}
                 tooltip="Atrás"
             />
             <Button 
                 icon="pi pi-refresh" 
                 className="mr-2" 
                 onClick={() => currentPath && loadFiles(currentPath)}
-                disabled={!currentPath}
+                disabled={!sshReady || !currentPath}
                 tooltip="Actualizar"
             />
             <Button 
                 icon="pi pi-home" 
                 className="mr-2" 
                 onClick={() => navigateToPath('/')}
-                disabled={!currentPath}
+                disabled={!sshReady || !currentPath}
                 tooltip="Inicio"
             />
             <Button 
@@ -386,7 +415,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 label="Subir"
                 className="mr-2" 
                 onClick={handleUploadFiles}
-                disabled={!currentPath || loading}
+                disabled={!sshReady || !currentPath || loading}
                 tooltip="Subir archivos"
             />
             <Button 
@@ -394,7 +423,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 label="Nueva Carpeta"
                 className="mr-2" 
                 onClick={() => setNewFolderDialog(true)}
-                disabled={!currentPath || loading}
+                disabled={!sshReady || !currentPath || loading}
                 tooltip="Crear nueva carpeta"
             />
             <Button 
@@ -402,7 +431,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 label="Eliminar"
                 className="mr-2 p-button-danger" 
                 onClick={handleDeleteFiles}
-                disabled={!currentPath || loading || selectedFiles.length === 0}
+                disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
                 tooltip="Eliminar archivos seleccionados"
             />
         </div>
@@ -434,6 +463,16 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     className="file-explorer-breadcrumb"
                 />
                 
+                {!sshReady && (
+                    <div className="mb-3">
+                        <Message 
+                            severity="info" 
+                            text="Estableciendo conexión SSH..." 
+                            icon="pi pi-spin pi-spinner" 
+                        />
+                    </div>
+                )}
+                
                 {loading && (
                     <ProgressBar mode="indeterminate" className="file-explorer-loading" />
                 )}
@@ -442,16 +481,17 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     <Message severity="error" text={error} className="mb-3" />
                 )}
                 
-                <div className="file-explorer-table-container">
-                    <DataTable 
-                        value={files}
-                        selectionMode="multiple"
-                        selection={selectedFiles}
-                        onSelectionChange={(e) => setSelectedFiles(e.value)}
-                        onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
-                        rowHover={true}
-                        className="file-explorer-datatable"
-                    >
+                {sshReady && (
+                    <div className="file-explorer-table-container">
+                        <DataTable 
+                            value={files}
+                            selectionMode="multiple"
+                            selection={selectedFiles}
+                            onSelectionChange={(e) => setSelectedFiles(e.value)}
+                            onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
+                            rowHover={true}
+                            className="file-explorer-datatable"
+                        >
                         <Column 
                             field="name" 
                             header="Nombre" 
@@ -502,7 +542,8 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                             style={{ width: '100px' }}
                         />
                     </DataTable>
-                </div>
+                    </div>
+                )}
                 
                 {/* Progreso de transferencia */}
                 {transferProgress && (
