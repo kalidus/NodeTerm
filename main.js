@@ -60,6 +60,7 @@ function createWindow() {
     height: 1000,
     minWidth: 1400,
     minHeight: 600,
+    title: 'NodeTerm',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
