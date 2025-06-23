@@ -1,18 +1,22 @@
 {
-  "name": "basicapp_2",
+  "name": "NodeTerm",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "webpack --mode production",
-    "dev": "concurrently \"webpack --watch --mode development\" \"electron .\""
+    "dev": "concurrently \"webpack --watch --mode development\" \"electron .\"",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
   },
   "build": {
-    "appId": "com.example.basicapp",
+    "appId": "com.nodeterm.app",
+    "productName": "NodeTerm",
     "directories": {
-      "output": "build"
+      "output": "release"
     },
     "win": {
+      "icon": "src/assets/icon.ico",
       "target": "nsis"
     },
     "mac": {
@@ -20,7 +24,11 @@
     },
     "linux": {
       "target": "deb"
-    }
+    },
+    "files": [
+      "**/*",
+      "!node_modules/cpu-features/**"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -60,5 +68,8 @@
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
+  },
+  "overrides": {
+    "ssh2": "0.8.9"
   }
 }
