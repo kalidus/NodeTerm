@@ -235,6 +235,13 @@ html, body {
   flex-shrink: 0;
 }
 
+.file-explorer-toolbar .p-toolbar {
+  padding: 0.75rem;
+  border: 1px solid var(--surface-300);
+  border-radius: 6px;
+  background: var(--surface-0);
+}
+
 .file-explorer-breadcrumb {
   margin-bottom: 0.75rem;
   flex-shrink: 0;
@@ -419,10 +426,37 @@ html, body {
     /* These classes are no longer used or have been simplified */
 }
 
-/* Estilos adicionales para funcionalidades de subir/descargar */
-.file-explorer-toolbar .p-toolbar-group-start {
-  flex-wrap: wrap;
-  gap: 0.5rem;
+/* Estilos para botones del explorador de archivos */
+.file-explorer-toolbar .p-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+.file-explorer-toolbar .p-button .p-button-icon {
+  margin: 0 !important;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.file-explorer-toolbar .p-button .p-button-label {
+  display: none;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger {
+  background: #f87171 !important;
+  color: #fff !important;
+  border: none !important;
 }
 
 /* Estilos para progreso de transferencia */
@@ -450,15 +484,6 @@ html, body {
 
 /* Estilos responsivos para pantallas pequeñas */
 @media (max-width: 768px) {
-  .file-explorer-toolbar .p-toolbar-group-start {
-    justify-content: center;
-  }
-  
-  .file-explorer-toolbar .p-button {
-    font-size: 0.8rem;
-    padding: 0.5rem;
-  }
-  
   .file-explorer-toolbar .p-button .p-button-label {
     display: none;
   }
