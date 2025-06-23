@@ -197,47 +197,102 @@ html, body {
   border-radius: 6px;
 }
 
-/* Estilos para el explorador de archivos */
-.file-explorer .p-datatable .p-datatable-tbody > tr:hover {
-  background: var(--surface-hover);
+/* Elimina el espacio entre las pestañas y el contenido del terminal */
+
+/* Estilos específicos para el explorador de archivos */
+.file-explorer-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.file-explorer .p-datatable .p-datatable-tbody > tr {
+.file-explorer-card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.file-explorer-card .p-card-body {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 1rem !important;
+}
+
+.file-explorer-card .p-card-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.file-explorer-toolbar {
+  margin-bottom: 1rem;
+}
+
+.file-explorer-breadcrumb {
+  margin-bottom: 1rem;
+}
+
+.file-explorer-table {
+  flex: 1;
+  min-height: 0;
+}
+
+.file-explorer-table .p-datatable {
+  height: 100% !important;
+}
+
+.file-explorer-table .p-datatable-wrapper {
+  height: 100% !important;
+}
+
+.file-explorer-table .p-datatable-scrollable-body {
+  height: calc(100% - 40px) !important;
+}
+
+/* Iconos de archivos */
+.file-icon {
+  margin-right: 0.5rem;
+  width: 16px;
+  text-align: center;
+}
+
+.directory-icon {
+  color: #007ad9;
+}
+
+.file-type-icon {
+  color: #6c757d;
+}
+
+/* Estilos para hover en las filas de archivos */
+.file-explorer-table .p-datatable tbody tr:hover {
+  background-color: var(--surface-100) !important;
   cursor: pointer;
 }
 
-.file-explorer .p-toolbar {
-  padding: 0.5rem;
+/* Estilos para filas seleccionadas */
+.file-explorer-table .p-datatable tbody tr.p-highlight {
+  background-color: var(--primary-50) !important;
 }
 
-.file-explorer .p-breadcrumb {
-  padding: 0.5rem;
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
+/* Estilos para el breadcrumb */
+.file-explorer-breadcrumb .p-breadcrumb {
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
   border-radius: 6px;
+  padding: 0.5rem 0.75rem;
 }
 
-.file-explorer .p-breadcrumb .p-breadcrumb-list {
+.file-explorer-breadcrumb .p-breadcrumb ol {
   margin: 0;
 }
 
-.file-explorer .p-datatable .p-datatable-thead > tr > th {
-  background: var(--surface-section);
-  padding: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
+/* Progress bar para carga */
+.file-explorer-loading {
+  margin-bottom: 1rem;
 }
-
-.file-explorer .p-datatable .p-datatable-tbody > tr > td {
-  padding: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.file-explorer .p-fileupload-basic {
-  display: inline-flex;
-}
-
-/* Elimina el espacio entre las pestañas y el contenido del terminal */
 .p-tabview .p-tabview-panels {
   padding: 0 !important;
 }
