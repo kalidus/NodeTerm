@@ -315,4 +315,107 @@ function sendToMainWindow(channel, ...args) {
 
 ipcMain.handle('app:get-sessions', async () => {
   // Implementation of getting sessions
+});
+
+// File Explorer IPC Handlers
+ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    // Usar ls con formato largo para obtener información detallada
+    const lsOutput = await conn.ssh.exec(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
+    
+    if (lsOutput.includes('ERROR: Cannot access directory')) {
+      throw new Error(`Cannot access directory: ${path}`);
+    }
+
+    // Parsear la salida de ls -la
+    const lines = lsOutput.trim().split('\n');
+    const files = [];
+
+    // Saltar la primera línea que muestra el total
+    lines.slice(1).forEach(line => {
+      if (line.trim() === '') return;
+
+      // Parsear línea de ls -la (maneja archivos con espacios y enlaces simbólicos)
+      const match = line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/);
+      if (!match) return;
+
+      const [, permissions, , owner, group, size, dateTime, fullName] = match;
+      
+      // Manejar enlaces simbólicos (formato: "nombre -> destino")
+      const name = fullName.includes(' -> ') ? fullName.split(' -> ')[0] : fullName;
+      
+      // Saltar . y .. para el directorio actual
+      if (name === '.' || name === '..') {
+        // Solo incluir .. si no estamos en la raíz
+        if (name === '..' && path !== '/') {
+          files.push({
+            name: '..',
+            type: 'directory',
+            size: 0,
+            permissions,
+            owner,
+            group,
+            modified: dateTime
+          });
+        }
+        return;
+      }
+
+      let type = 'file';
+      if (permissions.startsWith('d')) {
+        type = 'directory';
+      } else if (permissions.startsWith('l')) {
+        type = 'symlink';
+      }
+      
+      files.push({
+        name,
+        type,
+        size: parseInt(size, 10),
+        permissions,
+        owner,
+        group,
+        modified: dateTime
+      });
+    });
+
+    return { success: true, files };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Verificar si un directorio existe y es accesible
+ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    const result = await conn.ssh.exec(`test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+    return result.trim() === 'EXISTS';
+  } catch (error) {
+    return false;
+  }
+});
+
+// Obtener el directorio home del usuario
+ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    const homeDir = await conn.ssh.exec('echo $HOME');
+    return homeDir.trim();
+  } catch (error) {
+    return '/';
+  }
 }); 

@@ -7,85 +7,67 @@ import { Column } from 'primereact/column';
 import { BreadCrumb } from 'primereact/breadcrumb';
 import { InputText } from 'primereact/inputtext';
 import { ProgressBar } from 'primereact/progressbar';
+import { Message } from 'primereact/message';
 
 const FileExplorer = ({ sshConfig, tabId }) => {
-    const [currentPath, setCurrentPath] = useState('/');
+    const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [breadcrumbItems, setBreadcrumbItems] = useState([]);
+    const [error, setError] = useState(null);
 
-    // Simular datos de archivos (en implementación real, estos vendrían del servidor SSH)
+    // Cargar directorio inicial (home del usuario)
     useEffect(() => {
-        loadFiles(currentPath);
+        const initializeExplorer = async () => {
+            if (!window.electron || !tabId) return;
+            
+            setLoading(true);
+            try {
+                // Obtener el directorio home del usuario
+                const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId);
+                setCurrentPath(homeDir || '/');
+            } catch (err) {
+                console.error('Error getting home directory:', err);
+                setCurrentPath('/'); // Fallback al root
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initializeExplorer();
+    }, [tabId]);
+
+    // Cargar archivos cuando cambia el path
+    useEffect(() => {
+        if (currentPath !== null) {
+            loadFiles(currentPath);
+        }
     }, [currentPath]);
 
     const loadFiles = async (path) => {
-        setLoading(true);
+        if (!window.electron || !tabId) return;
         
-        // Simular llamada a API para obtener archivos del servidor SSH
-        setTimeout(() => {
-            const mockFiles = [
-                {
-                    name: '..',
-                    type: 'directory',
-                    size: 0,
-                    permissions: 'drwxr-xr-x',
-                    owner: 'root',
-                    group: 'root',
-                    modified: '2024-01-15 10:30'
-                },
-                {
-                    name: 'home',
-                    type: 'directory',
-                    size: 4096,
-                    permissions: 'drwxr-xr-x',
-                    owner: 'root',
-                    group: 'root',
-                    modified: '2024-01-15 10:30'
-                },
-                {
-                    name: 'var',
-                    type: 'directory',
-                    size: 4096,
-                    permissions: 'drwxr-xr-x',
-                    owner: 'root',
-                    group: 'root',
-                    modified: '2024-01-15 10:30'
-                },
-                {
-                    name: 'etc',
-                    type: 'directory',
-                    size: 4096,
-                    permissions: 'drwxr-xr-x',
-                    owner: 'root',
-                    group: 'root',
-                    modified: '2024-01-15 10:30'
-                },
-                {
-                    name: 'example.txt',
-                    type: 'file',
-                    size: 1024,
-                    permissions: '-rw-r--r--',
-                    owner: 'user',
-                    group: 'user',
-                    modified: '2024-01-15 14:25'
-                },
-                {
-                    name: 'script.sh',
-                    type: 'file',
-                    size: 2048,
-                    permissions: '-rwxr-xr-x',
-                    owner: 'user',
-                    group: 'user',
-                    modified: '2024-01-15 16:10'
-                }
-            ];
+        setLoading(true);
+        setError(null);
+        
+        try {
+            const result = await window.electron.fileExplorer.listFiles(tabId, path);
             
-            setFiles(mockFiles);
-            updateBreadcrumb(path);
+            if (result.success) {
+                setFiles(result.files);
+                updateBreadcrumb(path);
+            } else {
+                setError(result.error || 'Error al cargar archivos');
+                setFiles([]);
+            }
+        } catch (err) {
+            console.error('Error loading files:', err);
+            setError('Error de conexión al cargar archivos');
+            setFiles([]);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
     };
 
     const updateBreadcrumb = (path) => {
@@ -104,12 +86,25 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         ]);
     };
 
-    const navigateToPath = (path) => {
-        setCurrentPath(path);
+    const navigateToPath = async (path) => {
+        if (!window.electron || !tabId) return;
+        
+        try {
+            // Verificar que el directorio existe antes de navegar
+            const exists = await window.electron.fileExplorer.checkDirectory(tabId, path);
+            if (exists) {
+                setCurrentPath(path);
+            } else {
+                setError(`El directorio ${path} no existe o no es accesible`);
+            }
+        } catch (err) {
+            console.error('Error checking directory:', err);
+            setError('Error al verificar el directorio');
+        }
     };
 
     const onFileDoubleClick = (file) => {
-        if (file.type === 'directory') {
+        if (file.type === 'directory' || (file.type === 'symlink' && file.permissions.startsWith('l') && file.permissions.includes('d'))) {
             if (file.name === '..') {
                 // Navegar al directorio padre
                 const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
@@ -135,6 +130,10 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             return file.name === '..' ? 'pi pi-arrow-up' : 'pi pi-folder';
         }
         
+        if (file.type === 'symlink') {
+            return 'pi pi-link';
+        }
+        
         const extension = file.name.split('.').pop().toLowerCase();
         switch (extension) {
             case 'txt':
@@ -148,16 +147,29 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             case 'png':
             case 'gif':
                 return 'pi pi-image';
+            case 'zip':
+            case 'tar':
+            case 'gz':
+                return 'pi pi-file-archive';
+            case 'pdf':
+                return 'pi pi-file-pdf';
             default:
                 return 'pi pi-file';
         }
     };
 
     const nameBodyTemplate = (file) => {
+        let iconClass = 'file-type-icon';
+        if (file.type === 'directory') {
+            iconClass = 'directory-icon';
+        } else if (file.type === 'symlink') {
+            iconClass = 'symlink-icon';
+        }
+
         return (
             <div className="flex align-items-center">
-                <i className={`${getFileIcon(file)} file-icon ${file.type === 'directory' ? 'directory-icon' : 'file-type-icon'}`}></i>
-                <span>{file.name}</span>
+                <i className={`${getFileIcon(file)} file-icon ${iconClass}`}></i>
+                <span className={file.type === 'symlink' ? 'symlink-name' : ''}>{file.name}</span>
             </div>
         );
     };
@@ -175,19 +187,21 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
                     navigateToPath(parentPath);
                 }}
-                disabled={currentPath === '/'}
+                disabled={!currentPath || currentPath === '/'}
                 tooltip="Atrás"
             />
             <Button 
                 icon="pi pi-refresh" 
                 className="mr-2" 
-                onClick={() => loadFiles(currentPath)}
+                onClick={() => currentPath && loadFiles(currentPath)}
+                disabled={!currentPath}
                 tooltip="Actualizar"
             />
             <Button 
                 icon="pi pi-home" 
                 className="mr-2" 
                 onClick={() => navigateToPath('/')}
+                disabled={!currentPath}
                 tooltip="Inicio"
             />
         </div>
@@ -221,6 +235,10 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 
                 {loading && (
                     <ProgressBar mode="indeterminate" className="file-explorer-loading" />
+                )}
+                
+                {error && (
+                    <Message severity="error" text={error} className="mb-3" />
                 )}
                 
                 <div className="file-explorer-table">
