@@ -6,6 +6,7 @@ const { app, BrowserWindow, ipcMain, clipboard, dialog } = require('electron');
 const path = require('path');
 const url = require('url');
 const SSH2Promise = require('ssh2-promise');
+const { NodeSSH } = require('node-ssh');
 
 let mainWindow;
 
@@ -211,7 +212,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     const stream = await ssh.shell({ term: 'xterm-256color' });
 
-    sshConnections[tabId] = { ssh, stream, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
+    sshConnections[tabId] = { ssh, stream, config, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
@@ -428,7 +429,18 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
   }
 
   try {
-    await conn.ssh.getFile(localPath, remotePath);
+    // Crear una nueva instancia de NodeSSH para operaciones de archivos
+    const nodeSSH = new NodeSSH();
+    await nodeSSH.connect({
+      host: conn.config.host,
+      username: conn.config.username,
+      password: conn.config.password,
+      port: conn.config.port || 22,
+      readyTimeout: 99999
+    });
+    
+    await nodeSSH.getFile(localPath, remotePath);
+    nodeSSH.dispose();
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -443,7 +455,18 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
   }
 
   try {
-    await conn.ssh.putFile(localPath, remotePath);
+    // Crear una nueva instancia de NodeSSH para operaciones de archivos
+    const nodeSSH = new NodeSSH();
+    await nodeSSH.connect({
+      host: conn.config.host,
+      username: conn.config.username,
+      password: conn.config.password,
+      port: conn.config.port || 22,
+      readyTimeout: 99999
+    });
+    
+    await nodeSSH.putFile(localPath, remotePath);
+    nodeSSH.dispose();
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
