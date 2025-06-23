@@ -2,7 +2,7 @@ try {
   require('electron-reloader')(module);
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog } = require('electron');
 const path = require('path');
 const url = require('url');
 const SSH2Promise = require('ssh2-promise');
@@ -418,4 +418,76 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
   } catch (error) {
     return '/';
   }
-}); 
+});
+
+// Descargar archivo desde servidor SSH
+ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    await conn.ssh.getFile(localPath, remotePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Subir archivo al servidor SSH
+ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    await conn.ssh.putFile(localPath, remotePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Eliminar archivo en servidor SSH
+ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    const command = isDirectory ? `rm -rf "${remotePath}"` : `rm "${remotePath}"`;
+    await conn.ssh.exec(command);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Crear directorio en servidor SSH
+ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath }) => {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh) {
+    throw new Error('SSH connection not found');
+  }
+
+  try {
+    await conn.ssh.exec(`mkdir -p "${remotePath}"`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Dialog handlers para seleccionar archivos
+ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
+  const result = await dialog.showSaveDialog(mainWindow, options);
+  return result;
+});
+
+ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
+  const result = await dialog.showOpenDialog(mainWindow, options);
+  return result;
+});

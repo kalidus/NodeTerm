@@ -10,6 +10,14 @@ contextBridge.exposeInMainWorld('electron', {
     listFiles: (tabId, path) => ipcRenderer.invoke('ssh:list-files', { tabId, path }),
     checkDirectory: (tabId, path) => ipcRenderer.invoke('ssh:check-directory', { tabId, path }),
     getHomeDirectory: (tabId) => ipcRenderer.invoke('ssh:get-home-directory', { tabId }),
+    downloadFile: (tabId, remotePath, localPath) => ipcRenderer.invoke('ssh:download-file', { tabId, remotePath, localPath }),
+    uploadFile: (tabId, localPath, remotePath) => ipcRenderer.invoke('ssh:upload-file', { tabId, localPath, remotePath }),
+    deleteFile: (tabId, remotePath, isDirectory) => ipcRenderer.invoke('ssh:delete-file', { tabId, remotePath, isDirectory }),
+    createDirectory: (tabId, remotePath) => ipcRenderer.invoke('ssh:create-directory', { tabId, remotePath })
+  },
+  dialog: {
+    showSaveDialog: (options) => ipcRenderer.invoke('dialog:show-save-dialog', options),
+    showOpenDialog: (options) => ipcRenderer.invoke('dialog:show-open-dialog', options)
   },
   ipcRenderer: {
     send: (channel, data) => {

@@ -59,16 +59,28 @@ Esto iniciará tanto el compilador webpack como la aplicación Electron automát
 
 ### Explorador de Archivos SSH
 
-El explorador de archivos te permite navegar por los archivos del servidor remoto con una interfaz gráfica intuitiva:
+El explorador de archivos te permite navegar y gestionar archivos del servidor remoto con una interfaz gráfica completa:
 
+#### Navegación
 - **Navegación**: Haz doble clic en carpetas para entrar, o usa el breadcrumb para navegar
 - **Botones de navegación**: 
   - Atrás: Volver al directorio anterior
   - Actualizar: Recargar el contenido del directorio actual
   - Inicio: Ir al directorio raíz
-- **Información de archivos**: Muestra nombre, tamaño, permisos, propietario y fecha de modificación
+
+#### Gestión de Archivos
+- **Subir archivos**: Botón "Subir" - Selecciona y sube uno o múltiples archivos al servidor
+- **Descargar archivos**: Botón de descarga en cada archivo - Guarda archivos localmente
+- **Crear carpetas**: Botón "Nueva Carpeta" - Crea directorios en el servidor
+- **Eliminar archivos**: Selecciona archivos/carpetas y usa el botón "Eliminar" (confirmación requerida)
+
+#### Características Adicionales
+- **Progreso de transferencia**: Barra de progreso visual para subidas, descargas y eliminaciones
+- **Notificaciones**: Mensajes de éxito/error para todas las operaciones
+- **Información detallada**: Muestra nombre, tamaño, permisos, propietario y fecha de modificación
 - **Selección múltiple**: Selecciona varios archivos manteniendo Ctrl/Cmd
 - **Iconos por tipo**: Diferentes iconos para carpetas, archivos de texto, scripts, imágenes, etc.
+- **Soporte para enlaces simbólicos**: Identifica y muestra enlaces simbólicos con iconos especiales
 
 ### Gestión de Pestañas
 
