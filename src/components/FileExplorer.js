@@ -241,16 +241,15 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     <Message severity="error" text={error} className="mb-3" />
                 )}
                 
-                <div className="file-explorer-table">
+                <div className="file-explorer-table-container">
                     <DataTable 
                         value={files}
                         selectionMode="multiple"
                         selection={selectedFiles}
                         onSelectionChange={(e) => setSelectedFiles(e.value)}
                         onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
-                        scrollable
-                        scrollHeight="flex"
-                        rowHover
+                        rowHover={true}
+                        className="file-explorer-datatable"
                     >
                         <Column 
                             field="name" 
