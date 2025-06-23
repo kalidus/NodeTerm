@@ -197,6 +197,46 @@ html, body {
   border-radius: 6px;
 }
 
+/* Estilos para el explorador de archivos */
+.file-explorer .p-datatable .p-datatable-tbody > tr:hover {
+  background: var(--surface-hover);
+}
+
+.file-explorer .p-datatable .p-datatable-tbody > tr {
+  cursor: pointer;
+}
+
+.file-explorer .p-toolbar {
+  padding: 0.5rem;
+}
+
+.file-explorer .p-breadcrumb {
+  padding: 0.5rem;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+}
+
+.file-explorer .p-breadcrumb .p-breadcrumb-list {
+  margin: 0;
+}
+
+.file-explorer .p-datatable .p-datatable-thead > tr > th {
+  background: var(--surface-section);
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.file-explorer .p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.file-explorer .p-fileupload-basic {
+  display: inline-flex;
+}
+
 /* Elimina el espacio entre las pestañas y el contenido del terminal */
 .p-tabview .p-tabview-panels {
   padding: 0 !important;

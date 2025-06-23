@@ -12,6 +12,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Sidebar } from 'primereact/sidebar';
 import { TabView, TabPanel } from 'primereact/tabview';
 import TerminalComponent from './TerminalComponent';
+import FileExplorer from './FileExplorer';
 import { Divider } from 'primereact/divider';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
@@ -45,6 +46,8 @@ const App = () => {
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
   const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
+  const [fileExplorerTabs, setFileExplorerTabs] = useState([]);
+  const [activeTabType, setActiveTabType] = useState('terminal'); // 'terminal' o 'fileexplorer'
 
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
@@ -710,10 +713,12 @@ const App = () => {
               key: tabId,
               label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
               originalKey: node.key,
-              sshConfig: sshConfig
+              sshConfig: sshConfig,
+              type: 'terminal'
             };
             const newTabs = [...prevTabs, newTab];
             setActiveTabIndex(newTabs.length - 1);
+            setActiveTabType('terminal');
             return newTabs;
           });
         } : undefined}
@@ -722,19 +727,34 @@ const App = () => {
         <span className="node-label">{node.label}</span>
         <div className="ml-auto flex">
           {isSSH && (
-            <Button
-              icon="pi pi-pencil"
-              rounded
-              text
-              size="small"
-              className="node-action-button"
-              onClick={e => {
-                e.stopPropagation();
-                openEditSSHDialog(node);
-              }}
-              tooltip="Editar sesión SSH"
-              tooltipOptions={{ position: 'top' }}
-            />
+            <>
+              <Button
+                icon="pi pi-folder-open"
+                rounded
+                text
+                size="small"
+                className="node-action-button"
+                onClick={e => {
+                  e.stopPropagation();
+                  openFileExplorer(node);
+                }}
+                tooltip="Explorador de archivos"
+                tooltipOptions={{ position: 'top' }}
+              />
+              <Button
+                icon="pi pi-pencil"
+                rounded
+                text
+                size="small"
+                className="node-action-button"
+                onClick={e => {
+                  e.stopPropagation();
+                  openEditSSHDialog(node);
+                }}
+                tooltip="Editar sesión SSH"
+                tooltipOptions={{ position: 'top' }}
+              />
+            </>
           )}
           {isFolder && (
             <>
@@ -960,6 +980,33 @@ const App = () => {
     }
   };
 
+  // Función para abrir el explorador de archivos
+  const openFileExplorer = (node) => {
+    const tabId = `fileexplorer_${node.key}_${Date.now()}`;
+    const sshConfig = {
+      host: node.data.host,
+      username: node.data.user,
+      password: node.data.password,
+    };
+    
+    const newTab = {
+      key: tabId,
+      label: `Files: ${node.label}`,
+      originalKey: node.key,
+      sshConfig: sshConfig,
+      type: 'fileexplorer'
+    };
+    
+    setFileExplorerTabs(prevTabs => {
+      const newTabs = [...prevTabs, newTab];
+      // El índice de la nueva pestaña es: cantidad de pestañas SSH + cantidad de pestañas del explorador
+      const newTabIndex = sshTabs.length + newTabs.length - 1;
+      setActiveTabIndex(newTabIndex);
+      setActiveTabType('fileexplorer');
+      return newTabs;
+    });
+  };
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Toast ref={toast} />
@@ -984,6 +1031,31 @@ const App = () => {
                     className="p-button-rounded p-button-text sidebar-action-button"
                     onClick={() => setShowSSHDialog(true)}
                     tooltip="Nueva conexión SSH"
+                    tooltipOptions={{ position: 'bottom' }}
+                  />
+                  <Button
+                    icon="pi pi-folder-open"
+                    className="p-button-rounded p-button-text sidebar-action-button"
+                    onClick={() => {
+                      // Buscar una conexión SSH activa
+                      if (sshTabs.length > 0) {
+                        const activeSSHTab = sshTabs[0]; // Usar la primera conexión SSH disponible
+                        const fakeNode = {
+                          key: activeSSHTab.originalKey,
+                          label: activeSSHTab.label.split(' (')[0],
+                          data: activeSSHTab.sshConfig
+                        };
+                        openFileExplorer(fakeNode);
+                      } else {
+                        toast.current.show({
+                          severity: 'warn',
+                          summary: 'Sin conexiones',
+                          detail: 'Necesitas tener al menos una conexión SSH activa para usar el explorador de archivos',
+                          life: 3000
+                        });
+                      }
+                    }}
+                    tooltip="Explorador de archivos"
                     tooltipOptions={{ position: 'bottom' }}
                   />
                 </div>
@@ -1023,26 +1095,36 @@ const App = () => {
           </SplitterPanel>
           
           <SplitterPanel size={75} style={{ display: 'flex', flexDirection: 'column' }}>
-            {sshTabs.length > 0 ? (
+            {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <TabView 
                   activeIndex={activeTabIndex} 
                   onTabChange={(e) => {
                     setActiveTabIndex(e.index);
+                    // Determinar el tipo de pestaña activa
+                    const totalTabs = [...sshTabs, ...fileExplorerTabs];
+                    const activeTab = totalTabs[e.index];
+                    setActiveTabType(activeTab?.type || 'terminal');
                   }}
                   onTabClose={(e) => {
-                    const closedTabKey = sshTabs[e.index].key;
-                    if (window.electron && window.electron.ipcRenderer) {
-                      window.electron.ipcRenderer.send('ssh:disconnect', closedTabKey);
+                    const totalTabs = [...sshTabs, ...fileExplorerTabs];
+                    const closedTab = totalTabs[e.index];
+                    
+                    if (closedTab.type === 'fileexplorer') {
+                      // Cerrar pestaña del explorador de archivos
+                      setFileExplorerTabs(prevTabs => prevTabs.filter(tab => tab.key !== closedTab.key));
+                    } else {
+                      // Cerrar pestaña del terminal
+                      if (window.electron && window.electron.ipcRenderer) {
+                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                      }
+                      setSshTabs(prevTabs => prevTabs.filter(tab => tab.key !== closedTab.key));
+                      delete terminalRefs.current[closedTab.key];
                     }
-                    const newTabs = sshTabs.filter((_, i) => i !== e.index);
-                    delete terminalRefs.current[closedTabKey];
                     
                     if (activeTabIndex >= e.index && activeTabIndex > 0) {
                       setActiveTabIndex(activeTabIndex - 1);
                     }
-                    
-                    setSshTabs(newTabs);
                   }}
                   pt={{
                     navContainer: { style: { flexShrink: 0 } },
@@ -1056,13 +1138,20 @@ const App = () => {
                       closable
                     />
                   ))}
+                  {fileExplorerTabs.map((tab) => (
+                    <TabPanel 
+                      key={tab.key} 
+                      header={tab.label} 
+                      closable
+                    />
+                  ))}
                 </TabView>
                 <div style={{ flexGrow: 1, position: 'relative' }}>
                   {sshTabs.map((tab, index) => (
                     <div 
                       key={tab.key} 
                       style={{ 
-                        display: activeTabIndex === index ? 'flex' : 'none',
+                        display: activeTabIndex === index && activeTabType === 'terminal' ? 'flex' : 'none',
                         flexDirection: 'column',
                         height: '100%',
                         width: '100%',
@@ -1078,6 +1167,25 @@ const App = () => {
                         fontFamily={fontFamily}
                         fontSize={fontSize}
                         theme={terminalTheme.theme}
+                      />
+                    </div>
+                  ))}
+                  {fileExplorerTabs.map((tab, index) => (
+                    <div 
+                      key={tab.key} 
+                      style={{ 
+                        display: activeTabIndex === (sshTabs.length + index) && activeTabType === 'fileexplorer' ? 'flex' : 'none',
+                        flexDirection: 'column',
+                        height: '100%',
+                        width: '100%',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0
+                      }}
+                    >
+                      <FileExplorer
+                        tabId={tab.key}
+                        sshConfig={tab.sshConfig}
                       />
                     </div>
                   ))}
