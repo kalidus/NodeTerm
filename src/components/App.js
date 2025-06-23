@@ -1001,8 +1001,29 @@ const App = () => {
       return;
     }
 
-    // Crear nueva pestaña de explorador
-    const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
+    // Verificar si hay alguna conexión SSH activa para este nodo que podamos reutilizar
+    const existingSSHTab = sshTabs.find(tab => tab.originalKey === sshNode.key);
+    let explorerTabId;
+    
+    if (existingSSHTab) {
+      // Usar el mismo tabId de la conexión SSH existente para compartir la conexión
+      explorerTabId = existingSSHTab.key;
+    } else {
+      // Crear nueva conexión SSH específica para el explorador
+      explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
+      
+      // Establecer conexión SSH para el explorador
+      const sshConfig = {
+        host: sshNode.data.host,
+        username: sshNode.data.user,
+        password: sshNode.data.password,
+      };
+      
+      if (window.electron && window.electron.ipcRenderer) {
+        window.electron.ipcRenderer.send('ssh:connect', { tabId: explorerTabId, config: sshConfig });
+      }
+    }
+
     const sshConfig = {
       host: sshNode.data.host,
       username: sshNode.data.user,
@@ -1014,7 +1035,8 @@ const App = () => {
       label: `📁 ${sshNode.label}`,
       originalKey: sshNode.key,
       sshConfig: sshConfig,
-      type: 'explorer'
+      type: 'explorer',
+      needsOwnConnection: !existingSSHTab // Indica si necesita su propia conexión
     };
 
     setFileExplorerTabs(prevTabs => {
@@ -1102,6 +1124,12 @@ const App = () => {
                     if (closedTab.type === 'explorer') {
                       // Cerrar pestaña de explorador
                       const newExplorerTabs = fileExplorerTabs.filter(tab => tab.key !== closedTab.key);
+                      
+                      // Si el explorador tenía su propia conexión SSH, desconectarla
+                      if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                      }
+                      
                       setFileExplorerTabs(newExplorerTabs);
                     } else {
                       // Cerrar pestaña SSH

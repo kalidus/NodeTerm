@@ -6,6 +6,11 @@ contextBridge.exposeInMainWorld('electron', {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
   },
+  fileExplorer: {
+    listFiles: (tabId, path) => ipcRenderer.invoke('ssh:list-files', { tabId, path }),
+    checkDirectory: (tabId, path) => ipcRenderer.invoke('ssh:check-directory', { tabId, path }),
+    getHomeDirectory: (tabId) => ipcRenderer.invoke('ssh:get-home-directory', { tabId }),
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
