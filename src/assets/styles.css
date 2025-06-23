@@ -205,50 +205,64 @@ html, body {
   width: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .file-explorer-card {
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 .file-explorer-card .p-card-body {
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
-  padding: 1rem !important;
+  padding: 0.75rem !important;
+  overflow: hidden !important;
 }
 
 .file-explorer-card .p-card-content {
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 .file-explorer-toolbar {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 
 .file-explorer-breadcrumb {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 
-.file-explorer-table {
+/* Contenedor con scroll manual para la tabla de archivos */
+.file-explorer-table-container {
   flex: 1;
   min-height: 0;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--surface-300);
+  border-radius: 6px;
 }
 
-.file-explorer-table .p-datatable {
-  height: 100% !important;
+/* Estilos específicos para la DataTable del explorador */
+.file-explorer-datatable {
+  border: none !important;
 }
 
-.file-explorer-table .p-datatable-wrapper {
-  height: 100% !important;
+.file-explorer-datatable .p-datatable-wrapper {
+  border: none !important;
 }
 
-.file-explorer-table .p-datatable-scrollable-body {
-  height: calc(100% - 40px) !important;
+.file-explorer-datatable .p-datatable-header {
+  background: var(--surface-50) !important;
+  border-bottom: 1px solid var(--surface-300) !important;
 }
 
 /* Iconos de archivos */
@@ -300,7 +314,8 @@ html, body {
 
 /* Progress bar para carga */
 .file-explorer-loading {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
 }
 .p-tabview .p-tabview-panels {
   padding: 0 !important;
