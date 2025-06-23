@@ -385,54 +385,55 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     };
 
     const toolbarLeft = (
-        <div className="flex align-items-center">
+        <div className="flex align-items-center gap-2 flex-wrap">
             <Button 
                 icon="pi pi-arrow-left" 
-                className="mr-2" 
                 onClick={() => {
                     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
                     navigateToPath(parentPath);
                 }}
                 disabled={!sshReady || !currentPath || currentPath === '/'}
                 tooltip="Atrás"
+                size="small"
             />
             <Button 
                 icon="pi pi-refresh" 
-                className="mr-2" 
                 onClick={() => currentPath && loadFiles(currentPath)}
                 disabled={!sshReady || !currentPath}
                 tooltip="Actualizar"
+                size="small"
             />
             <Button 
                 icon="pi pi-home" 
-                className="mr-2" 
                 onClick={() => navigateToPath('/')}
                 disabled={!sshReady || !currentPath}
                 tooltip="Inicio"
+                size="small"
             />
             <Button 
                 icon="pi pi-upload" 
                 label="Subir"
-                className="mr-2" 
                 onClick={handleUploadFiles}
                 disabled={!sshReady || !currentPath || loading}
                 tooltip="Subir archivos"
+                size="small"
             />
             <Button 
-                icon="pi pi-folder-plus" 
-                label="Nueva Carpeta"
-                className="mr-2" 
+                icon="pi pi-folder" 
+                label="Carpeta"
                 onClick={() => setNewFolderDialog(true)}
                 disabled={!sshReady || !currentPath || loading}
                 tooltip="Crear nueva carpeta"
+                size="small"
             />
             <Button 
                 icon="pi pi-trash" 
                 label="Eliminar"
-                className="mr-2 p-button-danger" 
+                className="p-button-danger" 
                 onClick={handleDeleteFiles}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
                 tooltip="Eliminar archivos seleccionados"
+                size="small"
             />
         </div>
     );
