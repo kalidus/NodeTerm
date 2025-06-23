@@ -8,6 +8,9 @@ import { BreadCrumb } from 'primereact/breadcrumb';
 import { InputText } from 'primereact/inputtext';
 import { ProgressBar } from 'primereact/progressbar';
 import { Message } from 'primereact/message';
+import { Dialog } from 'primereact/dialog';
+import { Toast } from 'primereact/toast';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 
 const FileExplorer = ({ sshConfig, tabId }) => {
     const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
@@ -16,6 +19,11 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [breadcrumbItems, setBreadcrumbItems] = useState([]);
     const [error, setError] = useState(null);
+    const [uploadDialog, setUploadDialog] = useState(false);
+    const [newFolderDialog, setNewFolderDialog] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const [transferProgress, setTransferProgress] = useState(null);
+    const toast = React.useRef(null);
 
     // Cargar directorio inicial (home del usuario)
     useEffect(() => {
@@ -178,6 +186,175 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         return file.type === 'directory' ? '-' : formatFileSize(file.size);
     };
 
+    // Funciones para manejo de archivos
+    const handleUploadFiles = async () => {
+        try {
+            const result = await window.electron.dialog.showOpenDialog({
+                properties: ['openFile', 'multiSelections'],
+                title: 'Seleccionar archivos para subir'
+            });
+
+            if (!result.canceled && result.filePaths.length > 0) {
+                setTransferProgress({ type: 'upload', current: 0, total: result.filePaths.length });
+                
+                for (let i = 0; i < result.filePaths.length; i++) {
+                    const localPath = result.filePaths[i];
+                    const fileName = localPath.split(/[\\/]/).pop();
+                    const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
+                    
+                    try {
+                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath);
+                        if (uploadResult.success) {
+                            toast.current?.show({
+                                severity: 'success',
+                                summary: 'Subida exitosa',
+                                detail: `${fileName} subido correctamente`,
+                                life: 3000
+                            });
+                        } else {
+                            throw new Error(uploadResult.error);
+                        }
+                    } catch (err) {
+                        toast.current?.show({
+                            severity: 'error',
+                            summary: 'Error al subir',
+                            detail: `Error subiendo ${fileName}: ${err.message}`,
+                            life: 5000
+                        });
+                    }
+                    
+                    setTransferProgress({ type: 'upload', current: i + 1, total: result.filePaths.length });
+                }
+                
+                setTransferProgress(null);
+                loadFiles(currentPath); // Recargar archivos
+            }
+        } catch (err) {
+            console.error('Error in upload dialog:', err);
+            setTransferProgress(null);
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Error al abrir selector de archivos',
+                life: 5000
+            });
+        }
+    };
+
+    const handleDownloadFile = async (file) => {
+        try {
+            const result = await window.electron.dialog.showSaveDialog({
+                defaultPath: file.name,
+                title: 'Guardar archivo como'
+            });
+
+            if (!result.canceled && result.filePath) {
+                setTransferProgress({ type: 'download', current: 0, total: 1, fileName: file.name });
+                
+                const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath);
+                
+                if (downloadResult.success) {
+                    toast.current?.show({
+                        severity: 'success',
+                        summary: 'Descarga exitosa',
+                        detail: `${file.name} descargado correctamente`,
+                        life: 3000
+                    });
+                } else {
+                    throw new Error(downloadResult.error);
+                }
+                
+                setTransferProgress(null);
+            }
+        } catch (err) {
+            console.error('Error downloading file:', err);
+            setTransferProgress(null);
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error al descargar',
+                detail: `Error descargando ${file.name}: ${err.message}`,
+                life: 5000
+            });
+        }
+    };
+
+    const handleDeleteFiles = () => {
+        if (selectedFiles.length === 0) return;
+        
+        const fileNames = selectedFiles.map(f => f.name).join(', ');
+        confirmDialog({
+            message: `¿Estás seguro de eliminar ${selectedFiles.length} archivo(s)? Esta acción no se puede deshacer.\n\nArchivos: ${fileNames}`,
+            header: 'Confirmar eliminación',
+            icon: 'pi pi-exclamation-triangle',
+            accept: async () => {
+                setTransferProgress({ type: 'delete', current: 0, total: selectedFiles.length });
+                
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+                    
+                    try {
+                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory');
+                        if (deleteResult.success) {
+                            toast.current?.show({
+                                severity: 'success',
+                                summary: 'Eliminación exitosa',
+                                detail: `${file.name} eliminado correctamente`,
+                                life: 3000
+                            });
+                        } else {
+                            throw new Error(deleteResult.error);
+                        }
+                    } catch (err) {
+                        toast.current?.show({
+                            severity: 'error',
+                            summary: 'Error al eliminar',
+                            detail: `Error eliminando ${file.name}: ${err.message}`,
+                            life: 5000
+                        });
+                    }
+                    
+                    setTransferProgress({ type: 'delete', current: i + 1, total: selectedFiles.length });
+                }
+                
+                setTransferProgress(null);
+                setSelectedFiles([]);
+                loadFiles(currentPath); // Recargar archivos
+            }
+        });
+    };
+
+    const handleCreateFolder = async () => {
+        if (!newFolderName.trim()) return;
+        
+        try {
+            const remotePath = currentPath === '/' ? `/${newFolderName}` : `${currentPath}/${newFolderName}`;
+            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath);
+            
+            if (result.success) {
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Carpeta creada',
+                    detail: `Carpeta "${newFolderName}" creada correctamente`,
+                    life: 3000
+                });
+                setNewFolderName('');
+                setNewFolderDialog(false);
+                loadFiles(currentPath); // Recargar archivos
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (err) {
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error al crear carpeta',
+                detail: `Error creando carpeta: ${err.message}`,
+                life: 5000
+            });
+        }
+    };
+
     const toolbarLeft = (
         <div className="flex align-items-center">
             <Button 
@@ -203,6 +380,30 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 onClick={() => navigateToPath('/')}
                 disabled={!currentPath}
                 tooltip="Inicio"
+            />
+            <Button 
+                icon="pi pi-upload" 
+                label="Subir"
+                className="mr-2" 
+                onClick={handleUploadFiles}
+                disabled={!currentPath || loading}
+                tooltip="Subir archivos"
+            />
+            <Button 
+                icon="pi pi-folder-plus" 
+                label="Nueva Carpeta"
+                className="mr-2" 
+                onClick={() => setNewFolderDialog(true)}
+                disabled={!currentPath || loading}
+                tooltip="Crear nueva carpeta"
+            />
+            <Button 
+                icon="pi pi-trash" 
+                label="Eliminar"
+                className="mr-2 p-button-danger" 
+                onClick={handleDeleteFiles}
+                disabled={!currentPath || loading || selectedFiles.length === 0}
+                tooltip="Eliminar archivos seleccionados"
             />
         </div>
     );
@@ -283,9 +484,98 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                             sortable
                             style={{ width: '150px' }}
                         />
+                        <Column 
+                            header="Acciones" 
+                            body={(file) => (
+                                <div className="flex gap-2">
+                                    {file.type === 'file' && (
+                                        <Button 
+                                            icon="pi pi-download" 
+                                            size="small"
+                                            className="p-button-text" 
+                                            onClick={() => handleDownloadFile(file)}
+                                            tooltip="Descargar archivo"
+                                        />
+                                    )}
+                                </div>
+                            )}
+                            style={{ width: '100px' }}
+                        />
                     </DataTable>
                 </div>
+                
+                {/* Progreso de transferencia */}
+                {transferProgress && (
+                    <div className="mt-3">
+                        <div className="flex justify-content-between align-items-center mb-2">
+                            <span>
+                                {transferProgress.type === 'upload' && 'Subiendo archivos...'}
+                                {transferProgress.type === 'download' && `Descargando ${transferProgress.fileName}...`}
+                                {transferProgress.type === 'delete' && 'Eliminando archivos...'}
+                            </span>
+                            <span>{transferProgress.current} / {transferProgress.total}</span>
+                        </div>
+                        <ProgressBar 
+                            value={(transferProgress.current / transferProgress.total) * 100} 
+                            showValue={false}
+                        />
+                    </div>
+                )}
             </Card>
+            
+            {/* Dialog para crear nueva carpeta */}
+            <Dialog 
+                header="Crear Nueva Carpeta" 
+                visible={newFolderDialog} 
+                style={{ width: '400px' }} 
+                onHide={() => {
+                    setNewFolderDialog(false);
+                    setNewFolderName('');
+                }}
+                footer={
+                    <div>
+                        <Button 
+                            label="Cancelar" 
+                            icon="pi pi-times" 
+                            className="p-button-text" 
+                            onClick={() => {
+                                setNewFolderDialog(false);
+                                setNewFolderName('');
+                            }}
+                        />
+                        <Button 
+                            label="Crear" 
+                            icon="pi pi-check" 
+                            className="p-button-primary" 
+                            onClick={handleCreateFolder}
+                            disabled={!newFolderName.trim()}
+                        />
+                    </div>
+                }
+            >
+                <div className="field">
+                    <label htmlFor="folderName">Nombre de la carpeta:</label>
+                    <InputText 
+                        id="folderName"
+                        value={newFolderName} 
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        placeholder="Ingresa el nombre de la carpeta"
+                        className="w-full mt-2"
+                        autoFocus
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter' && newFolderName.trim()) {
+                                handleCreateFolder();
+                            }
+                        }}
+                    />
+                </div>
+            </Dialog>
+            
+            {/* Toast para notificaciones */}
+            <Toast ref={toast} />
+            
+            {/* Diálogo de confirmación */}
+            <ConfirmDialog />
         </div>
     );
 };

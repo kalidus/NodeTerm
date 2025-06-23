@@ -417,4 +417,53 @@ html, body {
 /* Remove old/conflicting styles */
 .status-item, .status-item-disk, .disk-name, .disk-usage, .ram-text {
     /* These classes are no longer used or have been simplified */
-} 
+}
+
+/* Estilos adicionales para funcionalidades de subir/descargar */
+.file-explorer-toolbar .p-toolbar-group-start {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Estilos para progreso de transferencia */
+.transfer-progress {
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.transfer-progress-text {
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+
+/* Botones de acción en las filas */
+.file-actions-button {
+  margin-right: 0.25rem;
+}
+
+.file-actions-button:last-child {
+  margin-right: 0;
+}
+
+/* Estilos responsivos para pantallas pequeñas */
+@media (max-width: 768px) {
+  .file-explorer-toolbar .p-toolbar-group-start {
+    justify-content: center;
+  }
+  
+  .file-explorer-toolbar .p-button {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+  }
+  
+  .file-explorer-toolbar .p-button .p-button-label {
+    display: none;
+  }
+  
+  .file-explorer-table-container {
+    max-height: calc(100vh - 320px);
+  }
+}
