@@ -190,9 +190,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           distro: distro,
           ip: ip
       };
-      if (mainWindow) {
-        mainWindow.webContents.send(`ssh-stats:update:${tabId}`, stats);
-      }
+      sendToMainWindow(`ssh-stats:update:${tabId}`, stats);
     } catch (e) {
       // console.error(`Error fetching stats for ${tabId}:`, e.message);
     } finally {
@@ -299,11 +297,30 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 
 // Permite cerrar la app desde el renderer (React) usando ipcRenderer
 ipcMain.on('app-quit', () => {
-  // Close all SSH connections before quitting
+  // Close all SSH connections and clear timeouts before quitting
   Object.values(sshConnections).forEach(conn => {
+    if (conn.statsTimeout) {
+      clearTimeout(conn.statsTimeout);
+    }
+    if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
+      conn.stream.removeAllListeners();
+    }
     conn.ssh.close();
   });
   app.quit();
+});
+
+// Limpieza robusta también en before-quit
+app.on('before-quit', () => {
+  Object.values(sshConnections).forEach(conn => {
+    if (conn.statsTimeout) {
+      clearTimeout(conn.statsTimeout);
+    }
+    if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
+      conn.stream.removeAllListeners();
+    }
+    conn.ssh.close();
+  });
 });
 
 // Clipboard IPC Handlers
@@ -317,7 +334,7 @@ ipcMain.handle('clipboard:writeText', (event, text) => {
 
 // Function to safely send to mainWindow
 function sendToMainWindow(channel, ...args) {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, ...args);
   }
 }
