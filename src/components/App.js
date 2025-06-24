@@ -991,44 +991,19 @@ const App = () => {
 
   // Función para abrir explorador de archivos SSH
   const openFileExplorer = (sshNode) => {
-    // Verificar si ya existe una pestaña de explorador para esta sesión SSH
-    const existingExplorerTab = fileExplorerTabs.find(tab => tab.originalKey === sshNode.key);
-    
-    if (existingExplorerTab) {
-      // Si ya existe, activar esa pestaña
-      const explorerIndex = sshTabs.length + fileExplorerTabs.findIndex(tab => tab.originalKey === sshNode.key);
-      setActiveTabIndex(explorerIndex);
-      return;
-    }
+    // Siempre crear nueva conexión SSH específica para el explorador
+    const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
 
-    // Verificar si hay alguna conexión SSH activa para este nodo que podamos reutilizar
-    const existingSSHTab = sshTabs.find(tab => tab.originalKey === sshNode.key);
-    let explorerTabId;
-    
-    if (existingSSHTab) {
-      // Usar el mismo tabId de la conexión SSH existente para compartir la conexión
-      explorerTabId = existingSSHTab.key;
-    } else {
-      // Crear nueva conexión SSH específica para el explorador
-      explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
-      
-      // Establecer conexión SSH para el explorador
-      const sshConfig = {
-        host: sshNode.data.host,
-        username: sshNode.data.user,
-        password: sshNode.data.password,
-      };
-      
-      if (window.electron && window.electron.ipcRenderer) {
-        window.electron.ipcRenderer.send('ssh:connect', { tabId: explorerTabId, config: sshConfig });
-      }
-    }
-
+    // Establecer conexión SSH para el explorador
     const sshConfig = {
       host: sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
     };
+
+    if (window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.send('ssh:connect', { tabId: explorerTabId, config: sshConfig });
+    }
 
     const newExplorerTab = {
       key: explorerTabId,
@@ -1036,7 +1011,7 @@ const App = () => {
       originalKey: sshNode.key,
       sshConfig: sshConfig,
       type: 'explorer',
-      needsOwnConnection: !existingSSHTab // Indica si necesita su propia conexión
+      needsOwnConnection: true // Siempre necesita su propia conexión
     };
 
     setFileExplorerTabs(prevTabs => {
@@ -1117,53 +1092,107 @@ const App = () => {
                   onTabChange={(e) => {
                     setActiveTabIndex(e.index);
                   }}
-                  onTabClose={(e) => {
-                    const allTabs = [...sshTabs, ...fileExplorerTabs];
-                    const closedTab = allTabs[e.index];
-                    
-                    if (closedTab.type === 'explorer') {
-                      // Cerrar pestaña de explorador
-                      const newExplorerTabs = fileExplorerTabs.filter(tab => tab.key !== closedTab.key);
-                      
-                      // Si el explorador tenía su propia conexión SSH, desconectarla
-                      if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                      }
-                      
-                      setFileExplorerTabs(newExplorerTabs);
-                    } else {
-                      // Cerrar pestaña SSH
-                      if (window.electron && window.electron.ipcRenderer) {
-                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                      }
-                      const newSshTabs = sshTabs.filter(tab => tab.key !== closedTab.key);
-                      delete terminalRefs.current[closedTab.key];
-                      setSshTabs(newSshTabs);
-                    }
-                    
-                    if (activeTabIndex >= e.index && activeTabIndex > 0) {
-                      setActiveTabIndex(activeTabIndex - 1);
-                    }
-                  }}
-                  pt={{
-                    navContainer: { style: { flexShrink: 0 } },
-                  }}
+                  renderActiveOnly={false}
                   scrollable
                 >
-                  {sshTabs.map((tab) => (
+                  {sshTabs.map((tab, idx) => (
                     <TabPanel 
                       key={tab.key} 
-                      header={tab.label} 
-                      closable
+                      header={tab.label}
+                      headerTemplate={(options) => {
+                        const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                        return (
+                          <div
+                            className={className}
+                            style={{ ...style, display: 'flex', alignItems: 'center', maxWidth: 220 }}
+                            onClick={onClick}
+                            onKeyDown={onKeyDown}
+                            tabIndex={0}
+                            aria-selected={selected}
+                            role="tab"
+                          >
+                            {leftIcon}
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                            <Button
+                              icon="pi pi-times"
+                              className="p-button-rounded p-button-text p-button-sm ml-2"
+                              style={{ marginLeft: 8, minWidth: 24, minHeight: 24 }}
+                              onClick={e => {
+                                e.stopPropagation();
+                                // Cierre robusto de pestaña
+                                const closedTab = tab;
+                                if (window.electron && window.electron.ipcRenderer) {
+                                  window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                }
+                                const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+                                delete terminalRefs.current[closedTab.key];
+                                setSshTabs(newSshTabs);
+                                // Ajustar índice activo
+                                if (activeTabIndex === idx) {
+                                  setActiveTabIndex(Math.max(0, idx - 1));
+                                } else if (activeTabIndex > idx) {
+                                  setActiveTabIndex(activeTabIndex - 1);
+                                }
+                              }}
+                              tooltip="Cerrar pestaña"
+                              tooltipOptions={{ position: 'top' }}
+                            />
+                            {rightIcon}
+                          </div>
+                        );
+                      }}
                     />
                   ))}
-                  {fileExplorerTabs.map((tab) => (
-                    <TabPanel 
-                      key={tab.key} 
-                      header={tab.label} 
-                      closable
-                    />
-                  ))}
+                  {fileExplorerTabs.map((tab, idx) => {
+                    const tabIndex = sshTabs.length + idx;
+                    return (
+                      <TabPanel 
+                        key={tab.key} 
+                        header={tab.label}
+                        headerTemplate={(options) => {
+                          const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                          return (
+                            <div
+                              className={className}
+                              style={{ ...style, display: 'flex', alignItems: 'center', maxWidth: 220 }}
+                              onClick={onClick}
+                              onKeyDown={onKeyDown}
+                              tabIndex={0}
+                              aria-selected={selected}
+                              role="tab"
+                            >
+                              {leftIcon}
+                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                              <Button
+                                icon="pi pi-times"
+                                className="p-button-rounded p-button-text p-button-sm ml-2"
+                                style={{ marginLeft: 8, minWidth: 24, minHeight: 24 }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  // Cierre robusto de pestaña
+                                  const closedTab = tab;
+                                  if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  }
+                                  const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
+                                  setFileExplorerTabs(newExplorerTabs);
+                                  // Ajustar índice activo
+                                  if (activeTabIndex === tabIndex) {
+                                    setActiveTabIndex(Math.max(0, tabIndex - 1));
+                                  } else if (activeTabIndex > tabIndex) {
+                                    setActiveTabIndex(activeTabIndex - 1);
+                                  }
+                                }}
+                                tooltip="Cerrar pestaña"
+                                tooltipOptions={{ position: 'top' }}
+                              />
+                              {rightIcon}
+                            </div>
+                          );
+                        }}
+                      />
+                    );
+                  })}
                 </TabView>
                 <div style={{ flexGrow: 1, position: 'relative' }}>
                   {sshTabs.map((tab, index) => (
