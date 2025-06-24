@@ -247,14 +247,21 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     event.sender.send(`ssh:ready:${tabId}`);
 
     // After setting up the shell, get the hostname/distro and start the stats loop
-    const [realHostname, osRelease] = await Promise.all([
-        ssh.exec('hostname'),
-        ssh.exec('cat /etc/os-release || echo "ID=linux"') // fallback for systems without os-release
-    ]);
+    let realHostname = 'unknown';
+    let osRelease = '';
+    try {
+      realHostname = (await ssh.exec('hostname')).trim();
+    } catch (e) {
+      // Si falla, dejamos 'unknown'
+    }
+    try {
+      osRelease = await ssh.exec('cat /etc/os-release');
+    } catch (e) {
+      osRelease = 'ID=linux'; // fallback si no existe el archivo
+    }
     const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
     const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-
-    statsLoop(realHostname.trim(), finalDistroId, config.host);
+    statsLoop(realHostname, finalDistroId, config.host);
 
   } catch (err) {
     const errorMsg = err && err.message ? err.message : (typeof err === 'string' ? err : JSON.stringify(err) || 'Error desconocido al conectar por SSH');
