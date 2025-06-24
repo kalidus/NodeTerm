@@ -136,6 +136,9 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (typeof error === 'string' && error.includes('Channel open failure')) {
                     message = `No se pudo abrir un nuevo canal SSH.\r\n\r\nEsto suele ocurrir porque el servidor solo permite un canal SSH por sesión, o el sistema necesita ser reiniciado.\r\n\r\nDetalles: ${error}`;
                 }
+                if (!message || (typeof message === 'string' && message.trim() === '')) {
+                    message = 'Error desconocido al conectar por SSH.';
+                }
                 term.current?.writeln(`\r\n\x1b[31mConnection Error: ${message}\x1b[0m`);
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, errorListener);
