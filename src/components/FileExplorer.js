@@ -24,6 +24,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const [newFolderName, setNewFolderName] = useState('');
     const [transferProgress, setTransferProgress] = useState(null);
     const [sshReady, setSshReady] = useState(false);
+    const [showDotfiles, setShowDotfiles] = useState(false); // Por defecto, ocultar dotfiles
     const toast = React.useRef(null);
 
     // Escuchar cuando la conexión SSH esté lista
@@ -214,6 +215,9 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const sizeBodyTemplate = (file) => {
         return file.type === 'directory' ? '-' : formatFileSize(file.size);
     };
+
+    // Filtrar archivos según showDotfiles
+    const visibleFiles = showDotfiles ? files : files.filter(f => !f.name.startsWith('.') || f.name === '..');
 
     // Funciones para manejo de archivos
     const handleUploadFiles = async () => {
@@ -411,8 +415,13 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 size="small"
             />
             <Button 
+                icon={showDotfiles ? "pi pi-eye" : "pi pi-eye-slash"}
+                onClick={() => setShowDotfiles(v => !v)}
+                tooltip={showDotfiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+                size="small"
+            />
+            <Button 
                 icon="pi pi-upload" 
-                label="Subir"
                 onClick={handleUploadFiles}
                 disabled={!sshReady || !currentPath || loading}
                 tooltip="Subir archivos"
@@ -420,7 +429,6 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             />
             <Button 
                 icon="pi pi-folder" 
-                label="Carpeta"
                 onClick={() => setNewFolderDialog(true)}
                 disabled={!sshReady || !currentPath || loading}
                 tooltip="Crear nueva carpeta"
@@ -428,7 +436,6 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             />
             <Button 
                 icon="pi pi-trash" 
-                label="Eliminar"
                 className="p-button-danger" 
                 onClick={handleDeleteFiles}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
@@ -485,7 +492,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 {sshReady && (
                     <div className="file-explorer-table-container">
                         <DataTable 
-                            value={files}
+                            value={visibleFiles}
                             selectionMode="multiple"
                             selection={selectedFiles}
                             onSelectionChange={(e) => setSelectedFiles(e.value)}
