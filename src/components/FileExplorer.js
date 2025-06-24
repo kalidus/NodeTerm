@@ -26,6 +26,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const [sshReady, setSshReady] = useState(false);
     const [showDotfiles, setShowDotfiles] = useState(false); // Por defecto, ocultar dotfiles
     const toast = React.useRef(null);
+    const [isDragActive, setIsDragActive] = useState(false);
 
     // Escuchar cuando la conexión SSH esté lista
     useEffect(() => {
@@ -388,6 +389,57 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         }
     };
 
+    // Handler para drop de archivos
+    const handleDrop = async (event) => {
+        event.preventDefault();
+        setIsDragActive(false);
+        if (!sshReady || !currentPath || loading) return;
+        const files = Array.from(event.dataTransfer.files);
+        // Solo archivos, no carpetas
+        const filePaths = files
+            .filter(f => f.type !== '' || f.name) // f.type vacío puede ser binario, pero si tiene nombre lo aceptamos
+            .map(f => f.path)
+            .filter(Boolean);
+        if (filePaths.length === 0) return;
+        setTransferProgress({ type: 'upload', current: 0, total: filePaths.length });
+        for (let i = 0; i < filePaths.length; i++) {
+            const localPath = filePaths[i];
+            const fileName = localPath.split(/[\\/]/).pop();
+            const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
+            try {
+                const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath);
+                if (uploadResult.success) {
+                    toast.current?.show({
+                        severity: 'success',
+                        summary: 'Subida exitosa',
+                        detail: `${fileName} subido correctamente`,
+                        life: 3000
+                    });
+                } else {
+                    throw new Error(uploadResult.error);
+                }
+            } catch (err) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: 'Error al subir',
+                    detail: `Error subiendo ${fileName}: ${err.message}`,
+                    life: 5000
+                });
+            }
+            setTransferProgress({ type: 'upload', current: i + 1, total: filePaths.length });
+        }
+        setTransferProgress(null);
+        loadFiles(currentPath); // Recargar archivos
+    };
+    const handleDragOver = (event) => {
+        event.preventDefault();
+        if (!isDragActive) setIsDragActive(true);
+    };
+    const handleDragLeave = (event) => {
+        event.preventDefault();
+        setIsDragActive(false);
+    };
+
     const toolbarLeft = (
         <div className="flex align-items-center gap-2 flex-wrap">
             <Button 
@@ -490,7 +542,12 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 )}
                 
                 {sshReady && (
-                    <div className="file-explorer-table-container">
+                    <div 
+                        className={`file-explorer-table-container${isDragActive ? ' drag-active' : ''}`}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                    >
                         <DataTable 
                             value={visibleFiles}
                             selectionMode="multiple"

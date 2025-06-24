@@ -258,6 +258,12 @@ html, body {
   border-radius: 6px;
 }
 
+.file-explorer-table-container.drag-active {
+  border: 2px dashed var(--primary-color, #007ad9);
+  background: rgba(0, 122, 217, 0.08);
+  transition: border 0.2s, background 0.2s;
+}
+
 /* Estilos específicos para la DataTable del explorador */
 .file-explorer-datatable {
   border: none !important;
