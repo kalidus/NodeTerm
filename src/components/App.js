@@ -991,29 +991,31 @@ const App = () => {
 
   // Función para abrir explorador de archivos SSH
   const openFileExplorer = (sshNode) => {
-    // Siempre crear nueva conexión SSH específica para el explorador
+    // Buscar si ya existe un explorador para este host+usuario
+    const existingTabIndex = fileExplorerTabs.findIndex(tab => tab.sshConfig.host === sshNode.data.host && tab.sshConfig.username === sshNode.data.user);
+    if (existingTabIndex !== -1) {
+      // Activar la pestaña existente
+      setActiveTabIndex(sshTabs.length + existingTabIndex);
+      return;
+    }
+    // Si no existe, crear nueva conexión SSH específica para el explorador
     const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
-
-    // Establecer conexión SSH para el explorador
     const sshConfig = {
       host: sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
     };
-
     if (window.electron && window.electron.ipcRenderer) {
       window.electron.ipcRenderer.send('ssh:connect', { tabId: explorerTabId, config: sshConfig });
     }
-
     const newExplorerTab = {
       key: explorerTabId,
       label: `📁 ${sshNode.label}`,
       originalKey: sshNode.key,
       sshConfig: sshConfig,
       type: 'explorer',
-      needsOwnConnection: true // Siempre necesita su propia conexión
+      needsOwnConnection: true
     };
-
     setFileExplorerTabs(prevTabs => {
       const newTabs = [...prevTabs, newExplorerTab];
       const totalTabs = sshTabs.length + newTabs.length;
