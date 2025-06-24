@@ -20,7 +20,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             try {
                  fitAddon.current?.fit();
             } catch (e) {
-                console.log("Failed to fit terminal", e);
+                // Elimina cualquier console.log de depuración restante.
             }
         },
         focus: () => {
@@ -132,7 +132,11 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
             // Listen for connection error
             const errorListener = (error) => {
-                term.current?.writeln(`\r\n\x1b[31mConnection Error: ${error}\x1b[0m`);
+                let message = error;
+                if (typeof error === 'string' && error.includes('Channel open failure')) {
+                    message = `No se pudo abrir un nuevo canal SSH.\r\n\r\nEsto suele ocurrir porque el servidor solo permite un canal SSH por sesión, o el sistema necesita ser reiniciado.\r\n\r\nDetalles: ${error}`;
+                }
+                term.current?.writeln(`\r\n\x1b[31mConnection Error: ${message}\x1b[0m`);
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, errorListener);
 
