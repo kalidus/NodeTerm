@@ -257,7 +257,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     statsLoop(realHostname.trim(), finalDistroId, config.host);
 
   } catch (err) {
-    event.sender.send(`ssh:error:${tabId}`, err.message);
+    const errorMsg = err && err.message ? err.message : (typeof err === 'string' ? err : JSON.stringify(err) || 'Error desconocido al conectar por SSH');
+    event.sender.send(`ssh:error:${tabId}`, errorMsg);
   }
 });
 
