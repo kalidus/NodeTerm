@@ -27,6 +27,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const [showDotfiles, setShowDotfiles] = useState(false); // Por defecto, ocultar dotfiles
     const toast = React.useRef(null);
     const [isDragActive, setIsDragActive] = useState(false);
+    const [homeDir, setHomeDir] = useState(null);
 
     // Escuchar cuando la conexión SSH esté lista
     useEffect(() => {
@@ -62,10 +63,12 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             try {
                 // Obtener el directorio home del usuario
                 const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId);
+                setHomeDir(homeDir || '/');
                 setCurrentPath(homeDir || '/');
             } catch (err) {
                 console.error('Error getting home directory:', err);
                 setError('No se pudo obtener el directorio home del usuario.');
+                setHomeDir('/');
                 setCurrentPath('/'); // Fallback al root
             } finally {
                 setLoading(false);
@@ -313,21 +316,19 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         }
     };
 
-    const handleDeleteFiles = () => {
-        if (selectedFiles.length === 0) return;
-        
-        const fileNames = selectedFiles.map(f => f.name).join(', ');
+    const handleDeleteFiles = (filesToDelete) => {
+        const filesTarget = filesToDelete || selectedFiles;
+        if (filesTarget.length === 0) return;
+        const fileNames = filesTarget.map(f => f.name).join(', ');
         confirmDialog({
-            message: `¿Estás seguro de eliminar ${selectedFiles.length} archivo(s)? Esta acción no se puede deshacer.\n\nArchivos: ${fileNames}`,
+            message: `¿Estás seguro de eliminar ${filesTarget.length} archivo(s)? Esta acción no se puede deshacer.\n\nArchivos: ${fileNames}`,
             header: 'Confirmar eliminación',
             icon: 'pi pi-exclamation-triangle',
             accept: async () => {
-                setTransferProgress({ type: 'delete', current: 0, total: selectedFiles.length });
-                
-                for (let i = 0; i < selectedFiles.length; i++) {
-                    const file = selectedFiles[i];
+                setTransferProgress({ type: 'delete', current: 0, total: filesTarget.length });
+                for (let i = 0; i < filesTarget.length; i++) {
+                    const file = filesTarget[i];
                     const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-                    
                     try {
                         const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory');
                         if (deleteResult.success) {
@@ -348,10 +349,8 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                             life: 5000
                         });
                     }
-                    
-                    setTransferProgress({ type: 'delete', current: i + 1, total: selectedFiles.length });
+                    setTransferProgress({ type: 'delete', current: i + 1, total: filesTarget.length });
                 }
-                
                 setTransferProgress(null);
                 setSelectedFiles([]);
                 loadFiles(currentPath); // Recargar archivos
@@ -461,7 +460,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             />
             <Button 
                 icon="pi pi-home" 
-                onClick={() => navigateToPath('/')}
+                onClick={() => homeDir && navigateToPath(homeDir)}
                 disabled={!sshReady || !currentPath}
                 tooltip="Inicio"
                 size="small"
@@ -489,7 +488,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             <Button 
                 icon="pi pi-trash" 
                 className="p-button-danger" 
-                onClick={handleDeleteFiles}
+                onClick={() => handleDeleteFiles(selectedFiles)}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
                 tooltip="Eliminar archivos seleccionados"
                 size="small"
@@ -594,13 +593,22 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                             body={(file) => (
                                 <div className="flex gap-2">
                                     {file.type === 'file' && (
-                                        <Button 
-                                            icon="pi pi-download" 
-                                            size="small"
-                                            className="p-button-text" 
-                                            onClick={() => handleDownloadFile(file)}
-                                            tooltip="Descargar archivo"
-                                        />
+                                        <>
+                                            <Button 
+                                                icon="pi pi-download" 
+                                                size="small"
+                                                className="p-button-text" 
+                                                onClick={() => handleDownloadFile(file)}
+                                                tooltip="Descargar archivo"
+                                            />
+                                            <Button
+                                                icon="pi pi-trash"
+                                                size="small"
+                                                className="p-button-text p-button-danger"
+                                                onClick={() => handleDeleteFiles([file])}
+                                                tooltip="Eliminar archivo"
+                                            />
+                                        </>
                                     )}
                                 </div>
                             )}
