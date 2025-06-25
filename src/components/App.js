@@ -876,7 +876,7 @@ const App = () => {
     // Add bastion host configuration if provided
     if (sshBastionHost.trim()) {
       sshData.bastionHost = sshBastionHost.trim();
-      sshData.bastionUser = sshBastionUser.trim();
+      sshData.bastionUser = validateBastionUser(sshBastionUser.trim());
       sshData.bastionPassword = sshBastionPassword.trim();
       if (sshBastionPort.trim()) {
         sshData.bastionPort = parseInt(sshBastionPort.trim()) || 22;
@@ -925,7 +925,7 @@ const App = () => {
     setEditSSHPassword(node.data?.password || '');
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
     setEditSSHBastionHost(node.data?.bastionHost || '');
-    setEditSSHBastionUser(node.data?.bastionUser || '');
+    setEditSSHBastionUser(validateBastionUser(node.data?.bastionUser || ''));
     setEditSSHBastionPassword(node.data?.bastionPassword || '');
     setEditSSHBastionPort(node.data?.bastionPort ? node.data.bastionPort.toString() : '');
     setShowEditSSHDialog(true);
@@ -958,7 +958,7 @@ const App = () => {
       // Add bastion host configuration if provided
       if (editSSHBastionHost.trim()) {
         updatedData.bastionHost = editSSHBastionHost.trim();
-        updatedData.bastionUser = editSSHBastionUser.trim();
+        updatedData.bastionUser = validateBastionUser(editSSHBastionUser.trim());
         updatedData.bastionPassword = editSSHBastionPassword.trim();
         if (editSSHBastionPort.trim()) {
           updatedData.bastionPort = parseInt(editSSHBastionPort.trim()) || 22;
@@ -1089,6 +1089,39 @@ const App = () => {
       setActiveTabIndex(totalTabs - 1);
       return newTabs;
     });
+  };
+
+  // Helper function to validate and clean bastion user format
+  const validateBastionUser = (user) => {
+    if (!user) return user;
+    
+    // Check for any duplicate @word@word@ pattern and fix it
+    // This regex captures any pattern like @WORD@WORD@ and replaces with @WORD@
+    const duplicatePattern = /@([^@]+)@\1@/g;
+    let cleaned = user;
+    let hasChanges = false;
+    
+    // Keep replacing until no more duplicates are found
+    while (duplicatePattern.test(cleaned)) {
+      const originalCleaned = cleaned;
+      cleaned = cleaned.replace(duplicatePattern, '@$1@');
+      hasChanges = true;
+      duplicatePattern.lastIndex = 0; // Reset regex for next iteration
+      
+      // Prevent infinite loop
+      if (originalCleaned === cleaned) break;
+    }
+    
+    if (hasChanges) {
+      toast.current.show({
+        severity: 'warn',
+        summary: 'Formato corregido',
+        detail: 'Se detectó y corrigió una duplicación en el usuario de bastión',
+        life: 3000
+      });
+    }
+    
+    return cleaned;
   };
 
   return (
@@ -1401,7 +1434,13 @@ const App = () => {
           </div>
           <div className="p-field">
             <label htmlFor="sshBastionUser">Usuario de Bastión</label>
-            <InputText id="sshBastionUser" value={sshBastionUser} onChange={e => setSSHBastionUser(e.target.value)} placeholder="usuario" />
+            <InputText 
+              id="sshBastionUser" 
+              value={sshBastionUser} 
+              onChange={e => setSSHBastionUser(validateBastionUser(e.target.value))} 
+              placeholder="usuario" 
+              onBlur={e => setSSHBastionUser(validateBastionUser(e.target.value))}
+            />
           </div>
           <div className="p-field">
             <label htmlFor="sshBastionPassword">Contraseña de Bastión</label>
@@ -1460,7 +1499,13 @@ const App = () => {
           </div>
           <div className="p-field">
             <label htmlFor="editSSHBastionUser">Usuario de Bastión</label>
-            <InputText id="editSSHBastionUser" value={editSSHBastionUser} onChange={e => setEditSSHBastionUser(e.target.value)} placeholder="usuario" />
+            <InputText 
+              id="editSSHBastionUser" 
+              value={editSSHBastionUser} 
+              onChange={e => setEditSSHBastionUser(validateBastionUser(e.target.value))} 
+              placeholder="usuario" 
+              onBlur={e => setEditSSHBastionUser(validateBastionUser(e.target.value))}
+            />
           </div>
           <div className="p-field">
             <label htmlFor="editSSHBastionPassword">Contraseña de Bastión</label>
