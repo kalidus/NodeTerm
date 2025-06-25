@@ -7,6 +7,7 @@ const path = require('path');
 const url = require('url');
 const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
+const { Client: SSH2Client } = require('ssh2');
 
 let mainWindow;
 
@@ -14,6 +15,95 @@ let mainWindow;
 const sshConnections = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
+
+// Helper function to create SSH connection (with bastion support)
+async function createSSHConnection(config, tabId) {
+  if (config.bastionHost) {
+    // Check if this is a proxy-style bastion (where bastion user contains routing info)
+    const isProxyBastion = config.bastionUser && config.bastionUser.includes('@') && config.bastionUser.includes(':');
+    
+    if (isProxyBastion) {
+      // For proxy-style bastions, connect directly to bastion with the special user format
+      const bastionClient = new SSH2Client();
+      
+      return new Promise((resolve, reject) => {
+        bastionClient.on('ready', () => {
+          resolve({ ssh: bastionClient, bastionClient: null });
+        });
+        
+        bastionClient.on('error', (err) => {
+          reject(err);
+        });
+        
+        // Connect directly to bastion with the routing user
+        bastionClient.connect({
+          host: config.bastionHost,
+          port: config.bastionPort || 22,
+          username: config.bastionUser, // This contains the routing info
+          password: config.bastionPassword,
+          readyTimeout: 99999
+        });
+      });
+    } else {
+      // Traditional bastion tunneling
+      const bastionClient = new SSH2Client();
+      const targetClient = new SSH2Client();
+      
+      return new Promise((resolve, reject) => {
+        bastionClient.on('ready', () => {
+          // Create a tunnel through the bastion host
+          bastionClient.forwardOut(
+            '127.0.0.1', // source IP
+            12345, // source port (arbitrary)
+            config.host, // destination IP
+            config.port || 22, // destination port
+            (err, stream) => {
+              if (err) {
+                bastionClient.end();
+                return reject(err);
+              }
+              
+              // Connect to target host through the tunnel
+              targetClient.on('ready', () => {
+                resolve({ ssh: targetClient, bastionClient });
+              });
+              
+              targetClient.on('error', (err) => {
+                bastionClient.end();
+                reject(err);
+              });
+              
+              targetClient.connect({
+                sock: stream,
+                username: config.username,
+                password: config.password,
+                readyTimeout: 99999
+              });
+            }
+          );
+        });
+        
+        bastionClient.on('error', (err) => {
+          reject(err);
+        });
+        
+        // Connect to bastion host
+        bastionClient.connect({
+          host: config.bastionHost,
+          port: config.bastionPort || 22,
+          username: config.bastionUser,
+          password: config.bastionPassword,
+          readyTimeout: 99999
+        });
+      });
+    }
+  } else {
+    // Direct connection
+    const ssh = new SSH2Promise(config);
+    await ssh.connect();
+    return { ssh };
+  }
+}
 
 // Helper function to parse 'df -P' command output
 function parseDfOutput(dfOutput) {
@@ -105,15 +195,44 @@ app.on('activate', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
-  const cacheKey = `${config.username}@${config.host}:${config.port}`;
-  const ssh = new SSH2Promise(config);
+  const cacheKey = config.bastionHost 
+    ? (config.bastionUser && config.bastionUser.includes('@') && config.bastionUser.includes(':')
+       ? `${config.bastionUser}@${config.bastionHost}:${config.bastionPort || 22}` // Proxy-style bastion
+       : `${config.username}@${config.host}:${config.port || 22}:via:${config.bastionUser}@${config.bastionHost}:${config.bastionPort || 22}`) // Traditional bastion
+    : `${config.username}@${config.host}:${config.port || 22}`;
+  
+  let sshConnection;
 
   const statsLoop = async (hostname, distro, ip) => {
     if (!sshConnections[tabId]) return; // Stop if connection is closed
 
     try {
+      const conn = sshConnections[tabId];
+      const sshClient = conn.ssh;
+      
+          // Helper function to execute commands for both SSH2Promise and SSH2Client
+    const execCommand = (command) => {
+      if (config.bastionHost || sshClient.constructor.name === 'SSH2Client') {
+        // For SSH2Client (bastion connections)
+        return new Promise((resolve, reject) => {
+          sshClient.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            }).on('close', () => {
+              resolve(output);
+            }).on('error', reject);
+          });
+        });
+      } else {
+        // For SSH2Promise (direct connections)
+        return sshClient.exec(command);
+      }
+    };
+      
       // --- Get CPU stats first
-      const cpuStatOutput = await ssh.exec("grep 'cpu ' /proc/stat");
+      const cpuStatOutput = await execCommand("grep 'cpu ' /proc/stat");
       const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
       const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
 
@@ -134,7 +253,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sshConnections[tabId].previousCpu = currentCpu;
 
       // --- Get Memory, Disk, Uptime and Network stats ---
-      const allStatsRes = await ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
+      const allStatsRes = await execCommand("free -b && df -P && uptime && cat /proc/net/dev");
       const parts = allStatsRes.trim().split('\n');
 
       // Parse Memory
@@ -206,11 +325,34 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       event.sender.send(`ssh:data:${tabId}`, motdCache[cacheKey]);
     }
 
-    await ssh.connect();
+    // Create SSH connection (with or without bastion)
+    sshConnection = await createSSHConnection(config, tabId);
+    const { ssh, bastionClient } = sshConnection;
     
-    const stream = await ssh.shell({ term: 'xterm-256color' });
+    let stream;
+    if (config.bastionHost || ssh.constructor.name === 'SSH2Client') {
+      // For bastion connections, ssh is the raw SSH2Client
+      stream = await new Promise((resolve, reject) => {
+        ssh.shell({ term: 'xterm-256color' }, (err, stream) => {
+          if (err) reject(err);
+          else resolve(stream);
+        });
+      });
+    } else {
+      // For direct connections, ssh is SSH2Promise
+      stream = await ssh.shell({ term: 'xterm-256color' });
+    }
 
-    sshConnections[tabId] = { ssh, stream, config, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
+    sshConnections[tabId] = { 
+      ssh, 
+      bastionClient, 
+      stream, 
+      config, 
+      previousCpu: null, 
+      statsTimeout: null, 
+      previousNet: null, 
+      previousTime: null 
+    };
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
@@ -247,13 +389,35 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // After setting up the shell, get the hostname/distro and start the stats loop
     let realHostname = 'unknown';
     let osRelease = '';
+    
+    // Helper function to execute commands for both SSH2Promise and SSH2Client
+    const execCommand = (command) => {
+      if (config.bastionHost || ssh.constructor.name === 'SSH2Client') {
+        // For SSH2Client (bastion connections)
+        return new Promise((resolve, reject) => {
+          ssh.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            }).on('close', () => {
+              resolve(output);
+            }).on('error', reject);
+          });
+        });
+      } else {
+        // For SSH2Promise (direct connections)
+        return ssh.exec(command);
+      }
+    };
+    
     try {
-      realHostname = (await ssh.exec('hostname')).trim();
+      realHostname = (await execCommand('hostname')).trim();
     } catch (e) {
       // Si falla, dejamos 'unknown'
     }
     try {
-      osRelease = await ssh.exec('cat /etc/os-release');
+      osRelease = await execCommand('cat /etc/os-release');
     } catch (e) {
       osRelease = 'ID=linux'; // fallback si no existe el archivo
     }
@@ -290,7 +454,21 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
     }
-    conn.ssh.close();
+    
+    // Close the SSH connection
+    if (conn.ssh) {
+      if (typeof conn.ssh.close === 'function') {
+        conn.ssh.close(); // SSH2Promise
+      } else if (typeof conn.ssh.end === 'function') {
+        conn.ssh.end(); // SSH2Client
+      }
+    }
+    
+    // Close the bastion connection if it exists
+    if (conn.bastionClient) {
+      conn.bastionClient.end();
+    }
+    
     delete sshConnections[tabId];
   }
 });
@@ -305,7 +483,20 @@ ipcMain.on('app-quit', () => {
     if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
       conn.stream.removeAllListeners();
     }
-    conn.ssh.close();
+    
+    // Close the SSH connection
+    if (conn.ssh) {
+      if (typeof conn.ssh.close === 'function') {
+        conn.ssh.close(); // SSH2Promise
+      } else if (typeof conn.ssh.end === 'function') {
+        conn.ssh.end(); // SSH2Client
+      }
+    }
+    
+    // Close the bastion connection if it exists
+    if (conn.bastionClient) {
+      conn.bastionClient.end();
+    }
   });
   app.quit();
 });
@@ -319,7 +510,20 @@ app.on('before-quit', () => {
     if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
       conn.stream.removeAllListeners();
     }
-    conn.ssh.close();
+    
+    // Close the SSH connection
+    if (conn.ssh) {
+      if (typeof conn.ssh.close === 'function') {
+        conn.ssh.close(); // SSH2Promise
+      } else if (typeof conn.ssh.end === 'function') {
+        conn.ssh.end(); // SSH2Client
+      }
+    }
+    
+    // Close the bastion connection if it exists
+    if (conn.bastionClient) {
+      conn.bastionClient.end();
+    }
   });
 });
 
@@ -351,8 +555,29 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
   }
 
   try {
+    // Helper function to execute commands for both SSH2Promise and SSH2Client
+    const execCommand = (command) => {
+      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+        // For SSH2Client (bastion connections)
+        return new Promise((resolve, reject) => {
+          conn.ssh.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            }).on('close', () => {
+              resolve(output);
+            }).on('error', reject);
+          });
+        });
+      } else {
+        // For SSH2Promise (direct connections)
+        return conn.ssh.exec(command);
+      }
+    };
+    
     // Usar ls con formato largo para obtener información detallada
-    const lsOutput = await conn.ssh.exec(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
+    const lsOutput = await execCommand(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
     
     if (lsOutput.includes('ERROR: Cannot access directory')) {
       throw new Error(`Cannot access directory: ${path}`);
@@ -424,7 +649,28 @@ ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
   }
 
   try {
-    const result = await conn.ssh.exec(`test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+    // Helper function to execute commands for both SSH2Promise and SSH2Client
+    const execCommand = (command) => {
+      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+        // For SSH2Client (bastion connections)
+        return new Promise((resolve, reject) => {
+          conn.ssh.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            }).on('close', () => {
+              resolve(output);
+            }).on('error', reject);
+          });
+        });
+      } else {
+        // For SSH2Promise (direct connections)
+        return conn.ssh.exec(command);
+      }
+    };
+    
+    const result = await execCommand(`test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"`);
     return result.trim() === 'EXISTS';
   } catch (error) {
     return false;
@@ -439,7 +685,28 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
   }
 
   try {
-    const homeDir = await conn.ssh.exec('echo $HOME');
+    // Helper function to execute commands for both SSH2Promise and SSH2Client
+    const execCommand = (command) => {
+      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+        // For SSH2Client (bastion connections)
+        return new Promise((resolve, reject) => {
+          conn.ssh.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            }).on('close', () => {
+              resolve(output);
+            }).on('error', reject);
+          });
+        });
+      } else {
+        // For SSH2Promise (direct connections)
+        return conn.ssh.exec(command);
+      }
+    };
+    
+    const homeDir = await execCommand('echo $HOME');
     return homeDir.trim();
   } catch (error) {
     return '/';
@@ -454,19 +721,87 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
   }
 
   try {
-    // Crear una nueva instancia de NodeSSH para operaciones de archivos
-    const nodeSSH = new NodeSSH();
-    await nodeSSH.connect({
-      host: conn.config.host,
-      username: conn.config.username,
-      password: conn.config.password,
-      port: conn.config.port || 22,
-      readyTimeout: 99999
-    });
-    
-    await nodeSSH.getFile(localPath, remotePath);
-    nodeSSH.dispose();
-    return { success: true };
+    if (conn.config.bastionHost) {
+      // Check if this is a proxy-style bastion
+      const isProxyBastion = conn.config.bastionUser && conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
+      
+      if (isProxyBastion) {
+        // For proxy-style bastions, use the existing connection
+        return new Promise((resolve, reject) => {
+          conn.ssh.sftp((err, sftp) => {
+            if (err) return reject({ success: false, error: err.message });
+            
+            sftp.fastGet(remotePath, localPath, (err) => {
+              if (err) reject({ success: false, error: err.message });
+              else resolve({ success: true });
+            });
+          });
+        });
+      } else {
+        // For traditional bastions, we need to create a new connection through the bastion
+        const bastionClient = new SSH2Client();
+        const targetClient = new SSH2Client();
+      
+        return new Promise((resolve, reject) => {
+          bastionClient.on('ready', () => {
+            bastionClient.forwardOut('127.0.0.1', 12345, conn.config.host, conn.config.port || 22, (err, stream) => {
+              if (err) {
+                bastionClient.end();
+                return reject(err);
+              }
+              
+              targetClient.on('ready', () => {
+                targetClient.sftp((err, sftp) => {
+                  if (err) {
+                    targetClient.end();
+                    bastionClient.end();
+                    return reject(err);
+                  }
+                  
+                  sftp.fastGet(remotePath, localPath, (err) => {
+                    sftp.end();
+                    targetClient.end();
+                    bastionClient.end();
+                    
+                    if (err) reject({ success: false, error: err.message });
+                    else resolve({ success: true });
+                  });
+                });
+              });
+              
+              targetClient.connect({
+                sock: stream,
+                username: conn.config.username,
+                password: conn.config.password,
+                readyTimeout: 99999
+              });
+            });
+          });
+          
+          bastionClient.connect({
+            host: conn.config.bastionHost,
+            port: conn.config.bastionPort || 22,
+            username: conn.config.bastionUser,
+            password: conn.config.bastionPassword,
+            readyTimeout: 99999
+          });
+        });
+      }
+    } else {
+      // Direct connection
+      const nodeSSH = new NodeSSH();
+      await nodeSSH.connect({
+        host: conn.config.host,
+        username: conn.config.username,
+        password: conn.config.password,
+        port: conn.config.port || 22,
+        readyTimeout: 99999
+      });
+      
+      await nodeSSH.getFile(localPath, remotePath);
+      nodeSSH.dispose();
+      return { success: true };
+    }
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -480,19 +815,87 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
   }
 
   try {
-    // Crear una nueva instancia de NodeSSH para operaciones de archivos
-    const nodeSSH = new NodeSSH();
-    await nodeSSH.connect({
-      host: conn.config.host,
-      username: conn.config.username,
-      password: conn.config.password,
-      port: conn.config.port || 22,
-      readyTimeout: 99999
-    });
-    
-    await nodeSSH.putFile(localPath, remotePath);
-    nodeSSH.dispose();
-    return { success: true };
+    if (conn.config.bastionHost) {
+      // Check if this is a proxy-style bastion
+      const isProxyBastion = conn.config.bastionUser && conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
+      
+      if (isProxyBastion) {
+        // For proxy-style bastions, use the existing connection
+        return new Promise((resolve, reject) => {
+          conn.ssh.sftp((err, sftp) => {
+            if (err) return reject({ success: false, error: err.message });
+            
+            sftp.fastPut(localPath, remotePath, (err) => {
+              if (err) reject({ success: false, error: err.message });
+              else resolve({ success: true });
+            });
+          });
+        });
+      } else {
+        // For traditional bastions, we need to create a new connection through the bastion
+        const bastionClient = new SSH2Client();
+        const targetClient = new SSH2Client();
+      
+        return new Promise((resolve, reject) => {
+          bastionClient.on('ready', () => {
+            bastionClient.forwardOut('127.0.0.1', 12345, conn.config.host, conn.config.port || 22, (err, stream) => {
+              if (err) {
+                bastionClient.end();
+                return reject(err);
+              }
+              
+              targetClient.on('ready', () => {
+                targetClient.sftp((err, sftp) => {
+                  if (err) {
+                    targetClient.end();
+                    bastionClient.end();
+                    return reject(err);
+                  }
+                  
+                  sftp.fastPut(localPath, remotePath, (err) => {
+                    sftp.end();
+                    targetClient.end();
+                    bastionClient.end();
+                    
+                    if (err) reject({ success: false, error: err.message });
+                    else resolve({ success: true });
+                  });
+                });
+              });
+              
+              targetClient.connect({
+                sock: stream,
+                username: conn.config.username,
+                password: conn.config.password,
+                readyTimeout: 99999
+              });
+            });
+          });
+          
+          bastionClient.connect({
+            host: conn.config.bastionHost,
+            port: conn.config.bastionPort || 22,
+            username: conn.config.bastionUser,
+            password: conn.config.bastionPassword,
+            readyTimeout: 99999
+          });
+        });
+      }
+    } else {
+      // Direct connection
+      const nodeSSH = new NodeSSH();
+      await nodeSSH.connect({
+        host: conn.config.host,
+        username: conn.config.username,
+        password: conn.config.password,
+        port: conn.config.port || 22,
+        readyTimeout: 99999
+      });
+      
+      await nodeSSH.putFile(localPath, remotePath);
+      nodeSSH.dispose();
+      return { success: true };
+    }
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -506,8 +909,29 @@ ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory
   }
 
   try {
+    // Helper function to execute commands for both SSH2Promise and SSH2Client
+    const execCommand = (command) => {
+      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+        // For SSH2Client (bastion connections)
+        return new Promise((resolve, reject) => {
+          conn.ssh.exec(command, (err, stream) => {
+            if (err) return reject(err);
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            }).on('close', () => {
+              resolve(output);
+            }).on('error', reject);
+          });
+        });
+      } else {
+        // For SSH2Promise (direct connections)
+        return conn.ssh.exec(command);
+      }
+    };
+    
     const command = isDirectory ? `rm -rf "${remotePath}"` : `rm "${remotePath}"`;
-    await conn.ssh.exec(command);
+    await execCommand(command);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

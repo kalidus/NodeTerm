@@ -46,6 +46,15 @@ const App = () => {
   const [pendingExplorerSession, setPendingExplorerSession] = useState(null);
   const [sshPassword, setSSHPassword] = useState('');
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
+  // Add bastion host support
+  const [sshBastionHost, setSSHBastionHost] = useState('');
+  const [sshBastionUser, setSSHBastionUser] = useState('');
+  const [sshBastionPassword, setSSHBastionPassword] = useState('');
+  const [sshBastionPort, setSSHBastionPort] = useState('');
+  const [editSSHBastionHost, setEditSSHBastionHost] = useState('');
+  const [editSSHBastionUser, setEditSSHBastionUser] = useState('');
+  const [editSSHBastionPassword, setEditSSHBastionPassword] = useState('');
+  const [editSSHBastionPort, setEditSSHBastionPort] = useState('');
   const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
 
@@ -719,7 +728,17 @@ const App = () => {
               host: node.data.host,
               username: node.data.user,
               password: node.data.password,
+              port: node.data.port || 22,
             };
+            
+            // Add bastion configuration if available
+            if (node.data.bastionHost) {
+              sshConfig.bastionHost = node.data.bastionHost;
+              sshConfig.bastionUser = node.data.bastionUser;
+              sshConfig.bastionPassword = node.data.bastionPassword;
+              sshConfig.bastionPort = node.data.bastionPort || 22;
+            }
+            
             const newTab = {
               key: tabId,
               label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
@@ -846,16 +865,28 @@ const App = () => {
       return;
     }
     const newKey = generateNextKey(sshTargetFolder);
+    const sshData = {
+      host: sshHost.trim(),
+      user: sshUser.trim(),
+      password: sshPassword.trim(),
+      remoteFolder: sshRemoteFolder.trim(),
+      type: 'ssh'
+    };
+    
+    // Add bastion host configuration if provided
+    if (sshBastionHost.trim()) {
+      sshData.bastionHost = sshBastionHost.trim();
+      sshData.bastionUser = sshBastionUser.trim();
+      sshData.bastionPassword = sshBastionPassword.trim();
+      if (sshBastionPort.trim()) {
+        sshData.bastionPort = parseInt(sshBastionPort.trim()) || 22;
+      }
+    }
+    
     const newSSHNode = {
       key: newKey,
       label: sshName.trim(),
-      data: {
-        host: sshHost.trim(),
-        user: sshUser.trim(),
-        password: sshPassword.trim(),
-        remoteFolder: sshRemoteFolder.trim(),
-        type: 'ssh'
-      },
+      data: sshData,
       draggable: true,
       uid: `ssh_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
       createdAt: new Date().toISOString(),
@@ -876,6 +907,7 @@ const App = () => {
     updateNodesWithKeys(nodesCopy);
     setShowSSHDialog(false);
     setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder('');
+    setSSHBastionHost(''); setSSHBastionUser(''); setSSHBastionPassword(''); setSSHBastionPort('');
     toast.current.show({
       severity: 'success',
       summary: 'SSH añadida',
@@ -892,6 +924,10 @@ const App = () => {
     setEditSSHUser(node.data?.user || '');
     setEditSSHPassword(node.data?.password || '');
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
+    setEditSSHBastionHost(node.data?.bastionHost || '');
+    setEditSSHBastionUser(node.data?.bastionUser || '');
+    setEditSSHBastionPassword(node.data?.bastionPassword || '');
+    setEditSSHBastionPort(node.data?.bastionPort ? node.data.bastionPort.toString() : '');
     setShowEditSSHDialog(true);
   };
 
@@ -910,7 +946,7 @@ const App = () => {
     const nodeToEdit = findNodeByKey(nodesCopy, editSSHNode.key);
     if (nodeToEdit) {
       nodeToEdit.label = editSSHName.trim();
-      nodeToEdit.data = { 
+      const updatedData = { 
         ...nodeToEdit.data, 
         host: editSSHHost.trim(), 
         user: editSSHUser.trim(),
@@ -918,6 +954,24 @@ const App = () => {
         remoteFolder: editSSHRemoteFolder.trim(),
         type: 'ssh'
       };
+      
+      // Add bastion host configuration if provided
+      if (editSSHBastionHost.trim()) {
+        updatedData.bastionHost = editSSHBastionHost.trim();
+        updatedData.bastionUser = editSSHBastionUser.trim();
+        updatedData.bastionPassword = editSSHBastionPassword.trim();
+        if (editSSHBastionPort.trim()) {
+          updatedData.bastionPort = parseInt(editSSHBastionPort.trim()) || 22;
+        }
+      } else {
+        // Remove bastion host configuration if not provided
+        delete updatedData.bastionHost;
+        delete updatedData.bastionUser;
+        delete updatedData.bastionPassword;
+        delete updatedData.bastionPort;
+      }
+      
+      nodeToEdit.data = updatedData;
     }
     updateNodesWithKeys(nodesCopy);
     setShowEditSSHDialog(false);
@@ -927,6 +981,10 @@ const App = () => {
     setEditSSHUser('');
     setEditSSHPassword('');
     setEditSSHRemoteFolder('');
+    setEditSSHBastionHost('');
+    setEditSSHBastionUser('');
+    setEditSSHBastionPassword('');
+    setEditSSHBastionPort('');
     toast.current.show({
       severity: 'success',
       summary: 'SSH editada',
@@ -1004,7 +1062,16 @@ const App = () => {
       host: sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
+      port: sshNode.data.port || 22,
     };
+    
+    // Add bastion configuration if available
+    if (sshNode.data.bastionHost) {
+      sshConfig.bastionHost = sshNode.data.bastionHost;
+      sshConfig.bastionUser = sshNode.data.bastionUser;
+      sshConfig.bastionPassword = sshNode.data.bastionPassword;
+      sshConfig.bastionPort = sshNode.data.bastionPort || 22;
+    }
     if (window.electron && window.electron.ipcRenderer) {
       window.electron.ipcRenderer.send('ssh:connect', { tabId: explorerTabId, config: sshConfig });
     }
@@ -1326,6 +1393,25 @@ const App = () => {
             <label htmlFor="sshRemoteFolder">Carpeta remota</label>
             <InputText id="sshRemoteFolder" value={sshRemoteFolder} onChange={e => setSSHRemoteFolder(e.target.value)} placeholder="/home/usuario" />
           </div>
+          
+          <h6>Configuración de Bastión (Opcional)</h6>
+          <div className="p-field">
+            <label htmlFor="sshBastionHost">Host de Bastión</label>
+            <InputText id="sshBastionHost" value={sshBastionHost} onChange={e => setSSHBastionHost(e.target.value)} placeholder="bastion.example.com" />
+          </div>
+          <div className="p-field">
+            <label htmlFor="sshBastionUser">Usuario de Bastión</label>
+            <InputText id="sshBastionUser" value={sshBastionUser} onChange={e => setSSHBastionUser(e.target.value)} placeholder="usuario" />
+          </div>
+          <div className="p-field">
+            <label htmlFor="sshBastionPassword">Contraseña de Bastión</label>
+            <InputText id="sshBastionPassword" type="password" value={sshBastionPassword} onChange={e => setSSHBastionPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="sshBastionPort">Puerto de Bastión</label>
+            <InputText id="sshBastionPort" value={sshBastionPort} onChange={e => setSSHBastionPort(e.target.value)} placeholder="22" />
+          </div>
+          
           <div className="p-field">
             <label htmlFor="sshTargetFolder">Carpeta destino</label>
             <Dropdown id="sshTargetFolder" value={sshTargetFolder} options={getAllFolders(nodes)} onChange={e => setSSHTargetFolder(e.value)} placeholder="Selecciona una carpeta (opcional)" showClear filter />
@@ -1365,6 +1451,24 @@ const App = () => {
           <div className="p-field">
             <label htmlFor="editSSHRemoteFolder">Carpeta remota</label>
             <InputText id="editSSHRemoteFolder" value={editSSHRemoteFolder} onChange={e => setEditSSHRemoteFolder(e.target.value)} placeholder="/home/usuario" />
+          </div>
+          
+          <h6>Configuración de Bastión (Opcional)</h6>
+          <div className="p-field">
+            <label htmlFor="editSSHBastionHost">Host de Bastión</label>
+            <InputText id="editSSHBastionHost" value={editSSHBastionHost} onChange={e => setEditSSHBastionHost(e.target.value)} placeholder="bastion.example.com" />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editSSHBastionUser">Usuario de Bastión</label>
+            <InputText id="editSSHBastionUser" value={editSSHBastionUser} onChange={e => setEditSSHBastionUser(e.target.value)} placeholder="usuario" />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editSSHBastionPassword">Contraseña de Bastión</label>
+            <InputText id="editSSHBastionPassword" type="password" value={editSSHBastionPassword} onChange={e => setEditSSHBastionPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editSSHBastionPort">Puerto de Bastión</label>
+            <InputText id="editSSHBastionPort" value={editSSHBastionPort} onChange={e => setEditSSHBastionPort(e.target.value)} placeholder="22" />
           </div>
         </div>
       </Dialog>
