@@ -478,6 +478,19 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 tooltip="Subir archivos"
                 size="small"
             />
+            <Button
+                icon="pi pi-download"
+                onClick={async () => {
+                    for (const file of selectedFiles) {
+                        if (file.type === 'file') {
+                            await handleDownloadFile(file);
+                        }
+                    }
+                }}
+                disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
+                tooltip="Descargar archivos seleccionados"
+                size="small"
+            />
             <Button 
                 icon="pi pi-folder" 
                 onClick={() => setNewFolderDialog(true)}
