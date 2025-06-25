@@ -217,35 +217,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // Helper function to execute commands for both SSH2Promise and SSH2Client
       const execCommand = (command) => {
         if (isProxyBastion) {
-          // For proxy bastions, use the existing terminal stream to avoid "Channel open failure"
-          return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Stats command timeout'));
-            }, 8000);
-            
-            let output = '';
-            let commandSent = false;
-            
-            const dataHandler = (data) => {
-              const dataStr = data.toString();
-              output += dataStr;
-              
-              // Look for command completion (prompt appears)
-              if (commandSent && (dataStr.match(/[\n\r].*[$#>]\s*$/) || dataStr.includes('$'))) {
-                clearTimeout(timeout);
-                conn.stream.removeListener('data', dataHandler);
-                resolve(output);
-              }
-            };
-            
-            conn.stream.on('data', dataHandler);
-            
-            // Send command after a small delay to ensure handler is ready
-            setTimeout(() => {
-              commandSent = true;
-              conn.stream.write(command + '\n');
-            }, 50);
-          });
+          // For proxy bastions, temporarily disable stats to avoid interfering with terminal input
+          // TODO: Implement a better solution that doesn't interfere with terminal stream
+          throw new Error('Stats temporarily disabled for proxy bastions to avoid input interference');
         } else if (config.bastionHost || sshClient.constructor.name === 'SSH2Client') {
           // For SSH2Client (traditional bastion connections)
           return new Promise((resolve, reject) => {
