@@ -356,6 +356,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
+    let suppressFileExplorerCommands = false;
+    
     stream.on('data', (data) => {
       const dataStr = data.toString('utf-8');
 
@@ -369,6 +371,28 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         // If it was already cached, we've already sent the cached version.
         // We do nothing here, effectively suppressing the duplicate message.
         return; 
+      }
+      
+      // Don't show file explorer commands in terminal
+      if (dataStr.includes('ls -la ') || 
+          dataStr.includes('test -d ') || 
+          dataStr.includes('echo $HOME') ||
+          dataStr.includes('rm -rf ') ||
+          dataStr.includes('rm ') ||
+          dataStr.includes('mkdir -p ')) {
+        suppressFileExplorerCommands = true;
+        return;
+      }
+      
+      // Reset suppression after seeing a prompt
+      if (suppressFileExplorerCommands && dataStr.match(/[\n\r].*[$#]\s*$/)) {
+        suppressFileExplorerCommands = false;
+        return;
+      }
+      
+      // Skip if we're suppressing file explorer output
+      if (suppressFileExplorerCommands) {
+        return;
       }
       
       // For all subsequent packets, just send them
@@ -550,59 +574,110 @@ ipcMain.handle('app:get-sessions', async () => {
 // File Explorer IPC Handlers
 ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
   const conn = sshConnections[tabId];
-  if (!conn || !conn.ssh) {
+  if (!conn || !conn.ssh || !conn.stream) {
     throw new Error('SSH connection not found');
   }
 
   try {
-    // Helper function to execute commands for both SSH2Promise and SSH2Client
-    const execCommand = (command) => {
-      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
-        // For SSH2Client (bastion connections)
-        return new Promise((resolve, reject) => {
-          conn.ssh.exec(command, (err, stream) => {
-            if (err) return reject(err);
-            let output = '';
-            stream.on('data', (data) => {
-              output += data.toString();
-            }).on('close', () => {
-              resolve(output);
-            }).on('error', reject);
-          });
-        });
-      } else {
-        // For SSH2Promise (direct connections)
-        return conn.ssh.exec(command);
-      }
-    };
+    // For bastion proxy connections, use the existing terminal stream instead of creating new channels
+    const isProxyBastion = conn.config.bastionHost && conn.config.bastionUser && 
+                          conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
     
-    // Usar ls con formato largo para obtener información detallada
-    const lsOutput = await execCommand(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
+    let lsOutput;
+    
+    if (isProxyBastion) {
+      // Use the existing terminal stream to avoid "Channel open failure"
+      lsOutput = await new Promise((resolve, reject) => {
+        const command = `ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"\n`;
+        const timeout = setTimeout(() => {
+          reject(new Error('Command timeout'));
+        }, 10000);
+        
+        let output = '';
+        let collecting = false;
+        
+        const dataHandler = (data) => {
+          const dataStr = data.toString();
+          
+          if (dataStr.includes('ERROR: Cannot access directory')) {
+            clearTimeout(timeout);
+            conn.stream.removeListener('data', dataHandler);
+            resolve(dataStr);
+            return;
+          }
+          
+          // Start collecting when we see directory listing patterns
+          if (dataStr.includes('total ') || collecting) {
+            collecting = true;
+            output += dataStr;
+            
+            // Stop collecting when we see a new prompt ($ or # at start of line)
+            if (dataStr.match(/[\n\r].*[$#]\s*$/)) {
+              clearTimeout(timeout);
+              conn.stream.removeListener('data', dataHandler);
+              resolve(output);
+            }
+          }
+        };
+        
+        conn.stream.on('data', dataHandler);
+        conn.stream.write(command);
+      });
+    } else {
+      // For non-proxy connections, use the traditional method
+      const execCommand = (command) => {
+        if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+          return new Promise((resolve, reject) => {
+            conn.ssh.exec(command, (err, stream) => {
+              if (err) return reject(err);
+              let output = '';
+              stream.on('data', (data) => {
+                output += data.toString();
+              }).on('close', () => {
+                resolve(output);
+              }).on('error', reject);
+            });
+          });
+        } else {
+          return conn.ssh.exec(command);
+        }
+      };
+      
+      lsOutput = await execCommand(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
+    }
     
     if (lsOutput.includes('ERROR: Cannot access directory')) {
       throw new Error(`Cannot access directory: ${path}`);
     }
 
-    // Parsear la salida de ls -la
-    const lines = lsOutput.trim().split('\n');
+    // Parse ls -la output
+    const lines = lsOutput.trim().split('\n').filter(line => {
+      const trimmed = line.trim();
+      // Filter out prompt lines and irrelevant output
+      return trimmed && 
+             !trimmed.match(/^.*[$#]\s*$/) && 
+             !trimmed.startsWith('ls -la') &&
+             trimmed !== 'total 0' &&
+             !trimmed.match(/^total \d+$/);
+    });
+    
     const files = [];
 
-    // Saltar la primera línea que muestra el total
-    lines.slice(1).forEach(line => {
+    lines.forEach(line => {
       if (line.trim() === '') return;
 
-      // Parsear línea de ls -la (maneja archivos con espacios y enlaces simbólicos)
+      // Parse ls -la line (handles files with spaces and symlinks)
       const match = line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/);
       if (!match) return;
 
       const [, permissions, , owner, group, size, dateTime, fullName] = match;
       
-      // Manejar enlaces simbólicos (formato: "nombre -> destino")
+      // Handle symlinks (format: "name -> target")
       const name = fullName.includes(' -> ') ? fullName.split(' -> ')[0] : fullName;
       
-      // Saltar . y .. para el directorio actual
+      // Skip . and .. for current directory
       if (name === '.' || name === '..') {
-        // Solo incluir .. si no estamos en la raíz
+        // Only include .. if we're not at root
         if (name === '..' && path !== '/') {
           files.push({
             name: '..',
@@ -644,34 +719,63 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
 // Verificar si un directorio existe y es accesible
 ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
   const conn = sshConnections[tabId];
-  if (!conn || !conn.ssh) {
+  if (!conn || !conn.ssh || !conn.stream) {
     throw new Error('SSH connection not found');
   }
 
   try {
-    // Helper function to execute commands for both SSH2Promise and SSH2Client
-    const execCommand = (command) => {
-      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
-        // For SSH2Client (bastion connections)
-        return new Promise((resolve, reject) => {
-          conn.ssh.exec(command, (err, stream) => {
-            if (err) return reject(err);
-            let output = '';
-            stream.on('data', (data) => {
-              output += data.toString();
-            }).on('close', () => {
-              resolve(output);
-            }).on('error', reject);
-          });
-        });
-      } else {
-        // For SSH2Promise (direct connections)
-        return conn.ssh.exec(command);
-      }
-    };
+    const isProxyBastion = conn.config.bastionHost && conn.config.bastionUser && 
+                          conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
     
-    const result = await execCommand(`test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"`);
-    return result.trim() === 'EXISTS';
+    if (isProxyBastion) {
+      // Use the existing terminal stream to avoid "Channel open failure"
+      const result = await new Promise((resolve, reject) => {
+        const command = `test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"\n`;
+        const timeout = setTimeout(() => {
+          reject(new Error('Command timeout'));
+        }, 5000);
+        
+        let output = '';
+        
+        const dataHandler = (data) => {
+          const dataStr = data.toString();
+          output += dataStr;
+          
+          if (dataStr.includes('EXISTS') || dataStr.includes('NOT_EXISTS')) {
+            clearTimeout(timeout);
+            conn.stream.removeListener('data', dataHandler);
+            resolve(output);
+          }
+        };
+        
+        conn.stream.on('data', dataHandler);
+        conn.stream.write(command);
+      });
+      
+      return result.includes('EXISTS');
+    } else {
+      // For non-proxy connections, use the traditional method
+      const execCommand = (command) => {
+        if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+          return new Promise((resolve, reject) => {
+            conn.ssh.exec(command, (err, stream) => {
+              if (err) return reject(err);
+              let output = '';
+              stream.on('data', (data) => {
+                output += data.toString();
+              }).on('close', () => {
+                resolve(output);
+              }).on('error', reject);
+            });
+          });
+        } else {
+          return conn.ssh.exec(command);
+        }
+      };
+      
+      const result = await execCommand(`test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"`);
+      return result.trim() === 'EXISTS';
+    }
   } catch (error) {
     return false;
   }
@@ -680,34 +784,75 @@ ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
 // Obtener el directorio home del usuario
 ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
   const conn = sshConnections[tabId];
-  if (!conn || !conn.ssh) {
+  if (!conn || !conn.ssh || !conn.stream) {
     throw new Error('SSH connection not found');
   }
 
   try {
-    // Helper function to execute commands for both SSH2Promise and SSH2Client
-    const execCommand = (command) => {
-      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
-        // For SSH2Client (bastion connections)
-        return new Promise((resolve, reject) => {
-          conn.ssh.exec(command, (err, stream) => {
-            if (err) return reject(err);
-            let output = '';
-            stream.on('data', (data) => {
-              output += data.toString();
-            }).on('close', () => {
-              resolve(output);
-            }).on('error', reject);
-          });
-        });
-      } else {
-        // For SSH2Promise (direct connections)
-        return conn.ssh.exec(command);
-      }
-    };
+    const isProxyBastion = conn.config.bastionHost && conn.config.bastionUser && 
+                          conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
     
-    const homeDir = await execCommand('echo $HOME');
-    return homeDir.trim();
+    if (isProxyBastion) {
+      // Use the existing terminal stream to avoid "Channel open failure"
+      const homeDir = await new Promise((resolve, reject) => {
+        const command = `echo $HOME\n`;
+        const timeout = setTimeout(() => {
+          reject(new Error('Command timeout'));
+        }, 5000);
+        
+        let output = '';
+        let collecting = false;
+        
+        const dataHandler = (data) => {
+          const dataStr = data.toString();
+          
+          // Start collecting after the command echo
+          if (dataStr.includes('echo $HOME') || collecting) {
+            collecting = true;
+            output += dataStr;
+            
+            // Stop collecting when we see a path and a new prompt
+            const lines = output.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i].trim();
+              if (line.startsWith('/') && !line.includes('echo $HOME')) {
+                clearTimeout(timeout);
+                conn.stream.removeListener('data', dataHandler);
+                resolve(line);
+                return;
+              }
+            }
+          }
+        };
+        
+        conn.stream.on('data', dataHandler);
+        conn.stream.write(command);
+      });
+      
+      return homeDir;
+    } else {
+      // For non-proxy connections, use the traditional method
+      const execCommand = (command) => {
+        if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+          return new Promise((resolve, reject) => {
+            conn.ssh.exec(command, (err, stream) => {
+              if (err) return reject(err);
+              let output = '';
+              stream.on('data', (data) => {
+                output += data.toString();
+              }).on('close', () => {
+                resolve(output);
+              }).on('error', reject);
+            });
+          });
+        } else {
+          return conn.ssh.exec(command);
+        }
+      };
+      
+      const homeDir = await execCommand('echo $HOME');
+      return homeDir.trim();
+    }
   } catch (error) {
     return '/';
   }
@@ -904,34 +1049,64 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
 // Eliminar archivo en servidor SSH
 ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory }) => {
   const conn = sshConnections[tabId];
-  if (!conn || !conn.ssh) {
+  if (!conn || !conn.ssh || !conn.stream) {
     throw new Error('SSH connection not found');
   }
 
   try {
-    // Helper function to execute commands for both SSH2Promise and SSH2Client
-    const execCommand = (command) => {
-      if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
-        // For SSH2Client (bastion connections)
-        return new Promise((resolve, reject) => {
-          conn.ssh.exec(command, (err, stream) => {
-            if (err) return reject(err);
-            let output = '';
-            stream.on('data', (data) => {
-              output += data.toString();
-            }).on('close', () => {
-              resolve(output);
-            }).on('error', reject);
-          });
-        });
-      } else {
-        // For SSH2Promise (direct connections)
-        return conn.ssh.exec(command);
-      }
-    };
+    const isProxyBastion = conn.config.bastionHost && conn.config.bastionUser && 
+                          conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
     
     const command = isDirectory ? `rm -rf "${remotePath}"` : `rm "${remotePath}"`;
-    await execCommand(command);
+    
+    if (isProxyBastion) {
+      // Use the existing terminal stream to avoid "Channel open failure"
+      await new Promise((resolve, reject) => {
+        const fullCommand = `${command}\n`;
+        const timeout = setTimeout(() => {
+          reject(new Error('Command timeout'));
+        }, 10000);
+        
+        let commandSent = false;
+        
+        const dataHandler = (data) => {
+          const dataStr = data.toString();
+          
+          // Look for prompt after command completion
+          if (commandSent && dataStr.match(/[\n\r].*[$#]\s*$/)) {
+            clearTimeout(timeout);
+            conn.stream.removeListener('data', dataHandler);
+            resolve();
+          }
+        };
+        
+        conn.stream.on('data', dataHandler);
+        conn.stream.write(fullCommand);
+        commandSent = true;
+      });
+    } else {
+      // For non-proxy connections, use the traditional method
+      const execCommand = (command) => {
+        if (conn.config.bastionHost || conn.ssh.constructor.name === 'SSH2Client') {
+          return new Promise((resolve, reject) => {
+            conn.ssh.exec(command, (err, stream) => {
+              if (err) return reject(err);
+              let output = '';
+              stream.on('data', (data) => {
+                output += data.toString();
+              }).on('close', () => {
+                resolve(output);
+              }).on('error', reject);
+            });
+          });
+        } else {
+          return conn.ssh.exec(command);
+        }
+      };
+      
+      await execCommand(command);
+    }
+    
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -941,12 +1116,46 @@ ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory
 // Crear directorio en servidor SSH
 ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath }) => {
   const conn = sshConnections[tabId];
-  if (!conn || !conn.ssh) {
+  if (!conn || !conn.ssh || !conn.stream) {
     throw new Error('SSH connection not found');
   }
 
   try {
-    await conn.ssh.exec(`mkdir -p "${remotePath}"`);
+    const isProxyBastion = conn.config.bastionHost && conn.config.bastionUser && 
+                          conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
+    
+    const command = `mkdir -p "${remotePath}"`;
+    
+    if (isProxyBastion) {
+      // Use the existing terminal stream to avoid "Channel open failure"
+      await new Promise((resolve, reject) => {
+        const fullCommand = `${command}\n`;
+        const timeout = setTimeout(() => {
+          reject(new Error('Command timeout'));
+        }, 10000);
+        
+        let commandSent = false;
+        
+        const dataHandler = (data) => {
+          const dataStr = data.toString();
+          
+          // Look for prompt after command completion
+          if (commandSent && dataStr.match(/[\n\r].*[$#]\s*$/)) {
+            clearTimeout(timeout);
+            conn.stream.removeListener('data', dataHandler);
+            resolve();
+          }
+        };
+        
+        conn.stream.on('data', dataHandler);
+        conn.stream.write(fullCommand);
+        commandSent = true;
+      });
+    } else {
+      // For non-proxy connections, use the traditional method
+      await conn.ssh.exec(command);
+    }
+    
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
