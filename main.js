@@ -210,30 +210,67 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       const conn = sshConnections[tabId];
       const sshClient = conn.ssh;
       
-          // Helper function to execute commands for both SSH2Promise and SSH2Client
-    const execCommand = (command) => {
-      if (config.bastionHost || sshClient.constructor.name === 'SSH2Client') {
-        // For SSH2Client (bastion connections)
-        return new Promise((resolve, reject) => {
-          sshClient.exec(command, (err, stream) => {
-            if (err) return reject(err);
+      // Check if this is a proxy bastion that needs to use terminal stream
+      const isProxyBastion = conn.config.bastionHost && conn.config.bastionUser && 
+                            conn.config.bastionUser.includes('@') && conn.config.bastionUser.includes(':');
+      
+      // Helper function to execute commands for both SSH2Promise and SSH2Client
+      const execCommand = (command) => {
+        if (isProxyBastion) {
+          // For proxy bastions, use the existing terminal stream to avoid "Channel open failure"
+          return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Stats command timeout'));
+            }, 8000);
+            
             let output = '';
-            stream.on('data', (data) => {
-              output += data.toString();
-            }).on('close', () => {
-              resolve(output);
-            }).on('error', reject);
+            let commandSent = false;
+            
+            const dataHandler = (data) => {
+              const dataStr = data.toString();
+              output += dataStr;
+              
+              // Look for command completion (prompt appears)
+              if (commandSent && (dataStr.match(/[\n\r].*[$#>]\s*$/) || dataStr.includes('$'))) {
+                clearTimeout(timeout);
+                conn.stream.removeListener('data', dataHandler);
+                resolve(output);
+              }
+            };
+            
+            conn.stream.on('data', dataHandler);
+            
+            // Send command after a small delay to ensure handler is ready
+            setTimeout(() => {
+              commandSent = true;
+              conn.stream.write(command + '\n');
+            }, 50);
           });
-        });
-      } else {
-        // For SSH2Promise (direct connections)
-        return sshClient.exec(command);
-      }
-    };
+        } else if (config.bastionHost || sshClient.constructor.name === 'SSH2Client') {
+          // For SSH2Client (traditional bastion connections)
+          return new Promise((resolve, reject) => {
+            sshClient.exec(command, (err, stream) => {
+              if (err) return reject(err);
+              let output = '';
+              stream.on('data', (data) => {
+                output += data.toString();
+              }).on('close', () => {
+                resolve(output);
+              }).on('error', reject);
+            });
+          });
+        } else {
+          // For SSH2Promise (direct connections)
+          return sshClient.exec(command);
+        }
+      };
       
       // --- Get CPU stats first
       const cpuStatOutput = await execCommand("grep 'cpu ' /proc/stat");
-      const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+      
+      // Clean output for proxy bastions (remove command echo and prompt)
+      const cleanCpuOutput = cpuStatOutput.split('\n').find(line => line.startsWith('cpu ')) || cpuStatOutput;
+      const cpuTimes = cleanCpuOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
       const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
 
       let cpuLoad = '0.00';
@@ -254,7 +291,17 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
       // --- Get Memory, Disk, Uptime and Network stats ---
       const allStatsRes = await execCommand("free -b && df -P && uptime && cat /proc/net/dev");
-      const parts = allStatsRes.trim().split('\n');
+      
+      // Clean output for proxy bastions - remove command echo and prompts
+      const lines = allStatsRes.split('\n');
+      const cleanLines = lines.filter(line => {
+        const trimmed = line.trim();
+        return trimmed && 
+               !trimmed.startsWith('free -b') &&
+               !trimmed.match(/^.*[$#>]\s*$/) &&
+               !trimmed.includes('&&');
+      });
+      const parts = cleanLines;
 
       // Parse Memory
       const memLine = parts.find(line => line.startsWith('Mem:'));
@@ -373,13 +420,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         return; 
       }
       
-      // Don't show file explorer commands in terminal
+      // Don't show file explorer and stats commands in terminal
       if (dataStr.includes('ls -la ') || 
           dataStr.includes('test -d ') || 
           dataStr.includes('echo $HOME') ||
           dataStr.includes('rm -rf ') ||
           dataStr.includes('rm ') ||
-          dataStr.includes('mkdir -p ')) {
+          dataStr.includes('mkdir -p ') ||
+          dataStr.includes("grep 'cpu ' /proc/stat") ||
+          dataStr.includes('free -b && df -P && uptime && cat /proc/net/dev')) {
         suppressFileExplorerCommands = true;
         return;
       }
