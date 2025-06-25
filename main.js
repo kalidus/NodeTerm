@@ -586,66 +586,75 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
     let lsOutput;
     
     if (isProxyBastion) {
-      // Use the existing terminal stream to avoid "Channel open failure"
+      // For proxy bastions, we must use the existing terminal stream
+      // because new SSH channels are administratively prohibited
+      const command = `ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`;
+      
+      console.log(`[${tabId}] Using terminal stream for proxy bastion:`, command);
+      
       lsOutput = await new Promise((resolve, reject) => {
-        const command = `ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"\n`;
-        const timeout = setTimeout(() => {
-          reject(new Error('Command timeout'));
-        }, 10000);
-        
         let output = '';
-        let collecting = false;
-        let commandEchoed = false;
+        let commandStarted = false;
+        
+        const timeout = setTimeout(() => {
+          console.log(`[${tabId}] Stream command completed by timeout, output:`, output);
+          conn.stream.removeListener('data', dataHandler);
+          
+          // Extract directory lines
+          const lines = output.split('\n');
+          const dirLines = [];
+          
+          for (let line of lines) {
+            line = line.trim();
+            if (line.match(/^[drwxlstT-]/)) {
+              dirLines.push(line);
+            }
+          }
+          
+          if (dirLines.length > 0) {
+            resolve(dirLines.join('\n'));
+          } else {
+            resolve('ERROR: No directory listing found');
+          }
+        }, 4000);
         
         const dataHandler = (data) => {
           const dataStr = data.toString();
+          console.log(`[${tabId}] Stream data:`, dataStr);
           output += dataStr;
           
-          // Check for error message first
-          if (dataStr.includes('ERROR: Cannot access directory')) {
+          // Mark that command has started when we see the command echo
+          if (!commandStarted && dataStr.includes('ls -la')) {
+            commandStarted = true;
+            console.log(`[${tabId}] Command echo detected`);
+          }
+          
+          // End when we see a prompt after the command started
+          if (commandStarted && dataStr.match(/\[.*@.*\]\s*\$\s*$/)) {
+            console.log(`[${tabId}] Prompt detected, ending command`);
             clearTimeout(timeout);
             conn.stream.removeListener('data', dataHandler);
-            resolve('ERROR: Cannot access directory');
-            return;
-          }
-          
-          // Wait for command to be echoed
-          if (dataStr.includes(`ls -la "${path}"`) || commandEchoed) {
-            commandEchoed = true;
-            collecting = true;
-          }
-          
-          // Start collecting when we see directory listing patterns or total
-          if (collecting && (dataStr.includes('total ') || dataStr.match(/^[drwxlstT-]/m))) {
-            // Stop collecting when we see a new prompt ($ or # or similar)
-            if (dataStr.match(/[\n\r].*[$#>]\s*$/m)) {
-              clearTimeout(timeout);
-              conn.stream.removeListener('data', dataHandler);
-              
-              // Clean output - remove command echo and prompt
-              let cleanOutput = output;
-              
-              // Remove command echo
-              const commandIndex = cleanOutput.indexOf(`ls -la "${path}"`);
-              if (commandIndex !== -1) {
-                cleanOutput = cleanOutput.substring(commandIndex);
-                const afterCommand = cleanOutput.indexOf('\n');
-                if (afterCommand !== -1) {
-                  cleanOutput = cleanOutput.substring(afterCommand + 1);
-                }
+            
+            // Extract directory lines from output
+            const lines = output.split('\n');
+            const dirLines = [];
+            
+            for (let line of lines) {
+              line = line.trim();
+              if (line.match(/^[drwxlstT-]/)) {
+                dirLines.push(line);
               }
-              
-              // Remove final prompt
-              cleanOutput = cleanOutput.replace(/[\n\r].*[$#>]\s*$/m, '');
-              
-              console.log('Debug - Raw ls output:', cleanOutput); // Debug log
-              resolve(cleanOutput);
             }
+            
+            console.log(`[${tabId}] Found ${dirLines.length} directory lines`);
+            const result = dirLines.join('\n');
+            console.log(`[${tabId}] Returning directory listing:`, result);
+            resolve(result);
           }
         };
         
         conn.stream.on('data', dataHandler);
-        conn.stream.write(command);
+        conn.stream.write(command + '\n');
       });
     } else {
       // For non-proxy connections, use the traditional method
@@ -670,15 +679,31 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
       lsOutput = await execCommand(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
     }
     
-    if (lsOutput.includes('ERROR: Cannot access directory')) {
+    console.log('Debug - About to check for errors in lsOutput:', lsOutput); // Debug log
+    
+    // Check if the command actually returned an error (not just containing the error text)
+    const outputLines = lsOutput.trim().split('\n');
+    const hasActualError = outputLines.some(line => 
+      line.trim() === 'ERROR: Cannot access directory' || 
+      line.includes('Permission denied') || 
+      line.includes('No such file or directory')
+    );
+    
+    if (hasActualError) {
       // If we can't access the requested directory, try home directory as fallback
       if (path === '/') {
         try {
           console.log('Debug - Root directory failed, trying home directory'); // Debug log
           
           const homeDir = await new Promise((resolve, reject) => {
-            const command = `echo $HOME\n`;
+            const command = isProxyBastion ? 
+              `echo $HOME` :
+              `echo $HOME`;
+              
+            console.log(`[${tabId}] Executing HOME command:`, command);
+              
             const timeout = setTimeout(() => {
+              console.log(`[${tabId}] HOME command timed out:`, command);
               reject(new Error('Command timeout'));
             }, 5000);
             
@@ -688,17 +713,31 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
             const dataHandler = (data) => {
               const dataStr = data.toString();
               output += dataStr;
+              console.log(`[${tabId}] HOME output chunk:`, dataStr);
               
-              if (dataStr.includes('echo $HOME') || commandEchoed) {
+              if (dataStr.includes('echo') || commandEchoed) {
                 commandEchoed = true;
                 
                 const lines = output.split('\n');
                 for (let line of lines) {
                   line = line.trim();
-                  if (line.startsWith('/') && !line.includes('echo $HOME') && !line.includes('$')) {
+                  if (line.startsWith('/') && !line.includes('echo') && !line.includes('$')) {
                     clearTimeout(timeout);
                     conn.stream.removeListener('data', dataHandler);
+                    console.log(`[${tabId}] Found home directory:`, line);
                     resolve(line);
+                    return;
+                  }
+                }
+                
+                // Also check if we see a prompt after getting the home directory
+                if (dataStr.match(/\[.*@.*\]\$/) && output.includes('/home/')) {
+                  const homeMatch = output.match(/\/home\/\w+/);
+                  if (homeMatch) {
+                    clearTimeout(timeout);
+                    conn.stream.removeListener('data', dataHandler);
+                    console.log(`[${tabId}] Found home directory from match:`, homeMatch[0]);
+                    resolve(homeMatch[0]);
                     return;
                   }
                 }
@@ -706,7 +745,7 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
             };
             
             conn.stream.on('data', dataHandler);
-            conn.stream.write(command);
+            conn.stream.write(command + '\n');
           });
           
           // Recursively call with home directory
@@ -720,34 +759,53 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
     }
 
     // Parse ls -la output
-    const lines = lsOutput.trim().split('\n').filter(line => {
+    console.log('Debug - Raw lsOutput before processing:', lsOutput); // Debug log
+    
+    const allLines = lsOutput.trim().split('\n');
+    console.log('Debug - All lines before filtering:', allLines); // Debug log
+    
+    const lines = allLines.filter(line => {
       const trimmed = line.trim();
       // Filter out prompt lines and irrelevant output
-      return trimmed && 
+      const keep = trimmed && 
              !trimmed.match(/^.*[$#>]\s*$/) && 
              !trimmed.startsWith('ls -la') &&
              !trimmed.startsWith('total ') &&
              trimmed !== 'total 0';
+      
+      console.log(`Debug - Line: "${trimmed}" -> Keep: ${keep}`); // Debug log
+      return keep;
+    }).map(line => {
+      // Remove ANSI color codes
+      return line.replace(/\x1B\[[0-9;]*[mGK]/g, '');
     });
     
-    console.log('Debug - Filtered lines:', lines); // Debug log
+    console.log('Debug - Filtered lines (after ANSI cleanup):', lines); // Debug log
     
     const files = [];
 
     lines.forEach(line => {
       if (line.trim() === '') return;
 
-      // Parse ls -la line (handles files with spaces and symlinks)
-      // More flexible regex that handles different ls output formats
-      const match = line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(.{12})\s+(.+)$/) ||
-                   line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/);
+      // Parse ls -la line using a more robust approach
+      const parts = line.trim().split(/\s+/);
       
-      if (!match) {
-        console.log('Debug - Failed to parse line:', line); // Debug log
+      if (parts.length < 9) {
+        console.log('Debug - Not enough parts in line:', line, 'Parts:', parts.length); // Debug log
         return;
       }
 
-      const [, permissions, , owner, group, size, dateTime, fullName] = match;
+      const permissions = parts[0];
+      const linkCount = parts[1];
+      const owner = parts[2];
+      const group = parts[3];
+      const size = parts[4];
+      
+      // Date can be 3 parts: month day year/time
+      const dateTime = `${parts[5]} ${parts[6]} ${parts[7]}`;
+      
+      // Filename is everything after the date (may contain spaces)
+      const fullName = parts.slice(8).join(' ');
       
       // Handle symlinks (format: "name -> target")
       const name = fullName.includes(' -> ') ? fullName.split(' -> ')[0] : fullName;
@@ -873,30 +931,48 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
     if (isProxyBastion) {
       // Use the existing terminal stream to avoid "Channel open failure"
       const homeDir = await new Promise((resolve, reject) => {
-        const command = `echo $HOME\n`;
+        const command = isProxyBastion ? 
+          `echo $HOME` :
+          `echo $HOME`;
+          
+        console.log(`[${tabId}] Executing HOME command:`, command);
+          
         const timeout = setTimeout(() => {
+          console.log(`[${tabId}] HOME command timed out:`, command);
           reject(new Error('Command timeout'));
         }, 5000);
         
         let output = '';
-        let collecting = false;
+        let commandEchoed = false;
         
         const dataHandler = (data) => {
           const dataStr = data.toString();
+          output += dataStr;
+          console.log(`[${tabId}] HOME output chunk:`, dataStr);
           
-          // Start collecting after the command echo
-          if (dataStr.includes('echo $HOME') || collecting) {
-            collecting = true;
-            output += dataStr;
+          if (dataStr.includes('echo') || commandEchoed) {
+            commandEchoed = true;
             
-            // Stop collecting when we see a path and a new prompt
             const lines = output.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-              const line = lines[i].trim();
-              if (line.startsWith('/') && !line.includes('echo $HOME')) {
+            for (let line of lines) {
+              line = line.trim();
+              if (line.startsWith('/') && !line.includes('echo') && !line.includes('$')) {
                 clearTimeout(timeout);
                 conn.stream.removeListener('data', dataHandler);
+                console.log(`[${tabId}] Found home directory:`, line);
                 resolve(line);
+                return;
+              }
+            }
+            
+            // Also check if we see a prompt after getting the home directory
+            if (dataStr.match(/\[.*@.*\]\$/) && output.includes('/home/')) {
+              const homeMatch = output.match(/\/home\/\w+/);
+              if (homeMatch) {
+                clearTimeout(timeout);
+                conn.stream.removeListener('data', dataHandler);
+                console.log(`[${tabId}] Found home directory from match:`, homeMatch[0]);
+                resolve(homeMatch[0]);
                 return;
               }
             }
@@ -904,7 +980,7 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
         };
         
         conn.stream.on('data', dataHandler);
-        conn.stream.write(command);
+        conn.stream.write(command + '\n');
       });
       
       return homeDir;
