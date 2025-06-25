@@ -595,27 +595,51 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
         
         let output = '';
         let collecting = false;
+        let commandEchoed = false;
         
         const dataHandler = (data) => {
           const dataStr = data.toString();
+          output += dataStr;
           
+          // Check for error message first
           if (dataStr.includes('ERROR: Cannot access directory')) {
             clearTimeout(timeout);
             conn.stream.removeListener('data', dataHandler);
-            resolve(dataStr);
+            resolve('ERROR: Cannot access directory');
             return;
           }
           
-          // Start collecting when we see directory listing patterns
-          if (dataStr.includes('total ') || collecting) {
+          // Wait for command to be echoed
+          if (dataStr.includes(`ls -la "${path}"`) || commandEchoed) {
+            commandEchoed = true;
             collecting = true;
-            output += dataStr;
-            
-            // Stop collecting when we see a new prompt ($ or # at start of line)
-            if (dataStr.match(/[\n\r].*[$#]\s*$/)) {
+          }
+          
+          // Start collecting when we see directory listing patterns or total
+          if (collecting && (dataStr.includes('total ') || dataStr.match(/^[drwxlstT-]/m))) {
+            // Stop collecting when we see a new prompt ($ or # or similar)
+            if (dataStr.match(/[\n\r].*[$#>]\s*$/m)) {
               clearTimeout(timeout);
               conn.stream.removeListener('data', dataHandler);
-              resolve(output);
+              
+              // Clean output - remove command echo and prompt
+              let cleanOutput = output;
+              
+              // Remove command echo
+              const commandIndex = cleanOutput.indexOf(`ls -la "${path}"`);
+              if (commandIndex !== -1) {
+                cleanOutput = cleanOutput.substring(commandIndex);
+                const afterCommand = cleanOutput.indexOf('\n');
+                if (afterCommand !== -1) {
+                  cleanOutput = cleanOutput.substring(afterCommand + 1);
+                }
+              }
+              
+              // Remove final prompt
+              cleanOutput = cleanOutput.replace(/[\n\r].*[$#>]\s*$/m, '');
+              
+              console.log('Debug - Raw ls output:', cleanOutput); // Debug log
+              resolve(cleanOutput);
             }
           }
         };
@@ -647,6 +671,51 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
     }
     
     if (lsOutput.includes('ERROR: Cannot access directory')) {
+      // If we can't access the requested directory, try home directory as fallback
+      if (path === '/') {
+        try {
+          console.log('Debug - Root directory failed, trying home directory'); // Debug log
+          
+          const homeDir = await new Promise((resolve, reject) => {
+            const command = `echo $HOME\n`;
+            const timeout = setTimeout(() => {
+              reject(new Error('Command timeout'));
+            }, 5000);
+            
+            let output = '';
+            let commandEchoed = false;
+            
+            const dataHandler = (data) => {
+              const dataStr = data.toString();
+              output += dataStr;
+              
+              if (dataStr.includes('echo $HOME') || commandEchoed) {
+                commandEchoed = true;
+                
+                const lines = output.split('\n');
+                for (let line of lines) {
+                  line = line.trim();
+                  if (line.startsWith('/') && !line.includes('echo $HOME') && !line.includes('$')) {
+                    clearTimeout(timeout);
+                    conn.stream.removeListener('data', dataHandler);
+                    resolve(line);
+                    return;
+                  }
+                }
+              }
+            };
+            
+            conn.stream.on('data', dataHandler);
+            conn.stream.write(command);
+          });
+          
+          // Recursively call with home directory
+          return await ipcMain.handle.get('ssh:list-files').call(this, event, { tabId, path: homeDir });
+        } catch (homeError) {
+          console.log('Debug - Home directory also failed:', homeError); // Debug log
+        }
+      }
+      
       throw new Error(`Cannot access directory: ${path}`);
     }
 
@@ -655,11 +724,13 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
       const trimmed = line.trim();
       // Filter out prompt lines and irrelevant output
       return trimmed && 
-             !trimmed.match(/^.*[$#]\s*$/) && 
+             !trimmed.match(/^.*[$#>]\s*$/) && 
              !trimmed.startsWith('ls -la') &&
-             trimmed !== 'total 0' &&
-             !trimmed.match(/^total \d+$/);
+             !trimmed.startsWith('total ') &&
+             trimmed !== 'total 0';
     });
+    
+    console.log('Debug - Filtered lines:', lines); // Debug log
     
     const files = [];
 
@@ -667,8 +738,14 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
       if (line.trim() === '') return;
 
       // Parse ls -la line (handles files with spaces and symlinks)
-      const match = line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/);
-      if (!match) return;
+      // More flexible regex that handles different ls output formats
+      const match = line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(.{12})\s+(.+)$/) ||
+                   line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/);
+      
+      if (!match) {
+        console.log('Debug - Failed to parse line:', line); // Debug log
+        return;
+      }
 
       const [, permissions, , owner, group, size, dateTime, fullName] = match;
       
@@ -710,6 +787,7 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
       });
     });
 
+    console.log('Debug - Parsed files:', files.length); // Debug log
     return { success: true, files };
   } catch (error) {
     return { success: false, error: error.message };
