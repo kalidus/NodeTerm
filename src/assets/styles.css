@@ -618,9 +618,26 @@ html, body {
   transition: transform 0.2s ease-out;
 }
 
-/* --- Menú contextual de pestañas --- */
+/* --- Menú contextual de terminal --- */
 .p-menu.p-menu-overlay {
   min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--surface-300, #dee2e6);
+  border-radius: 6px;
+  background: var(--surface-0, #ffffff);
+  z-index: 9999;
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .p-menu .p-menuitem-link {
@@ -629,6 +646,8 @@ html, body {
   align-items: center;
   gap: 0.5rem;
   transition: background-color 0.2s;
+  border-radius: 4px;
+  margin: 2px 4px;
 }
 
 .p-menu .p-menuitem-link:hover {
@@ -638,6 +657,12 @@ html, body {
 .p-menu .p-menuitem-icon {
   width: 1rem;
   text-align: center;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.p-menu .p-menuitem-text {
+  color: var(--text-color, #212529);
+  font-weight: 500;
 }
 
 .p-menu .p-separator {
