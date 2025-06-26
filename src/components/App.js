@@ -16,6 +16,31 @@ import FileExplorer from './FileExplorer';
 import { Divider } from 'primereact/divider';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
+// Importar iconos para distribuciones
+import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
+import { SiDebian } from 'react-icons/si';
+
+// Componente para mostrar icono según distribución
+const DistroIcon = ({ distro, size = 14 }) => {
+  const iconStyle = { fontSize: `${size}px`, marginRight: '6px' };
+  
+  switch (distro) {
+    case 'ubuntu':
+      return <FaUbuntu style={iconStyle} />;
+    case 'debian':
+      return <SiDebian style={iconStyle} />;
+    case 'rhel':
+    case 'redhat':
+      return <FaRedhat style={iconStyle} />;
+    case 'centos':
+      return <FaCentos style={iconStyle} />;
+    case 'fedora':
+      return <FaFedora style={iconStyle} />;
+    case 'arch':
+    default:
+      return <FaLinux style={iconStyle} />;
+  }
+};
 
 const App = () => {
   const toast = useRef(null);
@@ -50,6 +75,46 @@ const App = () => {
   const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
 
+  // Estado para tracking del distro por pestaña
+  const [tabDistros, setTabDistros] = useState({});
+
+  // Effect para escuchar actualizaciones de estadísticas y capturar el distro
+  useEffect(() => {
+    if (!window.electron) return;
+
+    // Escuchar todos los eventos de estadísticas
+    const cleanupListeners = [];
+    
+    // Función para agregar listener para una pestaña específica
+    const addStatsListener = (tabId) => {
+      const eventName = `ssh-stats:update:${tabId}`;
+      const listener = (stats) => {
+        if (stats.distro) {
+          setTabDistros(prev => ({
+            ...prev,
+            [tabId]: stats.distro
+          }));
+        }
+      };
+      
+      window.electron.ipcRenderer.on(eventName, listener);
+      cleanupListeners.push(() => {
+        window.electron.ipcRenderer.off(eventName, listener);
+      });
+    };
+
+    // Agregar listeners para pestañas existentes
+    sshTabs.forEach(tab => {
+      if (tab.type === 'terminal') {
+        addStatsListener(tab.key);
+      }
+    });
+
+    return () => {
+      cleanupListeners.forEach(cleanup => cleanup());
+    };
+  }, [sshTabs]);
+
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
   const FONT_SIZE_STORAGE_KEY = 'basicapp_terminal_font_size';
@@ -72,10 +137,10 @@ const App = () => {
 
   // Theme configuration
   const THEME_STORAGE_KEY = 'basicapp_terminal_theme';
-  const availableThemes = Object.keys(themes);
+  const availableThemes = themes ? Object.keys(themes) : [];
   const [terminalTheme, setTerminalTheme] = useState(() => {
       const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
-      return themes[savedThemeName];
+      return themes && themes[savedThemeName] ? themes[savedThemeName] : {};
   });
 
   // Constantes para el overflow de pestañas
@@ -193,8 +258,6 @@ const App = () => {
     setDragOverTabIndex(null);
   };
 
-
-
   // Funciones para menú contextual de terminal
   const handleTerminalContextMenu = (e, tabKey) => {
     e.preventDefault();
@@ -232,10 +295,17 @@ const App = () => {
     setTerminalContextMenu({ tabKey, mouseX: adjustedX, mouseY: adjustedY });
   };
 
-
-
   const hideContextMenu = () => {
     setTerminalContextMenu(null);
+  };
+
+  // Función para limpiar distro cuando se cierra una pestaña
+  const cleanupTabDistro = (tabKey) => {
+    setTabDistros(prev => {
+      const newDistros = { ...prev };
+      delete newDistros[tabKey];
+      return newDistros;
+    });
   };
 
   const handleCopyFromTerminal = (tabKey) => {
@@ -382,8 +452,6 @@ const App = () => {
       }
     }
   }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
-
-
 
   // Default tree data
   const getDefaultNodes = () => [
@@ -1167,7 +1235,7 @@ const App = () => {
       
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
-          <SplitterPanel size={25} minSize={20}>
+          <SplitterPanel size={15} minSize={10}>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
                 <div>
@@ -1283,6 +1351,14 @@ const App = () => {
                               title="Arrastra para reordenar pestañas"
                             >
                               {leftIcon}
+                              {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
+                              {tab.type === 'terminal' && tabDistros[tab.key] && (
+                                <DistroIcon distro={tabDistros[tab.key]} size={12} />
+                              )}
+                              {/* Icono específico para exploradores */}
+                              {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+                                <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                              )}
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
                               <Button
                                 icon="pi pi-times"
@@ -1292,6 +1368,9 @@ const App = () => {
                                   e.stopPropagation();
                                   // Cierre robusto de pestaña
                                   const closedTab = tab;
+                                  
+                                  // Limpiar distro de la pestaña cerrada
+                                  cleanupTabDistro(closedTab.key);
                                   
                                   if (isSSHTab) {
                                     // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
@@ -1653,7 +1732,7 @@ const App = () => {
             </div>
             <div className="field">
                 <label htmlFor="terminal-theme">Tema</label>
-                <Dropdown id="terminal-theme" value={terminalTheme.name} options={availableThemes} onChange={(e) => setTerminalTheme(themes[e.value])} placeholder="Selecciona un tema" />
+                <Dropdown id="terminal-theme" value={terminalTheme.name} options={availableThemes} onChange={(e) => setTerminalTheme(themes && themes[e.value] ? themes[e.value] : {})} placeholder="Selecciona un tema" />
             </div>
         </div>
       </Dialog>
