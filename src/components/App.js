@@ -396,6 +396,47 @@ const App = () => {
     hideContextMenu();
   };
 
+  const moveTabToFirst = (globalIndex) => {
+    const allTabs = getAllTabs();
+    const tabToMove = allTabs[globalIndex];
+    
+    if (!tabToMove) return;
+    
+    // Determinar si es una pestaña SSH o explorador
+    const isSSHTab = globalIndex < sshTabs.length || tabToMove.isExplorerInSSH;
+    
+    if (isSSHTab) {
+      // Mover pestaña SSH
+      const currentSSHIndex = sshTabs.findIndex(tab => tab.key === tabToMove.key);
+      if (currentSSHIndex !== -1) {
+        const newSSHTabs = [...sshTabs];
+        const [movedTab] = newSSHTabs.splice(currentSSHIndex, 1);
+        newSSHTabs.unshift(movedTab); // Mover al principio
+        setSshTabs(newSSHTabs);
+        setActiveTabIndex(0); // Activar la primera pestaña
+      }
+    } else {
+      // Mover pestaña de explorador
+      const currentExplorerIndex = fileExplorerTabs.findIndex(tab => tab.key === tabToMove.key);
+      if (currentExplorerIndex !== -1) {
+        const newExplorerTabs = [...fileExplorerTabs];
+        const [movedTab] = newExplorerTabs.splice(currentExplorerIndex, 1);
+        
+        // Si hay pestañas SSH, mover el explorador al principio de los exploradores
+        // Si no hay pestañas SSH, mover al principio absoluto
+        if (sshTabs.length > 0) {
+          newExplorerTabs.unshift(movedTab);
+          setFileExplorerTabs(newExplorerTabs);
+          setActiveTabIndex(sshTabs.length); // Primera posición de exploradores
+        } else {
+          newExplorerTabs.unshift(movedTab);
+          setFileExplorerTabs(newExplorerTabs);
+          setActiveTabIndex(0); // Primera posición absoluta
+        }
+      }
+    }
+  };
+
   const generateOverflowMenuItems = () => {
     const hiddenTabs = getHiddenTabs();
     
@@ -408,7 +449,7 @@ const App = () => {
         label: tab.label,
         icon: isExplorerTab ? 'pi pi-folder' : 'pi pi-terminal',
         command: () => {
-          setActiveTabIndex(globalIndex);
+          moveTabToFirst(globalIndex);
         }
       };
     });
