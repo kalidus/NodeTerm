@@ -109,7 +109,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const ssh = new SSH2Promise(config);
 
   const statsLoop = async (hostname, distro, ip) => {
-    if (!sshConnections[tabId]) return; // Stop if connection is closed
+    // Verificación robusta de la conexión
+    const conn = sshConnections[tabId];
+    if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
+      return; // Stop if connection is closed or invalid
+    }
 
     try {
       // --- Get CPU stats first
@@ -190,12 +194,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           distro: distro,
           ip: ip
       };
-      sendToMainWindow(`ssh-stats:update:${tabId}`, stats);
+      sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
     } catch (e) {
       // console.error(`Error fetching stats for ${tabId}:`, e.message);
     } finally {
-      if (sshConnections[tabId]) {
-        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
+      // Verificar nuevamente que la conexión siga válida antes de programar siguiente loop
+      const finalConn = sshConnections[tabId];
+      if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
+        finalConn.statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
       }
     }
   };
@@ -203,38 +209,48 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   try {
     // For subsequent connections, send the cached MOTD immediately.
     if (motdCache[cacheKey]) {
-      event.sender.send(`ssh:data:${tabId}`, motdCache[cacheKey]);
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
     }
+
+    // Configurar límites de listeners para evitar memory leaks
+    ssh.setMaxListeners(20);
 
     await ssh.connect();
     
     const stream = await ssh.shell({ term: 'xterm-256color' });
+    
+    // Configurar límites de listeners para el stream
+    stream.setMaxListeners(20);
 
     sshConnections[tabId] = { ssh, stream, config, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
     stream.on('data', (data) => {
-      const dataStr = data.toString('utf-8');
+      try {
+        const dataStr = data.toString('utf-8');
 
-      if (isFirstPacket) {
-        isFirstPacket = false;
-        // If the MOTD is not cached yet (it's the first-ever connection)
-        if (!motdCache[cacheKey]) {
-          motdCache[cacheKey] = dataStr; // Cache it
-          event.sender.send(`ssh:data:${tabId}`, dataStr); // And send it
+        if (isFirstPacket) {
+          isFirstPacket = false;
+          // If the MOTD is not cached yet (it's the first-ever connection)
+          if (!motdCache[cacheKey]) {
+            motdCache[cacheKey] = dataStr; // Cache it
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr); // And send it
+          }
+          // If it was already cached, we've already sent the cached version.
+          // We do nothing here, effectively suppressing the duplicate message.
+          return; 
         }
-        // If it was already cached, we've already sent the cached version.
-        // We do nothing here, effectively suppressing the duplicate message.
-        return; 
+        
+        // For all subsequent packets, just send them
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+      } catch (e) {
+        // log o ignora
       }
-      
-      // For all subsequent packets, just send them
-      event.sender.send(`ssh:data:${tabId}`, dataStr);
     });
 
     stream.on('close', () => {
-      event.sender.send(`ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
       const conn = sshConnections[tabId];
       if (conn && conn.statsTimeout) {
           clearTimeout(conn.statsTimeout);
@@ -242,7 +258,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       delete sshConnections[tabId];
     });
 
-    event.sender.send(`ssh:ready:${tabId}`);
+    sendToRenderer(event.sender, `ssh:ready:${tabId}`);
 
     // After setting up the shell, get the hostname/distro and start the stats loop
     let realHostname = 'unknown';
@@ -263,14 +279,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
   } catch (err) {
     const errorMsg = err && err.message ? err.message : (typeof err === 'string' ? err : JSON.stringify(err) || 'Error desconocido al conectar por SSH');
-    event.sender.send(`ssh:error:${tabId}`, errorMsg);
+    sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
   }
 });
 
 // IPC handler to send data to the SSH shell
 ipcMain.on('ssh:data', (event, { tabId, data }) => {
   const conn = sshConnections[tabId];
-  if (conn && conn.stream) {
+  if (conn && conn.stream && !conn.stream.destroyed) {
     conn.stream.write(data);
   }
 });
@@ -287,11 +303,34 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
 ipcMain.on('ssh:disconnect', (event, tabId) => {
   const conn = sshConnections[tabId];
   if (conn) {
-    if (conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
+    try {
+      // Limpiar timeout de stats
+      if (conn.statsTimeout) {
+        clearTimeout(conn.statsTimeout);
+        conn.statsTimeout = null;
+      }
+      
+      // Limpiar listeners del stream
+      if (conn.stream && !conn.stream.destroyed) {
+        conn.stream.removeAllListeners();
+        conn.stream.end();
+      }
+      
+      // Cerrar conexión SSH
+      if (conn.ssh) {
+        // Aumentar límite de listeners temporalmente para evitar warnings
+        const originalLimit = conn.ssh.getMaxListeners();
+        conn.ssh.setMaxListeners(0);
+        conn.ssh.removeAllListeners();
+        conn.ssh.end();
+      }
+      
+    } catch (error) {
+      console.error(`Error cleaning up SSH connection ${tabId}:`, error);
+    } finally {
+      // Always delete the connection
+      delete sshConnections[tabId];
     }
-    conn.ssh.close();
-    delete sshConnections[tabId];
   }
 });
 
@@ -333,9 +372,14 @@ ipcMain.handle('clipboard:writeText', (event, text) => {
 });
 
 // Function to safely send to mainWindow
-function sendToMainWindow(channel, ...args) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, ...args);
+function sendToRenderer(sender, ...args) {
+  try {
+    if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
+      sender.send(...args);
+    }
+  } catch (error) {
+    // Silently ignore renderer communication errors
+    console.warn('Failed to send to renderer:', error.message);
   }
 }
 

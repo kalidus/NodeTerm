@@ -1220,15 +1220,14 @@ const App = () => {
                     );
                   })}
                 </TabView>
-                {getAllTabs().length > MAX_VISIBLE_TABS && (
-                  <Button
-                    icon="pi pi-ellipsis-v"
-                    className="overflow-tab-btn p-button-outlined p-button-sm"
-                    onClick={(e) => overflowMenuRef.current?.toggle(e)}
-                    tooltip={`Ver ${getAllTabs().length - MAX_VISIBLE_TABS} pestañas más`}
-                    tooltipOptions={{ position: 'left' }}
-                  />
-                )}
+                <Button
+                  icon="pi pi-ellipsis-v"
+                  className="overflow-tab-btn p-button-outlined p-button-sm"
+                  onClick={(e) => overflowMenuRef.current?.toggle(e)}
+                  tooltip={getAllTabs().length > MAX_VISIBLE_TABS ? `Ver ${getAllTabs().length - MAX_VISIBLE_TABS} pestañas más` : 'Menú de pestañas'}
+                  tooltipOptions={{ position: 'left' }}
+                  disabled={getAllTabs().length === 0}
+                />
                 <Menu
                   ref={overflowMenuRef}
                   model={generateOverflowMenuItems()}
