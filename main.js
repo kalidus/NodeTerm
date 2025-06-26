@@ -17,7 +17,7 @@ const motdCache = {};
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
 
-// Función para limpiar conexiones SSH huérfanas cada 30 segundos
+// Función para limpiar conexiones SSH huérfanas cada 15 segundos
 setInterval(() => {
   const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
   
@@ -25,6 +25,10 @@ setInterval(() => {
     if (!activeKeys.has(poolKey)) {
       console.log(`Limpiando conexión SSH huérfana: ${poolKey}`);
       try {
+        // Limpiar listeners antes de cerrar
+        if (poolConnection.ssh) {
+          poolConnection.ssh.removeAllListeners();
+        }
         poolConnection.close();
       } catch (e) {
         console.warn(`Error closing orphaned connection: ${e.message}`);
@@ -32,7 +36,7 @@ setInterval(() => {
       delete sshConnectionPool[poolKey];
     }
   }
-}, 30000); // Cada 30 segundos
+}, 15000); // Cada 15 segundos para una limpieza más frecuente
 
 // Helper function to parse 'df -P' command output
 function parseDfOutput(dfOutput) {
@@ -126,12 +130,24 @@ app.on('activate', () => {
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
   
-  // Verificar si ya existe una conexión en el pool para este servidor
+  // Verificar si ya existe una conexión válida en el pool para este servidor
   let ssh;
-  if (sshConnectionPool[cacheKey] && sshConnectionPool[cacheKey].ssh && sshConnectionPool[cacheKey].ssh.connected) {
-    ssh = sshConnectionPool[cacheKey];
+  const existingConnection = sshConnectionPool[cacheKey];
+  
+  if (existingConnection && existingConnection.ssh && existingConnection.ssh.connected) {
+    ssh = existingConnection;
     console.log(`Reutilizando conexión SSH existente para ${cacheKey}`);
   } else {
+    // Limpiar conexión anterior si existe pero no está conectada
+    if (existingConnection) {
+      try {
+        existingConnection.close();
+      } catch (e) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+    
     ssh = new SSH2Promise(config);
     console.log(`Creando nueva conexión SSH para ${cacheKey}`);
   }
@@ -240,20 +256,26 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
     }
 
-    // Configurar límites de listeners para evitar memory leaks
-    ssh.setMaxListeners(50); // Aumentado para múltiples pestañas
-
     // Solo conectar si no está ya conectado
     if (!ssh.ssh || !ssh.ssh.connected) {
+      // Configurar límites de listeners ANTES de conectar
+      ssh.setMaxListeners(100);
+      
       await ssh.connect();
+      
+      // Configurar límites adicionales en la conexión SSH interna
+      if (ssh.ssh) {
+        ssh.ssh.setMaxListeners(100);
+      }
+      
       // Guardar en el pool para reutilizar
       sshConnectionPool[cacheKey] = ssh;
     }
     
     const stream = await ssh.shell({ term: 'xterm-256color' });
     
-    // Configurar límites de listeners para el stream
-    stream.setMaxListeners(50); // Aumentado para múltiples pestañas
+    // Configurar límites de listeners para cada stream individual
+    stream.setMaxListeners(0); // Sin límite para streams individuales
 
     sshConnections[tabId] = { ssh, stream, config, cacheKey, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
@@ -343,10 +365,16 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
         conn.statsTimeout = null;
       }
       
-      // Limpiar listeners del stream (solo el stream, no la conexión SSH compartida)
-      if (conn.stream && !conn.stream.destroyed) {
-        conn.stream.removeAllListeners();
-        conn.stream.end();
+      // Limpiar listeners del stream de forma más agresiva
+      if (conn.stream) {
+        try {
+          conn.stream.removeAllListeners();
+          if (!conn.stream.destroyed) {
+            conn.stream.destroy();
+          }
+        } catch (streamError) {
+          console.warn(`Error destroying stream: ${streamError.message}`);
+        }
       }
       
       // Verificar si otras pestañas están usando la misma conexión SSH
@@ -357,6 +385,12 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
         try {
           console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
+          
+          // Limpiar listeners de la conexión SSH también
+          if (conn.ssh.ssh) {
+            conn.ssh.ssh.removeAllListeners();
+          }
+          
           conn.ssh.close();
           delete sshConnectionPool[conn.cacheKey];
         } catch (closeError) {
@@ -382,11 +416,37 @@ ipcMain.on('app-quit', () => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
     }
-    if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
-      conn.stream.removeAllListeners();
+    if (conn.stream) {
+      try {
+        conn.stream.removeAllListeners();
+        if (!conn.stream.destroyed) {
+          conn.stream.destroy();
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
     }
-    conn.ssh.close();
+    if (conn.ssh) {
+      try {
+        if (conn.ssh.ssh) {
+          conn.ssh.ssh.removeAllListeners();
+        }
+        conn.ssh.close();
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
   });
+  
+  // Limpiar también el pool de conexiones
+  Object.values(sshConnectionPool).forEach(poolConn => {
+    try {
+      poolConn.close();
+    } catch (e) {
+      // Ignorar errores
+    }
+  });
+  
   app.quit();
 });
 
@@ -396,10 +456,35 @@ app.on('before-quit', () => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
     }
-    if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
-      conn.stream.removeAllListeners();
+    if (conn.stream) {
+      try {
+        conn.stream.removeAllListeners();
+        if (!conn.stream.destroyed) {
+          conn.stream.destroy();
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
     }
-    conn.ssh.close();
+    if (conn.ssh) {
+      try {
+        if (conn.ssh.ssh) {
+          conn.ssh.ssh.removeAllListeners();
+        }
+        conn.ssh.close();
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+  });
+  
+  // Limpiar también el pool de conexiones
+  Object.values(sshConnectionPool).forEach(poolConn => {
+    try {
+      poolConn.close();
+    } catch (e) {
+      // Ignorar errores
+    }
   });
 });
 
