@@ -17,6 +17,44 @@ const motdCache = {};
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
 
+// Sistema de throttling para conexiones SSH
+const connectionThrottle = {
+  pending: new Map(), // Conexiones en proceso por cacheKey
+  lastAttempt: new Map(), // Último intento por cacheKey
+  minInterval: 2000, // Mínimo 2 segundos entre intentos al mismo servidor
+  
+  async throttle(cacheKey, connectionFn) {
+    // Si ya hay una conexión pendiente para este servidor, esperar
+    if (this.pending.has(cacheKey)) {
+      console.log(`Esperando conexión pendiente para ${cacheKey}...`);
+      return await this.pending.get(cacheKey);
+    }
+    
+    // Verificar intervalo mínimo
+    const lastAttempt = this.lastAttempt.get(cacheKey) || 0;
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttempt;
+    
+    if (timeSinceLastAttempt < this.minInterval) {
+      const waitTime = this.minInterval - timeSinceLastAttempt;
+      console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    // Crear la conexión
+    this.lastAttempt.set(cacheKey, Date.now());
+    const connectionPromise = connectionFn();
+    this.pending.set(cacheKey, connectionPromise);
+    
+    try {
+      const result = await connectionPromise;
+      return result;
+    } finally {
+      this.pending.delete(cacheKey);
+    }
+  }
+};
+
 // Función para limpiar conexiones SSH huérfanas cada 15 segundos
 setInterval(() => {
   const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
@@ -130,10 +168,49 @@ app.on('activate', () => {
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
   
-  // Para conexiones de terminal, SIEMPRE crear una nueva conexión SSH
-  // No reutilizar del pool porque las terminales necesitan shells dedicados
-  const ssh = new SSH2Promise(config);
-  console.log(`Creando nueva conexión SSH para terminal ${cacheKey}`);
+  // Aplicar throttling simple
+  const lastAttempt = connectionThrottle.lastAttempt.get(cacheKey) || 0;
+  const now = Date.now();
+  const timeSinceLastAttempt = now - lastAttempt;
+  
+  if (timeSinceLastAttempt < connectionThrottle.minInterval) {
+    const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
+    console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  connectionThrottle.lastAttempt.set(cacheKey, Date.now());
+  
+  // Intentar reutilizar conexión del pool primero, incluso para terminales
+  let ssh;
+  let isReusedConnection = false;
+  
+  // Buscar en el pool una conexión existente
+  const existingPoolConnection = sshConnectionPool[cacheKey];
+  if (existingPoolConnection) {
+    try {
+      // Verificar si la conexión del pool está activa
+      await existingPoolConnection.exec('echo "test"');
+      ssh = existingPoolConnection;
+      isReusedConnection = true;
+      console.log(`Reutilizando conexión del pool para terminal ${cacheKey}`);
+    } catch (testError) {
+      console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
+      // Limpiar conexión no válida
+      try {
+        existingPoolConnection.close();
+      } catch (e) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+  }
+  
+  // Si no hay conexión válida en el pool, crear una nueva
+  if (!ssh) {
+    ssh = new SSH2Promise(config);
+    console.log(`Creando nueva conexión SSH para terminal ${cacheKey}`);
+  }
 
   const statsLoop = async (hostname, distro, ip) => {
     // Verificación robusta de la conexión
@@ -239,28 +316,56 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
     }
 
-    // Conectar siempre (nueva conexión)
-    console.log(`Conectando SSH para terminal ${cacheKey}...`);
-    
-    // Configurar límites de listeners ANTES de conectar
-    ssh.setMaxListeners(100);
-    
-    try {
+    // Solo conectar si es una conexión nueva
+    if (!isReusedConnection) {
+      console.log(`Conectando SSH para terminal ${cacheKey}...`);
+      
+      // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
+      ssh.setMaxListeners(300);
+      
       await ssh.connect();
       console.log(`Conectado exitosamente a terminal ${cacheKey}`);
       
       // Configurar límites adicionales en la conexión SSH interna
       if (ssh.ssh) {
-        ssh.ssh.setMaxListeners(100);
+        ssh.ssh.setMaxListeners(300);
       }
       
-      // NO guardar conexiones de terminal en el pool - son dedicadas
-    } catch (connectError) {
-      console.error(`Error conectando terminal a ${cacheKey}:`, connectError);
-      throw connectError; // Re-lanzar el error para que sea manejado por el catch principal
+      // Guardar en el pool para reutilización
+      sshConnectionPool[cacheKey] = ssh;
+    } else {
+      console.log(`Usando conexión existente para terminal ${cacheKey}`);
     }
     
-    const stream = await ssh.shell({ term: 'xterm-256color' });
+    // Intentar crear shell con reintentos y configuración mejorada
+    let stream;
+    let shellAttempts = 0;
+    const maxShellAttempts = 3;
+    
+    while (shellAttempts < maxShellAttempts) {
+      try {
+        // Añadir pequeño delay entre intentos
+        if (shellAttempts > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * shellAttempts));
+        }
+        
+        stream = await ssh.shell({ 
+          term: 'xterm-256color',
+          cols: 80,
+          rows: 24,
+          // Configuraciones adicionales para mejor compatibilidad
+          env: {}
+        });
+        break;
+      } catch (shellError) {
+        shellAttempts++;
+        console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError.message);
+        
+        if (shellAttempts >= maxShellAttempts) {
+          throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError.message}`);
+        }
+      }
+    }
     
     // Configurar límites de listeners para cada stream individual
     stream.setMaxListeners(0); // Sin límite para streams individuales
@@ -403,10 +508,18 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
         try {
           console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
           
-          // Limpiar listeners de la conexión SSH también
+          // Limpiar listeners específicos de la conexión SSH de forma más selectiva
           if (conn.ssh.ssh) {
-            conn.ssh.ssh.removeAllListeners();
+            // Solo remover listeners específicos en lugar de todos
+            conn.ssh.ssh.removeAllListeners('error');
+            conn.ssh.ssh.removeAllListeners('close');
+            conn.ssh.ssh.removeAllListeners('end');
           }
+          
+          // Limpiar listeners del SSH2Promise también
+          conn.ssh.removeAllListeners('error');
+          conn.ssh.removeAllListeners('close');
+          conn.ssh.removeAllListeners('end');
           
           conn.ssh.close();
           delete sshConnectionPool[conn.cacheKey];
@@ -446,8 +559,15 @@ ipcMain.on('app-quit', () => {
     if (conn.ssh) {
       try {
         if (conn.ssh.ssh) {
-          conn.ssh.ssh.removeAllListeners();
+          // Limpiar listeners específicos en lugar de todos en app-quit
+          conn.ssh.ssh.removeAllListeners('error');
+          conn.ssh.ssh.removeAllListeners('close');
+          conn.ssh.ssh.removeAllListeners('end');
         }
+        // Limpiar listeners del SSH2Promise también
+        conn.ssh.removeAllListeners('error');
+        conn.ssh.removeAllListeners('close');
+        conn.ssh.removeAllListeners('end');
         conn.ssh.close();
       } catch (e) {
         // Ignorar errores
@@ -455,9 +575,18 @@ ipcMain.on('app-quit', () => {
     }
   });
   
-  // Limpiar también el pool de conexiones
+  // Limpiar también el pool de conexiones con mejor limpieza
   Object.values(sshConnectionPool).forEach(poolConn => {
     try {
+      // Limpiar listeners del pool también
+      poolConn.removeAllListeners('error');
+      poolConn.removeAllListeners('close');
+      poolConn.removeAllListeners('end');
+      if (poolConn.ssh) {
+        poolConn.ssh.removeAllListeners('error');
+        poolConn.ssh.removeAllListeners('close');
+        poolConn.ssh.removeAllListeners('end');
+      }
       poolConn.close();
     } catch (e) {
       // Ignorar errores
@@ -486,8 +615,15 @@ app.on('before-quit', () => {
     if (conn.ssh) {
       try {
         if (conn.ssh.ssh) {
-          conn.ssh.ssh.removeAllListeners();
+          // Limpiar listeners específicos en lugar de todos en before-quit
+          conn.ssh.ssh.removeAllListeners('error');
+          conn.ssh.ssh.removeAllListeners('close');
+          conn.ssh.ssh.removeAllListeners('end');
         }
+        // Limpiar listeners del SSH2Promise también
+        conn.ssh.removeAllListeners('error');
+        conn.ssh.removeAllListeners('close');
+        conn.ssh.removeAllListeners('end');
         conn.ssh.close();
       } catch (e) {
         // Ignorar errores
@@ -495,9 +631,18 @@ app.on('before-quit', () => {
     }
   });
   
-  // Limpiar también el pool de conexiones
+  // Limpiar también el pool de conexiones con mejor limpieza
   Object.values(sshConnectionPool).forEach(poolConn => {
     try {
+      // Limpiar listeners del pool también
+      poolConn.removeAllListeners('error');
+      poolConn.removeAllListeners('close');
+      poolConn.removeAllListeners('end');
+      if (poolConn.ssh) {
+        poolConn.ssh.removeAllListeners('error');
+        poolConn.ssh.removeAllListeners('close');
+        poolConn.ssh.removeAllListeners('end');
+      }
       poolConn.close();
     } catch (e) {
       // Ignorar errores
@@ -526,12 +671,41 @@ function sendToRenderer(sender, ...args) {
   }
 }
 
+// Función para limpiar conexiones huérfanas del pool cada 10 minutos
+function cleanupOrphanedConnections() {
+  Object.keys(sshConnectionPool).forEach(cacheKey => {
+    const poolConnection = sshConnectionPool[cacheKey];
+    // Verificar si hay alguna conexión activa usando esta conexión del pool
+    const hasActiveConnections = Object.values(sshConnections).some(conn => conn.cacheKey === cacheKey);
+    
+    if (!hasActiveConnections) {
+      console.log(`Limpiando conexión SSH huérfana: ${cacheKey}`);
+      try {
+        // Limpiar listeners antes de cerrar
+        poolConnection.removeAllListeners('error');
+        poolConnection.removeAllListeners('close');
+        poolConnection.removeAllListeners('end');
+        if (poolConnection.ssh) {
+          poolConnection.ssh.removeAllListeners('error');
+          poolConnection.ssh.removeAllListeners('close');
+          poolConnection.ssh.removeAllListeners('end');
+        }
+        poolConnection.close();
+      } catch (e) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+  });
+}
+
+// Ejecutar limpieza cada 10 minutos
+setInterval(cleanupOrphanedConnections, 10 * 60 * 1000);
+
 // Helper function to find SSH connection by host/username or by tabId
 async function findSSHConnection(tabId, sshConfig = null) {
-  console.log(`[DEBUG] findSSHConnection called with tabId: ${tabId}, sshConfig:`, sshConfig);
   // Primero intentar por tabId (para conexiones directas de terminal)
   if (sshConnections[tabId]) {
-    console.log(`[DEBUG] Found existing connection for tabId: ${tabId}`);
     return sshConnections[tabId];
   }
   
@@ -577,12 +751,19 @@ async function findSSHConnection(tabId, sshConfig = null) {
     console.log(`Creando conexión SSH bajo demanda para FileExplorer: ${targetCacheKey}`);
     try {
       const ssh = new SSH2Promise(sshConfig);
-      ssh.setMaxListeners(100);
+      // Configurar límites más altos para conexiones del pool que se reutilizan mucho
+      ssh.setMaxListeners(400);
       
       await ssh.connect();
       
       if (ssh.ssh) {
-        ssh.ssh.setMaxListeners(100);
+        ssh.ssh.setMaxListeners(400);
+      }
+      
+      // Limpiar listeners existentes para evitar acumulación
+      ssh.removeAllListeners();
+      if (ssh.ssh) {
+        ssh.ssh.removeAllListeners();
       }
       
       // Guardar en el pool
@@ -606,9 +787,7 @@ ipcMain.handle('app:get-sessions', async () => {
 
 // File Explorer IPC Handlers
 ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
-  console.log(`[DEBUG] ssh:list-files called with tabId: ${tabId}, path: ${path}, sshConfig:`, sshConfig);
   const conn = await findSSHConnection(tabId, sshConfig);
-  console.log(`[DEBUG] findSSHConnection returned:`, { hasConn: !!conn, hasSSH: !!(conn && conn.ssh) });
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
