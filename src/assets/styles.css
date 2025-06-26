@@ -574,3 +574,46 @@ html, body {
     max-height: calc(100vh - 320px);
   }
 }
+
+/* --- Drag & Drop para pestañas --- */
+.p-tabview .p-tabview-nav li[draggable="true"] {
+  transition: opacity 0.2s, border-left 0.2s, transform 0.1s;
+}
+
+.p-tabview .p-tabview-nav li[draggable="true"]:hover {
+  cursor: grab;
+}
+
+.p-tabview .p-tabview-nav li[draggable="true"]:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+/* Indicador visual durante drag */
+.tab-drag-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--primary-color, #007ad9);
+  opacity: 0.8;
+  z-index: 1000;
+}
+
+/* Estilos para la pestaña que se está arrastrando */
+.tab-dragging {
+  opacity: 0.5 !important;
+  pointer-events: none;
+}
+
+/* Estilos para la zona de drop */
+.tab-drop-zone {
+  border-left: 3px solid var(--primary-color, #007ad9) !important;
+  background: rgba(0, 122, 217, 0.05);
+}
+
+/* Animación suave para reordenamiento */
+.p-tabview .p-tabview-nav li {
+  transition: transform 0.2s ease-out;
+}
