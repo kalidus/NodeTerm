@@ -128,7 +128,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   
   // Verificar si ya existe una conexión en el pool para este servidor
   let ssh;
-  if (sshConnectionPool[cacheKey] && sshConnectionPool[cacheKey].isConnected()) {
+  if (sshConnectionPool[cacheKey] && sshConnectionPool[cacheKey].ssh && sshConnectionPool[cacheKey].ssh.connected) {
     ssh = sshConnectionPool[cacheKey];
     console.log(`Reutilizando conexión SSH existente para ${cacheKey}`);
   } else {
@@ -244,7 +244,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     ssh.setMaxListeners(50); // Aumentado para múltiples pestañas
 
     // Solo conectar si no está ya conectado
-    if (!ssh.isConnected()) {
+    if (!ssh.ssh || !ssh.ssh.connected) {
       await ssh.connect();
       // Guardar en el pool para reutilizar
       sshConnectionPool[cacheKey] = ssh;
