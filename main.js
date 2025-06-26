@@ -134,11 +134,30 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   let ssh;
   const existingConnection = sshConnectionPool[cacheKey];
   
-  if (existingConnection && existingConnection.ssh && existingConnection.ssh.connected) {
-    ssh = existingConnection;
-    console.log(`Reutilizando conexión SSH existente para ${cacheKey}`);
+  // Verificación más robusta de la conexión existente
+  if (existingConnection && existingConnection.ssh) {
+    try {
+      // Verificar si la conexión SSH interna está realmente conectada
+      if (existingConnection.ssh.connected) {
+        ssh = existingConnection;
+        console.log(`Reutilizando conexión SSH existente para ${cacheKey}`);
+      } else {
+        throw new Error('Conexión SSH no está conectada');
+      }
+    } catch (e) {
+      console.log(`Conexión existente no válida para ${cacheKey}, creando nueva`);
+      // Limpiar conexión no válida
+      try {
+        existingConnection.close();
+      } catch (closeError) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+      ssh = new SSH2Promise(config);
+      console.log(`Creando nueva conexión SSH para ${cacheKey}`);
+    }
   } else {
-    // Limpiar conexión anterior si existe pero no está conectada
+    // Limpiar conexión anterior si existe pero no es válida
     if (existingConnection) {
       try {
         existingConnection.close();
@@ -258,18 +277,28 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     // Solo conectar si no está ya conectado
     if (!ssh.ssh || !ssh.ssh.connected) {
+      console.log(`Conectando SSH para ${cacheKey}...`);
+      
       // Configurar límites de listeners ANTES de conectar
       ssh.setMaxListeners(100);
       
-      await ssh.connect();
-      
-      // Configurar límites adicionales en la conexión SSH interna
-      if (ssh.ssh) {
-        ssh.ssh.setMaxListeners(100);
+      try {
+        await ssh.connect();
+        console.log(`Conectado exitosamente a ${cacheKey}`);
+        
+        // Configurar límites adicionales en la conexión SSH interna
+        if (ssh.ssh) {
+          ssh.ssh.setMaxListeners(100);
+        }
+        
+        // Guardar en el pool para reutilizar
+        sshConnectionPool[cacheKey] = ssh;
+      } catch (connectError) {
+        console.error(`Error conectando a ${cacheKey}:`, connectError);
+        throw connectError; // Re-lanzar el error para que sea manejado por el catch principal
       }
-      
-      // Guardar en el pool para reutilizar
-      sshConnectionPool[cacheKey] = ssh;
+    } else {
+      console.log(`SSH ya conectado para ${cacheKey}`);
     }
     
     const stream = await ssh.shell({ term: 'xterm-256color' });
@@ -333,7 +362,36 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     statsLoop(realHostname, finalDistroId, config.host);
 
   } catch (err) {
-    const errorMsg = err && err.message ? err.message : (typeof err === 'string' ? err : JSON.stringify(err) || 'Error desconocido al conectar por SSH');
+    console.error(`Error en conexión SSH para ${tabId}:`, err);
+    
+    // Limpiar conexión problemática del pool
+    if (ssh && cacheKey && sshConnectionPool[cacheKey] === ssh) {
+      try {
+        ssh.close();
+      } catch (closeError) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+    
+    // Crear mensaje de error más descriptivo
+    let errorMsg = 'Error desconocido al conectar por SSH';
+    if (err) {
+      if (typeof err === 'string') {
+        errorMsg = err;
+      } else if (err.message) {
+        errorMsg = err.message;
+      } else if (err.code) {
+        errorMsg = `Error de conexión: ${err.code}`;
+      } else {
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch (jsonError) {
+          errorMsg = 'Error de conexión SSH';
+        }
+      }
+    }
+    
     sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
   }
 });
