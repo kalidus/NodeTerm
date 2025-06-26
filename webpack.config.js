@@ -8,6 +8,10 @@ module.exports = {
   mode: 'development',
   entry: './src/index.js',
   target: 'electron-renderer',
+  node: {
+    __dirname: false,
+    __filename: false
+  },
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'dist'),
@@ -48,6 +52,9 @@ module.exports = {
     new webpack.ProvidePlugin({
       process: 'process/browser',
       Buffer: ['buffer', 'Buffer']
+    }),
+    new webpack.DefinePlugin({
+      'global': 'globalThis'
     })
   ],
   resolve: {
@@ -58,8 +65,19 @@ module.exports = {
       "os": require.resolve("os-browserify/browser"),
       "crypto": require.resolve("crypto-browserify"),
       "stream": require.resolve("stream-browserify"),
-      "buffer": require.resolve("buffer")
+      "buffer": require.resolve("buffer"),
+      "util": require.resolve("util/"),
+      "url": require.resolve("url/"),
+      "querystring": require.resolve("querystring-es3"),
+      "fs": false,
+      "net": false,
+      "tls": false
     }
+  },
+  externals: {
+    // Excluir módulos problemáticos de Node.js
+    'utf-8-validate': 'commonjs utf-8-validate',
+    'bufferutil': 'commonjs bufferutil'
   },
   devtool: 'source-map'
 }; 
