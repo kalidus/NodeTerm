@@ -88,7 +88,6 @@ const App = () => {
 
   // Estado para menú contextual de terminal
   const [terminalContextMenu, setTerminalContextMenu] = useState(null);
-  const terminalContextMenuRef = useRef(null);
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -194,50 +193,7 @@ const App = () => {
     setDragOverTabIndex(null);
   };
 
-  // Efecto para posicionar el menú contextual correctamente
-  useEffect(() => {
-    if (terminalContextMenu && terminalContextMenu.mouseX !== undefined && terminalContextMenu.mouseY !== undefined) {
-      const timer = setTimeout(() => {
-        const menuElement = document.querySelector('.p-menu.p-menu-overlay');
-        if (menuElement) {
-          menuElement.style.position = 'fixed';
-          menuElement.style.left = `${terminalContextMenu.mouseX}px`;
-          menuElement.style.top = `${terminalContextMenu.mouseY}px`;
-          menuElement.style.zIndex = '9999';
-          menuElement.style.transform = 'none';
-          menuElement.style.margin = '0';
-        }
-      }, 50); // Dar más tiempo para que el menú se renderice
 
-      // Agregar listener para cerrar menú al hacer clic fuera
-      const handleClickOutside = (event) => {
-        const menuElement = document.querySelector('.p-menu.p-menu-overlay');
-        if (menuElement && !menuElement.contains(event.target)) {
-          // Limpiar estado y ocultar menú
-          setTerminalContextMenu(null);
-          if (terminalContextMenuRef.current) {
-            terminalContextMenuRef.current.hide();
-          }
-          // Remover el elemento del DOM si aún existe
-          setTimeout(() => {
-            const remainingMenu = document.querySelector('.p-menu.p-menu-overlay');
-            if (remainingMenu) {
-              remainingMenu.style.display = 'none';
-            }
-          }, 10);
-        }
-      };
-
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('contextmenu', handleClickOutside); // También en clic derecho
-      
-      return () => {
-        clearTimeout(timer);
-        document.removeEventListener('click', handleClickOutside);
-        document.removeEventListener('contextmenu', handleClickOutside);
-      };
-    }
-  }, [terminalContextMenu]);
 
   // Funciones para menú contextual de terminal
   const handleTerminalContextMenu = (e, tabKey) => {
@@ -249,8 +205,8 @@ const App = () => {
     const mouseY = e.clientY;
     
     // Calcular posición ajustada para que no se salga de la pantalla
-    const menuWidth = 180; // Ancho aproximado del menú
-    const menuHeight = 200; // Altura aproximada del menú
+    const menuWidth = 180;
+    const menuHeight = 200;
     const viewport = {
       width: window.innerWidth,
       height: window.innerHeight
@@ -273,63 +229,13 @@ const App = () => {
     adjustedX = Math.max(10, adjustedX);
     adjustedY = Math.max(10, adjustedY);
     
-    setTerminalContextMenu({ tabKey, event: e, mouseX: adjustedX, mouseY: adjustedY });
-    
-    // Mostrar menú (el posicionamiento se maneja en useEffect)
-    setTimeout(() => {
-      if (terminalContextMenuRef.current) {
-        terminalContextMenuRef.current.show(e);
-      }
-    }, 0);
+    setTerminalContextMenu({ tabKey, mouseX: adjustedX, mouseY: adjustedY });
   };
 
-  const getTerminalContextMenuItems = () => {
-    if (!terminalContextMenu) return [];
-    
-    const { tabKey } = terminalContextMenu;
-    
-    return [
-      {
-        label: 'Copiar selección',
-        icon: 'pi pi-copy',
-        command: () => handleCopyFromTerminal(tabKey)
-      },
-      {
-        label: 'Pegar',
-        icon: 'pi pi-clone',
-        command: () => handlePasteToTerminal(tabKey)
-      },
-      {
-        separator: true
-      },
-      {
-        label: 'Seleccionar todo',
-        icon: 'pi pi-list',
-        command: () => handleSelectAllTerminal(tabKey)
-      },
-      {
-        separator: true
-      },
-      {
-        label: 'Limpiar terminal',
-        icon: 'pi pi-trash',
-        command: () => handleClearTerminal(tabKey)
-      }
-    ];
-  };
+
 
   const hideContextMenu = () => {
     setTerminalContextMenu(null);
-    if (terminalContextMenuRef.current) {
-      terminalContextMenuRef.current.hide();
-    }
-    // Forzar ocultación del elemento DOM
-    setTimeout(() => {
-      const menuElement = document.querySelector('.p-menu.p-menu-overlay');
-      if (menuElement) {
-        menuElement.style.display = 'none';
-      }
-    }, 10);
   };
 
   const handleCopyFromTerminal = (tabKey) => {
@@ -338,12 +244,7 @@ const App = () => {
       const selection = terminal.getSelection();
       if (selection) {
         window.electron.clipboard.writeText(selection);
-        toast.current.show({
-          severity: 'success',
-          summary: 'Copiado',
-          detail: 'Texto copiado al portapapeles',
-          life: 2000
-        });
+        // No mostrar toast aquí para evitar duplicación
       } else {
         toast.current.show({
           severity: 'warn',
@@ -1446,11 +1347,106 @@ const App = () => {
                   model={generateOverflowMenuItems()}
                   popup
                 />
-                <Menu
-                  ref={terminalContextMenuRef}
-                  model={getTerminalContextMenuItems()}
-                  popup
-                />
+                {/* Menú contextual personalizado */}
+                {terminalContextMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      left: terminalContextMenu.mouseX,
+                      top: terminalContextMenu.mouseY,
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      zIndex: 9999,
+                      minWidth: '180px',
+                      overflow: 'hidden'
+                    }}
+                    onMouseLeave={() => setTerminalContextMenu(null)}
+                  >
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handleCopyFromTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-copy" style={{ width: '16px' }}></i>
+                      Copiar selección
+                    </div>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handlePasteToTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-clone" style={{ width: '16px' }}></i>
+                      Pegar
+                    </div>
+                    <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handleSelectAllTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-list" style={{ width: '16px' }}></i>
+                      Seleccionar todo
+                    </div>
+                    <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handleClearTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-trash" style={{ width: '16px' }}></i>
+                      Limpiar terminal
+                    </div>
+                  </div>
+                )}
+                
+                {/* Overlay para cerrar menú al hacer clic fuera */}
+                {terminalContextMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998
+                    }}
+                    onClick={() => setTerminalContextMenu(null)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setTerminalContextMenu(null);
+                    }}
+                  />
+                )}
               </div>
                               <div style={{ flexGrow: 1, position: 'relative' }}>
                   {sshTabs.map((tab, index) => (
