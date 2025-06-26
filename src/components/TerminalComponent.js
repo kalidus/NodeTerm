@@ -25,6 +25,24 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         },
         focus: () => {
             term.current?.focus();
+        },
+        getSelection: () => {
+            return term.current?.getSelection() || '';
+        },
+        selectAll: () => {
+            if (term.current) {
+                term.current.selectAll();
+            }
+        },
+        clear: () => {
+            if (term.current) {
+                term.current.clear();
+            }
+        },
+        paste: (text) => {
+            if (term.current && text) {
+                term.current.write(text);
+            }
         }
     }));
 

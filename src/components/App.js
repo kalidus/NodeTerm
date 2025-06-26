@@ -86,6 +86,10 @@ const App = () => {
   const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
   const [dragStartTimer, setDragStartTimer] = useState(null);
 
+  // Estado para menú contextual de pestañas
+  const [tabContextMenu, setTabContextMenu] = useState(null);
+  const tabContextMenuRef = useRef(null);
+
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
     return [...sshTabs, ...fileExplorerTabs];
@@ -188,6 +192,150 @@ const App = () => {
     }
     setDraggedTabIndex(null);
     setDragOverTabIndex(null);
+  };
+
+  // Funciones para menú contextual de pestañas
+  const handleTabContextMenu = (e, tabIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const allTabs = getAllTabs();
+    const tab = allTabs[tabIndex];
+    
+    // Solo mostrar menú para pestañas de terminal SSH (no exploradores)
+    if (tab.isExplorerInSSH || tab.type === 'explorer') {
+      return;
+    }
+    
+    setTabContextMenu({ tab, tabIndex, event: e });
+    
+    // Mostrar menú
+    setTimeout(() => {
+      if (tabContextMenuRef.current) {
+        tabContextMenuRef.current.show(e);
+      }
+    }, 0);
+  };
+
+  const getTabContextMenuItems = () => {
+    if (!tabContextMenu) return [];
+    
+    const { tab } = tabContextMenu;
+    
+    return [
+      {
+        label: 'Copiar selección',
+        icon: 'pi pi-copy',
+        command: () => handleCopyFromTerminal(tab.key)
+      },
+      {
+        label: 'Pegar',
+        icon: 'pi pi-clone',
+        command: () => handlePasteToTerminal(tab.key)
+      },
+      {
+        separator: true
+      },
+      {
+        label: 'Seleccionar todo',
+        icon: 'pi pi-list',
+        command: () => handleSelectAllTerminal(tab.key)
+      },
+      {
+        separator: true
+      },
+      {
+        label: 'Limpiar terminal',
+        icon: 'pi pi-trash',
+        command: () => handleClearTerminal(tab.key)
+      }
+    ];
+  };
+
+  const handleCopyFromTerminal = (tabKey) => {
+    if (window.electron && terminalRefs.current[tabKey]) {
+      const terminal = terminalRefs.current[tabKey];
+      const selection = terminal.getSelection();
+      if (selection) {
+        window.electron.clipboard.writeText(selection);
+        toast.current.show({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: 'Texto copiado al portapapeles',
+          life: 2000
+        });
+      } else {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Sin selección',
+          detail: 'No hay texto seleccionado para copiar',
+          life: 3000
+        });
+      }
+    }
+  };
+
+  const handlePasteToTerminal = async (tabKey) => {
+    if (window.electron && terminalRefs.current[tabKey]) {
+      try {
+        const text = await window.electron.clipboard.readText();
+        if (text) {
+          // Enviar el texto al terminal a través del IPC para que vaya al servidor SSH
+          window.electron.ipcRenderer.send('ssh:data', { tabId: tabKey, data: text });
+          toast.current.show({
+            severity: 'success',
+            summary: 'Pegado',
+            detail: 'Texto enviado al terminal',
+            life: 2000
+          });
+        } else {
+          toast.current.show({
+            severity: 'warn',
+            summary: 'Portapapeles vacío',
+            detail: 'No hay texto en el portapapeles',
+            life: 3000
+          });
+        }
+      } catch (error) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo acceder al portapapeles',
+          life: 3000
+        });
+      }
+    }
+  };
+
+  const handleSelectAllTerminal = (tabKey) => {
+    if (terminalRefs.current[tabKey]) {
+      const terminal = terminalRefs.current[tabKey];
+      terminal.selectAll();
+      toast.current.show({
+        severity: 'info',
+        summary: 'Seleccionado',
+        detail: 'Todo el contenido del terminal seleccionado',
+        life: 2000
+      });
+    }
+  };
+
+  const handleClearTerminal = (tabKey) => {
+    if (terminalRefs.current[tabKey]) {
+      const terminal = terminalRefs.current[tabKey];
+      // Limpiar el buffer visual del terminal
+      terminal.clear();
+      // También enviar comando clear al servidor SSH para limpiar la sesión
+      if (window.electron) {
+        window.electron.ipcRenderer.send('ssh:data', { tabId: tabKey, data: 'clear\n' });
+      }
+      toast.current.show({
+        severity: 'info',
+        summary: 'Terminal limpiado',
+        detail: 'Terminal y sesión SSH limpiados',
+        life: 2000
+      });
+    }
   };
 
   const generateOverflowMenuItems = () => {
@@ -1147,7 +1295,8 @@ const App = () => {
                               onDragLeave={handleTabDragLeave}
                               onDrop={(e) => handleTabDrop(e, idx)}
                               onDragEnd={handleTabDragEnd}
-                              title="Arrastra para reordenar pestañas"
+                              onContextMenu={(e) => handleTabContextMenu(e, idx)}
+                              title="Arrastra para reordenar pestañas | Clic derecho para menú"
                             >
                               {leftIcon}
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
@@ -1212,6 +1361,11 @@ const App = () => {
                 <Menu
                   ref={overflowMenuRef}
                   model={generateOverflowMenuItems()}
+                  popup
+                />
+                <Menu
+                  ref={tabContextMenuRef}
+                  model={getTabContextMenuItems()}
                   popup
                 />
               </div>
