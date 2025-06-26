@@ -13,6 +13,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
+import AboutDialog from './AboutDialog';
 import { Divider } from 'primereact/divider';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
@@ -67,6 +68,7 @@ const App = () => {
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
+  const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [sshTabs, setSshTabs] = useState([]);
@@ -1311,6 +1313,13 @@ const App = () => {
                 </div>
                 <div>
                   <Button
+                    icon="pi pi-info-circle"
+                    className="p-button-rounded p-button-text sidebar-action-button"
+                    onClick={() => setShowAboutDialog(true)}
+                    tooltip="Acerca de NodeTerm"
+                    tooltipOptions={{ position: 'bottom' }}
+                  />
+                  <Button
                     icon="pi pi-cog"
                     className="p-button-rounded p-button-text sidebar-action-button"
                     onClick={() => setShowConfigDialog(true)}
@@ -1901,6 +1910,11 @@ const App = () => {
           </div>
         </div>
       </Dialog>
+
+      <AboutDialog
+        visible={showAboutDialog}
+        onHide={() => setShowAboutDialog(false)}
+      />
     </div>
   );
 };

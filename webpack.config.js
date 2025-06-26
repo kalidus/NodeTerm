@@ -1,6 +1,8 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
+const packageJson = require('./package.json');
 
 module.exports = {
   mode: 'development',
@@ -37,6 +39,11 @@ module.exports = {
       patterns: [
         { from: 'preload.js', to: 'preload.js' }
       ]
+    }),
+    new webpack.DefinePlugin({
+      'process.env.REACT_APP_VERSION': JSON.stringify(packageJson.version),
+      'process.env.REACT_APP_NAME': JSON.stringify(packageJson.name),
+      'process.env.REACT_APP_BUILD_DATE': JSON.stringify(new Date().toLocaleDateString())
     })
   ],
   resolve: {

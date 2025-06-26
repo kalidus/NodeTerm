@@ -38,8 +38,23 @@ const DistroIcon = ({ distro }) => {
 };
 
 const StatusBar = ({ stats }) => {
+    // Obtener la versión de la aplicación
+    const appVersion = process.env.REACT_APP_VERSION || '1.0.0';
+    
     if (!stats) {
-        return null;
+        // Mostrar al menos la versión si no hay stats
+        return (
+            <div className="status-bar">
+                <div className="status-group">
+                    <div className="status-bar-section version-section">
+                        <i className="pi pi-desktop" style={{ fontSize: '0.8rem', marginRight: '4px', color: 'var(--primary-color)' }}></i>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                            NodeTerm v{appVersion}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip } = stats;
@@ -112,6 +127,16 @@ const StatusBar = ({ stats }) => {
                         <span>{ip}</span>
                     </div>
                 )}
+            </div>
+            
+            {/* Versión de la aplicación en el lado derecho */}
+            <div className="status-group">
+                <div className="status-bar-section version-section">
+                    <i className="pi pi-desktop" style={{ fontSize: '0.8rem', marginRight: '4px', color: 'var(--primary-color)' }}></i>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                        v{appVersion}
+                    </span>
+                </div>
             </div>
         </div>
     );
