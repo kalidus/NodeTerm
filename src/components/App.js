@@ -109,8 +109,8 @@ const App = () => {
     const hiddenTabs = getHiddenTabs();
     return hiddenTabs.map((tab, index) => {
       const globalIndex = MAX_VISIBLE_TABS + index;
-      // Determinar el tipo de pestaña basado en su tipo o contenido
-      const isExplorerTab = tab.type === 'explorer';
+      // Determinar el tipo de pestaña basado en su tipo, contenido o flag híbrido
+      const isExplorerTab = tab.type === 'explorer' || tab.isExplorerInSSH;
       const isTerminalTab = tab.type === 'terminal';
       return {
         label: tab.label,
@@ -772,8 +772,8 @@ const App = () => {
               sshConfig: sshConfig,
               type: 'terminal'
             };
-            const newTabs = [...prevTabs, newTab];
-            setActiveTabIndex(newTabs.length - 1);
+            const newTabs = [newTab, ...prevTabs];
+            setActiveTabIndex(0);
             return newTabs;
           });
         } : undefined}
@@ -1062,11 +1062,16 @@ const App = () => {
       type: 'explorer',
       needsOwnConnection: true
     };
-    setFileExplorerTabs(prevTabs => {
-      const newTabs = [...prevTabs, newExplorerTab];
-      const totalTabs = sshTabs.length + newTabs.length;
-      setActiveTabIndex(totalTabs - 1);
-      return newTabs;
+    // Para que la pestaña del explorador aparezca al principio absoluto,
+    // la insertamos como si fuera una pestaña SSH especial
+    setSshTabs(prevSshTabs => {
+      const hybridExplorerTab = {
+        ...newExplorerTab,
+        isExplorerInSSH: true // Flag para identificarla como explorador en el array SSH
+      };
+      const newSshTabs = [hybridExplorerTab, ...prevSshTabs];
+      setActiveTabIndex(0);
+      return newSshTabs;
     });
   };
 
@@ -1146,7 +1151,8 @@ const App = () => {
                     className={getAllTabs().length > MAX_VISIBLE_TABS ? 'has-overflow' : ''}
                   >
                   {getVisibleTabs().map((tab, idx) => {
-                    const isSSHTab = idx < Math.min(sshTabs.length, MAX_VISIBLE_TABS);
+                    // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
+                    const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
                     const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
                     
                     return (
@@ -1177,11 +1183,16 @@ const App = () => {
                                   const closedTab = tab;
                                   
                                   if (isSSHTab) {
-                                    if (window.electron && window.electron.ipcRenderer) {
+                                    // Verificar si es una pestaña híbrida (explorador en array SSH)
+                                    if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    } else if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
                                       window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
                                     }
                                     const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                    delete terminalRefs.current[closedTab.key];
+                                    if (!closedTab.isExplorerInSSH) {
+                                      delete terminalRefs.current[closedTab.key];
+                                    }
                                     setSshTabs(newSshTabs);
                                   } else {
                                     if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
@@ -1211,10 +1222,10 @@ const App = () => {
                 </TabView>
                 {getAllTabs().length > MAX_VISIBLE_TABS && (
                   <Button
-                    icon="pi pi-angle-down"
-                    className="overflow-tab-btn"
+                    icon="pi pi-ellipsis-v"
+                    className="overflow-tab-btn p-button-outlined p-button-sm"
                     onClick={(e) => overflowMenuRef.current?.toggle(e)}
-                    tooltip="Más pestañas"
+                    tooltip={`Ver ${getAllTabs().length - MAX_VISIBLE_TABS} pestañas más`}
                     tooltipOptions={{ position: 'left' }}
                   />
                 )}
@@ -1224,7 +1235,7 @@ const App = () => {
                   popup
                 />
               </div>
-              <div style={{ flexGrow: 1, position: 'relative' }}>
+                              <div style={{ flexGrow: 1, position: 'relative' }}>
                   {sshTabs.map((tab, index) => (
                     <div 
                       key={tab.key} 
@@ -1238,14 +1249,21 @@ const App = () => {
                         left: 0
                       }}
                     >
-                      <TerminalComponent
-                        ref={el => terminalRefs.current[tab.key] = el}
-                        tabId={tab.key}
-                        sshConfig={tab.sshConfig}
-                        fontFamily={fontFamily}
-                        fontSize={fontSize}
-                        theme={terminalTheme.theme}
-                      />
+                      {tab.isExplorerInSSH ? (
+                        <FileExplorer
+                          sshConfig={tab.sshConfig}
+                          tabId={tab.key}
+                        />
+                      ) : (
+                        <TerminalComponent
+                          ref={el => terminalRefs.current[tab.key] = el}
+                          tabId={tab.key}
+                          sshConfig={tab.sshConfig}
+                          fontFamily={fontFamily}
+                          fontSize={fontSize}
+                          theme={terminalTheme.theme}
+                        />
+                      )}
                     </div>
                   ))}
                   {fileExplorerTabs.map((tab, index) => {
