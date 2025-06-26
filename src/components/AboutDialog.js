@@ -1,17 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
+import { getVersionInfo, getElectronVersionInfo } from '../version-info';
 
 const AboutDialog = ({ visible, onHide }) => {
-  // Obtener información del package.json (será inyectada por webpack)
-  const appVersion = process.env.REACT_APP_VERSION || '1.0.0';
-  const appName = process.env.REACT_APP_NAME || 'NodeTerm';
-  const electronVersion = process.versions?.electron || 'Unknown';
-  const nodeVersion = process.versions?.node || 'Unknown';
-  const chromeVersion = process.versions?.chrome || 'Unknown';
-  
-  const buildDate = process.env.REACT_APP_BUILD_DATE || new Date().toLocaleDateString();
+  const [versionInfo, setVersionInfo] = useState(getVersionInfo());
+
+  useEffect(() => {
+    // Intentar obtener información más detallada de Electron
+    const loadElectronInfo = async () => {
+      const electronInfo = await getElectronVersionInfo();
+      setVersionInfo(prev => ({
+        ...prev,
+        ...electronInfo
+      }));
+    };
+
+    if (visible) {
+      loadElectronInfo();
+    }
+  }, [visible]);
+
+  const {
+    appVersion,
+    appName,
+    buildDate,
+    electronVersion,
+    nodeVersion,
+    chromeVersion
+  } = versionInfo;
 
   return (
     <Dialog

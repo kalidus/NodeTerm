@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
 import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
+import { getVersionInfo } from '../version-info';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -38,8 +39,8 @@ const DistroIcon = ({ distro }) => {
 };
 
 const StatusBar = ({ stats }) => {
-    // Obtener la versión de la aplicación
-    const appVersion = process.env.REACT_APP_VERSION || '1.0.0';
+    // Obtener la versión de la aplicación de forma segura
+    const { appVersion } = getVersionInfo();
     
     if (!stats) {
         // Mostrar al menos la versión si no hay stats
