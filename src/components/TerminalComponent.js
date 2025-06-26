@@ -8,7 +8,7 @@ import { ImageAddon } from '@xterm/addon-image';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -128,14 +128,19 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 }
             });
 
-            // Handle right-click to paste
+            // Handle right-click context menu
             const contextMenuHandler = (e) => {
-                e.preventDefault();
-                window.electron.clipboard.readText().then(text => {
-                    if (text) {
-                        term.current.paste(text);
-                    }
-                });
+                if (onContextMenu) {
+                    onContextMenu(e, tabId);
+                } else {
+                    // Fallback: paste functionality
+                    e.preventDefault();
+                    window.electron.clipboard.readText().then(text => {
+                        if (text) {
+                            window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
+                        }
+                    });
+                }
             };
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
             
