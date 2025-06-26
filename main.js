@@ -349,20 +349,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           await new Promise(resolve => setTimeout(resolve, 1000 * shellAttempts));
         }
         
-        stream = await ssh.shell({ 
-          term: 'xterm-256color',
-          cols: 80,
-          rows: 24,
-          // Configuraciones adicionales para mejor compatibilidad
-          env: {}
-        });
+        stream = await ssh.shell({ term: 'xterm-256color' });
         break;
       } catch (shellError) {
         shellAttempts++;
-        console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError.message);
+        console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
         
         if (shellAttempts >= maxShellAttempts) {
-          throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError.message}`);
+          throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError?.message || shellError || 'Unknown error'}`);
         }
       }
     }
@@ -387,6 +381,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           }
           // If it was already cached, we've already sent the cached version.
           // We do nothing here, effectively suppressing the duplicate message.
+          
+                    // La configuración original ya funciona correctamente
           return; 
         }
         
@@ -405,6 +401,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
       delete sshConnections[tabId];
     });
+
+
 
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
 
@@ -471,8 +469,17 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
 // IPC handler to handle terminal resize
 ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
     const conn = sshConnections[tabId];
-    if (conn && conn.stream) {
-        conn.stream.setWindow(rows, cols);
+    if (conn && conn.stream && !conn.stream.destroyed) {
+        try {
+            // Asegurar que el tamaño sea válido antes de aplicar
+            const safeRows = Math.max(1, Math.min(300, rows || 24));
+            const safeCols = Math.max(1, Math.min(500, cols || 80));
+            
+            conn.stream.setWindow(safeRows, safeCols);
+            console.log(`Terminal ${tabId} redimensionado a ${safeCols}x${safeRows}`);
+        } catch (resizeError) {
+            console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
+        }
     }
 });
 
