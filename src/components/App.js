@@ -86,9 +86,9 @@ const App = () => {
   const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
   const [dragStartTimer, setDragStartTimer] = useState(null);
 
-  // Estado para menú contextual de pestañas
-  const [tabContextMenu, setTabContextMenu] = useState(null);
-  const tabContextMenuRef = useRef(null);
+  // Estado para menú contextual de terminal
+  const [terminalContextMenu, setTerminalContextMenu] = useState(null);
+  const terminalContextMenuRef = useRef(null);
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -194,44 +194,36 @@ const App = () => {
     setDragOverTabIndex(null);
   };
 
-  // Funciones para menú contextual de pestañas
-  const handleTabContextMenu = (e, tabIndex) => {
+  // Funciones para menú contextual de terminal
+  const handleTerminalContextMenu = (e, tabKey) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const allTabs = getAllTabs();
-    const tab = allTabs[tabIndex];
-    
-    // Solo mostrar menú para pestañas de terminal SSH (no exploradores)
-    if (tab.isExplorerInSSH || tab.type === 'explorer') {
-      return;
-    }
-    
-    setTabContextMenu({ tab, tabIndex, event: e });
+    setTerminalContextMenu({ tabKey, event: e });
     
     // Mostrar menú
     setTimeout(() => {
-      if (tabContextMenuRef.current) {
-        tabContextMenuRef.current.show(e);
+      if (terminalContextMenuRef.current) {
+        terminalContextMenuRef.current.show(e);
       }
     }, 0);
   };
 
-  const getTabContextMenuItems = () => {
-    if (!tabContextMenu) return [];
+  const getTerminalContextMenuItems = () => {
+    if (!terminalContextMenu) return [];
     
-    const { tab } = tabContextMenu;
+    const { tabKey } = terminalContextMenu;
     
     return [
       {
         label: 'Copiar selección',
         icon: 'pi pi-copy',
-        command: () => handleCopyFromTerminal(tab.key)
+        command: () => handleCopyFromTerminal(tabKey)
       },
       {
         label: 'Pegar',
         icon: 'pi pi-clone',
-        command: () => handlePasteToTerminal(tab.key)
+        command: () => handlePasteToTerminal(tabKey)
       },
       {
         separator: true
@@ -239,7 +231,7 @@ const App = () => {
       {
         label: 'Seleccionar todo',
         icon: 'pi pi-list',
-        command: () => handleSelectAllTerminal(tab.key)
+        command: () => handleSelectAllTerminal(tabKey)
       },
       {
         separator: true
@@ -247,7 +239,7 @@ const App = () => {
       {
         label: 'Limpiar terminal',
         icon: 'pi pi-trash',
-        command: () => handleClearTerminal(tab.key)
+        command: () => handleClearTerminal(tabKey)
       }
     ];
   };
@@ -1295,8 +1287,7 @@ const App = () => {
                               onDragLeave={handleTabDragLeave}
                               onDrop={(e) => handleTabDrop(e, idx)}
                               onDragEnd={handleTabDragEnd}
-                              onContextMenu={(e) => handleTabContextMenu(e, idx)}
-                              title="Arrastra para reordenar pestañas | Clic derecho para menú"
+                              title="Arrastra para reordenar pestañas"
                             >
                               {leftIcon}
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
@@ -1364,8 +1355,8 @@ const App = () => {
                   popup
                 />
                 <Menu
-                  ref={tabContextMenuRef}
-                  model={getTabContextMenuItems()}
+                  ref={terminalContextMenuRef}
+                  model={getTerminalContextMenuItems()}
                   popup
                 />
               </div>
@@ -1396,6 +1387,7 @@ const App = () => {
                           fontFamily={fontFamily}
                           fontSize={fontSize}
                           theme={terminalTheme.theme}
+                          onContextMenu={handleTerminalContextMenu}
                         />
                       )}
                     </div>
