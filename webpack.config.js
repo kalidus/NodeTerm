@@ -44,10 +44,22 @@ module.exports = {
       'process.env.REACT_APP_VERSION': JSON.stringify(packageJson.version),
       'process.env.REACT_APP_NAME': JSON.stringify(packageJson.name),
       'process.env.REACT_APP_BUILD_DATE': JSON.stringify(new Date().toLocaleDateString())
+    }),
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer']
     })
   ],
   resolve: {
-    extensions: ['.js', '.jsx']
+    extensions: ['.js', '.jsx'],
+    fallback: {
+      "process": require.resolve("process/browser"),
+      "path": require.resolve("path-browserify"),
+      "os": require.resolve("os-browserify/browser"),
+      "crypto": require.resolve("crypto-browserify"),
+      "stream": require.resolve("stream-browserify"),
+      "buffer": require.resolve("buffer")
+    }
   },
   devtool: 'source-map'
 }; 

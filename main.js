@@ -7,6 +7,7 @@ const path = require('path');
 const url = require('url');
 const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
+const packageJson = require('./package.json');
 
 let mainWindow;
 
@@ -162,6 +163,18 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+// IPC handler para obtener información de versión
+ipcMain.handle('get-version-info', () => {
+  return {
+    appVersion: packageJson.version,
+    appName: packageJson.name,
+    electronVersion: process.versions.electron,
+    nodeVersion: process.versions.node,
+    chromeVersion: process.versions.chrome,
+    buildDate: new Date().toLocaleDateString()
+  };
 });
 
 // IPC handler to establish an SSH connection
