@@ -617,3 +617,30 @@ html, body {
 .p-tabview .p-tabview-nav li {
   transition: transform 0.2s ease-out;
 }
+
+/* --- Menú contextual de pestañas --- */
+.p-menu.p-menu-overlay {
+  min-width: 180px;
+}
+
+.p-menu .p-menuitem-link {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.p-menu .p-menuitem-link:hover {
+  background-color: var(--surface-100, #f8f9fa);
+}
+
+.p-menu .p-menuitem-icon {
+  width: 1rem;
+  text-align: center;
+}
+
+.p-menu .p-separator {
+  margin: 0.25rem 0;
+  border-top: 1px solid var(--surface-300, #dee2e6);
+}
