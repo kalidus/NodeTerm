@@ -194,6 +194,41 @@ const App = () => {
     setDragOverTabIndex(null);
   };
 
+  // Efecto para posicionar el menú contextual correctamente
+  useEffect(() => {
+    if (terminalContextMenu && terminalContextMenu.mouseX !== undefined && terminalContextMenu.mouseY !== undefined) {
+      const timer = setTimeout(() => {
+        const menuElement = document.querySelector('.p-menu.p-menu-overlay');
+        if (menuElement) {
+          menuElement.style.position = 'fixed';
+          menuElement.style.left = `${terminalContextMenu.mouseX}px`;
+          menuElement.style.top = `${terminalContextMenu.mouseY}px`;
+          menuElement.style.zIndex = '9999';
+          menuElement.style.transform = 'none';
+          menuElement.style.margin = '0';
+        }
+      }, 50); // Dar más tiempo para que el menú se renderice
+
+      // Agregar listener para cerrar menú al hacer clic fuera
+      const handleClickOutside = (event) => {
+        const menuElement = document.querySelector('.p-menu.p-menu-overlay');
+        if (menuElement && !menuElement.contains(event.target)) {
+          setTerminalContextMenu(null);
+          if (terminalContextMenuRef.current) {
+            terminalContextMenuRef.current.hide();
+          }
+        }
+      };
+
+      document.addEventListener('click', handleClickOutside);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [terminalContextMenu]);
+
   // Funciones para menú contextual de terminal
   const handleTerminalContextMenu = (e, tabKey) => {
     e.preventDefault();
@@ -230,18 +265,10 @@ const App = () => {
     
     setTerminalContextMenu({ tabKey, event: e, mouseX: adjustedX, mouseY: adjustedY });
     
-    // Mostrar menú en las coordenadas ajustadas
+    // Mostrar menú (el posicionamiento se maneja en useEffect)
     setTimeout(() => {
       if (terminalContextMenuRef.current) {
-        // Crear un evento personalizado con las coordenadas ajustadas
-        const customEvent = {
-          ...e,
-          pageX: adjustedX,
-          pageY: adjustedY,
-          clientX: adjustedX,
-          clientY: adjustedY
-        };
-        terminalContextMenuRef.current.show(customEvent);
+        terminalContextMenuRef.current.show(e);
       }
     }, 0);
   };
