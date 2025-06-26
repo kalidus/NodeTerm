@@ -81,40 +81,50 @@ const App = () => {
   // Estado para tracking del distro por pestaña
   const [tabDistros, setTabDistros] = useState({});
 
+  // Ref para mantener track de los listeners activos
+  const activeListenersRef = useRef(new Set());
+
   // Effect para escuchar actualizaciones de estadísticas y capturar el distro
   useEffect(() => {
     if (!window.electron) return;
 
-    // Escuchar todos los eventos de estadísticas
-    const cleanupListeners = [];
+    // Obtener todos los tabIds actuales de terminales SSH
+    const currentTerminalTabs = sshTabs.filter(tab => tab.type === 'terminal').map(tab => tab.key);
     
-    // Función para agregar listener para una pestaña específica
-    const addStatsListener = (tabId) => {
-      const eventName = `ssh-stats:update:${tabId}`;
-      const listener = (stats) => {
-        if (stats.distro) {
-          setTabDistros(prev => ({
-            ...prev,
-            [tabId]: stats.distro
-          }));
-        }
-      };
-      
-      window.electron.ipcRenderer.on(eventName, listener);
-      cleanupListeners.push(() => {
-        window.electron.ipcRenderer.off(eventName, listener);
-      });
-    };
-
-    // Agregar listeners para pestañas existentes
-    sshTabs.forEach(tab => {
-      if (tab.type === 'terminal') {
-        addStatsListener(tab.key);
+    // Remover listeners de pestañas que ya no existen
+    activeListenersRef.current.forEach(tabId => {
+      if (!currentTerminalTabs.includes(tabId)) {
+        const eventName = `ssh-stats:update:${tabId}`;
+        window.electron.ipcRenderer.removeAllListeners(eventName);
+        activeListenersRef.current.delete(tabId);
       }
     });
 
+    // Agregar listeners para nuevas pestañas
+    currentTerminalTabs.forEach(tabId => {
+      if (!activeListenersRef.current.has(tabId)) {
+        const eventName = `ssh-stats:update:${tabId}`;
+        const listener = (stats) => {
+          if (stats && stats.distro) {
+            setTabDistros(prev => ({
+              ...prev,
+              [tabId]: stats.distro
+            }));
+          }
+        };
+        
+        window.electron.ipcRenderer.on(eventName, listener);
+        activeListenersRef.current.add(tabId);
+      }
+    });
+
+    // Cleanup function al desmontar el componente
     return () => {
-      cleanupListeners.forEach(cleanup => cleanup());
+      activeListenersRef.current.forEach(tabId => {
+        const eventName = `ssh-stats:update:${tabId}`;
+        window.electron.ipcRenderer.removeAllListeners(eventName);
+      });
+      activeListenersRef.current.clear();
     };
   }, [sshTabs]);
 
