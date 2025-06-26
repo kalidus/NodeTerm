@@ -36,8 +36,19 @@ contextBridge.exposeInMainWorld('electron', {
         ipcRenderer.on(channel, subscription);
 
         return () => {
-          ipcRenderer.removeListener(channel, subscription);
+          ipcRenderer.off(channel, subscription);
         };
+      }
+    },
+    off: (channel, func) => {
+      const validChannels = [
+        /^ssh:data:.*$/,
+        /^ssh:ready:.*$/,
+        /^ssh:error:.*$/,
+        /^ssh-stats:update:.*$/
+      ];
+      if (validChannels.some(regex => regex.test(channel))) {
+        ipcRenderer.off(channel, func);
       }
     },
     removeAllListeners: (channel) => {

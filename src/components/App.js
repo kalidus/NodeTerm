@@ -16,10 +16,38 @@ import FileExplorer from './FileExplorer';
 import { Divider } from 'primereact/divider';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
+// Importar iconos para distribuciones
+import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
+import { SiDebian } from 'react-icons/si';
+
+// Componente para mostrar icono según distribución
+const DistroIcon = ({ distro, size = 14 }) => {
+  const iconStyle = { fontSize: `${size}px`, marginRight: '6px' };
+  
+  switch (distro) {
+    case 'ubuntu':
+      return <FaUbuntu style={iconStyle} />;
+    case 'debian':
+      return <SiDebian style={iconStyle} />;
+    case 'rhel':
+    case 'redhat':
+      return <FaRedhat style={iconStyle} />;
+    case 'centos':
+      return <FaCentos style={iconStyle} />;
+    case 'fedora':
+      return <FaFedora style={iconStyle} />;
+    case 'arch':
+    default:
+      return <FaLinux style={iconStyle} />;
+  }
+};
 
 const App = () => {
   const toast = useRef(null);
   const overflowMenuRef = useRef(null);
+  const [overflowMenuItems, setOverflowMenuItems] = useState([]);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+  const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
   // Storage key for persistence
   const STORAGE_KEY = 'basicapp2_tree_data';
   const [folderName, setFolderName] = useState('');
@@ -50,6 +78,56 @@ const App = () => {
   const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
 
+  // Estado para tracking del distro por pestaña
+  const [tabDistros, setTabDistros] = useState({});
+
+  // Ref para mantener track de los listeners activos
+  const activeListenersRef = useRef(new Set());
+
+  // Effect para escuchar actualizaciones de estadísticas y capturar el distro
+  useEffect(() => {
+    if (!window.electron) return;
+
+    // Obtener todos los tabIds actuales de terminales SSH
+    const currentTerminalTabs = sshTabs.filter(tab => tab.type === 'terminal').map(tab => tab.key);
+    
+    // Remover listeners de pestañas que ya no existen
+    activeListenersRef.current.forEach(tabId => {
+      if (!currentTerminalTabs.includes(tabId)) {
+        const eventName = `ssh-stats:update:${tabId}`;
+        window.electron.ipcRenderer.removeAllListeners(eventName);
+        activeListenersRef.current.delete(tabId);
+      }
+    });
+
+    // Agregar listeners para nuevas pestañas
+    currentTerminalTabs.forEach(tabId => {
+      if (!activeListenersRef.current.has(tabId)) {
+        const eventName = `ssh-stats:update:${tabId}`;
+        const listener = (stats) => {
+          if (stats && stats.distro) {
+            setTabDistros(prev => ({
+              ...prev,
+              [tabId]: stats.distro
+            }));
+          }
+        };
+        
+        window.electron.ipcRenderer.on(eventName, listener);
+        activeListenersRef.current.add(tabId);
+      }
+    });
+
+    // Cleanup function al desmontar el componente
+    return () => {
+      activeListenersRef.current.forEach(tabId => {
+        const eventName = `ssh-stats:update:${tabId}`;
+        window.electron.ipcRenderer.removeAllListeners(eventName);
+      });
+      activeListenersRef.current.clear();
+    };
+  }, [sshTabs]);
+
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
   const FONT_SIZE_STORAGE_KEY = 'basicapp_terminal_font_size';
@@ -72,14 +150,22 @@ const App = () => {
 
   // Theme configuration
   const THEME_STORAGE_KEY = 'basicapp_terminal_theme';
-  const availableThemes = Object.keys(themes);
+  const availableThemes = themes ? Object.keys(themes) : [];
   const [terminalTheme, setTerminalTheme] = useState(() => {
       const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
-      return themes[savedThemeName];
+      return themes && themes[savedThemeName] ? themes[savedThemeName] : {};
   });
 
   // Constantes para el overflow de pestañas
   const MAX_VISIBLE_TABS = 8;
+
+  // Estado para drag & drop de pestañas
+  const [draggedTabIndex, setDraggedTabIndex] = useState(null);
+  const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
+  const [dragStartTimer, setDragStartTimer] = useState(null);
+
+  // Estado para menú contextual de terminal
+  const [terminalContextMenu, setTerminalContextMenu] = useState(null);
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -104,8 +190,266 @@ const App = () => {
     }
   };
 
+  // Funciones para drag & drop de pestañas
+  const handleTabDragStart = (e, tabIndex) => {
+    // Pequeño delay para distinguir entre click y drag
+    const timer = setTimeout(() => {
+      setDraggedTabIndex(tabIndex);
+    }, 50);
+    setDragStartTimer(timer);
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tabIndex.toString());
+  };
+
+  const handleTabDragOver = (e, tabIndex) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverTabIndex(tabIndex);
+  };
+
+  const handleTabDragLeave = (e) => {
+    // Solo limpiar si realmente salimos del área de pestañas
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverTabIndex(null);
+    }
+  };
+
+  const handleTabDrop = (e, dropIndex) => {
+    e.preventDefault();
+    const dragIndex = draggedTabIndex;
+    
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
+    }
+
+    // Reordenar las pestañas
+    const allTabs = getAllTabs();
+    const draggedTab = allTabs[dragIndex];
+    const newTabs = [...allTabs];
+    
+    // Remover el tab de su posición original
+    newTabs.splice(dragIndex, 1);
+    // Insertar en la nueva posición
+    newTabs.splice(dropIndex, 0, draggedTab);
+    
+    // Separar nuevamente en SSH y Explorer tabs manteniendo el orden
+    const newSshTabs = [];
+    const newExplorerTabs = [];
+    
+    newTabs.forEach(tab => {
+      // Verificar si es una pestaña SSH (incluyendo exploradores en SSH)
+      const isSSHTab = sshTabs.some(sshTab => sshTab.key === tab.key);
+      if (isSSHTab) {
+        newSshTabs.push(tab);
+      } else {
+        newExplorerTabs.push(tab);
+      }
+    });
+    
+    // Actualizar los estados manteniendo el orden correcto
+    setSshTabs(newSshTabs);
+    setFileExplorerTabs(newExplorerTabs);
+    
+    // Actualizar el índice activo
+    setActiveTabIndex(dropIndex);
+    
+    // Limpiar estado de drag
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
+  const handleTabDragEnd = () => {
+    // Limpiar timer si existe
+    if (dragStartTimer) {
+      clearTimeout(dragStartTimer);
+      setDragStartTimer(null);
+    }
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
+  // Funciones para menú contextual de terminal
+  const handleTerminalContextMenu = (e, tabKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Capturar coordenadas exactas del mouse
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    
+    // Calcular posición ajustada para que no se salga de la pantalla
+    const menuWidth = 180;
+    const menuHeight = 200;
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+    
+    let adjustedX = mouseX;
+    let adjustedY = mouseY;
+    
+    // Ajustar X si se sale por la derecha
+    if (mouseX + menuWidth > viewport.width) {
+      adjustedX = viewport.width - menuWidth - 10;
+    }
+    
+    // Ajustar Y si se sale por abajo
+    if (mouseY + menuHeight > viewport.height) {
+      adjustedY = viewport.height - menuHeight - 10;
+    }
+    
+    // Asegurar que no se salga por la izquierda o arriba
+    adjustedX = Math.max(10, adjustedX);
+    adjustedY = Math.max(10, adjustedY);
+    
+    setTerminalContextMenu({ tabKey, mouseX: adjustedX, mouseY: adjustedY });
+  };
+
+  const hideContextMenu = () => {
+    setTerminalContextMenu(null);
+  };
+
+  // Función para limpiar distro cuando se cierra una pestaña
+  const cleanupTabDistro = (tabKey) => {
+    setTabDistros(prev => {
+      const newDistros = { ...prev };
+      delete newDistros[tabKey];
+      return newDistros;
+    });
+  };
+
+  const handleCopyFromTerminal = (tabKey) => {
+    if (window.electron && terminalRefs.current[tabKey]) {
+      const terminal = terminalRefs.current[tabKey];
+      const selection = terminal.getSelection();
+      if (selection) {
+        window.electron.clipboard.writeText(selection);
+        // No mostrar toast aquí para evitar duplicación
+      } else {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Sin selección',
+          detail: 'No hay texto seleccionado para copiar',
+          life: 3000
+        });
+      }
+    }
+    hideContextMenu();
+  };
+
+  const handlePasteToTerminal = async (tabKey) => {
+    if (window.electron && terminalRefs.current[tabKey]) {
+      try {
+        const text = await window.electron.clipboard.readText();
+        if (text) {
+          // Enviar el texto al terminal a través del IPC para que vaya al servidor SSH
+          window.electron.ipcRenderer.send('ssh:data', { tabId: tabKey, data: text });
+          toast.current.show({
+            severity: 'success',
+            summary: 'Pegado',
+            detail: 'Texto enviado al terminal',
+            life: 2000
+          });
+        } else {
+          toast.current.show({
+            severity: 'warn',
+            summary: 'Portapapeles vacío',
+            detail: 'No hay texto en el portapapeles',
+            life: 3000
+          });
+        }
+      } catch (error) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo acceder al portapapeles',
+          life: 3000
+        });
+      }
+    }
+    hideContextMenu();
+  };
+
+  const handleSelectAllTerminal = (tabKey) => {
+    if (terminalRefs.current[tabKey]) {
+      const terminal = terminalRefs.current[tabKey];
+      terminal.selectAll();
+      toast.current.show({
+        severity: 'info',
+        summary: 'Seleccionado',
+        detail: 'Todo el contenido del terminal seleccionado',
+        life: 2000
+      });
+    }
+    hideContextMenu();
+  };
+
+  const handleClearTerminal = (tabKey) => {
+    if (terminalRefs.current[tabKey]) {
+      const terminal = terminalRefs.current[tabKey];
+      // Limpiar el buffer visual del terminal
+      terminal.clear();
+      // También enviar comando clear al servidor SSH para limpiar la sesión
+      if (window.electron) {
+        window.electron.ipcRenderer.send('ssh:data', { tabId: tabKey, data: 'clear\n' });
+      }
+      toast.current.show({
+        severity: 'info',
+        summary: 'Terminal limpiado',
+        detail: 'Terminal y sesión SSH limpiados',
+        life: 2000
+      });
+    }
+    hideContextMenu();
+  };
+
+  const moveTabToFirst = (globalIndex) => {
+    const allTabs = getAllTabs();
+    const tabToMove = allTabs[globalIndex];
+    
+    if (!tabToMove) return;
+    
+    // Determinar si es una pestaña SSH o explorador
+    const isSSHTab = globalIndex < sshTabs.length || tabToMove.isExplorerInSSH;
+    
+    if (isSSHTab) {
+      // Mover pestaña SSH
+      const currentSSHIndex = sshTabs.findIndex(tab => tab.key === tabToMove.key);
+      if (currentSSHIndex !== -1) {
+        const newSSHTabs = [...sshTabs];
+        const [movedTab] = newSSHTabs.splice(currentSSHIndex, 1);
+        newSSHTabs.unshift(movedTab); // Mover al principio
+        setSshTabs(newSSHTabs);
+        setActiveTabIndex(0); // Activar la primera pestaña
+      }
+    } else {
+      // Mover pestaña de explorador
+      const currentExplorerIndex = fileExplorerTabs.findIndex(tab => tab.key === tabToMove.key);
+      if (currentExplorerIndex !== -1) {
+        const newExplorerTabs = [...fileExplorerTabs];
+        const [movedTab] = newExplorerTabs.splice(currentExplorerIndex, 1);
+        
+        // Si hay pestañas SSH, mover el explorador al principio de los exploradores
+        // Si no hay pestañas SSH, mover al principio absoluto
+        if (sshTabs.length > 0) {
+          newExplorerTabs.unshift(movedTab);
+          setFileExplorerTabs(newExplorerTabs);
+          setActiveTabIndex(sshTabs.length); // Primera posición de exploradores
+        } else {
+          newExplorerTabs.unshift(movedTab);
+          setFileExplorerTabs(newExplorerTabs);
+          setActiveTabIndex(0); // Primera posición absoluta
+        }
+      }
+    }
+  };
+
   const generateOverflowMenuItems = () => {
     const hiddenTabs = getHiddenTabs();
+    
     return hiddenTabs.map((tab, index) => {
       const globalIndex = MAX_VISIBLE_TABS + index;
       // Determinar el tipo de pestaña basado en su tipo, contenido o flag híbrido
@@ -115,7 +459,7 @@ const App = () => {
         label: tab.label,
         icon: isExplorerTab ? 'pi pi-folder' : 'pi pi-terminal',
         command: () => {
-          setActiveTabIndex(globalIndex);
+          moveTabToFirst(globalIndex);
         }
       };
     });
@@ -163,8 +507,6 @@ const App = () => {
       }
     }
   }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
-
-
 
   // Default tree data
   const getDefaultNodes = () => [
@@ -948,7 +1290,7 @@ const App = () => {
       
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
-          <SplitterPanel size={25} minSize={20}>
+          <SplitterPanel size={15} minSize={10}>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
                 <div>
@@ -1026,17 +1368,52 @@ const App = () => {
                         header={tab.label}
                         headerTemplate={(options) => {
                           const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                          const isDragging = draggedTabIndex === idx;
+                          const isDragOver = dragOverTabIndex === idx;
+                          
                           return (
                             <div
-                              className={className}
-                              style={{ ...style, display: 'flex', alignItems: 'center', maxWidth: 220 }}
-                              onClick={onClick}
+                              className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
+                              style={{ 
+                                ...style, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                maxWidth: 220,
+                                opacity: isDragging ? 0.5 : 1,
+                                borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
+                                transition: 'opacity 0.2s, border-left 0.2s',
+                                cursor: isDragging ? 'grabbing' : 'grab'
+                              }}
+                              onClick={(e) => {
+                                // Prevenir click si está en proceso de drag o hay un timer activo
+                                if (draggedTabIndex !== null || dragStartTimer !== null) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                onClick(e);
+                              }}
                               onKeyDown={onKeyDown}
                               tabIndex={0}
                               aria-selected={selected}
                               role="tab"
+                              draggable="true"
+                              onDragStart={(e) => handleTabDragStart(e, idx)}
+                              onDragOver={(e) => handleTabDragOver(e, idx)}
+                              onDragLeave={handleTabDragLeave}
+                              onDrop={(e) => handleTabDrop(e, idx)}
+                              onDragEnd={handleTabDragEnd}
+                              title="Arrastra para reordenar pestañas"
                             >
                               {leftIcon}
+                              {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
+                              {tab.type === 'terminal' && tabDistros[tab.key] && (
+                                <DistroIcon distro={tabDistros[tab.key]} size={12} />
+                              )}
+                              {/* Icono específico para exploradores */}
+                              {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+                                <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                              )}
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
                               <Button
                                 icon="pi pi-times"
@@ -1046,6 +1423,9 @@ const App = () => {
                                   e.stopPropagation();
                                   // Cierre robusto de pestaña
                                   const closedTab = tab;
+                                  
+                                  // Limpiar distro de la pestaña cerrada
+                                  cleanupTabDistro(closedTab.key);
                                   
                                   if (isSSHTab) {
                                     // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
@@ -1089,18 +1469,208 @@ const App = () => {
                   })}
                 </TabView>
                 <Button
+                  ref={overflowMenuRef}
                   icon="pi pi-ellipsis-v"
                   className="overflow-tab-btn p-button-outlined p-button-sm"
-                  onClick={(e) => overflowMenuRef.current?.toggle(e)}
-                  tooltip={getAllTabs().length > MAX_VISIBLE_TABS ? `Ver ${getAllTabs().length - MAX_VISIBLE_TABS} pestañas más` : 'Menú de pestañas'}
-                  tooltipOptions={{ position: 'left' }}
-                  disabled={getAllTabs().length === 0}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const items = generateOverflowMenuItems();
+                    setOverflowMenuItems(items);
+                    
+                    // Calcular posición del menú relativa al botón
+                    const buttonRect = e.currentTarget.getBoundingClientRect();
+                    const menuWidth = 200;
+                    const menuHeight = items.length * 40 + 10; // Estimación de altura
+                    
+                    let x = buttonRect.left;
+                    let y = buttonRect.bottom + 5;
+                    
+                    // Ajustar si se sale de la pantalla por la derecha
+                    if (x + menuWidth > window.innerWidth) {
+                      x = buttonRect.right - menuWidth;
+                    }
+                    
+                    // Ajustar si se sale de la pantalla por abajo
+                    if (y + menuHeight > window.innerHeight) {
+                      y = buttonRect.top - menuHeight - 5;
+                    }
+                    
+                    setOverflowMenuPosition({ x, y });
+                    setShowOverflowMenu(!showOverflowMenu);
+                  }}
+
+                  disabled={getAllTabs().length <= MAX_VISIBLE_TABS}
                 />
-                <Menu
-                  ref={overflowMenuRef}
-                  model={generateOverflowMenuItems()}
-                  popup
-                />
+                {/* Menú contextual personalizado */}
+                {terminalContextMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      left: terminalContextMenu.mouseX,
+                      top: terminalContextMenu.mouseY,
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      zIndex: 9999,
+                      minWidth: '180px',
+                      overflow: 'hidden'
+                    }}
+                    onMouseLeave={() => setTerminalContextMenu(null)}
+                  >
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handleCopyFromTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-copy" style={{ width: '16px' }}></i>
+                      Copiar selección
+                    </div>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handlePasteToTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-clone" style={{ width: '16px' }}></i>
+                      Pegar
+                    </div>
+                    <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handleSelectAllTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-list" style={{ width: '16px' }}></i>
+                      Seleccionar todo
+                    </div>
+                    <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => handleClearTerminal(terminalContextMenu.tabKey)}
+                    >
+                      <i className="pi pi-trash" style={{ width: '16px' }}></i>
+                      Limpiar terminal
+                    </div>
+                  </div>
+                )}
+                
+                {/* Overlay para cerrar menú al hacer clic fuera */}
+                {terminalContextMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998
+                    }}
+                    onClick={() => setTerminalContextMenu(null)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setTerminalContextMenu(null);
+                    }}
+                  />
+                )}
+
+                {/* Menú de overflow personalizado */}
+                {showOverflowMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      left: overflowMenuPosition.x,
+                      top: overflowMenuPosition.y,
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      zIndex: 9999,
+                      minWidth: '200px',
+                      maxHeight: '300px',
+                      overflow: 'auto',
+                      animation: 'contextMenuFadeIn 0.15s ease-out'
+                    }}
+                    onMouseLeave={() => setShowOverflowMenu(false)}
+                  >
+                    {overflowMenuItems.map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderBottom: index < overflowMenuItems.length - 1 ? '1px solid #f0f0f0' : 'none'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        onClick={() => {
+                          item.command();
+                          setShowOverflowMenu(false);
+                        }}
+                      >
+                        <i className={item.icon} style={{ width: '16px', fontSize: '14px' }}></i>
+                        <span style={{ flex: 1, fontSize: '14px' }}>{item.label}</span>
+                      </div>
+                    ))}
+                    {overflowMenuItems.length === 0 && (
+                      <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '14px' }}>
+                        No hay pestañas ocultas
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Overlay para cerrar menú de overflow al hacer clic fuera */}
+                {showOverflowMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998
+                    }}
+                    onClick={() => setShowOverflowMenu(false)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setShowOverflowMenu(false);
+                    }}
+                  />
+                )}
               </div>
                               <div style={{ flexGrow: 1, position: 'relative' }}>
                   {sshTabs.map((tab, index) => (
@@ -1129,6 +1699,7 @@ const App = () => {
                           fontFamily={fontFamily}
                           fontSize={fontSize}
                           theme={terminalTheme.theme}
+                          onContextMenu={handleTerminalContextMenu}
                         />
                       )}
                     </div>
@@ -1306,7 +1877,7 @@ const App = () => {
             </div>
             <div className="field">
                 <label htmlFor="terminal-theme">Tema</label>
-                <Dropdown id="terminal-theme" value={terminalTheme.name} options={availableThemes} onChange={(e) => setTerminalTheme(themes[e.value])} placeholder="Selecciona un tema" />
+                <Dropdown id="terminal-theme" value={terminalTheme.name} options={availableThemes} onChange={(e) => setTerminalTheme(themes && themes[e.value] ? themes[e.value] : {})} placeholder="Selecciona un tema" />
             </div>
         </div>
       </Dialog>

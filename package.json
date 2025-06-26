@@ -47,6 +47,7 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
+    "node-ssh": "^13.2.0",
     "primeflex": "^3.3.1",
     "primeicons": "^6.0.1",
     "primereact": "^10.2.1",
@@ -54,7 +55,6 @@
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
     "ssh2-promise": "^1.0.3",
-    "node-ssh": "^13.2.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"
   },
