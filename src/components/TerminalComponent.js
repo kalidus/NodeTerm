@@ -38,6 +38,27 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
             fontSize: fontSize,
             allowProposedApi: true,
             theme: theme,
+            // Configuraciones adicionales para compatibilidad con aplicaciones TUI
+            convertEol: true,
+            scrollback: 10000,
+            rightClickSelectsWord: true,
+            macOptionIsMeta: true,
+            windowsMode: false,
+            // Habilitar soporte completo para códigos de escape ANSI
+            allowTransparency: true,
+            windowOptions: {},
+            // Configuración para aplicaciones interactivas
+            cols: 80,
+            rows: 24,
+            // Configuraciones críticas para aplicaciones TUI como htop, vim, etc.
+            fastScrollModifier: 'alt',
+            fastScrollSensitivity: 5,
+            scrollSensitivity: 1,
+            // Habilitar procesamiento completo de códigos de escape
+            disableStdin: false,
+            // Configuraciones de compatibilidad con aplicaciones complejas
+            drawBoldTextInBrightColors: true,
+            minimumContrastRatio: 4.5,
         });
 
         // Disable bracketed paste mode to prevent weird characters on Ctrl+V
