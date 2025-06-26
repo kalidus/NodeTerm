@@ -11,6 +11,7 @@ import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { Dropdown } from 'primereact/dropdown';
 import { Sidebar } from 'primereact/sidebar';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { Menu } from 'primereact/menu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import { Divider } from 'primereact/divider';
@@ -19,6 +20,7 @@ import { themes } from '../themes';
 
 const App = () => {
   const toast = useRef(null);
+  const overflowMenuRef = useRef(null);
   // Storage key for persistence
   const STORAGE_KEY = 'basicapp2_tree_data';
   const [folderName, setFolderName] = useState('');
@@ -76,6 +78,49 @@ const App = () => {
       const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
       return themes[savedThemeName];
   });
+
+  // Constantes para el overflow de pestañas
+  const MAX_VISIBLE_TABS = 8;
+
+  // Funciones auxiliares para el manejo de pestañas
+  const getAllTabs = () => {
+    return [...sshTabs, ...fileExplorerTabs];
+  };
+
+  const getVisibleTabs = () => {
+    const allTabs = getAllTabs();
+    return allTabs.slice(0, MAX_VISIBLE_TABS);
+  };
+
+  const getHiddenTabs = () => {
+    const allTabs = getAllTabs();
+    return allTabs.slice(MAX_VISIBLE_TABS);
+  };
+
+  const getTabTypeAndIndex = (globalIndex) => {
+    if (globalIndex < sshTabs.length) {
+      return { type: 'ssh', index: globalIndex };
+    } else {
+      return { type: 'explorer', index: globalIndex - sshTabs.length };
+    }
+  };
+
+  const generateOverflowMenuItems = () => {
+    const hiddenTabs = getHiddenTabs();
+    return hiddenTabs.map((tab, index) => {
+      const globalIndex = MAX_VISIBLE_TABS + index;
+      // Determinar el tipo de pestaña basado en su tipo o contenido
+      const isExplorerTab = tab.type === 'explorer';
+      const isTerminalTab = tab.type === 'terminal';
+      return {
+        label: tab.label,
+        icon: isExplorerTab ? 'pi pi-folder' : 'pi pi-terminal',
+        command: () => {
+          setActiveTabIndex(globalIndex);
+        }
+      };
+    });
+  };
 
   // Load initial nodes from localStorage or use default
   useEffect(() => {
@@ -724,7 +769,8 @@ const App = () => {
               key: tabId,
               label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
               originalKey: node.key,
-              sshConfig: sshConfig
+              sshConfig: sshConfig,
+              type: 'terminal'
             };
             const newTabs = [...prevTabs, newTab];
             setActiveTabIndex(newTabs.length - 1);
@@ -1089,64 +1135,20 @@ const App = () => {
           <SplitterPanel size={75} style={{ display: 'flex', flexDirection: 'column' }}>
             {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <TabView 
-                  activeIndex={activeTabIndex} 
-                  onTabChange={(e) => {
-                    setActiveTabIndex(e.index);
-                  }}
-                  renderActiveOnly={false}
-                  scrollable
-                >
-                  {sshTabs.map((tab, idx) => (
-                    <TabPanel 
-                      key={tab.key} 
-                      header={tab.label}
-                      headerTemplate={(options) => {
-                        const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
-                        return (
-                          <div
-                            className={className}
-                            style={{ ...style, display: 'flex', alignItems: 'center', maxWidth: 220 }}
-                            onClick={onClick}
-                            onKeyDown={onKeyDown}
-                            tabIndex={0}
-                            aria-selected={selected}
-                            role="tab"
-                          >
-                            {leftIcon}
-                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
-                            <Button
-                              icon="pi pi-times"
-                              className="p-button-rounded p-button-text p-button-sm ml-2"
-                              style={{ marginLeft: 8, minWidth: 24, minHeight: 24 }}
-                              onClick={e => {
-                                e.stopPropagation();
-                                // Cierre robusto de pestaña
-                                const closedTab = tab;
-                                if (window.electron && window.electron.ipcRenderer) {
-                                  window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                }
-                                const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                delete terminalRefs.current[closedTab.key];
-                                setSshTabs(newSshTabs);
-                                // Ajustar índice activo
-                                if (activeTabIndex === idx) {
-                                  setActiveTabIndex(Math.max(0, idx - 1));
-                                } else if (activeTabIndex > idx) {
-                                  setActiveTabIndex(activeTabIndex - 1);
-                                }
-                              }}
-                              tooltip="Cerrar pestaña"
-                              tooltipOptions={{ position: 'top' }}
-                            />
-                            {rightIcon}
-                          </div>
-                        );
-                      }}
-                    />
-                  ))}
-                  {fileExplorerTabs.map((tab, idx) => {
-                    const tabIndex = sshTabs.length + idx;
+                <div style={{ position: 'relative' }}>
+                  <TabView 
+                    activeIndex={activeTabIndex} 
+                    onTabChange={(e) => {
+                      setActiveTabIndex(e.index);
+                    }}
+                    renderActiveOnly={false}
+                    scrollable={false}
+                    className={getAllTabs().length > MAX_VISIBLE_TABS ? 'has-overflow' : ''}
+                  >
+                  {getVisibleTabs().map((tab, idx) => {
+                    const isSSHTab = idx < Math.min(sshTabs.length, MAX_VISIBLE_TABS);
+                    const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
+                    
                     return (
                       <TabPanel 
                         key={tab.key} 
@@ -1168,20 +1170,31 @@ const App = () => {
                               <Button
                                 icon="pi pi-times"
                                 className="p-button-rounded p-button-text p-button-sm ml-2"
-                                style={{ marginLeft: 8, minWidth: 24, minHeight: 24 }}
+                                style={{ marginLeft: 8, minWidth: 18, minHeight: 18 }}
                                 onClick={e => {
                                   e.stopPropagation();
                                   // Cierre robusto de pestaña
                                   const closedTab = tab;
-                                  if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  
+                                  if (isSSHTab) {
+                                    if (window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    }
+                                    const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+                                    delete terminalRefs.current[closedTab.key];
+                                    setSshTabs(newSshTabs);
+                                  } else {
+                                    if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    }
+                                    const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
+                                    setFileExplorerTabs(newExplorerTabs);
                                   }
-                                  const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
-                                  setFileExplorerTabs(newExplorerTabs);
+                                  
                                   // Ajustar índice activo
-                                  if (activeTabIndex === tabIndex) {
-                                    setActiveTabIndex(Math.max(0, tabIndex - 1));
-                                  } else if (activeTabIndex > tabIndex) {
+                                  if (activeTabIndex === idx) {
+                                    setActiveTabIndex(Math.max(0, idx - 1));
+                                  } else if (activeTabIndex > idx) {
                                     setActiveTabIndex(activeTabIndex - 1);
                                   }
                                 }}
@@ -1196,7 +1209,22 @@ const App = () => {
                     );
                   })}
                 </TabView>
-                <div style={{ flexGrow: 1, position: 'relative' }}>
+                {getAllTabs().length > MAX_VISIBLE_TABS && (
+                  <Button
+                    icon="pi pi-angle-down"
+                    className="overflow-tab-btn"
+                    onClick={(e) => overflowMenuRef.current?.toggle(e)}
+                    tooltip="Más pestañas"
+                    tooltipOptions={{ position: 'left' }}
+                  />
+                )}
+                <Menu
+                  ref={overflowMenuRef}
+                  model={generateOverflowMenuItems()}
+                  popup
+                />
+              </div>
+              <div style={{ flexGrow: 1, position: 'relative' }}>
                   {sshTabs.map((tab, index) => (
                     <div 
                       key={tab.key} 
