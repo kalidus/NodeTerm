@@ -45,6 +45,9 @@ const DistroIcon = ({ distro, size = 14 }) => {
 const App = () => {
   const toast = useRef(null);
   const overflowMenuRef = useRef(null);
+  const [overflowMenuItems, setOverflowMenuItems] = useState([]);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+  const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
   // Storage key for persistence
   const STORAGE_KEY = 'basicapp2_tree_data';
   const [folderName, setFolderName] = useState('');
@@ -395,6 +398,7 @@ const App = () => {
 
   const generateOverflowMenuItems = () => {
     const hiddenTabs = getHiddenTabs();
+    
     return hiddenTabs.map((tab, index) => {
       const globalIndex = MAX_VISIBLE_TABS + index;
       // Determinar el tipo de pestaña basado en su tipo, contenido o flag híbrido
@@ -1414,17 +1418,39 @@ const App = () => {
                   })}
                 </TabView>
                 <Button
+                  ref={overflowMenuRef}
                   icon="pi pi-ellipsis-v"
                   className="overflow-tab-btn p-button-outlined p-button-sm"
-                  onClick={(e) => overflowMenuRef.current?.toggle(e)}
-                  tooltip={getAllTabs().length > MAX_VISIBLE_TABS ? `Ver ${getAllTabs().length - MAX_VISIBLE_TABS} pestañas más` : 'Menú de pestañas'}
-                  tooltipOptions={{ position: 'left' }}
-                  disabled={getAllTabs().length === 0}
-                />
-                <Menu
-                  ref={overflowMenuRef}
-                  model={generateOverflowMenuItems()}
-                  popup
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const items = generateOverflowMenuItems();
+                    setOverflowMenuItems(items);
+                    
+                    // Calcular posición del menú relativa al botón
+                    const buttonRect = e.currentTarget.getBoundingClientRect();
+                    const menuWidth = 200;
+                    const menuHeight = items.length * 40 + 10; // Estimación de altura
+                    
+                    let x = buttonRect.left;
+                    let y = buttonRect.bottom + 5;
+                    
+                    // Ajustar si se sale de la pantalla por la derecha
+                    if (x + menuWidth > window.innerWidth) {
+                      x = buttonRect.right - menuWidth;
+                    }
+                    
+                    // Ajustar si se sale de la pantalla por abajo
+                    if (y + menuHeight > window.innerHeight) {
+                      y = buttonRect.top - menuHeight - 5;
+                    }
+                    
+                    setOverflowMenuPosition({ x, y });
+                    setShowOverflowMenu(!showOverflowMenu);
+                  }}
+
+                  disabled={getAllTabs().length <= MAX_VISIBLE_TABS}
                 />
                 {/* Menú contextual personalizado */}
                 {terminalContextMenu && (
@@ -1523,6 +1549,74 @@ const App = () => {
                     onContextMenu={(e) => {
                       e.preventDefault();
                       setTerminalContextMenu(null);
+                    }}
+                  />
+                )}
+
+                {/* Menú de overflow personalizado */}
+                {showOverflowMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      left: overflowMenuPosition.x,
+                      top: overflowMenuPosition.y,
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      zIndex: 9999,
+                      minWidth: '200px',
+                      maxHeight: '300px',
+                      overflow: 'auto',
+                      animation: 'contextMenuFadeIn 0.15s ease-out'
+                    }}
+                    onMouseLeave={() => setShowOverflowMenu(false)}
+                  >
+                    {overflowMenuItems.map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderBottom: index < overflowMenuItems.length - 1 ? '1px solid #f0f0f0' : 'none'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        onClick={() => {
+                          item.command();
+                          setShowOverflowMenu(false);
+                        }}
+                      >
+                        <i className={item.icon} style={{ width: '16px', fontSize: '14px' }}></i>
+                        <span style={{ flex: 1, fontSize: '14px' }}>{item.label}</span>
+                      </div>
+                    ))}
+                    {overflowMenuItems.length === 0 && (
+                      <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '14px' }}>
+                        No hay pestañas ocultas
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Overlay para cerrar menú de overflow al hacer clic fuera */}
+                {showOverflowMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9998
+                    }}
+                    onClick={() => setShowOverflowMenu(false)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setShowOverflowMenu(false);
                     }}
                   />
                 )}
