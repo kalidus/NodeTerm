@@ -14,6 +14,67 @@ let mainWindow;
 const sshConnections = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
+// Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
+const sshConnectionPool = {};
+
+// Sistema de throttling para conexiones SSH
+const connectionThrottle = {
+  pending: new Map(), // Conexiones en proceso por cacheKey
+  lastAttempt: new Map(), // Último intento por cacheKey
+  minInterval: 2000, // Mínimo 2 segundos entre intentos al mismo servidor
+  
+  async throttle(cacheKey, connectionFn) {
+    // Si ya hay una conexión pendiente para este servidor, esperar
+    if (this.pending.has(cacheKey)) {
+      console.log(`Esperando conexión pendiente para ${cacheKey}...`);
+      return await this.pending.get(cacheKey);
+    }
+    
+    // Verificar intervalo mínimo
+    const lastAttempt = this.lastAttempt.get(cacheKey) || 0;
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttempt;
+    
+    if (timeSinceLastAttempt < this.minInterval) {
+      const waitTime = this.minInterval - timeSinceLastAttempt;
+      console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    // Crear la conexión
+    this.lastAttempt.set(cacheKey, Date.now());
+    const connectionPromise = connectionFn();
+    this.pending.set(cacheKey, connectionPromise);
+    
+    try {
+      const result = await connectionPromise;
+      return result;
+    } finally {
+      this.pending.delete(cacheKey);
+    }
+  }
+};
+
+// Función para limpiar conexiones SSH huérfanas cada 15 segundos
+setInterval(() => {
+  const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
+  
+  for (const [poolKey, poolConnection] of Object.entries(sshConnectionPool)) {
+    if (!activeKeys.has(poolKey)) {
+      console.log(`Limpiando conexión SSH huérfana: ${poolKey}`);
+      try {
+        // Limpiar listeners antes de cerrar
+        if (poolConnection.ssh) {
+          poolConnection.ssh.removeAllListeners();
+        }
+        poolConnection.close();
+      } catch (e) {
+        console.warn(`Error closing orphaned connection: ${e.message}`);
+      }
+      delete sshConnectionPool[poolKey];
+    }
+  }
+}, 15000); // Cada 15 segundos para una limpieza más frecuente
 
 // Helper function to parse 'df -P' command output
 function parseDfOutput(dfOutput) {
@@ -105,11 +166,58 @@ app.on('activate', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
-  const cacheKey = `${config.username}@${config.host}:${config.port}`;
-  const ssh = new SSH2Promise(config);
+  const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
+  
+  // Aplicar throttling simple
+  const lastAttempt = connectionThrottle.lastAttempt.get(cacheKey) || 0;
+  const now = Date.now();
+  const timeSinceLastAttempt = now - lastAttempt;
+  
+  if (timeSinceLastAttempt < connectionThrottle.minInterval) {
+    const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
+    console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  connectionThrottle.lastAttempt.set(cacheKey, Date.now());
+  
+  // Intentar reutilizar conexión del pool primero, incluso para terminales
+  let ssh;
+  let isReusedConnection = false;
+  
+  // Buscar en el pool una conexión existente
+  const existingPoolConnection = sshConnectionPool[cacheKey];
+  if (existingPoolConnection) {
+    try {
+      // Verificar si la conexión del pool está activa
+      await existingPoolConnection.exec('echo "test"');
+      ssh = existingPoolConnection;
+      isReusedConnection = true;
+      console.log(`Reutilizando conexión del pool para terminal ${cacheKey}`);
+    } catch (testError) {
+      console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
+      // Limpiar conexión no válida
+      try {
+        existingPoolConnection.close();
+      } catch (e) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+  }
+  
+  // Si no hay conexión válida en el pool, crear una nueva
+  if (!ssh) {
+    ssh = new SSH2Promise(config);
+    console.log(`Creando nueva conexión SSH para terminal ${cacheKey}`);
+  }
 
   const statsLoop = async (hostname, distro, ip) => {
-    if (!sshConnections[tabId]) return; // Stop if connection is closed
+    // Verificación robusta de la conexión
+    const conn = sshConnections[tabId];
+    if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
+      return; // Stop if connection is closed or invalid
+    }
 
     try {
       // --- Get CPU stats first
@@ -190,12 +298,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           distro: distro,
           ip: ip
       };
-      sendToMainWindow(`ssh-stats:update:${tabId}`, stats);
+      sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
     } catch (e) {
       // console.error(`Error fetching stats for ${tabId}:`, e.message);
     } finally {
-      if (sshConnections[tabId]) {
-        sshConnections[tabId].statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
+      // Verificar nuevamente que la conexión siga válida antes de programar siguiente loop
+      const finalConn = sshConnections[tabId];
+      if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
+        finalConn.statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
       }
     }
   };
@@ -203,38 +313,88 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   try {
     // For subsequent connections, send the cached MOTD immediately.
     if (motdCache[cacheKey]) {
-      event.sender.send(`ssh:data:${tabId}`, motdCache[cacheKey]);
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
     }
 
-    await ssh.connect();
+    // Solo conectar si es una conexión nueva
+    if (!isReusedConnection) {
+      console.log(`Conectando SSH para terminal ${cacheKey}...`);
+      
+      // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
+      ssh.setMaxListeners(300);
+      
+      await ssh.connect();
+      console.log(`Conectado exitosamente a terminal ${cacheKey}`);
+      
+      // Configurar límites adicionales en la conexión SSH interna
+      if (ssh.ssh) {
+        ssh.ssh.setMaxListeners(300);
+      }
+      
+      // Guardar en el pool para reutilización
+      sshConnectionPool[cacheKey] = ssh;
+    } else {
+      console.log(`Usando conexión existente para terminal ${cacheKey}`);
+    }
     
-    const stream = await ssh.shell({ term: 'xterm-256color' });
+    // Intentar crear shell con reintentos y configuración mejorada
+    let stream;
+    let shellAttempts = 0;
+    const maxShellAttempts = 3;
+    
+    while (shellAttempts < maxShellAttempts) {
+      try {
+        // Añadir pequeño delay entre intentos
+        if (shellAttempts > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * shellAttempts));
+        }
+        
+        stream = await ssh.shell({ term: 'xterm-256color' });
+        break;
+      } catch (shellError) {
+        shellAttempts++;
+        console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
+        
+        if (shellAttempts >= maxShellAttempts) {
+          throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError?.message || shellError || 'Unknown error'}`);
+        }
+      }
+    }
+    
+    // Configurar límites de listeners para cada stream individual
+    stream.setMaxListeners(0); // Sin límite para streams individuales
 
-    sshConnections[tabId] = { ssh, stream, config, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
+    sshConnections[tabId] = { ssh, stream, config, cacheKey, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
     stream.on('data', (data) => {
-      const dataStr = data.toString('utf-8');
+      try {
+        const dataStr = data.toString('utf-8');
 
-      if (isFirstPacket) {
-        isFirstPacket = false;
-        // If the MOTD is not cached yet (it's the first-ever connection)
-        if (!motdCache[cacheKey]) {
-          motdCache[cacheKey] = dataStr; // Cache it
-          event.sender.send(`ssh:data:${tabId}`, dataStr); // And send it
+        if (isFirstPacket) {
+          isFirstPacket = false;
+          // If the MOTD is not cached yet (it's the first-ever connection)
+          if (!motdCache[cacheKey]) {
+            motdCache[cacheKey] = dataStr; // Cache it
+            sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr); // And send it
+          }
+          // If it was already cached, we've already sent the cached version.
+          // We do nothing here, effectively suppressing the duplicate message.
+          
+                    // La configuración original ya funciona correctamente
+          return; 
         }
-        // If it was already cached, we've already sent the cached version.
-        // We do nothing here, effectively suppressing the duplicate message.
-        return; 
+        
+        // For all subsequent packets, just send them
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
+      } catch (e) {
+        // log o ignora
       }
-      
-      // For all subsequent packets, just send them
-      event.sender.send(`ssh:data:${tabId}`, dataStr);
     });
 
     stream.on('close', () => {
-      event.sender.send(`ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
       const conn = sshConnections[tabId];
       if (conn && conn.statsTimeout) {
           clearTimeout(conn.statsTimeout);
@@ -242,7 +402,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       delete sshConnections[tabId];
     });
 
-    event.sender.send(`ssh:ready:${tabId}`);
+
+
+    sendToRenderer(event.sender, `ssh:ready:${tabId}`);
 
     // After setting up the shell, get the hostname/distro and start the stats loop
     let realHostname = 'unknown';
@@ -262,15 +424,44 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     statsLoop(realHostname, finalDistroId, config.host);
 
   } catch (err) {
-    const errorMsg = err && err.message ? err.message : (typeof err === 'string' ? err : JSON.stringify(err) || 'Error desconocido al conectar por SSH');
-    event.sender.send(`ssh:error:${tabId}`, errorMsg);
+    console.error(`Error en conexión SSH para ${tabId}:`, err);
+    
+    // Limpiar conexión problemática del pool
+    if (ssh && cacheKey && sshConnectionPool[cacheKey] === ssh) {
+      try {
+        ssh.close();
+      } catch (closeError) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+    
+    // Crear mensaje de error más descriptivo
+    let errorMsg = 'Error desconocido al conectar por SSH';
+    if (err) {
+      if (typeof err === 'string') {
+        errorMsg = err;
+      } else if (err.message) {
+        errorMsg = err.message;
+      } else if (err.code) {
+        errorMsg = `Error de conexión: ${err.code}`;
+      } else {
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch (jsonError) {
+          errorMsg = 'Error de conexión SSH';
+        }
+      }
+    }
+    
+    sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
   }
 });
 
 // IPC handler to send data to the SSH shell
 ipcMain.on('ssh:data', (event, { tabId, data }) => {
   const conn = sshConnections[tabId];
-  if (conn && conn.stream) {
+  if (conn && conn.stream && !conn.stream.destroyed) {
     conn.stream.write(data);
   }
 });
@@ -278,8 +469,17 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
 // IPC handler to handle terminal resize
 ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
     const conn = sshConnections[tabId];
-    if (conn && conn.stream) {
-        conn.stream.setWindow(rows, cols);
+    if (conn && conn.stream && !conn.stream.destroyed) {
+        try {
+            // Asegurar que el tamaño sea válido antes de aplicar
+            const safeRows = Math.max(1, Math.min(300, rows || 24));
+            const safeCols = Math.max(1, Math.min(500, cols || 80));
+            
+            conn.stream.setWindow(safeRows, safeCols);
+            console.log(`Terminal ${tabId} redimensionado a ${safeCols}x${safeRows}`);
+        } catch (resizeError) {
+            console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
+        }
     }
 });
 
@@ -287,11 +487,62 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
 ipcMain.on('ssh:disconnect', (event, tabId) => {
   const conn = sshConnections[tabId];
   if (conn) {
-    if (conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
+    try {
+      // Limpiar timeout de stats
+      if (conn.statsTimeout) {
+        clearTimeout(conn.statsTimeout);
+        conn.statsTimeout = null;
+      }
+      
+      // Limpiar listeners del stream de forma más agresiva
+      if (conn.stream) {
+        try {
+          conn.stream.removeAllListeners();
+          if (!conn.stream.destroyed) {
+            conn.stream.destroy();
+          }
+        } catch (streamError) {
+          console.warn(`Error destroying stream: ${streamError?.message || streamError || 'Unknown error'}`);
+        }
+      }
+      
+      // Verificar si otras pestañas están usando la misma conexión SSH
+      const otherTabsUsingConnection = Object.values(sshConnections)
+        .filter(c => c !== conn && c.cacheKey === conn.cacheKey);
+      
+      // Solo cerrar la conexión SSH si no hay otras pestañas usándola
+      if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
+        try {
+          console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
+          
+          // Limpiar listeners específicos de la conexión SSH de forma más selectiva
+          if (conn.ssh.ssh) {
+            // Solo remover listeners específicos en lugar de todos
+            conn.ssh.ssh.removeAllListeners('error');
+            conn.ssh.ssh.removeAllListeners('close');
+            conn.ssh.ssh.removeAllListeners('end');
+          }
+          
+          // Limpiar listeners del SSH2Promise también
+          conn.ssh.removeAllListeners('error');
+          conn.ssh.removeAllListeners('close');
+          conn.ssh.removeAllListeners('end');
+          
+          conn.ssh.close();
+          delete sshConnectionPool[conn.cacheKey];
+        } catch (closeError) {
+          console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
+        }
+      } else {
+        console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
+      }
+      
+    } catch (error) {
+      console.error(`Error cleaning up SSH connection ${tabId}:`, error);
+    } finally {
+      // Always delete the connection
+      delete sshConnections[tabId];
     }
-    conn.ssh.close();
-    delete sshConnections[tabId];
   }
 });
 
@@ -302,11 +553,53 @@ ipcMain.on('app-quit', () => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
     }
-    if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
-      conn.stream.removeAllListeners();
+    if (conn.stream) {
+      try {
+        conn.stream.removeAllListeners();
+        if (!conn.stream.destroyed) {
+          conn.stream.destroy();
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
     }
-    conn.ssh.close();
+    if (conn.ssh) {
+      try {
+        if (conn.ssh.ssh) {
+          // Limpiar listeners específicos en lugar de todos en app-quit
+          conn.ssh.ssh.removeAllListeners('error');
+          conn.ssh.ssh.removeAllListeners('close');
+          conn.ssh.ssh.removeAllListeners('end');
+        }
+        // Limpiar listeners del SSH2Promise también
+        conn.ssh.removeAllListeners('error');
+        conn.ssh.removeAllListeners('close');
+        conn.ssh.removeAllListeners('end');
+        conn.ssh.close();
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
   });
+  
+  // Limpiar también el pool de conexiones con mejor limpieza
+  Object.values(sshConnectionPool).forEach(poolConn => {
+    try {
+      // Limpiar listeners del pool también
+      poolConn.removeAllListeners('error');
+      poolConn.removeAllListeners('close');
+      poolConn.removeAllListeners('end');
+      if (poolConn.ssh) {
+        poolConn.ssh.removeAllListeners('error');
+        poolConn.ssh.removeAllListeners('close');
+        poolConn.ssh.removeAllListeners('end');
+      }
+      poolConn.close();
+    } catch (e) {
+      // Ignorar errores
+    }
+  });
+  
   app.quit();
 });
 
@@ -316,10 +609,51 @@ app.on('before-quit', () => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
     }
-    if (conn.stream && typeof conn.stream.removeAllListeners === 'function') {
-      conn.stream.removeAllListeners();
+    if (conn.stream) {
+      try {
+        conn.stream.removeAllListeners();
+        if (!conn.stream.destroyed) {
+          conn.stream.destroy();
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
     }
-    conn.ssh.close();
+    if (conn.ssh) {
+      try {
+        if (conn.ssh.ssh) {
+          // Limpiar listeners específicos en lugar de todos en before-quit
+          conn.ssh.ssh.removeAllListeners('error');
+          conn.ssh.ssh.removeAllListeners('close');
+          conn.ssh.ssh.removeAllListeners('end');
+        }
+        // Limpiar listeners del SSH2Promise también
+        conn.ssh.removeAllListeners('error');
+        conn.ssh.removeAllListeners('close');
+        conn.ssh.removeAllListeners('end');
+        conn.ssh.close();
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+  });
+  
+  // Limpiar también el pool de conexiones con mejor limpieza
+  Object.values(sshConnectionPool).forEach(poolConn => {
+    try {
+      // Limpiar listeners del pool también
+      poolConn.removeAllListeners('error');
+      poolConn.removeAllListeners('close');
+      poolConn.removeAllListeners('end');
+      if (poolConn.ssh) {
+        poolConn.ssh.removeAllListeners('error');
+        poolConn.ssh.removeAllListeners('close');
+        poolConn.ssh.removeAllListeners('end');
+      }
+      poolConn.close();
+    } catch (e) {
+      // Ignorar errores
+    }
   });
 });
 
@@ -333,10 +667,125 @@ ipcMain.handle('clipboard:writeText', (event, text) => {
 });
 
 // Function to safely send to mainWindow
-function sendToMainWindow(channel, ...args) {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, ...args);
+function sendToRenderer(sender, ...args) {
+  try {
+    if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
+      sender.send(...args);
+    }
+  } catch (error) {
+    // Silently ignore renderer communication errors
+    console.warn('Failed to send to renderer:', error?.message || error || 'Unknown error');
   }
+}
+
+// Función para limpiar conexiones huérfanas del pool cada 10 minutos
+function cleanupOrphanedConnections() {
+  Object.keys(sshConnectionPool).forEach(cacheKey => {
+    const poolConnection = sshConnectionPool[cacheKey];
+    // Verificar si hay alguna conexión activa usando esta conexión del pool
+    const hasActiveConnections = Object.values(sshConnections).some(conn => conn.cacheKey === cacheKey);
+    
+    if (!hasActiveConnections) {
+      console.log(`Limpiando conexión SSH huérfana: ${cacheKey}`);
+      try {
+        // Limpiar listeners antes de cerrar
+        poolConnection.removeAllListeners('error');
+        poolConnection.removeAllListeners('close');
+        poolConnection.removeAllListeners('end');
+        if (poolConnection.ssh) {
+          poolConnection.ssh.removeAllListeners('error');
+          poolConnection.ssh.removeAllListeners('close');
+          poolConnection.ssh.removeAllListeners('end');
+        }
+        poolConnection.close();
+      } catch (e) {
+        // Ignorar errores de cierre
+      }
+      delete sshConnectionPool[cacheKey];
+    }
+  });
+}
+
+// Ejecutar limpieza cada 10 minutos
+setInterval(cleanupOrphanedConnections, 10 * 60 * 1000);
+
+// Helper function to find SSH connection by host/username or by tabId
+async function findSSHConnection(tabId, sshConfig = null) {
+  // Primero intentar por tabId (para conexiones directas de terminal)
+  if (sshConnections[tabId]) {
+    return sshConnections[tabId];
+  }
+  
+  // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexión al mismo servidor
+  if (sshConfig && sshConfig.host && sshConfig.username) {
+    const targetCacheKey = `${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`;
+    
+    // Buscar en conexiones activas
+    for (const conn of Object.values(sshConnections)) {
+      if (conn.cacheKey === targetCacheKey) {
+        return conn;
+      }
+    }
+    
+    // Buscar en el pool de conexiones
+    const existingPoolConnection = sshConnectionPool[targetCacheKey];
+    if (existingPoolConnection) {
+      try {
+        // Verificar si la conexión del pool sigue siendo válida
+        // SSH2Promise maneja la verificación de estado internamente
+        try {
+          // Intentar una operación simple para verificar si la conexión está activa
+          await existingPoolConnection.exec('echo "test"');
+          console.log(`Reutilizando conexión del pool para: ${targetCacheKey}`);
+          return { ssh: existingPoolConnection, cacheKey: targetCacheKey };
+        } catch (testError) {
+          console.log(`Conexión del pool no válida para ${targetCacheKey}, limpiando...`);
+          // Limpiar conexión no válida
+          try {
+            existingPoolConnection.close();
+          } catch (e) {
+            // Ignorar errores de cierre
+          }
+          delete sshConnectionPool[targetCacheKey];
+        }
+      } catch (e) {
+        console.log(`Error verificando conexión del pool para ${targetCacheKey}, limpiando...`);
+        delete sshConnectionPool[targetCacheKey];
+      }
+    }
+    
+    // Si no hay ninguna conexión válida, crear una nueva para el pool
+    console.log(`Creando conexión SSH bajo demanda para FileExplorer: ${targetCacheKey}`);
+    try {
+      const ssh = new SSH2Promise(sshConfig);
+      // Configurar límites más altos para conexiones del pool que se reutilizan mucho
+      ssh.setMaxListeners(400);
+      
+      await ssh.connect();
+      
+      if (ssh.ssh) {
+        ssh.ssh.setMaxListeners(400);
+      }
+      
+      // Limpiar listeners existentes para evitar acumulación
+      ssh.removeAllListeners();
+      if (ssh.ssh) {
+        ssh.ssh.removeAllListeners();
+      }
+      
+      // Guardar en el pool
+      sshConnectionPool[targetCacheKey] = ssh;
+      
+      console.log(`Conexión SSH creada exitosamente para: ${targetCacheKey}`);
+      return { ssh: ssh, cacheKey: targetCacheKey };
+      
+    } catch (error) {
+      console.error(`Error creando conexión SSH para ${targetCacheKey}:`, error);
+      throw error;
+    }
+  }
+  
+  return null;
 }
 
 ipcMain.handle('app:get-sessions', async () => {
@@ -344,8 +793,8 @@ ipcMain.handle('app:get-sessions', async () => {
 });
 
 // File Explorer IPC Handlers
-ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -412,13 +861,13 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
 
     return { success: true, files };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Verificar si un directorio existe y es accesible
-ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -432,8 +881,8 @@ ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
 });
 
 // Obtener el directorio home del usuario
-ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -447,8 +896,8 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
 });
 
 // Descargar archivo desde servidor SSH
-ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -457,10 +906,10 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
     // Crear una nueva instancia de NodeSSH para operaciones de archivos
     const nodeSSH = new NodeSSH();
     await nodeSSH.connect({
-      host: conn.config.host,
-      username: conn.config.username,
-      password: conn.config.password,
-      port: conn.config.port || 22,
+      host: sshConfig.host,
+      username: sshConfig.username,
+      password: sshConfig.password,
+      port: sshConfig.port || 22,
       readyTimeout: 99999
     });
     
@@ -468,13 +917,13 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
     nodeSSH.dispose();
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Subir archivo al servidor SSH
-ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -483,10 +932,10 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
     // Crear una nueva instancia de NodeSSH para operaciones de archivos
     const nodeSSH = new NodeSSH();
     await nodeSSH.connect({
-      host: conn.config.host,
-      username: conn.config.username,
-      password: conn.config.password,
-      port: conn.config.port || 22,
+      host: sshConfig.host,
+      username: sshConfig.username,
+      password: sshConfig.password,
+      port: sshConfig.port || 22,
       readyTimeout: 99999
     });
     
@@ -494,13 +943,13 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
     nodeSSH.dispose();
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Eliminar archivo en servidor SSH
-ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -510,13 +959,13 @@ ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory
     await conn.ssh.exec(command);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Crear directorio en servidor SSH
-ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -525,7 +974,7 @@ ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath }) => {
     await conn.ssh.exec(`mkdir -p "${remotePath}"`);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
