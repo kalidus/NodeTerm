@@ -1,13 +1,17 @@
 {
   "name": "NodeTerm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "webpack --mode production",
     "dev": "concurrently \"webpack --watch --mode development\" \"electron .\"",
     "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
+    "version:build": "npm run build && npm run pack"
   },
   "build": {
     "appId": "com.electron.nodeterm",

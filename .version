@@ -1,0 +1,28 @@
+1.1.0
+
+CHANGELOG:
+- v1.1.0 (2025-01-27)
+  * 🎉 Sistema de versionado implementado
+  * 📋 Diálogo "Acerca de" con información completa de la aplicación
+  * 📍 Versión mostrada en barra de estado
+  * 🔧 Scripts npm para manejo de versiones (patch/minor/major)
+  * 📝 Información técnica: Electron, Node.js, Chromium
+  * ✨ Funcionalidades destacadas listadas en el diálogo
+  * 🎨 Interfaz mejorada con iconos y diseño profesional
+
+- v1.0.0 (2025-01-27)
+  * 🚀 Major UI/UX Improvements - Tab Management & Distribution Icons
+  * 📏 Panel lateral con tamaño mínimo optimizado (133x47px)
+  * 🐧 Iconos automáticos por distribución Linux en pestañas SSH
+  * 🔄 Sistema de overflow inteligente para pestañas
+  * 📋 Funcionalidad move-to-front para pestañas en overflow
+  * 🐛 Corrección de memory leaks en event listeners
+  * 🎯 Menú de overflow con posicionamiento correcto
+  * ⚡ Drag & drop para organización de pestañas
+  * 🔧 Exploradores de archivos remotos integrados
+
+PRÓXIMAS VERSIONES:
+- v1.2.0: Configuración de temas personalizados
+- v1.3.0: Exportación/importación de configuraciones SSH
+- v1.4.0: Soporte para llaves SSH
+- v1.5.0: Terminal integrado con múltiples shells 
