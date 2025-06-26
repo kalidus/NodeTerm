@@ -7,13 +7,13 @@ contextBridge.exposeInMainWorld('electron', {
     readText: () => ipcRenderer.invoke('clipboard:readText'),
   },
   fileExplorer: {
-    listFiles: (tabId, path) => ipcRenderer.invoke('ssh:list-files', { tabId, path }),
-    checkDirectory: (tabId, path) => ipcRenderer.invoke('ssh:check-directory', { tabId, path }),
-    getHomeDirectory: (tabId) => ipcRenderer.invoke('ssh:get-home-directory', { tabId }),
-    downloadFile: (tabId, remotePath, localPath) => ipcRenderer.invoke('ssh:download-file', { tabId, remotePath, localPath }),
-    uploadFile: (tabId, localPath, remotePath) => ipcRenderer.invoke('ssh:upload-file', { tabId, localPath, remotePath }),
-    deleteFile: (tabId, remotePath, isDirectory) => ipcRenderer.invoke('ssh:delete-file', { tabId, remotePath, isDirectory }),
-    createDirectory: (tabId, remotePath) => ipcRenderer.invoke('ssh:create-directory', { tabId, remotePath })
+    listFiles: (tabId, path, sshConfig) => ipcRenderer.invoke('ssh:list-files', { tabId, path, sshConfig }),
+    checkDirectory: (tabId, path, sshConfig) => ipcRenderer.invoke('ssh:check-directory', { tabId, path, sshConfig }),
+    getHomeDirectory: (tabId, sshConfig) => ipcRenderer.invoke('ssh:get-home-directory', { tabId, sshConfig }),
+    downloadFile: (tabId, remotePath, localPath, sshConfig) => ipcRenderer.invoke('ssh:download-file', { tabId, remotePath, localPath, sshConfig }),
+    uploadFile: (tabId, localPath, remotePath, sshConfig) => ipcRenderer.invoke('ssh:upload-file', { tabId, localPath, remotePath, sshConfig }),
+    deleteFile: (tabId, remotePath, isDirectory, sshConfig) => ipcRenderer.invoke('ssh:delete-file', { tabId, remotePath, isDirectory, sshConfig }),
+    createDirectory: (tabId, remotePath, sshConfig) => ipcRenderer.invoke('ssh:create-directory', { tabId, remotePath, sshConfig })
   },
   dialog: {
     showSaveDialog: (options) => ipcRenderer.invoke('dialog:show-save-dialog', options),

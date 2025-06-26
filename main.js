@@ -130,46 +130,10 @@ app.on('activate', () => {
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
   
-  // Verificar si ya existe una conexión válida en el pool para este servidor
-  let ssh;
-  const existingConnection = sshConnectionPool[cacheKey];
-  
-  // Verificación más robusta de la conexión existente
-  if (existingConnection && existingConnection.ssh) {
-    try {
-      // Verificar si la conexión SSH interna está realmente conectada
-      if (existingConnection.ssh.connected) {
-        ssh = existingConnection;
-        console.log(`Reutilizando conexión SSH existente para ${cacheKey}`);
-      } else {
-        throw new Error('Conexión SSH no está conectada');
-      }
-    } catch (e) {
-      console.log(`Conexión existente no válida para ${cacheKey}, creando nueva`);
-      // Limpiar conexión no válida
-      try {
-        existingConnection.close();
-      } catch (closeError) {
-        // Ignorar errores de cierre
-      }
-      delete sshConnectionPool[cacheKey];
-      ssh = new SSH2Promise(config);
-      console.log(`Creando nueva conexión SSH para ${cacheKey}`);
-    }
-  } else {
-    // Limpiar conexión anterior si existe pero no es válida
-    if (existingConnection) {
-      try {
-        existingConnection.close();
-      } catch (e) {
-        // Ignorar errores de cierre
-      }
-      delete sshConnectionPool[cacheKey];
-    }
-    
-    ssh = new SSH2Promise(config);
-    console.log(`Creando nueva conexión SSH para ${cacheKey}`);
-  }
+  // Para conexiones de terminal, SIEMPRE crear una nueva conexión SSH
+  // No reutilizar del pool porque las terminales necesitan shells dedicados
+  const ssh = new SSH2Promise(config);
+  console.log(`Creando nueva conexión SSH para terminal ${cacheKey}`);
 
   const statsLoop = async (hostname, distro, ip) => {
     // Verificación robusta de la conexión
@@ -275,30 +239,25 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
     }
 
-    // Solo conectar si no está ya conectado
-    if (!ssh.ssh || !ssh.ssh.connected) {
-      console.log(`Conectando SSH para ${cacheKey}...`);
+    // Conectar siempre (nueva conexión)
+    console.log(`Conectando SSH para terminal ${cacheKey}...`);
+    
+    // Configurar límites de listeners ANTES de conectar
+    ssh.setMaxListeners(100);
+    
+    try {
+      await ssh.connect();
+      console.log(`Conectado exitosamente a terminal ${cacheKey}`);
       
-      // Configurar límites de listeners ANTES de conectar
-      ssh.setMaxListeners(100);
-      
-      try {
-        await ssh.connect();
-        console.log(`Conectado exitosamente a ${cacheKey}`);
-        
-        // Configurar límites adicionales en la conexión SSH interna
-        if (ssh.ssh) {
-          ssh.ssh.setMaxListeners(100);
-        }
-        
-        // Guardar en el pool para reutilizar
-        sshConnectionPool[cacheKey] = ssh;
-      } catch (connectError) {
-        console.error(`Error conectando a ${cacheKey}:`, connectError);
-        throw connectError; // Re-lanzar el error para que sea manejado por el catch principal
+      // Configurar límites adicionales en la conexión SSH interna
+      if (ssh.ssh) {
+        ssh.ssh.setMaxListeners(100);
       }
-    } else {
-      console.log(`SSH ya conectado para ${cacheKey}`);
+      
+      // NO guardar conexiones de terminal en el pool - son dedicadas
+    } catch (connectError) {
+      console.error(`Error conectando terminal a ${cacheKey}:`, connectError);
+      throw connectError; // Re-lanzar el error para que sea manejado por el catch principal
     }
     
     const stream = await ssh.shell({ term: 'xterm-256color' });
@@ -431,7 +390,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
             conn.stream.destroy();
           }
         } catch (streamError) {
-          console.warn(`Error destroying stream: ${streamError.message}`);
+          console.warn(`Error destroying stream: ${streamError?.message || streamError || 'Unknown error'}`);
         }
       }
       
@@ -452,7 +411,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
           conn.ssh.close();
           delete sshConnectionPool[conn.cacheKey];
         } catch (closeError) {
-          console.warn(`Error closing SSH connection: ${closeError.message}`);
+          console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
         }
       } else {
         console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
@@ -563,8 +522,82 @@ function sendToRenderer(sender, ...args) {
     }
   } catch (error) {
     // Silently ignore renderer communication errors
-    console.warn('Failed to send to renderer:', error.message);
+    console.warn('Failed to send to renderer:', error?.message || error || 'Unknown error');
   }
+}
+
+// Helper function to find SSH connection by host/username or by tabId
+async function findSSHConnection(tabId, sshConfig = null) {
+  console.log(`[DEBUG] findSSHConnection called with tabId: ${tabId}, sshConfig:`, sshConfig);
+  // Primero intentar por tabId (para conexiones directas de terminal)
+  if (sshConnections[tabId]) {
+    console.log(`[DEBUG] Found existing connection for tabId: ${tabId}`);
+    return sshConnections[tabId];
+  }
+  
+  // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexión al mismo servidor
+  if (sshConfig && sshConfig.host && sshConfig.username) {
+    const targetCacheKey = `${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`;
+    
+    // Buscar en conexiones activas
+    for (const conn of Object.values(sshConnections)) {
+      if (conn.cacheKey === targetCacheKey) {
+        return conn;
+      }
+    }
+    
+    // Buscar en el pool de conexiones
+    const existingPoolConnection = sshConnectionPool[targetCacheKey];
+    if (existingPoolConnection) {
+      try {
+        // Verificar si la conexión del pool sigue siendo válida
+        // SSH2Promise maneja la verificación de estado internamente
+        try {
+          // Intentar una operación simple para verificar si la conexión está activa
+          await existingPoolConnection.exec('echo "test"');
+          console.log(`Reutilizando conexión del pool para: ${targetCacheKey}`);
+          return { ssh: existingPoolConnection, cacheKey: targetCacheKey };
+        } catch (testError) {
+          console.log(`Conexión del pool no válida para ${targetCacheKey}, limpiando...`);
+          // Limpiar conexión no válida
+          try {
+            existingPoolConnection.close();
+          } catch (e) {
+            // Ignorar errores de cierre
+          }
+          delete sshConnectionPool[targetCacheKey];
+        }
+      } catch (e) {
+        console.log(`Error verificando conexión del pool para ${targetCacheKey}, limpiando...`);
+        delete sshConnectionPool[targetCacheKey];
+      }
+    }
+    
+    // Si no hay ninguna conexión válida, crear una nueva para el pool
+    console.log(`Creando conexión SSH bajo demanda para FileExplorer: ${targetCacheKey}`);
+    try {
+      const ssh = new SSH2Promise(sshConfig);
+      ssh.setMaxListeners(100);
+      
+      await ssh.connect();
+      
+      if (ssh.ssh) {
+        ssh.ssh.setMaxListeners(100);
+      }
+      
+      // Guardar en el pool
+      sshConnectionPool[targetCacheKey] = ssh;
+      
+      console.log(`Conexión SSH creada exitosamente para: ${targetCacheKey}`);
+      return { ssh: ssh, cacheKey: targetCacheKey };
+      
+    } catch (error) {
+      console.error(`Error creando conexión SSH para ${targetCacheKey}:`, error);
+      throw error;
+    }
+  }
+  
+  return null;
 }
 
 ipcMain.handle('app:get-sessions', async () => {
@@ -572,8 +605,10 @@ ipcMain.handle('app:get-sessions', async () => {
 });
 
 // File Explorer IPC Handlers
-ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
+  console.log(`[DEBUG] ssh:list-files called with tabId: ${tabId}, path: ${path}, sshConfig:`, sshConfig);
+  const conn = await findSSHConnection(tabId, sshConfig);
+  console.log(`[DEBUG] findSSHConnection returned:`, { hasConn: !!conn, hasSSH: !!(conn && conn.ssh) });
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -640,13 +675,13 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path }) => {
 
     return { success: true, files };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Verificar si un directorio existe y es accesible
-ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -660,8 +695,8 @@ ipcMain.handle('ssh:check-directory', async (event, { tabId, path }) => {
 });
 
 // Obtener el directorio home del usuario
-ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -675,8 +710,8 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId }) => {
 });
 
 // Descargar archivo desde servidor SSH
-ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -685,10 +720,10 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
     // Crear una nueva instancia de NodeSSH para operaciones de archivos
     const nodeSSH = new NodeSSH();
     await nodeSSH.connect({
-      host: conn.config.host,
-      username: conn.config.username,
-      password: conn.config.password,
-      port: conn.config.port || 22,
+      host: sshConfig.host,
+      username: sshConfig.username,
+      password: sshConfig.password,
+      port: sshConfig.port || 22,
       readyTimeout: 99999
     });
     
@@ -696,13 +731,13 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
     nodeSSH.dispose();
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Subir archivo al servidor SSH
-ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -711,10 +746,10 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
     // Crear una nueva instancia de NodeSSH para operaciones de archivos
     const nodeSSH = new NodeSSH();
     await nodeSSH.connect({
-      host: conn.config.host,
-      username: conn.config.username,
-      password: conn.config.password,
-      port: conn.config.port || 22,
+      host: sshConfig.host,
+      username: sshConfig.username,
+      password: sshConfig.password,
+      port: sshConfig.port || 22,
       readyTimeout: 99999
     });
     
@@ -722,13 +757,13 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath }
     nodeSSH.dispose();
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Eliminar archivo en servidor SSH
-ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -738,13 +773,13 @@ ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory
     await conn.ssh.exec(command);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
 // Crear directorio en servidor SSH
-ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath }) => {
-  const conn = sshConnections[tabId];
+ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
+  const conn = await findSSHConnection(tabId, sshConfig);
   if (!conn || !conn.ssh) {
     throw new Error('SSH connection not found');
   }
@@ -753,7 +788,7 @@ ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath }) => {
     await conn.ssh.exec(`mkdir -p "${remotePath}"`);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || error || 'Unknown error' };
   }
 });
 
