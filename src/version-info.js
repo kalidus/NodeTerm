@@ -33,10 +33,12 @@ const getVersionInfo = () => {
 // Obtener información desde el proceso principal de Electron si está disponible
 const getElectronVersionInfo = async () => {
   try {
-    if (window.electron && window.electron.ipcRenderer) {
+    if (window.electron && window.electron.ipcRenderer && window.electron.ipcRenderer.invoke) {
       // Solicitar información de versión al proceso principal
       const versions = await window.electron.ipcRenderer.invoke('get-version-info');
       return versions || {};
+    } else {
+      console.log('IPC invoke not available, using default version info');
     }
   } catch (error) {
     console.warn('Could not get Electron version info:', error);

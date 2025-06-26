@@ -177,6 +177,15 @@ ipcMain.handle('get-version-info', () => {
   };
 });
 
+// IPC handlers para clipboard
+ipcMain.handle('clipboard:writeText', (event, text) => {
+  return clipboard.writeText(text);
+});
+
+ipcMain.handle('clipboard:readText', () => {
+  return clipboard.readText();
+});
+
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
