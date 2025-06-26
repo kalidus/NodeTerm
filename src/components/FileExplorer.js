@@ -29,28 +29,12 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
 
-    // Escuchar cuando la conexión SSH esté lista
+    // Para FileExplorer, no necesitamos esperar conexión SSH propia
+    // Usaremos las conexiones del pool directamente
     useEffect(() => {
-        if (!window.electron || !tabId) return;
-
-        const handleSSHReady = () => {
-            setSshReady(true);
-        };
-
-        const handleSSHError = (error) => {
-            setError(`Error de conexión SSH: ${error}`);
-            setLoading(false);
-        };
-
-        // Configurar listeners
-        const readyUnsubscribe = window.electron.ipcRenderer.on(`ssh:ready:${tabId}`, handleSSHReady);
-        const errorUnsubscribe = window.electron.ipcRenderer.on(`ssh:error:${tabId}`, handleSSHError);
-
-        return () => {
-            if (readyUnsubscribe) readyUnsubscribe();
-            if (errorUnsubscribe) errorUnsubscribe();
-        };
-    }, [tabId]);
+        // Marcar como SSH listo inmediatamente - usaremos el pool de conexiones
+        setSshReady(true);
+    }, []);
 
     // Cargar directorio inicial cuando SSH esté listo
     useEffect(() => {
@@ -62,7 +46,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             
             try {
                 // Obtener el directorio home del usuario
-                const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId);
+                const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
                 setHomeDir(homeDir || '/');
                 setCurrentPath(homeDir || '/');
             } catch (err) {
@@ -94,7 +78,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         setError(null);
         
         try {
-            const result = await window.electron.fileExplorer.listFiles(tabId, path);
+            const result = await window.electron.fileExplorer.listFiles(tabId, path, sshConfig);
             
             if (result.success) {
                 setFiles(result.files);
@@ -133,7 +117,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         
         try {
             // Verificar que el directorio existe antes de navegar
-            const exists = await window.electron.fileExplorer.checkDirectory(tabId, path);
+            const exists = await window.electron.fileExplorer.checkDirectory(tabId, path, sshConfig);
             if (exists) {
                 setCurrentPath(path);
             } else {
@@ -240,7 +224,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
                     
                     try {
-                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath);
+                        const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, sshConfig);
                         if (uploadResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -289,7 +273,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 setTransferProgress({ type: 'download', current: 0, total: 1, fileName: file.name });
                 
                 const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
-                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath);
+                const downloadResult = await window.electron.fileExplorer.downloadFile(tabId, remotePath, result.filePath, sshConfig);
                 
                 if (downloadResult.success) {
                     toast.current?.show({
@@ -330,7 +314,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     const file = filesTarget[i];
                     const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
                     try {
-                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory');
+                        const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', sshConfig);
                         if (deleteResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -363,7 +347,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         
         try {
             const remotePath = currentPath === '/' ? `/${newFolderName}` : `${currentPath}/${newFolderName}`;
-            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath);
+            const result = await window.electron.fileExplorer.createDirectory(tabId, remotePath, sshConfig);
             
             if (result.success) {
                 toast.current?.show({
@@ -406,7 +390,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             const fileName = localPath.split(/[\\/]/).pop();
             const remotePath = currentPath === '/' ? `/${fileName}` : `${currentPath}/${fileName}`;
             try {
-                const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath);
+                const uploadResult = await window.electron.fileExplorer.uploadFile(tabId, localPath, remotePath, sshConfig);
                 if (uploadResult.success) {
                     toast.current?.show({
                         severity: 'success',

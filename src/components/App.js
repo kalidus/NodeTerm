@@ -901,38 +901,41 @@ const App = () => {
   // Función para abrir explorador de archivos SSH
   const openFileExplorer = (sshNode) => {
     // Buscar si ya existe un explorador para este host+usuario
-    const existingTabIndex = fileExplorerTabs.findIndex(tab => tab.sshConfig.host === sshNode.data.host && tab.sshConfig.username === sshNode.data.user);
-    if (existingTabIndex !== -1) {
-      // Activar la pestaña existente
-      setActiveTabIndex(sshTabs.length + existingTabIndex);
+    const existingExplorerIndex = sshTabs.findIndex(tab => 
+      tab.isExplorerInSSH && 
+      tab.sshConfig.host === sshNode.data.host && 
+      tab.sshConfig.username === sshNode.data.user
+    );
+    
+    if (existingExplorerIndex !== -1) {
+      // Activar la pestaña existente del explorador
+      setActiveTabIndex(existingExplorerIndex);
       return;
     }
-    // Si no existe, crear nueva conexión SSH específica para el explorador
+    
+    // Crear el explorador SIN conexión SSH propia - reutilizará conexiones existentes del pool
     const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
     const sshConfig = {
       host: sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
+      port: sshNode.data.port || 22
     };
-    if (window.electron && window.electron.ipcRenderer) {
-      window.electron.ipcRenderer.send('ssh:connect', { tabId: explorerTabId, config: sshConfig });
-    }
+    
+    // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
     const newExplorerTab = {
       key: explorerTabId,
       label: `📁 ${sshNode.label}`,
       originalKey: sshNode.key,
       sshConfig: sshConfig,
       type: 'explorer',
-      needsOwnConnection: true
+      needsOwnConnection: false, // Cambio importante: NO necesita su propia conexión
+      isExplorerInSSH: true // Flag para identificarla como explorador en el array SSH
     };
-    // Para que la pestaña del explorador aparezca al principio absoluto,
-    // la insertamos como si fuera una pestaña SSH especial
+    
+    // Insertar como primera pestaña
     setSshTabs(prevSshTabs => {
-      const hybridExplorerTab = {
-        ...newExplorerTab,
-        isExplorerInSSH: true // Flag para identificarla como explorador en el array SSH
-      };
-      const newSshTabs = [hybridExplorerTab, ...prevSshTabs];
+      const newSshTabs = [newExplorerTab, ...prevSshTabs];
       setActiveTabIndex(0);
       return newSshTabs;
     });
@@ -1045,12 +1048,15 @@ const App = () => {
                                   const closedTab = tab;
                                   
                                   if (isSSHTab) {
-                                    // Verificar si es una pestaña híbrida (explorador en array SSH)
-                                    if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                    // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                    if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                      // Terminal SSH - siempre desconectar
                                       window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                    } else if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                    } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                      // Explorador con conexión propia - desconectar
                                       window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
                                     }
+                                    // Los exploradores que usan el pool NO necesitan desconectarse
                                     const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
                                     if (!closedTab.isExplorerInSSH) {
                                       delete terminalRefs.current[closedTab.key];
