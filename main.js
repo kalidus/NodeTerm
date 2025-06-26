@@ -14,6 +14,25 @@ let mainWindow;
 const sshConnections = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
+// Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
+const sshConnectionPool = {};
+
+// Función para limpiar conexiones SSH huérfanas cada 30 segundos
+setInterval(() => {
+  const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
+  
+  for (const [poolKey, poolConnection] of Object.entries(sshConnectionPool)) {
+    if (!activeKeys.has(poolKey)) {
+      console.log(`Limpiando conexión SSH huérfana: ${poolKey}`);
+      try {
+        poolConnection.close();
+      } catch (e) {
+        console.warn(`Error closing orphaned connection: ${e.message}`);
+      }
+      delete sshConnectionPool[poolKey];
+    }
+  }
+}, 30000); // Cada 30 segundos
 
 // Helper function to parse 'df -P' command output
 function parseDfOutput(dfOutput) {
@@ -105,8 +124,17 @@ app.on('activate', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
-  const cacheKey = `${config.username}@${config.host}:${config.port}`;
-  const ssh = new SSH2Promise(config);
+  const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
+  
+  // Verificar si ya existe una conexión en el pool para este servidor
+  let ssh;
+  if (sshConnectionPool[cacheKey] && sshConnectionPool[cacheKey].isConnected()) {
+    ssh = sshConnectionPool[cacheKey];
+    console.log(`Reutilizando conexión SSH existente para ${cacheKey}`);
+  } else {
+    ssh = new SSH2Promise(config);
+    console.log(`Creando nueva conexión SSH para ${cacheKey}`);
+  }
 
   const statsLoop = async (hostname, distro, ip) => {
     // Verificación robusta de la conexión
@@ -213,16 +241,21 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
 
     // Configurar límites de listeners para evitar memory leaks
-    ssh.setMaxListeners(20);
+    ssh.setMaxListeners(50); // Aumentado para múltiples pestañas
 
-    await ssh.connect();
+    // Solo conectar si no está ya conectado
+    if (!ssh.isConnected()) {
+      await ssh.connect();
+      // Guardar en el pool para reutilizar
+      sshConnectionPool[cacheKey] = ssh;
+    }
     
     const stream = await ssh.shell({ term: 'xterm-256color' });
     
     // Configurar límites de listeners para el stream
-    stream.setMaxListeners(20);
+    stream.setMaxListeners(50); // Aumentado para múltiples pestañas
 
-    sshConnections[tabId] = { ssh, stream, config, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
+    sshConnections[tabId] = { ssh, stream, config, cacheKey, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
@@ -310,19 +343,27 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
         conn.statsTimeout = null;
       }
       
-      // Limpiar listeners del stream
+      // Limpiar listeners del stream (solo el stream, no la conexión SSH compartida)
       if (conn.stream && !conn.stream.destroyed) {
         conn.stream.removeAllListeners();
         conn.stream.end();
       }
       
-      // Cerrar conexión SSH
-      if (conn.ssh) {
-        // Aumentar límite de listeners temporalmente para evitar warnings
-        const originalLimit = conn.ssh.getMaxListeners();
-        conn.ssh.setMaxListeners(0);
-        conn.ssh.removeAllListeners();
-        conn.ssh.end();
+      // Verificar si otras pestañas están usando la misma conexión SSH
+      const otherTabsUsingConnection = Object.values(sshConnections)
+        .filter(c => c !== conn && c.cacheKey === conn.cacheKey);
+      
+      // Solo cerrar la conexión SSH si no hay otras pestañas usándola
+      if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
+        try {
+          console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
+          conn.ssh.close();
+          delete sshConnectionPool[conn.cacheKey];
+        } catch (closeError) {
+          console.warn(`Error closing SSH connection: ${closeError.message}`);
+        }
+      } else {
+        console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
       }
       
     } catch (error) {
