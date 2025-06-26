@@ -199,12 +199,49 @@ const App = () => {
     e.preventDefault();
     e.stopPropagation();
     
-    setTerminalContextMenu({ tabKey, event: e });
+    // Capturar coordenadas exactas del mouse
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
     
-    // Mostrar menú
+    // Calcular posición ajustada para que no se salga de la pantalla
+    const menuWidth = 180; // Ancho aproximado del menú
+    const menuHeight = 200; // Altura aproximada del menú
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+    
+    let adjustedX = mouseX;
+    let adjustedY = mouseY;
+    
+    // Ajustar X si se sale por la derecha
+    if (mouseX + menuWidth > viewport.width) {
+      adjustedX = viewport.width - menuWidth - 10;
+    }
+    
+    // Ajustar Y si se sale por abajo
+    if (mouseY + menuHeight > viewport.height) {
+      adjustedY = viewport.height - menuHeight - 10;
+    }
+    
+    // Asegurar que no se salga por la izquierda o arriba
+    adjustedX = Math.max(10, adjustedX);
+    adjustedY = Math.max(10, adjustedY);
+    
+    setTerminalContextMenu({ tabKey, event: e, mouseX: adjustedX, mouseY: adjustedY });
+    
+    // Mostrar menú en las coordenadas ajustadas
     setTimeout(() => {
       if (terminalContextMenuRef.current) {
-        terminalContextMenuRef.current.show(e);
+        // Crear un evento personalizado con las coordenadas ajustadas
+        const customEvent = {
+          ...e,
+          pageX: adjustedX,
+          pageY: adjustedY,
+          clientX: adjustedX,
+          clientY: adjustedY
+        };
+        terminalContextMenuRef.current.show(customEvent);
       }
     }, 0);
   };
