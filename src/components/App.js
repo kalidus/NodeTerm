@@ -81,6 +81,11 @@ const App = () => {
   // Constantes para el overflow de pestañas
   const MAX_VISIBLE_TABS = 8;
 
+  // Estado para drag & drop de pestañas
+  const [draggedTabIndex, setDraggedTabIndex] = useState(null);
+  const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
+  const [dragStartTimer, setDragStartTimer] = useState(null);
+
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
     return [...sshTabs, ...fileExplorerTabs];
@@ -102,6 +107,87 @@ const App = () => {
     } else {
       return { type: 'explorer', index: globalIndex - sshTabs.length };
     }
+  };
+
+  // Funciones para drag & drop de pestañas
+  const handleTabDragStart = (e, tabIndex) => {
+    // Pequeño delay para distinguir entre click y drag
+    const timer = setTimeout(() => {
+      setDraggedTabIndex(tabIndex);
+    }, 50);
+    setDragStartTimer(timer);
+    
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tabIndex.toString());
+  };
+
+  const handleTabDragOver = (e, tabIndex) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverTabIndex(tabIndex);
+  };
+
+  const handleTabDragLeave = (e) => {
+    // Solo limpiar si realmente salimos del área de pestañas
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverTabIndex(null);
+    }
+  };
+
+  const handleTabDrop = (e, dropIndex) => {
+    e.preventDefault();
+    const dragIndex = draggedTabIndex;
+    
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
+    }
+
+    // Reordenar las pestañas
+    const allTabs = getAllTabs();
+    const draggedTab = allTabs[dragIndex];
+    const newTabs = [...allTabs];
+    
+    // Remover el tab de su posición original
+    newTabs.splice(dragIndex, 1);
+    // Insertar en la nueva posición
+    newTabs.splice(dropIndex, 0, draggedTab);
+    
+    // Separar nuevamente en SSH y Explorer tabs manteniendo el orden
+    const newSshTabs = [];
+    const newExplorerTabs = [];
+    
+    newTabs.forEach(tab => {
+      // Verificar si es una pestaña SSH (incluyendo exploradores en SSH)
+      const isSSHTab = sshTabs.some(sshTab => sshTab.key === tab.key);
+      if (isSSHTab) {
+        newSshTabs.push(tab);
+      } else {
+        newExplorerTabs.push(tab);
+      }
+    });
+    
+    // Actualizar los estados manteniendo el orden correcto
+    setSshTabs(newSshTabs);
+    setFileExplorerTabs(newExplorerTabs);
+    
+    // Actualizar el índice activo
+    setActiveTabIndex(dropIndex);
+    
+    // Limpiar estado de drag
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
+  };
+
+  const handleTabDragEnd = () => {
+    // Limpiar timer si existe
+    if (dragStartTimer) {
+      clearTimeout(dragStartTimer);
+      setDragStartTimer(null);
+    }
+    setDraggedTabIndex(null);
+    setDragOverTabIndex(null);
   };
 
   const generateOverflowMenuItems = () => {
@@ -1026,15 +1112,42 @@ const App = () => {
                         header={tab.label}
                         headerTemplate={(options) => {
                           const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                          const isDragging = draggedTabIndex === idx;
+                          const isDragOver = dragOverTabIndex === idx;
+                          
                           return (
                             <div
-                              className={className}
-                              style={{ ...style, display: 'flex', alignItems: 'center', maxWidth: 220 }}
-                              onClick={onClick}
+                              className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
+                              style={{ 
+                                ...style, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                maxWidth: 220,
+                                opacity: isDragging ? 0.5 : 1,
+                                borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
+                                transition: 'opacity 0.2s, border-left 0.2s',
+                                cursor: isDragging ? 'grabbing' : 'grab'
+                              }}
+                              onClick={(e) => {
+                                // Prevenir click si está en proceso de drag o hay un timer activo
+                                if (draggedTabIndex !== null || dragStartTimer !== null) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                onClick(e);
+                              }}
                               onKeyDown={onKeyDown}
                               tabIndex={0}
                               aria-selected={selected}
                               role="tab"
+                              draggable="true"
+                              onDragStart={(e) => handleTabDragStart(e, idx)}
+                              onDragOver={(e) => handleTabDragOver(e, idx)}
+                              onDragLeave={handleTabDragLeave}
+                              onDrop={(e) => handleTabDrop(e, idx)}
+                              onDragEnd={handleTabDragEnd}
+                              title="Arrastra para reordenar pestañas"
                             >
                               {leftIcon}
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
