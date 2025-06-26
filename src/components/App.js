@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menubar } from 'primereact/menubar';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Tree } from 'primereact/tree';
 import { Card } from 'primereact/card';
@@ -165,143 +164,7 @@ const App = () => {
     }
   }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
 
-  // Menu items for the top menubar
-  const menuItems = [
-    {
-      label: 'Archivo',
-      icon: 'pi pi-fw pi-file',
-      items: [
-        {
-          label: 'Nuevo',
-          icon: 'pi pi-fw pi-plus',
-          items: [
-            {
-              label: 'Nueva Carpeta',
-              icon: 'pi pi-fw pi-folder',
-              command: () => openNewFolderDialog(null)
-            },
-            {
-              label: 'Nuevo Archivo',
-              icon: 'pi pi-fw pi-file'
-            },
-            {
-              label: 'Nueva sesión SSH',
-              icon: 'pi pi-fw pi-terminal',
-              command: () => setShowSSHDialog(true)
-            }
-          ]
-        },
-        {
-          label: 'Abrir',
-          icon: 'pi pi-fw pi-folder-open'
-        },
-        {
-          label: 'Guardar',
-          icon: 'pi pi-fw pi-save'
-        },
-        {
-          separator: true
-        },
-        {
-          label: 'Salir',
-          icon: 'pi pi-fw pi-power-off',
-          command: () => {
-            try {
-              if (window.electron && window.electron.ipcRenderer) {
-                window.electron.ipcRenderer.send('app-quit');
-              } else {
-                toast.current.show({
-                  severity: 'info',
-                  summary: 'Solo en escritorio',
-                  detail: 'Esta opción solo está disponible en la app de escritorio (Electron).',
-                  life: 3000
-                });
-              }
-            } catch (e) {
-              toast.current.show({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'No se pudo cerrar la aplicación.',
-                life: 3000
-              });
-            }
-          }
-        }
-      ]
-    },
-    {
-      label: 'Editar',
-      icon: 'pi pi-fw pi-pencil',
-      items: [
-        {
-          label: 'Cortar',
-          icon: 'pi pi-fw pi-cut'
-        },
-        
-        {
-          label: 'Copiar',
-          icon: 'pi pi-fw pi-copy'
-        },
-        {
-          label: 'Pegar',
-          icon: 'pi pi-fw pi-paste'
-        }
-      ]
-    },
-    {
-      label: 'Ver',
-      icon: 'pi pi-fw pi-eye',
-      items: [
-        {
-          label: 'Panel lateral',
-          icon: 'pi pi-fw pi-list'
-        },
-        {
-          separator: true
-        },
-        {
-          label: 'Resetear datos',
-          icon: 'pi pi-fw pi-refresh',
-          command: () => {
-            const defaultNodes = getDefaultNodes();
-            setNodes(defaultNodes);
-            toast.current.show({
-              severity: 'info',
-              summary: 'Datos reseteados',
-              detail: 'Se han restaurado los datos por defecto',
-              life: 3000
-            });
-          }
-        },
-        {
-          separator: true
-        },
-        {
-          label: 'Regenerar keys',
-          icon: 'pi pi-fw pi-wrench',
-          command: () => {
-            updateNodesWithKeys(nodes);
-            toast.current.show({
-              severity: 'success',
-              summary: 'Keys regeneradas',
-              detail: 'Se han regenerado todas las keys del árbol',
-              life: 3000
-            });
-          }
-        }
-      ]
-    },
-    {
-      label: 'Ayuda',
-      icon: 'pi pi-fw pi-question-circle',
-      items: [
-        {
-          label: 'Acerca de',
-          icon: 'pi pi-fw pi-info-circle'
-        }
-      ]
-    }
-  ];
+
 
   // Default tree data
   const getDefaultNodes = () => [
@@ -1079,7 +942,6 @@ const App = () => {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Toast ref={toast} />
       <ConfirmDialog />
-      <Menubar model={menuItems} />
       
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
