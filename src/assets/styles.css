@@ -630,6 +630,14 @@ html, body {
   position: fixed !important;
   transform: none !important;
   margin: 0 !important;
+  opacity: 1 !important;
+}
+
+/* Asegurar que elementos ocultos no interfieran */
+.p-menu.p-menu-overlay[style*="display: none"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 @keyframes contextMenuFadeIn {

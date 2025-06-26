@@ -213,18 +213,28 @@ const App = () => {
       const handleClickOutside = (event) => {
         const menuElement = document.querySelector('.p-menu.p-menu-overlay');
         if (menuElement && !menuElement.contains(event.target)) {
+          // Limpiar estado y ocultar menú
           setTerminalContextMenu(null);
           if (terminalContextMenuRef.current) {
             terminalContextMenuRef.current.hide();
           }
+          // Remover el elemento del DOM si aún existe
+          setTimeout(() => {
+            const remainingMenu = document.querySelector('.p-menu.p-menu-overlay');
+            if (remainingMenu) {
+              remainingMenu.style.display = 'none';
+            }
+          }, 10);
         }
       };
 
       document.addEventListener('click', handleClickOutside);
+      document.addEventListener('contextmenu', handleClickOutside); // También en clic derecho
       
       return () => {
         clearTimeout(timer);
         document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('contextmenu', handleClickOutside);
       };
     }
   }, [terminalContextMenu]);
@@ -308,6 +318,20 @@ const App = () => {
     ];
   };
 
+  const hideContextMenu = () => {
+    setTerminalContextMenu(null);
+    if (terminalContextMenuRef.current) {
+      terminalContextMenuRef.current.hide();
+    }
+    // Forzar ocultación del elemento DOM
+    setTimeout(() => {
+      const menuElement = document.querySelector('.p-menu.p-menu-overlay');
+      if (menuElement) {
+        menuElement.style.display = 'none';
+      }
+    }, 10);
+  };
+
   const handleCopyFromTerminal = (tabKey) => {
     if (window.electron && terminalRefs.current[tabKey]) {
       const terminal = terminalRefs.current[tabKey];
@@ -329,6 +353,7 @@ const App = () => {
         });
       }
     }
+    hideContextMenu();
   };
 
   const handlePasteToTerminal = async (tabKey) => {
@@ -361,6 +386,7 @@ const App = () => {
         });
       }
     }
+    hideContextMenu();
   };
 
   const handleSelectAllTerminal = (tabKey) => {
@@ -374,6 +400,7 @@ const App = () => {
         life: 2000
       });
     }
+    hideContextMenu();
   };
 
   const handleClearTerminal = (tabKey) => {
@@ -392,6 +419,7 @@ const App = () => {
         life: 2000
       });
     }
+    hideContextMenu();
   };
 
   const generateOverflowMenuItems = () => {
