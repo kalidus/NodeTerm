@@ -1486,7 +1486,9 @@ const App = () => {
                     // Calcular posición del menú relativa al botón
                     const buttonRect = e.currentTarget.getBoundingClientRect();
                     const menuWidth = 200;
-                    const menuHeight = items.length * 40 + 10; // Estimación de altura
+                    const maxMenuHeight = 300; // Altura máxima real del CSS
+                    const estimatedHeight = items.length * 40 + 10;
+                    const menuHeight = Math.min(estimatedHeight, maxMenuHeight); // Usar la altura real limitada
                     
                     let x = buttonRect.left;
                     let y = buttonRect.bottom + 5;
