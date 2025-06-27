@@ -13,6 +13,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
+import AboutDialog from './AboutDialog';
 import { Divider } from 'primereact/divider';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
@@ -67,6 +68,7 @@ const App = () => {
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
+  const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [sshTabs, setSshTabs] = useState([]);
@@ -1224,13 +1226,8 @@ const App = () => {
   useEffect(() => {
     // Cuando cambiamos de pestaña, la terminal necesita recalcular su tamaño
     // para ajustarse al contenedor que ahora es visible.
-    const resizeTimer = setTimeout(() => {
-      handleResize();
-    }, 50); // Un pequeño retardo para asegurar que el DOM está listo
-  
-    return () => {
-      clearTimeout(resizeTimer);
-    };
+    // Llamar inmediatamente para que el servidor SSH reciba las dimensiones correctas
+    handleResize();
   }, [activeTabIndex, sshTabs]); // Se ejecuta cuando cambia la pestaña activa o la lista de pestañas
 
   const handleResize = () => {
@@ -1310,6 +1307,13 @@ const App = () => {
                   />
                 </div>
                 <div>
+                  <Button
+                    icon="pi pi-info-circle"
+                    className="p-button-rounded p-button-text sidebar-action-button"
+                    onClick={() => setShowAboutDialog(true)}
+                    tooltip="Acerca de NodeTerm"
+                    tooltipOptions={{ position: 'bottom' }}
+                  />
                   <Button
                     icon="pi pi-cog"
                     className="p-button-rounded p-button-text sidebar-action-button"
@@ -1482,7 +1486,9 @@ const App = () => {
                     // Calcular posición del menú relativa al botón
                     const buttonRect = e.currentTarget.getBoundingClientRect();
                     const menuWidth = 200;
-                    const menuHeight = items.length * 40 + 10; // Estimación de altura
+                    const maxMenuHeight = 300; // Altura máxima real del CSS
+                    const estimatedHeight = items.length * 40 + 10;
+                    const menuHeight = Math.min(estimatedHeight, maxMenuHeight); // Usar la altura real limitada
                     
                     let x = buttonRect.left;
                     let y = buttonRect.bottom + 5;
@@ -1901,6 +1907,11 @@ const App = () => {
           </div>
         </div>
       </Dialog>
+
+      <AboutDialog
+        visible={showAboutDialog}
+        onHide={() => setShowAboutDialog(false)}
+      />
     </div>
   );
 };

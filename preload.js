@@ -23,6 +23,23 @@ contextBridge.exposeInMainWorld('electron', {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
     },
+    invoke: (channel, ...args) => {
+      const validChannels = [
+        'get-version-info',
+        'clipboard:writeText',
+        'clipboard:readText',
+        /^ssh:.*$/,
+        /^dialog:.*$/
+      ];
+      if (validChannels.some(regex => {
+        if (typeof regex === 'string') {
+          return regex === channel;
+        }
+        return regex.test(channel);
+      })) {
+        return ipcRenderer.invoke(channel, ...args);
+      }
+    },
     on: (channel, func) => {
       const validChannels = [
         /^ssh:data:.*$/,
