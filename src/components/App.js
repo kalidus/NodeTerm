@@ -1226,13 +1226,8 @@ const App = () => {
   useEffect(() => {
     // Cuando cambiamos de pestaña, la terminal necesita recalcular su tamaño
     // para ajustarse al contenedor que ahora es visible.
-    const resizeTimer = setTimeout(() => {
-      handleResize();
-    }, 50); // Un pequeño retardo para asegurar que el DOM está listo
-  
-    return () => {
-      clearTimeout(resizeTimer);
-    };
+    // Llamar inmediatamente para que el servidor SSH reciba las dimensiones correctas
+    handleResize();
   }, [activeTabIndex, sshTabs]); // Se ejecuta cuando cambia la pestaña activa o la lista de pestañas
 
   const handleResize = () => {
