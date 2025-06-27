@@ -173,6 +173,7 @@ const App = () => {
   // Referencias y estado para menú contextual del árbol
   const treeContextMenuRef = useRef(null);
   const [selectedNode, setSelectedNode] = useState(null);
+  const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -1082,13 +1083,50 @@ const App = () => {
     return items;
   };
 
+  // Función para generar items del menú contextual general del árbol
+  const getGeneralTreeContextMenuItems = () => {
+    return [
+      {
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-folder',
+        command: () => openNewFolderDialog(null) // null = crear en raíz
+      },
+      {
+        label: 'Nueva Conexión SSH',
+        icon: 'pi pi-desktop',
+        command: () => setShowSSHDialog(true)
+      }
+    ];
+  };
+
   // Context menu for nodes
   const onNodeContextMenu = (event, node) => {
     event.preventDefault();
     event.stopPropagation();
     setSelectedNode(node);
+    setIsGeneralTreeMenu(false);
     if (treeContextMenuRef.current) {
       treeContextMenuRef.current.show(event);
+    }
+  };
+
+  // Context menu for tree area (general)
+  const onTreeAreaContextMenu = (event) => {
+    // Solo mostrar el menú si NO se hizo click en un nodo
+    const targetElement = event.target;
+    const isNodeClick = targetElement.closest('.p-treenode-content') || 
+                       targetElement.closest('.p-treenode') ||
+                       targetElement.closest('.node-label') ||
+                       targetElement.closest('.align-items-center');
+    
+    if (!isNodeClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedNode(null);
+      setIsGeneralTreeMenu(true);
+      if (treeContextMenuRef.current) {
+        treeContextMenuRef.current.show(event);
+      }
     }
   };
 
@@ -1343,7 +1381,17 @@ const App = () => {
                 </div>
               </div>
               <Divider className="my-2" />
-              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+              <div 
+                style={{ 
+                  flex: 1, 
+                  minHeight: 0, 
+                  overflowY: 'auto', 
+                  overflowX: 'hidden',
+                  position: 'relative' 
+                }}
+                onContextMenu={onTreeAreaContextMenu}
+                className="tree-container"
+              >
                 <Tree
                   value={nodes}
                   selectionMode="single"
@@ -1935,8 +1983,11 @@ const App = () => {
       {/* Menú contextual del árbol de sesiones */}
       <ContextMenu
         ref={treeContextMenuRef}
-        model={selectedNode ? getTreeContextMenuItems(selectedNode) : []}
-        popup={true}
+        model={
+          isGeneralTreeMenu 
+            ? getGeneralTreeContextMenuItems() 
+            : (selectedNode ? getTreeContextMenuItems(selectedNode) : [])
+        }
       />
     </div>
   );
