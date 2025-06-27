@@ -11,6 +11,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Sidebar } from 'primereact/sidebar';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
+import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import AboutDialog from './AboutDialog';
@@ -168,6 +169,10 @@ const App = () => {
 
   // Estado para menú contextual de terminal
   const [terminalContextMenu, setTerminalContextMenu] = useState(null);
+  
+  // Referencias y estado para menú contextual del árbol
+  const treeContextMenuRef = useRef(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -949,10 +954,9 @@ const App = () => {
     });
   };
   
-  // Node context menu
+  // Node template simplificado - acciones movidas al menú contextual
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
-    const hasChildren = isFolder && node.children && node.children.length > 0;
     const isSSH = node.data && node.data.type === 'ssh';
     let iconClass = '';
     if (isSSH) {
@@ -984,93 +988,108 @@ const App = () => {
             return newTabs;
           });
         } : undefined}
+        style={{ cursor: 'pointer' }}
+        title="Click derecho para más opciones"
       >
         <span className={iconClass} style={{ minWidth: 20 }}></span>
         <span className="node-label">{node.label}</span>
-        <div className="ml-auto flex">
-          {isSSH && (
-            <>
-              <Button
-                icon="pi pi-folder-open"
-                rounded
-                text
-                size="small"
-                className="node-action-button"
-                onClick={e => {
-                  e.stopPropagation();
-                  openFileExplorer(node);
-                }}
-                tooltip="Explorador de archivos"
-                tooltipOptions={{ position: 'top' }}
-              />
-              <Button
-                icon="pi pi-pencil"
-                rounded
-                text
-                size="small"
-                className="node-action-button"
-                onClick={e => {
-                  e.stopPropagation();
-                  openEditSSHDialog(node);
-                }}
-                tooltip="Editar sesión SSH"
-                tooltipOptions={{ position: 'top' }}
-              />
-            </>
-          )}
-          {isFolder && (
-            <>
-              <Button
-                icon="pi pi-pencil"
-                rounded
-                text
-                size="small"
-                className="node-action-button"
-                onClick={e => {
-                  e.stopPropagation();
-                  openEditFolderDialog(node);
-                }}
-                tooltip="Editar carpeta"
-                tooltipOptions={{ position: 'top' }}
-              />
-              <Button 
-                icon="pi pi-plus" 
-                rounded 
-                text 
-                size="small" 
-                className="node-action-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openNewFolderDialog(node.key);
-                }}
-                tooltip="Crear carpeta"
-                tooltipOptions={{ position: 'top' }}
-              />
-            </>
-          )}
-          <Button 
-            icon="pi pi-trash" 
-            rounded 
-            text 
-            severity="danger" 
-            size="small" 
-            className="node-action-button ml-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              confirmDeleteNode(node.key, node.label, hasChildren);
-            }}
-            tooltip="Eliminar"
-            tooltipOptions={{ position: 'top' }}
-          />
-        </div>
+        <span className="ml-auto text-xs text-400">⋮</span>
       </div>
     );
+  };
+
+  // Función para generar items del menú contextual del árbol
+  const getTreeContextMenuItems = (node) => {
+    if (!node) return [];
+    
+    const isFolder = node.droppable;
+    const isSSH = node.data && node.data.type === 'ssh';
+    const items = [];
+    
+    if (isSSH) {
+      // Items para sesiones SSH
+      items.push({
+        label: 'Abrir Terminal',
+        icon: 'pi pi-desktop',
+        command: () => {
+          // Abrir nueva pestaña de terminal (mismo código que onDoubleClick)
+          setSshTabs(prevTabs => {
+            const tabId = `${node.key}_${Date.now()}`;
+            const sshConfig = {
+              host: node.data.host,
+              username: node.data.user,
+              password: node.data.password,
+            };
+            const newTab = {
+              key: tabId,
+              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+              originalKey: node.key,
+              sshConfig: sshConfig,
+              type: 'terminal'
+            };
+            const newTabs = [newTab, ...prevTabs];
+            setActiveTabIndex(0);
+            return newTabs;
+          });
+        }
+      });
+      
+      items.push({
+        label: 'Explorador de Archivos',
+        icon: 'pi pi-folder-open',
+        command: () => openFileExplorer(node)
+      });
+      
+      items.push({ separator: true });
+      
+      items.push({
+        label: 'Editar Sesión',
+        icon: 'pi pi-pencil',
+        command: () => openEditSSHDialog(node)
+      });
+    }
+    
+    if (isFolder) {
+      // Items para carpetas
+      items.push({
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-plus',
+        command: () => openNewFolderDialog(node.key)
+      });
+      
+      items.push({ separator: true });
+      
+      items.push({
+        label: 'Editar Carpeta',
+        icon: 'pi pi-pencil',
+        command: () => openEditFolderDialog(node)
+      });
+    }
+    
+    // Item eliminar para todos los tipos
+    if (items.length > 0) {
+      items.push({ separator: true });
+    }
+    
+    const hasChildren = isFolder && node.children && node.children.length > 0;
+    items.push({
+      label: 'Eliminar',
+      icon: 'pi pi-trash',
+      command: () => confirmDeleteNode(node.key, node.label, hasChildren),
+      className: 'p-menuitem-danger'
+    });
+    
+    return items;
   };
 
   // Context menu for nodes
   const onNodeContextMenu = (event, node) => {
     event.preventDefault();
-    // Aquí podrías mostrar un menú contextual (se implementará después)
+    event.stopPropagation();
+    setSelectedNode(node);
+    if (treeContextMenuRef.current) {
+      treeContextMenuRef.current.show(event);
+    }
   };
 
   // Función recursiva para obtener todas las carpetas del árbol
@@ -1912,6 +1931,16 @@ const App = () => {
         visible={showAboutDialog}
         onHide={() => setShowAboutDialog(false)}
       />
+      
+      {/* Menú contextual del árbol de sesiones */}
+      <ContextMenu
+        ref={treeContextMenuRef}
+        model={selectedNode ? getTreeContextMenuItems(selectedNode) : []}
+        popup={true}
+      />
+      
+      {/* Confirmaciones de eliminación */}
+      <ConfirmDialog />
     </div>
   );
 };
