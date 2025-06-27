@@ -1938,9 +1938,6 @@ const App = () => {
         model={selectedNode ? getTreeContextMenuItems(selectedNode) : []}
         popup={true}
       />
-      
-      {/* Confirmaciones de eliminación */}
-      <ConfirmDialog />
     </div>
   );
 };
