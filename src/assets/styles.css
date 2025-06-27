@@ -432,6 +432,7 @@ html, body {
 /* --- Status Bar --- */
 .status-bar {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     background-color: #252526;
     color: #cccccc;
@@ -452,6 +453,16 @@ html, body {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.status-bar-section.version-section {
+    font-size: 11px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.status-bar-section.version-section:hover {
+    opacity: 1;
 }
 
 .status-bar-section .disk-info {

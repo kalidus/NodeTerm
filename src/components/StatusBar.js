@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
 import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
+import { getVersionInfo } from '../version-info';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -38,8 +39,23 @@ const DistroIcon = ({ distro }) => {
 };
 
 const StatusBar = ({ stats }) => {
+    // Obtener la versión de la aplicación de forma segura
+    const { appVersion } = getVersionInfo();
+    
     if (!stats) {
-        return null;
+        // Mostrar al menos la versión si no hay stats
+        return (
+            <div className="status-bar">
+                <div className="status-group">
+                    <div className="status-bar-section version-section">
+                        <i className="pi pi-desktop" style={{ fontSize: '0.8rem', marginRight: '4px', color: 'var(--primary-color)' }}></i>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                            NodeTerm v{appVersion}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip } = stats;
@@ -112,6 +128,16 @@ const StatusBar = ({ stats }) => {
                         <span>{ip}</span>
                     </div>
                 )}
+            </div>
+            
+            {/* Versión de la aplicación en el lado derecho */}
+            <div className="status-group">
+                <div className="status-bar-section version-section">
+                    <i className="pi pi-desktop" style={{ fontSize: '0.8rem', marginRight: '4px', color: 'var(--primary-color)' }}></i>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                        v{appVersion}
+                    </span>
+                </div>
             </div>
         </div>
     );
