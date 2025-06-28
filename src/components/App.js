@@ -131,6 +131,57 @@ const App = () => {
     };
   }, [sshTabs]);
 
+  // Listeners para estado de conexión SSH
+  useEffect(() => {
+    if (!window.electron || !window.electron.ipcRenderer) return;
+
+    // Función para manejar estado de conexión
+    const handleConnectionStatus = (originalKey, status) => {
+      console.log('🔄 SSH estado:', originalKey, '->', status);
+      setSshConnectionStatus(prevStatus => {
+        const newStatus = { ...prevStatus, [originalKey]: status };
+        console.log('Nuevo estado sshConnectionStatus:', newStatus);
+        return newStatus;
+      });
+    };
+
+    // Listeners estables con referencias fijas
+    const handleSSHReady = (data) => {
+      console.log('✅ SSH conectado para originalKey:', data?.originalKey);
+      if (data?.originalKey) {
+        handleConnectionStatus(data.originalKey, 'connected');
+      }
+    };
+
+    const handleSSHError = (data) => {
+      console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error);
+      if (data?.originalKey) {
+        handleConnectionStatus(data.originalKey, 'error');
+      }
+    };
+
+    const handleSSHDisconnected = (data) => {
+      console.log('🔌 SSH desconectado para originalKey:', data?.originalKey);
+      if (data?.originalKey) {
+        handleConnectionStatus(data.originalKey, 'disconnected');
+      }
+    };
+
+    // Registrar listeners
+    console.log('🚀 Registrando listeners SSH IPC');
+    window.electron.ipcRenderer.on('ssh-connection-ready', handleSSHReady);
+    window.electron.ipcRenderer.on('ssh-connection-error', handleSSHError);
+    window.electron.ipcRenderer.on('ssh-connection-disconnected', handleSSHDisconnected);
+
+    // Cleanup usando removeAllListeners para asegurar limpieza completa
+    return () => {
+      console.log('🧹 Limpiando listeners SSH IPC');
+      window.electron.ipcRenderer.removeAllListeners('ssh-connection-ready');
+      window.electron.ipcRenderer.removeAllListeners('ssh-connection-error');
+      window.electron.ipcRenderer.removeAllListeners('ssh-connection-disconnected');
+    };
+  }, []);
+
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
   const FONT_SIZE_STORAGE_KEY = 'basicapp_terminal_font_size';
@@ -174,6 +225,9 @@ const App = () => {
   const treeContextMenuRef = useRef(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
+  
+  // Estado para trackear conexiones SSH
+  const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -959,23 +1013,47 @@ const App = () => {
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
+    if (isSSH) {
+      console.log('Renderizando nodo SSH:', node.key, node.label);
+    }
     let iconClass = '';
     if (isSSH) {
       iconClass = 'pi pi-desktop';
     } else if (isFolder) {
       iconClass = options.expanded ? 'pi pi-folder-open' : 'pi pi-folder';
     }
+
+    // Obtener estado de conexión para sesiones SSH
+    const connectionStatus = isSSH ? sshConnectionStatus[node.key] : null;
+    const getConnectionIndicator = () => {
+      if (!isSSH) return null;
+      
+      switch (connectionStatus) {
+        case 'connected':
+          return <span className="connection-indicator connected" title="Conectado">●</span>;
+        case 'error':
+          return <span className="connection-indicator error" title="Error de conexión">●</span>;
+        case 'disconnected':
+          return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
+        default:
+          // Por defecto: gris (desconectado), amarillo para otros estados
+          return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
+      }
+    };
+
     return (
       <div className="flex align-items-center gap-2"
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
+          console.log('🖱️ Doble click en nodo SSH:', node.key, '- Abriendo terminal');
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
               host: node.data.host,
               username: node.data.user,
               password: node.data.password,
+              originalKey: node.key,
             };
             const newTab = {
               key: tabId,
@@ -989,11 +1067,15 @@ const App = () => {
             return newTabs;
           });
         } : undefined}
+        onClick={isSSH ? (e) => {
+          console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
+        } : undefined}
         style={{ cursor: 'pointer' }}
         title="Click derecho para más opciones"
       >
         <span className={iconClass} style={{ minWidth: 20 }}></span>
         <span className="node-label">{node.label}</span>
+        {getConnectionIndicator()}
         <span className="ml-auto text-xs text-400">⋮</span>
       </div>
     );
@@ -1020,6 +1102,7 @@ const App = () => {
               host: node.data.host,
               username: node.data.user,
               password: node.data.password,
+              originalKey: node.key,
             };
             const newTab = {
               key: tabId,
@@ -1315,7 +1398,8 @@ const App = () => {
       host: sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
-      port: sshNode.data.port || 22
+      port: sshNode.data.port || 22,
+      originalKey: sshNode.key,
     };
     
     // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
@@ -1396,7 +1480,10 @@ const App = () => {
                   value={nodes}
                   selectionMode="single"
                   selectionKeys={selectedNodeKey}
-                  onSelectionChange={e => setSelectedNodeKey(e.value)}
+                  onSelectionChange={e => {
+                    console.log('🔍 Selección del árbol cambiada:', e.value);
+                    setSelectedNodeKey(e.value);
+                  }}
                   dragdropScope="files"
                   onDragDrop={onDragDrop}
                   onDragStart={e => {
@@ -1511,6 +1598,15 @@ const App = () => {
                                     const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
                                     if (!closedTab.isExplorerInSSH) {
                                       delete terminalRefs.current[closedTab.key];
+                                    }
+                                    // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
+                                    const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
+                                    if (remainingTabs.length === 0) {
+                                        setSshConnectionStatus(prev => {
+                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                            console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                            return updated;
+                                        });
                                     }
                                     setSshTabs(newSshTabs);
                                   } else {
