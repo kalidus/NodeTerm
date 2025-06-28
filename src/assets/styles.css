@@ -698,3 +698,27 @@ html, body {
   margin: 0.25rem 0;
   border-top: 1px solid var(--surface-300, #dee2e6);
 }
+
+/* Indicadores de estado de conexión SSH */
+.connection-indicator {
+  font-size: 8px;
+  margin-left: 4px;
+  margin-right: 4px;
+  transition: color 0.3s ease;
+}
+
+.connection-indicator.connected {
+  color: #28a745; /* Verde */
+}
+
+.connection-indicator.error {
+  color: #dc3545; /* Rojo */
+}
+
+.connection-indicator.disconnected {
+  color: #6c757d; /* Gris */
+}
+
+.connection-indicator.unknown {
+  color: #ffc107; /* Amarillo */
+}
