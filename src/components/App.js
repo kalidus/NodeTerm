@@ -1074,8 +1074,8 @@ const App = () => {
         title="Click derecho para más opciones"
       >
         <span className={iconClass} style={{ minWidth: 20 }}></span>
-        <span className="node-label">{node.label}</span>
         {getConnectionIndicator()}
+        <span className="node-label">{node.label}</span>
         <span className="ml-auto text-xs text-400">⋮</span>
       </div>
     );
