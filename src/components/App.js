@@ -1394,7 +1394,20 @@ const App = () => {
     return false;
   }
 
-  const [expandedKeys, setExpandedKeys] = useState({});
+  // Clave para guardar el estado expandido de la sidebar
+  const EXPANDED_KEYS_STORAGE_KEY = 'basicapp2_sidebar_expanded_keys';
+
+  // Estado para expandedKeys, inicializado desde localStorage si existe
+  const [expandedKeys, setExpandedKeys] = useState(() => {
+    const saved = localStorage.getItem(EXPANDED_KEYS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Guardar expandedKeys en localStorage cada vez que cambie
+  useEffect(() => {
+    localStorage.setItem(EXPANDED_KEYS_STORAGE_KEY, JSON.stringify(expandedKeys));
+  }, [expandedKeys]);
+
   const [allExpanded, setAllExpanded] = useState(false);
 
   // Función para expandir o plegar todas las carpetas
