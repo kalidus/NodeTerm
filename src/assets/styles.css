@@ -114,7 +114,7 @@ html, body {
 
 /* Tamaño mínimo para el panel lateral */
 .p-splitter .p-splitter-panel:first-child {
-  min-width: 133px !important;
+  min-width: 32px !important;
   min-height: 47px !important;
   max-width: 400px;
 }
