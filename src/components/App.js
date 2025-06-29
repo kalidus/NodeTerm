@@ -21,6 +21,7 @@ import { themes } from '../themes';
 // Importar iconos para distribuciones
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
+import SidebarFooter from './SidebarFooter';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -1459,6 +1460,10 @@ const App = () => {
                   filterPlaceholder="Buscar..."
                 />
               </div>
+              <SidebarFooter 
+                onConfigClick={() => setShowConfigDialog(true)} 
+                version={process.env.REACT_APP_VERSION || '1.0.0'} 
+              />
             </div>
           </SplitterPanel>
           
