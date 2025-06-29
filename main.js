@@ -379,7 +379,19 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // Configurar límites de listeners para cada stream individual
     stream.setMaxListeners(0); // Sin límite para streams individuales
 
-    sshConnections[tabId] = { ssh, stream, config, cacheKey, previousCpu: null, statsTimeout: null, previousNet: null, previousTime: null };
+    const storedOriginalKey = config.originalKey || tabId;
+    console.log('Guardando conexión SSH con originalKey:', storedOriginalKey, 'para tabId:', tabId);
+    sshConnections[tabId] = { 
+      ssh, 
+      stream, 
+      config, 
+      cacheKey, 
+      originalKey: storedOriginalKey,
+      previousCpu: null, 
+      statsTimeout: null, 
+      previousNet: null, 
+      previousTime: null 
+    };
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
@@ -414,12 +426,29 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       if (conn && conn.statsTimeout) {
           clearTimeout(conn.statsTimeout);
       }
+      
+      // Enviar evento de desconexión
+      const disconnectOriginalKey = conn?.originalKey || tabId;
+      console.log('🔌 SSH desconectado - enviando evento para originalKey:', disconnectOriginalKey);
+      sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
+        originalKey: disconnectOriginalKey,
+        tabId: tabId 
+      });
+      
       delete sshConnections[tabId];
     });
 
 
 
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+    
+    // Enviar evento de conexión exitosa
+    const originalKey = config.originalKey || tabId;
+    console.log('✅ SSH conectado - enviando evento para originalKey:', originalKey);
+    sendToRenderer(event.sender, 'ssh-connection-ready', { 
+      originalKey: originalKey,
+      tabId: tabId 
+    });
 
     // After setting up the shell, get the hostname/distro and start the stats loop
     let realHostname = 'unknown';
@@ -470,6 +499,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
     
     sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
+    
+    // Enviar evento de error de conexión
+    const errorOriginalKey = config.originalKey || tabId;
+    console.log('❌ SSH error - enviando evento para originalKey:', errorOriginalKey, 'error:', errorMsg);
+    sendToRenderer(event.sender, 'ssh-connection-error', { 
+      originalKey: errorOriginalKey,
+      tabId: tabId,
+      error: errorMsg 
+    });
   }
 });
 
@@ -528,23 +566,30 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       // Solo cerrar la conexión SSH si no hay otras pestañas usándola
       if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
         try {
-          console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
-          
-          // Limpiar listeners específicos de la conexión SSH de forma más selectiva
-          if (conn.ssh.ssh) {
-            // Solo remover listeners específicos en lugar de todos
-            conn.ssh.ssh.removeAllListeners('error');
-            conn.ssh.ssh.removeAllListeners('close');
-            conn.ssh.ssh.removeAllListeners('end');
-          }
-          
-          // Limpiar listeners del SSH2Promise también
-          conn.ssh.removeAllListeners('error');
-          conn.ssh.removeAllListeners('close');
-          conn.ssh.removeAllListeners('end');
-          
-          conn.ssh.close();
-          delete sshConnectionPool[conn.cacheKey];
+                console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
+      
+      // Enviar evento de desconexión
+      const disconnectOriginalKey = conn.originalKey || conn.cacheKey;
+      console.log('🔌 SSH cerrado - enviando evento para originalKey:', disconnectOriginalKey);
+      sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
+        originalKey: disconnectOriginalKey
+      });
+      
+      // Limpiar listeners específicos de la conexión SSH de forma más selectiva
+      if (conn.ssh.ssh) {
+        // Solo remover listeners específicos en lugar de todos
+        conn.ssh.ssh.removeAllListeners('error');
+        conn.ssh.ssh.removeAllListeners('close');
+        conn.ssh.ssh.removeAllListeners('end');
+      }
+      
+      // Limpiar listeners del SSH2Promise también
+      conn.ssh.removeAllListeners('error');
+      conn.ssh.removeAllListeners('close');
+      conn.ssh.removeAllListeners('end');
+      
+      conn.ssh.close();
+      delete sshConnectionPool[conn.cacheKey];
         } catch (closeError) {
           console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
         }
@@ -682,14 +727,19 @@ ipcMain.handle('clipboard:writeText', (event, text) => {
 });
 
 // Function to safely send to mainWindow
-function sendToRenderer(sender, ...args) {
+function sendToRenderer(sender, eventName, ...args) {
   try {
     if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
-      sender.send(...args);
+      // Solo logear eventos SSH para debugging
+      if (eventName.startsWith('ssh-connection-')) {
+        console.log('📡 Enviando evento SSH:', eventName, 'con args:', args);
+      }
+      sender.send(eventName, ...args);
+    } else {
+      console.error('Sender no válido o destruido para evento:', eventName);
     }
   } catch (error) {
-    // Silently ignore renderer communication errors
-    console.warn('Failed to send to renderer:', error?.message || error || 'Unknown error');
+    console.error('Error sending to renderer:', eventName, error);
   }
 }
 
@@ -792,6 +842,10 @@ async function findSSHConnection(tabId, sshConfig = null) {
       sshConnectionPool[targetCacheKey] = ssh;
       
       console.log(`Conexión SSH creada exitosamente para: ${targetCacheKey}`);
+      
+      // ⚠️ IMPORTANTE: NO emitir ssh-connection-ready aquí porque esto es solo para FileExplorer
+      // El indicador de conexión debería mostrar estado solo para terminales activos
+      
       return { ssh: ssh, cacheKey: targetCacheKey };
       
     } catch (error) {
@@ -806,6 +860,28 @@ async function findSSHConnection(tabId, sshConfig = null) {
 ipcMain.handle('app:get-sessions', async () => {
   // Implementation of getting sessions
 });
+
+// Handler para obtener estado de conexiones SSH
+ipcMain.handle('ssh:get-connection-status', async () => {
+  const status = {};
+  
+  // Recorrer todas las conexiones activas
+  Object.values(sshConnections).forEach(conn => {
+    if (conn.originalKey) {
+      // Si la conexión existe y tiene stream activo, está conectada
+      if (conn.stream && !conn.stream.destroyed) {
+        status[conn.originalKey] = 'connected';
+      } else {
+        status[conn.originalKey] = 'disconnected';
+      }
+    }
+  });
+  
+  console.log('📊 Estado actual SSH:', status);
+  return status;
+});
+
+
 
 // File Explorer IPC Handlers
 ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {

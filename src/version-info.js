@@ -4,7 +4,7 @@
 const getVersionInfo = () => {
   // Valores por defecto
   const defaultInfo = {
-    appVersion: '1.1.0',
+    appVersion: '1.2.0',
     appName: 'NodeTerm',
     buildDate: new Date().toLocaleDateString(),
     electronVersion: 'Unknown',
