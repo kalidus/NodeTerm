@@ -571,39 +571,44 @@ const App = () => {
     }
   }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
 
+  // Helper para generar un key único e inmutable
+  function generateUniqueKey() {
+    return `node_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+  }
+
   // Default tree data
   const getDefaultNodes = () => [
     {
-      key: '0',
+      key: generateUniqueKey(),
       label: 'Proyectos',
       droppable: true,
       children: [
         {
-          key: '0-0',
+          key: generateUniqueKey(),
           label: 'Proyecto 1',
           droppable: true,
           children: [
-            { key: '0-0-0', label: 'Archivo 1.txt', draggable: true },
-            { key: '0-0-1', label: 'Archivo 2.txt', draggable: true }
+            { key: generateUniqueKey(), label: 'Archivo 1.txt', draggable: true },
+            { key: generateUniqueKey(), label: 'Archivo 2.txt', draggable: true }
           ]
         },
         {
-          key: '0-1',
+          key: generateUniqueKey(),
           label: 'Proyecto 2',
           droppable: true,
           children: [
-            { key: '0-1-0', label: 'Archivo 3.txt', draggable: true }
+            { key: generateUniqueKey(), label: 'Archivo 3.txt', draggable: true }
           ]
         }
       ]
     },
     {
-      key: '1',
+      key: generateUniqueKey(),
       label: 'Documentos',
       droppable: true,
       children: [
-        { key: '1-0', label: 'Documento 1.pdf', draggable: true },
-        { key: '1-1', label: 'Documento 2.docx', draggable: true }
+        { key: generateUniqueKey(), label: 'Documento 1.pdf', draggable: true },
+        { key: generateUniqueKey(), label: 'Documento 2.docx', draggable: true }
       ]
     }
   ];
@@ -755,7 +760,7 @@ const App = () => {
       nodesCopy.push(dragNode);
       
       // Update nodes with key regeneration
-      updateNodesWithKeys(nodesCopy);
+      setNodes(nodesCopy);
       setDraggedNodeKey(null);
       
       toast.current.show({
@@ -775,27 +780,34 @@ const App = () => {
     }
   };
 
+  // Clona el árbol y actualiza solo el subárbol con la key indicada
+  function cloneTreeWithUpdatedNode(tree, targetKey, updateFn) {
+    return tree.map(node => {
+      if (node.key === targetKey) {
+        return updateFn({ ...node });
+      }
+      if (node.children) {
+        return { ...node, children: cloneTreeWithUpdatedNode(node.children, targetKey, updateFn) };
+      }
+      return node;
+    });
+  }
+
   // Handle drag and drop with UID preservation
   const onDragDrop = (event) => {
-    try {
-      const { dragNode, dropNode, dropPoint, value } = event;
-
-      // Cancelar solo si se suelta SOBRE un nodo no droppable (dropPoint === 0)
-      if (dropPoint === 0 && dropNode && !dropNode.droppable) {
-        toast.current.show({
-          severity: 'warn',
-          summary: 'Movimiento no permitido',
-          detail: 'Solo puedes mover sesiones a carpetas.',
-          life: 3000
-        });
-        return;
-      }
-
-      // Aceptar la reordenación que PrimeReact ya ha aplicado en `value`
-      setNodes(value);
-    } catch (error) {
-      console.error('Error en drag & drop:', error);
-      toast.current.show({severity: 'error', summary: 'Error', detail: `Error en drag & drop: ${error.message}`, life: 5000});
+    const { dragNode, dropNode, dropPoint, value } = event;
+    if (dropPoint === 0 && dropNode && dropNode.droppable) {
+      // Clonar el árbol y actualizar solo la carpeta destino
+      const newValue = cloneTreeWithUpdatedNode(value, dropNode.key, (parent) => {
+        // Eliminar cualquier instancia del nodo movido
+        parent.children = parent.children.filter(n => n.key !== dragNode.key);
+        // Insertar al principio
+        parent.children = [dragNode, ...parent.children];
+        return parent;
+      });
+      setNodes(newValue);
+    } else {
+      setNodes([...value]);
     }
   };
   
@@ -831,44 +843,34 @@ const App = () => {
       });
       return;
     }
-    
     try {
-      const newKey = generateNextKey(parentNodeKey);
-      
+      const newKey = generateUniqueKey();
       const newFolder = {
         key: newKey,
         label: folderName.trim(),
         droppable: true,
         children: [],
-        // Add unique persistent identifier
-        uid: `node_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+        uid: newKey,
         createdAt: new Date().toISOString(),
         isUserCreated: true
       };
-      
       const nodesCopy = deepCopy(nodes);
-      
       if (parentNodeKey === null) {
-        // Add to root level
         nodesCopy.push(newFolder);
       } else {
-        // Add to specific parent
         const parentNode = findNodeByKey(nodesCopy, parentNodeKey);
-        
         if (!parentNode) {
           throw new Error(`Parent node with key ${parentNodeKey} not found`);
         }
-        
         parentNode.children = parentNode.children || [];
         parentNode.children.push(newFolder);
       }
-      
-      updateNodesWithKeys(nodesCopy);
+      setNodes(nodesCopy);
       setShowFolderDialog(false);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
-        detail: `Carpeta "${folderName}" creada con keys actualizadas`,
+        detail: `Carpeta "${folderName}" creada`,
         life: 3000
       });
     } catch (error) {
@@ -930,7 +932,7 @@ const App = () => {
       nodeInfo.parentList.splice(nodeInfo.index, 1);
       
       // Update the state with automatic key regeneration
-      updateNodesWithKeys(nodesCopy);
+      setNodes(nodesCopy);
       
       // If the deleted node was selected, clear selection
       if (selectedNodeKey && Object.keys(selectedNodeKey)[0] === nodeKey) {
@@ -974,9 +976,6 @@ const App = () => {
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
-    if (isSSH) {
-      console.log('Renderizando nodo SSH:', node.key, node.label);
-    }
     let iconClass = '';
     if (isSSH) {
       iconClass = 'pi pi-desktop';
@@ -1007,7 +1006,6 @@ const App = () => {
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
-          console.log('🖱️ Doble click en nodo SSH:', node.key, '- Abriendo terminal');
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
@@ -1029,7 +1027,7 @@ const App = () => {
           });
         } : undefined}
         onClick={isSSH ? (e) => {
-          console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
+          // No mostrar log: console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
         } : undefined}
         style={{ cursor: 'pointer' }}
         title="Click derecho para más opciones"
@@ -1199,7 +1197,7 @@ const App = () => {
       });
       return;
     }
-    const newKey = generateNextKey(sshTargetFolder);
+    const newKey = generateUniqueKey();
     const newSSHNode = {
       key: newKey,
       label: sshName.trim(),
@@ -1211,7 +1209,7 @@ const App = () => {
         type: 'ssh'
       },
       draggable: true,
-      uid: `ssh_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+      uid: newKey,
       createdAt: new Date().toISOString(),
       isUserCreated: true
     };
@@ -1220,14 +1218,14 @@ const App = () => {
       const parentNode = findNodeByKey(nodesCopy, sshTargetFolder);
       if (parentNode) {
         parentNode.children = parentNode.children || [];
-        parentNode.children.unshift(newSSHNode); // insertar al principio
+        parentNode.children.unshift(newSSHNode);
       } else {
         nodesCopy.push(newSSHNode);
       }
     } else {
       nodesCopy.unshift(newSSHNode);
     }
-    updateNodesWithKeys(nodesCopy);
+    setNodes(nodesCopy);
     setShowSSHDialog(false);
     setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder('');
     toast.current.show({
@@ -1273,7 +1271,7 @@ const App = () => {
         type: 'ssh'
       };
     }
-    updateNodesWithKeys(nodesCopy);
+    setNodes(nodesCopy);
     setShowEditSSHDialog(false);
     setEditSSHNode(null);
     setEditSSHName(''); 
@@ -1312,7 +1310,7 @@ const App = () => {
     if (nodeToEdit) {
       nodeToEdit.label = editFolderName.trim();
     }
-    updateNodesWithKeys(nodesCopy);
+    setNodes(nodesCopy);
     setShowEditFolderDialog(false);
     setEditFolderNode(null);
     setEditFolderName('');
@@ -1382,6 +1380,47 @@ const App = () => {
     });
   };
 
+  // Helper para eliminar un nodo por key en todo el árbol
+  function removeNodeByKey(tree, key) {
+    for (let i = 0; i < tree.length; i++) {
+      if (tree[i].key === key) {
+        tree.splice(i, 1);
+        return true;
+      }
+      if (tree[i].children) {
+        if (removeNodeByKey(tree[i].children, key)) return true;
+      }
+    }
+    return false;
+  }
+
+  const [expandedKeys, setExpandedKeys] = useState({});
+  const [allExpanded, setAllExpanded] = useState(false);
+
+  // Función para expandir o plegar todas las carpetas
+  const toggleExpandAll = () => {
+    if (allExpanded) {
+      setExpandedKeys({});
+      setAllExpanded(false);
+    } else {
+      // Recorrer todos los nodos y marcar los folders como expandidos
+      const expandAllFolders = (nodes) => {
+        let keys = {};
+        for (const node of nodes) {
+          if (node.droppable || node.children) {
+            keys[node.key] = true;
+          }
+          if (node.children && node.children.length > 0) {
+            keys = { ...keys, ...expandAllFolders(node.children) };
+          }
+        }
+        return keys;
+      };
+      setExpandedKeys(expandAllFolders(nodes));
+      setAllExpanded(true);
+    }
+  };
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Toast ref={toast} />
@@ -1407,23 +1446,15 @@ const App = () => {
                     tooltip="Nueva conexión SSH"
                     tooltipOptions={{ position: 'bottom' }}
                   />
-                </div>
-                <div>
                   <Button
-                    icon="pi pi-info-circle"
+                    icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"}
                     className="p-button-rounded p-button-text sidebar-action-button"
-                    onClick={() => setShowAboutDialog(true)}
-                    tooltip="Acerca de NodeTerm"
-                    tooltipOptions={{ position: 'bottom' }}
-                  />
-                  <Button
-                    icon="pi pi-cog"
-                    className="p-button-rounded p-button-text sidebar-action-button"
-                    onClick={() => setShowConfigDialog(true)}
-                    tooltip="Configuración"
+                    onClick={toggleExpandAll}
+                    tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"}
                     tooltipOptions={{ position: 'bottom' }}
                   />
                 </div>
+                {/* Quitamos los botones de versión y configuración del menú superior */}
               </div>
               <Divider className="my-2" />
               <div 
@@ -1458,11 +1489,13 @@ const App = () => {
                   filter
                   filterMode="strict"
                   filterPlaceholder="Buscar..."
+                  expandedKeys={expandedKeys}
+                  onToggle={e => setExpandedKeys(e.value)}
                 />
               </div>
               <SidebarFooter 
                 onConfigClick={() => setShowConfigDialog(true)} 
-                version={process.env.REACT_APP_VERSION || '1.0.0'} 
+                onAboutClick={() => setShowAboutDialog(true)}
               />
             </div>
           </SplitterPanel>
