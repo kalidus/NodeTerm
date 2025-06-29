@@ -1421,40 +1421,49 @@ const App = () => {
     }
   };
 
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Toast ref={toast} />
       <ConfirmDialog />
-      
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
-          <SplitterPanel size={15} minSize={10}>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <Divider className="my-2" />
+      <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
+        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 32 : 10} maxSize={sidebarCollapsed ? 32 : 400} style={{
+          transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
+          width: sidebarCollapsed ? 32 : undefined,
+          minWidth: 32,
+          maxWidth: sidebarCollapsed ? 32 : undefined,
+          background: '#fff',
+          borderRight: '1px solid #e0e0e0',
+          padding: 0,
+          height: '100vh',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          {sidebarCollapsed ? (
+            // Iconos alineados arriba, más juntos y barra más fina
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem', width: '100%', paddingTop: 2 }}>
+              <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+              <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+              <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+              <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+              <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowAboutDialog(true)} tooltip="Acerca de NodeTerm" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+              <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowConfigDialog(true)} tooltip="Configuración" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+            </div>
+          ) : (
+            // Sidebar completa
+            <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
                 <div>
-                  <Button
-                    icon="pi pi-plus"
-                    className="p-button-rounded p-button-text sidebar-action-button"
-                    onClick={() => openNewFolderDialog(null)}
-                    tooltip="Crear carpeta"
-                    tooltipOptions={{ position: 'bottom' }}
-                  />
-                  <Button
-                    icon="pi pi-server"
-                    className="p-button-rounded p-button-text sidebar-action-button"
-                    onClick={() => setShowSSHDialog(true)}
-                    tooltip="Nueva conexión SSH"
-                    tooltipOptions={{ position: 'bottom' }}
-                  />
-                  <Button
-                    icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"}
-                    className="p-button-rounded p-button-text sidebar-action-button"
-                    onClick={toggleExpandAll}
-                    tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"}
-                    tooltipOptions={{ position: 'bottom' }}
-                  />
+                  <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'bottom' }} style={{ marginRight: 8 }} />
+                  <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
+                  <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'bottom' }} />
+                  <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'bottom' }} />
                 </div>
-                {/* Quitamos los botones de versión y configuración del menú superior */}
               </div>
               <Divider className="my-2" />
               <div 
@@ -1473,7 +1482,6 @@ const App = () => {
                   selectionMode="single"
                   selectionKeys={selectedNodeKey}
                   onSelectionChange={e => {
-                    console.log('🔍 Selección del árbol cambiada:', e.value);
                     setSelectedNodeKey(e.value);
                   }}
                   dragdropScope="files"
@@ -1497,141 +1505,141 @@ const App = () => {
                 onConfigClick={() => setShowConfigDialog(true)} 
                 onAboutClick={() => setShowAboutDialog(true)}
               />
-            </div>
-          </SplitterPanel>
-          
-          <SplitterPanel size={75} style={{ display: 'flex', flexDirection: 'column' }}>
-            {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
-              <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ position: 'relative' }}>
-                  <TabView 
-                    activeIndex={activeTabIndex} 
-                    onTabChange={(e) => {
-                      setActiveTabIndex(e.index);
-                    }}
-                    renderActiveOnly={false}
-                    scrollable={false}
-                    className={getAllTabs().length > MAX_VISIBLE_TABS ? 'has-overflow' : ''}
-                  >
-                  {getVisibleTabs().map((tab, idx) => {
-                    // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
-                    const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
-                    const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
-                    
-                    return (
-                      <TabPanel 
-                        key={tab.key} 
-                        header={tab.label}
-                        headerTemplate={(options) => {
-                          const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
-                          const isDragging = draggedTabIndex === idx;
-                          const isDragOver = dragOverTabIndex === idx;
-                          
-                          return (
-                            <div
-                              className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
-                              style={{ 
-                                ...style, 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                maxWidth: 220,
-                                opacity: isDragging ? 0.5 : 1,
-                                borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
-                                transition: 'opacity 0.2s, border-left 0.2s',
-                                cursor: isDragging ? 'grabbing' : 'grab'
-                              }}
-                              onClick={(e) => {
-                                // Prevenir click si está en proceso de drag o hay un timer activo
-                                if (draggedTabIndex !== null || dragStartTimer !== null) {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  return;
+            </>
+          )}
+        </SplitterPanel>
+        <SplitterPanel size={sidebarVisible ? 75 : 100} style={{ display: 'flex', flexDirection: 'column' }}>
+          {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'relative' }}>
+                <TabView 
+                  activeIndex={activeTabIndex} 
+                  onTabChange={(e) => {
+                    setActiveTabIndex(e.index);
+                  }}
+                  renderActiveOnly={false}
+                  scrollable={false}
+                  className={getAllTabs().length > MAX_VISIBLE_TABS ? 'has-overflow' : ''}
+                >
+                {getVisibleTabs().map((tab, idx) => {
+                  // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
+                  const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
+                  const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
+                  
+                  return (
+                    <TabPanel 
+                      key={tab.key} 
+                      header={tab.label}
+                      headerTemplate={(options) => {
+                        const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                        const isDragging = draggedTabIndex === idx;
+                        const isDragOver = dragOverTabIndex === idx;
+                        
+                        return (
+                          <div
+                            className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
+                            style={{ 
+                              ...style, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              maxWidth: 220,
+                              opacity: isDragging ? 0.5 : 1,
+                              borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
+                              transition: 'opacity 0.2s, border-left 0.2s',
+                              cursor: isDragging ? 'grabbing' : 'grab'
+                            }}
+                            onClick={(e) => {
+                              // Prevenir click si está en proceso de drag o hay un timer activo
+                              if (draggedTabIndex !== null || dragStartTimer !== null) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return;
+                              }
+                              onClick(e);
+                            }}
+                            onKeyDown={onKeyDown}
+                            tabIndex={0}
+                            aria-selected={selected}
+                            role="tab"
+                            draggable="true"
+                            onDragStart={(e) => handleTabDragStart(e, idx)}
+                            onDragOver={(e) => handleTabDragOver(e, idx)}
+                            onDragLeave={handleTabDragLeave}
+                            onDrop={(e) => handleTabDrop(e, idx)}
+                            onDragEnd={handleTabDragEnd}
+                            title="Arrastra para reordenar pestañas"
+                          >
+                            {leftIcon}
+                            {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
+                            {tab.type === 'terminal' && tabDistros[tab.key] && (
+                              <DistroIcon distro={tabDistros[tab.key]} size={12} />
+                            )}
+                            {/* Icono específico para exploradores */}
+                            {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+                              <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                            )}
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                            <Button
+                              icon="pi pi-times"
+                              className="p-button-rounded p-button-text p-button-sm ml-2"
+                              style={{ marginLeft: 8, minWidth: 18, minHeight: 18 }}
+                              onClick={e => {
+                                e.stopPropagation();
+                                // Cierre robusto de pestaña
+                                const closedTab = tab;
+                                
+                                // Limpiar distro de la pestaña cerrada
+                                cleanupTabDistro(closedTab.key);
+                                
+                                if (isSSHTab) {
+                                  // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                  if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                    // Terminal SSH - siempre desconectar
+                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                    // Explorador con conexión propia - desconectar
+                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  }
+                                  // Los exploradores que usan el pool NO necesitan desconectarse
+                                  const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+                                  if (!closedTab.isExplorerInSSH) {
+                                    delete terminalRefs.current[closedTab.key];
+                                  }
+                                  // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
+                                  const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
+                                  if (remainingTabs.length === 0) {
+                                      setSshConnectionStatus(prev => {
+                                          const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                          console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                          return updated;
+                                      });
+                                  }
+                                  setSshTabs(newSshTabs);
+                                } else {
+                                  if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  }
+                                  const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
+                                  setFileExplorerTabs(newExplorerTabs);
                                 }
-                                onClick(e);
+                                
+                                // Ajustar índice activo
+                                if (activeTabIndex === idx) {
+                                  setActiveTabIndex(Math.max(0, idx - 1));
+                                } else if (activeTabIndex > idx) {
+                                  setActiveTabIndex(activeTabIndex - 1);
+                                }
                               }}
-                              onKeyDown={onKeyDown}
-                              tabIndex={0}
-                              aria-selected={selected}
-                              role="tab"
-                              draggable="true"
-                              onDragStart={(e) => handleTabDragStart(e, idx)}
-                              onDragOver={(e) => handleTabDragOver(e, idx)}
-                              onDragLeave={handleTabDragLeave}
-                              onDrop={(e) => handleTabDrop(e, idx)}
-                              onDragEnd={handleTabDragEnd}
-                              title="Arrastra para reordenar pestañas"
-                            >
-                              {leftIcon}
-                              {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
-                              {tab.type === 'terminal' && tabDistros[tab.key] && (
-                                <DistroIcon distro={tabDistros[tab.key]} size={12} />
-                              )}
-                              {/* Icono específico para exploradores */}
-                              {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
-                                <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
-                              )}
-                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
-                              <Button
-                                icon="pi pi-times"
-                                className="p-button-rounded p-button-text p-button-sm ml-2"
-                                style={{ marginLeft: 8, minWidth: 18, minHeight: 18 }}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  // Cierre robusto de pestaña
-                                  const closedTab = tab;
-                                  
-                                  // Limpiar distro de la pestaña cerrada
-                                  cleanupTabDistro(closedTab.key);
-                                  
-                                  if (isSSHTab) {
-                                    // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                    if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-                                      // Terminal SSH - siempre desconectar
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                    } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                      // Explorador con conexión propia - desconectar
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                    }
-                                    // Los exploradores que usan el pool NO necesitan desconectarse
-                                    const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                    if (!closedTab.isExplorerInSSH) {
-                                      delete terminalRefs.current[closedTab.key];
-                                    }
-                                    // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
-                                    const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
-                                    if (remainingTabs.length === 0) {
-                                        setSshConnectionStatus(prev => {
-                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
-                                            console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
-                                            return updated;
-                                        });
-                                    }
-                                    setSshTabs(newSshTabs);
-                                  } else {
-                                    if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                    }
-                                    const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
-                                    setFileExplorerTabs(newExplorerTabs);
-                                  }
-                                  
-                                  // Ajustar índice activo
-                                  if (activeTabIndex === idx) {
-                                    setActiveTabIndex(Math.max(0, idx - 1));
-                                  } else if (activeTabIndex > idx) {
-                                    setActiveTabIndex(activeTabIndex - 1);
-                                  }
-                                }}
-                                tooltip="Cerrar pestaña"
-                                tooltipOptions={{ position: 'top' }}
-                              />
-                              {rightIcon}
-                            </div>
-                          );
-                        }}
-                      />
-                    );
-                  })}
+                              tooltip="Cerrar pestaña"
+                              tooltipOptions={{ position: 'top' }}
+                            />
+                            {rightIcon}
+                          </div>
+                        );
+                      }}
+                    />
+                  );
+                })}
                 </TabView>
                 <Button
                   ref={overflowMenuRef}
@@ -1840,11 +1848,44 @@ const App = () => {
                 )}
               </div>
                               <div style={{ flexGrow: 1, position: 'relative' }}>
-                  {sshTabs.map((tab, index) => (
+                {sshTabs.map((tab, index) => (
+                  <div 
+                    key={tab.key} 
+                    style={{ 
+                      display: activeTabIndex === index ? 'flex' : 'none',
+                      flexDirection: 'column',
+                      height: '100%',
+                      width: '100%',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0
+                    }}
+                  >
+                    {tab.isExplorerInSSH ? (
+                      <FileExplorer
+                        sshConfig={tab.sshConfig}
+                        tabId={tab.key}
+                      />
+                    ) : (
+                      <TerminalComponent
+                        ref={el => terminalRefs.current[tab.key] = el}
+                        tabId={tab.key}
+                        sshConfig={tab.sshConfig}
+                        fontFamily={fontFamily}
+                        fontSize={fontSize}
+                        theme={terminalTheme.theme}
+                        onContextMenu={handleTerminalContextMenu}
+                      />
+                    )}
+                  </div>
+                ))}
+                {fileExplorerTabs.map((tab, index) => {
+                  const tabIndex = sshTabs.length + index;
+                  return (
                     <div 
                       key={tab.key} 
                       style={{ 
-                        display: activeTabIndex === index ? 'flex' : 'none',
+                        display: activeTabIndex === tabIndex ? 'flex' : 'none',
                         flexDirection: 'column',
                         height: '100%',
                         width: '100%',
@@ -1853,68 +1894,34 @@ const App = () => {
                         left: 0
                       }}
                     >
-                      {tab.isExplorerInSSH ? (
-                        <FileExplorer
-                          sshConfig={tab.sshConfig}
-                          tabId={tab.key}
-                        />
-                      ) : (
-                        <TerminalComponent
-                          ref={el => terminalRefs.current[tab.key] = el}
-                          tabId={tab.key}
-                          sshConfig={tab.sshConfig}
-                          fontFamily={fontFamily}
-                          fontSize={fontSize}
-                          theme={terminalTheme.theme}
-                          onContextMenu={handleTerminalContextMenu}
-                        />
-                      )}
+                      <FileExplorer
+                        sshConfig={tab.sshConfig}
+                        tabId={tab.key}
+                      />
                     </div>
-                  ))}
-                  {fileExplorerTabs.map((tab, index) => {
-                    const tabIndex = sshTabs.length + index;
-                    return (
-                      <div 
-                        key={tab.key} 
-                        style={{ 
-                          display: activeTabIndex === tabIndex ? 'flex' : 'none',
-                          flexDirection: 'column',
-                          height: '100%',
-                          width: '100%',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0
-                        }}
-                      >
-                        <FileExplorer
-                          sshConfig={tab.sshConfig}
-                          tabId={tab.key}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
-            ) : (
-              <Card title="Contenido Principal" style={{ flex: 1 }}>
-                <p className="m-0">
-                  Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
-                </p>
-                {selectedNodeKey && (
-                  <div className="mt-3">
-                    <p>Elemento seleccionado: {Object.keys(selectedNodeKey)[0]}</p>
-                  </div>
-                )}
+            </div>
+          ) : (
+            <Card title="Contenido Principal" style={{ flex: 1 }}>
+              <p className="m-0">
+                Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
+              </p>
+              {selectedNodeKey && (
                 <div className="mt-3">
-                  <p>Puedes arrastrar y soltar elementos en el panel lateral para reorganizarlos.</p>
-                  <p>Haz clic en el botón "+" para crear carpetas nuevas.</p>
-                  <p>Para eliminar un elemento, haz clic en el botón de la papelera que aparece al pasar el ratón.</p>
+                  <p>Elemento seleccionado: {Object.keys(selectedNodeKey)[0]}</p>
                 </div>
-              </Card>
-            )}
-          </SplitterPanel>
-        </Splitter>
-      </div>
+              )}
+              <div className="mt-3">
+                <p>Puedes arrastrar y soltar elementos en el panel lateral para reorganizarlos.</p>
+                <p>Haz clic en el botón "+" para crear carpetas nuevas.</p>
+                <p>Para eliminar un elemento, haz clic en el botón de la papelera que aparece al pasar el ratón.</p>
+              </div>
+            </Card>
+          )}
+        </SplitterPanel>
+      </Splitter>
       
       <Dialog 
         header="Crear Nueva Carpeta" 
