@@ -779,13 +779,7 @@ html, body {
   position: relative;
 }
 .sidebar-tree .p-tree-container::before {
-  content: '';
-  position: absolute;
-  left: 1rem;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--surface-border, #d5d5d5);
+  display: none !important;
 }
 
 /* Evitar huecos: nodos droppoint (espacios de drop) */
@@ -810,9 +804,17 @@ html, body {
   color: #42a5f5 !important; /* Azul para SSH/RDP */
 }
 /* Color de toggler (flecha) */
+.sidebar-tree .p-tree-toggler {
+  margin-right: 1px !important;
+  padding: 0 !important;
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .sidebar-tree .p-tree-toggler-icon {
-  color: #6c757d !important;
-  font-size: 0.9rem;
+  font-size: 0.65rem !important; /* flecha más pequeña */
 }
 
 :root {
@@ -826,7 +828,10 @@ html, body {
 }
 .sidebar-tree .p-treenode-content {
   margin-left: calc(-1 * var(--tree-indent));
-  padding-left: var(--tree-indent);
+  padding-left: 0.25rem !important;
+}
+.sidebar-tree .p-treenode-icon {
+  margin: 0 0.25rem 0 0 !important; /* icono más cerca de la flecha */
 }
 
 /* Alinear nodos hoja con su carpeta padre */
