@@ -777,61 +777,21 @@ const App = () => {
   // Handle drag and drop with UID preservation
   const onDragDrop = (event) => {
     try {
-      const dragNodeKey = event.dragNode.key;
-      const dropNodeKey = event.dropNode ? event.dropNode.key : null;
+      const { dragNode, dropNode, dropPoint, value } = event;
 
-      // Si dropNodeKey es null, es un drop en la raíz
-      if (dropNodeKey === null) {
-        const nodesCopy = deepCopy(nodes);
-        let dragNodeInfo = findParentNodeAndIndex(nodesCopy, dragNodeKey);
-        if (dragNodeInfo.index === -1) {
-          toast.current.show({severity: 'error', summary: 'Error', detail: 'No se encontró el elemento a mover', life: 3000});
-          return;
-        }
-        const [dragNode] = dragNodeInfo.parentList.splice(dragNodeInfo.index, 1);
-        nodesCopy.push(dragNode);
-        updateNodesWithKeys(nodesCopy, 'Nodo movido a la raíz');
+      // Cancelar solo si se suelta SOBRE un nodo no droppable (dropPoint === 0)
+      if (dropPoint === 0 && dropNode && !dropNode.droppable) {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Movimiento no permitido',
+          detail: 'Solo puedes mover sesiones a carpetas.',
+          life: 3000
+        });
         return;
       }
 
-      // Lógica normal para drop entre nodos
-      const nodesCopy = deepCopy(nodes);
-      let dragNodeInfo = findParentNodeAndIndex(nodesCopy, dragNodeKey);
-      if (dragNodeInfo.index === -1) {
-        const originalDragInfo = findParentNodeAndIndex(nodes, dragNodeKey);
-        if (originalDragInfo.index !== -1) {
-          const originalNode = originalDragInfo.parentList[originalDragInfo.index];
-          if (originalNode.uid) {
-            dragNodeInfo = findParentNodeAndIndexByUID(nodesCopy, originalNode.uid);
-          }
-        }
-      }
-      if (dragNodeInfo.index === -1) {
-        toast.current.show({severity: 'error', summary: 'Error', detail: 'No se encontró el elemento a mover', life: 3000});
-        return;
-      }
-      const dragNode = dragNodeInfo.parentList[dragNodeInfo.index];
-      if (!dragNode.uid && dragNode.isUserCreated) {
-        dragNode.uid = `node_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-      }
-      dragNodeInfo.parentList.splice(dragNodeInfo.index, 1);
-      let dropNode = findNodeByKey(nodesCopy, dropNodeKey);
-      if (!dropNode) {
-        const originalDropNode = findNodeByKey(nodes, dropNodeKey);
-        if (originalDropNode && originalDropNode.uid) {
-          dropNode = findNodeByUID(nodesCopy, originalDropNode.uid);
-        }
-      }
-      if (!dropNode) {
-        nodesCopy.push(dragNode);
-        updateNodesWithKeys(nodesCopy, 'Nodo movido a la raíz');
-        return;
-      }
-      if (!dropNode.children) {
-        dropNode.children = [];
-      }
-      dropNode.children.push(dragNode);
-      updateNodesWithKeys(nodesCopy, 'Nodo movido');
+      // Aceptar la reordenación que PrimeReact ya ha aplicado en `value`
+      setNodes(value);
     } catch (error) {
       console.error('Error en drag & drop:', error);
       toast.current.show({severity: 'error', summary: 'Error', detail: `Error en drag & drop: ${error.message}`, life: 5000});
@@ -1259,12 +1219,12 @@ const App = () => {
       const parentNode = findNodeByKey(nodesCopy, sshTargetFolder);
       if (parentNode) {
         parentNode.children = parentNode.children || [];
-        parentNode.children.push(newSSHNode);
+        parentNode.children.unshift(newSSHNode); // insertar al principio
       } else {
         nodesCopy.push(newSSHNode);
       }
     } else {
-      nodesCopy.push(newSSHNode);
+      nodesCopy.unshift(newSSHNode);
     }
     updateNodesWithKeys(nodesCopy);
     setShowSSHDialog(false);
