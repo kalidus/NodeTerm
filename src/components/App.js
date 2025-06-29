@@ -1428,13 +1428,12 @@ const App = () => {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Toast ref={toast} />
       <ConfirmDialog />
-      <Divider className="my-2" />
       <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
-        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 32 : 10} maxSize={sidebarCollapsed ? 32 : 400} style={{
+        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 400} style={{
           transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
-          width: sidebarCollapsed ? 32 : undefined,
-          minWidth: 32,
-          maxWidth: sidebarCollapsed ? 32 : undefined,
+          width: sidebarCollapsed ? 44 : undefined,
+          minWidth: 44,
+          maxWidth: sidebarCollapsed ? 44 : undefined,
           background: '#fff',
           borderRight: '1px solid #e0e0e0',
           padding: 0,
@@ -1447,21 +1446,21 @@ const App = () => {
           {sidebarCollapsed ? (
             // Iconos alineados arriba, más juntos y barra más fina
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem', width: '100%', paddingTop: 2 }}>
-              <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
-              <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
-              <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
-              <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
-              <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowAboutDialog(true)} tooltip="Acerca de NodeTerm" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
-              <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowConfigDialog(true)} tooltip="Configuración" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16 }} />
+              <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowAboutDialog(true)} tooltip="Acerca de NodeTerm" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowConfigDialog(true)} tooltip="Configuración" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
             </div>
           ) : (
             // Sidebar completa
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
-                <div>
-                  <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'bottom' }} style={{ marginRight: 8 }} />
-                  <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
+                <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'bottom' }} style={{ marginRight: 8 }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'bottom' }} />
+                  <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'bottom' }} />
                 </div>
               </div>
