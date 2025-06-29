@@ -33,28 +33,73 @@ html, body {
   border: none;
 }
 
-/* Solo estilos visuales y de fuente para el tree */
+/* === PrimeReact Tree Style Matching === */
 .sidebar-tree {
-  font-size: 0.75rem;
+  font-family: "Public Sans", Arial, sans-serif;
+  font-size: 1rem;
+  color: #495057;
+  background: #fff;
+  border: none;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
 }
-
+.sidebar-tree .p-treenode {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
 .sidebar-tree .p-treenode-content {
-  padding: 0.2rem 0.3rem;
-  min-height: 1.8rem;
+  padding: 0.15rem 0.5rem !important;
+  min-height: 26px !important;
+  line-height: 26px !important;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
 }
-
-.sidebar-tree .p-tree-container {
-  padding: 0.15rem;
+.sidebar-tree .p-treenode-content:hover,
+.sidebar-tree .p-treenode-content.p-highlight {
+  background: #f6f9fa;
+  color: #2c3e50;
 }
-
-.sidebar-tree .p-treenode-icon {
-  font-size: 0.7rem !important;
-  margin-right: 0.3rem;
+.sidebar-tree .p-treenode-label {
+  font-size: 1rem;
+  color: #495057;
+  font-weight: 400;
 }
-
 .sidebar-tree .pi {
-  font-size: 1.5em;
-  vertical-align: middle;
+  font-size: 1.1rem;
+  color: #6c757d;
+}
+.sidebar-tree .p-treenode-children {
+  padding-left: 0.75rem !important;
+}
+.sidebar-tree .p-treenode-content {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+.sidebar-tree .p-treenode-content::before,
+.sidebar-tree .p-treenode::before,
+.sidebar-tree .p-treenode-children::before,
+.sidebar-tree .p-treenode-children > .p-treenode::before {
+  display: block !important;
+}
+.sidebar-tree .p-treenode-leaf > .p-treenode-content .pi {
+  color: #b0b0b0;
+}
+.sidebar-tree .p-treenode-content .connection-indicator {
+  font-size: 0.7rem;
+  margin-right: 0.25rem;
+}
+.sidebar-tree .p-treenode-content .node-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-tree .p-treenode-content .ml-auto {
+  margin-left: auto;
 }
 
 .p-splitter-panel h3 {
@@ -697,4 +742,100 @@ html, body {
 .p-menu .p-separator {
   margin: 0.25rem 0;
   border-top: 1px solid var(--surface-300, #dee2e6);
+}
+
+/* Indicadores de estado de conexión SSH */
+.connection-indicator {
+  font-size: 8px;
+  margin-left: 4px;
+  margin-right: 4px;
+  transition: color 0.3s ease;
+}
+
+.connection-indicator.connected {
+  color: #28a745; /* Verde */
+}
+
+.connection-indicator.error {
+  color: #dc3545; /* Rojo */
+}
+
+.connection-indicator.disconnected {
+  color: #6c757d; /* Gris */
+}
+
+.connection-indicator.unknown {
+  color: #ffc107; /* Amarillo */
+}
+
+/* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
+.sidebar-tree .p-treenode {
+  margin-bottom: 2px;
+  /* Reduce el espacio entre nodos */
+}
+
+/* Línea vertical continua para nivel raíz */
+.sidebar-tree .p-tree-container {
+  position: relative;
+}
+.sidebar-tree .p-tree-container::before {
+  display: none !important;
+}
+
+/* Evitar huecos: nodos droppoint (espacios de drop) */
+.sidebar-tree .p-treenode-droppoint {
+  height: 1px !important;
+  min-height: 1px !important;
+}
+.sidebar-tree .p-treenode-droppoint::before {
+  display: none !important;
+}
+/* Mostrar línea resaltada solo durante dragover */
+.sidebar-tree .p-treenode-droppoint-active {
+  height: 3px !important; /* ligeramente más alto para ver el indicador */
+}
+
+/* Colores de iconos personalizados */
+.sidebar-tree .pi-folder,
+.sidebar-tree .pi-folder-open {
+  color: #f4b400 !important; /* Amarillo carpeta claro */
+}
+.sidebar-tree .pi-desktop {
+  color: #42a5f5 !important; /* Azul para SSH/RDP */
+}
+/* Color de toggler (flecha) */
+.sidebar-tree .p-tree-toggler {
+  margin-right: 1px !important;
+  padding: 0 !important;
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-tree .p-tree-toggler-icon {
+  font-size: 0.65rem !important; /* flecha más pequeña */
+}
+
+:root {
+  --tree-indent: 24px; /* ancho flecha+icono */
+}
+
+/* Alineación: cada nivel mantiene padding y compensa margen */
+.sidebar-tree .p-treenode-children {
+  padding-left: var(--tree-indent) !important;
+  border-left: 1px solid var(--surface-border, #d5d5d5) !important;
+}
+.sidebar-tree .p-treenode-content {
+  margin-left: calc(-1 * var(--tree-indent));
+  padding-left: 0.25rem !important;
+}
+.sidebar-tree .p-treenode-icon {
+  margin: 0 0.25rem 0 0 !important; /* icono más cerca de la flecha */
+}
+
+/* Alinear nodos hoja con su carpeta padre */
+.sidebar-tree .p-treenode-leaf > .p-treenode-content {
+  margin-left: calc(-0.75rem); /* compensa padding del ul */
+  padding-left: 0.75rem;       /* mantiene espacio para icono */
 }

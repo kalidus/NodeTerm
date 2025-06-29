@@ -11,6 +11,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Sidebar } from 'primereact/sidebar';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
+import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import AboutDialog from './AboutDialog';
@@ -130,6 +131,57 @@ const App = () => {
     };
   }, [sshTabs]);
 
+  // Listeners para estado de conexión SSH
+  useEffect(() => {
+    if (!window.electron || !window.electron.ipcRenderer) return;
+
+    // Función para manejar estado de conexión
+    const handleConnectionStatus = (originalKey, status) => {
+      console.log('🔄 SSH estado:', originalKey, '->', status);
+      setSshConnectionStatus(prevStatus => {
+        const newStatus = { ...prevStatus, [originalKey]: status };
+        console.log('Nuevo estado sshConnectionStatus:', newStatus);
+        return newStatus;
+      });
+    };
+
+    // Listeners estables con referencias fijas
+    const handleSSHReady = (data) => {
+      console.log('✅ SSH conectado para originalKey:', data?.originalKey);
+      if (data?.originalKey) {
+        handleConnectionStatus(data.originalKey, 'connected');
+      }
+    };
+
+    const handleSSHError = (data) => {
+      console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error);
+      if (data?.originalKey) {
+        handleConnectionStatus(data.originalKey, 'error');
+      }
+    };
+
+    const handleSSHDisconnected = (data) => {
+      console.log('🔌 SSH desconectado para originalKey:', data?.originalKey);
+      if (data?.originalKey) {
+        handleConnectionStatus(data.originalKey, 'disconnected');
+      }
+    };
+
+    // Registrar listeners
+    console.log('🚀 Registrando listeners SSH IPC');
+    window.electron.ipcRenderer.on('ssh-connection-ready', handleSSHReady);
+    window.electron.ipcRenderer.on('ssh-connection-error', handleSSHError);
+    window.electron.ipcRenderer.on('ssh-connection-disconnected', handleSSHDisconnected);
+
+    // Cleanup usando removeAllListeners para asegurar limpieza completa
+    return () => {
+      console.log('🧹 Limpiando listeners SSH IPC');
+      window.electron.ipcRenderer.removeAllListeners('ssh-connection-ready');
+      window.electron.ipcRenderer.removeAllListeners('ssh-connection-error');
+      window.electron.ipcRenderer.removeAllListeners('ssh-connection-disconnected');
+    };
+  }, []);
+
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
   const FONT_SIZE_STORAGE_KEY = 'basicapp_terminal_font_size';
@@ -168,6 +220,14 @@ const App = () => {
 
   // Estado para menú contextual de terminal
   const [terminalContextMenu, setTerminalContextMenu] = useState(null);
+  
+  // Referencias y estado para menú contextual del árbol
+  const treeContextMenuRef = useRef(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
+  
+  // Estado para trackear conexiones SSH
+  const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -717,61 +777,21 @@ const App = () => {
   // Handle drag and drop with UID preservation
   const onDragDrop = (event) => {
     try {
-      const dragNodeKey = event.dragNode.key;
-      const dropNodeKey = event.dropNode ? event.dropNode.key : null;
+      const { dragNode, dropNode, dropPoint, value } = event;
 
-      // Si dropNodeKey es null, es un drop en la raíz
-      if (dropNodeKey === null) {
-        const nodesCopy = deepCopy(nodes);
-        let dragNodeInfo = findParentNodeAndIndex(nodesCopy, dragNodeKey);
-        if (dragNodeInfo.index === -1) {
-          toast.current.show({severity: 'error', summary: 'Error', detail: 'No se encontró el elemento a mover', life: 3000});
-          return;
-        }
-        const [dragNode] = dragNodeInfo.parentList.splice(dragNodeInfo.index, 1);
-        nodesCopy.push(dragNode);
-        updateNodesWithKeys(nodesCopy, 'Nodo movido a la raíz');
+      // Cancelar solo si se suelta SOBRE un nodo no droppable (dropPoint === 0)
+      if (dropPoint === 0 && dropNode && !dropNode.droppable) {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Movimiento no permitido',
+          detail: 'Solo puedes mover sesiones a carpetas.',
+          life: 3000
+        });
         return;
       }
 
-      // Lógica normal para drop entre nodos
-      const nodesCopy = deepCopy(nodes);
-      let dragNodeInfo = findParentNodeAndIndex(nodesCopy, dragNodeKey);
-      if (dragNodeInfo.index === -1) {
-        const originalDragInfo = findParentNodeAndIndex(nodes, dragNodeKey);
-        if (originalDragInfo.index !== -1) {
-          const originalNode = originalDragInfo.parentList[originalDragInfo.index];
-          if (originalNode.uid) {
-            dragNodeInfo = findParentNodeAndIndexByUID(nodesCopy, originalNode.uid);
-          }
-        }
-      }
-      if (dragNodeInfo.index === -1) {
-        toast.current.show({severity: 'error', summary: 'Error', detail: 'No se encontró el elemento a mover', life: 3000});
-        return;
-      }
-      const dragNode = dragNodeInfo.parentList[dragNodeInfo.index];
-      if (!dragNode.uid && dragNode.isUserCreated) {
-        dragNode.uid = `node_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-      }
-      dragNodeInfo.parentList.splice(dragNodeInfo.index, 1);
-      let dropNode = findNodeByKey(nodesCopy, dropNodeKey);
-      if (!dropNode) {
-        const originalDropNode = findNodeByKey(nodes, dropNodeKey);
-        if (originalDropNode && originalDropNode.uid) {
-          dropNode = findNodeByUID(nodesCopy, originalDropNode.uid);
-        }
-      }
-      if (!dropNode) {
-        nodesCopy.push(dragNode);
-        updateNodesWithKeys(nodesCopy, 'Nodo movido a la raíz');
-        return;
-      }
-      if (!dropNode.children) {
-        dropNode.children = [];
-      }
-      dropNode.children.push(dragNode);
-      updateNodesWithKeys(nodesCopy, 'Nodo movido');
+      // Aceptar la reordenación que PrimeReact ya ha aplicado en `value`
+      setNodes(value);
     } catch (error) {
       console.error('Error en drag & drop:', error);
       toast.current.show({severity: 'error', summary: 'Error', detail: `Error en drag & drop: ${error.message}`, life: 5000});
@@ -949,28 +969,51 @@ const App = () => {
     });
   };
   
-  // Node context menu
+  // Node template simplificado - acciones movidas al menú contextual
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
-    const hasChildren = isFolder && node.children && node.children.length > 0;
     const isSSH = node.data && node.data.type === 'ssh';
+    if (isSSH) {
+      console.log('Renderizando nodo SSH:', node.key, node.label);
+    }
     let iconClass = '';
     if (isSSH) {
       iconClass = 'pi pi-desktop';
     } else if (isFolder) {
       iconClass = options.expanded ? 'pi pi-folder-open' : 'pi pi-folder';
     }
+
+    // Obtener estado de conexión para sesiones SSH
+    const connectionStatus = isSSH ? sshConnectionStatus[node.key] : null;
+    const getConnectionIndicator = () => {
+      if (!isSSH) return null;
+      
+      switch (connectionStatus) {
+        case 'connected':
+          return <span className="connection-indicator connected" title="Conectado">●</span>;
+        case 'error':
+          return <span className="connection-indicator error" title="Error de conexión">●</span>;
+        case 'disconnected':
+          return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
+        default:
+          // Por defecto: gris (desconectado), amarillo para otros estados
+          return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
+      }
+    };
+
     return (
       <div className="flex align-items-center gap-2"
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
+          console.log('🖱️ Doble click en nodo SSH:', node.key, '- Abriendo terminal');
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
               host: node.data.host,
               username: node.data.user,
               password: node.data.password,
+              originalKey: node.key,
             };
             const newTab = {
               key: tabId,
@@ -984,93 +1027,150 @@ const App = () => {
             return newTabs;
           });
         } : undefined}
+        onClick={isSSH ? (e) => {
+          console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
+        } : undefined}
+        style={{ cursor: 'pointer' }}
+        title="Click derecho para más opciones"
       >
         <span className={iconClass} style={{ minWidth: 20 }}></span>
+        {getConnectionIndicator()}
         <span className="node-label">{node.label}</span>
-        <div className="ml-auto flex">
-          {isSSH && (
-            <>
-              <Button
-                icon="pi pi-folder-open"
-                rounded
-                text
-                size="small"
-                className="node-action-button"
-                onClick={e => {
-                  e.stopPropagation();
-                  openFileExplorer(node);
-                }}
-                tooltip="Explorador de archivos"
-                tooltipOptions={{ position: 'top' }}
-              />
-              <Button
-                icon="pi pi-pencil"
-                rounded
-                text
-                size="small"
-                className="node-action-button"
-                onClick={e => {
-                  e.stopPropagation();
-                  openEditSSHDialog(node);
-                }}
-                tooltip="Editar sesión SSH"
-                tooltipOptions={{ position: 'top' }}
-              />
-            </>
-          )}
-          {isFolder && (
-            <>
-              <Button
-                icon="pi pi-pencil"
-                rounded
-                text
-                size="small"
-                className="node-action-button"
-                onClick={e => {
-                  e.stopPropagation();
-                  openEditFolderDialog(node);
-                }}
-                tooltip="Editar carpeta"
-                tooltipOptions={{ position: 'top' }}
-              />
-              <Button 
-                icon="pi pi-plus" 
-                rounded 
-                text 
-                size="small" 
-                className="node-action-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openNewFolderDialog(node.key);
-                }}
-                tooltip="Crear carpeta"
-                tooltipOptions={{ position: 'top' }}
-              />
-            </>
-          )}
-          <Button 
-            icon="pi pi-trash" 
-            rounded 
-            text 
-            severity="danger" 
-            size="small" 
-            className="node-action-button ml-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              confirmDeleteNode(node.key, node.label, hasChildren);
-            }}
-            tooltip="Eliminar"
-            tooltipOptions={{ position: 'top' }}
-          />
-        </div>
+        <span className="ml-auto text-xs text-400">⋮</span>
       </div>
     );
+  };
+
+  // Función para generar items del menú contextual del árbol
+  const getTreeContextMenuItems = (node) => {
+    if (!node) return [];
+    
+    const isFolder = node.droppable;
+    const isSSH = node.data && node.data.type === 'ssh';
+    const items = [];
+    
+    if (isSSH) {
+      // Items para sesiones SSH
+      items.push({
+        label: 'Abrir Terminal',
+        icon: 'pi pi-desktop',
+        command: () => {
+          // Abrir nueva pestaña de terminal (mismo código que onDoubleClick)
+          setSshTabs(prevTabs => {
+            const tabId = `${node.key}_${Date.now()}`;
+            const sshConfig = {
+              host: node.data.host,
+              username: node.data.user,
+              password: node.data.password,
+              originalKey: node.key,
+            };
+            const newTab = {
+              key: tabId,
+              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+              originalKey: node.key,
+              sshConfig: sshConfig,
+              type: 'terminal'
+            };
+            const newTabs = [newTab, ...prevTabs];
+            setActiveTabIndex(0);
+            return newTabs;
+          });
+        }
+      });
+      
+      items.push({
+        label: 'Explorador de Archivos',
+        icon: 'pi pi-folder-open',
+        command: () => openFileExplorer(node)
+      });
+      
+      items.push({ separator: true });
+      
+      items.push({
+        label: 'Editar Sesión',
+        icon: 'pi pi-pencil',
+        command: () => openEditSSHDialog(node)
+      });
+    }
+    
+    if (isFolder) {
+      // Items para carpetas
+      items.push({
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-plus',
+        command: () => openNewFolderDialog(node.key)
+      });
+      
+      items.push({ separator: true });
+      
+      items.push({
+        label: 'Editar Carpeta',
+        icon: 'pi pi-pencil',
+        command: () => openEditFolderDialog(node)
+      });
+    }
+    
+    // Item eliminar para todos los tipos
+    if (items.length > 0) {
+      items.push({ separator: true });
+    }
+    
+    const hasChildren = isFolder && node.children && node.children.length > 0;
+    items.push({
+      label: 'Eliminar',
+      icon: 'pi pi-trash',
+      command: () => confirmDeleteNode(node.key, node.label, hasChildren),
+      className: 'p-menuitem-danger'
+    });
+    
+    return items;
+  };
+
+  // Función para generar items del menú contextual general del árbol
+  const getGeneralTreeContextMenuItems = () => {
+    return [
+      {
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-folder',
+        command: () => openNewFolderDialog(null) // null = crear en raíz
+      },
+      {
+        label: 'Nueva Conexión SSH',
+        icon: 'pi pi-desktop',
+        command: () => setShowSSHDialog(true)
+      }
+    ];
   };
 
   // Context menu for nodes
   const onNodeContextMenu = (event, node) => {
     event.preventDefault();
-    // Aquí podrías mostrar un menú contextual (se implementará después)
+    event.stopPropagation();
+    setSelectedNode(node);
+    setIsGeneralTreeMenu(false);
+    if (treeContextMenuRef.current) {
+      treeContextMenuRef.current.show(event);
+    }
+  };
+
+  // Context menu for tree area (general)
+  const onTreeAreaContextMenu = (event) => {
+    // Solo mostrar el menú si NO se hizo click en un nodo
+    const targetElement = event.target;
+    const isNodeClick = targetElement.closest('.p-treenode-content') || 
+                       targetElement.closest('.p-treenode') ||
+                       targetElement.closest('.node-label') ||
+                       targetElement.closest('.align-items-center');
+    
+    if (!isNodeClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedNode(null);
+      setIsGeneralTreeMenu(true);
+      if (treeContextMenuRef.current) {
+        treeContextMenuRef.current.show(event);
+      }
+    }
   };
 
   // Función recursiva para obtener todas las carpetas del árbol
@@ -1119,12 +1219,12 @@ const App = () => {
       const parentNode = findNodeByKey(nodesCopy, sshTargetFolder);
       if (parentNode) {
         parentNode.children = parentNode.children || [];
-        parentNode.children.push(newSSHNode);
+        parentNode.children.unshift(newSSHNode); // insertar al principio
       } else {
         nodesCopy.push(newSSHNode);
       }
     } else {
-      nodesCopy.push(newSSHNode);
+      nodesCopy.unshift(newSSHNode);
     }
     updateNodesWithKeys(nodesCopy);
     setShowSSHDialog(false);
@@ -1258,7 +1358,8 @@ const App = () => {
       host: sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
-      port: sshNode.data.port || 22
+      port: sshNode.data.port || 22,
+      originalKey: sshNode.key,
     };
     
     // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
@@ -1324,12 +1425,25 @@ const App = () => {
                 </div>
               </div>
               <Divider className="my-2" />
-              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+              <div 
+                style={{ 
+                  flex: 1, 
+                  minHeight: 0, 
+                  overflowY: 'auto', 
+                  overflowX: 'hidden',
+                  position: 'relative' 
+                }}
+                onContextMenu={onTreeAreaContextMenu}
+                className="tree-container"
+              >
                 <Tree
                   value={nodes}
                   selectionMode="single"
                   selectionKeys={selectedNodeKey}
-                  onSelectionChange={e => setSelectedNodeKey(e.value)}
+                  onSelectionChange={e => {
+                    console.log('🔍 Selección del árbol cambiada:', e.value);
+                    setSelectedNodeKey(e.value);
+                  }}
                   dragdropScope="files"
                   onDragDrop={onDragDrop}
                   onDragStart={e => {
@@ -1444,6 +1558,15 @@ const App = () => {
                                     const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
                                     if (!closedTab.isExplorerInSSH) {
                                       delete terminalRefs.current[closedTab.key];
+                                    }
+                                    // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
+                                    const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
+                                    if (remainingTabs.length === 0) {
+                                        setSshConnectionStatus(prev => {
+                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                            console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                            return updated;
+                                        });
                                     }
                                     setSshTabs(newSshTabs);
                                   } else {
@@ -1911,6 +2034,16 @@ const App = () => {
       <AboutDialog
         visible={showAboutDialog}
         onHide={() => setShowAboutDialog(false)}
+      />
+      
+      {/* Menú contextual del árbol de sesiones */}
+      <ContextMenu
+        ref={treeContextMenuRef}
+        model={
+          isGeneralTreeMenu 
+            ? getGeneralTreeContextMenuItems() 
+            : (selectedNode ? getTreeContextMenuItems(selectedNode) : [])
+        }
       />
     </div>
   );

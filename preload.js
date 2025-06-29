@@ -45,7 +45,10 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh:data:.*$/,
         /^ssh:ready:.*$/,
         /^ssh:error:.*$/,
-        /^ssh-stats:update:.*$/
+        /^ssh-stats:update:.*$/,
+        /^ssh-connection-ready$/,
+        /^ssh-connection-disconnected$/,
+        /^ssh-connection-error$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -62,7 +65,10 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh:data:.*$/,
         /^ssh:ready:.*$/,
         /^ssh:error:.*$/,
-        /^ssh-stats:update:.*$/
+        /^ssh-stats:update:.*$/,
+        /^ssh-connection-ready$/,
+        /^ssh-connection-disconnected$/,
+        /^ssh-connection-error$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);
