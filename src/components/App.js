@@ -1219,12 +1219,12 @@ const App = () => {
       const parentNode = findNodeByKey(nodesCopy, sshTargetFolder);
       if (parentNode) {
         parentNode.children = parentNode.children || [];
-        parentNode.children.push(newSSHNode);
+        parentNode.children.unshift(newSSHNode); // insertar al principio
       } else {
         nodesCopy.push(newSSHNode);
       }
     } else {
-      nodesCopy.push(newSSHNode);
+      nodesCopy.unshift(newSSHNode);
     }
     updateNodesWithKeys(nodesCopy);
     setShowSSHDialog(false);
