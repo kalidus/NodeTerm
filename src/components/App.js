@@ -1441,7 +1441,16 @@ const App = () => {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Toast ref={toast} />
       <ConfirmDialog />
-      <Splitter style={{ height: '100%' }} onResizeEnd={handleResize}>
+      <Splitter 
+        style={{ height: '100%' }} 
+        onResizeEnd={sidebarCollapsed ? undefined : handleResize}
+        disabled={sidebarCollapsed}
+        pt={{
+          gutter: {
+            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {}
+          }
+        }}
+      >
         <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 400} style={{
           transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
           width: sidebarCollapsed ? 44 : undefined,
