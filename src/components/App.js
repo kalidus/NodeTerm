@@ -103,6 +103,9 @@ const App = () => {
     '#f1c40f', '#e91e63', '#ff5722', '#795548'
   ];
 
+  // Estado para color personalizado
+  const [selectedGroupColor, setSelectedGroupColor] = useState('');
+
   // === FUNCIONES DE GRUPOS ===
   
   // Obtener siguiente color disponible
@@ -121,18 +124,17 @@ const App = () => {
       });
       return;
     }
-
+    const colorToUse = selectedGroupColor || getNextGroupColor();
     const newGroup = {
       id: `group_${Date.now()}`,
       name: newGroupName.trim(),
-      color: getNextGroupColor(),
+      color: colorToUse,
       createdAt: new Date().toISOString()
     };
-
     setTabGroups(prev => [...prev, newGroup]);
     setNewGroupName('');
+    setSelectedGroupColor('');
     setShowCreateGroupDialog(false);
-    
     toast.current.show({
       severity: 'success',
       summary: 'Grupo creado',
@@ -2475,6 +2477,53 @@ const App = () => {
               </small>
             </div>
           )}
+          <div className="p-field">
+            <label>Color del grupo</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap', margin: '10px 0 0 0' }}>
+              {GROUP_COLORS.map(color => (
+                <div
+                  key={color}
+                  onClick={() => setSelectedGroupColor(color)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    background: color,
+                    border: selectedGroupColor === color ? '3px solid #333' : '2px solid #fff',
+                    boxShadow: '0 0 2px #888',
+                    cursor: 'pointer',
+                    transition: 'border 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title={color}
+                />
+              ))}
+              {/* Paleta de color personalizada */}
+              <label style={{ margin: 0, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Elegir color personalizado">
+                <div style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? selectedGroupColor : '#eee',
+                  border: selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? '3px solid #333' : '2px dashed #bbb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 2px #888',
+                }}>
+                  <i className="pi pi-palette" style={{ color: '#888', fontSize: 18 }}></i>
+                </div>
+                <input
+                  type="color"
+                  style={{ display: 'none' }}
+                  value={selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? selectedGroupColor : '#888888'}
+                  onChange={e => setSelectedGroupColor(e.target.value)}
+                />
+              </label>
+            </div>
+          </div>
         </div>
       </Dialog>
       
