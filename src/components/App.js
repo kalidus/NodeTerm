@@ -1451,7 +1451,7 @@ const App = () => {
           }
         }}
       >
-        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 400} style={{
+        <SplitterPanel size={sidebarCollapsed ? 4 : 14.5} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 400} style={{
           transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
           width: sidebarCollapsed ? 44 : undefined,
           minWidth: 44,
@@ -1532,7 +1532,7 @@ const App = () => {
             </>
           )}
         </SplitterPanel>
-        <SplitterPanel size={sidebarVisible ? 75 : 100} style={{ display: 'flex', flexDirection: 'column' }}>
+        <SplitterPanel size={sidebarVisible ? 85.5 : 100} style={{ display: 'flex', flexDirection: 'column' }}>
           {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div style={{ position: 'relative' }}>

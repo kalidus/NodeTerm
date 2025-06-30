@@ -529,7 +529,7 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
             const safeCols = Math.max(1, Math.min(500, cols || 80));
             
             conn.stream.setWindow(safeRows, safeCols);
-            console.log(`Terminal ${tabId} redimensionado a ${safeCols}x${safeRows}`);
+            // console.log(`Terminal ${tabId} redimensionado a ${safeCols}x${safeRows}`);
         } catch (resizeError) {
             console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
         }
