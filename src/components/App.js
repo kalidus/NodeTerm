@@ -1590,7 +1590,7 @@ const App = () => {
             <>
               <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
                 <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'bottom' }} style={{ marginRight: 8 }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                   <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'bottom' }} />
