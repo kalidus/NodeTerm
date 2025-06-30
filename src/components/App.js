@@ -1003,7 +1003,7 @@ const App = () => {
     };
 
     return (
-      <div className="flex align-items-center gap-2"
+      <div className="flex align-items-center gap-1"
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
@@ -1033,7 +1033,7 @@ const App = () => {
         style={{ cursor: 'pointer' }}
         title="Click derecho para más opciones"
       >
-        <span className={iconClass} style={{ minWidth: 20 }}></span>
+        <span className={iconClass} style={{ minWidth: 16 }}></span>
         <span className="node-label">{node.label}</span>
         {getConnectionIndicator()}
       </div>
