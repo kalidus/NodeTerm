@@ -22,6 +22,7 @@ import { themes } from '../themes';
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import SidebarFooter from './SidebarFooter';
+import { getVersionInfo } from '../version-info';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -1457,13 +1458,16 @@ const App = () => {
         }}>
           {sidebarCollapsed ? (
             // Iconos alineados arriba, más juntos y barra más fina
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem', width: '100%', paddingTop: 2 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem', width: '100%', paddingTop: 2, position: 'relative' }}>
               <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowAboutDialog(true)} tooltip="Acerca de NodeTerm" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowConfigDialog(true)} tooltip="Configuración" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              {/* Botones fijos abajo */}
+              <div style={{ position: 'absolute', bottom: 8, left: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowAboutDialog(true)} tooltip="Acerca de NodeTerm" tooltipOptions={{ position: 'right' }} style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+                <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowConfigDialog(true)} tooltip="Configuración" tooltipOptions={{ position: 'right' }} style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18, marginTop: 2 }} />
+              </div>
             </div>
           ) : (
             // Sidebar completa
