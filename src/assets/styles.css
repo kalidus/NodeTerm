@@ -36,7 +36,7 @@ html, body {
 /* === PrimeReact Tree Style Matching === */
 .sidebar-tree {
   font-family: "Public Sans", Arial, sans-serif;
-  font-size: 1rem;
+  font-size: 0.8rem;
   color: #495057;
   background: #fff;
   border: none;
@@ -49,13 +49,13 @@ html, body {
   transition: background 0.2s;
 }
 .sidebar-tree .p-treenode-content {
-  padding: 0.15rem 0.5rem !important;
-  min-height: 26px !important;
-  line-height: 26px !important;
+  padding: 0.1rem 0.5rem !important;
+  min-height: 22px !important;
+  line-height: 22px !important;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.2rem;
   transition: background 0.2s;
 }
 .sidebar-tree .p-treenode-content:hover,
@@ -64,16 +64,16 @@ html, body {
   color: #2c3e50;
 }
 .sidebar-tree .p-treenode-label {
-  font-size: 1rem;
+  font-size: 0.8rem;
   color: #495057;
   font-weight: 400;
 }
 .sidebar-tree .pi {
-  font-size: 1.1rem;
+  font-size: 0.8rem;
   color: #6c757d;
 }
 .sidebar-tree .p-treenode-children {
-  padding-left: 0.75rem !important;
+  padding-left: 0.6rem !important;
 }
 .sidebar-tree .p-treenode-content {
   margin-left: 0 !important;
@@ -114,7 +114,7 @@ html, body {
 
 /* Tamaño mínimo para el panel lateral */
 .p-splitter .p-splitter-panel:first-child {
-  min-width: 133px !important;
+  min-width: 32px !important;
   min-height: 47px !important;
   max-width: 400px;
 }
@@ -566,10 +566,6 @@ html, body {
     gap: 6px; /* Spacing between icon and text */
 }
 
-/* Remove old/conflicting styles */
-.status-item, .status-item-disk, .disk-name, .disk-usage, .ram-text {
-    /* These classes are no longer used or have been simplified */
-}
 
 /* Estilos para botones del explorador de archivos */
 .file-explorer-toolbar .p-button {
@@ -770,7 +766,7 @@ html, body {
 
 /* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
 .sidebar-tree .p-treenode {
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   /* Reduce el espacio entre nodos */
 }
 
@@ -807,14 +803,14 @@ html, body {
 .sidebar-tree .p-tree-toggler {
   margin-right: 1px !important;
   padding: 0 !important;
-  width: 0.9rem !important;
-  height: 0.9rem !important;
+  width: 0.7rem !important;
+  height: 0.7rem !important;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .sidebar-tree .p-tree-toggler-icon {
-  font-size: 0.65rem !important; /* flecha más pequeña */
+  font-size: 0.45rem !important; /* flecha más pequeña */
 }
 
 :root {
@@ -831,7 +827,7 @@ html, body {
   padding-left: 0.25rem !important;
 }
 .sidebar-tree .p-treenode-icon {
-  margin: 0 0.25rem 0 0 !important; /* icono más cerca de la flecha */
+  margin: 0 0.125rem 0 0 !important; /* icono más cerca del texto */
 }
 
 /* Alinear nodos hoja con su carpeta padre */
