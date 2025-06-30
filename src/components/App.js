@@ -89,6 +89,110 @@ const App = () => {
   // Ref para mantener track de los listeners activos
   const activeListenersRef = useRef(new Set());
 
+  // === ESTADO PARA GRUPOS DE PESTAÑAS ===
+  const [tabGroups, setTabGroups] = useState([]);
+  const [activeGroupId, setActiveGroupId] = useState(null);
+  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [tabContextMenu, setTabContextMenu] = useState(null);
+
+  // Colores predefinidos para grupos
+  const GROUP_COLORS = [
+    '#e74c3c', '#3498db', '#2ecc71', '#f39c12', 
+    '#9b59b6', '#1abc9c', '#e67e22', '#34495e',
+    '#f1c40f', '#e91e63', '#ff5722', '#795548'
+  ];
+
+  // === FUNCIONES DE GRUPOS ===
+  
+  // Obtener siguiente color disponible
+  const getNextGroupColor = () => {
+    return GROUP_COLORS[tabGroups.length % GROUP_COLORS.length];
+  };
+
+  // Crear nuevo grupo
+  const createNewGroup = () => {
+    if (!newGroupName.trim()) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'El nombre del grupo no puede estar vacío',
+        life: 3000
+      });
+      return;
+    }
+
+    const newGroup = {
+      id: `group_${Date.now()}`,
+      name: newGroupName.trim(),
+      color: getNextGroupColor(),
+      createdAt: new Date().toISOString()
+    };
+
+    setTabGroups(prev => [...prev, newGroup]);
+    setNewGroupName('');
+    setShowCreateGroupDialog(false);
+    
+    toast.current.show({
+      severity: 'success',
+      summary: 'Grupo creado',
+      detail: `Grupo "${newGroup.name}" creado exitosamente`,
+      life: 3000
+    });
+  };
+
+  // Eliminar grupo
+  const deleteGroup = (groupId) => {
+    // Remover groupId de todas las pestañas
+    setSshTabs(prev => prev.map(tab => 
+      tab.groupId === groupId ? { ...tab, groupId: null } : tab
+    ));
+    setFileExplorerTabs(prev => prev.map(tab => 
+      tab.groupId === groupId ? { ...tab, groupId: null } : tab
+    ));
+    
+    // Eliminar el grupo
+    setTabGroups(prev => prev.filter(group => group.id !== groupId));
+    
+    // Si era el grupo activo, desactivar
+    if (activeGroupId === groupId) {
+      setActiveGroupId(null);
+    }
+  };
+
+  // Mover pestaña a grupo
+  const moveTabToGroup = (tabKey, groupId) => {
+    setSshTabs(prev => prev.map(tab => 
+      tab.key === tabKey ? { ...tab, groupId } : tab
+    ));
+    setFileExplorerTabs(prev => prev.map(tab => 
+      tab.key === tabKey ? { ...tab, groupId } : tab
+    ));
+  };
+
+  // Obtener pestañas de un grupo específico
+  const getTabsInGroup = (groupId) => {
+    const allTabs = [...sshTabs, ...fileExplorerTabs];
+    return groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
+  };
+
+  // Obtener pestañas filtradas según el grupo activo
+  const getFilteredTabs = () => {
+    return getTabsInGroup(activeGroupId);
+  };
+
+  // Manejar menú contextual de pestañas
+  const handleTabContextMenu = (e, tabKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setTabContextMenu({
+      tabKey,
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
   // Effect para escuchar actualizaciones de estadísticas y capturar el distro
   useEffect(() => {
     if (!window.electron) return;
@@ -1471,6 +1575,7 @@ const App = () => {
               <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon="pi pi-th-large" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowCreateGroupDialog(true)} tooltip="Crear grupo de pestañas" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               {/* Botones fijos abajo */}
               <div style={{ position: 'absolute', bottom: 8, left: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -1486,6 +1591,7 @@ const App = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
+                  <Button icon="pi pi-th-large" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowCreateGroupDialog(true)} tooltip="Crear grupo de pestañas" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'bottom' }} />
                 </div>
               </div>
@@ -1535,6 +1641,101 @@ const App = () => {
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column' }}>
           {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* Barra de grupos - solo visible cuando hay grupos */}
+              {tabGroups.length > 0 && (
+                <div 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    padding: '8px 12px', 
+                    borderBottom: '1px solid #e0e0e0',
+                    backgroundColor: '#f8f9fa',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>Grupos:</span>
+                  
+                  {/* Grupo "Sin grupo" para pestañas sin agrupar */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      backgroundColor: activeGroupId === null ? '#007ad9' : '#fff',
+                      color: activeGroupId === null ? '#fff' : '#333',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      transition: 'all 0.2s'
+                    }}
+                                             onClick={() => {
+                           setActiveGroupId(null);
+                           setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
+                         }}
+                  >
+                    <span>Sin grupo ({getTabsInGroup(null).length})</span>
+                  </div>
+
+                  {/* Grupos creados */}
+                  {tabGroups.map(group => {
+                    const tabCount = getTabsInGroup(group.id).length;
+                    return (
+                      <div
+                        key={group.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 8px',
+                          backgroundColor: activeGroupId === group.id ? group.color : '#fff',
+                          color: activeGroupId === group.id ? '#fff' : '#333',
+                          border: `2px solid ${group.color}`,
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          transition: 'all 0.2s'
+                        }}
+                                                 onClick={() => {
+                           setActiveGroupId(group.id);
+                           setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
+                         }}
+                      >
+                        <div 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            backgroundColor: activeGroupId === group.id ? '#fff' : group.color, 
+                            borderRadius: '50%',
+                            flexShrink: 0
+                          }}
+                        />
+                        <span>{group.name} ({tabCount})</span>
+                        {tabCount === 0 && (
+                          <Button
+                            icon="pi pi-times"
+                            className="p-button-rounded p-button-text p-button-sm"
+                            style={{ 
+                              width: '16px', 
+                              height: '16px', 
+                              marginLeft: '4px',
+                              color: activeGroupId === group.id ? '#fff' : group.color
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteGroup(group.id);
+                            }}
+                            tooltip="Eliminar grupo vacío"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
               <div style={{ position: 'relative' }}>
                 <TabView 
                   activeIndex={activeTabIndex} 
@@ -1545,7 +1746,7 @@ const App = () => {
                   scrollable={false}
                   className={getAllTabs().length > MAX_VISIBLE_TABS ? 'has-overflow' : ''}
                 >
-                {getVisibleTabs().map((tab, idx) => {
+                {getFilteredTabs().map((tab, idx) => {
                   // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
                   const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
                   const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
@@ -1591,7 +1792,8 @@ const App = () => {
                             onDragLeave={handleTabDragLeave}
                             onDrop={(e) => handleTabDrop(e, idx)}
                             onDragEnd={handleTabDragEnd}
-                            title="Arrastra para reordenar pestañas"
+                            onContextMenu={(e) => handleTabContextMenu(e, tab.key)}
+                            title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
                           >
                             {leftIcon}
                             {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
@@ -1702,6 +1904,117 @@ const App = () => {
 
                   disabled={getAllTabs().length <= MAX_VISIBLE_TABS}
                 />
+                
+                {/* Menú contextual para grupos de pestañas */}
+                {tabContextMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      left: tabContextMenu.x,
+                      top: tabContextMenu.y,
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      zIndex: 10000,
+                      minWidth: '180px',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {tabGroups.length > 0 && (
+                      <>
+                        <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
+                          Mover a grupo:
+                        </div>
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          onClick={() => {
+                            moveTabToGroup(tabContextMenu.tabKey, null);
+                            setTabContextMenu(null);
+                          }}
+                        >
+                          <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
+                          Sin grupo
+                        </div>
+                        {tabGroups.map(group => (
+                          <div
+                            key={group.id}
+                            style={{
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                            onClick={() => {
+                              moveTabToGroup(tabContextMenu.tabKey, group.id);
+                              setTabContextMenu(null);
+                            }}
+                          >
+                            <div 
+                              style={{ 
+                                width: '12px', 
+                                height: '12px', 
+                                backgroundColor: group.color, 
+                                borderRadius: '2px' 
+                              }}
+                            ></div>
+                            {group.name}
+                          </div>
+                        ))}
+                        <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                      </>
+                    )}
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      onClick={() => {
+                        setTabContextMenu(null);
+                        setShowCreateGroupDialog(true);
+                      }}
+                    >
+                      <i className="pi pi-plus" style={{ width: '16px' }}></i>
+                      Crear nuevo grupo
+                    </div>
+                  </div>
+                )}
+
+                {/* Overlay para cerrar menú contextual de grupos */}
+                {tabContextMenu && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 9999
+                    }}
+                    onClick={() => setTabContextMenu(null)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setTabContextMenu(null);
+                    }}
+                  />
+                )}
+                
                 {/* Menú contextual personalizado */}
                 {terminalContextMenu && (
                   <div
@@ -1872,7 +2185,7 @@ const App = () => {
                 )}
               </div>
                               <div style={{ flexGrow: 1, position: 'relative' }}>
-                {sshTabs.map((tab, index) => (
+                {getFilteredTabs().map((tab, index) => (
                   <div 
                     key={tab.key} 
                     style={{ 
@@ -1885,7 +2198,7 @@ const App = () => {
                       left: 0
                     }}
                   >
-                    {tab.isExplorerInSSH ? (
+                    {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
                       <FileExplorer
                         sshConfig={tab.sshConfig}
                         tabId={tab.key}
@@ -1903,28 +2216,6 @@ const App = () => {
                     )}
                   </div>
                 ))}
-                {fileExplorerTabs.map((tab, index) => {
-                  const tabIndex = sshTabs.length + index;
-                  return (
-                    <div 
-                      key={tab.key} 
-                      style={{ 
-                        display: activeTabIndex === tabIndex ? 'flex' : 'none',
-                        flexDirection: 'column',
-                        height: '100%',
-                        width: '100%',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0
-                      }}
-                    >
-                      <FileExplorer
-                        sshConfig={tab.sshConfig}
-                        tabId={tab.key}
-                      />
-                    </div>
-                  );
-                })}
               </div>
             </div>
           ) : (
@@ -2104,6 +2395,62 @@ const App = () => {
         visible={showAboutDialog}
         onHide={() => setShowAboutDialog(false)}
       />
+
+      {/* Diálogo para crear nuevo grupo */}
+      <Dialog
+        header="Crear Nuevo Grupo de Pestañas"
+        visible={showCreateGroupDialog}
+        style={{ width: '25rem' }}
+        onHide={() => {
+          setShowCreateGroupDialog(false);
+          setNewGroupName('');
+        }}
+        footer={
+          <div>
+            <Button 
+              label="Cancelar" 
+              icon="pi pi-times" 
+              onClick={() => {
+                setShowCreateGroupDialog(false);
+                setNewGroupName('');
+              }} 
+              className="p-button-text" 
+            />
+            <Button 
+              label="Crear" 
+              icon="pi pi-check" 
+              onClick={createNewGroup} 
+              autoFocus 
+              disabled={!newGroupName.trim()}
+            />
+          </div>
+        }
+      >
+        <div className="p-fluid">
+          <div className="p-field">
+            <label htmlFor="groupName">Nombre del grupo</label>
+            <InputText
+              id="groupName"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="Ej: Producción, Desarrollo, Testing..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newGroupName.trim()) {
+                  createNewGroup();
+                }
+              }}
+            />
+          </div>
+          {tabGroups.length > 0 && (
+            <div className="mt-3">
+              <small className="text-muted">
+                Grupos existentes: {tabGroups.map(g => g.name).join(', ')}
+              </small>
+            </div>
+          )}
+        </div>
+      </Dialog>
       
       {/* Menú contextual del árbol de sesiones */}
       <ContextMenu
