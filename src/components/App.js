@@ -2496,9 +2496,14 @@ const App = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    position: 'relative',
                   }}
                   title={color}
-                />
+                >
+                  {selectedGroupColor === color && (
+                    <i className="pi pi-check" style={{ color: '#fff', fontSize: 18, textShadow: '0 0 2px #333' }}></i>
+                  )}
+                </div>
               ))}
               {/* Paleta de color personalizada */}
               <label style={{ margin: 0, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Elegir color personalizado">
