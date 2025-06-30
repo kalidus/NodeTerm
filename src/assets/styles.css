@@ -835,3 +835,14 @@ html, body {
   margin-left: calc(-0.75rem); /* compensa padding del ul */
   padding-left: 0.75rem;       /* mantiene espacio para icono */
 }
+
+/* Mostrar la X de eliminar grupo solo en hover */
+.group-delete-x {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.group-hover .group-delete-x {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

@@ -1682,6 +1682,7 @@ const App = () => {
                   {/* Grupos creados */}
                   {tabGroups.map(group => {
                     const tabCount = getTabsInGroup(group.id).length;
+                    const isActive = activeGroupId === group.id;
                     return (
                       <div
                         key={group.id}
@@ -1690,46 +1691,71 @@ const App = () => {
                           alignItems: 'center',
                           gap: '4px',
                           padding: '4px 8px',
-                          backgroundColor: activeGroupId === group.id ? group.color : '#fff',
-                          color: activeGroupId === group.id ? '#fff' : '#333',
-                          border: `2px solid ${group.color}`,
+                          backgroundColor: isActive ? group.color : '#fff',
+                          color: isActive ? '#fff' : '#333',
+                          border: isActive ? `1px solid ${group.color}` : `1px solid ${group.color}`,
                           borderRadius: '4px',
                           cursor: 'pointer',
                           fontSize: '12px',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.2s',
+                          position: 'relative'
                         }}
-                                                 onClick={() => {
-                           setActiveGroupId(group.id);
-                           setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
-                         }}
+                        onClick={() => {
+                          setActiveGroupId(group.id);
+                          setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.classList.add('group-hover');
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.classList.remove('group-hover');
+                        }}
                       >
                         <div 
                           style={{ 
                             width: '8px', 
                             height: '8px', 
-                            backgroundColor: activeGroupId === group.id ? '#fff' : group.color, 
+                            backgroundColor: isActive ? '#fff' : group.color, 
                             borderRadius: '50%',
                             flexShrink: 0
                           }}
                         />
                         <span>{group.name} ({tabCount})</span>
-                        {tabCount === 0 && (
+                        {/* Contenedor fijo para la X, mantiene el tamaño siempre igual */}
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            width: 20,
+                            height: 20,
+                            marginLeft: 4,
+                            justifyContent: 'center',
+                            transition: 'opacity 0.2s',
+                            opacity: 0,
+                            pointerEvents: 'none',
+                            position: 'relative'
+                          }}
+                          className="group-delete-x"
+                        >
                           <Button
                             icon="pi pi-times"
                             className="p-button-rounded p-button-text p-button-sm"
-                            style={{ 
-                              width: '16px', 
-                              height: '16px', 
-                              marginLeft: '4px',
-                              color: activeGroupId === group.id ? '#fff' : group.color
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              color: isActive ? '#fff' : group.color,
+                              padding: 0
                             }}
-                            onClick={(e) => {
+                            onClick={e => {
                               e.stopPropagation();
+                              // Mover todas las pestañas del grupo a 'Sin grupo' antes de eliminar
+                              const tabsInGroup = getTabsInGroup(group.id);
+                              tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
                               deleteGroup(group.id);
                             }}
-                            tooltip="Eliminar grupo vacío"
+                            tooltip={tabCount === 0 ? "Eliminar grupo vacío" : "Eliminar grupo y mover pestañas a 'Sin grupo'"}
                           />
-                        )}
+                        </span>
                       </div>
                     );
                   })}
