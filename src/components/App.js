@@ -1659,7 +1659,8 @@ const App = () => {
                   }
                   setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
                 }}
-                style={{ marginBottom: 0 }}
+                style={{ marginBottom: 0, '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb') }}
+                className="tabview-groups-bar"
               >
                 <TabPanel key="no-group" 
                   header={
