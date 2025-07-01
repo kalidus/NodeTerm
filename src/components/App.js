@@ -1511,7 +1511,7 @@ const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
       <Toast ref={toast} />
       <ConfirmDialog />
       <Splitter 
@@ -1524,7 +1524,7 @@ const App = () => {
           }
         }}
       >
-        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 400} style={{
+        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 120} maxSize={sidebarCollapsed ? 44 : 600} style={{
           transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
           width: sidebarCollapsed ? 44 : undefined,
           minWidth: 44,
@@ -1607,9 +1607,9 @@ const App = () => {
             </>
           )}
         </SplitterPanel>
-        <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column' }}>
+        <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
               {/* Barra de grupos como TabView scrollable */}
               {tabGroups.length > 0 && (
                 <TabView
@@ -1670,8 +1670,9 @@ const App = () => {
                   ))}
                 </TabView>
               )}
+              <div style={{ height: '4px', background: 'transparent' }} />
               
-              <div style={{ position: 'relative' }}>
+              <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                 <TabView 
                   activeIndex={activeTabIndex} 
                   onTabChange={(e) => {
