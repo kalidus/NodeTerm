@@ -1689,10 +1689,9 @@ const App = () => {
                       '--tab-border-color': '#d0d0d0'
                     }}
                     header={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
                         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Home</span>
-                        <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({getTabsInGroup(null).length})</span>
                       </span>
                     }
                   >
@@ -1706,10 +1705,9 @@ const App = () => {
                         '--tab-border-color': group.color + '66'
                       }}
                       header={
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
                           <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
                           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
-                          <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({getTabsInGroup(group.id).length})</span>
                           <Button
                             icon="pi pi-times"
                             className="p-button-rounded p-button-text p-button-sm"
