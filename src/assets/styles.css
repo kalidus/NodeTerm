@@ -846,3 +846,7 @@ html, body {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-ink-bar {
+  background-color: var(--group-ink-bar-color, #bbb) !important;
+}
