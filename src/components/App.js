@@ -48,8 +48,6 @@ const DistroIcon = ({ distro, size = 14 }) => {
 
 const App = () => {
   const toast = useRef(null);
-  const overflowMenuRef = useRef(null);
-  const [overflowMenuItems, setOverflowMenuItems] = useState([]);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
   // Storage key for persistence
@@ -318,9 +316,6 @@ const App = () => {
       return themes && themes[savedThemeName] ? themes[savedThemeName] : {};
   });
 
-  // Constantes para el overflow de pestañas
-  const MAX_VISIBLE_TABS = 8;
-
   // Estado para drag & drop de pestañas
   const [draggedTabIndex, setDraggedTabIndex] = useState(null);
   const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
@@ -340,16 +335,6 @@ const App = () => {
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
     return [...sshTabs, ...fileExplorerTabs];
-  };
-
-  const getVisibleTabs = () => {
-    const allTabs = getAllTabs();
-    return allTabs.slice(0, MAX_VISIBLE_TABS);
-  };
-
-  const getHiddenTabs = () => {
-    const allTabs = getAllTabs();
-    return allTabs.slice(MAX_VISIBLE_TABS);
   };
 
   const getTabTypeAndIndex = (globalIndex) => {
@@ -615,24 +600,6 @@ const App = () => {
         }
       }
     }
-  };
-
-  const generateOverflowMenuItems = () => {
-    const hiddenTabs = getHiddenTabs();
-    
-    return hiddenTabs.map((tab, index) => {
-      const globalIndex = MAX_VISIBLE_TABS + index;
-      // Determinar el tipo de pestaña basado en su tipo, contenido o flag híbrido
-      const isExplorerTab = tab.type === 'explorer' || tab.isExplorerInSSH;
-      const isTerminalTab = tab.type === 'terminal';
-      return {
-        label: tab.label,
-        icon: isExplorerTab ? 'pi pi-folder' : 'pi pi-terminal',
-        command: () => {
-          moveTabToFirst(globalIndex);
-        }
-      };
-    });
   };
 
   // Load initial nodes from localStorage or use default
@@ -1712,7 +1679,7 @@ const App = () => {
                   }}
                   renderActiveOnly={false}
                   scrollable={false}
-                  className={getAllTabs().length > MAX_VISIBLE_TABS ? 'has-overflow' : ''}
+                  className=""
                 >
                 {getFilteredTabs().map((tab, idx) => {
                   // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
@@ -1835,43 +1802,6 @@ const App = () => {
                   );
                 })}
                 </TabView>
-                <Button
-                  ref={overflowMenuRef}
-                  icon="pi pi-ellipsis-v"
-                  className="overflow-tab-btn p-button-outlined p-button-sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const items = generateOverflowMenuItems();
-                    setOverflowMenuItems(items);
-                    
-                    // Calcular posición del menú relativa al botón
-                    const buttonRect = e.currentTarget.getBoundingClientRect();
-                    const menuWidth = 200;
-                    const maxMenuHeight = 300; // Altura máxima real del CSS
-                    const estimatedHeight = items.length * 40 + 10;
-                    const menuHeight = Math.min(estimatedHeight, maxMenuHeight); // Usar la altura real limitada
-                    
-                    let x = buttonRect.left;
-                    let y = buttonRect.bottom + 5;
-                    
-                    // Ajustar si se sale de la pantalla por la derecha
-                    if (x + menuWidth > window.innerWidth) {
-                      x = buttonRect.right - menuWidth;
-                    }
-                    
-                    // Ajustar si se sale de la pantalla por abajo
-                    if (y + menuHeight > window.innerHeight) {
-                      y = buttonRect.top - menuHeight - 5;
-                    }
-                    
-                    setOverflowMenuPosition({ x, y });
-                    setShowOverflowMenu(!showOverflowMenu);
-                  }}
-
-                  disabled={getAllTabs().length <= MAX_VISIBLE_TABS}
-                />
                 
                 {/* Menú contextual para grupos de pestañas */}
                 {tabContextMenu && (
