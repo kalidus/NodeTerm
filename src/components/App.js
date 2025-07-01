@@ -1440,7 +1440,7 @@ const App = () => {
     // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
     const newExplorerTab = {
       key: explorerTabId,
-      label: `📁 ${sshNode.label}`,
+      label: sshNode.label,
       originalKey: sshNode.key,
       sshConfig: sshConfig,
       type: 'explorer',
@@ -1646,9 +1646,9 @@ const App = () => {
                 >
                   <TabPanel key="no-group" 
                     header={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
                         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
-                        <span>Sin grupo</span>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Home</span>
                         <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({getTabsInGroup(null).length})</span>
                       </span>
                     }
@@ -1659,9 +1659,9 @@ const App = () => {
                     <TabPanel
                       key={group.id}
                       header={
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
                           <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
-                          <span>{group.name}</span>
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
                           <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({getTabsInGroup(group.id).length})</span>
                           <Button
                             icon="pi pi-times"
@@ -1669,7 +1669,7 @@ const App = () => {
                             style={{ marginLeft: 6, width: 16, height: 16, color: group.color, padding: 0 }}
                             onClick={e => {
                               e.stopPropagation();
-                              // Mover todas las pestañas del grupo a 'Sin grupo' antes de eliminar
+                              // Mover todas las pestañas del grupo a 'Home' antes de eliminar
                               const tabsInGroup = getTabsInGroup(group.id);
                               tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
                               deleteGroup(group.id);
@@ -1875,7 +1875,7 @@ const App = () => {
                           }}
                         >
                           <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
-                          Sin grupo
+                          Home
                         </div>
                         {tabGroups.map(group => (
                           <div

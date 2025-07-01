@@ -865,15 +865,24 @@ html, body {
 
 .tabview-groups-bar .p-tabview-nav li {
   min-width: 90px !important;
-  max-width: 130px !important;
+  max-width: 220px !important;
 }
 
 .tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
   padding-right: 32px !important; /* espacio para la X */
+  overflow: hidden;
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .tabview-groups-bar .group-delete-x {
