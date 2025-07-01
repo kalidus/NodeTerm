@@ -1873,8 +1873,8 @@ const App = () => {
                                   }));
                                 }
                               }}
-                              tooltip="Cerrar pestaña"
-                              tooltipOptions={{ position: 'top' }}
+                              // tooltip="Cerrar pestaña"
+                              // tooltipOptions={{ position: 'top' }}
                             />
                             {rightIcon}
                           </div>
