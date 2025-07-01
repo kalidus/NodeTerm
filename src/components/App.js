@@ -2443,13 +2443,13 @@ const App = () => {
               }}
             />
           </div>
-          {tabGroups.length > 0 && (
+          {/* {tabGroups.length > 0 && (
             <div className="mt-3">
               <small className="text-muted">
                 Grupos existentes: {tabGroups.map(g => g.name).join(', ')}
               </small>
             </div>
-          )}
+          )} */}
           <div className="p-field">
             <label>Color del grupo</label>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap', margin: '10px 0 0 0' }}>
