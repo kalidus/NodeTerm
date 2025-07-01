@@ -88,7 +88,14 @@ const App = () => {
   const activeListenersRef = useRef(new Set());
 
   // === ESTADO PARA GRUPOS DE PESTAÑAS ===
-  const [tabGroups, setTabGroups] = useState([]);
+  const [tabGroups, setTabGroups] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tabGroups');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -1548,6 +1555,13 @@ const App = () => {
 
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Guardar en localStorage cada vez que cambian los grupos
+  useEffect(() => {
+    try {
+      localStorage.setItem('tabGroups', JSON.stringify(tabGroups));
+    } catch {}
+  }, [tabGroups]);
 
   return (
     <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
