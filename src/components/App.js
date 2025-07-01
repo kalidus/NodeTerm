@@ -1524,10 +1524,10 @@ const App = () => {
           }
         }}
       >
-        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 120} maxSize={sidebarCollapsed ? 44 : 600} style={{
+        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 600} style={{
           transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
           width: sidebarCollapsed ? 44 : undefined,
-          minWidth: 44,
+          minWidth: sidebarCollapsed ? 44 : undefined,
           maxWidth: sidebarCollapsed ? 44 : undefined,
           background: '#fff',
           borderRight: '1px solid #e0e0e0',
