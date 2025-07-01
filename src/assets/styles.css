@@ -239,8 +239,8 @@ html, body {
 
 .p-tabview .p-tabview-nav li {
     flex: 0 0 auto;
-    min-width: 100px !important;
-    max-width: 160px !important;
+    min-width: 130px !important;
+    max-width: 220px !important;
     margin-bottom: 0;
     padding-bottom: 0;
 }
@@ -864,8 +864,8 @@ html, body {
 }
 
 .tabview-groups-bar .p-tabview-nav li {
-  min-width: 180px !important;
-  max-width: 300px !important;
+  min-width: 90px !important;
+  max-width: 130px !important;
 }
 
 .tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
