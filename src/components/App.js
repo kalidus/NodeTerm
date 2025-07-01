@@ -2152,6 +2152,7 @@ const App = () => {
                           fontSize={fontSize}
                           theme={terminalTheme.theme}
                           onContextMenu={handleTerminalContextMenu}
+                          active={isActiveTab}
                         />
                       )}
                     </div>
