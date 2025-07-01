@@ -1643,126 +1643,63 @@ const App = () => {
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column' }}>
           {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {/* Barra de grupos - solo visible cuando hay grupos */}
-              {tabGroups.length > 0 && (
-                <div 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    padding: '8px 12px', 
-                    borderBottom: '1px solid #e0e0e0',
-                    backgroundColor: '#f8f9fa',
-                    flexWrap: 'wrap'
-                  }}
+              {/* Barra de grupos como TabView scrollable */}
+              <TabView
+                scrollable
+                activeIndex={(() => {
+                  if (activeGroupId === null) return 0;
+                  const idx = tabGroups.findIndex(g => g.id === activeGroupId);
+                  return idx === -1 ? 0 : idx + 1;
+                })()}
+                onTabChange={e => {
+                  if (e.index === 0) {
+                    setActiveGroupId(null);
+                  } else {
+                    setActiveGroupId(tabGroups[e.index - 1].id);
+                  }
+                  setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
+                }}
+                style={{ marginBottom: 0 }}
+              >
+                <TabPanel key="no-group" 
+                  header={
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
+                      <span>Sin grupo</span>
+                      <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({getTabsInGroup(null).length})</span>
+                    </span>
+                  }
                 >
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>Grupos:</span>
-                  
-                  {/* Grupo "Sin grupo" para pestañas sin agrupar */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 8px',
-                      backgroundColor: activeGroupId === null ? '#007ad9' : '#fff',
-                      color: activeGroupId === null ? '#fff' : '#333',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      transition: 'all 0.2s'
-                    }}
-                                             onClick={() => {
-                           setActiveGroupId(null);
-                           setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
-                         }}
-                  >
-                    <span>Sin grupo ({getTabsInGroup(null).length})</span>
-                  </div>
-
-                  {/* Grupos creados */}
-                  {tabGroups.map(group => {
-                    const tabCount = getTabsInGroup(group.id).length;
-                    const isActive = activeGroupId === group.id;
-                    return (
-                      <div
-                        key={group.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '4px 8px',
-                          backgroundColor: isActive ? group.color : '#fff',
-                          color: isActive ? '#fff' : '#333',
-                          border: isActive ? `1px solid ${group.color}` : `1px solid ${group.color}`,
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          transition: 'all 0.2s',
-                          position: 'relative'
-                        }}
-                        onClick={() => {
-                          setActiveGroupId(group.id);
-                          setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.classList.add('group-hover');
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.classList.remove('group-hover');
-                        }}
-                      >
-                        <div 
-                          style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            backgroundColor: isActive ? '#fff' : group.color, 
-                            borderRadius: '50%',
-                            flexShrink: 0
+                  <div style={{display:'none'}} />
+                </TabPanel>
+                {tabGroups.map((group) => (
+                  <TabPanel
+                    key={group.id}
+                    header={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
+                        <span>{group.name}</span>
+                        <span style={{ fontSize: 11, color: '#888', marginLeft: 6 }}>({getTabsInGroup(group.id).length})</span>
+                        <Button
+                          icon="pi pi-times"
+                          className="p-button-rounded p-button-text p-button-sm"
+                          style={{ marginLeft: 6, width: 16, height: 16, color: group.color, padding: 0 }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            // Mover todas las pestañas del grupo a 'Sin grupo' antes de eliminar
+                            const tabsInGroup = getTabsInGroup(group.id);
+                            tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
+                            deleteGroup(group.id);
                           }}
+                          tooltip={"Eliminar grupo"}
                         />
-                        <span>{group.name} ({tabCount})</span>
-                        {/* Contenedor fijo para la X, mantiene el tamaño siempre igual */}
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            width: 20,
-                            height: 20,
-                            marginLeft: 4,
-                            justifyContent: 'center',
-                            transition: 'opacity 0.2s',
-                            opacity: 0,
-                            pointerEvents: 'none',
-                            position: 'relative'
-                          }}
-                          className="group-delete-x"
-                        >
-                          <Button
-                            icon="pi pi-times"
-                            className="p-button-rounded p-button-text p-button-sm"
-                            style={{
-                              width: '16px',
-                              height: '16px',
-                              color: isActive ? '#fff' : group.color,
-                              padding: 0
-                            }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              // Mover todas las pestañas del grupo a 'Sin grupo' antes de eliminar
-                              const tabsInGroup = getTabsInGroup(group.id);
-                              tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
-                              deleteGroup(group.id);
-                            }}
-                            tooltip={tabCount === 0 ? "Eliminar grupo vacío" : "Eliminar grupo y mover pestañas a 'Sin grupo'"}
-                          />
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      </span>
+                    }
+                  >
+                    <div style={{display:'none'}} />
+                  </TabPanel>
+                ))}
+              </TabView>
               
               <div style={{ position: 'relative' }}>
                 <TabView 
