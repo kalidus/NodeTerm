@@ -865,7 +865,7 @@ html, body {
 
 .tabview-groups-bar .p-tabview-nav li {
   min-width: 90px !important;
-  max-width: 220px !important;
+  max-width: 150px !important;
 }
 
 .tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
