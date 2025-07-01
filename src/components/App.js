@@ -1641,10 +1641,17 @@ const App = () => {
                     const validIndex = Math.min(savedIndex, Math.max(0, tabsInNewGroup.length - 1));
                     setActiveTabIndex(validIndex);
                   }}
-                  style={{ marginBottom: 0, '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb') }}
+                  style={{ 
+                    marginBottom: 0, 
+                    '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb')
+                  }}
                   className="tabview-groups-bar"
                 >
                   <TabPanel key="no-group" 
+                    style={{
+                      '--tab-bg-color': '#f5f5f5',
+                      '--tab-border-color': '#d0d0d0'
+                    }}
                     header={
                       <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
                         <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
@@ -1658,6 +1665,10 @@ const App = () => {
                   {tabGroups.map((group) => (
                     <TabPanel
                       key={group.id}
+                      style={{
+                        '--tab-bg-color': group.color + '33',
+                        '--tab-border-color': group.color + '66'
+                      }}
                       header={
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 220 }}>
                           <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />

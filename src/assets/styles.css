@@ -875,6 +875,8 @@ html, body {
   position: relative;
   padding-right: 32px !important; /* espacio para la X */
   overflow: hidden;
+  background-color: var(--tab-bg-color, #f5f5f5) !important; /* Fondo específico de cada pestaña */
+  border: 1px solid var(--tab-border-color, #d0d0d0) !important; /* Borde específico de cada pestaña */
 }
 
 .tabview-groups-bar .p-tabview-nav .p-tabview-nav-link > span {
@@ -891,4 +893,10 @@ html, body {
   top: 50%;
   transform: translateY(-50%);
   margin-left: 0;
+}
+
+/* Pestaña activa con color del grupo más saturado */
+.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background-color: #e3f2fd !important; /* Azul fijo para pestaña activa */
+  border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
 }
