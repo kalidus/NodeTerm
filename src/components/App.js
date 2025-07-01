@@ -1083,6 +1083,19 @@ const App = () => {
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
+          // Si no estamos en el grupo Home, cambiar a Home primero
+          if (activeGroupId !== null) {
+            // Guardar el índice activo del grupo actual antes de cambiar
+            const currentGroupKey = activeGroupId || 'no-group';
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              [currentGroupKey]: activeTabIndex
+            }));
+            
+            // Cambiar al grupo Home
+            setActiveGroupId(null);
+          }
+          
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
@@ -1100,6 +1113,11 @@ const App = () => {
             };
             const newTabs = [newTab, ...prevTabs];
             setActiveTabIndex(0);
+            // También actualizar el índice guardado para el grupo Home
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              'no-group': 0
+            }));
             return newTabs;
           });
         } : undefined}
@@ -1130,6 +1148,19 @@ const App = () => {
         label: 'Abrir Terminal',
         icon: 'pi pi-desktop',
         command: () => {
+          // Si no estamos en el grupo Home, cambiar a Home primero
+          if (activeGroupId !== null) {
+            // Guardar el índice activo del grupo actual antes de cambiar
+            const currentGroupKey = activeGroupId || 'no-group';
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              [currentGroupKey]: activeTabIndex
+            }));
+            
+            // Cambiar al grupo Home
+            setActiveGroupId(null);
+          }
+          
           // Abrir nueva pestaña de terminal (mismo código que onDoubleClick)
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
@@ -1148,6 +1179,11 @@ const App = () => {
             };
             const newTabs = [newTab, ...prevTabs];
             setActiveTabIndex(0);
+            // También actualizar el índice guardado para el grupo Home
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              'no-group': 0
+            }));
             return newTabs;
           });
         }
