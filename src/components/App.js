@@ -93,6 +93,9 @@ const App = () => {
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [tabContextMenu, setTabContextMenu] = useState(null);
+  
+  // Estado para mantener el índice activo de cada grupo
+  const [groupActiveIndices, setGroupActiveIndices] = useState({});
 
   // Colores predefinidos para grupos
   const GROUP_COLORS = [
@@ -1620,12 +1623,23 @@ const App = () => {
                     return idx === -1 ? 0 : idx + 1;
                   })()}
                   onTabChange={e => {
-                    if (e.index === 0) {
-                      setActiveGroupId(null);
-                    } else {
-                      setActiveGroupId(tabGroups[e.index - 1].id);
-                    }
-                    setActiveTabIndex(0); // Resetear a la primera pestaña del grupo
+                    // Guardar el índice activo del grupo actual antes de cambiar
+                    const currentGroupKey = activeGroupId || 'no-group';
+                    setGroupActiveIndices(prev => ({
+                      ...prev,
+                      [currentGroupKey]: activeTabIndex
+                    }));
+                    
+                    // Cambiar al nuevo grupo
+                    const newGroupId = e.index === 0 ? null : tabGroups[e.index - 1].id;
+                    setActiveGroupId(newGroupId);
+                    
+                    // Restaurar el índice activo del nuevo grupo (o 0 si es la primera vez)
+                    const newGroupKey = newGroupId || 'no-group';
+                    const savedIndex = groupActiveIndices[newGroupKey] || 0;
+                    const tabsInNewGroup = getTabsInGroup(newGroupId);
+                    const validIndex = Math.min(savedIndex, Math.max(0, tabsInNewGroup.length - 1));
+                    setActiveTabIndex(validIndex);
                   }}
                   style={{ marginBottom: 0, '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb') }}
                   className="tabview-groups-bar"
@@ -1677,6 +1691,12 @@ const App = () => {
                   activeIndex={activeTabIndex} 
                   onTabChange={(e) => {
                     setActiveTabIndex(e.index);
+                    // También guardar el nuevo índice para el grupo actual
+                    const currentGroupKey = activeGroupId || 'no-group';
+                    setGroupActiveIndices(prev => ({
+                      ...prev,
+                      [currentGroupKey]: e.index
+                    }));
                   }}
                   renderActiveOnly={false}
                   scrollable={false}
@@ -1787,9 +1807,23 @@ const App = () => {
                                 
                                 // Ajustar índice activo
                                 if (activeTabIndex === idx) {
-                                  setActiveTabIndex(Math.max(0, idx - 1));
+                                  const newIndex = Math.max(0, idx - 1);
+                                  setActiveTabIndex(newIndex);
+                                  // También actualizar el índice guardado para el grupo actual
+                                  const currentGroupKey = activeGroupId || 'no-group';
+                                  setGroupActiveIndices(prev => ({
+                                    ...prev,
+                                    [currentGroupKey]: newIndex
+                                  }));
                                 } else if (activeTabIndex > idx) {
-                                  setActiveTabIndex(activeTabIndex - 1);
+                                  const newIndex = activeTabIndex - 1;
+                                  setActiveTabIndex(newIndex);
+                                  // También actualizar el índice guardado para el grupo actual
+                                  const currentGroupKey = activeGroupId || 'no-group';
+                                  setGroupActiveIndices(prev => ({
+                                    ...prev,
+                                    [currentGroupKey]: newIndex
+                                  }));
                                 }
                               }}
                               tooltip="Cerrar pestaña"
@@ -2084,37 +2118,45 @@ const App = () => {
                 )}
               </div>
                               <div style={{ flexGrow: 1, position: 'relative' }}>
-                {getFilteredTabs().map((tab, index) => (
-                  <div 
-                    key={tab.key} 
-                    style={{ 
-                      display: activeTabIndex === index ? 'flex' : 'none',
-                      flexDirection: 'column',
-                      height: '100%',
-                      width: '100%',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0
-                    }}
-                  >
-                    {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
-                      <FileExplorer
-                        sshConfig={tab.sshConfig}
-                        tabId={tab.key}
-                      />
-                    ) : (
-                      <TerminalComponent
-                        ref={el => terminalRefs.current[tab.key] = el}
-                        tabId={tab.key}
-                        sshConfig={tab.sshConfig}
-                        fontFamily={fontFamily}
-                        fontSize={fontSize}
-                        theme={terminalTheme.theme}
-                        onContextMenu={handleTerminalContextMenu}
-                      />
-                    )}
-                  </div>
-                ))}
+                {/* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */}
+                {[...sshTabs, ...fileExplorerTabs].map((tab) => {
+                  const filteredTabs = getFilteredTabs();
+                  const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
+                  const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
+                  const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                  
+                  return (
+                    <div 
+                      key={tab.key} 
+                      style={{ 
+                        display: isActiveTab ? 'flex' : 'none',
+                        flexDirection: 'column',
+                        height: '100%',
+                        width: '100%',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0
+                      }}
+                    >
+                      {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
+                        <FileExplorer
+                          sshConfig={tab.sshConfig}
+                          tabId={tab.key}
+                        />
+                      ) : (
+                        <TerminalComponent
+                          ref={el => terminalRefs.current[tab.key] = el}
+                          tabId={tab.key}
+                          sshConfig={tab.sshConfig}
+                          fontFamily={fontFamily}
+                          fontSize={fontSize}
+                          theme={terminalTheme.theme}
+                          onContextMenu={handleTerminalContextMenu}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (
