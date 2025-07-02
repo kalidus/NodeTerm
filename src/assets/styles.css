@@ -114,9 +114,14 @@ html, body {
 
 /* Tamaño mínimo para el panel lateral */
 .p-splitter .p-splitter-panel:first-child {
-  min-width: 32px !important;
+  min-width: 240px !important;
   min-height: 47px !important;
   max-width: 400px;
+}
+/* Cuando la sidebar está colapsada (ancho 44px) */
+.p-splitter .p-splitter-panel:first-child[style*="width: 44px"] {
+  min-width: 44px !important;
+  max-width: 44px !important;
 }
 
 .p-treenode:hover .node-action-button {
@@ -227,28 +232,33 @@ html, body {
 
 /* Estilos para las pestañas */
 .p-tabview .p-tabview-nav {
-    position: relative;
-    min-height: 28px !important;
-    height: 28px !important;
-    margin-top: 5px !important;
-    padding-right: 30px !important;
-    overflow-x: hidden !important;
-    overflow-y: hidden;
-    white-space: nowrap;
-    flex-wrap: nowrap !important;
-    max-width: 100vw;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  height: 26px;
+  min-height: 26px;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .p-tabview .p-tabview-nav li {
     flex: 0 0 auto;
+    min-width: 130px !important;
+    max-width: 220px !important;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
 .p-tabview .p-tabview-nav li .p-tabview-nav-link {
     padding: 0 0.7rem !important;
     font-size: 0.78rem !important;
-    min-height: 26px !important;
-    height: 26px !important;
-    line-height: 26px !important;
+    height: 100%;
+    min-height: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    display: flex;
+    align-items: center;
 }
 
 .p-tabview .p-tabview-nav .p-tabview-ink-bar {
@@ -834,4 +844,64 @@ html, body {
 .sidebar-tree .p-treenode-leaf > .p-treenode-content {
   margin-left: calc(-0.75rem); /* compensa padding del ul */
   padding-left: 0.75rem;       /* mantiene espacio para icono */
+}
+
+/* Mostrar la X de eliminar grupo solo en hover */
+.group-delete-x {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.group-hover .group-delete-x {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.tabview-groups-bar .p-tabview-nav {
+  border-bottom: 2px solid #bdbdbd;
+  margin-bottom: 0;
+  z-index: 2;
+  position: relative;
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-ink-bar {
+  background-color: var(--group-ink-bar-color, #bbb) !important;
+}
+
+.tabview-groups-bar .p-tabview-nav li {
+  min-width: 90px !important;
+  max-width: 150px !important;
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  padding-right: 32px !important; /* espacio para la X */
+  overflow: hidden;
+  background-color: var(--tab-bg-color, #f5f5f5) !important; /* Fondo específico de cada pestaña */
+  border: 1px solid var(--tab-border-color, #d0d0d0) !important; /* Borde específico de cada pestaña */
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.tabview-groups-bar .group-delete-x {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+}
+
+/* Pestaña activa con color del grupo más saturado */
+.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background-color: #e3f2fd !important; /* Azul fijo para pestaña activa */
+  border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
 }
