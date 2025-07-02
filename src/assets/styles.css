@@ -905,3 +905,137 @@ html, body {
   background-color: #e3f2fd !important; /* Azul fijo para pestaña activa */
   border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
 }
+
+/* ===== ESTILOS PARA COMPONENTE RDP ===== */
+.rdp-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #f5f5f5;
+  position: relative;
+}
+
+.rdp-toolbar {
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--surface-300);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.rdp-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rdp-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rdp-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.rdp-status-indicator.connected {
+  color: #28a745;
+}
+
+.rdp-status-indicator.connecting {
+  color: #ffc107;
+}
+
+.rdp-status-indicator.error {
+  color: #dc3545;
+}
+
+.rdp-status-indicator.disconnected {
+  color: #6c757d;
+}
+
+.rdp-canvas-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2c2c2c;
+  position: relative;
+  overflow: hidden;
+}
+
+.rdp-canvas {
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: default;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.rdp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.rdp-loading .p-progressspinner {
+  width: 50px;
+  height: 50px;
+}
+
+.rdp-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #dc3545;
+  font-size: 1.1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.rdp-error .pi {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.rdp-disconnected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: #6c757d;
+  font-size: 1.1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.rdp-disconnected .pi {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.rdp-resolution-info {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
+/* Icono específico para conexiones RDP en el árbol */
+.sidebar-tree .pi-window-maximize {
+  color: #6f42c1 !important; /* Púrpura para RDP */
+}

@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Nunca hagas commits ni push a un repositorio remoto sin mi consentimiento
+
+No hagas grandes resumen de los cambios , lo mas preciso posible
+
+
+Utilizamos windows y Powershell para lanzar comandos

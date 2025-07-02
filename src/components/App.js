@@ -13,6 +13,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
 import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
+import RDPComponent from './RDPComponent';
 import FileExplorer from './FileExplorer';
 import AboutDialog from './AboutDialog';
 import { Divider } from 'primereact/divider';
@@ -67,6 +68,23 @@ const App = () => {
   const [editSSHUser, setEditSSHUser] = useState('');
   const [editSSHPassword, setEditSSHPassword] = useState('');
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
+  
+  // Estados para RDP
+  const [showRDPDialog, setShowRDPDialog] = useState(false);
+  const [rdpName, setRDPName] = useState('');
+  const [rdpHost, setRDPHost] = useState('');
+  const [rdpUser, setRDPUser] = useState('');
+  const [rdpPassword, setRDPPassword] = useState('');
+  const [rdpDomain, setRDPDomain] = useState('');
+  const [rdpTargetFolder, setRDPTargetFolder] = useState(null);
+  const [showEditRDPDialog, setShowEditRDPDialog] = useState(false);
+  const [editRDPNode, setEditRDPNode] = useState(null);
+  const [editRDPName, setEditRDPName] = useState('');
+  const [editRDPHost, setEditRDPHost] = useState('');
+  const [editRDPUser, setEditRDPUser] = useState('');
+  const [editRDPPassword, setEditRDPPassword] = useState('');
+  const [editRDPDomain, setEditRDPDomain] = useState('');
+  
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
@@ -298,6 +316,57 @@ const App = () => {
     };
   }, []);
 
+  // Listeners para estado de conexión RDP
+  useEffect(() => {
+    if (!window.electron || !window.electron.ipcRenderer) return;
+
+    // Función para manejar estado de conexión RDP
+    const handleRdpConnectionStatus = (originalKey, status) => {
+      console.log('🔄 RDP estado:', originalKey, '->', status);
+      setRdpConnectionStatus(prevStatus => {
+        const newStatus = { ...prevStatus, [originalKey]: status };
+        console.log('Nuevo estado rdpConnectionStatus:', newStatus);
+        return newStatus;
+      });
+    };
+
+    // Listeners para RDP
+    const handleRDPReady = (data) => {
+      console.log('✅ RDP conectado para originalKey:', data?.originalKey);
+      if (data?.originalKey) {
+        handleRdpConnectionStatus(data.originalKey, 'connected');
+      }
+    };
+
+    const handleRDPError = (data) => {
+      console.log('❌ RDP error para originalKey:', data?.originalKey, 'error:', data?.error);
+      if (data?.originalKey) {
+        handleRdpConnectionStatus(data.originalKey, 'error');
+      }
+    };
+
+    const handleRDPDisconnected = (data) => {
+      console.log('🔌 RDP desconectado para originalKey:', data?.originalKey);
+      if (data?.originalKey) {
+        handleRdpConnectionStatus(data.originalKey, 'disconnected');
+      }
+    };
+
+    // Registrar listeners RDP
+    console.log('🚀 Registrando listeners RDP IPC');
+    window.electron.ipcRenderer.on('rdp-connection-ready', handleRDPReady);
+    window.electron.ipcRenderer.on('rdp-connection-error', handleRDPError);
+    window.electron.ipcRenderer.on('rdp-connection-disconnected', handleRDPDisconnected);
+
+    // Cleanup
+    return () => {
+      console.log('🧹 Limpiando listeners RDP IPC');
+      window.electron.ipcRenderer.removeAllListeners('rdp-connection-ready');
+      window.electron.ipcRenderer.removeAllListeners('rdp-connection-error');
+      window.electron.ipcRenderer.removeAllListeners('rdp-connection-disconnected');
+    };
+  }, []);
+
   // Font configuration
   const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
   const FONT_SIZE_STORAGE_KEY = 'basicapp_terminal_font_size';
@@ -339,8 +408,9 @@ const App = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
   
-  // Estado para trackear conexiones SSH
+  // Estado para trackear conexiones SSH y RDP
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
+  const [rdpConnectionStatus, setRdpConnectionStatus] = useState({});
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -1060,17 +1130,20 @@ const App = () => {
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
+    const isRDP = node.data && node.data.type === 'rdp';
     let iconClass = '';
     if (isSSH) {
       iconClass = 'pi pi-desktop';
+    } else if (isRDP) {
+      iconClass = 'pi pi-window-maximize';
     } else if (isFolder) {
       iconClass = options.expanded ? 'pi pi-folder-open' : 'pi pi-folder';
     }
 
-    // Obtener estado de conexión para sesiones SSH
-    const connectionStatus = isSSH ? sshConnectionStatus[node.key] : null;
+    // Obtener estado de conexión para sesiones SSH y RDP
+    const connectionStatus = isSSH ? sshConnectionStatus[node.key] : (isRDP ? rdpConnectionStatus[node.key] : null);
     const getConnectionIndicator = () => {
-      if (!isSSH) return null;
+      if (!isSSH && !isRDP) return null;
       
       switch (connectionStatus) {
         case 'connected':
@@ -1088,7 +1161,7 @@ const App = () => {
     return (
       <div className="flex align-items-center gap-1"
         onContextMenu={(e) => onNodeContextMenu(e, node)}
-        onDoubleClick={isSSH ? (e) => {
+        onDoubleClick={(isSSH || isRDP) ? (e) => {
           e.stopPropagation();
           // Si no estamos en el grupo Home, cambiar a Home primero
           if (activeGroupId !== null) {
@@ -1098,38 +1171,63 @@ const App = () => {
               ...prev,
               [currentGroupKey]: activeTabIndex
             }));
-            
             // Cambiar al grupo Home
             setActiveGroupId(null);
           }
-          
-          setSshTabs(prevTabs => {
-            const tabId = `${node.key}_${Date.now()}`;
-            const sshConfig = {
-              host: node.data.host,
-              username: node.data.user,
-              password: node.data.password,
-              originalKey: node.key,
-            };
-            const newTab = {
-              key: tabId,
-              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
-              originalKey: node.key,
-              sshConfig: sshConfig,
-              type: 'terminal'
-            };
-            const newTabs = [newTab, ...prevTabs];
-            setActiveTabIndex(0);
-            // También actualizar el índice guardado para el grupo Home
-            setGroupActiveIndices(prev => ({
-              ...prev,
-              'no-group': 0
-            }));
-            return newTabs;
-          });
+          if (isSSH) {
+            setSshTabs(prevTabs => {
+              const tabId = `${node.key}_${Date.now()}`;
+              const sshConfig = {
+                host: node.data.host,
+                username: node.data.user,
+                password: node.data.password,
+                originalKey: node.key,
+              };
+              const newTab = {
+                key: tabId,
+                label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+                originalKey: node.key,
+                sshConfig: sshConfig,
+                type: 'terminal'
+              };
+              const newTabs = [newTab, ...prevTabs];
+              setActiveTabIndex(0);
+              // También actualizar el índice guardado para el grupo Home
+              setGroupActiveIndices(prev => ({
+                ...prev,
+                'no-group': 0
+              }));
+              return newTabs;
+            });
+          } else if (isRDP) {
+            setSshTabs(prevTabs => {
+              const tabId = `${node.key}_${Date.now()}`;
+              const rdpConfig = {
+                host: node.data.host,
+                username: node.data.user,
+                password: node.data.password,
+                domain: node.data.domain || '',
+                originalKey: node.key,
+              };
+              const newTab = {
+                key: tabId,
+                label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+                originalKey: node.key,
+                rdpConfig: rdpConfig,
+                type: 'rdp'
+              };
+              const newTabs = [newTab, ...prevTabs];
+              setActiveTabIndex(0);
+              setGroupActiveIndices(prev => ({
+                ...prev,
+                'no-group': 0
+              }));
+              return newTabs;
+            });
+          }
         } : undefined}
-        onClick={isSSH ? (e) => {
-          // No mostrar log: console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
+        onClick={(isSSH || isRDP) ? (e) => {
+          // No mostrar log: console.log('🖱️ Click simple en nodo SSH/RDP:', node.key, '- NO debería cambiar estado de conexión');
         } : undefined}
         style={{ cursor: 'pointer' }}
         title="Click derecho para más opciones"
@@ -1147,6 +1245,7 @@ const App = () => {
     
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
+    const isRDP = node.data && node.data.type === 'rdp';
     const items = [];
     
     if (isSSH) {
@@ -1211,6 +1310,45 @@ const App = () => {
       });
     }
     
+    if (isRDP) {
+      // Items para sesiones RDP
+      items.push({
+        label: 'Abrir Escritorio Remoto',
+        icon: 'pi pi-window-maximize',
+        command: () => {
+          // Abrir nueva pestaña RDP (mismo código que onDoubleClick)
+          setSshTabs(prevTabs => {
+            const tabId = `${node.key}_${Date.now()}`;
+            const rdpConfig = {
+              host: node.data.host,
+              username: node.data.user,
+              password: node.data.password,
+              domain: node.data.domain || '',
+              originalKey: node.key,
+            };
+            const newTab = {
+              key: tabId,
+              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+              originalKey: node.key,
+              rdpConfig: rdpConfig,
+              type: 'rdp'
+            };
+            const newTabs = [newTab, ...prevTabs];
+            setActiveTabIndex(0);
+            return newTabs;
+          });
+        }
+      });
+      
+      items.push({ separator: true });
+      
+      items.push({
+        label: 'Editar Sesión',
+        icon: 'pi pi-pencil',
+        command: () => openEditRDPDialog(node)
+      });
+    }
+    
     if (isFolder) {
       // Items para carpetas
       items.push({
@@ -1256,6 +1394,11 @@ const App = () => {
         label: 'Nueva Conexión SSH',
         icon: 'pi pi-desktop',
         command: () => setShowSSHDialog(true)
+      },
+      {
+        label: 'Nueva Conexión RDP',
+        icon: 'pi pi-window-maximize',
+        command: () => setShowRDPDialog(true)
       }
     ];
   };
@@ -1441,6 +1584,120 @@ const App = () => {
     });
   };
 
+  // ========================================
+  // FUNCIONES PARA RDP
+  // ========================================
+
+  // Función para crear una nueva conexión RDP
+  const createNewRDP = () => {
+    if (!rdpName.trim() || !rdpHost.trim() || !rdpUser.trim() || !rdpPassword.trim()) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Nombre, host, usuario y contraseña son obligatorios',
+        life: 3000
+      });
+      return;
+    }
+    const newKey = generateUniqueKey();
+    const newRDPNode = {
+      key: newKey,
+      label: rdpName.trim(),
+      data: {
+        host: rdpHost.trim(),
+        user: rdpUser.trim(),
+        password: rdpPassword.trim(),
+        domain: rdpDomain.trim(),
+        type: 'rdp'
+      },
+      draggable: true,
+      uid: newKey,
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
+    };
+    const nodesCopy = deepCopy(nodes);
+    if (rdpTargetFolder) {
+      const parentNode = findNodeByKey(nodesCopy, rdpTargetFolder);
+      if (parentNode) {
+        parentNode.children = parentNode.children || [];
+        parentNode.children.unshift(newRDPNode);
+      } else {
+        nodesCopy.push(newRDPNode);
+      }
+    } else {
+      nodesCopy.unshift(newRDPNode);
+    }
+    setNodes(nodesCopy);
+    setShowRDPDialog(false);
+    setRDPName(''); 
+    setRDPHost(''); 
+    setRDPUser(''); 
+    setRDPPassword(''); 
+    setRDPDomain(''); 
+    setRDPTargetFolder(null);
+    toast.current.show({
+      severity: 'success',
+      summary: 'RDP añadida',
+      detail: `Conexión RDP "${rdpName}" añadida al árbol`,
+      life: 3000
+    });
+  };
+
+  // Función para abrir el diálogo de edición RDP
+  const openEditRDPDialog = (node) => {
+    setEditRDPNode(node);
+    setEditRDPName(node.label);
+    setEditRDPHost(node.data?.host || '');
+    setEditRDPUser(node.data?.user || '');
+    setEditRDPPassword(node.data?.password || '');
+    setEditRDPDomain(node.data?.domain || '');
+    setShowEditRDPDialog(true);
+  };
+
+  // Función para guardar la edición RDP
+  const saveEditRDP = () => {
+    if (!editRDPName.trim() || !editRDPHost.trim() || !editRDPUser.trim() || !editRDPPassword.trim()) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Nombre, host, usuario y contraseña son obligatorios',
+        life: 3000
+      });
+      return;
+    }
+    const nodesCopy = deepCopy(nodes);
+    const nodeToEdit = findNodeByKey(nodesCopy, editRDPNode.key);
+    if (nodeToEdit) {
+      nodeToEdit.label = editRDPName.trim();
+      nodeToEdit.data = { 
+        ...nodeToEdit.data, 
+        host: editRDPHost.trim(), 
+        user: editRDPUser.trim(),
+        password: editRDPPassword.trim(),
+        domain: editRDPDomain.trim(),
+        type: 'rdp'
+      };
+    }
+    setNodes(nodesCopy);
+    setShowEditRDPDialog(false);
+    setEditRDPNode(null);
+    setEditRDPName(''); 
+    setEditRDPHost(''); 
+    setEditRDPUser('');
+    setEditRDPPassword('');
+    setEditRDPDomain('');
+    toast.current.show({
+      severity: 'success',
+      summary: 'RDP editada',
+      detail: `Sesión RDP actualizada`,
+      life: 3000
+    });
+  };
+
+  // ========================================
+  // FIN FUNCIONES RDP
+  // ========================================
+
   useEffect(() => {
     // Cuando cambiamos de pestaña, la terminal necesita recalcular su tamaño
     // para ajustarse al contenedor que ahora es visible.
@@ -1596,7 +1853,7 @@ const App = () => {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem', width: '100%', paddingTop: 2, position: 'relative' }}>
               <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
+              <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowRDPDialog(true)} tooltip="Nueva conexión RDP" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               <Button icon="pi pi-th-large" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowCreateGroupDialog(true)} tooltip="Crear grupo de pestañas" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
               {/* Botones fijos abajo */}
@@ -1612,6 +1869,7 @@ const App = () => {
                 <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'bottom' }} style={{ marginRight: 8 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                   <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'bottom' }} />
+                  <Button icon="pi pi-window-maximize" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowRDPDialog(true)} tooltip="Nueva conexión RDP" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
                   <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'bottom' }} />
                   <Button icon="pi pi-th-large" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowCreateGroupDialog(true)} tooltip="Crear grupo de pestañas" tooltipOptions={{ position: 'bottom' }} />
@@ -1819,6 +2077,10 @@ const App = () => {
                             {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
                               <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
                             )}
+                            {/* Icono específico para RDP */}
+                            {tab.type === 'rdp' && (
+                              <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                            )}
                             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
                             <Button
                               icon="pi pi-times"
@@ -1834,7 +2096,10 @@ const App = () => {
                                 
                                 if (isSSHTab) {
                                   // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                  if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                  if (closedTab.type === 'rdp' && window.electron && window.electron.ipcRenderer) {
+                                    // Desconectar RDP
+                                    window.electron.ipcRenderer.send('rdp:disconnect', closedTab.key);
+                                  } else if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
                                     // Terminal SSH - siempre desconectar
                                     window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
                                   } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
@@ -1849,11 +2114,19 @@ const App = () => {
                                   // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
                                   const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
                                   if (remainingTabs.length === 0) {
-                                      setSshConnectionStatus(prev => {
-                                          const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
-                                          console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
-                                          return updated;
-                                      });
+                                      if (closedTab.type === 'rdp') {
+                                        setRdpConnectionStatus(prev => {
+                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                            console.log('🔌 Todas las pestañas RDP cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                            return updated;
+                                        });
+                                      } else {
+                                        setSshConnectionStatus(prev => {
+                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                            console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                            return updated;
+                                        });
+                                      }
                                   }
                                   setSshTabs(newSshTabs);
                                 } else {
@@ -2202,6 +2475,13 @@ const App = () => {
                           sshConfig={tab.sshConfig}
                           tabId={tab.key}
                         />
+                      ) : tab.type === 'rdp' ? (
+                        <RDPComponent
+                          tabKey={tab.key}
+                          rdpConfig={tab.rdpConfig}
+                          isActive={isActiveTab}
+                          onConnectionStatusChange={status => setRdpConnectionStatus(prev => ({ ...prev, [tab.originalKey]: status }))}
+                        />
                       ) : (
                         <TerminalComponent
                           ref={el => terminalRefs.current[tab.key] = el}
@@ -2339,6 +2619,82 @@ const App = () => {
           <div className="p-field">
             <label htmlFor="editSSHRemoteFolder">Carpeta remota</label>
             <InputText id="editSSHRemoteFolder" value={editSSHRemoteFolder} onChange={e => setEditSSHRemoteFolder(e.target.value)} placeholder="/home/usuario" />
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        header="Nueva sesión RDP"
+        visible={showRDPDialog}
+        style={{ width: '25rem' }}
+        onHide={() => setShowRDPDialog(false)}
+        footer={
+          <div>
+            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowRDPDialog(false)} className="p-button-text" />
+            <Button label="Crear" icon="pi pi-check" onClick={createNewRDP} autoFocus />
+          </div>
+        }
+      >
+        <div className="p-fluid">
+          <div className="p-field">
+            <label htmlFor="rdpName">Nombre</label>
+            <InputText id="rdpName" value={rdpName} onChange={e => setRDPName(e.target.value)} autoFocus />
+          </div>
+          <div className="p-field">
+            <label htmlFor="rdpHost">Host</label>
+            <InputText id="rdpHost" value={rdpHost} onChange={e => setRDPHost(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="rdpUser">Usuario</label>
+            <InputText id="rdpUser" value={rdpUser} onChange={e => setRDPUser(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="rdpPassword">Contraseña</label>
+            <InputText id="rdpPassword" type="password" value={rdpPassword} onChange={e => setRDPPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="rdpDomain">Dominio (opcional)</label>
+            <InputText id="rdpDomain" value={rdpDomain} onChange={e => setRDPDomain(e.target.value)} placeholder="DOMAIN" />
+          </div>
+          <div className="p-field">
+            <label htmlFor="rdpTargetFolder">Carpeta destino</label>
+            <Dropdown id="rdpTargetFolder" value={rdpTargetFolder} options={getAllFolders(nodes)} onChange={e => setRDPTargetFolder(e.value)} placeholder="Selecciona una carpeta (opcional)" showClear filter />
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        header="Editar sesión RDP"
+        visible={showEditRDPDialog}
+        style={{ width: '25rem' }}
+        onHide={() => setShowEditRDPDialog(false)}
+        footer={
+          <div>
+            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowEditRDPDialog(false)} className="p-button-text" />
+            <Button label="Guardar" icon="pi pi-check" onClick={saveEditRDP} autoFocus />
+          </div>
+        }
+      >
+        <div className="p-fluid">
+          <div className="p-field">
+            <label htmlFor="editRDPName">Nombre</label>
+            <InputText id="editRDPName" value={editRDPName} onChange={e => setEditRDPName(e.target.value)} autoFocus />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editRDPHost">Host</label>
+            <InputText id="editRDPHost" value={editRDPHost} onChange={e => setEditRDPHost(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editRDPUser">Usuario</label>
+            <InputText id="editRDPUser" value={editRDPUser} onChange={e => setEditRDPUser(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editRDPPassword">Contraseña</label>
+            <InputText id="editRDPPassword" type="password" value={editRDPPassword} onChange={e => setEditRDPPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editRDPDomain">Dominio (opcional)</label>
+            <InputText id="editRDPDomain" value={editRDPDomain} onChange={e => setEditRDPDomain(e.target.value)} placeholder="DOMAIN" />
           </div>
         </div>
       </Dialog>

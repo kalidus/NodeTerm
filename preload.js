@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electron', {
         'clipboard:writeText',
         'clipboard:readText',
         /^ssh:.*$/,
+        /^rdp:.*$/,
         /^dialog:.*$/
       ];
       if (validChannels.some(regex => {
@@ -48,7 +49,13 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-stats:update:.*$/,
         /^ssh-connection-ready$/,
         /^ssh-connection-disconnected$/,
-        /^ssh-connection-error$/
+        /^ssh-connection-error$/,
+        /^rdp:ready:.*$/,
+        /^rdp:bitmap:.*$/,
+        /^rdp:error:.*$/,
+        /^rdp-connection-ready$/,
+        /^rdp-connection-disconnected$/,
+        /^rdp-connection-error$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -68,7 +75,13 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-stats:update:.*$/,
         /^ssh-connection-ready$/,
         /^ssh-connection-disconnected$/,
-        /^ssh-connection-error$/
+        /^ssh-connection-error$/,
+        /^rdp:ready:.*$/,
+        /^rdp:bitmap:.*$/,
+        /^rdp:error:.*$/,
+        /^rdp-connection-ready$/,
+        /^rdp-connection-disconnected$/,
+        /^rdp-connection-error$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);

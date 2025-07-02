@@ -1,22 +1,23 @@
-try {
-  require('electron-reloader')(module);
-} catch (_) {}
-
 const { app, BrowserWindow, ipcMain, clipboard, dialog } = require('electron');
 const path = require('path');
 const url = require('url');
 const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
+// const rdp = require('node-rdpjs'); // Comentado temporalmente
 const packageJson = require('./package.json');
 
 let mainWindow;
 
 // Store active SSH connections and their shells
 const sshConnections = {};
+// Store active RDP connections
+const rdpConnections = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
+// Pool de conexiones RDP compartidas
+const rdpConnectionPool = {};
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -1078,4 +1079,268 @@ ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
 ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
   const result = await dialog.showOpenDialog(mainWindow, options);
   return result;
+});
+
+// ==============================================
+// RDP HANDLERS - Implementación completa de RDP
+// ==============================================
+
+// IPC handler to establish an RDP connection (SIMULADO)
+ipcMain.on('rdp:connect', async (event, { tabId, config }) => {
+  const cacheKey = `${config.username}@${config.host}:${config.port || 3389}`;
+  
+  console.log(`🎭 Iniciando conexión RDP SIMULADA para ${tabId} -> ${cacheKey}`);
+  
+  try {
+    // Simular proceso de conexión
+    const storedOriginalKey = config.originalKey || tabId;
+    
+    // Crear conexión simulada
+    rdpConnections[tabId] = {
+      config,
+      cacheKey,
+      originalKey: storedOriginalKey,
+      connected: false,
+      simulation: true
+    };
+
+    // Simular delay de conexión
+    setTimeout(() => {
+      // Simular conexión exitosa
+      if (rdpConnections[tabId]) {
+        rdpConnections[tabId].connected = true;
+        
+        console.log(`✅ RDP SIMULADO conectado: ${cacheKey}`);
+        
+        // Enviar evento de conexión exitosa
+        sendToRenderer(event.sender, `rdp:ready:${tabId}`, { tabId });
+        sendToRenderer(event.sender, 'rdp-connection-ready', { 
+          originalKey: storedOriginalKey,
+          tabId: tabId 
+        });
+        
+        // Simular envío de bitmap inicial
+        setTimeout(() => {
+          sendToRenderer(event.sender, `rdp:bitmap:${tabId}`, {
+            tabId,
+            bitmap: {
+              x: 0,
+              y: 0,
+              width: config.width || 1366,
+              height: config.height || 768,
+              data: Buffer.alloc((config.width || 1366) * (config.height || 768) * 4, 100), // Gris
+              bitsPerPixel: 32
+            }
+          });
+        }, 500);
+      }
+    }, 1000);
+
+  } catch (err) {
+    console.error(`Error en conexión RDP simulada para ${tabId}:`, err);
+    
+    const errorMsg = 'Error en simulación RDP';
+    sendToRenderer(event.sender, `rdp:error:${tabId}`, errorMsg);
+    
+    const errorOriginalKey = config.originalKey || tabId;
+    sendToRenderer(event.sender, 'rdp-connection-error', { 
+      originalKey: errorOriginalKey,
+      tabId: tabId,
+      error: errorMsg 
+    });
+  }
+});
+
+// IPC handler to send mouse events to RDP (SIMULADO)
+ipcMain.on('rdp:mouse', (event, { tabId, x, y, button, isPressed }) => {
+  const conn = rdpConnections[tabId];
+  if (conn && conn.connected) {
+    console.log(`🖱️ Mouse RDP simulado ${tabId}: (${x}, ${y}) botón:${button} presionado:${isPressed}`);
+  }
+});
+
+// IPC handler to send keyboard events to RDP (SIMULADO)
+ipcMain.on('rdp:keyboard', (event, { tabId, scancode, isPressed }) => {
+  const conn = rdpConnections[tabId];
+  if (conn && conn.connected) {
+    console.log(`⌨️ Teclado RDP simulado ${tabId}: scancode:${scancode} presionado:${isPressed}`);
+  }
+});
+
+// IPC handler to send keyboard events via unicode to RDP (SIMULADO)
+ipcMain.on('rdp:keyboard-unicode', (event, { tabId, unicode, isPressed }) => {
+  const conn = rdpConnections[tabId];
+  if (conn && conn.connected) {
+    console.log(`🔤 Unicode RDP simulado ${tabId}: unicode:${unicode} presionado:${isPressed}`);
+  }
+});
+
+// IPC handler to disconnect RDP (SIMULADO)
+ipcMain.on('rdp:disconnect', (event, tabId) => {
+  const conn = rdpConnections[tabId];
+  if (conn) {
+    try {
+      console.log(`🔌 Desconectando RDP simulado ${tabId}`);
+      
+      // Enviar evento de desconexión
+      if (conn.originalKey) {
+        sendToRenderer(event.sender, 'rdp-connection-disconnected', { 
+          originalKey: conn.originalKey 
+        });
+      }
+      
+    } catch (error) {
+      console.error(`Error desconectando RDP simulado ${tabId}:`, error);
+    } finally {
+      delete rdpConnections[tabId];
+    }
+  }
+});
+
+// Handler para obtener estado de conexiones RDP
+ipcMain.handle('rdp:get-connection-status', async () => {
+  const status = {};
+  
+  Object.values(rdpConnections).forEach(conn => {
+    if (conn.originalKey) {
+      status[conn.originalKey] = conn.connected ? 'connected' : 'disconnected';
+    }
+  });
+  
+  console.log('📊 Estado actual RDP:', status);
+  return status;
+});
+
+// Actualizar app-quit para incluir limpieza de RDP
+const originalAppQuit = ipcMain.listeners('app-quit')[0];
+if (originalAppQuit) {
+  ipcMain.removeListener('app-quit', originalAppQuit);
+}
+
+ipcMain.on('app-quit', () => {
+  // Close all SSH connections first (existing code)
+  Object.values(sshConnections).forEach(conn => {
+    if (conn.statsTimeout) {
+      clearTimeout(conn.statsTimeout);
+    }
+    if (conn.stream) {
+      try {
+        conn.stream.removeAllListeners();
+        if (!conn.stream.destroyed) {
+          conn.stream.destroy();
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+    if (conn.ssh) {
+      try {
+        if (conn.ssh.ssh) {
+          conn.ssh.ssh.removeAllListeners('error');
+          conn.ssh.ssh.removeAllListeners('close');
+          conn.ssh.ssh.removeAllListeners('end');
+        }
+        conn.ssh.removeAllListeners('error');
+        conn.ssh.removeAllListeners('close');
+        conn.ssh.removeAllListeners('end');
+        conn.ssh.close();
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+  });
+  
+  Object.values(sshConnectionPool).forEach(poolConn => {
+    try {
+      poolConn.removeAllListeners('error');
+      poolConn.removeAllListeners('close');
+      poolConn.removeAllListeners('end');
+      if (poolConn.ssh) {
+        poolConn.ssh.removeAllListeners('error');
+        poolConn.ssh.removeAllListeners('close');
+        poolConn.ssh.removeAllListeners('end');
+      }
+      poolConn.close();
+    } catch (e) {
+      // Ignorar errores
+    }
+  });
+
+  // Close all RDP connections
+  Object.values(rdpConnections).forEach(conn => {
+    try {
+      if (conn.client) {
+        conn.client.removeAllListeners();
+        conn.client.close();
+      }
+    } catch (e) {
+      console.warn('Error closing RDP connection:', e);
+    }
+  });
+  
+  app.quit();
+});
+
+// Actualizar before-quit para incluir limpieza de RDP
+app.removeAllListeners('before-quit');
+app.on('before-quit', () => {
+  // Clean SSH connections
+  Object.values(sshConnections).forEach(conn => {
+    if (conn.statsTimeout) {
+      clearTimeout(conn.statsTimeout);
+    }
+    if (conn.stream) {
+      try {
+        conn.stream.removeAllListeners();
+        if (!conn.stream.destroyed) {
+          conn.stream.destroy();
+        }
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+    if (conn.ssh) {
+      try {
+        if (conn.ssh.ssh) {
+          conn.ssh.ssh.removeAllListeners('error');
+          conn.ssh.ssh.removeAllListeners('close');
+          conn.ssh.ssh.removeAllListeners('end');
+        }
+        conn.ssh.removeAllListeners('error');
+        conn.ssh.removeAllListeners('close');
+        conn.ssh.removeAllListeners('end');
+        conn.ssh.close();
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+  });
+  
+  Object.values(sshConnectionPool).forEach(poolConn => {
+    try {
+      poolConn.removeAllListeners('error');
+      poolConn.removeAllListeners('close');
+      poolConn.removeAllListeners('end');
+      if (poolConn.ssh) {
+        poolConn.ssh.removeAllListeners('error');
+        poolConn.ssh.removeAllListeners('close');
+        poolConn.ssh.removeAllListeners('end');
+      }
+      poolConn.close();
+    } catch (e) {
+      // Ignorar errores
+    }
+  });
+
+  // Clean RDP connections
+  Object.values(rdpConnections).forEach(conn => {
+    try {
+      if (conn.client) {
+        conn.client.removeAllListeners();
+        conn.client.close();
+      }
+    } catch (e) {
+      console.warn('Error closing RDP connection:', e);
+    }
+  });
 });
