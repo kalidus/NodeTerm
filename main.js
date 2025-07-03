@@ -178,7 +178,37 @@ ipcMain.handle('get-version-info', () => {
   };
 });
 
-// IPC handlers para clipboard - Ya están definidos más adelante en el archivo
+// Clipboard IPC Handlers
+ipcMain.handle('clipboard:readText', () => {
+  return clipboard.readText();
+});
+
+ipcMain.handle('clipboard:writeText', (event, text) => {
+  clipboard.writeText(text);
+});
+
+// Dialog IPC Handlers
+ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
+  const result = await dialog.showSaveDialog(mainWindow, options);
+  return result;
+});
+
+ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
+  const result = await dialog.showOpenDialog(mainWindow, options);
+  return result;
+});
+
+// SSH Resize Handler (faltaba este handler que se usa en TerminalComponent)
+ipcMain.on('ssh:resize', (event, { tabId, cols, rows }) => {
+  const conn = sshConnections[tabId];
+  if (conn && conn.stream && !conn.stream.destroyed) {
+    try {
+      conn.stream.setWindow(rows, cols);
+    } catch (error) {
+      console.warn(`Error resizing terminal ${tabId}:`, error.message);
+    }
+  }
+});
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
@@ -520,23 +550,6 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
   }
 });
 
-// IPC handler to handle terminal resize
-ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
-    const conn = sshConnections[tabId];
-    if (conn && conn.stream && !conn.stream.destroyed) {
-        try {
-            // Asegurar que el tamaño sea válido antes de aplicar
-            const safeRows = Math.max(1, Math.min(300, rows || 24));
-            const safeCols = Math.max(1, Math.min(500, cols || 80));
-            
-            conn.stream.setWindow(safeRows, safeCols);
-            // console.log(`Terminal ${tabId} redimensionado a ${safeCols}x${safeRows}`);
-        } catch (resizeError) {
-            console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
-        }
-    }
-});
-
 // IPC handler to terminate an SSH connection
 ipcMain.on('ssh:disconnect', (event, tabId) => {
   const conn = sshConnections[tabId];
@@ -664,8 +677,9 @@ ipcMain.on('app-quit', () => {
   app.quit();
 });
 
-// Limpieza robusta también en before-quit
+// Cleanup RDP sessions on app quit
 app.on('before-quit', () => {
+  // Clean SSH connections
   Object.values(sshConnections).forEach(conn => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
@@ -683,12 +697,10 @@ app.on('before-quit', () => {
     if (conn.ssh) {
       try {
         if (conn.ssh.ssh) {
-          // Limpiar listeners específicos en lugar de todos en before-quit
           conn.ssh.ssh.removeAllListeners('error');
           conn.ssh.ssh.removeAllListeners('close');
           conn.ssh.ssh.removeAllListeners('end');
         }
-        // Limpiar listeners del SSH2Promise también
         conn.ssh.removeAllListeners('error');
         conn.ssh.removeAllListeners('close');
         conn.ssh.removeAllListeners('end');
@@ -699,10 +711,8 @@ app.on('before-quit', () => {
     }
   });
   
-  // Limpiar también el pool de conexiones con mejor limpieza
   Object.values(sshConnectionPool).forEach(poolConn => {
     try {
-      // Limpiar listeners del pool también
       poolConn.removeAllListeners('error');
       poolConn.removeAllListeners('close');
       poolConn.removeAllListeners('end');
@@ -716,15 +726,16 @@ app.on('before-quit', () => {
       // Ignorar errores
     }
   });
-});
 
-// Clipboard IPC Handlers
-ipcMain.handle('clipboard:readText', () => {
-  return clipboard.readText();
-});
-
-ipcMain.handle('clipboard:writeText', (event, text) => {
-  clipboard.writeText(text);
+  // Clean RDP connections
+  const sidecar = getRdpSidecar();
+  if (sidecar) {
+    try {
+      sidecar.stopAllRdpSessions();
+    } catch (e) {
+      console.warn('Error stopping RDP sessions on quit:', e);
+    }
+  }
 });
 
 // Function to safely send to mainWindow
@@ -1085,262 +1096,93 @@ ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
 // RDP HANDLERS - Implementación completa de RDP
 // ==============================================
 
-// IPC handler to establish an RDP connection (SIMULADO)
-ipcMain.on('rdp:connect', async (event, { tabId, config }) => {
-  const cacheKey = `${config.username}@${config.host}:${config.port || 3389}`;
-  
-  console.log(`🎭 Iniciando conexión RDP SIMULADA para ${tabId} -> ${cacheKey}`);
-  
-  try {
-    // Simular proceso de conexión
-    const storedOriginalKey = config.originalKey || tabId;
-    
-    // Crear conexión simulada
-    rdpConnections[tabId] = {
-      config,
-      cacheKey,
-      originalKey: storedOriginalKey,
-      connected: false,
-      simulation: true
-    };
+// RDP Sidecar IPC Handlers
+let rdpSidecar = null;
 
-    // Simular delay de conexión
-    setTimeout(() => {
-      // Simular conexión exitosa
-      if (rdpConnections[tabId]) {
-        rdpConnections[tabId].connected = true;
-        
-        console.log(`✅ RDP SIMULADO conectado: ${cacheKey}`);
-        
-        // Enviar evento de conexión exitosa
-        sendToRenderer(event.sender, `rdp:ready:${tabId}`, { tabId });
-        sendToRenderer(event.sender, 'rdp-connection-ready', { 
-          originalKey: storedOriginalKey,
-          tabId: tabId 
-        });
-        
-        // Simular envío de bitmap inicial
-        setTimeout(() => {
-          sendToRenderer(event.sender, `rdp:bitmap:${tabId}`, {
-            tabId,
-            bitmap: {
-              x: 0,
-              y: 0,
-              width: config.width || 1366,
-              height: config.height || 768,
-              data: Buffer.alloc((config.width || 1366) * (config.height || 768) * 4, 100), // Gris
-              bitsPerPixel: 32
-            }
-          });
-        }, 500);
-      }
-    }, 1000);
-
-  } catch (err) {
-    console.error(`Error en conexión RDP simulada para ${tabId}:`, err);
-    
-    const errorMsg = 'Error en simulación RDP';
-    sendToRenderer(event.sender, `rdp:error:${tabId}`, errorMsg);
-    
-    const errorOriginalKey = config.originalKey || tabId;
-    sendToRenderer(event.sender, 'rdp-connection-error', { 
-      originalKey: errorOriginalKey,
-      tabId: tabId,
-      error: errorMsg 
-    });
-  }
-});
-
-// IPC handler to send mouse events to RDP (SIMULADO)
-ipcMain.on('rdp:mouse', (event, { tabId, x, y, button, isPressed }) => {
-  const conn = rdpConnections[tabId];
-  if (conn && conn.connected) {
-    console.log(`🖱️ Mouse RDP simulado ${tabId}: (${x}, ${y}) botón:${button} presionado:${isPressed}`);
-  }
-});
-
-// IPC handler to send keyboard events to RDP (SIMULADO)
-ipcMain.on('rdp:keyboard', (event, { tabId, scancode, isPressed }) => {
-  const conn = rdpConnections[tabId];
-  if (conn && conn.connected) {
-    console.log(`⌨️ Teclado RDP simulado ${tabId}: scancode:${scancode} presionado:${isPressed}`);
-  }
-});
-
-// IPC handler to send keyboard events via unicode to RDP (SIMULADO)
-ipcMain.on('rdp:keyboard-unicode', (event, { tabId, unicode, isPressed }) => {
-  const conn = rdpConnections[tabId];
-  if (conn && conn.connected) {
-    console.log(`🔤 Unicode RDP simulado ${tabId}: unicode:${unicode} presionado:${isPressed}`);
-  }
-});
-
-// IPC handler to disconnect RDP (SIMULADO)
-ipcMain.on('rdp:disconnect', (event, tabId) => {
-  const conn = rdpConnections[tabId];
-  if (conn) {
+// Lazy load RDP sidecar
+function getRdpSidecar() {
+  if (!rdpSidecar) {
     try {
-      console.log(`🔌 Desconectando RDP simulado ${tabId}`);
-      
-      // Enviar evento de desconexión
-      if (conn.originalKey) {
-        sendToRenderer(event.sender, 'rdp-connection-disconnected', { 
-          originalKey: conn.originalKey 
-        });
-      }
-      
+      rdpSidecar = require('./src/rdpSidecar');
     } catch (error) {
-      console.error(`Error desconectando RDP simulado ${tabId}:`, error);
-    } finally {
-      delete rdpConnections[tabId];
+      console.error('Error loading RDP sidecar:', error);
+      return null;
     }
   }
-});
-
-// Handler para obtener estado de conexiones RDP
-ipcMain.handle('rdp:get-connection-status', async () => {
-  const status = {};
-  
-  Object.values(rdpConnections).forEach(conn => {
-    if (conn.originalKey) {
-      status[conn.originalKey] = conn.connected ? 'connected' : 'disconnected';
-    }
-  });
-  
-  console.log('📊 Estado actual RDP:', status);
-  return status;
-});
-
-// Actualizar app-quit para incluir limpieza de RDP
-const originalAppQuit = ipcMain.listeners('app-quit')[0];
-if (originalAppQuit) {
-  ipcMain.removeListener('app-quit', originalAppQuit);
+  return rdpSidecar;
 }
 
-ipcMain.on('app-quit', () => {
-  // Close all SSH connections first (existing code)
-  Object.values(sshConnections).forEach(conn => {
-    if (conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
-    }
-    if (conn.stream) {
-      try {
-        conn.stream.removeAllListeners();
-        if (!conn.stream.destroyed) {
-          conn.stream.destroy();
-        }
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-    if (conn.ssh) {
-      try {
-        if (conn.ssh.ssh) {
-          conn.ssh.ssh.removeAllListeners('error');
-          conn.ssh.ssh.removeAllListeners('close');
-          conn.ssh.ssh.removeAllListeners('end');
-        }
-        conn.ssh.removeAllListeners('error');
-        conn.ssh.removeAllListeners('close');
-        conn.ssh.removeAllListeners('end');
-        conn.ssh.close();
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-  });
+// Check if FreeRDP is available
+ipcMain.handle('rdp:check-available', () => {
+  const sidecar = getRdpSidecar();
+  if (!sidecar) {
+    return { available: false, error: 'Sidecar no disponible' };
+  }
   
-  Object.values(sshConnectionPool).forEach(poolConn => {
-    try {
-      poolConn.removeAllListeners('error');
-      poolConn.removeAllListeners('close');
-      poolConn.removeAllListeners('end');
-      if (poolConn.ssh) {
-        poolConn.ssh.removeAllListeners('error');
-        poolConn.ssh.removeAllListeners('close');
-        poolConn.ssh.removeAllListeners('end');
-      }
-      poolConn.close();
-    } catch (e) {
-      // Ignorar errores
-    }
-  });
-
-  // Close all RDP connections
-  Object.values(rdpConnections).forEach(conn => {
-    try {
-      if (conn.client) {
-        conn.client.removeAllListeners();
-        conn.client.close();
-      }
-    } catch (e) {
-      console.warn('Error closing RDP connection:', e);
-    }
-  });
-  
-  app.quit();
+  try {
+    sidecar.checkFreeRDPAvailable();
+    return { available: true };
+  } catch (error) {
+    return { available: false, error: error.message };
+  }
 });
 
-// Actualizar before-quit para incluir limpieza de RDP
-app.removeAllListeners('before-quit');
-app.on('before-quit', () => {
-  // Clean SSH connections
-  Object.values(sshConnections).forEach(conn => {
-    if (conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
-    }
-    if (conn.stream) {
-      try {
-        conn.stream.removeAllListeners();
-        if (!conn.stream.destroyed) {
-          conn.stream.destroy();
-        }
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-    if (conn.ssh) {
-      try {
-        if (conn.ssh.ssh) {
-          conn.ssh.ssh.removeAllListeners('error');
-          conn.ssh.ssh.removeAllListeners('close');
-          conn.ssh.ssh.removeAllListeners('end');
-        }
-        conn.ssh.removeAllListeners('error');
-        conn.ssh.removeAllListeners('close');
-        conn.ssh.removeAllListeners('end');
-        conn.ssh.close();
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-  });
+// Start RDP session
+ipcMain.handle('rdp:start-session', (event, config) => {
+  const sidecar = getRdpSidecar();
+  if (!sidecar) {
+    throw new Error('Sidecar RDP no disponible');
+  }
   
-  Object.values(sshConnectionPool).forEach(poolConn => {
-    try {
-      poolConn.removeAllListeners('error');
-      poolConn.removeAllListeners('close');
-      poolConn.removeAllListeners('end');
-      if (poolConn.ssh) {
-        poolConn.ssh.removeAllListeners('error');
-        poolConn.ssh.removeAllListeners('close');
-        poolConn.ssh.removeAllListeners('end');
-      }
-      poolConn.close();
-    } catch (e) {
-      // Ignorar errores
-    }
-  });
+  try {
+    const result = sidecar.startRdpSession(config);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+});
 
-  // Clean RDP connections
-  Object.values(rdpConnections).forEach(conn => {
-    try {
-      if (conn.client) {
-        conn.client.removeAllListeners();
-        conn.client.close();
-      }
-    } catch (e) {
-      console.warn('Error closing RDP connection:', e);
-    }
-  });
+// Stop RDP session
+ipcMain.handle('rdp:stop-session', (event, sessionId) => {
+  const sidecar = getRdpSidecar();
+  if (!sidecar) {
+    throw new Error('Sidecar RDP no disponible');
+  }
+  
+  try {
+    sidecar.stopRdpSession(sessionId);
+    return { success: true };
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Get active RDP sessions
+ipcMain.handle('rdp:get-active-sessions', () => {
+  const sidecar = getRdpSidecar();
+  if (!sidecar) {
+    return [];
+  }
+  
+  try {
+    return sidecar.getActiveSessions();
+  } catch (error) {
+    console.error('Error getting active RDP sessions:', error);
+    return [];
+  }
+});
+
+// Stop all RDP sessions
+ipcMain.handle('rdp:stop-all-sessions', () => {
+  const sidecar = getRdpSidecar();
+  if (!sidecar) {
+    return { success: false, error: 'Sidecar no disponible' };
+  }
+  
+  try {
+    sidecar.stopAllRdpSessions();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
