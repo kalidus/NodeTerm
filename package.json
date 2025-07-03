@@ -5,7 +5,10 @@
   "scripts": {
     "start": "electron .",
     "build": "webpack --mode production",
-    "dev": "concurrently \"webpack --watch --mode development\" \"electron .\"",
+    "dev:build": "webpack --mode development",
+    "dev:watch": "webpack --watch --mode development",
+    "dev:electron": "electron .",
+    "dev": "npm run dev:build && concurrently \"npm run dev:watch\" \"npm run dev:electron\"",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "version:patch": "npm version patch --no-git-tag-version",

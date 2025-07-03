@@ -41,7 +41,8 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'preload.js', to: 'preload.js' }
+        { from: 'preload.js', to: 'preload.js' },
+        { from: 'preload.js', to: '../preload.js' }
       ]
     }),
     new webpack.DefinePlugin({

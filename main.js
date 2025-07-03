@@ -133,13 +133,11 @@ function createWindow() {
   });
 
   mainWindow.loadURL(
-    process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3000'
-      : url.format({
-          pathname: path.join(__dirname, 'dist', 'index.html'),
-          protocol: 'file:',
-          slashes: true
-        })
+    url.format({
+      pathname: path.join(__dirname, 'dist', 'index.html'),
+      protocol: 'file:',
+      slashes: true
+    })
   );
 
   // Open the DevTools in development mode
@@ -1081,16 +1079,7 @@ ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshCon
   }
 });
 
-// Dialog handlers para seleccionar archivos
-ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
-  const result = await dialog.showSaveDialog(mainWindow, options);
-  return result;
-});
-
-ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
-  const result = await dialog.showOpenDialog(mainWindow, options);
-  return result;
-});
+// Dialog handlers ya están definidos más arriba en el archivo
 
 // ==============================================
 // RDP HANDLERS - Implementación completa de RDP
