@@ -25,4 +25,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+
+# Ignorar binarios de ffmpeg
+resources/ffmpeg/ 
