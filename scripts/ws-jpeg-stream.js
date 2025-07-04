@@ -1,9 +1,27 @@
 const WebSocket = require('ws');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 
 const PORT = 9001;
 const FFMPEG = path.join(__dirname, '../resources/ffmpeg/ffmpeg-7.1.1-essentials_build/bin/ffmpeg.exe');
+
+// --- DETECCIÓN AUTOMÁTICA DEL MONITOR PRINCIPAL ---
+function getMonitorBounds(index = 0) {
+  const psScriptPath = path.join(__dirname, 'get-monitors.ps1');
+  const result = execSync(`powershell -NoProfile -File \"${psScriptPath}\"`).toString().trim();
+  const monitors = JSON.parse(result);
+  const arr = Array.isArray(monitors) ? monitors : [monitors];
+  console.log('Monitores detectados:');
+  arr.forEach((m, i) => {
+    console.log(`[${i}] ${m.DeviceName} (${m.Width}x${m.Height}) offset=(${m.X},${m.Y})${m.Primary ? ' [PRINCIPAL]' : ''}`);
+  });
+  return arr[index];
+}
+
+// Cambia el índice aquí si quieres otro monitor (0 = primero)
+const monitor = getMonitorBounds(0);
+const { X: x, Y: y, PhysicalWidth: width, PhysicalHeight: height } = monitor;
+console.log(`Usando monitor: offset_x=${x}, offset_y=${y}, video_size=${width}x${height}`);
 
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`WebSocket JPEG server listening on ws://localhost:${PORT}`);
@@ -11,10 +29,13 @@ console.log(`WebSocket JPEG server listening on ws://localhost:${PORT}`);
 wss.on('connection', (ws) => {
   console.log('Cliente WebSocket conectado');
 
-  // Lanza ffmpeg para capturar el escritorio a resolución nativa
+  // Lanza ffmpeg para capturar SOLO el monitor principal
   const ffmpeg = spawn(FFMPEG, [
     '-f', 'gdigrab',
     '-framerate', '10',
+    '-offset_x', String(x),
+    '-offset_y', String(y),
+    '-video_size', `${width}x${height}`,
     '-i', 'desktop',
     '-update', '1',
     '-q:v', '5',
