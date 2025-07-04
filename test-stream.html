@@ -14,6 +14,51 @@
         img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         img.src = URL.createObjectURL(blob);
       };
+      ws.onopen = () => console.log('WebSocket abierto');
+
+      // --- CONTROL REMOTO: mouse/teclado ---
+      function sendControl(data) {
+        if (ws.readyState === 1) {
+          ws.send(JSON.stringify(data));
+          console.log('[FRONTEND] Enviado:', JSON.stringify(data));
+        }
+      }
+      // Mouse move
+      canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left) * (canvas.width / rect.width));
+        const y = Math.round((e.clientY - rect.top) * (canvas.height / rect.height));
+        sendControl({ type: 'mouse', action: 'move', x, y });
+      });
+      // Mouse click
+      canvas.addEventListener('mousedown', e => {
+        const button = ['left','middle','right'][e.button] || 'left';
+        sendControl({ type: 'mouse', action: 'down', button });
+      });
+      canvas.addEventListener('mouseup', e => {
+        const button = ['left','middle','right'][e.button] || 'left';
+        sendControl({ type: 'mouse', action: 'up', button });
+      });
+      canvas.addEventListener('click', e => {
+        const button = ['left','middle','right'][e.button] || 'left';
+        sendControl({ type: 'mouse', action: 'click', button });
+      });
+      // Wheel
+      canvas.addEventListener('wheel', e => {
+        sendControl({ type: 'mouse', action: 'wheel', x: 0, y: Math.sign(e.deltaY) * 10 });
+        e.preventDefault();
+      });
+      // Teclado
+      window.addEventListener('keydown', e => {
+        if (e.repeat) return;
+        sendControl({ type: 'key', action: 'down', key: e.key });
+      });
+      window.addEventListener('keyup', e => {
+        sendControl({ type: 'key', action: 'up', key: e.key });
+      });
+      window.addEventListener('keypress', e => {
+        sendControl({ type: 'key', action: 'tap', key: e.key });
+      });
     </script>
   </body>
 </html> 

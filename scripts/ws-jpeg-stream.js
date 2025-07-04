@@ -1,6 +1,7 @@
 const WebSocket = require('ws');
 const { spawn, execSync } = require('child_process');
 const path = require('path');
+const robot = require('robotjs');
 
 const PORT = 9001;
 const FFMPEG = path.join(__dirname, '../resources/ffmpeg/ffmpeg-7.1.1-essentials_build/bin/ffmpeg.exe');
@@ -8,7 +9,7 @@ const FFMPEG = path.join(__dirname, '../resources/ffmpeg/ffmpeg-7.1.1-essentials
 // --- DETECCIÓN AUTOMÁTICA DEL MONITOR PRINCIPAL ---
 function getMonitorBounds(index = 0) {
   const psScriptPath = path.join(__dirname, 'get-monitors.ps1');
-  const result = execSync(`powershell -NoProfile -File \"${psScriptPath}\"`).toString().trim();
+  const result = execSync(`powershell -NoProfile -File "${psScriptPath}"`).toString().trim();
   const monitors = JSON.parse(result);
   const arr = Array.isArray(monitors) ? monitors : [monitors];
   console.log('Monitores detectados:');
@@ -65,5 +66,48 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     ffmpeg.kill('SIGKILL');
     console.log('Cliente WebSocket desconectado, ffmpeg terminado');
+  });
+
+  // --- CONTROL REMOTO: mouse/teclado ---
+  ws.on('message', (msg) => {
+    console.log('[DEBUG] Tipo de mensaje:', typeof msg, Buffer.isBuffer(msg));
+    let data;
+    try {
+      const str = Buffer.isBuffer(msg) ? msg.toString() : msg;
+      data = JSON.parse(str);
+    } catch (e) {
+      // No es JSON, probablemente es binario, ignorar
+      return;
+    }
+    console.log('[CONTROL] Evento recibido:', data);
+    if (data.type === 'mouse') {
+      if (data.action === 'move') {
+        console.log(`[CONTROL] Mover mouse a (${data.x}, ${data.y})`);
+        robot.moveMouse(data.x, data.y);
+      } else if (data.action === 'click') {
+        console.log(`[CONTROL] Click mouse (${data.button || 'left'})`);
+        robot.mouseClick(data.button || 'left', false);
+      } else if (data.action === 'down') {
+        console.log(`[CONTROL] Mouse down (${data.button || 'left'})`);
+        robot.mouseToggle('down', data.button || 'left');
+      } else if (data.action === 'up') {
+        console.log(`[CONTROL] Mouse up (${data.button || 'left'})`);
+        robot.mouseToggle('up', data.button || 'left');
+      } else if (data.action === 'wheel') {
+        console.log(`[CONTROL] Scroll mouse (${data.x || 0}, ${data.y || 0})`);
+        robot.scrollMouse(data.x || 0, data.y || 0);
+      }
+    } else if (data.type === 'key') {
+      if (data.action === 'down') {
+        console.log(`[CONTROL] Key down (${data.key})`);
+        robot.keyToggle(data.key, 'down');
+      } else if (data.action === 'up') {
+        console.log(`[CONTROL] Key up (${data.key})`);
+        robot.keyToggle(data.key, 'up');
+      } else if (data.action === 'tap') {
+        console.log(`[CONTROL] Key tap (${data.key})`);
+        robot.keyTap(data.key);
+      }
+    }
   });
 }); 
