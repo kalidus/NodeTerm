@@ -24,8 +24,22 @@ const monitor = getMonitorBounds(0);
 const { X: x, Y: y, PhysicalWidth: width, PhysicalHeight: height } = monitor;
 console.log(`Usando monitor: offset_x=${x}, offset_y=${y}, video_size=${width}x${height}`);
 
+// Lanzar FreeRDP después de obtener width y height
+const freerdpPath = path.join(__dirname, '../resources/freerdp/wfreerdp.exe');
+const freerdpArgs = [
+  '/v:192.168.10.52',
+  '/u:kalidus',
+  '/p:Ronaldi$1024',
+  `/size:${width}x${height}`,
+  '/dynamic-resolution'
+];
+
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`WebSocket JPEG server listening on ws://localhost:${PORT}`);
+
+const freerdp = spawn(freerdpPath, freerdpArgs, { detached: true, stdio: 'ignore' });
+freerdp.unref();
+console.log('FreeRDP lanzado con IP 192.168.10.52, usuario kalidus');
 
 wss.on('connection', (ws) => {
   console.log('Cliente WebSocket conectado');
