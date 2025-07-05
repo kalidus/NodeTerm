@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <body style="background:#222; margin:0; overflow:hidden;">
+    <canvas id="stream" style="border:1px solid #444; display:block; margin:0 auto; background:black;"></canvas>
+    <script>
+      const WS_URL = 'ws://localhost:9001';
+      const canvas = document.getElementById('stream');
+      const ctx = canvas.getContext('2d');
+      let lastImg = null;
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        if (lastImg) ctx.drawImage(lastImg, 0, 0, canvas.width, canvas.height);
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      const ws = new WebSocket(WS_URL);
+      ws.binaryType = 'arraybuffer';
+      ws.onmessage = (event) => {
+        const blob = new Blob([event.data], { type: 'image/jpeg' });
+        const img = new Image();
+        img.onload = () => {
+          lastImg = img;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = URL.createObjectURL(blob);
+      };
+      ws.onopen = () => {
+        console.log('WebSocket abierto');
+        resizeCanvas();
+      };
+    </script>
+  </body>
+</html> 

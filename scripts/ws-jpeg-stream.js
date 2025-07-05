@@ -5,6 +5,14 @@ const robot = require('robotjs');
 
 const PORT = 9001;
 const FFMPEG = path.join(__dirname, '../resources/ffmpeg/ffmpeg-7.1.1-essentials_build/bin/ffmpeg.exe');
+const freerdpPath = path.join(__dirname, '../resources/freerdp/wfreerdp.exe');
+const freerdpArgs = [
+  '/v:192.168.10.52',
+  '/u:kalidus',
+  '/p:Ronaldi$1024',
+  '/size:1280x720',
+  '/cert:ignore'
+];
 
 // --- DETECCIÓN AUTOMÁTICA DEL MONITOR PRINCIPAL ---
 function getMonitorBounds(index = 0) {
@@ -24,34 +32,22 @@ const monitor = getMonitorBounds(0);
 const { X: x, Y: y, PhysicalWidth: width, PhysicalHeight: height } = monitor;
 console.log(`Usando monitor: offset_x=${x}, offset_y=${y}, video_size=${width}x${height}`);
 
-// Lanzar FreeRDP después de obtener width y height
-const freerdpPath = path.join(__dirname, '../resources/freerdp/wfreerdp.exe');
-const freerdpArgs = [
-  '/v:192.168.10.52',
-  '/u:kalidus',
-  '/p:Ronaldi$1024',
-  `/size:${width}x${height}`,
-  '/dynamic-resolution'
-];
+console.log('Lanzando FreeRDP...');
+const freerdp = spawn(freerdpPath, freerdpArgs, { detached: true, stdio: 'ignore' });
+freerdp.unref();
+console.log('FreeRDP lanzado.');
 
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`WebSocket JPEG server listening on ws://localhost:${PORT}`);
 
-const freerdp = spawn(freerdpPath, freerdpArgs, { detached: true, stdio: 'ignore' });
-freerdp.unref();
-console.log('FreeRDP lanzado con IP 192.168.10.52, usuario kalidus');
-
 wss.on('connection', (ws) => {
   console.log('Cliente WebSocket conectado');
 
-  // Lanza ffmpeg para capturar SOLO el monitor principal
+  // Lanza ffmpeg para capturar SOLO la ventana de FreeRDP
   const ffmpeg = spawn(FFMPEG, [
     '-f', 'gdigrab',
     '-framerate', '10',
-    '-offset_x', String(x),
-    '-offset_y', String(y),
-    '-video_size', `${width}x${height}`,
-    '-i', 'desktop',
+    '-i', 'title=FreeRDP: 192.168.10.52',
     '-update', '1',
     '-q:v', '5',
     '-f', 'image2pipe',
