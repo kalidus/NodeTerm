@@ -32,19 +32,32 @@ const monitor = getMonitorBounds(0);
 const { X: x, Y: y, PhysicalWidth: width, PhysicalHeight: height } = monitor;
 console.log(`Usando monitor: offset_x=${x}, offset_y=${y}, video_size=${width}x${height}`);
 
-console.log('Lanzando FreeRDP...');
-const freerdp = spawn(freerdpPath, freerdpArgs, { detached: true, stdio: 'ignore' });
-freerdp.unref();
-console.log('FreeRDP lanzado.');
+// Al iniciar, matar cualquier FreeRDP existente y lanzar uno nuevo con /smart-sizing
+try {
+  execSync('taskkill /IM wfreerdp.exe /F', { stdio: 'ignore' });
+  console.log('Procesos wfreerdp.exe terminados.');
+} catch (e) {
+  // Puede que no haya ningún proceso, ignorar error
+}
+const freerdpInitWidth = 1280;
+const freerdpInitHeight = 720;
+const cmd = 'cmd.exe';
+const args = ['/c', `resources\\freerdp\\wfreerdp.exe /v:192.168.10.52 /u:kalidus /p:Ronaldi$1024 /size:${freerdpInitWidth}x${freerdpInitHeight} /smart-sizing /cert:ignore`];
+console.log('Lanzando FreeRDP con CMD:', args[1]);
+spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref();
 
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`WebSocket JPEG server listening on ws://localhost:${PORT}`);
 
-wss.on('connection', (ws) => {
-  console.log('Cliente WebSocket conectado');
+let lastResizeWidth = 0;
+let lastResizeHeight = 0;
+let ffmpegProcess = null;
 
-  // Lanza ffmpeg para capturar SOLO la ventana de FreeRDP
-  const ffmpeg = spawn(FFMPEG, [
+function launchFFmpeg(ws) {
+  if (ffmpegProcess) {
+    ffmpegProcess.kill('SIGKILL');
+  }
+  ffmpegProcess = spawn(FFMPEG, [
     '-f', 'gdigrab',
     '-framerate', '10',
     '-i', 'title=FreeRDP: 192.168.10.52',
@@ -54,12 +67,9 @@ wss.on('connection', (ws) => {
     '-vcodec', 'mjpeg',
     '-'
   ]);
-
   let buffer = Buffer.alloc(0);
-
-  ffmpeg.stdout.on('data', (data) => {
+  ffmpegProcess.stdout.on('data', (data) => {
     buffer = Buffer.concat([buffer, data]);
-    // Buscar SOI y EOI de JPEG
     let start, end;
     while ((start = buffer.indexOf(Buffer.from([0xFF, 0xD8]))) !== -1 && (end = buffer.indexOf(Buffer.from([0xFF, 0xD9]), start)) !== -1) {
       const jpeg = buffer.slice(start, end + 2);
@@ -67,16 +77,20 @@ wss.on('connection', (ws) => {
       buffer = buffer.slice(end + 2);
     }
   });
-
-  ffmpeg.stderr.on('data', d => process.stdout.write('[ffmpeg] ' + d.toString()));
-  ffmpeg.on('exit', (code, signal) => {
+  ffmpegProcess.stderr.on('data', d => process.stdout.write('[ffmpeg] ' + d.toString()));
+  ffmpegProcess.on('exit', (code, signal) => {
     console.log(`ffmpeg terminó con código ${code}, señal ${signal}`);
     ws.close();
   });
   ws.on('close', () => {
-    ffmpeg.kill('SIGKILL');
+    ffmpegProcess.kill('SIGKILL');
     console.log('Cliente WebSocket desconectado, ffmpeg terminado');
   });
+}
+
+wss.on('connection', (ws) => {
+  console.log('Cliente WebSocket conectado');
+  launchFFmpeg(ws);
 
   // --- CONTROL REMOTO: mouse/teclado ---
   ws.on('message', (msg) => {
@@ -117,6 +131,14 @@ wss.on('connection', (ws) => {
       } else if (data.action === 'tap') {
         console.log(`[CONTROL] Key tap (${data.key})`);
         robot.keyTap(data.key);
+      }
+    } else if (data.type === 'resize') {
+      if (data.width !== lastResizeWidth || data.height !== lastResizeHeight) {
+        lastResizeWidth = data.width;
+        lastResizeHeight = data.height;
+        console.log(`[RESIZE] Redimensionando FreeRDP a ${data.width}x${data.height}`);
+        spawn('node', ['scripts/resize-freerdp.js', 'FreeRDP: 192.168.10.52', data.width, data.height], { stdio: 'inherit' });
+        setTimeout(() => launchFFmpeg(ws), 500); // Espera a que la ventana se redimensione
       }
     }
   });
