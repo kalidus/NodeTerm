@@ -916,18 +916,113 @@ html, body, #root {
 
 /* El gutter del Splitter ahora es temático, ver themeManager.js */
 
-/* Centrado vertical para el contenido de los paneles de configuración */
-.p-tabview .p-tabview-panels {
+/* Centrado vertical SOLO para el contenido de los paneles de configuración */
+.settings-dialog-tabview .p-tabview-panels {
   height: 50vh !important;
   min-height: 300px !important;
   max-height: 60vh !important;
   overflow-y: auto !important;
 }
-.p-tabview .p-tabview-panel {
+.settings-dialog-tabview .p-tabview-panel {
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
   align-items: center !important;
   min-height: 40vh !important;
   width: 100% !important;
+}
+
+.theme-preview {
+  padding: 12px;
+  border: 1px solid var(--ui-content-border);
+  border-radius: 6px;
+  background: var(--ui-content-bg);
+  margin-top: 10px;
+  width: 100%;
+  max-width: 600px;
+}
+.theme-preview-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--ui-dialog-text);
+  margin-bottom: 8px;
+}
+.theme-preview-layout {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.theme-preview-sidebar {
+  width: 60px;
+  height: 40px;
+  background: var(--ui-sidebar-bg);
+  border: 1px solid var(--ui-sidebar-border);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--ui-sidebar-text);
+}
+.theme-preview-main {
+  flex: 1;
+}
+.theme-preview-menubar {
+  height: 16px;
+  background: var(--ui-menubar-bg);
+  border: 1px solid var(--ui-menubar-border);
+  border-radius: 2px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
+  font-size: 8px;
+  color: var(--ui-menubar-text);
+}
+.theme-preview-tabs {
+  height: 16px;
+  background: var(--ui-tab-bg);
+  border: 1px solid var(--ui-tab-border);
+  border-radius: 2px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 4px;
+}
+.theme-preview-tab-active {
+  background: var(--ui-tab-active-bg);
+  color: var(--ui-tab-active-text);
+  padding: 1px 4px;
+  font-size: 8px;
+  border-radius: 2px;
+}
+.theme-preview-tab {
+  background: var(--ui-tab-bg);
+  color: var(--ui-tab-text);
+  padding: 1px 4px;
+  font-size: 8px;
+  border-radius: 2px;
+}
+.theme-preview-content {
+  height: 20px;
+  background: var(--ui-content-bg);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
+  font-size: 8px;
+  color: var(--ui-dialog-text);
+}
+.theme-preview-statusbar {
+  height: 12px;
+  background: var(--ui-statusbar-bg);
+  border: 1px solid var(--ui-statusbar-border);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
+  font-size: 7px;
+  color: var(--ui-statusbar-text);
 }

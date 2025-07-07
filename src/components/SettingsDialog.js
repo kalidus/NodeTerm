@@ -128,7 +128,7 @@ const SettingsDialog = ({
         </div>
       }
       visible={visible}
-      style={{ width: '600px', height: '70vh' }}
+      style={{ width: '800px', height: '80vh' }}
       onHide={onHide}
       modal
       maximizable
@@ -146,6 +146,7 @@ const SettingsDialog = ({
       <TabView 
         activeIndex={activeIndex} 
         onTabChange={(e) => setActiveIndex(e.index)}
+        className="settings-dialog-tabview"
       >
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
           <div style={{
