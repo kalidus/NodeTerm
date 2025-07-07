@@ -994,6 +994,85 @@ html, body, #root {
   font-size: 8px;
   color: var(--ui-menubar-text);
 }
+
+/* Estilos específicos para el diálogo de configuración */
+.p-dialog.settings-dialog {
+  background: var(--ui-content-bg) !important;
+}
+
+.p-dialog.settings-dialog .p-dialog-header {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border-bottom: 1px solid var(--ui-content-border) !important;
+}
+
+.p-dialog.settings-dialog .p-dialog-content {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-dialog.settings-dialog .p-dialog-footer {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border-top: 1px solid var(--ui-content-border) !important;
+}
+
+.p-dialog-mask {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Estilos específicos para TODOS los diálogos */
+.p-dialog {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+}
+
+.p-dialog .p-dialog-header {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+.p-dialog .p-dialog-content {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-dialog .p-dialog-footer {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border-top: 1px solid var(--ui-dialog-border) !important;
+}
+
+/* TabView dentro de diálogos */
+.p-dialog .p-tabview {
+  background: var(--ui-dialog-bg) !important;
+}
+
+.p-dialog .p-tabview .p-tabview-nav {
+  background: var(--ui-dialog-bg) !important;
+}
+
+.p-dialog .p-tabview .p-tabview-panels {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-dialog .p-tabview .p-tabview-panel {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-dialog .p-tabview-nav-link {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-dialog .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+}
 .theme-preview-tabs {
   height: 16px;
   background: var(--ui-tab-bg);
