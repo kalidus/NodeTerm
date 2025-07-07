@@ -12,7 +12,6 @@ import { Menu } from 'primereact/menu';
 import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
-import AboutDialog from './AboutDialog';
 import Sidebar from './Sidebar';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
@@ -69,7 +68,6 @@ const App = () => {
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
 
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
-  const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
@@ -1613,8 +1611,7 @@ const App = () => {
             setShowSSHDialog={setShowSSHDialog}
             openNewFolderDialog={openNewFolderDialog}
             setShowCreateGroupDialog={setShowCreateGroupDialog}
-            setShowAboutDialog={setShowAboutDialog}
-            setShowConfigDialog={setShowSettingsDialog}
+            setShowSettingsDialog={setShowSettingsDialog}
             onTreeAreaContextMenu={onTreeAreaContextMenu}
             onDragDrop={onDragDrop}
             setDraggedNodeKey={setDraggedNodeKey}
@@ -2326,11 +2323,6 @@ const App = () => {
         </div>
       </Dialog>
 
-      <AboutDialog
-        visible={showAboutDialog}
-        onHide={() => setShowAboutDialog(false)}
-      />
-      
       <SettingsDialog
         visible={showSettingsDialog}
         onHide={() => setShowSettingsDialog(false)}

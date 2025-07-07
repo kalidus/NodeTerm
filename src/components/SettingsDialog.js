@@ -287,17 +287,18 @@ const SettingsDialog = ({
             minHeight: '50vh',
             width: '100%'
           }}>
-            <div style={{ marginBottom: '2rem' }}>
+            {/* Logo o Icono de la App */}
+            <div style={{ marginBottom: '1rem' }}>
               <i 
-                className="pi pi-cog" 
+                className="pi pi-desktop" 
                 style={{ 
-                  fontSize: '3rem', 
+                  fontSize: '4rem', 
                   color: 'var(--primary-color)',
                   background: 'var(--surface-100)',
                   padding: '1rem',
                   borderRadius: '50%',
-                  width: '5rem',
-                  height: '5rem',
+                  width: '6rem',
+                  height: '6rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -306,51 +307,103 @@ const SettingsDialog = ({
               ></i>
             </div>
 
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-              Sistema de Configuración
-            </h3>
+            {/* Información Principal */}
+            <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
+              NodeTerm
+            </h2>
+            <p style={{ 
+              margin: '0 0 1rem 0', 
+              color: 'var(--text-color-secondary)',
+              fontSize: '0.9rem'
+            }}>
+              Terminal SSH multiplataforma con gestión avanzada de pestañas
+            </p>
 
-            <div style={{ textAlign: 'left', marginTop: '2rem' }}>
+            {/* Versión Principal */}
+            <div style={{ 
+              background: 'var(--primary-color)', 
+              color: 'white', 
+              padding: '0.5rem 1rem', 
+              borderRadius: '20px', 
+              display: 'inline-block',
+              fontWeight: 'bold',
+              fontSize: '1.1rem',
+              marginBottom: '1.5rem'
+            }}>
+              {/* Puedes reemplazar esto por la versión real si la tienes en props o contexto */}
+              v1.3.0
+            </div>
+
+            <Divider />
+
+            {/* Información Técnica */}
+            <div style={{ textAlign: 'left', marginTop: '1rem' }}>
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                <i className="pi pi-check-circle" style={{ marginRight: '0.5rem' }}></i>
-                Características de Personalización
+                <i className="pi pi-cog" style={{ marginRight: '0.5rem' }}></i>
+                Información Técnica
               </h4>
-              
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-palette" style={{ color: 'var(--primary-color)', marginRight: '0.5rem' }}></i>
-                  <strong>Temas de Interfaz:</strong> 6 temas predefinidos (Light, Dark, Dracula, Nord, Solarized)
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-desktop" style={{ color: 'var(--primary-color)', marginRight: '0.5rem' }}></i>
-                  <strong>Temas de Terminal:</strong> 12 esquemas de color profesionales
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-font" style={{ color: 'var(--primary-color)', marginRight: '0.5rem' }}></i>
-                  <strong>Fuentes:</strong> 9 fuentes monoespaciadas optimizadas para terminal
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <i className="pi pi-save" style={{ color: 'var(--primary-color)', marginRight: '0.5rem' }}></i>
-                  <strong>Persistencia:</strong> Configuración guardada automáticamente en localStorage
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.9rem' }}>
+                <div>
+                  <strong>Electron:</strong>
+                  <br />
+                  <span style={{ color: 'var(--text-color-secondary)' }}>v25.x</span>
                 </div>
                 <div>
-                  <i className="pi pi-eye" style={{ color: 'var(--primary-color)', marginRight: '0.5rem' }}></i>
-                  <strong>Vista Previa:</strong> Cambios aplicados en tiempo real
+                  <strong>Node.js:</strong>
+                  <br />
+                  <span style={{ color: 'var(--text-color-secondary)' }}>v20.x</span>
+                </div>
+                <div>
+                  <strong>Chromium:</strong>
+                  <br />
+                  <span style={{ color: 'var(--text-color-secondary)' }}>v114.x</span>
+                </div>
+                <div>
+                  <strong>Compilación:</strong>
+                  <br />
+                  <span style={{ color: 'var(--text-color-secondary)' }}>jun 2024</span>
                 </div>
               </div>
             </div>
 
             <Divider />
 
-            <div style={{ 
-              fontSize: '0.8rem', 
-              color: 'var(--text-color-secondary)',
-              marginTop: '1rem'
-            }}>
+            {/* Funcionalidades */}
+            <div style={{ textAlign: 'left', marginTop: '1rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                <i className="pi pi-star" style={{ marginRight: '0.5rem' }}></i>
+                Características Principales
+              </h4>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
+                  Conexiones SSH múltiples con pestañas
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
+                  Explorador de archivos remoto integrado
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
+                  Drag & drop para organización de pestañas
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
+                  Iconos automáticos por distribución Linux
+                </div>
+                <div>
+                  <i className="pi pi-check" style={{ color: 'var(--green-500)', marginRight: '0.5rem' }}></i>
+                  Sistema de overflow inteligente para pestañas
+                </div>
+              </div>
+            </div>
+
+            <Divider />
+
+            {/* Footer */}
+            <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
               <p style={{ margin: '0' }}>
-                Los ajustes se aplican inmediatamente y se guardan automáticamente.
-                <br />
-                Los temas de interfaz no afectan el contenido del terminal.
+                © 2025 NodeTerm - Desarrollado con ❤️ usando Electron y React
               </p>
             </div>
           </div>
