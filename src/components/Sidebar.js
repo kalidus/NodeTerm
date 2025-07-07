@@ -198,7 +198,6 @@ const Sidebar = ({
           
           <SidebarFooter 
             onConfigClick={() => setShowConfigDialog(true)} 
-            onAboutClick={() => setShowAboutDialog(true)}
             allExpanded={allExpanded}
             toggleExpandAll={toggleExpandAll}
           />

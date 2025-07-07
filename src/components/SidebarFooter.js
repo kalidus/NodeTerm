@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from 'primereact/button';
 
-const SidebarFooter = ({ onConfigClick, onAboutClick, allExpanded, toggleExpandAll }) => (
+const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => (
   <div className="sidebar-footer" style={{
     display: 'flex',
     alignItems: 'center',
@@ -19,7 +19,6 @@ const SidebarFooter = ({ onConfigClick, onAboutClick, allExpanded, toggleExpandA
       onClick={toggleExpandAll}
       tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"}
     />
-    <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={onAboutClick} tooltip="Acerca de NodeTerm" />
     <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={onConfigClick} tooltip="Configuración" />
   </div>
 );
