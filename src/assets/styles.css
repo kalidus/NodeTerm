@@ -913,3 +913,5 @@ html, body, #root {
   background-color: #e3f2fd !important; /* Azul fijo para pestaña activa */
   border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
 }
+
+/* El gutter del Splitter ahora es temático, ver themeManager.js */
