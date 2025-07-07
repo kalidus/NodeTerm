@@ -915,3 +915,19 @@ html, body, #root {
 }
 
 /* El gutter del Splitter ahora es temático, ver themeManager.js */
+
+/* Centrado vertical para el contenido de los paneles de configuración */
+.p-tabview .p-tabview-panels {
+  height: 50vh !important;
+  min-height: 300px !important;
+  max-height: 60vh !important;
+  overflow-y: auto !important;
+}
+.p-tabview .p-tabview-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  min-height: 40vh !important;
+  width: 100% !important;
+}
