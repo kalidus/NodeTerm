@@ -113,6 +113,13 @@ class ThemeManager {
         background: var(--ui-sidebar-hover) !important;
       }
 
+      /* === SIDEBAR FOOTER === */
+      .sidebar-footer {
+        background: var(--ui-sidebar-bg) !important;
+        border-top: 1px solid var(--ui-sidebar-border) !important;
+        color: var(--ui-sidebar-text) !important;
+      }
+
       /* === MENU BAR STYLES === */
       .p-menubar {
         background: var(--ui-menubar-bg) !important;
@@ -318,6 +325,31 @@ class ThemeManager {
       }
       .p-splitter-gutter:hover {
         background: var(--ui-sidebar-hover) !important;
+      }
+
+      /* === DIVIDER STYLES === */
+      .p-divider {
+        border-color: var(--ui-sidebar-border) !important;
+      }
+      
+      .p-divider.p-divider-horizontal:before {
+        border-top-color: var(--ui-sidebar-border) !important;
+      }
+      
+      /* === TREE CONTAINER === */
+      .tree-container {
+        background: var(--ui-sidebar-bg) !important;
+      }
+      
+      /* === TREE FILTER === */
+      .sidebar-tree .p-tree-filter-container {
+        background: var(--ui-sidebar-bg) !important;
+      }
+      
+      .sidebar-tree .p-tree-filter-container .p-inputtext {
+        background: var(--ui-content-bg) !important;
+        color: var(--ui-dialog-text) !important;
+        border: 1px solid var(--ui-sidebar-border) !important;
       }
     `;
 
