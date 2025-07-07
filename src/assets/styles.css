@@ -1,8 +1,14 @@
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow: hidden;
+html, body, #root {
+  height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  width: 100vw !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 #root {
@@ -110,6 +116,8 @@ html, body {
 .p-splitter-panel {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 /* Tamaño mínimo para el panel lateral */
