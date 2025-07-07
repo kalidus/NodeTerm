@@ -25,20 +25,20 @@ const Sidebar = ({
   nodeTemplate
 }) => {
   return (
-    <div style={{
-      transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
-      width: sidebarCollapsed ? 44 : undefined,
-      minWidth: sidebarCollapsed ? 44 : 240,
-      maxWidth: sidebarCollapsed ? 44 : undefined,
-      background: '#fff',
-      borderRight: '1px solid #e0e0e0',
-      padding: 0,
-      height: '100vh',
-      boxSizing: 'border-box',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <div 
+      className="sidebar-container"
+      style={{
+        transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
+        width: sidebarCollapsed ? 44 : undefined,
+        minWidth: sidebarCollapsed ? 44 : 240,
+        maxWidth: sidebarCollapsed ? 44 : undefined,
+        padding: 0,
+        height: '100vh',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
       {sidebarCollapsed ? (
         // Iconos alineados arriba, más juntos y barra más fina
         <div style={{ 
