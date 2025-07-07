@@ -20,6 +20,9 @@ import { themes } from '../themes';
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import { getVersionInfo } from '../version-info';
+import { themeManager } from '../utils/themeManager';
+import ThemeSelector from './ThemeSelector';
+import SettingsDialog from './SettingsDialog';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -64,9 +67,10 @@ const App = () => {
   const [editSSHUser, setEditSSHUser] = useState('');
   const [editSSHPassword, setEditSSHPassword] = useState('');
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
-  const [showConfigDialog, setShowConfigDialog] = useState(false);
+
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [sshTabs, setSshTabs] = useState([]);
@@ -617,6 +621,9 @@ const App = () => {
     } else {
       setNodes(getDefaultNodes());
     }
+    
+    // Cargar tema UI guardado
+    themeManager.loadSavedTheme();
   }, []);
 
   // Save nodes to localStorage whenever they change
@@ -1445,6 +1452,16 @@ const App = () => {
     handleResize();
   }, [activeTabIndex, sshTabs]); // Se ejecuta cuando cambia la pestaña activa o la lista de pestañas
 
+  // useEffect para redimensionar terminal cuando se colapsa/expande el sidebar
+  useEffect(() => {
+    // Necesitamos un pequeño delay para que el CSS termine la transición
+    const timeoutId = setTimeout(() => {
+      handleResize();
+    }, 250); // Coincide con la duración de la transición CSS (0.2s + buffer)
+    
+    return () => clearTimeout(timeoutId);
+  }, [sidebarCollapsed]); // Se ejecuta cuando cambia el estado del sidebar
+
   const handleResize = () => {
     const activeTabKey = sshTabs[activeTabIndex]?.key;
     if (activeTabKey && terminalRefs.current[activeTabKey]) {
@@ -1561,7 +1578,7 @@ const App = () => {
   }, [tabGroups]);
 
   return (
-    <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
+    <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
       <ConfirmDialog />
       <Splitter 
@@ -1574,7 +1591,15 @@ const App = () => {
           }
         }}
       >
-        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 600}>
+        <SplitterPanel 
+          size={sidebarCollapsed ? 4 : 15} 
+          minSize={sidebarCollapsed ? 44 : 10} 
+          maxSize={sidebarCollapsed ? 44 : 600}
+          style={sidebarCollapsed 
+            ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'all 0.2s' }
+            : { minWidth: 240, maxWidth: 400, padding: 0, height: '100%', transition: 'all 0.2s' }
+          }
+        >
           <Sidebar
             sidebarCollapsed={sidebarCollapsed}
             setSidebarCollapsed={setSidebarCollapsed}
@@ -1589,16 +1614,16 @@ const App = () => {
             openNewFolderDialog={openNewFolderDialog}
             setShowCreateGroupDialog={setShowCreateGroupDialog}
             setShowAboutDialog={setShowAboutDialog}
-            setShowConfigDialog={setShowConfigDialog}
+            setShowConfigDialog={setShowSettingsDialog}
             onTreeAreaContextMenu={onTreeAreaContextMenu}
             onDragDrop={onDragDrop}
             setDraggedNodeKey={setDraggedNodeKey}
             nodeTemplate={nodeTemplate}
           />
         </SplitterPanel>
-        <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
           {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
-            <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
               {/* Barra de grupos como TabView scrollable */}
               {tabGroups.length > 0 && (
                 <TabView
@@ -2156,7 +2181,7 @@ const App = () => {
               </div>
             </div>
           ) : (
-            <Card title="Contenido Principal" style={{ flex: 1 }}>
+            <Card title="Contenido Principal" style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}>
               <p className="m-0">
                 Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
               </p>
@@ -2279,34 +2304,7 @@ const App = () => {
         </div>
       </Dialog>
 
-      <Dialog
-        header="Configuración de la aplicación"
-        visible={showConfigDialog}
-        style={{ width: '25rem' }}
-        onHide={() => setShowConfigDialog(false)}
-        footer={
-          <div>
-            <Button label="Cerrar" icon="pi pi-times" onClick={() => setShowConfigDialog(false)} className="p-button-text" />
-          </div>
-        }
-      >
-        <div className="card p-fluid">
-            <h5>Configuración del Terminal</h5>
 
-            <div className="field">
-                <label htmlFor="font-family">Fuente</label>
-                <Dropdown id="font-family" value={fontFamily} options={availableFonts} onChange={(e) => setFontFamily(e.value)} placeholder="Selecciona una fuente" />
-            </div>
-            <div className="field">
-                <label htmlFor="font-size">Tamaño de Fuente</label>
-                <InputNumber id="font-size" value={fontSize} onValueChange={(e) => setFontSize(e.value)} showButtons />
-            </div>
-            <div className="field">
-                <label htmlFor="terminal-theme">Tema</label>
-                <Dropdown id="terminal-theme" value={terminalTheme.name} options={availableThemes} onChange={(e) => setTerminalTheme(themes && themes[e.value] ? themes[e.value] : {})} placeholder="Selecciona un tema" />
-            </div>
-        </div>
-      </Dialog>
 
       <Dialog
         header="Editar carpeta"
@@ -2331,6 +2329,18 @@ const App = () => {
       <AboutDialog
         visible={showAboutDialog}
         onHide={() => setShowAboutDialog(false)}
+      />
+      
+      <SettingsDialog
+        visible={showSettingsDialog}
+        onHide={() => setShowSettingsDialog(false)}
+        fontFamily={fontFamily}
+        setFontFamily={setFontFamily}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        terminalTheme={terminalTheme}
+        setTerminalTheme={setTerminalTheme}
+        availableFonts={availableFonts}
       />
 
       {/* Diálogo para crear nuevo grupo */}
