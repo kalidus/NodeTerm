@@ -1,0 +1,110 @@
+/* Archivo de parches CSS para asegurar que los temas se apliquen correctamente */
+
+/* Forzar estilos de sidebar con máxima prioridad */
+.sidebar-container {
+  background: var(--ui-sidebar-bg) !important;
+  border-right: 1px solid var(--ui-sidebar-border) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Contenedor del árbol */
+.tree-container {
+  background: var(--ui-sidebar-bg) !important;
+}
+
+/* Árbol de la sidebar */
+.sidebar-tree {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Nodos del árbol */
+.sidebar-tree .p-tree {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+.sidebar-tree .p-treenode {
+  background: var(--ui-sidebar-bg) !important;
+}
+
+.sidebar-tree .p-treenode-content {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+.sidebar-tree .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+.sidebar-tree .p-treenode-content.p-highlight {
+  background: var(--ui-sidebar-selected) !important;
+}
+
+/* Botones de acción de la sidebar */
+.sidebar-action-button {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.sidebar-action-button:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
+/* Footer de la sidebar */
+.sidebar-footer {
+  background: var(--ui-sidebar-bg) !important;
+  border-top: 1px solid var(--ui-sidebar-border) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Divider en la sidebar */
+.sidebar-container .p-divider {
+  border-color: var(--ui-sidebar-border) !important;
+}
+
+.sidebar-container .p-divider.p-divider-horizontal:before {
+  border-top-color: var(--ui-sidebar-border) !important;
+}
+
+/* Filtro del árbol */
+.sidebar-tree .p-tree-filter-container {
+  background: var(--ui-sidebar-bg) !important;
+}
+
+.sidebar-tree .p-tree-filter-container .p-inputtext {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+}
+
+/* Iconos específicos */
+.sidebar-tree .p-treenode-icon {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.sidebar-tree .p-tree-toggler {
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Label de los nodos */
+.sidebar-tree .p-treenode-label {
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Connection indicators */
+.connection-indicator {
+  margin-left: 8px;
+  font-size: 8px;
+}
+
+.connection-indicator.connected {
+  color: #22c55e !important;
+}
+
+.connection-indicator.error {
+  color: #ef4444 !important;
+}
+
+.connection-indicator.disconnected {
+  color: #6b7280 !important;
+}
