@@ -311,43 +311,7 @@ const ThemeSelector = ({ showPreview = false }) => {
       </div>
 
       {/* Información adicional */}
-      <div style={{ 
-        marginTop: '30px', 
-        padding: '15px',
-        background: 'var(--surface-100)',
-        borderRadius: '8px',
-        border: '1px solid var(--surface-300)'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          marginBottom: '10px'
-        }}>
-          <i className="pi pi-info-circle" style={{ color: 'var(--primary-color)' }}></i>
-          <span style={{ 
-            fontWeight: 'bold',
-            color: 'var(--text-color)'
-          }}>
-            Información sobre temas
-          </span>
-        </div>
-        <div style={{ 
-          fontSize: '14px', 
-          color: 'var(--text-color-secondary)',
-          lineHeight: '1.5'
-        }}>
-          <p style={{ margin: '0 0 8px 0' }}>
-            • <strong>Tema activo:</strong> {currentTheme}
-          </p>
-          <p style={{ margin: '0 0 8px 0' }}>
-            • <strong>Temas disponibles:</strong> {Object.keys(uiThemes).length} temas predefinidos
-          </p>
-          <p style={{ margin: '0' }}>
-            • <strong>Persistencia:</strong> El tema seleccionado se guarda automáticamente y se aplicará en futuras sesiones
-          </p>
-        </div>
-      </div>
+      {/* Bloque eliminado: Información sobre temas */}
     </div>
   );
 };
