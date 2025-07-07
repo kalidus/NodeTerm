@@ -17,8 +17,7 @@ const Sidebar = ({
   setShowSSHDialog,
   openNewFolderDialog,
   setShowCreateGroupDialog,
-  setShowAboutDialog,
-  setShowConfigDialog,
+  setShowSettingsDialog,
   onTreeAreaContextMenu,
   onDragDrop,
   setDraggedNodeKey,
@@ -107,7 +106,7 @@ const Sidebar = ({
             <Button 
               icon="pi pi-info-circle" 
               className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowAboutDialog(true)} 
+              onClick={() => setShowSettingsDialog(true)} 
               tooltip="Acerca de NodeTerm" 
               tooltipOptions={{ position: 'right' }} 
               style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
@@ -115,7 +114,7 @@ const Sidebar = ({
             <Button 
               icon="pi pi-cog" 
               className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowConfigDialog(true)} 
+              onClick={() => setShowSettingsDialog(true)} 
               tooltip="Configuración" 
               tooltipOptions={{ position: 'right' }} 
               style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18, marginTop: 2 }} 
@@ -197,7 +196,7 @@ const Sidebar = ({
           </div>
           
           <SidebarFooter 
-            onConfigClick={() => setShowConfigDialog(true)} 
+            onConfigClick={() => setShowSettingsDialog(true)} 
             allExpanded={allExpanded}
             toggleExpandAll={toggleExpandAll}
           />
