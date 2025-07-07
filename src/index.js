@@ -10,6 +10,7 @@ import "primeflex/primeflex.css";
 
 // Custom styles
 import './assets/styles.css';
+import './assets/sidebar-theme-fixes.css';
 
 ReactDOM.render(
   <React.StrictMode>
