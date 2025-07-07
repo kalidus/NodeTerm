@@ -150,13 +150,6 @@ const Sidebar = ({
                 tooltipOptions={{ position: 'bottom' }} 
               />
               <Button 
-                icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={toggleExpandAll} 
-                tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} 
-                tooltipOptions={{ position: 'bottom' }} 
-              />
-              <Button 
                 icon="pi pi-th-large" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={() => setShowCreateGroupDialog(true)} 
@@ -206,6 +199,8 @@ const Sidebar = ({
           <SidebarFooter 
             onConfigClick={() => setShowConfigDialog(true)} 
             onAboutClick={() => setShowAboutDialog(true)}
+            allExpanded={allExpanded}
+            toggleExpandAll={toggleExpandAll}
           />
         </>
       )}
