@@ -128,12 +128,29 @@ const SettingsDialog = ({
         </div>
       }
       visible={visible}
-      style={{ width: '800px', height: '80vh' }}
+      className="settings-dialog"
+      style={{ 
+        width: '800px', 
+        height: '80vh'
+      }}
+      contentStyle={{
+        background: 'var(--ui-dialog-bg)',
+        color: 'var(--ui-dialog-text)'
+      }}
+      headerStyle={{
+        background: 'var(--ui-dialog-bg)',
+        color: 'var(--ui-dialog-text)',
+        borderBottom: '1px solid var(--ui-dialog-border)'
+      }}
       onHide={onHide}
       modal
       maximizable
       footer={
-        <div>
+        <div style={{
+          background: 'var(--ui-dialog-bg)',
+          color: 'var(--ui-dialog-text)',
+          borderTop: '1px solid var(--ui-dialog-border)'
+        }}>
           <Button 
             label="Cerrar" 
             icon="pi pi-times" 
