@@ -354,11 +354,13 @@ html, body, #root {
   overflow: hidden;
 }
 
-.file-explorer-card {
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
+.file-explorer-card,
+.file-explorer-card .p-card,
+.file-explorer-card .p-card-body,
+.file-explorer-card .p-card-content {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
 }
 
 .file-explorer-card .p-card-body {
@@ -382,15 +384,24 @@ html, body, #root {
 }
 
 .file-explorer-toolbar .p-toolbar {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
   padding: 0.75rem;
-  border: 1px solid var(--surface-300);
   border-radius: 6px;
-  background: var(--surface-0);
 }
 
 .file-explorer-breadcrumb {
   margin-bottom: 0.75rem;
   flex-shrink: 0;
+}
+
+.file-explorer-breadcrumb .p-breadcrumb {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
 }
 
 /* Contenedor con scroll manual para la tabla de archivos */
@@ -400,7 +411,9 @@ html, body, #root {
   max-height: calc(100vh - 280px);
   overflow-y: auto;
   overflow-x: hidden;
-  border: 1px solid var(--surface-300);
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-content-text) !important;
+  border: 1px solid var(--ui-content-border) !important;
   border-radius: 6px;
 }
 
@@ -432,31 +445,33 @@ html, body, #root {
 }
 
 .directory-icon {
-  color: #007ad9;
+  color: var(--ui-sidebar-folder, #007ad9) !important;
 }
 
 .file-type-icon {
-  color: #6c757d;
+  color: var(--ui-sidebar-text) !important;
 }
 
 .symlink-icon {
-  color: #17a2b8;
+  color: var(--ui-sidebar-text) !important;
 }
 
 .symlink-name {
   font-style: italic;
-  color: #17a2b8;
+  color: var(--ui-sidebar-text) !important;
 }
 
 /* Estilos para hover en las filas de archivos */
 .file-explorer-table .p-datatable tbody tr:hover {
-  background-color: var(--surface-100) !important;
+  background-color: var(--ui-sidebar-hover) !important;
+  color: var(--ui-sidebar-text) !important;
   cursor: pointer;
 }
 
 /* Estilos para filas seleccionadas */
 .file-explorer-table .p-datatable tbody tr.p-highlight {
-  background-color: var(--primary-50) !important;
+  background-color: var(--ui-sidebar-selected) !important;
+  color: var(--ui-sidebar-text) !important;
 }
 
 /* Estilos para el breadcrumb */
@@ -1025,4 +1040,48 @@ html, body, #root {
   padding-left: 4px;
   font-size: 7px;
   color: var(--ui-statusbar-text);
+}
+
+.file-explorer-table-container,
+.file-explorer-table-container .p-datatable,
+.file-explorer-table-container .p-datatable-wrapper,
+.file-explorer-table-container .p-datatable-header,
+.file-explorer-table-container .p-datatable-thead > tr > th,
+.file-explorer-table-container .p-datatable-tbody > tr > td {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-content-text) !important;
+  border-color: var(--ui-content-border) !important;
+}
+
+.file-explorer-table-container .p-datatable-header {
+  border-bottom: 1px solid var(--ui-content-border) !important;
+}
+
+.file-explorer-table-container .p-datatable-thead > tr > th {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-content-text) !important;
+  border-bottom: 1px solid var(--ui-content-border) !important;
+}
+
+.file-explorer-table-container .p-datatable-tbody > tr > td {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-content-text) !important;
+}
+
+.file-explorer-toolbar .p-toolbar {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+}
+
+.file-explorer-breadcrumb .p-breadcrumb {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+}
+
+.file-explorer-card *,
+.file-explorer-table-container * {
+  background: inherit !important;
+  background-color: inherit !important;
 }
