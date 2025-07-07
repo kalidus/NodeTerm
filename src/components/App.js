@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
-import { Tree } from 'primereact/tree';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
@@ -8,20 +7,18 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { Dropdown } from 'primereact/dropdown';
-import { Sidebar } from 'primereact/sidebar';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
 import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import AboutDialog from './AboutDialog';
-import { Divider } from 'primereact/divider';
+import Sidebar from './Sidebar';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
 // Importar iconos para distribuciones
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
-import SidebarFooter from './SidebarFooter';
 import { getVersionInfo } from '../version-info';
 
 // Componente para mostrar icono según distribución
@@ -1577,88 +1574,27 @@ const App = () => {
           }
         }}
       >
-        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 600} style={{
-          transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
-          width: sidebarCollapsed ? 44 : undefined,
-          minWidth: sidebarCollapsed ? 44 : 240,
-          maxWidth: sidebarCollapsed ? 44 : undefined,
-          background: '#fff',
-          borderRight: '1px solid #e0e0e0',
-          padding: 0,
-          height: '100vh',
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          {sidebarCollapsed ? (
-            // Iconos alineados arriba, más juntos y barra más fina
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0.25rem', width: '100%', paddingTop: 2, position: 'relative' }}>
-              <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              <Button icon="pi pi-th-large" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowCreateGroupDialog(true)} tooltip="Crear grupo de pestañas" tooltipOptions={{ position: 'right' }} style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-              {/* Botones fijos abajo */}
-              <div style={{ position: 'absolute', bottom: 8, left: 0, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <Button icon="pi pi-info-circle" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowAboutDialog(true)} tooltip="Acerca de NodeTerm" tooltipOptions={{ position: 'right' }} style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} />
-                <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowConfigDialog(true)} tooltip="Configuración" tooltipOptions={{ position: 'right' }} style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18, marginTop: 2 }} />
-              </div>
-            </div>
-          ) : (
-            // Sidebar completa
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
-                <Button icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setSidebarCollapsed(v => !v)} tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} tooltipOptions={{ position: 'bottom' }} style={{ marginRight: 8 }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-                  <Button icon="pi pi-server" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowSSHDialog(true)} tooltip="Nueva conexión SSH" tooltipOptions={{ position: 'bottom' }} />
-                  <Button icon="pi pi-plus" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => openNewFolderDialog(null)} tooltip="Crear carpeta" tooltipOptions={{ position: 'bottom' }} />
-                  <Button icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} className="p-button-rounded p-button-text sidebar-action-button" onClick={toggleExpandAll} tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} tooltipOptions={{ position: 'bottom' }} />
-                  <Button icon="pi pi-th-large" className="p-button-rounded p-button-text sidebar-action-button" onClick={() => setShowCreateGroupDialog(true)} tooltip="Crear grupo de pestañas" tooltipOptions={{ position: 'bottom' }} />
-                </div>
-              </div>
-              <Divider className="my-2" />
-              <div 
-                style={{ 
-                  flex: 1, 
-                  minHeight: 0, 
-                  overflowY: 'auto', 
-                  overflowX: 'hidden',
-                  position: 'relative' 
-                }}
-                onContextMenu={onTreeAreaContextMenu}
-                className="tree-container"
-              >
-                <Tree
-                  value={nodes}
-                  selectionMode="single"
-                  selectionKeys={selectedNodeKey}
-                  onSelectionChange={e => {
-                    setSelectedNodeKey(e.value);
-                  }}
-                  dragdropScope="files"
-                  onDragDrop={onDragDrop}
-                  onDragStart={e => {
-                    if (e.node) {
-                      setDraggedNodeKey(e.node.key);
-                    }
-                  }}
-                  onDragEnd={() => {}}
-                  className="sidebar-tree"
-                  nodeTemplate={nodeTemplate}
-                  filter
-                  filterMode="strict"
-                  filterPlaceholder="Buscar..."
-                  expandedKeys={expandedKeys}
-                  onToggle={e => setExpandedKeys(e.value)}
-                />
-              </div>
-              <SidebarFooter 
-                onConfigClick={() => setShowConfigDialog(true)} 
-                onAboutClick={() => setShowAboutDialog(true)}
-              />
-            </>
-          )}
+        <SplitterPanel size={sidebarCollapsed ? 4 : 15} minSize={sidebarCollapsed ? 44 : 10} maxSize={sidebarCollapsed ? 44 : 600}>
+          <Sidebar
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
+            nodes={nodes}
+            selectedNodeKey={selectedNodeKey}
+            setSelectedNodeKey={setSelectedNodeKey}
+            expandedKeys={expandedKeys}
+            setExpandedKeys={setExpandedKeys}
+            allExpanded={allExpanded}
+            toggleExpandAll={toggleExpandAll}
+            setShowSSHDialog={setShowSSHDialog}
+            openNewFolderDialog={openNewFolderDialog}
+            setShowCreateGroupDialog={setShowCreateGroupDialog}
+            setShowAboutDialog={setShowAboutDialog}
+            setShowConfigDialog={setShowConfigDialog}
+            onTreeAreaContextMenu={onTreeAreaContextMenu}
+            onDragDrop={onDragDrop}
+            setDraggedNodeKey={setDraggedNodeKey}
+            nodeTemplate={nodeTemplate}
+          />
         </SplitterPanel>
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
