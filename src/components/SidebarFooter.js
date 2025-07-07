@@ -7,8 +7,8 @@ const SidebarFooter = ({ onConfigClick, onAboutClick }) => (
     alignItems: 'center',
     justifyContent: 'flex-end',
     padding: '0.5rem 1rem',
-    borderTop: '1px solid #e0e0e0',
-    background: '#fff',
+    borderTop: '1px solid var(--ui-sidebar-border)',
+    background: 'var(--ui-sidebar-bg)',
     minHeight: '48px',
     boxSizing: 'border-box',
     gap: '0.5rem'
