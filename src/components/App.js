@@ -1781,7 +1781,7 @@ const App = () => {
                             <Button
                               icon="pi pi-times"
                               className="p-button-rounded p-button-text p-button-sm ml-2"
-                              style={{ marginLeft: 8, minWidth: 18, minHeight: 18 }}
+                              style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
                               onClick={e => {
                                 e.stopPropagation();
                                 // Cierre robusto de pestaña
