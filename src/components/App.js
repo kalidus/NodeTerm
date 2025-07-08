@@ -20,6 +20,7 @@ import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa'
 import { SiDebian } from 'react-icons/si';
 import { getVersionInfo } from '../version-info';
 import { themeManager } from '../utils/themeManager';
+import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import ThemeSelector from './ThemeSelector';
 import SettingsDialog from './SettingsDialog';
 
@@ -319,10 +320,14 @@ const App = () => {
 
   // Theme configuration
   const THEME_STORAGE_KEY = 'basicapp_terminal_theme';
+  const STATUSBAR_THEME_STORAGE_KEY = 'basicapp_statusbar_theme';
   const availableThemes = themes ? Object.keys(themes) : [];
   const [terminalTheme, setTerminalTheme] = useState(() => {
       const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
       return themes && themes[savedThemeName] ? themes[savedThemeName] : {};
+  });
+  const [statusBarTheme, setStatusBarTheme] = useState(() => {
+      return localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
   });
 
   // Estado para drag & drop de pestañas
@@ -622,6 +627,9 @@ const App = () => {
     
     // Cargar tema UI guardado
     themeManager.loadSavedTheme();
+    
+    // Cargar tema de status bar guardado
+    statusBarThemeManager.loadSavedTheme();
   }, []);
 
   // Save nodes to localStorage whenever they change
@@ -645,6 +653,12 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, terminalTheme.name);
   }, [terminalTheme]);
+
+  // Auto-save status bar theme to localStorage and apply it
+  useEffect(() => {
+    localStorage.setItem(STATUSBAR_THEME_STORAGE_KEY, statusBarTheme);
+    statusBarThemeManager.applyTheme(statusBarTheme);
+  }, [statusBarTheme]);
 
   // Efecto para manejar cambios en el explorador de archivos
   useEffect(() => {
@@ -2332,6 +2346,8 @@ const App = () => {
         setFontSize={setFontSize}
         terminalTheme={terminalTheme}
         setTerminalTheme={setTerminalTheme}
+        statusBarTheme={statusBarTheme}
+        setStatusBarTheme={setStatusBarTheme}
         availableFonts={availableFonts}
       />
 
