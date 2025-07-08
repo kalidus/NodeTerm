@@ -2,7 +2,7 @@
 
 # 🚀 NodeTerm
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/kalidus/NodeTerm)
+[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](https://github.com/kalidus/NodeTerm)
 [![License](https://img.shields.io/badge/license-ISC-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-28+-purple.svg)](https://electronjs.org/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
@@ -122,9 +122,9 @@ npm run pack
 
 | Comando | Acción | Ejemplo |
 |---------|--------|---------|
-| `npm run version:patch` | 🔧 Bug fixes | `1.3.0` → `1.3.1` |
-| `npm run version:minor` | ✨ Nuevas características | `1.3.0` → `1.4.0` |
-| `npm run version:major` | 💥 Cambios importantes | `1.3.0` → `2.0.0` |
+| `npm run version:patch` | 🔧 Bug fixes | `1.3.1` → `1.3.2` |
+| `npm run version:minor` | ✨ Nuevas características | `1.3.1` → `1.4.0` |
+| `npm run version:major` | 💥 Cambios importantes | `1.3.1` → `2.0.0` |
 | `npm run version:build` | 🏗️ Compilar después de versionar | - |
 
 ---
@@ -237,7 +237,7 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.3.0** | 🎨 Configuración de temas personalizados | 🔄 Desarrollo |
+| **v1.3.1** | 🎨 Configuración de temas personalizados | 🔄 Desarrollo |
 | **v1.4.0** | 📤 Exportación/importación de configuraciones | 📋 Planificado |
 | **v1.5.0** | 🔑 Soporte para llaves SSH | 📋 Planificado |
 | **v1.6.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
@@ -246,7 +246,7 @@ NodeTerm/
 
 ## 📝 **Changelog**
 
-### **v1.3.0** *(Actual)*
+### **v1.3.1** *(Actual)*
 - ✨ Menús contextuales para explorador de sesiones
 - 🆕 Menú contextual en área vacía del árbol
 - 🐛 Corrección de confirmaciones duplicadas
@@ -341,7 +341,7 @@ Este proyecto está bajo la **Licencia ISC** - ver [LICENSE](LICENSE) para detal
 
 <div align="center">
 
-### 🚀 **NodeTerm v1.3.0**
+### 🚀 **NodeTerm v1.3.1**
 *Desarrollado con ❤️ usando tecnologías modernas*
 
 [![GitHub](https://img.shields.io/badge/GitHub-kalidus/NodeTerm-black?style=for-the-badge&logo=github)](https://github.com/kalidus/NodeTerm)
