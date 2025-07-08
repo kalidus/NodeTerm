@@ -252,6 +252,24 @@ NodeTerm/
 - 🐛 Corrección de confirmaciones duplicadas
 - 🧹 Interface más limpia sin botones inline
 
+### Cambios integrados desde 'refactor'
+
+- Add StatusBarThemeManager for dynamic theme managemen
+- Reducir tamaño de botones de cierre de pestañas
+- chore: eliminar información sobre temas en la configuración de temas globales
+- chore: guardar todos los archivos y sincronizar estado actual
+- fix: corregir apertura de configuración en Sidebar eliminando referencias a funciones obsoletas
+- refactor: integrar 'Acerca de NodeTerm' en la configuración y eliminar referencias y diálogo AboutDialog
+- refactor: mover botón de desplegar/plegar todo al menú inferior del sidebar
+- fix: el explorador de archivos respeta el tema seleccionado en toda la UI
+- Fix: Importar archivo CSS de parches para temas de sidebar en index.js
+- Feat: Crear archivo CSS de parches para temas de sidebar con alta prioridad
+- Fix: Agregar estilos CSS para sidebar footer, dividers y tree en themeManager
+- Fix: Remover background hardcodeado de Sidebar.js y agregar className para temas
+- Regenerar componente ThemeSelector.js para selección de temas de UI
+- fix(ui): el centrado vertical de paneles de configuración ya no afecta las pestañas principales (terminal)
+- fix(ui): centrado y visibilidad del contenido en paneles de configuración (SettingsDialog)
+
 ### **v1.1.0**
 - 🎉 Sistema de versionado implementado
 - 📋 Diálogo "Acerca de" con información completa
