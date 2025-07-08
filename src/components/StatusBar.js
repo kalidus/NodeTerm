@@ -80,22 +80,41 @@ const StatusBar = ({ stats }) => {
                 )}
                 {cpu !== undefined && (
                     <div className="status-bar-section cpu-section">
-                        <FontAwesomeIcon icon={faMicrochip} className="status-bar-icon" />
+                        <FontAwesomeIcon 
+                            icon={faMicrochip} 
+                            className="status-bar-icon" 
+                            style={{ color: 'var(--statusbar-cpu-color, var(--statusbar-icon-color, inherit))' }}
+                        />
                         <span>{cpu}%</span>
                         <CpuSparkline history={cpuHistory} />
                     </div>
                 )}
                 {mem && mem.total > 0 && (
                     <div className="status-bar-section">
-                        <FontAwesomeIcon icon={faMemory} className="status-bar-icon" />
+                        <FontAwesomeIcon 
+                            icon={faMemory} 
+                            className="status-bar-icon" 
+                            style={{ color: 'var(--statusbar-memory-color, var(--statusbar-icon-color, inherit))' }}
+                        />
                         <span>{formatBytes(mem.used)} / {formatBytes(mem.total)}</span>
                     </div>
                 )}
                 {network && (
                     <div className="status-bar-section network-section">
-                        <FontAwesomeIcon icon={faArrowDown} className="status-bar-icon" />
+                        <FontAwesomeIcon 
+                            icon={faArrowDown} 
+                            className="status-bar-icon" 
+                            style={{ color: 'var(--statusbar-network-down-color, var(--statusbar-icon-color, inherit))' }}
+                        />
                         <span>{formatSpeed(network.rx_speed)}</span>
-                        <FontAwesomeIcon icon={faArrowUp} className="status-bar-icon" style={{ marginLeft: '5px' }} />
+                        <FontAwesomeIcon 
+                            icon={faArrowUp} 
+                            className="status-bar-icon" 
+                            style={{ 
+                                marginLeft: '5px',
+                                color: 'var(--statusbar-network-up-color, var(--statusbar-icon-color, inherit))' 
+                            }}
+                        />
                         <span>{formatSpeed(network.tx_speed)}</span>
                     </div>
                 )}
@@ -103,7 +122,11 @@ const StatusBar = ({ stats }) => {
                     <div className="status-bar-section disk-section">
                         {disk.map((d, index) => (
                             <div key={index} className="disk-info-item">
-                                <FontAwesomeIcon icon={faHdd} className="status-bar-icon" />
+                                <FontAwesomeIcon 
+                                    icon={faHdd} 
+                                    className="status-bar-icon" 
+                                    style={{ color: 'var(--statusbar-disk-color, var(--statusbar-icon-color, inherit))' }}
+                                />
                                 <span className="disk-info-text">{d.fs}: {d.use}%</span>
                             </div>
                         ))}
@@ -111,13 +134,21 @@ const StatusBar = ({ stats }) => {
                 )}
                 {uptime && (
                     <div className="status-bar-section">
-                        <FontAwesomeIcon icon={faClock} className="status-bar-icon" />
+                        <FontAwesomeIcon 
+                            icon={faClock} 
+                            className="status-bar-icon" 
+                            style={{ color: 'var(--statusbar-icon-color, inherit)' }}
+                        />
                         <span>{uptime}</span>
                     </div>
                 )}
                 {ip && (
                     <div className="status-bar-section">
-                        <FontAwesomeIcon icon={faServer} className="status-bar-icon" />
+                        <FontAwesomeIcon 
+                            icon={faServer} 
+                            className="status-bar-icon" 
+                            style={{ color: 'var(--statusbar-icon-color, inherit)' }}
+                        />
                         <span>{ip}</span>
                     </div>
                 )}
