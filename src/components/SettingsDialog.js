@@ -8,6 +8,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import { themes } from '../themes';
+import { getVersionInfo } from '../version-info';
 
 const SettingsDialog = ({ 
   visible, 
@@ -23,6 +24,13 @@ const SettingsDialog = ({
   availableFonts 
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
+
+  useEffect(() => {
+    // Obtener la versión real de la app
+    const info = getVersionInfo();
+    setVersionInfo(info);
+  }, []);
 
   // Configuración de temas de terminal
   const availableTerminalThemes = themes ? Object.keys(themes) : [];
@@ -350,8 +358,7 @@ const SettingsDialog = ({
               fontSize: '1.1rem',
               marginBottom: '1.5rem'
             }}>
-              {/* Puedes reemplazar esto por la versión real si la tienes en props o contexto */}
-              v1.3.0
+              {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.3.1'}
             </div>
 
             <Divider />
