@@ -6,6 +6,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import ThemeSelector from './ThemeSelector';
+import StatusBarThemeSelector from './StatusBarThemeSelector';
 import { themes } from '../themes';
 
 const SettingsDialog = ({ 
@@ -17,6 +18,8 @@ const SettingsDialog = ({
   setFontSize, 
   terminalTheme, 
   setTerminalTheme,
+  statusBarTheme,
+  setStatusBarTheme,
   availableFonts 
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -423,6 +426,23 @@ const SettingsDialog = ({
                 © 2025 NodeTerm - Desarrollado con ❤️ usando Electron y React
               </p>
             </div>
+          </div>
+        </TabPanel>
+
+        <TabPanel header="Status Bar" leftIcon="pi pi-minus">
+          <div style={{
+            padding: '1rem 0',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '50vh',
+            width: '100%'
+          }}>
+            <StatusBarThemeSelector 
+              currentTheme={statusBarTheme}
+              onThemeChange={setStatusBarTheme}
+            />
           </div>
         </TabPanel>
       </TabView>
