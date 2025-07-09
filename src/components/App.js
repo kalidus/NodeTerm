@@ -1719,6 +1719,14 @@ const App = () => {
       return explorerFonts[0];
     }
   });
+  const [sidebarFontSize, setSidebarFontSize] = useState(() => {
+    try {
+      const savedSize = localStorage.getItem('sidebarFontSize');
+      return savedSize ? parseInt(savedSize, 10) : 14; // Default sidebar font size is 14
+    } catch {
+      return 14;
+    }
+  });
   useEffect(() => {
     try {
       localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
@@ -1729,6 +1737,11 @@ const App = () => {
       localStorage.setItem('sidebarFont', sidebarFont);
     } catch {}
   }, [sidebarFont]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebarFontSize', sidebarFontSize.toString());
+    } catch {}
+  }, [sidebarFontSize]);
 
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
@@ -1780,6 +1793,7 @@ const App = () => {
             nodeTemplate={nodeTemplate}
             iconTheme={iconThemeSidebar}
             explorerFont={sidebarFont}
+            explorerFontSize={sidebarFontSize}
           />
         </SplitterPanel>
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
@@ -2509,6 +2523,8 @@ const App = () => {
         setIconThemeSidebar={setIconThemeSidebar}
         sidebarFont={sidebarFont}
         setSidebarFont={setSidebarFont}
+        sidebarFontSize={sidebarFontSize}
+        setSidebarFontSize={setSidebarFontSize}
       />
 
       {/* Diálogo para crear nuevo grupo */}

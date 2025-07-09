@@ -23,7 +23,8 @@ const Sidebar = ({
   setDraggedNodeKey,
   nodeTemplate,
   iconTheme,
-  explorerFont
+  explorerFont,
+  explorerFontSize = 14
 }) => {
   return (
     <div 
@@ -39,7 +40,8 @@ const Sidebar = ({
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: explorerFont
+        fontFamily: explorerFont,
+        fontSize: `${explorerFontSize}px`
       }}>
       {sidebarCollapsed ? (
         // Iconos alineados arriba, más juntos y barra más fina
@@ -178,7 +180,8 @@ const Sidebar = ({
               minHeight: 0, 
               overflowY: 'auto', 
               overflowX: 'hidden',
-              position: 'relative' 
+              position: 'relative',
+              fontSize: `${explorerFontSize}px`
             }}
             onContextMenu={onTreeAreaContextMenu}
             className="tree-container"
@@ -199,6 +202,7 @@ const Sidebar = ({
               }}
               onDragEnd={() => {}}
               className="sidebar-tree"
+              style={{ fontSize: `${explorerFontSize}px` }}
               nodeTemplate={nodeTemplate}
               filter
               filterMode="strict"

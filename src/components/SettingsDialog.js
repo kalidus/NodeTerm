@@ -31,7 +31,9 @@ const SettingsDialog = ({
   iconThemeSidebar,
   setIconThemeSidebar,
   sidebarFont,
-  setSidebarFont
+  setSidebarFont,
+  sidebarFontSize,
+  setSidebarFontSize
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -64,6 +66,12 @@ const SettingsDialog = ({
   const handleFontSizeChange = (value) => {
     if (value && value >= 8 && value <= 32) {
       setFontSize(value);
+    }
+  };
+
+  const handleSidebarFontSizeChange = (value) => {
+    if (value && value >= 8 && value <= 32) {
+      setSidebarFontSize(value);
     }
   };
 
@@ -314,18 +322,51 @@ const SettingsDialog = ({
               <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                 Fuente del Explorador de Sesiones
               </h4>
-              <Dropdown
-                id="sidebar-font"
-                value={sidebarFont}
-                options={explorerFonts.map(f => ({ label: f, value: f }))}
-                onChange={e => setSidebarFont(e.value)}
-                placeholder="Selecciona una fuente"
-                style={{ width: '100%' }}
-                itemTemplate={option => (
-                  <span style={{ fontFamily: option.value }}>{option.label}</span>
-                )}
-              />
-              <div style={{ marginTop: 12, fontFamily: sidebarFont, fontSize: 18, textAlign: 'center' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label htmlFor="sidebar-font" style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem'
+                  }}>
+                    Familia de fuente
+                  </label>
+                  <Dropdown
+                    id="sidebar-font"
+                    value={sidebarFont}
+                    options={explorerFonts.map(f => ({ label: f, value: f }))}
+                    onChange={e => setSidebarFont(e.value)}
+                    placeholder="Selecciona una fuente"
+                    style={{ width: '100%' }}
+                    itemTemplate={option => (
+                      <span style={{ fontFamily: option.value }}>{option.label}</span>
+                    )}
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="sidebar-font-size" style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem',
+                    fontWeight: 'bold',
+                    fontSize: '0.9rem'
+                  }}>
+                    Tamaño (px)
+                  </label>
+                  <InputNumber
+                    id="sidebar-font-size"
+                    value={sidebarFontSize}
+                    onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
+                    min={8}
+                    max={32}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ marginTop: 12, fontFamily: sidebarFont, fontSize: `${sidebarFontSize}px`, textAlign: 'center' }}>
                 Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{sidebarFont}</span>
               </div>
             </div>
