@@ -8,7 +8,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14l2-8H4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
       file: (
@@ -23,7 +23,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#50e6ff"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4"><rect x="2" y="9" width="20" height="11" rx="2"/><path d="M2 9l3-6h6l2 2h9v4" fill="#50e6ff"/><rect x="4" y="11" width="16" height="7" rx="1" fill="#40e0d0"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#50e6ff"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
       file: (
@@ -38,7 +38,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l4-4h6l2 2h8v2"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M3 9l3-6h6l2 2h8v4"/><rect x="5" y="11" width="14" height="7" rx="1" fill="none" stroke="#ffc947"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l4-4h6l2 2h8v2"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
       file: (
@@ -53,7 +53,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#5e81ac"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#88c0d0"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#5e81ac"><rect x="2" y="9" width="20" height="11" rx="2"/><path d="M2 9l3-6h6l2 2h9v4" fill="#88c0d0"/><rect x="4" y="11" width="16" height="7" rx="1" fill="#81a1c1"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#5e81ac"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#88c0d0"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
       file: (
@@ -68,7 +68,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#bd93f9"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#ff79c6"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#bd93f9"><rect x="2" y="9" width="20" height="11" rx="2"/><path d="M2 9l3-6h6l2 2h9v4" fill="#ff79c6"/><rect x="4" y="11" width="16" height="7" rx="1" fill="#50fa7b"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#bd93f9"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#ff79c6"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
       file: (
@@ -83,7 +83,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#b58900"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#268bd2"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#b58900"><rect x="2" y="9" width="20" height="11" rx="2"/><path d="M2 9l3-6h6l2 2h9v4" fill="#268bd2"/><rect x="4" y="11" width="16" height="7" rx="1" fill="#859900"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#b58900"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#268bd2"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
       file: (
