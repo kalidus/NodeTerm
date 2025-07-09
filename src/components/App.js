@@ -244,6 +244,11 @@ const App = () => {
         window.electron.ipcRenderer.removeAllListeners(eventName);
       });
       activeListenersRef.current.clear();
+      
+      // Limpiar timeout de resize si existe
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
     };
   }, [sshTabs]);
 
@@ -642,8 +647,10 @@ const App = () => {
       setNodes(getDefaultNodes());
     }
     
-    // Cargar tema UI guardado
-    themeManager.loadSavedTheme();
+    // Cargar tema UI guardado (forzar recarga)
+    setTimeout(() => {
+      themeManager.loadSavedTheme();
+    }, 100);
     
     // Cargar tema de status bar guardado
     statusBarThemeManager.loadSavedTheme();
@@ -1507,11 +1514,65 @@ const App = () => {
     return () => clearTimeout(timeoutId);
   }, [sidebarCollapsed]); // Se ejecuta cuando cambia el estado del sidebar
 
+  // Optimización para redimensionamiento fluido
+  useEffect(() => {
+    const splitterElement = document.querySelector('.p-splitter');
+    if (!splitterElement) return;
+
+    const handleResizeStart = (e) => {
+      // Solo aplicar optimizaciones si el click es en el gutter
+      if (e.target.classList.contains('p-splitter-gutter')) {
+        splitterElement.classList.add('p-splitter-resizing');
+        // Desactivar transiciones en sidebar durante redimensionamiento
+        document.documentElement.style.setProperty('--sidebar-transition', 'none');
+      }
+    };
+
+    const handleResizeEnd = () => {
+      splitterElement.classList.remove('p-splitter-resizing');
+      // Reactivar transiciones después del redimensionamiento
+      document.documentElement.style.removeProperty('--sidebar-transition');
+    };
+
+    // Eventos para detectar inicio y fin del redimensionamiento
+    splitterElement.addEventListener('mousedown', handleResizeStart);
+    document.addEventListener('mouseup', handleResizeEnd);
+    
+    return () => {
+      splitterElement.removeEventListener('mousedown', handleResizeStart);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, []);
+
+  // Ref para throttling del resize
+  const resizeTimeoutRef = useRef(null);
+  
   const handleResize = () => {
     const activeTabKey = sshTabs[activeTabIndex]?.key;
     if (activeTabKey && terminalRefs.current[activeTabKey]) {
-      terminalRefs.current[activeTabKey].fit();
+      // Cancelar resize anterior si existe
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      
+      // Usar requestAnimationFrame para optimizar el redimensionamiento
+      requestAnimationFrame(() => {
+        if (terminalRefs.current[activeTabKey]) {
+          terminalRefs.current[activeTabKey].fit();
+        }
+      });
     }
+  };
+  
+  // Versión con throttling para onResize
+  const handleResizeThrottled = () => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    
+    resizeTimeoutRef.current = setTimeout(() => {
+      handleResize();
+    }, 16); // ~60fps
   };
 
   // Función para abrir explorador de archivos SSH
@@ -1629,10 +1690,18 @@ const App = () => {
       <Splitter 
         style={{ height: '100%' }} 
         onResizeEnd={sidebarCollapsed ? undefined : handleResize}
+        onResize={sidebarCollapsed ? undefined : handleResizeThrottled}
         disabled={sidebarCollapsed}
+        resizerStyle={{ transition: 'none' }}
+        className="main-splitter"
         pt={{
           gutter: {
-            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {}
+            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {
+              transition: 'none',
+              background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
+              borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
+              width: '2px'
+            }
           }
         }}
       >

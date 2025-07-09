@@ -941,6 +941,151 @@ html, body, #root {
   border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
 }
 
+/* === Splitter principal === */
+.main-splitter .p-splitter-gutter {
+  background: var(--ui-sidebar-gutter-bg, #dee2e6) !important;
+  border-left: 1px solid var(--ui-sidebar-border, #e0e0e0) !important;
+  border-right: 1px solid var(--ui-sidebar-border, #e0e0e0) !important;
+  width: 2px !important;
+  min-width: 2px !important;
+  max-width: 2px !important;
+}
+
+.main-splitter .p-splitter-gutter:hover {
+  background: var(--ui-sidebar-hover, #adb5bd) !important;
+}
+
+.main-splitter .p-splitter-gutter:active {
+  background: var(--primary-color, #007ad9) !important;
+}
+
+/* === Optimización del Splitter para redimensionamiento fluido === */
+.p-splitter {
+  border: none;
+}
+
+.p-splitter-gutter {
+  background: var(--ui-sidebar-gutter-bg, #dee2e6) !important;
+  border: none !important;
+  width: 2px !important;
+  min-width: 2px !important;
+  max-width: 2px !important;
+  cursor: col-resize !important;
+  transition: background-color 0.2s ease !important;
+  position: relative !important;
+  z-index: 2 !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  pointer-events: auto !important;
+}
+
+.p-splitter-gutter:hover {
+  background: var(--ui-sidebar-hover, #adb5bd) !important;
+}
+
+.p-splitter-gutter:active {
+  background: var(--primary-color, #007ad9) !important;
+}
+
+/* Mejoras de rendimiento para el redimensionamiento */
+.p-splitter-panel {
+  transition: none !important;
+  overflow: hidden !important;
+}
+
+/* Optimización específica para el gutter horizontal */
+.p-splitter.p-splitter-horizontal > .p-splitter-gutter {
+  width: 2px !important;
+  min-width: 2px !important;
+  max-width: 2px !important;
+  flex: 0 0 2px !important;
+  cursor: col-resize !important;
+}
+
+/* Desactivar transiciones durante el redimensionamiento */
+.p-splitter.p-splitter-resizing .p-splitter-panel {
+  transition: none !important;
+  /* NO desactivar pointer-events en los paneles, solo en elementos específicos si es necesario */
+}
+
+.p-splitter.p-splitter-resizing .sidebar-container {
+  transition: none !important;
+  /* Mantener pointer-events activos para que funcionen los clicks */
+}
+
+/* Optimización con GPU para un redimensionamiento más fluido */
+.p-splitter-panel {
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  perspective: 1000px !important;
+}
+
+/* Sidebar optimizada sin interferir con eventos */
+.sidebar-container {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Solo aplicar will-change durante el redimensionamiento */
+.p-splitter.p-splitter-resizing .sidebar-container {
+  will-change: width, min-width, max-width !important;
+}
+
+/* Indicador visual mejorado para el gutter */
+.p-splitter-gutter::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 16px;
+  background: var(--ui-sidebar-text, #6c757d);
+  border-radius: 0.5px;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.p-splitter-gutter:hover::before {
+  opacity: 0.7;
+}
+
+.p-splitter-gutter:active::before {
+  opacity: 0.9;
+  background: var(--primary-color, #007ad9);
+}
+
+/* Restablecer estilos del árbol para asegurar funcionalidad */
+.sidebar-tree .p-tree,
+.sidebar-tree .p-treenode,
+.sidebar-tree .p-treenode-content {
+  pointer-events: auto;
+  cursor: default;
+  user-select: none;
+}
+
+/* Cursor pointer solo para elementos clicables */
+.sidebar-tree .p-treenode-content:hover {
+  cursor: pointer;
+}
+
+/* Botones de la sidebar */
+.sidebar-container .p-button {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Drag & drop */
+.sidebar-tree .p-treenode-content[draggable="true"] {
+  cursor: grab;
+}
+
+.sidebar-tree .p-treenode-content[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 /* El gutter del Splitter ahora es temático, ver themeManager.js */
 
 /* Centrado vertical SOLO para el contenido de los paneles de configuración */
