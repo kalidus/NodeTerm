@@ -12,8 +12,9 @@ import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { iconThemes } from '../themes/icon-themes';
+import { uiThemes } from '../themes/ui-themes';
 
-const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI' }) => {
+const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light' }) => {
     const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -38,10 +39,100 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         setSshReady(true);
     }, []);
 
-    // Forzar actualización cuando cambia el tema de iconos o la fuente
+    // Forzar actualización cuando cambia el tema de iconos, la fuente o el tema de colores
     useEffect(() => {
         setForceUpdate(prev => prev + 1);
-    }, [iconTheme, explorerFont]);
+    }, [iconTheme, explorerFont, explorerColorTheme]);
+
+    // Aplicar tema de colores del explorador
+    useEffect(() => {
+        const theme = uiThemes[explorerColorTheme];
+        if (!theme) return;
+
+        const colors = theme.colors;
+        const styleId = `explorer-color-theme-${tabId}`;
+        
+        // Remover estilo previo si existe
+        const existingStyle = document.getElementById(styleId);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        // Crear nuevo estilo
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .file-explorer-container[data-tab-id="${tabId}"] {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-card {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-card .p-card-header {
+                background: ${colors.tabBackground} !important;
+                color: ${colors.dialogText} !important;
+                border-bottom: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-card .p-card-title {
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-toolbar {
+                background: ${colors.tabBackground} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-thead > tr > th {
+                background: ${colors.tabBackground} !important;
+                color: ${colors.dialogText} !important;
+                border-color: ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr > td {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+                border-color: ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr:hover > td {
+                background: ${colors.sidebarHover} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr.p-highlight > td {
+                background: ${colors.sidebarSelected} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb {
+                background: ${colors.tabBackground} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb .p-breadcrumb-list li .p-menuitem-link {
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb .p-breadcrumb-list li .p-menuitem-link:hover {
+                background: ${colors.sidebarHover} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-progressbar {
+                background: ${colors.tabBackground} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-message {
+                background: ${colors.tabBackground} !important;
+                color: ${colors.dialogText} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+        `;
+        
+        document.head.appendChild(style);
+
+        // Cleanup function
+        return () => {
+            const styleElement = document.getElementById(styleId);
+            if (styleElement) {
+                styleElement.remove();
+            }
+        };
+    }, [explorerColorTheme, tabId]);
 
     // Cargar directorio inicial cuando SSH esté listo
     useEffect(() => {
@@ -499,8 +590,9 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
 
     return (
         <div 
-            key={`file-explorer-${iconTheme}-${explorerFont}-${forceUpdate}`} 
+            key={`file-explorer-${iconTheme}-${explorerFont}-${explorerColorTheme}-${forceUpdate}`} 
             className="file-explorer-container" 
+            data-tab-id={tabId}
             style={{ fontFamily: explorerFont }}
         >
             <Card 

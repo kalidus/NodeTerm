@@ -17,6 +17,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
+import { uiThemes } from '../themes/ui-themes';
 // Importar iconos para distribuciones
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
@@ -1692,6 +1693,13 @@ const App = () => {
       return explorerFonts[0];
     }
   });
+  const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
+    try {
+      return localStorage.getItem('explorerColorTheme') || 'Light';
+    } catch {
+      return 'Light';
+    }
+  });
 
   useEffect(() => {
     try {
@@ -1704,6 +1712,12 @@ const App = () => {
       localStorage.setItem('explorerFont', explorerFont);
     } catch {}
   }, [explorerFont]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorerColorTheme', explorerColorTheme);
+    } catch {}
+  }, [explorerColorTheme]);
 
   const [iconThemeSidebar, setIconThemeSidebar] = useState(() => {
     try {
@@ -2339,6 +2353,7 @@ const App = () => {
                           tabId={tab.key}
                           iconTheme={iconTheme}
                           explorerFont={explorerFont}
+                          explorerColorTheme={explorerColorTheme}
                         />
                       ) : (
                         <TerminalComponent
@@ -2519,6 +2534,8 @@ const App = () => {
         setIconTheme={setIconTheme}
         explorerFont={explorerFont}
         setExplorerFont={setExplorerFont}
+        explorerColorTheme={explorerColorTheme}
+        setExplorerColorTheme={setExplorerColorTheme}
         iconThemeSidebar={iconThemeSidebar}
         setIconThemeSidebar={setIconThemeSidebar}
         sidebarFont={sidebarFont}

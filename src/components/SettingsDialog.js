@@ -11,6 +11,7 @@ import { themes } from '../themes';
 import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
+import { uiThemes } from '../themes/ui-themes';
 
 const SettingsDialog = ({ 
   visible, 
@@ -28,6 +29,8 @@ const SettingsDialog = ({
   setIconTheme,
   explorerFont,
   setExplorerFont,
+  explorerColorTheme,
+  setExplorerColorTheme,
   iconThemeSidebar,
   setIconThemeSidebar,
   sidebarFont,
@@ -275,6 +278,48 @@ const SettingsDialog = ({
               />
               <div style={{ marginTop: 12, fontFamily: explorerFont, fontSize: 18, textAlign: 'center' }}>
                 Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{explorerFont}</span>
+              </div>
+            </div>
+            <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                Tema de Colores
+              </h4>
+              <Dropdown
+                id="explorer-color-theme"
+                value={explorerColorTheme}
+                options={Object.entries(uiThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                onChange={e => setExplorerColorTheme(e.value)}
+                placeholder="Selecciona un tema de colores"
+                style={{ width: '100%' }}
+                itemTemplate={option => (
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 8,
+                    padding: '4px 0'
+                  }}>
+                    <div style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      background: uiThemes[option.value]?.colors?.buttonPrimary || '#007ad9',
+                      border: '1px solid #ddd'
+                    }}></div>
+                    {option.label}
+                  </span>
+                )}
+              />
+              <div style={{ 
+                marginTop: 12, 
+                padding: '8px 12px', 
+                borderRadius: '4px',
+                background: uiThemes[explorerColorTheme]?.colors?.contentBackground || '#fff',
+                border: `1px solid ${uiThemes[explorerColorTheme]?.colors?.contentBorder || '#e0e0e0'}`,
+                color: uiThemes[explorerColorTheme]?.colors?.dialogText || '#000',
+                textAlign: 'center',
+                fontSize: '14px'
+              }}>
+                Vista previa del tema: <span style={{ fontWeight: 'bold' }}>{uiThemes[explorerColorTheme]?.name}</span>
               </div>
             </div>
           </div>
