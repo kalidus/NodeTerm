@@ -831,4 +831,20 @@ export const themes = {
       cursor: '#ff69b4'
     }
   }
-}; 
+};
+
+// Fuentes recomendadas para el explorador de sesiones
+export const explorerFonts = [
+  'Segoe UI',
+  'Roboto',
+  'Fira Sans',
+  'Inter',
+  'JetBrains Mono',
+  'Source Sans Pro',
+  'Ubuntu',
+  'Open Sans',
+  'Montserrat',
+  'Lato',
+  'Arial',
+  'sans-serif'
+]; 

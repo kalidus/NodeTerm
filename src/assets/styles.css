@@ -365,6 +365,10 @@ html, body, #root {
   overflow: hidden;
 }
 
+.file-explorer-container, .file-explorer-container * {
+  font-family: inherit !important;
+}
+
 .file-explorer-card,
 .file-explorer-card .p-card,
 .file-explorer-card .p-card-body,
