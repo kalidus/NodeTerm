@@ -846,7 +846,7 @@ html, body, #root {
   color: #f4b400 !important; /* Amarillo carpeta claro */
 }
 .sidebar-tree .pi-desktop {
-  color: #42a5f5 !important; /* Azul para SSH/RDP */
+  /* Color heredado del tema */
 }
 /* Color de toggler (flecha) */
 .sidebar-tree .p-tree-toggler {

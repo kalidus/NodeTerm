@@ -105,6 +105,13 @@ class ThemeManager {
         color: var(--ui-sidebar-text) !important;
       }
 
+      .sidebar-tree .pi-desktop,
+      .sidebar-tree .p-treenode-content .pi-desktop,
+      .sidebar-tree .p-treenode-label .pi-desktop {
+        color: ${colors.sidebarText} !important;
+        font-size: inherit !important;
+      }
+
       .sidebar-action-button {
         color: var(--ui-sidebar-text) !important;
       }

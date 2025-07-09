@@ -86,6 +86,8 @@
   color: var(--ui-sidebar-text) !important;
 }
 
+/* Regla movida a themeManager.js para usar color directo del tema */
+
 /* Label de los nodos */
 .sidebar-tree .p-treenode-label {
   color: var(--ui-sidebar-text) !important;
