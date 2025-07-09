@@ -1005,5 +1005,577 @@ export const uiThemes = {
       contextMenuBorder: '#5d4d7a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
     }
+  },
+  'Night Owl': {
+    name: 'Night Owl',
+    colors: {
+      sidebarBackground: '#011627',
+      sidebarBorder: '#1d3b53',
+      sidebarText: '#d6deeb',
+      sidebarHover: '#1d3b53',
+      sidebarSelected: '#82aaff',
+      sidebarGutter: '#1d3b53',
+      
+      menuBarBackground: '#1d3b53',
+      menuBarText: '#d6deeb',
+      menuBarBorder: '#575656',
+      menuBarHover: '#575656',
+      
+      statusBarBackground: '#82aaff',
+      statusBarText: '#011627',
+      statusBarBorder: '#1d3b53',
+      
+      tabBackground: '#1d3b53',
+      tabActiveBackground: '#011627',
+      tabHoverBackground: '#575656',
+      tabText: '#d6deeb',
+      tabActiveText: '#21c7a8',
+      tabBorder: '#575656',
+      tabCloseHover: '#ef5350',
+      
+      tabGroupBackground: '#575656',
+      tabGroupText: '#d6deeb',
+      tabGroupBorder: '#1d3b53',
+      
+      contentBackground: '#011627',
+      contentBorder: '#1d3b53',
+      
+      dialogBackground: '#011627',
+      dialogText: '#d6deeb',
+      dialogBorder: '#1d3b53',
+      dialogShadow: 'rgba(0, 0, 0, 0.4)',
+      
+      buttonPrimary: '#82aaff',
+      buttonPrimaryText: '#011627',
+      buttonSecondary: '#1d3b53',
+      buttonSecondaryText: '#d6deeb',
+      buttonHover: '#21c7a8',
+      
+      contextMenuBackground: '#011627',
+      contextMenuText: '#d6deeb',
+      contextMenuHover: '#1d3b53',
+      contextMenuBorder: '#575656',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    }
+  },
+  'Silver': {
+    name: 'Silver',
+    colors: {
+      sidebarBackground: '#f5f5f5',
+      sidebarBorder: '#d0d0d0',
+      sidebarText: '#404040',
+      sidebarHover: '#e6e6e6',
+      sidebarSelected: '#729fcf',
+      sidebarGutter: '#d0d0d0',
+      
+      menuBarBackground: '#e6e6e6',
+      menuBarText: '#404040',
+      menuBarBorder: '#d0d0d0',
+      menuBarHover: '#d0d0d0',
+      
+      statusBarBackground: '#729fcf',
+      statusBarText: '#f5f5f5',
+      statusBarBorder: '#d0d0d0',
+      
+      tabBackground: '#e6e6e6',
+      tabActiveBackground: '#f5f5f5',
+      tabHoverBackground: '#d0d0d0',
+      tabText: '#404040',
+      tabActiveText: '#3465a4',
+      tabBorder: '#d0d0d0',
+      tabCloseHover: '#cc0000',
+      
+      tabGroupBackground: '#d0d0d0',
+      tabGroupText: '#404040',
+      tabGroupBorder: '#e6e6e6',
+      
+      contentBackground: '#f5f5f5',
+      contentBorder: '#d0d0d0',
+      
+      dialogBackground: '#f5f5f5',
+      dialogText: '#404040',
+      dialogBorder: '#d0d0d0',
+      dialogShadow: 'rgba(0, 0, 0, 0.1)',
+      
+      buttonPrimary: '#3465a4',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#e0e0e0',
+      buttonSecondaryText: '#404040',
+      buttonHover: '#729fcf',
+      
+      contextMenuBackground: '#f5f5f5',
+      contextMenuText: '#404040',
+      contextMenuHover: '#e6e6e6',
+      contextMenuBorder: '#d0d0d0',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    }
+  },
+  'Minimal Gray': {
+    name: 'Minimal Gray',
+    colors: {
+      sidebarBackground: '#fafafa',
+      sidebarBorder: '#e0e0e0',
+      sidebarText: '#505050',
+      sidebarHover: '#f0f0f0',
+      sidebarSelected: '#2196f3',
+      sidebarGutter: '#e0e0e0',
+      
+      menuBarBackground: '#f0f0f0',
+      menuBarText: '#505050',
+      menuBarBorder: '#e0e0e0',
+      menuBarHover: '#e0e0e0',
+      
+      statusBarBackground: '#2196f3',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#e0e0e0',
+      
+      tabBackground: '#f0f0f0',
+      tabActiveBackground: '#fafafa',
+      tabHoverBackground: '#e0e0e0',
+      tabText: '#505050',
+      tabActiveText: '#1976d2',
+      tabBorder: '#e0e0e0',
+      tabCloseHover: '#f44336',
+      
+      tabGroupBackground: '#e0e0e0',
+      tabGroupText: '#505050',
+      tabGroupBorder: '#f0f0f0',
+      
+      contentBackground: '#fafafa',
+      contentBorder: '#e0e0e0',
+      
+      dialogBackground: '#fafafa',
+      dialogText: '#505050',
+      dialogBorder: '#e0e0e0',
+      dialogShadow: 'rgba(0, 0, 0, 0.1)',
+      
+      buttonPrimary: '#1976d2',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#f0f0f0',
+      buttonSecondaryText: '#505050',
+      buttonHover: '#2196f3',
+      
+      contextMenuBackground: '#fafafa',
+      contextMenuText: '#505050',
+      contextMenuHover: '#f0f0f0',
+      contextMenuBorder: '#e0e0e0',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    }
+  },
+  'Paper': {
+    name: 'Paper',
+    colors: {
+      sidebarBackground: '#fefefe',
+      sidebarBorder: '#e1e4e8',
+      sidebarText: '#2b2b2b',
+      sidebarHover: '#f0f8ff',
+      sidebarSelected: '#0366d6',
+      sidebarGutter: '#e1e4e8',
+      
+      menuBarBackground: '#f0f8ff',
+      menuBarText: '#2b2b2b',
+      menuBarBorder: '#e1e4e8',
+      menuBarHover: '#e1e4e8',
+      
+      statusBarBackground: '#0366d6',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#e1e4e8',
+      
+      tabBackground: '#f0f8ff',
+      tabActiveBackground: '#fefefe',
+      tabHoverBackground: '#e1e4e8',
+      tabText: '#2b2b2b',
+      tabActiveText: '#0366d6',
+      tabBorder: '#e1e4e8',
+      tabCloseHover: '#d73a49',
+      
+      tabGroupBackground: '#e1e4e8',
+      tabGroupText: '#2b2b2b',
+      tabGroupBorder: '#f0f8ff',
+      
+      contentBackground: '#fefefe',
+      contentBorder: '#e1e4e8',
+      
+      dialogBackground: '#fefefe',
+      dialogText: '#2b2b2b',
+      dialogBorder: '#e1e4e8',
+      dialogShadow: 'rgba(0, 0, 0, 0.1)',
+      
+      buttonPrimary: '#0366d6',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#f6f8fa',
+      buttonSecondaryText: '#2b2b2b',
+      buttonHover: '#0598bc',
+      
+      contextMenuBackground: '#fefefe',
+      contextMenuText: '#2b2b2b',
+      contextMenuHover: '#f0f8ff',
+      contextMenuBorder: '#e1e4e8',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    }
+  },
+  'Soft Gray': {
+    name: 'Soft Gray',
+    colors: {
+      sidebarBackground: '#f7f7f7',
+      sidebarBorder: '#e8e8e8',
+      sidebarText: '#4a4a4a',
+      sidebarHover: '#eeeeee',
+      sidebarSelected: '#64b5f6',
+      sidebarGutter: '#e8e8e8',
+      
+      menuBarBackground: '#eeeeee',
+      menuBarText: '#4a4a4a',
+      menuBarBorder: '#e8e8e8',
+      menuBarHover: '#e8e8e8',
+      
+      statusBarBackground: '#64b5f6',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#e8e8e8',
+      
+      tabBackground: '#eeeeee',
+      tabActiveBackground: '#f7f7f7',
+      tabHoverBackground: '#e8e8e8',
+      tabText: '#4a4a4a',
+      tabActiveText: '#1565c0',
+      tabBorder: '#e8e8e8',
+      tabCloseHover: '#c62828',
+      
+      tabGroupBackground: '#e8e8e8',
+      tabGroupText: '#4a4a4a',
+      tabGroupBorder: '#eeeeee',
+      
+      contentBackground: '#f7f7f7',
+      contentBorder: '#e8e8e8',
+      
+      dialogBackground: '#f7f7f7',
+      dialogText: '#4a4a4a',
+      dialogBorder: '#e8e8e8',
+      dialogShadow: 'rgba(0, 0, 0, 0.1)',
+      
+      buttonPrimary: '#1565c0',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#f0f0f0',
+      buttonSecondaryText: '#4a4a4a',
+      buttonHover: '#64b5f6',
+      
+      contextMenuBackground: '#f7f7f7',
+      contextMenuText: '#4a4a4a',
+      contextMenuHover: '#eeeeee',
+      contextMenuBorder: '#e8e8e8',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    }
+  },
+  'Arctic': {
+    name: 'Arctic',
+    colors: {
+      sidebarBackground: '#fcfcfc',
+      sidebarBorder: '#ecf0f1',
+      sidebarText: '#2c3e50',
+      sidebarHover: '#e8f4f8',
+      sidebarSelected: '#3498db',
+      sidebarGutter: '#ecf0f1',
+      
+      menuBarBackground: '#e8f4f8',
+      menuBarText: '#2c3e50',
+      menuBarBorder: '#ecf0f1',
+      menuBarHover: '#ecf0f1',
+      
+      statusBarBackground: '#3498db',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#ecf0f1',
+      
+      tabBackground: '#e8f4f8',
+      tabActiveBackground: '#fcfcfc',
+      tabHoverBackground: '#ecf0f1',
+      tabText: '#2c3e50',
+      tabActiveText: '#3498db',
+      tabBorder: '#ecf0f1',
+      tabCloseHover: '#e74c3c',
+      
+      tabGroupBackground: '#ecf0f1',
+      tabGroupText: '#2c3e50',
+      tabGroupBorder: '#e8f4f8',
+      
+      contentBackground: '#fcfcfc',
+      contentBorder: '#ecf0f1',
+      
+      dialogBackground: '#fcfcfc',
+      dialogText: '#2c3e50',
+      dialogBorder: '#ecf0f1',
+      dialogShadow: 'rgba(0, 0, 0, 0.1)',
+      
+      buttonPrimary: '#3498db',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#f8f9fa',
+      buttonSecondaryText: '#2c3e50',
+      buttonHover: '#74b9ff',
+      
+      contextMenuBackground: '#fcfcfc',
+      contextMenuText: '#2c3e50',
+      contextMenuHover: '#e8f4f8',
+      contextMenuBorder: '#ecf0f1',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    }
+  },
+  'Neon Blue': {
+    name: 'Neon Blue',
+    colors: {
+      sidebarBackground: '#0a0a0f',
+      sidebarBorder: '#1a1a3a',
+      sidebarText: '#00d4ff',
+      sidebarHover: '#1a1a3a',
+      sidebarSelected: '#0080ff',
+      sidebarGutter: '#1a1a3a',
+      
+      menuBarBackground: '#1a1a3a',
+      menuBarText: '#00d4ff',
+      menuBarBorder: '#444444',
+      menuBarHover: '#444444',
+      
+      statusBarBackground: '#0080ff',
+      statusBarText: '#0a0a0f',
+      statusBarBorder: '#1a1a3a',
+      
+      tabBackground: '#1a1a3a',
+      tabActiveBackground: '#0a0a0f',
+      tabHoverBackground: '#444444',
+      tabText: '#00d4ff',
+      tabActiveText: '#18ffff',
+      tabBorder: '#444444',
+      tabCloseHover: '#ff0040',
+      
+      tabGroupBackground: '#444444',
+      tabGroupText: '#00d4ff',
+      tabGroupBorder: '#1a1a3a',
+      
+      contentBackground: '#0a0a0f',
+      contentBorder: '#1a1a3a',
+      
+      dialogBackground: '#0a0a0f',
+      dialogText: '#00d4ff',
+      dialogBorder: '#1a1a3a',
+      dialogShadow: 'rgba(0, 0, 0, 0.4)',
+      
+      buttonPrimary: '#0080ff',
+      buttonPrimaryText: '#0a0a0f',
+      buttonSecondary: '#1a1a3a',
+      buttonSecondaryText: '#00d4ff',
+      buttonHover: '#40c4ff',
+      
+      contextMenuBackground: '#0a0a0f',
+      contextMenuText: '#00d4ff',
+      contextMenuHover: '#1a1a3a',
+      contextMenuBorder: '#444444',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    }
+  },
+  'Cyberpunk': {
+    name: 'Cyberpunk',
+    colors: {
+      sidebarBackground: '#0d1117',
+      sidebarBorder: '#1a2332',
+      sidebarText: '#00ff41',
+      sidebarHover: '#1a2332',
+      sidebarSelected: '#0099ff',
+      sidebarGutter: '#1a2332',
+      
+      menuBarBackground: '#1a2332',
+      menuBarText: '#00ff41',
+      menuBarBorder: '#555555',
+      menuBarHover: '#555555',
+      
+      statusBarBackground: '#0099ff',
+      statusBarText: '#0d1117',
+      statusBarBorder: '#1a2332',
+      
+      tabBackground: '#1a2332',
+      tabActiveBackground: '#0d1117',
+      tabHoverBackground: '#555555',
+      tabText: '#00ff41',
+      tabActiveText: '#00ffff',
+      tabBorder: '#555555',
+      tabCloseHover: '#ff073a',
+      
+      tabGroupBackground: '#555555',
+      tabGroupText: '#00ff41',
+      tabGroupBorder: '#1a2332',
+      
+      contentBackground: '#0d1117',
+      contentBorder: '#1a2332',
+      
+      dialogBackground: '#0d1117',
+      dialogText: '#00ff41',
+      dialogBorder: '#1a2332',
+      dialogShadow: 'rgba(0, 0, 0, 0.4)',
+      
+      buttonPrimary: '#0099ff',
+      buttonPrimaryText: '#0d1117',
+      buttonSecondary: '#1a2332',
+      buttonSecondaryText: '#00ff41',
+      buttonHover: '#00d4ff',
+      
+      contextMenuBackground: '#0d1117',
+      contextMenuText: '#00ff41',
+      contextMenuHover: '#1a2332',
+      contextMenuBorder: '#555555',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    }
+  },
+  'Matrix': {
+    name: 'Matrix',
+    colors: {
+      sidebarBackground: '#000000',
+      sidebarBorder: '#002200',
+      sidebarText: '#00ff00',
+      sidebarHover: '#002200',
+      sidebarSelected: '#00cc00',
+      sidebarGutter: '#002200',
+      
+      menuBarBackground: '#002200',
+      menuBarText: '#00ff00',
+      menuBarBorder: '#003300',
+      menuBarHover: '#003300',
+      
+      statusBarBackground: '#00cc00',
+      statusBarText: '#000000',
+      statusBarBorder: '#002200',
+      
+      tabBackground: '#002200',
+      tabActiveBackground: '#000000',
+      tabHoverBackground: '#003300',
+      tabText: '#00ff00',
+      tabActiveText: '#55ff55',
+      tabBorder: '#003300',
+      tabCloseHover: '#00aa00',
+      
+      tabGroupBackground: '#003300',
+      tabGroupText: '#00ff00',
+      tabGroupBorder: '#002200',
+      
+      contentBackground: '#000000',
+      contentBorder: '#002200',
+      
+      dialogBackground: '#000000',
+      dialogText: '#00ff00',
+      dialogBorder: '#002200',
+      dialogShadow: 'rgba(0, 0, 0, 0.6)',
+      
+      buttonPrimary: '#00cc00',
+      buttonPrimaryText: '#000000',
+      buttonSecondary: '#002200',
+      buttonSecondaryText: '#00ff00',
+      buttonHover: '#00ee00',
+      
+      contextMenuBackground: '#000000',
+      contextMenuText: '#00ff00',
+      contextMenuHover: '#002200',
+      contextMenuBorder: '#003300',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.6)'
+    }
+  },
+  'Hologram': {
+    name: 'Hologram',
+    colors: {
+      sidebarBackground: '#05050a',
+      sidebarBorder: '#1a1a3a',
+      sidebarText: '#88ccff',
+      sidebarHover: '#1a1a3a',
+      sidebarSelected: '#4499ff',
+      sidebarGutter: '#1a1a3a',
+      
+      menuBarBackground: '#1a1a3a',
+      menuBarText: '#88ccff',
+      menuBarBorder: '#4a4a6a',
+      menuBarHover: '#4a4a6a',
+      
+      statusBarBackground: '#4499ff',
+      statusBarText: '#05050a',
+      statusBarBorder: '#1a1a3a',
+      
+      tabBackground: '#1a1a3a',
+      tabActiveBackground: '#05050a',
+      tabHoverBackground: '#4a4a6a',
+      tabText: '#88ccff',
+      tabActiveText: '#44ffcc',
+      tabBorder: '#4a4a6a',
+      tabCloseHover: '#ff4499',
+      
+      tabGroupBackground: '#4a4a6a',
+      tabGroupText: '#88ccff',
+      tabGroupBorder: '#1a1a3a',
+      
+      contentBackground: '#05050a',
+      contentBorder: '#1a1a3a',
+      
+      dialogBackground: '#05050a',
+      dialogText: '#88ccff',
+      dialogBorder: '#1a1a3a',
+      dialogShadow: 'rgba(0, 0, 0, 0.4)',
+      
+      buttonPrimary: '#4499ff',
+      buttonPrimaryText: '#05050a',
+      buttonSecondary: '#1a1a3a',
+      buttonSecondaryText: '#88ccff',
+      buttonHover: '#cc44ff',
+      
+      contextMenuBackground: '#05050a',
+      contextMenuText: '#88ccff',
+      contextMenuHover: '#1a1a3a',
+      contextMenuBorder: '#4a4a6a',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    }
+  },
+  'Plasma': {
+    name: 'Plasma',
+    colors: {
+      sidebarBackground: '#0f0f23',
+      sidebarBorder: '#2a1b3d',
+      sidebarText: '#ff69b4',
+      sidebarHover: '#2a1b3d',
+      sidebarSelected: '#2196f3',
+      sidebarGutter: '#2a1b3d',
+      
+      menuBarBackground: '#2a1b3d',
+      menuBarText: '#ff69b4',
+      menuBarBorder: '#555555',
+      menuBarHover: '#555555',
+      
+      statusBarBackground: '#2196f3',
+      statusBarText: '#0f0f23',
+      statusBarBorder: '#2a1b3d',
+      
+      tabBackground: '#2a1b3d',
+      tabActiveBackground: '#0f0f23',
+      tabHoverBackground: '#555555',
+      tabText: '#ff69b4',
+      tabActiveText: '#4dd0e1',
+      tabBorder: '#555555',
+      tabCloseHover: '#ff1744',
+      
+      tabGroupBackground: '#555555',
+      tabGroupText: '#ff69b4',
+      tabGroupBorder: '#2a1b3d',
+      
+      contentBackground: '#0f0f23',
+      contentBorder: '#2a1b3d',
+      
+      dialogBackground: '#0f0f23',
+      dialogText: '#ff69b4',
+      dialogBorder: '#2a1b3d',
+      dialogShadow: 'rgba(0, 0, 0, 0.4)',
+      
+      buttonPrimary: '#2196f3',
+      buttonPrimaryText: '#0f0f23',
+      buttonSecondary: '#2a1b3d',
+      buttonSecondaryText: '#ff69b4',
+      buttonHover: '#e91e63',
+      
+      contextMenuBackground: '#0f0f23',
+      contextMenuText: '#ff69b4',
+      contextMenuHover: '#2a1b3d',
+      contextMenuBorder: '#555555',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    }
   }
 }; 
