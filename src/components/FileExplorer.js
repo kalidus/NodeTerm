@@ -29,6 +29,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const toast = React.useRef(null);
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
+    const [forceUpdate, setForceUpdate] = useState(0);
 
     // Para FileExplorer, no necesitamos esperar conexión SSH propia
     // Usaremos las conexiones del pool directamente
@@ -36,6 +37,11 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
         // Marcar como SSH listo inmediatamente - usaremos el pool de conexiones
         setSshReady(true);
     }, []);
+
+    // Forzar actualización cuando cambia el tema de iconos o la fuente
+    useEffect(() => {
+        setForceUpdate(prev => prev + 1);
+    }, [iconTheme, explorerFont]);
 
     // Cargar directorio inicial cuando SSH esté listo
     useEffect(() => {
@@ -153,17 +159,19 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     };
 
     const getFileIcon = (file) => {
-        const theme = iconThemes[iconTheme] || iconThemes['material'];
+        // Asegurar que tenemos el tema correcto y que existe
+        const theme = (iconThemes && iconThemes[iconTheme]) ? iconThemes[iconTheme] : iconThemes['material'];
+        
         if (file.type === 'directory') {
             return file.name === '..'
                 ? <i className="pi pi-arrow-up file-icon directory-icon"></i>
-                : theme.icons.folder;
+                : (theme?.icons?.folder || <i className="pi pi-folder file-icon directory-icon"></i>);
         }
         if (file.type === 'symlink') {
             return <i className="pi pi-link file-icon symlink-icon"></i>;
         }
         // Para archivos, usar icono de archivo del tema
-        return theme.icons.file;
+        return theme?.icons?.file || <i className="pi pi-file file-icon"></i>;
     };
 
     const nameBodyTemplate = (file) => {
@@ -405,44 +413,49 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     const toolbarLeft = (
         <div className="flex align-items-center gap-2 flex-wrap">
             <Button 
-                icon="pi pi-arrow-left" 
+                label="⬅" 
                 onClick={() => {
                     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
                     navigateToPath(parentPath);
                 }}
                 disabled={!sshReady || !currentPath || currentPath === '/'}
-                tooltip="Atrás"
+                tooltip="Ir al directorio padre"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-refresh" 
+                label="⟲" 
                 onClick={() => currentPath && loadFiles(currentPath)}
                 disabled={!sshReady || !currentPath}
-                tooltip="Actualizar"
+                tooltip="Actualizar contenido del directorio"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-home" 
+                label="⌂" 
                 onClick={() => homeDir && navigateToPath(homeDir)}
                 disabled={!sshReady || !currentPath}
-                tooltip="Inicio"
+                tooltip="Ir al directorio home"
                 size="small"
+                text
             />
             <Button 
-                icon={showDotfiles ? "pi pi-eye" : "pi pi-eye-slash"}
+                label={showDotfiles ? "◉" : "○"}
                 onClick={() => setShowDotfiles(v => !v)}
-                tooltip={showDotfiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+                tooltip={showDotfiles ? "Ocultar archivos y carpetas ocultos" : "Mostrar archivos y carpetas ocultos"}
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-upload" 
+                label="↑" 
                 onClick={handleUploadFiles}
                 disabled={!sshReady || !currentPath || loading}
-                tooltip="Subir archivos"
+                tooltip="Subir archivos desde el equipo local"
                 size="small"
+                text
             />
             <Button
-                icon="pi pi-download"
+                label="↓"
                 onClick={async () => {
                     for (const file of selectedFiles) {
                         if (file.type === 'file') {
@@ -451,23 +464,26 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                     }
                 }}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
-                tooltip="Descargar archivos seleccionados"
+                tooltip="Descargar archivos seleccionados al equipo local"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-folder" 
+                label="+" 
                 onClick={() => setNewFolderDialog(true)}
                 disabled={!sshReady || !currentPath || loading}
-                tooltip="Crear nueva carpeta"
+                tooltip="Crear nueva carpeta en el directorio actual"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-trash" 
+                label="×" 
                 className="p-button-danger" 
                 onClick={() => handleDeleteFiles(selectedFiles)}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
-                tooltip="Eliminar archivos seleccionados"
+                tooltip="Eliminar permanentemente archivos seleccionados"
                 size="small"
+                text
             />
         </div>
     );
@@ -482,7 +498,11 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     );
 
     return (
-        <div className="file-explorer-container" style={{ fontFamily: explorerFont }}>
+        <div 
+            key={`file-explorer-${iconTheme}-${explorerFont}-${forceUpdate}`} 
+            className="file-explorer-container" 
+            style={{ fontFamily: explorerFont }}
+        >
             <Card 
                 title={`Explorador de Archivos - ${sshConfig.host}`}
                 className="file-explorer-card"
@@ -576,14 +596,14 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                                     {file.type === 'file' && (
                                         <>
                                             <Button 
-                                                icon="pi pi-download" 
+                                                label="↓" 
                                                 size="small"
                                                 className="p-button-text" 
                                                 onClick={() => handleDownloadFile(file)}
                                                 tooltip="Descargar archivo"
                                             />
                                             <Button
-                                                icon="pi pi-trash"
+                                                label="×"
                                                 size="small"
                                                 className="p-button-text p-button-danger"
                                                 onClick={() => handleDeleteFiles([file])}

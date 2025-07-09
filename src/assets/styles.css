@@ -627,6 +627,14 @@ html, body, #root {
   min-width: 44px;
   min-height: 44px;
   border-radius: 10px;
+  background: var(--ui-file-button-bg, transparent) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.3s ease;
+}
+
+.file-explorer-toolbar .p-button:hover {
+  background: var(--ui-file-button-hover, rgba(0,0,0,0.1)) !important;
+  transform: translateY(-1px);
 }
 
 .file-explorer-toolbar .p-button .p-button-icon {
@@ -635,18 +643,35 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  transition: color 0.3s ease;
 }
 
 .file-explorer-toolbar .p-button .p-button-label {
-  display: none;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  transition: color 0.3s ease;
 }
+
+/* .file-explorer-toolbar .p-button .p-button-label {
+  display: none;
+} */
 
 .file-explorer-toolbar .p-button.p-button-danger {
   background: #f87171 !important;
   color: #fff !important;
-  border: none !important;
+  border: 1px solid #f87171 !important;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger .p-button-label {
+  color: #fff !important;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger:hover {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
 }
 
 /* Estilos para progreso de transferencia */
@@ -672,11 +697,31 @@ html, body, #root {
   margin-right: 0;
 }
 
+/* Estilos para botones de acciones en la tabla */
+.file-explorer-datatable .p-button-text .p-button-label {
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.file-explorer-datatable .p-button-text:hover .p-button-label {
+  color: var(--ui-button-primary, #007ad9) !important;
+}
+
+.file-explorer-datatable .p-button-text.p-button-danger .p-button-label {
+  color: #f87171 !important;
+}
+
+.file-explorer-datatable .p-button-text.p-button-danger:hover .p-button-label {
+  color: #dc2626 !important;
+}
+
 /* Estilos responsivos para pantallas pequeñas */
 @media (max-width: 768px) {
-  .file-explorer-toolbar .p-button .p-button-label {
+  /* .file-explorer-toolbar .p-button .p-button-label {
     display: none;
-  }
+  } */
   
   .file-explorer-table-container {
     max-height: calc(100vh - 320px);
