@@ -21,7 +21,9 @@ const Sidebar = ({
   onTreeAreaContextMenu,
   onDragDrop,
   setDraggedNodeKey,
-  nodeTemplate
+  nodeTemplate,
+  iconTheme,
+  explorerFont
 }) => {
   return (
     <div 
@@ -37,6 +39,7 @@ const Sidebar = ({
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+        fontFamily: explorerFont
       }}>
       {sidebarCollapsed ? (
         // Iconos alineados arriba, más juntos y barra más fina

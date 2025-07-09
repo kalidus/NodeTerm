@@ -15,6 +15,8 @@ import FileExplorer from './FileExplorer';
 import Sidebar from './Sidebar';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
+import { iconThemes } from '../themes/icon-themes';
+import { explorerFonts } from '../themes';
 // Importar iconos para distribuciones
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
@@ -1114,18 +1116,20 @@ const App = () => {
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
-    let iconClass = '';
+    // Icono según tema seleccionado para la sidebar
+    let icon = null;
     if (isSSH) {
-      iconClass = 'pi pi-desktop';
+      icon = iconThemes[iconThemeSidebar]?.icons?.ssh || <span className="pi pi-desktop" />;
     } else if (isFolder) {
-      iconClass = options.expanded ? 'pi pi-folder-open' : 'pi pi-folder';
+      icon = options.expanded
+        ? (iconThemes[iconThemeSidebar]?.icons?.folderOpen || <span className="pi pi-folder-open" />)
+        : (iconThemes[iconThemeSidebar]?.icons?.folder || <span className="pi pi-folder" />);
     }
 
     // Obtener estado de conexión para sesiones SSH
     const connectionStatus = isSSH ? sshConnectionStatus[node.key] : null;
     const getConnectionIndicator = () => {
       if (!isSSH) return null;
-      
       switch (connectionStatus) {
         case 'connected':
           return <span className="connection-indicator connected" title="Conectado">●</span>;
@@ -1134,7 +1138,6 @@ const App = () => {
         case 'disconnected':
           return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
         default:
-          // Por defecto: gris (desconectado), amarillo para otros estados
           return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
       }
     };
@@ -1144,19 +1147,14 @@ const App = () => {
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
-          // Si no estamos en el grupo Home, cambiar a Home primero
           if (activeGroupId !== null) {
-            // Guardar el índice activo del grupo actual antes de cambiar
             const currentGroupKey = activeGroupId || 'no-group';
             setGroupActiveIndices(prev => ({
               ...prev,
               [currentGroupKey]: activeTabIndex
             }));
-            
-            // Cambiar al grupo Home
             setActiveGroupId(null);
           }
-          
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
@@ -1174,7 +1172,6 @@ const App = () => {
             };
             const newTabs = [newTab, ...prevTabs];
             setActiveTabIndex(0);
-            // También actualizar el índice guardado para el grupo Home
             setGroupActiveIndices(prev => ({
               ...prev,
               'no-group': 0
@@ -1182,13 +1179,11 @@ const App = () => {
             return newTabs;
           });
         } : undefined}
-        onClick={isSSH ? (e) => {
-          // No mostrar log: console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
-        } : undefined}
-        style={{ cursor: 'pointer' }}
+        onClick={isSSH ? (e) => {} : undefined}
+        style={{ cursor: 'pointer', fontFamily: sidebarFont }}
         title="Click derecho para más opciones"
       >
-        <span className={iconClass} style={{ minWidth: 16 }}></span>
+        <span style={{ minWidth: 16 }}>{icon}</span>
         <span className="node-label">{node.label}</span>
         {getConnectionIndicator()}
       </div>
@@ -1683,6 +1678,58 @@ const App = () => {
     } catch {}
   }, [tabGroups]);
 
+  const [iconTheme, setIconTheme] = useState(() => {
+    try {
+      return localStorage.getItem('iconTheme') || 'material';
+    } catch {
+      return 'material';
+    }
+  });
+  const [explorerFont, setExplorerFont] = useState(() => {
+    try {
+      return localStorage.getItem('explorerFont') || explorerFonts[0];
+    } catch {
+      return explorerFonts[0];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('iconTheme', iconTheme);
+    } catch {}
+  }, [iconTheme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorerFont', explorerFont);
+    } catch {}
+  }, [explorerFont]);
+
+  const [iconThemeSidebar, setIconThemeSidebar] = useState(() => {
+    try {
+      return localStorage.getItem('iconThemeSidebar') || 'material';
+    } catch {
+      return 'material';
+    }
+  });
+  const [sidebarFont, setSidebarFont] = useState(() => {
+    try {
+      return localStorage.getItem('sidebarFont') || explorerFonts[0];
+    } catch {
+      return explorerFonts[0];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
+    } catch {}
+  }, [iconThemeSidebar]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebarFont', sidebarFont);
+    } catch {}
+  }, [sidebarFont]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
@@ -1692,7 +1739,6 @@ const App = () => {
         onResizeEnd={sidebarCollapsed ? undefined : handleResize}
         onResize={sidebarCollapsed ? undefined : handleResizeThrottled}
         disabled={sidebarCollapsed}
-        resizerStyle={{ transition: 'none' }}
         className="main-splitter"
         pt={{
           gutter: {
@@ -1732,6 +1778,8 @@ const App = () => {
             onDragDrop={onDragDrop}
             setDraggedNodeKey={setDraggedNodeKey}
             nodeTemplate={nodeTemplate}
+            iconTheme={iconThemeSidebar}
+            explorerFont={sidebarFont}
           />
         </SplitterPanel>
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
@@ -2275,6 +2323,8 @@ const App = () => {
                         <FileExplorer
                           sshConfig={tab.sshConfig}
                           tabId={tab.key}
+                          iconTheme={iconTheme}
+                          explorerFont={explorerFont}
                         />
                       ) : (
                         <TerminalComponent
@@ -2451,6 +2501,14 @@ const App = () => {
         statusBarTheme={statusBarTheme}
         setStatusBarTheme={setStatusBarTheme}
         availableFonts={availableFonts}
+        iconTheme={iconTheme}
+        setIconTheme={setIconTheme}
+        explorerFont={explorerFont}
+        setExplorerFont={setExplorerFont}
+        iconThemeSidebar={iconThemeSidebar}
+        setIconThemeSidebar={setIconThemeSidebar}
+        sidebarFont={sidebarFont}
+        setSidebarFont={setSidebarFont}
       />
 
       {/* Diálogo para crear nuevo grupo */}
