@@ -843,7 +843,7 @@ html, body, #root {
 /* Colores de iconos personalizados */
 /* Los colores de carpetas e iconos ahora se manejan por tema específico */
 .sidebar-tree .pi-desktop {
-  /* Color heredado del tema */
+  color: #42a5f5 !important; /* Azul fijo para iconos de sesión */
 }
 /* Color de toggler (flecha) */
 .sidebar-tree .p-tree-toggler {
