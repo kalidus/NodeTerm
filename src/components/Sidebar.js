@@ -67,22 +67,28 @@ const Sidebar = ({
             tooltipOptions={{ position: 'right' }} 
             style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
           />
-          <Button 
-            icon="pi pi-plus" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
-            onClick={() => openNewFolderDialog(null)} 
-            tooltip="Crear carpeta" 
-            tooltipOptions={{ position: 'right' }} 
-            style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
-          />
-          <Button 
-            icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} 
-            className="p-button-rounded p-button-text sidebar-action-button" 
-            onClick={toggleExpandAll} 
-            tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} 
-            tooltipOptions={{ position: 'right' }} 
-            style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
-          />
+          {/* Ocultar el botón de crear carpeta cuando la sidebar está colapsada */}
+          {!sidebarCollapsed && (
+            <Button 
+              icon="pi pi-plus" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={() => openNewFolderDialog(null)} 
+              tooltip="Crear carpeta" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            />
+          )}
+          {/* Ocultar el botón de desplegar/plegar todo cuando la sidebar está colapsada */}
+          {!sidebarCollapsed && (
+            <Button 
+              icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={toggleExpandAll} 
+              tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            />
+          )}
           <Button 
             icon="pi pi-th-large" 
             className="p-button-rounded p-button-text sidebar-action-button" 
