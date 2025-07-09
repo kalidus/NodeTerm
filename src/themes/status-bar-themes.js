@@ -358,5 +358,155 @@ export const statusBarThemes = {
       networkDownColor: '#2d9574',
       sparklineColor: '#4f97d7'
     }
+  },
+  'Silver': {
+    name: 'Silver',
+    colors: {
+      background: '#f5f5f5',
+      text: '#404040',
+      border: '#d0d0d0',
+      iconColor: '#729fcf',
+      cpuBarColor: '#729fcf',
+      memoryBarColor: '#8ae234',
+      diskBarColor: '#fce94f',
+      networkUpColor: '#8ae234',
+      networkDownColor: '#34e2e2',
+      sparklineColor: '#729fcf'
+    }
+  },
+  'Minimal Gray': {
+    name: 'Minimal Gray',
+    colors: {
+      background: '#fafafa',
+      text: '#505050',
+      border: '#e0e0e0',
+      iconColor: '#2196f3',
+      cpuBarColor: '#2196f3',
+      memoryBarColor: '#4caf50',
+      diskBarColor: '#ff9800',
+      networkUpColor: '#4caf50',
+      networkDownColor: '#009688',
+      sparklineColor: '#2196f3'
+    }
+  },
+  'Paper': {
+    name: 'Paper',
+    colors: {
+      background: '#fefefe',
+      text: '#2b2b2b',
+      border: '#e1e4e8',
+      iconColor: '#0366d6',
+      cpuBarColor: '#0366d6',
+      memoryBarColor: '#28a745',
+      diskBarColor: '#ffd33d',
+      networkUpColor: '#28a745',
+      networkDownColor: '#0598bc',
+      sparklineColor: '#0366d6'
+    }
+  },
+  'Soft Gray': {
+    name: 'Soft Gray',
+    colors: {
+      background: '#f7f7f7',
+      text: '#4a4a4a',
+      border: '#e8e8e8',
+      iconColor: '#64b5f6',
+      cpuBarColor: '#64b5f6',
+      memoryBarColor: '#81c784',
+      diskBarColor: '#ffb74d',
+      networkUpColor: '#81c784',
+      networkDownColor: '#4db6ac',
+      sparklineColor: '#64b5f6'
+    }
+  },
+  'Arctic': {
+    name: 'Arctic',
+    colors: {
+      background: '#fcfcfc',
+      text: '#2c3e50',
+      border: '#ecf0f1',
+      iconColor: '#3498db',
+      cpuBarColor: '#3498db',
+      memoryBarColor: '#27ae60',
+      diskBarColor: '#f39c12',
+      networkUpColor: '#27ae60',
+      networkDownColor: '#16a085',
+      sparklineColor: '#3498db'
+    }
+  },
+  'Neon Blue': {
+    name: 'Neon Blue',
+    colors: {
+      background: '#0a0a0f',
+      text: '#00d4ff',
+      border: '#1a1a3a',
+      iconColor: '#0080ff',
+      cpuBarColor: '#0080ff',
+      memoryBarColor: '#00ff88',
+      diskBarColor: '#ffff00',
+      networkUpColor: '#00ff88',
+      networkDownColor: '#00ffff',
+      sparklineColor: '#0080ff'
+    }
+  },
+  'Cyberpunk': {
+    name: 'Cyberpunk',
+    colors: {
+      background: '#0d1117',
+      text: '#00ff41',
+      border: '#1a2332',
+      iconColor: '#0099ff',
+      cpuBarColor: '#0099ff',
+      memoryBarColor: '#00ff41',
+      diskBarColor: '#fff700',
+      networkUpColor: '#00ff41',
+      networkDownColor: '#00ffff',
+      sparklineColor: '#0099ff'
+    }
+  },
+  'Matrix': {
+    name: 'Matrix',
+    colors: {
+      background: '#000000',
+      text: '#00ff00',
+      border: '#002200',
+      iconColor: '#00cc00',
+      cpuBarColor: '#00cc00',
+      memoryBarColor: '#00ff00',
+      diskBarColor: '#88ff88',
+      networkUpColor: '#00ff00',
+      networkDownColor: '#00ee00',
+      sparklineColor: '#00cc00'
+    }
+  },
+  'Hologram': {
+    name: 'Hologram',
+    colors: {
+      background: '#05050a',
+      text: '#88ccff',
+      border: '#1a1a3a',
+      iconColor: '#4499ff',
+      cpuBarColor: '#4499ff',
+      memoryBarColor: '#44ff99',
+      diskBarColor: '#ffcc44',
+      networkUpColor: '#44ff99',
+      networkDownColor: '#44ffcc',
+      sparklineColor: '#4499ff'
+    }
+  },
+  'Plasma': {
+    name: 'Plasma',
+    colors: {
+      background: '#0f0f23',
+      text: '#ff69b4',
+      border: '#2a1b3d',
+      iconColor: '#2196f3',
+      cpuBarColor: '#2196f3',
+      memoryBarColor: '#00e676',
+      diskBarColor: '#ffc107',
+      networkUpColor: '#00e676',
+      networkDownColor: '#00bcd4',
+      sparklineColor: '#2196f3'
+    }
   }
 };
