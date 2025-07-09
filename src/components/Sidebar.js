@@ -103,14 +103,18 @@ const Sidebar = ({
             alignItems: 'center', 
             gap: 4 
           }}>
-            <Button 
-              icon="pi pi-info-circle" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowSettingsDialog(true)} 
-              tooltip="Acerca de NodeTerm" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
-            />
+            {/* Solo mostrar el botón de Acerca de NodeTerm si la sidebar NO está colapsada */}
+            {/* {sidebarCollapsed ? null : ( */}
+            {/*   <Button  */}
+            {/*     icon="pi pi-info-circle"  */}
+            {/*     className="p-button-rounded p-button-text sidebar-action-button"  */}
+            {/*     onClick={() => setShowSettingsDialog(true)}  */}
+            {/*     tooltip="Acerca de NodeTerm"  */}
+            {/*     tooltipOptions={{ position: 'right' }}  */}
+            {/*     style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }}  */}
+            {/*   /> */}
+            {/* )} */}
+            {/* Mostrar solo el botón de configuración cuando la sidebar está colapsada */}
             <Button 
               icon="pi pi-cog" 
               className="p-button-rounded p-button-text sidebar-action-button" 
