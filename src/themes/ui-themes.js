@@ -48,8 +48,8 @@ export const uiThemes = {
       // Buttons
       buttonPrimary: '#1976d2',
       buttonPrimaryText: '#ffffff',
-      buttonSecondary: '#6c757d',
-      buttonSecondaryText: '#ffffff',
+      buttonSecondary: '#e3f2fd',
+      buttonSecondaryText: '#1976d2',
       buttonHover: '#1565c0',
       
       // Context Menus
@@ -889,7 +889,7 @@ export const uiThemes = {
       
       buttonPrimary: '#4078f2',
       buttonPrimaryText: '#fafafa',
-      buttonSecondary: '#4f525d',
+      buttonSecondary: '#f1f1f1',
       buttonSecondaryText: '#383a42',
       buttonHover: '#a626a4',
       
