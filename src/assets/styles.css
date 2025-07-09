@@ -841,13 +841,7 @@ html, body, #root {
 }
 
 /* Colores de iconos personalizados */
-/* Color de carpetas ahora se maneja por tema específico */
-/*
-.sidebar-tree .pi-folder,
-.sidebar-tree .pi-folder-open {
-  color: #f4b400 !important;
-}
-*/
+/* Los colores de carpetas e iconos ahora se manejan por tema específico */
 .sidebar-tree .pi-desktop {
   /* Color heredado del tema */
 }
