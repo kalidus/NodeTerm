@@ -11,8 +11,9 @@ import { Message } from 'primereact/message';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { iconThemes } from '../themes/icon-themes';
 
-const FileExplorer = ({ sshConfig, tabId }) => {
+const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI' }) => {
     const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -152,50 +153,28 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     };
 
     const getFileIcon = (file) => {
+        const theme = iconThemes[iconTheme] || iconThemes['material'];
         if (file.type === 'directory') {
-            return file.name === '..' ? 'pi pi-arrow-up' : 'pi pi-folder';
+            return file.name === '..'
+                ? <i className="pi pi-arrow-up file-icon directory-icon"></i>
+                : theme.icons.folder;
         }
-        
         if (file.type === 'symlink') {
-            return 'pi pi-link';
+            return <i className="pi pi-link file-icon symlink-icon"></i>;
         }
-        
-        const extension = file.name.split('.').pop().toLowerCase();
-        switch (extension) {
-            case 'txt':
-            case 'md':
-                return 'pi pi-file-o';
-            case 'sh':
-            case 'py':
-            case 'js':
-                return 'pi pi-code';
-            case 'jpg':
-            case 'png':
-            case 'gif':
-                return 'pi pi-image';
-            case 'zip':
-            case 'tar':
-            case 'gz':
-                return 'pi pi-file-archive';
-            case 'pdf':
-                return 'pi pi-file-pdf';
-            default:
-                return 'pi pi-file';
-        }
+        // Para archivos, usar icono de archivo del tema
+        return theme.icons.file;
     };
 
     const nameBodyTemplate = (file) => {
-        let iconClass = 'file-type-icon';
-        if (file.type === 'directory') {
-            iconClass = 'directory-icon';
-        } else if (file.type === 'symlink') {
-            iconClass = 'symlink-icon';
-        }
-
+        const isPrimeIcon = file.type === 'directory' && file.name === '..' || file.type === 'symlink';
         return (
             <div className="flex align-items-center">
-                <i className={`${getFileIcon(file)} file-icon ${iconClass}`}></i>
-                <span className={file.type === 'symlink' ? 'symlink-name' : ''}>{file.name}</span>
+                {isPrimeIcon
+                    ? getFileIcon(file)
+                    : <span style={{ display: 'inline-flex', alignItems: 'center', width: 20 }}>{getFileIcon(file)}</span>
+                }
+                <span className={file.type === 'symlink' ? 'symlink-name' : ''} style={{ marginLeft: 8 }}>{file.name}</span>
             </div>
         );
     };
@@ -503,7 +482,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     );
 
     return (
-        <div className="file-explorer-container">
+        <div className="file-explorer-container" style={{ fontFamily: explorerFont }}>
             <Card 
                 title={`Explorador de Archivos - ${sshConfig.host}`}
                 className="file-explorer-card"
@@ -543,6 +522,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
+                        style={{ fontFamily: explorerFont }}
                     >
                         <DataTable 
                             value={visibleFiles}
@@ -552,13 +532,17 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                             onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
                             rowHover={true}
                             className="file-explorer-datatable"
+                            style={{ fontFamily: explorerFont }}
+                            tableStyle={{ fontFamily: explorerFont }}
+                            bodyClassName="file-explorer-table-body"
                         >
                         <Column 
                             field="name" 
                             header="Nombre" 
                             body={nameBodyTemplate}
                             sortable
-                            style={{ minWidth: '200px' }}
+                            style={{ minWidth: '200px', fontFamily: explorerFont }}
+                            bodyStyle={{ fontFamily: explorerFont }}
                         />
                         <Column 
                             field="size" 
