@@ -620,7 +620,24 @@ const App = () => {
   useEffect(() => {
     const savedNodes = localStorage.getItem(STORAGE_KEY);
     if (savedNodes) {
-      setNodes(JSON.parse(savedNodes));
+      const loadedNodes = JSON.parse(savedNodes);
+      // Migrar nodos existentes para asegurar que las sesiones SSH tengan droppable: false
+      const migrateNodes = (nodes) => {
+        return nodes.map(node => {
+          const migratedNode = { ...node };
+          // Si es una sesión SSH y no tiene droppable definido o es true, establecerlo como false
+          if (node.data && node.data.type === 'ssh') {
+            migratedNode.droppable = false;
+          }
+          // Migrar recursivamente los hijos
+          if (node.children && node.children.length > 0) {
+            migratedNode.children = migrateNodes(node.children);
+          }
+          return migratedNode;
+        });
+      };
+      const migratedNodes = migrateNodes(loadedNodes);
+      setNodes(migratedNodes);
     } else {
       setNodes(getDefaultNodes());
     }
@@ -896,8 +913,14 @@ const App = () => {
   // Handle drag and drop with UID preservation
   const onDragDrop = (event) => {
     const { dragNode, dropNode, dropPoint, value } = event;
-    if (dropPoint === 0 && dropNode && dropNode.droppable) {
-      // Clonar el árbol y actualizar solo la carpeta destino
+    
+    // Solo permitir drag and drop si el nodo de destino es una carpeta (droppable = true)
+    // Esto evita que se pueda arrastrar cualquier cosa a una sesión SSH
+    const isDropNodeFolder = dropNode && dropNode.droppable === true;
+    const isDropNodeSession = dropNode && dropNode.data && dropNode.data.type === 'ssh';
+    
+    if (dropPoint === 0 && isDropNodeFolder) {
+      // Permitir arrastrar cualquier cosa (carpetas o sesiones) a una carpeta
       const newValue = cloneTreeWithUpdatedNode(value, dropNode.key, (parent) => {
         // Eliminar cualquier instancia del nodo movido
         parent.children = parent.children.filter(n => n.key !== dragNode.key);
@@ -906,6 +929,14 @@ const App = () => {
         return parent;
       });
       setNodes(newValue);
+    } else if (dropPoint === 0 && isDropNodeSession) {
+      // Si se intenta arrastrar algo a una sesión SSH, mostrar mensaje de error
+      toast.current.show({
+        severity: 'warn',
+        summary: 'Operación no permitida',
+        detail: 'No se puede arrastrar elementos dentro de una sesión SSH. Solo las carpetas pueden contener otros elementos.',
+        life: 4000
+      });
     } else {
       setNodes([...value]);
     }
@@ -1344,6 +1375,7 @@ const App = () => {
         type: 'ssh'
       },
       draggable: true,
+      droppable: false, // Las sesiones SSH NO pueden contener otros elementos
       uid: newKey,
       createdAt: new Date().toISOString(),
       isUserCreated: true
@@ -1405,6 +1437,7 @@ const App = () => {
         remoteFolder: editSSHRemoteFolder.trim(),
         type: 'ssh'
       };
+      nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
     }
     setNodes(nodesCopy);
     setShowEditSSHDialog(false);
