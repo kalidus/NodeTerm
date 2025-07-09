@@ -841,10 +841,13 @@ html, body, #root {
 }
 
 /* Colores de iconos personalizados */
+/* Color de carpetas ahora se maneja por tema específico */
+/*
 .sidebar-tree .pi-folder,
 .sidebar-tree .pi-folder-open {
-  color: #f4b400 !important; /* Amarillo carpeta claro */
+  color: #f4b400 !important;
 }
+*/
 .sidebar-tree .pi-desktop {
   /* Color heredado del tema */
 }
