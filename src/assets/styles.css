@@ -89,7 +89,12 @@ html, body, #root {
 .sidebar-tree .p-treenode::before,
 .sidebar-tree .p-treenode-children::before,
 .sidebar-tree .p-treenode-children > .p-treenode::before {
-  display: block !important;
+  display: none !important;
+  background: none !important;
+  border: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  content: none !important;
 }
 .sidebar-tree .p-treenode-leaf > .p-treenode-content .pi {
   color: #b0b0b0;
@@ -911,7 +916,7 @@ html, body, #root {
 /* Alineación: cada nivel mantiene padding y compensa margen */
 .sidebar-tree .p-treenode-children {
   padding-left: var(--tree-indent) !important;
-  border-left: 1px solid var(--surface-border, #d5d5d5) !important;
+  border-left: none !important;
 }
 .sidebar-tree .p-treenode-content {
   margin-left: calc(-1 * var(--tree-indent));
