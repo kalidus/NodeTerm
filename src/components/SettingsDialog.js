@@ -36,7 +36,9 @@ const SettingsDialog = ({
   sidebarFont,
   setSidebarFont,
   sidebarFontSize,
-  setSidebarFontSize
+  setSidebarFontSize,
+  explorerFontSize,
+  setExplorerFontSize
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -476,18 +478,48 @@ const SettingsDialog = ({
                     <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                       Fuente del Explorador
                     </h4>
-                    <Dropdown
-                      id="explorer-font"
-                      value={explorerFont}
-                      options={explorerFonts.map(f => ({ label: f, value: f }))}
-                      onChange={e => setExplorerFont(e.value)}
-                      placeholder="Selecciona una fuente"
-                      style={{ width: '100%' }}
-                      itemTemplate={option => (
-                        <span style={{ fontFamily: option.value }}>{option.label}</span>
-                      )}
-                    />
-                    <div style={{ marginTop: 12, fontFamily: explorerFont, fontSize: 18, textAlign: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label htmlFor="explorer-font" style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem'
+                        }}>
+                          Familia de fuente
+                        </label>
+                        <Dropdown
+                          id="explorer-font"
+                          value={explorerFont}
+                          options={explorerFonts.map(f => ({ label: f, value: f }))}
+                          onChange={e => setExplorerFont(e.value)}
+                          placeholder="Selecciona una fuente"
+                          style={{ width: '100%' }}
+                          itemTemplate={option => (
+                            <span style={{ fontFamily: option.value }}>{option.label}</span>
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="explorer-font-size" style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem'
+                        }}>
+                          Tamaño (px)
+                        </label>
+                        <InputNumber
+                          id="explorer-font-size"
+                          value={explorerFontSize}
+                          onValueChange={e => setExplorerFontSize(e.value)}
+                          min={8}
+                          max={32}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 12, fontFamily: explorerFont, fontSize: `${explorerFontSize}px`, textAlign: 'center' }}>
                       Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{explorerFont}</span>
                     </div>
                   </div>
