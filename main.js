@@ -8,6 +8,7 @@ const url = require('url');
 const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
+const { createBastionShell } = require('./src/components/bastion-ssh');
 
 let mainWindow;
 
@@ -188,92 +189,114 @@ ipcMain.handle('get-version-info', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
-  // Generar cacheKey incluyendo información del bastión para evitar conflictos
+  // Para bastiones: usar cacheKey único por destino (permite reutilización)
+  // Para SSH directo: usar pooling normal para eficiencia
   const cacheKey = config.useBastionWallix 
-    ? `${config.bastionUser}@${config.bastionHost}->${config.username}@${config.host}:${config.port || 22}`
+    ? `bastion-${config.bastionUser}@${config.bastionHost}->${config.username}@${config.host}:${config.port || 22}`
     : `${config.username}@${config.host}:${config.port || 22}`;
   
-  // Aplicar throttling simple
-  const lastAttempt = connectionThrottle.lastAttempt.get(cacheKey) || 0;
-  const now = Date.now();
-  const timeSinceLastAttempt = now - lastAttempt;
-  
-  if (timeSinceLastAttempt < connectionThrottle.minInterval) {
-    const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
-    console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+  // Aplicar throttling solo para SSH directo (bastiones son únicos)
+  if (!config.useBastionWallix) {
+    const lastAttempt = connectionThrottle.lastAttempt.get(cacheKey) || 0;
+    const now = Date.now();
+    const timeSinceLastAttempt = now - lastAttempt;
+    
+    if (timeSinceLastAttempt < connectionThrottle.minInterval) {
+      const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
+      console.log(`Throttling conexión SSH directa a ${cacheKey}, esperando ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    connectionThrottle.lastAttempt.set(cacheKey, Date.now());
+  } else {
+    console.log(`Conexión bastión - sin throttling (pooling habilitado)`);
   }
   
-  connectionThrottle.lastAttempt.set(cacheKey, Date.now());
-  
-  // Intentar reutilizar conexión del pool primero, incluso para terminales
+  // Para bastiones: cada terminal tiene su propia conexión independiente (no pooling)
+  // Para SSH directo: usar pooling normal para eficiencia
   let ssh;
   let isReusedConnection = false;
-  
-  // Buscar en el pool una conexión existente
-  const existingPoolConnection = sshConnectionPool[cacheKey];
-  if (existingPoolConnection) {
-    try {
-      // Verificar si la conexión del pool está activa
-      await existingPoolConnection.exec('echo "test"');
-      ssh = existingPoolConnection;
-      isReusedConnection = true;
-      console.log(`Reutilizando conexión del pool para terminal ${cacheKey}`);
-    } catch (testError) {
-      console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
-      // Limpiar conexión no válida
-      try {
-        existingPoolConnection.close();
-      } catch (e) {
-        // Ignorar errores de cierre
+
+  if (config.useBastionWallix) {
+    // BASTIÓN: Usar ssh2 puro para crear una conexión y shell independientes
+    console.log(`Bastión ${cacheKey} - creando nueva conexión con ssh2 (bastion-ssh.js)`);
+    const bastionConfig = {
+      bastionHost: config.bastionHost,
+      port: 22,
+      bastionUser: config.bastionUser,
+      password: config.password
+    };
+    let shellStream;
+    const { conn } = createBastionShell(
+      bastionConfig,
+      (data) => {
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+      },
+      () => {
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+        if (sshConnections[tabId] && sshConnections[tabId].statsTimeout) {
+          clearTimeout(sshConnections[tabId].statsTimeout);
+        }
+        sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+          originalKey: config.originalKey || tabId,
+          tabId: tabId
+        });
+        delete sshConnections[tabId];
+      },
+      (err) => {
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+      },
+      (stream) => {
+        if (sshConnections[tabId]) {
+          sshConnections[tabId].stream = stream;
+        }
       }
-      delete sshConnectionPool[cacheKey];
+    );
+    // Guardar la conexión para gestión posterior (stream se asigna en onShellReady)
+    sshConnections[tabId] = {
+      ssh: conn,
+      stream: undefined,
+      config,
+      cacheKey,
+      originalKey: config.originalKey || tabId,
+      previousCpu: null,
+      statsTimeout: null,
+      previousNet: null,
+      previousTime: null
+    };
+    sendToRenderer(event.sender, `ssh:ready:${tabId}`);
+    sendToRenderer(event.sender, 'ssh-connection-ready', {
+      originalKey: config.originalKey || tabId,
+      tabId: tabId
+    });
+    return;
+  } else {
+    // SSH DIRECTO: Lógica de pooling normal
+    const existingPoolConnection = sshConnectionPool[cacheKey];
+    if (existingPoolConnection) {
+      try {
+        await existingPoolConnection.exec('echo "test"');
+        ssh = existingPoolConnection;
+        isReusedConnection = true;
+        console.log(`Reutilizando conexión del pool para terminal SSH directo ${cacheKey}`);
+      } catch (testError) {
+        console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
+        try {
+          existingPoolConnection.close();
+        } catch (e) {}
+        delete sshConnectionPool[cacheKey];
+      }
     }
-  }
-  
-  // Si no hay conexión válida en el pool, crear una nueva
-  if (!ssh) {
-    if (config.useBastionWallix) {
-      // Para conexiones Wallix, usar ssh2 directamente con forwardOut en lugar de ssh2-promise
-      console.log(`Creando conexión SSH mediante bastión Wallix para ${cacheKey}`);
-      
-      // Usamos la configuración del bastión solamente
-      const bastionConfig = {
-        host: config.bastionHost,
-        username: config.bastionUser,
-        password: config.password,
-        port: 22
-      };
-      
-      ssh = new SSH2Promise(bastionConfig);
-      
-      // Configurar manejo de errores temprano
-      ssh.on('error', (err) => {
-        console.error(`Error en conexión SSH al bastión ${config.bastionHost}:`, err);
-      });
-      
-      // Marcar como conexión Wallix para manejar el shell de forma diferente
-      ssh._isWallixConnection = true;
-      ssh._wallixTarget = {
-        host: config.host, // Mantener el hostname exacto como se configuró
-        username: config.username,
-        password: config.password,
-        port: config.port || 22
-      };
-      
-      console.log(`Configuración Wallix guardada - Host: '${config.host}', User: '${config.username}', Port: ${config.port || 22}`);
-    } else {
-      // Conexión SSH directa tradicional
+    if (!ssh) {
       console.log(`Creando nueva conexión SSH directa para terminal ${cacheKey}`);
-      
       const directConfig = {
         host: config.host,
         username: config.username,
         password: config.password,
         port: config.port || 22
       };
-      
       ssh = new SSH2Promise(directConfig);
+      sshConnectionPool[cacheKey] = ssh;
     }
   }
 
@@ -381,8 +404,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
     }
 
-    // Solo conectar si es una conexión nueva
+    // Conectar SSH si es necesario
     if (!isReusedConnection) {
+      // Solo conectar si es una conexión nueva (no reutilizada del pool)
       console.log(`Conectando SSH para terminal ${cacheKey}...`);
       
       // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
@@ -398,15 +422,19 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       console.log(`Conectado exitosamente a terminal ${cacheKey}`);
       
       // SSH2Promise está conectado y listo para usar
-      // No necesitamos acceder a la conexión interna, podemos usar directamente los métodos
       console.log('SSH2Promise conectado correctamente, procediendo a crear shell...');
       
-      // Guardar en el pool para reutilización
-      ssh._createdAt = Date.now();
-      ssh._lastUsed = Date.now();
-      sshConnectionPool[cacheKey] = ssh;
+      // Guardar en el pool solo para SSH directo (bastiones son independientes)
+      if (!config.useBastionWallix) {
+        ssh._createdAt = Date.now();
+        ssh._lastUsed = Date.now();
+        sshConnectionPool[cacheKey] = ssh;
+        console.log(`Conexión SSH directa ${cacheKey} guardada en pool para reutilización`);
+      } else {
+        console.log(`Conexión bastión ${cacheKey} - NO guardada en pool (independiente)`);
+      }
     } else {
-      console.log(`Usando conexión existente para terminal ${cacheKey}`);
+      console.log(`Usando conexión SSH directa existente del pool para terminal ${cacheKey}`);
     }
     
     // Crear shell con reintentos
@@ -421,24 +449,46 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           await new Promise(resolve => setTimeout(resolve, 1000 * shellAttempts));
         }
         
-        // Si es una conexión Wallix, usar enfoque de shell con comandos
+        // Si es una conexión Wallix, usar configuración específica para bastiones
         if (ssh._isWallixConnection && ssh._wallixTarget) {
           console.log(`Conexión Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
           
-          // Obtener shell del bastión usando SSH2Promise directamente
-          console.log('Obteniendo shell del bastión...');
-          stream = await ssh.shell({
-            term: 'xterm-256color',
-            cols: 80,
-            rows: 24
-          });
+          // Para bastiones Wallix, esperar un poco antes de crear shell
+          console.log('Esperando estabilización de conexión Wallix...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          console.log('Shell del bastión obtenido');
+          console.log('Creando shell usando SSH2Promise con configuración Wallix...');
+          
+          // Intentar con configuración específica para Wallix
+          try {
+            stream = await ssh.shell({
+              term: 'xterm-256color',
+              cols: 80,
+              rows: 24,
+              modes: {
+                ECHO: 1,
+                TTY_OP_ISPEED: 14400,
+                TTY_OP_OSPEED: 14400
+              }
+            });
+          } catch (shellError) {
+            console.warn('Error con configuración Wallix, intentando configuración básica:', shellError.message);
+            // Fallback con configuración mínima
+            stream = await ssh.shell('xterm-256color');
+          }
+          
+          console.log('Shell de bastión Wallix creado exitosamente');
+          
+          // Para Wallix, verificar dónde estamos conectados
+          console.log('Verificando estado de conexión Wallix...');
+          
+          // Enviar comando para verificar hostname
+          stream.write('hostname\n');
+          
+          // Esperar un poco para procesar
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           console.log('Para conexiones Wallix, el bastión maneja automáticamente la conexión al servidor destino');
-          console.log('No se envían comandos SSH adicionales - la conexión directa ya está establecida');
-          
-          // Para Wallix, no enviamos comandos SSH adicionales
-          // El bastión ya maneja la conexión al servidor destino automáticamente
           
         } else {
           // Conexión SSH directa normal
@@ -654,6 +704,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
         .filter(c => c !== conn && c.cacheKey === conn.cacheKey);
       
       // Solo cerrar la conexión SSH si no hay otras pestañas usándola
+      // (Para bastiones, cada terminal es independiente, así que siempre cerrar)
       if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
         try {
                 console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
@@ -873,326 +924,26 @@ async function findSSHConnection(tabId, sshConfig = null) {
   
   // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexión al mismo servidor
   if (sshConfig && sshConfig.host && sshConfig.username) {
-    const targetCacheKey = sshConfig.useBastionWallix 
-      ? `${sshConfig.bastionUser}@${sshConfig.bastionHost}->${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`
-      : `${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`;
-    
-    // Buscar en conexiones activas
-    for (const conn of Object.values(sshConnections)) {
-      if (conn.cacheKey === targetCacheKey) {
-        return conn;
-      }
-    }
-    
-    // Buscar en el pool de conexiones
-    const existingPoolConnection = sshConnectionPool[targetCacheKey];
-    if (existingPoolConnection) {
-      try {
-        // Verificar si la conexión del pool sigue siendo válida
-        // SSH2Promise maneja la verificación de estado internamente
-        try {
-          // Intentar una operación simple para verificar si la conexión está activa
-          await existingPoolConnection.exec('echo "test"');
-          console.log(`Reutilizando conexión del pool para: ${targetCacheKey}`);
-          return { ssh: existingPoolConnection, cacheKey: targetCacheKey };
-        } catch (testError) {
-          console.log(`Conexión del pool no válida para ${targetCacheKey}, limpiando...`);
-          // Limpiar conexión no válida
-          try {
-            existingPoolConnection.close();
-          } catch (e) {
-            // Ignorar errores de cierre
-          }
-          delete sshConnectionPool[targetCacheKey];
+    // Para bastiones: buscar cualquier conexión activa al mismo destino
+    // Para SSH directo: usar el formato estándar del pool
+    if (sshConfig.useBastionWallix) {
+      // Buscar en conexiones activas cualquier conexión que vaya al mismo destino via bastión
+      for (const conn of Object.values(sshConnections)) {
+        if (conn.config && 
+            conn.config.useBastionWallix &&
+            conn.config.bastionHost === sshConfig.bastionHost &&
+            conn.config.bastionUser === sshConfig.bastionUser &&
+            conn.config.host === sshConfig.host &&
+            conn.config.username === sshConfig.username &&
+            (conn.config.port || 22) === (sshConfig.port || 22)) {
+          // Aquí antes había un console.log(` incompleto que causaba error de sintaxis
+          // Si se desea loggear, usar una línea válida como:
+          // console.log('Conexión encontrada para bastion:', conn);
+          return conn;
         }
-      } catch (e) {
-        console.log(`Error verificando conexión del pool para ${targetCacheKey}, limpiando...`);
-        delete sshConnectionPool[targetCacheKey];
       }
-    }
-    
-    // Si no hay ninguna conexión válida, crear una nueva para el pool
-    console.log(`Creando conexión SSH bajo demanda para FileExplorer: ${targetCacheKey}`);
-    try {
-      let ssh;
-      
-      if (sshConfig.useBastionWallix) {
-        // Para conexiones Wallix, usar la misma lógica que en ssh:connect
-        const bastionConfig = {
-          host: sshConfig.bastionHost,
-          username: sshConfig.bastionUser,
-          password: sshConfig.password,
-          port: 22
-        };
-        
-        ssh = new SSH2Promise(bastionConfig);
-        
-        // Marcar como conexión Wallix
-        ssh._isWallixConnection = true;
-        ssh._wallixTarget = {
-          host: sshConfig.host,
-          username: sshConfig.username,
-          password: sshConfig.password,
-          port: sshConfig.port || 22
-        };
-      } else {
-        // Conexión SSH directa
-        ssh = new SSH2Promise(sshConfig);
-      }
-      
-      // Configurar límites más altos para conexiones del pool que se reutilizan mucho
-      ssh.setMaxListeners(400);
-      
-      await ssh.connect();
-      
-      if (ssh.ssh) {
-        ssh.ssh.setMaxListeners(400);
-      }
-      
-      // Limpiar listeners existentes para evitar acumulación
-      ssh.removeAllListeners();
-      if (ssh.ssh) {
-        ssh.ssh.removeAllListeners();
-      }
-      
-      // Guardar en el pool
-      sshConnectionPool[targetCacheKey] = ssh;
-      
-      console.log(`Conexión SSH creada exitosamente para: ${targetCacheKey}`);
-      
-      // ⚠️ IMPORTANTE: NO emitir ssh-connection-ready aquí porque esto es solo para FileExplorer
-      // El indicador de conexión debería mostrar estado solo para terminales activos
-      
-      return { ssh: ssh, cacheKey: targetCacheKey };
-      
-    } catch (error) {
-      console.error(`Error creando conexión SSH para ${targetCacheKey}:`, error);
-      throw error;
     }
   }
-  
+  // Si no se encuentra, retornar null
   return null;
 }
-
-ipcMain.handle('app:get-sessions', async () => {
-  // Implementation of getting sessions
-});
-
-// Handler para obtener estado de conexiones SSH
-ipcMain.handle('ssh:get-connection-status', async () => {
-  const status = {};
-  
-  // Recorrer todas las conexiones activas
-  Object.values(sshConnections).forEach(conn => {
-    if (conn.originalKey) {
-      // Si la conexión existe y tiene stream activo, está conectada
-      if (conn.stream && !conn.stream.destroyed) {
-        status[conn.originalKey] = 'connected';
-      } else {
-        status[conn.originalKey] = 'disconnected';
-      }
-    }
-  });
-  
-  console.log('📊 Estado actual SSH:', status);
-  return status;
-});
-
-
-
-// File Explorer IPC Handlers
-ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    // Usar ls con formato largo para obtener información detallada
-    const lsOutput = await conn.ssh.exec(`ls -la "${path}" 2>/dev/null || echo "ERROR: Cannot access directory"`);
-    
-    if (lsOutput.includes('ERROR: Cannot access directory')) {
-      throw new Error(`Cannot access directory: ${path}`);
-    }
-
-    // Parsear la salida de ls -la
-    const lines = lsOutput.trim().split('\n');
-    const files = [];
-
-    // Saltar la primera línea que muestra el total
-    lines.slice(1).forEach(line => {
-      if (line.trim() === '') return;
-
-      // Parsear línea de ls -la (maneja archivos con espacios y enlaces simbólicos)
-      const match = line.match(/^([drwxlstT-]+)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\w+\s+\d+\s+[\d:]+)\s+(.+)$/);
-      if (!match) return;
-
-      const [, permissions, , owner, group, size, dateTime, fullName] = match;
-      
-      // Manejar enlaces simbólicos (formato: "nombre -> destino")
-      const name = fullName.includes(' -> ') ? fullName.split(' -> ')[0] : fullName;
-      
-      // Saltar . y .. para el directorio actual
-      if (name === '.' || name === '..') {
-        // Solo incluir .. si no estamos en la raíz
-        if (name === '..' && path !== '/') {
-          files.push({
-            name: '..',
-            type: 'directory',
-            size: 0,
-            permissions,
-            owner,
-            group,
-            modified: dateTime
-          });
-        }
-        return;
-      }
-
-      let type = 'file';
-      if (permissions.startsWith('d')) {
-        type = 'directory';
-      } else if (permissions.startsWith('l')) {
-        type = 'symlink';
-      }
-      
-      files.push({
-        name,
-        type,
-        size: parseInt(size, 10),
-        permissions,
-        owner,
-        group,
-        modified: dateTime
-      });
-    });
-
-    return { success: true, files };
-  } catch (error) {
-    return { success: false, error: error?.message || error || 'Unknown error' };
-  }
-});
-
-// Verificar si un directorio existe y es accesible
-ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    const result = await conn.ssh.exec(`test -d "${path}" && echo "EXISTS" || echo "NOT_EXISTS"`);
-    return result.trim() === 'EXISTS';
-  } catch (error) {
-    return false;
-  }
-});
-
-// Obtener el directorio home del usuario
-ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    const homeDir = await conn.ssh.exec('echo $HOME');
-    return homeDir.trim();
-  } catch (error) {
-    return '/';
-  }
-});
-
-// Descargar archivo desde servidor SSH
-ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    // Crear una nueva instancia de NodeSSH para operaciones de archivos
-    const nodeSSH = new NodeSSH();
-    await nodeSSH.connect({
-      host: sshConfig.host,
-      username: sshConfig.username,
-      password: sshConfig.password,
-      port: sshConfig.port || 22,
-      readyTimeout: 99999
-    });
-    
-    await nodeSSH.getFile(localPath, remotePath);
-    nodeSSH.dispose();
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error?.message || error || 'Unknown error' };
-  }
-});
-
-// Subir archivo al servidor SSH
-ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    // Crear una nueva instancia de NodeSSH para operaciones de archivos
-    const nodeSSH = new NodeSSH();
-    await nodeSSH.connect({
-      host: sshConfig.host,
-      username: sshConfig.username,
-      password: sshConfig.password,
-      port: sshConfig.port || 22,
-      readyTimeout: 99999
-    });
-    
-    await nodeSSH.putFile(localPath, remotePath);
-    nodeSSH.dispose();
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error?.message || error || 'Unknown error' };
-  }
-});
-
-// Eliminar archivo en servidor SSH
-ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    const command = isDirectory ? `rm -rf "${remotePath}"` : `rm "${remotePath}"`;
-    await conn.ssh.exec(command);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error?.message || error || 'Unknown error' };
-  }
-});
-
-// Crear directorio en servidor SSH
-ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
-  const conn = await findSSHConnection(tabId, sshConfig);
-  if (!conn || !conn.ssh) {
-    throw new Error('SSH connection not found');
-  }
-
-  try {
-    await conn.ssh.exec(`mkdir -p "${remotePath}"`);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error?.message || error || 'Unknown error' };
-  }
-});
-
-// Dialog handlers para seleccionar archivos
-ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
-  const result = await dialog.showSaveDialog(mainWindow, options);
-  return result;
-});
-
-ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
-  const result = await dialog.showOpenDialog(mainWindow, options);
-  return result;
-});
