@@ -249,6 +249,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       (stream) => {
         if (sshConnections[tabId]) {
           sshConnections[tabId].stream = stream;
+          // Si hay un resize pendiente, aplicarlo ahora
+          const pending = sshConnections[tabId]._pendingResize;
+          if (pending && stream && !stream.destroyed && typeof stream.setWindow === 'function') {
+            const safeRows = Math.max(1, Math.min(300, pending.rows || 24));
+            const safeCols = Math.max(1, Math.min(500, pending.cols || 80));
+            stream.setWindow(safeRows, safeCols);
+            sshConnections[tabId]._pendingResize = null;
+          }
         }
       }
     );
@@ -657,16 +665,18 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
 // IPC handler to handle terminal resize
 ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
     const conn = sshConnections[tabId];
-    if (conn && conn.stream && !conn.stream.destroyed) {
-        try {
-            // Asegurar que el tamaño sea válido antes de aplicar
-            const safeRows = Math.max(1, Math.min(300, rows || 24));
-            const safeCols = Math.max(1, Math.min(500, cols || 80));
-            
-            conn.stream.setWindow(safeRows, safeCols);
-            // console.log(`Terminal ${tabId} redimensionado a ${safeCols}x${safeRows}`);
-        } catch (resizeError) {
-            console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
+    if (conn) {
+        // Guardar el último tamaño solicitado
+        conn._pendingResize = { rows, cols };
+        if (conn.stream && !conn.stream.destroyed) {
+            try {
+                const safeRows = Math.max(1, Math.min(300, rows || 24));
+                const safeCols = Math.max(1, Math.min(500, cols || 80));
+                conn.stream.setWindow(safeRows, safeCols);
+                conn._pendingResize = null; // Aplicado correctamente
+            } catch (resizeError) {
+                console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
+            }
         }
     }
 });
