@@ -14,7 +14,7 @@ import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { iconThemes } from '../themes/icon-themes';
 import { uiThemes } from '../themes/ui-themes';
 
-const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light' }) => {
+const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
     const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -593,21 +593,24 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             key={`file-explorer-${iconTheme}-${explorerFont}-${explorerColorTheme}-${forceUpdate}`} 
             className="file-explorer-container" 
             data-tab-id={tabId}
-            style={{ fontFamily: explorerFont }}
+            style={{ fontFamily: explorerFont, fontSize: explorerFontSize, '--explorer-font': explorerFont }}
         >
             <Card 
                 title={`Explorador de Archivos - ${sshConfig.host}`}
                 className="file-explorer-card"
+                style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
             >
                 <Toolbar 
                     start={toolbarLeft} 
                     end={toolbarRight}
                     className="file-explorer-toolbar"
+                    style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                 />
                 
                 <BreadCrumb 
                     model={breadcrumbItems} 
                     className="file-explorer-breadcrumb"
+                    style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                 />
                 
                 {!sshReady && (
@@ -634,7 +637,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
-                        style={{ fontFamily: explorerFont }}
+                        style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                     >
                         <DataTable 
                             value={visibleFiles}
@@ -644,8 +647,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
                             rowHover={true}
                             className="file-explorer-datatable"
-                            style={{ fontFamily: explorerFont }}
-                            tableStyle={{ fontFamily: explorerFont }}
+                            style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
+                            tableStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                             bodyClassName="file-explorer-table-body"
                         >
                         <Column 
@@ -653,8 +656,8 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             header="Nombre" 
                             body={nameBodyTemplate}
                             sortable
-                            style={{ minWidth: '200px', fontFamily: explorerFont }}
-                            bodyStyle={{ fontFamily: explorerFont }}
+                            style={{ minWidth: '200px', fontFamily: explorerFont, fontSize: explorerFontSize }}
+                            bodyStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                         />
                         <Column 
                             field="size" 

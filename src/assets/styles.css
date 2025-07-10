@@ -371,7 +371,7 @@ html, body, #root {
 }
 
 .file-explorer-container, .file-explorer-container * {
-  font-family: inherit !important;
+  font-family: var(--explorer-font, inherit) !important;
 }
 
 .file-explorer-card,
