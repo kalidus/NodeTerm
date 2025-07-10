@@ -162,8 +162,8 @@ const SettingsDialog = ({
       visible={visible}
       className="settings-dialog"
       style={{ 
-        width: '800px', 
-        height: '80vh'
+        maxWidth: '98vw',
+        maxHeight: '98vh'
       }}
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
@@ -200,7 +200,7 @@ const SettingsDialog = ({
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
             <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>
-              <TabPanel header="Interfaz" leftIcon="pi pi-eye">
+              <TabPanel header={<span><i className="pi pi-eye" style={{ marginRight: 8 }}></i>Interfaz</span>}>
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -224,200 +224,7 @@ const SettingsDialog = ({
                   <ThemeSelector showPreview={true} />
                 </div>
               </TabPanel>
-              <TabPanel header="Explorador" leftIcon="pi pi-folder-open">
-                <div style={{
-                  padding: '1rem 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
-                }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                    <i className="pi pi-folder-open" style={{ marginRight: '0.5rem' }}></i>
-                    Apariencia del Explorador
-                  </h3>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Tema de Iconos
-                    </h4>
-                    <Dropdown
-                      id="icon-theme"
-                      value={iconTheme}
-                      options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                      onChange={e => setIconTheme(e.value)}
-                      placeholder="Selecciona un tema de iconos"
-                      style={{ width: '100%' }}
-                      itemTemplate={option => (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {iconThemes[option.value]?.icons.folder}
-                          {iconThemes[option.value]?.name}
-                        </span>
-                      )}
-                    />
-                    <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
-                      {iconThemes[iconTheme] && Object.values(iconThemes[iconTheme].icons).map((icon, idx) => (
-                        <span key={idx}>{icon}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Fuente del Explorador
-                    </h4>
-                    <Dropdown
-                      id="explorer-font"
-                      value={explorerFont}
-                      options={explorerFonts.map(f => ({ label: f, value: f }))}
-                      onChange={e => setExplorerFont(e.value)}
-                      placeholder="Selecciona una fuente"
-                      style={{ width: '100%' }}
-                      itemTemplate={option => (
-                        <span style={{ fontFamily: option.value }}>{option.label}</span>
-                      )}
-                    />
-                    <div style={{ marginTop: 12, fontFamily: explorerFont, fontSize: 18, textAlign: 'center' }}>
-                      Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{explorerFont}</span>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Tema de Colores
-                    </h4>
-                    <Dropdown
-                      id="explorer-color-theme"
-                      value={explorerColorTheme}
-                      options={Object.entries(uiThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                      onChange={e => setExplorerColorTheme(e.value)}
-                      placeholder="Selecciona un tema de colores"
-                      style={{ width: '100%' }}
-                      itemTemplate={option => (
-                        <span style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 8,
-                          padding: '4px 0'
-                        }}>
-                          <div style={{
-                            width: 16,
-                            height: 16,
-                            borderRadius: '50%',
-                            background: uiThemes[option.value]?.colors?.buttonPrimary || '#007ad9',
-                            border: '1px solid #ddd'
-                          }}></div>
-                          {option.label}
-                        </span>
-                      )}
-                    />
-                    <div style={{ 
-                      marginTop: 12, 
-                      padding: '8px 12px', 
-                      borderRadius: '4px',
-                      background: uiThemes[explorerColorTheme]?.colors?.contentBackground || '#fff',
-                      border: `1px solid ${uiThemes[explorerColorTheme]?.colors?.contentBorder || '#e0e0e0'}`,
-                      color: uiThemes[explorerColorTheme]?.colors?.dialogText || '#000',
-                      textAlign: 'center',
-                      fontSize: '14px'
-                    }}>
-                      Vista previa del tema: <span style={{ fontWeight: 'bold' }}>{uiThemes[explorerColorTheme]?.name}</span>
-                    </div>
-                  </div>
-                </div>
-              </TabPanel>
-              <TabPanel header="Sesiones" leftIcon="pi pi-sitemap">
-                <div style={{
-                  padding: '1rem 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
-                }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                    <i className="pi pi-sitemap" style={{ marginRight: '0.5rem' }}></i>
-                    Apariencia del Explorador de Sesiones
-                  </h3>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Tema de Iconos
-                    </h4>
-                    <Dropdown
-                      id="icon-theme-sidebar"
-                      value={iconThemeSidebar}
-                      options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
-                      onChange={e => setIconThemeSidebar(e.value)}
-                      placeholder="Selecciona un tema de iconos"
-                      style={{ width: '100%' }}
-                      itemTemplate={option => (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {iconThemes[option.value]?.icons.folder}
-                          {iconThemes[option.value]?.name}
-                        </span>
-                      )}
-                    />
-                    <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
-                      {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
-                        <span key={idx}>{icon}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
-                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                      Fuente del Explorador de Sesiones
-                    </h4>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label htmlFor="sidebar-font" style={{ 
-                          display: 'block', 
-                          marginBottom: '0.5rem',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem'
-                        }}>
-                          Familia de fuente
-                        </label>
-                        <Dropdown
-                          id="sidebar-font"
-                          value={sidebarFont}
-                          options={explorerFonts.map(f => ({ label: f, value: f }))}
-                          onChange={e => setSidebarFont(e.value)}
-                          placeholder="Selecciona una fuente"
-                          style={{ width: '100%' }}
-                          itemTemplate={option => (
-                            <span style={{ fontFamily: option.value }}>{option.label}</span>
-                          )}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="sidebar-font-size" style={{ 
-                          display: 'block', 
-                          marginBottom: '0.5rem',
-                          fontWeight: 'bold',
-                          fontSize: '0.9rem'
-                        }}>
-                          Tamaño (px)
-                        </label>
-                        <InputNumber
-                          id="sidebar-font-size"
-                          value={sidebarFontSize}
-                          onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
-                          min={8}
-                          max={32}
-                          style={{ width: '100%' }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div style={{ marginTop: 12, fontFamily: sidebarFont, fontSize: `${sidebarFontSize}px`, textAlign: 'center' }}>
-                      Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{sidebarFont}</span>
-                    </div>
-                  </div>
-                </div>
-              </TabPanel>
-              <TabPanel header="Terminal" leftIcon="pi pi-desktop">
+              <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>Terminal</span>}>
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -519,7 +326,7 @@ const SettingsDialog = ({
                   </div>
                 </div>
               </TabPanel>
-              <TabPanel header="Status Bar" leftIcon="pi pi-minus">
+              <TabPanel header={<span><i className="pi pi-sliders-h" style={{ marginRight: 8 }}></i>Status Bar</span>}>
                 <div style={{
                   padding: '1rem 0',
                   display: 'flex',
@@ -533,6 +340,199 @@ const SettingsDialog = ({
                     currentTheme={statusBarTheme}
                     onThemeChange={setStatusBarTheme}
                   />
+                </div>
+              </TabPanel>
+              <TabPanel header={<span><i className="pi pi-sitemap" style={{ marginRight: 8 }}></i>Explorador de Sesiones</span>}>
+                <div style={{
+                  padding: '1rem 0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '50vh',
+                  width: '100%'
+                }}>
+                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                    <i className="pi pi-sitemap" style={{ marginRight: '0.5rem' }}></i>
+                    Apariencia del Explorador de Sesiones
+                  </h3>
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                      Tema de Iconos
+                    </h4>
+                    <Dropdown
+                      id="icon-theme-sidebar"
+                      value={iconThemeSidebar}
+                      options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                      onChange={e => setIconThemeSidebar(e.value)}
+                      placeholder="Selecciona un tema de iconos"
+                      style={{ width: '100%' }}
+                      itemTemplate={option => (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {iconThemes[option.value]?.icons.folder}
+                          {iconThemes[option.value]?.name}
+                        </span>
+                      )}
+                    />
+                    <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
+                      {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
+                        <span key={idx}>{icon}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                      Fuente del Explorador de Sesiones
+                    </h4>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label htmlFor="sidebar-font" style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem'
+                        }}>
+                          Familia de fuente
+                        </label>
+                        <Dropdown
+                          id="sidebar-font"
+                          value={sidebarFont}
+                          options={explorerFonts.map(f => ({ label: f, value: f }))}
+                          onChange={e => setSidebarFont(e.value)}
+                          placeholder="Selecciona una fuente"
+                          style={{ width: '100%' }}
+                          itemTemplate={option => (
+                            <span style={{ fontFamily: option.value }}>{option.label}</span>
+                          )}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="sidebar-font-size" style={{ 
+                          display: 'block', 
+                          marginBottom: '0.5rem',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem'
+                        }}>
+                          Tamaño (px)
+                        </label>
+                        <InputNumber
+                          id="sidebar-font-size"
+                          value={sidebarFontSize}
+                          onValueChange={(e) => handleSidebarFontSizeChange(e.value)}
+                          min={8}
+                          max={32}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div style={{ marginTop: 12, fontFamily: sidebarFont, fontSize: `${sidebarFontSize}px`, textAlign: 'center' }}>
+                      Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{sidebarFont}</span>
+                    </div>
+                  </div>
+                </div>
+              </TabPanel>
+              <TabPanel header={<span><i className="pi pi-folder-open" style={{ marginRight: 8 }}></i>Explorador de Archivos</span>}>
+                <div style={{
+                  padding: '1rem 0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '50vh',
+                  width: '100%'
+                }}>
+                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                    <i className="pi pi-folder-open" style={{ marginRight: '0.5rem' }}></i>
+                    Apariencia del Explorador
+                  </h3>
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                      Tema de Iconos
+                    </h4>
+                    <Dropdown
+                      id="icon-theme"
+                      value={iconTheme}
+                      options={Object.entries(iconThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                      onChange={e => setIconTheme(e.value)}
+                      placeholder="Selecciona un tema de iconos"
+                      style={{ width: '100%' }}
+                      itemTemplate={option => (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {iconThemes[option.value]?.icons.folder}
+                          {iconThemes[option.value]?.name}
+                        </span>
+                      )}
+                    />
+                    <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
+                      {iconThemes[iconTheme] && Object.values(iconThemes[iconTheme].icons).map((icon, idx) => (
+                        <span key={idx}>{icon}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                      Fuente del Explorador
+                    </h4>
+                    <Dropdown
+                      id="explorer-font"
+                      value={explorerFont}
+                      options={explorerFonts.map(f => ({ label: f, value: f }))}
+                      onChange={e => setExplorerFont(e.value)}
+                      placeholder="Selecciona una fuente"
+                      style={{ width: '100%' }}
+                      itemTemplate={option => (
+                        <span style={{ fontFamily: option.value }}>{option.label}</span>
+                      )}
+                    />
+                    <div style={{ marginTop: 12, fontFamily: explorerFont, fontSize: 18, textAlign: 'center' }}>
+                      Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{explorerFont}</span>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                      Tema de Colores
+                    </h4>
+                    <Dropdown
+                      id="explorer-color-theme"
+                      value={explorerColorTheme}
+                      options={Object.entries(uiThemes).map(([key, theme]) => ({ label: theme.name, value: key }))}
+                      onChange={e => setExplorerColorTheme(e.value)}
+                      placeholder="Selecciona un tema de colores"
+                      style={{ width: '100%' }}
+                      itemTemplate={option => (
+                        <span style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 8,
+                          padding: '4px 0'
+                        }}>
+                          <div style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            background: uiThemes[option.value]?.colors?.buttonPrimary || '#007ad9',
+                            border: '1px solid #ddd'
+                          }}></div>
+                          {option.label}
+                        </span>
+                      )}
+                    />
+                    <div style={{ 
+                      marginTop: 12, 
+                      padding: '8px 12px', 
+                      borderRadius: '4px',
+                      background: uiThemes[explorerColorTheme]?.colors?.contentBackground || '#fff',
+                      border: `1px solid ${uiThemes[explorerColorTheme]?.colors?.contentBorder || '#e0e0e0'}`,
+                      color: uiThemes[explorerColorTheme]?.colors?.dialogText || '#000',
+                      textAlign: 'center',
+                      fontSize: '14px'
+                    }}>
+                      Vista previa del tema: <span style={{ fontWeight: 'bold' }}>{uiThemes[explorerColorTheme]?.name}</span>
+                    </div>
+                  </div>
                 </div>
               </TabPanel>
             </TabView>
