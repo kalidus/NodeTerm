@@ -257,6 +257,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             stream.setWindow(safeRows, safeCols);
             sshConnections[tabId]._pendingResize = null;
           }
+          // Lanzar bucle de stats SOLO cuando el stream está listo
+          // wallixStatsLoop(); // Eliminado: ahora se llama dentro del callback onShellReady
         }
       }
     );
@@ -272,6 +274,130 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       previousNet: null,
       previousTime: null
     };
+    // Lanzar bucle de stats para Wallix
+    // function wallixStatsLoop() {
+    //   const connObj = sshConnections[tabId];
+    //   if (!connObj || !connObj.ssh || !connObj.stream) return;
+    //   try {
+    //     console.log('[WallixStats] Lanzando bucle de stats para', tabId);
+    //     connObj.ssh.exec('grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && cat /etc/os-release', (err, stream) => {
+    //       if (err || !stream) { console.warn('[WallixStats] Error en exec:', err); return; }
+    //       let output = '';
+    //       stream.on('data', (data) => { output += data.toString('utf-8'); });
+    //       stream.on('close', () => {
+    //         console.log('[WallixStats] Output recibido:', output);
+    //         // Parsear y enviar stats igual que en statsLoop
+    //         try {
+    //           const parts = output.trim().split('\n');
+    //           // CPU
+    //           const cpuLine = parts[0] || '';
+    //           const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+    //           let cpuLoad = '0.00';
+    //           const previousCpu = connObj.previousCpu;
+    //           if (cpuTimes.length >= 8) {
+    //             const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+    //             if (previousCpu) {
+    //               const prevIdle = previousCpu.idle + previousCpu.iowait;
+    //               const currentIdle = currentCpu.idle + currentCpu.iowait;
+    //               const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+    //               const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+    //               const totalDiff = currentTotal - prevTotal;
+    //               const idleDiff = currentIdle - prevIdle;
+    //               if (totalDiff > 0) {
+    //                 cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
+    //               }
+    //             }
+    //             connObj.previousCpu = currentCpu;
+    //           }
+    //           // Memoria
+    //           const memLine = parts.find(line => line.startsWith('Mem:')) || '';
+    //           const memParts = memLine.split(/\s+/);
+    //           const mem = {
+    //             total: parseInt(memParts[1], 10) || 0,
+    //             used: parseInt(memParts[2], 10) || 0,
+    //           };
+    //           // Disco
+    //           const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
+    //           const disks = dfIndex >= 0 ? (function(dfOutput) {
+    //             const lines = parts.slice(dfIndex).filter(l => l.trim() !== '');
+    //             lines.shift();
+    //             return lines.map(line => {
+    //               const p = line.trim().split(/\s+/);
+    //               if (p.length >= 6) {
+    //                 const use = parseInt(p[p.length - 2], 10);
+    //                 const name = p[p.length - 1];
+    //                 if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt') && !name.startsWith('/run') && name !== '/boot/efi' && !name.startsWith('/dev')) {
+    //                   return { fs: name, use };
+    //                 }
+    //               }
+    //               return null;
+    //             }).filter(Boolean);
+    //           })() : [];
+    //           // Uptime
+    //           const uptimeLine = parts.find(line => line.includes(' up '));
+    //           let uptime = '';
+    //           if (uptimeLine) {
+    //             const match = uptimeLine.match(/up (.*?),/);
+    //             if (match && match[1]) {
+    //               uptime = match[1].trim();
+    //             }
+    //           }
+    //           // Network
+    //           const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
+    //           let network = { rx_speed: 0, tx_speed: 0 };
+    //           if (netIndex >= 0) {
+    //             const netLines = parts.slice(netIndex + 2, netIndex + 4); // Solo dos interfaces
+    //             let totalRx = 0, totalTx = 0;
+    //             netLines.forEach(line => {
+    //               const p = line.trim().split(/\s+/);
+    //               if (p.length >= 10) {
+    //                 totalRx += parseInt(p[1], 10);
+    //                 totalTx += parseInt(p[9], 10);
+    //               }
+    //             });
+    //             const previousNet = connObj.previousNet;
+    //             const previousTime = connObj.previousTime;
+    //             const currentTime = Date.now();
+    //             if (previousNet && previousTime) {
+    //               const timeDiff = (currentTime - previousTime) / 1000;
+    //               const rxDiff = totalRx - previousNet.totalRx;
+    //               const txDiff = totalTx - previousNet.totalTx;
+    //               network.rx_speed = Math.max(0, rxDiff / timeDiff);
+    //               network.tx_speed = Math.max(0, txDiff / timeDiff);
+    //             }
+    //             connObj.previousNet = { totalRx, totalTx };
+    //             connObj.previousTime = currentTime;
+    //           }
+    //           // Hostname y distro
+    //           const hostname = parts[parts.length - 2] || '';
+    //           const osRelease = parts[parts.length - 1] || '';
+    //           const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+    //           const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+    //           // Enviar stats
+    //           const stats = {
+    //             cpu: cpuLoad,
+    //             mem,
+    //             disk: disks,
+    //             uptime,
+    //             network,
+    //             hostname,
+    //             distro: finalDistroId,
+    //             ip: config.host
+    //           };
+    //           console.log('[WallixStats] Enviando stats:', stats);
+    //           sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+    //         } catch (parseErr) {
+    //           console.warn('[WallixStats] Error parseando stats:', parseErr);
+    //         }
+    //         // Repetir si la conexión sigue viva
+    //         if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
+    //           sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
+    //         }
+    //       });
+    //     });
+    //   } catch (e) { console.warn('[WallixStats] Error general:', e); }
+    // }
+    // wallixStatsLoop(); // Eliminado: ahora se llama dentro del callback onShellReady
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
     sendToRenderer(event.sender, 'ssh-connection-ready', {
       originalKey: config.originalKey || tabId,
@@ -308,103 +434,104 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
   }
 
-  const statsLoop = async (hostname, distro, ip) => {
-    // Verificación robusta de la conexión
-    const conn = sshConnections[tabId];
-    if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
-      return; // Stop if connection is closed or invalid
-    }
+  // Eliminar función statsLoop y llamadas relacionadas
+  // const statsLoop = async (hostname, distro, ip) => {
+  //   // Verificación robusta de la conexión
+  //   const conn = sshConnections[tabId];
+  //   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
+  //     return; // Stop if connection is closed or invalid
+  //   }
 
-    try {
-      // --- Get CPU stats first
-      const cpuStatOutput = await ssh.exec("grep 'cpu ' /proc/stat");
-      const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-      const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+  //   try {
+  //     // --- Get CPU stats first
+  //     const cpuStatOutput = await ssh.exec("grep 'cpu ' /proc/stat");
+  //     const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+  //     const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
 
-      let cpuLoad = '0.00';
-      const previousCpu = sshConnections[tabId].previousCpu;
+  //     let cpuLoad = '0.00';
+  //     const previousCpu = sshConnections[tabId].previousCpu;
 
-      if (previousCpu) {
-          const prevIdle = previousCpu.idle + previousCpu.iowait;
-          const currentIdle = currentCpu.idle + currentCpu.iowait;
-          const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
-          const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-          const totalDiff = currentTotal - prevTotal;
-          const idleDiff = currentIdle - prevIdle;
-          if (totalDiff > 0) {
-              cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
-          }
-      }
-      sshConnections[tabId].previousCpu = currentCpu;
+  //     if (previousCpu) {
+  //         const prevIdle = previousCpu.idle + previousCpu.iowait;
+  //         const currentIdle = currentCpu.idle + currentCpu.iowait;
+  //         const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+  //         const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+  //         const totalDiff = currentTotal - prevTotal;
+  //         const idleDiff = currentIdle - prevIdle;
+  //         if (totalDiff > 0) {
+  //             cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
+  //         }
+  //     }
+  //     sshConnections[tabId].previousCpu = currentCpu;
 
-      // --- Get Memory, Disk, Uptime and Network stats ---
-      const allStatsRes = await ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
-      const parts = allStatsRes.trim().split('\n');
+  //     // --- Get Memory, Disk, Uptime and Network stats ---
+  //     const allStatsRes = await ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
+  //     const parts = allStatsRes.trim().split('\n');
 
-      // Parse Memory
-      const memLine = parts.find(line => line.startsWith('Mem:'));
-      const memParts = memLine.split(/\s+/);
-      const mem = {
-          total: parseInt(memParts[1], 10),
-          used: parseInt(memParts[2], 10),
-      };
+  //     // Parse Memory
+  //     const memLine = parts.find(line => line.startsWith('Mem:'));
+  //     const memParts = memLine.split(/\s+/);
+  //     const mem = {
+  //         total: parseInt(memParts[1], 10),
+  //         used: parseInt(memParts[2], 10),
+  //     };
 
-      // Parse Disk
-      const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-      const dfOutput = parts.slice(dfIndex).join('\n');
-      const disks = parseDfOutput(dfOutput);
+  //     // Parse Disk
+  //     const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
+  //     const dfOutput = parts.slice(dfIndex).join('\n');
+  //     const disks = parseDfOutput(dfOutput);
 
-      // Parse Uptime
-      const uptimeLine = parts.find(line => line.includes(' up '));
-      let uptime = '';
-      if (uptimeLine) {
-        const match = uptimeLine.match(/up (.*?),/);
-        if (match && match[1]) {
-          uptime = match[1].trim();
-        }
-      }
+  //     // Parse Uptime
+  //     const uptimeLine = parts.find(line => line.includes(' up '));
+  //     let uptime = '';
+  //     if (uptimeLine) {
+  //       const match = uptimeLine.match(/up (.*?),/);
+  //       if (match && match[1]) {
+  //         uptime = match[1].trim();
+  //       }
+  //     }
 
-      // Parse Network
-      const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
-      const netOutput = parts.slice(netIndex).join('\n');
-      const currentNet = parseNetDev(netOutput);
-      const previousNet = sshConnections[tabId].previousNet;
-      const previousTime = sshConnections[tabId].previousTime;
-      const currentTime = Date.now();
-      let network = { rx_speed: 0, tx_speed: 0 };
+  //     // Parse Network
+  //     const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
+  //     const netOutput = parts.slice(netIndex).join('\n');
+  //     const currentNet = parseNetDev(netOutput);
+  //     const previousNet = sshConnections[tabId].previousNet;
+  //     const previousTime = sshConnections[tabId].previousTime;
+  //     const currentTime = Date.now();
+  //     let network = { rx_speed: 0, tx_speed: 0 };
 
-      if (previousNet && previousTime) {
-          const timeDiff = (currentTime - previousTime) / 1000; // in seconds
-          const rxDiff = currentNet.totalRx - previousNet.totalRx;
-          const txDiff = currentNet.totalTx - previousNet.totalTx;
+  //     if (previousNet && previousTime) {
+  //         const timeDiff = (currentTime - previousTime) / 1000; // in seconds
+  //         const rxDiff = currentNet.totalRx - previousNet.totalRx;
+  //         const txDiff = currentNet.totalTx - previousNet.totalTx;
 
-          network.rx_speed = Math.max(0, rxDiff / timeDiff);
-          network.tx_speed = Math.max(0, txDiff / timeDiff);
-      }
-      sshConnections[tabId].previousNet = currentNet;
-      sshConnections[tabId].previousTime = currentTime;
+  //         network.rx_speed = Math.max(0, rxDiff / timeDiff);
+  //         network.tx_speed = Math.max(0, txDiff / timeDiff);
+  //     }
+  //     sshConnections[tabId].previousNet = currentNet;
+  //     sshConnections[tabId].previousTime = currentTime;
 
-      const stats = { 
-          cpu: cpuLoad, 
-          mem, 
-          disk: disks, 
-          uptime, 
-          network, 
-          hostname: hostname,
-          distro: distro,
-          ip: ip
-      };
-      sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
-    } catch (e) {
-      // console.error(`Error fetching stats for ${tabId}:`, e.message);
-    } finally {
-      // Verificar nuevamente que la conexión siga válida antes de programar siguiente loop
-      const finalConn = sshConnections[tabId];
-      if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
-        finalConn.statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
-      }
-    }
-  };
+  //     const stats = { 
+  //         cpu: cpuLoad, 
+  //         mem, 
+  //         disk: disks, 
+  //         uptime, 
+  //         network, 
+  //         hostname: hostname,
+  //         distro: distro,
+  //         ip: ip
+  //     };
+  //     sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+  //   } catch (e) {
+  //     // console.error(`Error fetching stats for ${tabId}:`, e.message);
+  //   } finally {
+  //     // Verificar nuevamente que la conexión siga válida antes de programar siguiente loop
+  //     const finalConn = sshConnections[tabId];
+  //     if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
+  //       finalConn.statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
+  //     }
+  //   }
+  // };
 
   try {
     // For subsequent connections, send the cached MOTD immediately.
@@ -608,7 +735,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
     const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
     const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-    statsLoop(realHostname, finalDistroId, config.host);
+    // statsLoop(realHostname, finalDistroId, config.host); // Eliminado: statsLoop eliminado
 
   } catch (err) {
     console.error(`Error en conexión SSH para ${tabId}:`, err);
@@ -957,3 +1084,92 @@ async function findSSHConnection(tabId, sshConfig = null) {
   // Si no se encuentra, retornar null
   return null;
 }
+
+// --- INICIO BLOQUE RESTAURACIÓN STATS ---
+// Función de statsLoop para conexiones directas (SSH2Promise)
+async function statsLoop(tabId, hostname, distro, ip) {
+  const conn = sshConnections[tabId];
+  if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
+    return;
+  }
+  try {
+    // CPU
+    const cpuStatOutput = await conn.ssh.exec("grep 'cpu ' /proc/stat");
+    const cpuTimes = cpuStatOutput.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+    let cpuLoad = '0.00';
+    const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+    const previousCpu = conn.previousCpu;
+    if (previousCpu) {
+      const prevIdle = previousCpu.idle + previousCpu.iowait;
+      const currentIdle = currentCpu.idle + currentCpu.iowait;
+      const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+      const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+      const totalDiff = currentTotal - prevTotal;
+      const idleDiff = currentIdle - prevIdle;
+      if (totalDiff > 0) {
+        cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
+      }
+    }
+    conn.previousCpu = currentCpu;
+    // Memoria, disco, uptime, red
+    const allStatsRes = await conn.ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
+    const parts = allStatsRes.trim().split('\n');
+    // Memoria
+    const memLine = parts.find(line => line.startsWith('Mem:')) || '';
+    const memParts = memLine.split(/\s+/);
+    const mem = {
+      total: parseInt(memParts[1], 10) || 0,
+      used: parseInt(memParts[2], 10) || 0,
+    };
+    // Disco
+    const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
+    const dfOutput = parts.slice(dfIndex).join('\n');
+    const disks = parseDfOutput(dfOutput);
+    // Uptime
+    const uptimeLine = parts.find(line => line.includes(' up '));
+    let uptime = '';
+    if (uptimeLine) {
+      const match = uptimeLine.match(/up (.*?),/);
+      if (match && match[1]) {
+        uptime = match[1].trim();
+      }
+    }
+    // Red
+    const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
+    const netOutput = parts.slice(netIndex).join('\n');
+    const currentNet = parseNetDev(netOutput);
+    const previousNet = conn.previousNet;
+    const previousTime = conn.previousTime;
+    const currentTime = Date.now();
+    let network = { rx_speed: 0, tx_speed: 0 };
+    if (previousNet && previousTime) {
+      const timeDiff = (currentTime - previousTime) / 1000;
+      const rxDiff = currentNet.totalRx - previousNet.totalRx;
+      const txDiff = currentNet.totalTx - previousNet.totalTx;
+      network.rx_speed = Math.max(0, rxDiff / timeDiff);
+      network.tx_speed = Math.max(0, txDiff / timeDiff);
+    }
+    conn.previousNet = currentNet;
+    conn.previousTime = currentTime;
+    // Enviar stats
+    const stats = {
+      cpu: cpuLoad,
+      mem,
+      disk: disks,
+      uptime,
+      network,
+      hostname,
+      distro,
+      ip
+    };
+    sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
+  } catch (e) {
+    // Silenciar errores de stats
+  } finally {
+    const finalConn = sshConnections[tabId];
+    if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
+      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, hostname, distro, ip), 2000);
+    }
+  }
+}
+// --- FIN BLOQUE RESTAURACIÓN STATS ---
