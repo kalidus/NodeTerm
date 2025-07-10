@@ -1141,10 +1141,11 @@ html, body, #root {
 
 /* Centrado vertical SOLO para el contenido de los paneles de configuración */
 .settings-dialog-tabview .p-tabview-panels {
-  height: 50vh !important;
-  min-height: 300px !important;
-  max-height: 60vh !important;
-  overflow-y: auto !important;
+  width: 100% !important;
+  min-height: unset !important;
+  max-height: unset !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 .settings-dialog-tabview .p-tabview-panel {
   display: flex !important;
