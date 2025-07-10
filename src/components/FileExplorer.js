@@ -138,15 +138,14 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     useEffect(() => {
         const initializeExplorer = async () => {
             if (!window.electron || !tabId || !sshReady) return;
-            
             setLoading(true);
             setError(null);
-            
             try {
                 // Obtener el directorio home del usuario
-                const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
-                setHomeDir(homeDir || '/');
-                setCurrentPath(homeDir || '/');
+                const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
+                const homeDir = (homeResult && homeResult.success && typeof homeResult.home === 'string') ? homeResult.home : '/';
+                setHomeDir(homeDir);
+                setCurrentPath(homeDir);
             } catch (err) {
                 console.error('Error getting home directory:', err);
                 setError('No se pudo obtener el directorio home del usuario.');
@@ -156,7 +155,6 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                 setLoading(false);
             }
         };
-
         if (sshReady) {
             initializeExplorer();
         }
@@ -180,7 +178,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             
             if (result.success) {
                 setFiles(result.files);
-                updateBreadcrumb(path);
+                updateBreadcrumb(typeof path === 'string' ? path : '/');
             } else {
                 setError(result.error || 'Error al cargar archivos');
                 setFiles([]);
@@ -195,6 +193,10 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     };
 
     const updateBreadcrumb = (path) => {
+        if (typeof path !== 'string') {
+            console.warn('updateBreadcrumb: path no es string:', path);
+            path = '/';
+        }
         const pathParts = path.split('/').filter(part => part !== '');
         const items = pathParts.map((part, index) => {
             const fullPath = '/' + pathParts.slice(0, index + 1).join('/');
@@ -649,7 +651,6 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
                             className="file-explorer-datatable"
                             style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                             tableStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
-                            bodyClassName="file-explorer-table-body"
                         >
                         <Column 
                             field="name" 

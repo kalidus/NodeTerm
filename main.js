@@ -10,6 +10,77 @@ const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
 
+// Parser simple para 'ls -la'
+function parseLsOutput(output) {
+  const lines = output.split('\n').filter(line => line.trim() !== '' && !line.startsWith('total'));
+  return lines.map(line => {
+    // Ejemplo: -rw-r--r-- 1 user group 4096 Jan 1 12:00 filename
+    const parts = line.split(/\s+/);
+    if (parts.length < 9) return null;
+    const [permissions, , owner, group, size, month, day, timeOrYear, ...nameParts] = parts;
+    const name = nameParts.join(' ');
+    return {
+      name,
+      permissions,
+      owner,
+      group,
+      size: parseInt(size, 10) || 0,
+      modified: `${month} ${day} ${timeOrYear}`,
+      type: permissions[0] === 'd' ? 'directory' : 'file',
+    };
+  }).filter(Boolean);
+}
+
+ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
+  try {
+    const ssh = new SSH2Promise(sshConfig);
+    await ssh.connect();
+    const home = await ssh.exec('pwd');
+    await ssh.close();
+    return { success: true, home: (home || '/').trim() };
+  } catch (err) {
+    return { success: false, error: err.message || err };
+  }
+});
+
+ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
+  try {
+    console.log('ssh:list-files: tabId:', tabId);
+    console.log('ssh:list-files: path recibido:', path);
+    console.log('ssh:list-files: sshConfig recibido:', sshConfig);
+    // Validación robusta de path
+    let safePath = '/';
+    if (typeof path === 'string') {
+      safePath = path;
+    } else if (path && typeof path.path === 'string') {
+      safePath = path.path;
+    } else {
+      console.warn('ssh:list-files: path inválido recibido:', path);
+    }
+    const ssh = new SSH2Promise(sshConfig);
+    await ssh.connect();
+    const lsOutput = await ssh.exec(`ls -la "${safePath}"`);
+    await ssh.close();
+    return { success: true, files: parseLsOutput(lsOutput) };
+  } catch (err) {
+    console.error('ssh:list-files: ERROR:', err);
+    return { success: false, error: err.message || err };
+  }
+});
+
+ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
+  try {
+    const ssh = new SSH2Promise(sshConfig);
+    await ssh.connect();
+    // Comprobar si el directorio existe y es accesible
+    const result = await ssh.exec(`[ -d "${path}" ] && echo "exists" || echo "notfound"`);
+    await ssh.close();
+    return result.trim() === 'exists';
+  } catch (err) {
+    return false;
+  }
+});
+
 let mainWindow;
 
 // Store active SSH connections and their shells
