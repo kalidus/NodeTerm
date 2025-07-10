@@ -165,7 +165,9 @@ const SettingsDialog = ({
       className="settings-dialog"
       style={{ 
         maxWidth: '98vw',
-        maxHeight: '98vh'
+        maxHeight: '98vh',
+        minWidth: '600px',
+        minHeight: '500px'
       }}
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
