@@ -70,6 +70,7 @@ const App = () => {
   const [editSSHUser, setEditSSHUser] = useState('');
   const [editSSHPassword, setEditSSHPassword] = useState('');
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
+  const [editSSHPort, setEditSSHPort] = useState(22);
 
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -81,6 +82,7 @@ const App = () => {
   const [pendingExplorerSession, setPendingExplorerSession] = useState(null);
   const [sshPassword, setSSHPassword] = useState('');
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
+  const [sshPort, setSSHPort] = useState(22);
   const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
 
@@ -353,6 +355,31 @@ const App = () => {
   
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
+
+  // Función para detectar y parsear formato Wallix
+  const parseWallixUser = (userString) => {
+    // Formato Wallix: usuario@dominio@servidor:protocolo:usuario_destino
+    // Ejemplo: rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119
+    const wallixPattern = /^(.+)@(.+)@(.+):(.+):(.+)$/;
+    const match = userString.match(wallixPattern);
+    
+    if (match) {
+      const [, bastionUser, domain, targetServer, protocol, targetUser] = match;
+      return {
+        isWallix: true,
+        bastionUser: userString, // El usuario completo para el bastión
+        targetUser: targetUser,
+        targetServer: targetServer,
+        protocol: protocol,
+        domain: domain
+      };
+    }
+    
+    return {
+      isWallix: false,
+      targetUser: userString
+    };
+  };
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -1159,10 +1186,15 @@ const App = () => {
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
-              host: node.data.host,
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
               username: node.data.user,
               password: node.data.password,
+              port: node.data.port || 22,
               originalKey: node.key,
+              // Datos del bastión Wallix
+              useBastionWallix: node.data.useBastionWallix || false,
+              bastionHost: node.data.bastionHost || '',
+              bastionUser: node.data.bastionUser || ''
             };
             const newTab = {
               key: tabId,
@@ -1222,10 +1254,15 @@ const App = () => {
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
-              host: node.data.host,
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
               username: node.data.user,
               password: node.data.password,
+              port: node.data.port || 22,
               originalKey: node.key,
+              // Datos del bastión Wallix
+              useBastionWallix: node.data.useBastionWallix || false,
+              bastionHost: node.data.bastionHost || '',
+              bastionUser: node.data.bastionUser || ''
             };
             const newTab = {
               key: tabId,
@@ -1366,16 +1403,26 @@ const App = () => {
       });
       return;
     }
+    
+    // Detectar automáticamente si es formato Wallix
+    const userInfo = parseWallixUser(sshUser.trim());
+    
     const newKey = generateUniqueKey();
     const newSSHNode = {
       key: newKey,
       label: sshName.trim(),
       data: {
         host: sshHost.trim(),
-        user: sshUser.trim(),
+        user: userInfo.isWallix ? userInfo.targetUser : sshUser.trim(),
         password: sshPassword.trim(),
         remoteFolder: sshRemoteFolder.trim(),
-        type: 'ssh'
+        port: sshPort,
+        type: 'ssh',
+        // Datos del bastión Wallix (si aplica)
+        useBastionWallix: userInfo.isWallix,
+        bastionHost: userInfo.isWallix ? sshHost.trim() : '', // En Wallix, el host es el bastión
+        bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
+        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
       },
       draggable: true,
       droppable: false, // Las sesiones SSH NO pueden contener otros elementos
@@ -1397,7 +1444,7 @@ const App = () => {
     }
     setNodes(nodesCopy);
     setShowSSHDialog(false);
-    setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder('');
+    setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder(''); setSSHPort(22);
     toast.current.show({
       severity: 'success',
       summary: 'SSH añadida',
@@ -1410,10 +1457,12 @@ const App = () => {
   const openEditSSHDialog = (node) => {
     setEditSSHNode(node);
     setEditSSHName(node.label);
-    setEditSSHHost(node.data?.host || '');
-    setEditSSHUser(node.data?.user || '');
+    setEditSSHHost(node.data?.bastionHost || node.data?.host || '');
+    // Mostrar el usuario original completo si es Wallix, o el usuario simple si es directo
+    setEditSSHUser(node.data?.useBastionWallix ? node.data?.bastionUser || '' : node.data?.user || '');
     setEditSSHPassword(node.data?.password || '');
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
+    setEditSSHPort(node.data?.port || 22);
     setShowEditSSHDialog(true);
   };
 
@@ -1428,17 +1477,27 @@ const App = () => {
       });
       return;
     }
+    
+    // Detectar automáticamente si es formato Wallix
+    const userInfo = parseWallixUser(editSSHUser.trim());
+    
     const nodesCopy = deepCopy(nodes);
     const nodeToEdit = findNodeByKey(nodesCopy, editSSHNode.key);
     if (nodeToEdit) {
       nodeToEdit.label = editSSHName.trim();
       nodeToEdit.data = { 
         ...nodeToEdit.data, 
-        host: editSSHHost.trim(), 
-        user: editSSHUser.trim(),
+        host: userInfo.isWallix ? userInfo.targetServer : editSSHHost.trim(), // Si es Wallix, el host real es el targetServer
+        user: userInfo.isWallix ? userInfo.targetUser : editSSHUser.trim(),
         password: editSSHPassword.trim(),
         remoteFolder: editSSHRemoteFolder.trim(),
-        type: 'ssh'
+        port: editSSHPort,
+        type: 'ssh',
+        // Datos del bastión Wallix (si aplica)
+        useBastionWallix: userInfo.isWallix,
+        bastionHost: userInfo.isWallix ? editSSHHost.trim() : '', // En Wallix, el host ingresado es el bastión
+        bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
+        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
       };
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
     }
@@ -1450,6 +1509,7 @@ const App = () => {
     setEditSSHUser('');
     setEditSSHPassword('');
     setEditSSHRemoteFolder('');
+    setEditSSHPort(22);
     toast.current.show({
       severity: 'success',
       summary: 'SSH editada',
@@ -1589,11 +1649,15 @@ const App = () => {
     // Crear el explorador SIN conexión SSH propia - reutilizará conexiones existentes del pool
     const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
     const sshConfig = {
-      host: sshNode.data.host,
+      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
       port: sshNode.data.port || 22,
       originalKey: sshNode.key,
+      // Datos del bastión Wallix
+      useBastionWallix: sshNode.data.useBastionWallix || false,
+      bastionHost: sshNode.data.bastionHost || '',
+      bastionUser: sshNode.data.bastionUser || ''
     };
     
     // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
@@ -2459,11 +2523,30 @@ const App = () => {
           </div>
           <div className="p-field">
             <label htmlFor="sshUser">Usuario</label>
-            <InputText id="sshUser" value={sshUser} onChange={e => setSSHUser(e.target.value)} />
+            <InputText 
+              id="sshUser" 
+              value={sshUser} 
+              onChange={e => setSSHUser(e.target.value)} 
+              placeholder="usuario o rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119"
+            />
+            <small className="p-d-block" style={{ color: '#666', marginTop: '0.25rem' }}>
+              Para Wallix usar formato: usuario@dominio@servidor:protocolo:usuario_destino
+            </small>
           </div>
           <div className="p-field">
             <label htmlFor="sshPassword">Contraseña</label>
             <InputText id="sshPassword" type="password" value={sshPassword} onChange={e => setSSHPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="sshPort">Puerto</label>
+            <InputNumber 
+              id="sshPort" 
+              value={sshPort} 
+              onValueChange={e => setSSHPort(e.value || 22)} 
+              min={1} 
+              max={65535} 
+              placeholder="22"
+            />
           </div>
           <div className="p-field">
             <label htmlFor="sshRemoteFolder">Carpeta remota</label>
@@ -2499,11 +2582,30 @@ const App = () => {
           </div>
           <div className="p-field">
             <label htmlFor="editSSHUser">Usuario</label>
-            <InputText id="editSSHUser" value={editSSHUser} onChange={e => setEditSSHUser(e.target.value)} />
+            <InputText 
+              id="editSSHUser" 
+              value={editSSHUser} 
+              onChange={e => setEditSSHUser(e.target.value)} 
+              placeholder="usuario o rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119"
+            />
+            <small className="p-d-block" style={{ color: '#666', marginTop: '0.25rem' }}>
+              Para Wallix usar formato: usuario@dominio@servidor:protocolo:usuario_destino
+            </small>
           </div>
           <div className="p-field">
             <label htmlFor="editSSHPassword">Contraseña</label>
             <InputText id="editSSHPassword" type="password" value={editSSHPassword} onChange={e => setEditSSHPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editSSHPort">Puerto</label>
+            <InputNumber 
+              id="editSSHPort" 
+              value={editSSHPort} 
+              onValueChange={e => setEditSSHPort(e.value || 22)} 
+              min={1} 
+              max={65535} 
+              placeholder="22"
+            />
           </div>
           <div className="p-field">
             <label htmlFor="editSSHRemoteFolder">Carpeta remota</label>
