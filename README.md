@@ -121,17 +121,6 @@ npm run pack
 
 ---
 
-## 📊 **Gestión de Versiones**
-
-| Comando | Acción | Ejemplo |
-|---------|--------|---------|
-| `npm run version:patch` | 🔧 Bug fixes | `1.3.1` → `1.3.2` |
-| `npm run version:minor` | ✨ Nuevas características | `1.3.1` → `1.4.0` |
-| `npm run version:major` | 💥 Cambios importantes | `1.3.1` → `2.0.0` |
-| `npm run version:build` | 🏗️ Compilar después de versionar | - |
-
----
-
 ## 🎨 **Interfaz de Usuario**
 
 <details>
@@ -205,34 +194,6 @@ NodeTerm/
 ├── 📄 preload.js          # Script de preload
 └── 📄 webpack.config.js   # Configuración Webpack
 ```
-
----
-
-## 🐛 **Solución de Problemas**
-
-<details>
-<summary><strong>🧠 Memory Leaks</strong></summary>
-
-- ✅ Sistema de limpieza automática de event listeners
-- 📊 Tracking de listeners activos por pestaña
-- 🗑️ Remoción automática al cerrar pestañas
-</details>
-
-<details>
-<summary><strong>⚡ Rendimiento</strong></summary>
-
-- 🔄 Lazy loading de componentes
-- 📑 Gestión eficiente de pestañas
-- 🎯 Optimización de re-renders
-</details>
-
-<details>
-<summary><strong>🔗 Conexiones SSH</strong></summary>
-
-- 🔄 Pool de conexiones reutilizables
-- ⏱️ Timeout configurables
-- 🛡️ Manejo robusto de errores de red
-</details>
 
 ---
 
