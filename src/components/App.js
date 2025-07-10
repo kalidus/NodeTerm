@@ -1757,6 +1757,21 @@ const App = () => {
     } catch {}
   }, [sidebarFontSize]);
 
+  const [explorerFontSize, setExplorerFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('explorerFontSize');
+      return saved ? parseInt(saved, 10) : 15;
+    } catch {
+      return 15;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorerFontSize', explorerFontSize.toString());
+    } catch {}
+  }, [explorerFontSize]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
@@ -2336,7 +2351,7 @@ const App = () => {
                   
                   return (
                     <div 
-                      key={tab.key} 
+                      key={tab.key}
                       style={{ 
                         display: isActiveTab ? 'flex' : 'none',
                         flexDirection: 'column',
@@ -2354,6 +2369,7 @@ const App = () => {
                           iconTheme={iconTheme}
                           explorerFont={explorerFont}
                           explorerColorTheme={explorerColorTheme}
+                          explorerFontSize={explorerFontSize}
                         />
                       ) : (
                         <TerminalComponent
@@ -2542,6 +2558,8 @@ const App = () => {
         setSidebarFont={setSidebarFont}
         sidebarFontSize={sidebarFontSize}
         setSidebarFontSize={setSidebarFontSize}
+        explorerFontSize={explorerFontSize}
+        setExplorerFontSize={setExplorerFontSize}
       />
 
       {/* Diálogo para crear nuevo grupo */}
