@@ -56,26 +56,33 @@ const connectionThrottle = {
   }
 };
 
-// Función para limpiar conexiones SSH huérfanas cada 15 segundos
+// Función para limpiar conexiones SSH huérfanas cada 60 segundos
 setInterval(() => {
   const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
   
   for (const [poolKey, poolConnection] of Object.entries(sshConnectionPool)) {
     if (!activeKeys.has(poolKey)) {
-      console.log(`Limpiando conexión SSH huérfana: ${poolKey}`);
-      try {
-        // Limpiar listeners antes de cerrar
-        if (poolConnection.ssh) {
-          poolConnection.ssh.removeAllListeners();
+      // Verificar si la conexión es realmente antigua (más de 5 minutos sin uso)
+      const connectionAge = Date.now() - (poolConnection._lastUsed || poolConnection._createdAt || 0);
+      if (connectionAge > 5 * 60 * 1000) { // 5 minutos
+        console.log(`Limpiando conexión SSH huérfana: ${poolKey} (sin uso por ${Math.round(connectionAge/1000)}s)`);
+        try {
+          // Limpiar listeners antes de cerrar
+          if (poolConnection.ssh) {
+            poolConnection.ssh.removeAllListeners();
+          }
+          poolConnection.close();
+        } catch (e) {
+          console.warn(`Error closing orphaned connection: ${e.message}`);
         }
-        poolConnection.close();
-      } catch (e) {
-        console.warn(`Error closing orphaned connection: ${e.message}`);
+        delete sshConnectionPool[poolKey];
       }
-      delete sshConnectionPool[poolKey];
+    } else {
+      // Marcar como usado recientemente
+      poolConnection._lastUsed = Date.now();
     }
   }
-}, 15000); // Cada 15 segundos para una limpieza más frecuente
+}, 60000); // Cambiar a 60 segundos para dar más tiempo
 
 // Helper function to parse 'df -P' command output
 function parseDfOutput(dfOutput) {
@@ -181,7 +188,10 @@ ipcMain.handle('get-version-info', () => {
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
-  const cacheKey = `${config.username}@${config.host}:${config.port || 22}`;
+  // Generar cacheKey incluyendo información del bastión para evitar conflictos
+  const cacheKey = config.useBastionWallix 
+    ? `${config.bastionUser}@${config.bastionHost}->${config.username}@${config.host}:${config.port || 22}`
+    : `${config.username}@${config.host}:${config.port || 22}`;
   
   // Aplicar throttling simple
   const lastAttempt = connectionThrottle.lastAttempt.get(cacheKey) || 0;
@@ -223,8 +233,48 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   
   // Si no hay conexión válida en el pool, crear una nueva
   if (!ssh) {
-    ssh = new SSH2Promise(config);
-    console.log(`Creando nueva conexión SSH para terminal ${cacheKey}`);
+    if (config.useBastionWallix) {
+      // Para conexiones Wallix, usar ssh2 directamente con forwardOut en lugar de ssh2-promise
+      console.log(`Creando conexión SSH mediante bastión Wallix para ${cacheKey}`);
+      
+      // Usamos la configuración del bastión solamente
+      const bastionConfig = {
+        host: config.bastionHost,
+        username: config.bastionUser,
+        password: config.password,
+        port: 22
+      };
+      
+      ssh = new SSH2Promise(bastionConfig);
+      
+      // Configurar manejo de errores temprano
+      ssh.on('error', (err) => {
+        console.error(`Error en conexión SSH al bastión ${config.bastionHost}:`, err);
+      });
+      
+      // Marcar como conexión Wallix para manejar el shell de forma diferente
+      ssh._isWallixConnection = true;
+      ssh._wallixTarget = {
+        host: config.host, // Mantener el hostname exacto como se configuró
+        username: config.username,
+        password: config.password,
+        port: config.port || 22
+      };
+      
+      console.log(`Configuración Wallix guardada - Host: '${config.host}', User: '${config.username}', Port: ${config.port || 22}`);
+    } else {
+      // Conexión SSH directa tradicional
+      console.log(`Creando nueva conexión SSH directa para terminal ${cacheKey}`);
+      
+      const directConfig = {
+        host: config.host,
+        username: config.username,
+        password: config.password,
+        port: config.port || 22
+      };
+      
+      ssh = new SSH2Promise(directConfig);
+    }
   }
 
   const statsLoop = async (hostname, distro, ip) => {
@@ -338,21 +388,28 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
       ssh.setMaxListeners(300);
       
+      console.log(`Iniciando conexión SSH para ${cacheKey}...`);
+      console.log(`Configuración: Host=${config.host}, Usuario=${config.username}, Puerto=${config.port || 22}`);
+      if (config.useBastionWallix) {
+        console.log(`Bastión Wallix: Host=${config.bastionHost}, Usuario=${config.bastionUser}`);
+      }
+      
       await ssh.connect();
       console.log(`Conectado exitosamente a terminal ${cacheKey}`);
       
-      // Configurar límites adicionales en la conexión SSH interna
-      if (ssh.ssh) {
-        ssh.ssh.setMaxListeners(300);
-      }
+      // SSH2Promise está conectado y listo para usar
+      // No necesitamos acceder a la conexión interna, podemos usar directamente los métodos
+      console.log('SSH2Promise conectado correctamente, procediendo a crear shell...');
       
       // Guardar en el pool para reutilización
+      ssh._createdAt = Date.now();
+      ssh._lastUsed = Date.now();
       sshConnectionPool[cacheKey] = ssh;
     } else {
       console.log(`Usando conexión existente para terminal ${cacheKey}`);
     }
     
-    // Intentar crear shell con reintentos y configuración mejorada
+    // Crear shell con reintentos
     let stream;
     let shellAttempts = 0;
     const maxShellAttempts = 3;
@@ -364,7 +421,35 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           await new Promise(resolve => setTimeout(resolve, 1000 * shellAttempts));
         }
         
-        stream = await ssh.shell({ term: 'xterm-256color' });
+        // Si es una conexión Wallix, usar enfoque de shell con comandos
+        if (ssh._isWallixConnection && ssh._wallixTarget) {
+          console.log(`Conexión Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
+          
+          // Obtener shell del bastión usando SSH2Promise directamente
+          console.log('Obteniendo shell del bastión...');
+          stream = await ssh.shell({
+            term: 'xterm-256color',
+            cols: 80,
+            rows: 24
+          });
+          
+          console.log('Shell del bastión obtenido');
+          console.log('Para conexiones Wallix, el bastión maneja automáticamente la conexión al servidor destino');
+          console.log('No se envían comandos SSH adicionales - la conexión directa ya está establecida');
+          
+          // Para Wallix, no enviamos comandos SSH adicionales
+          // El bastión ya maneja la conexión al servidor destino automáticamente
+          
+        } else {
+          // Conexión SSH directa normal
+          console.log('Creando shell SSH directo...');
+          stream = await ssh.shell({ 
+            term: 'xterm-256color',
+            cols: 80,
+            rows: 24
+          });
+        }
+        
         break;
       } catch (shellError) {
         shellAttempts++;
@@ -376,7 +461,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     
-    // Configurar límites de listeners para cada stream individual
+    // Configurar límites de listeners para el stream
     stream.setMaxListeners(0); // Sin límite para streams individuales
 
     const storedOriginalKey = config.originalKey || tabId;
@@ -545,6 +630,11 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       if (conn.statsTimeout) {
         clearTimeout(conn.statsTimeout);
         conn.statsTimeout = null;
+      }
+      
+      // Para conexiones Wallix, solo necesitamos cerrar el stream principal
+      if (conn.ssh && conn.ssh._isWallixConnection) {
+        console.log('Cerrando conexión Wallix');
       }
       
       // Limpiar listeners del stream de forma más agresiva
@@ -783,7 +873,9 @@ async function findSSHConnection(tabId, sshConfig = null) {
   
   // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexión al mismo servidor
   if (sshConfig && sshConfig.host && sshConfig.username) {
-    const targetCacheKey = `${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`;
+    const targetCacheKey = sshConfig.useBastionWallix 
+      ? `${sshConfig.bastionUser}@${sshConfig.bastionHost}->${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`
+      : `${sshConfig.username}@${sshConfig.host}:${sshConfig.port || 22}`;
     
     // Buscar en conexiones activas
     for (const conn of Object.values(sshConnections)) {
@@ -822,7 +914,32 @@ async function findSSHConnection(tabId, sshConfig = null) {
     // Si no hay ninguna conexión válida, crear una nueva para el pool
     console.log(`Creando conexión SSH bajo demanda para FileExplorer: ${targetCacheKey}`);
     try {
-      const ssh = new SSH2Promise(sshConfig);
+      let ssh;
+      
+      if (sshConfig.useBastionWallix) {
+        // Para conexiones Wallix, usar la misma lógica que en ssh:connect
+        const bastionConfig = {
+          host: sshConfig.bastionHost,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          port: 22
+        };
+        
+        ssh = new SSH2Promise(bastionConfig);
+        
+        // Marcar como conexión Wallix
+        ssh._isWallixConnection = true;
+        ssh._wallixTarget = {
+          host: sshConfig.host,
+          username: sshConfig.username,
+          password: sshConfig.password,
+          port: sshConfig.port || 22
+        };
+      } else {
+        // Conexión SSH directa
+        ssh = new SSH2Promise(sshConfig);
+      }
+      
       // Configurar límites más altos para conexiones del pool que se reutilizan mucho
       ssh.setMaxListeners(400);
       
