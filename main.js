@@ -362,7 +362,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
         
         if (connObj.ssh.execCommand) {
-          const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && cat /etc/os-release';
+          const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
               console.warn('[WallixStats] Error ejecutando comando:', err);
@@ -487,10 +487,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 bastionStatsState[tabId].previousTime = currentTime;
               }
               
-              // Hostname y distro
+              // Hostname, IP y distro
               let hostname = 'Bastión';
               let finalDistroId = 'linux';
-              
+              let ip = '';
               // Buscar hostname real
               const hostnameLineIndex = parts.findIndex(line => 
                 line && !line.includes('=') && !line.includes(':') && 
@@ -499,18 +499,28 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 !line.includes('cpu') && !line.includes('Mem') && 
                 !line.includes('total') && !line.includes('Filesystem')
               );
-              
               if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 5) {
                 hostname = parts[hostnameLineIndex].trim();
               }
-              
+              // Buscar IP real (línea después de hostname)
+              let ipLine = '';
+              if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 4) {
+                ipLine = parts[hostnameLineIndex + 1]?.trim() || '';
+              }
+              // Tomar la última IP válida (no 127.0.0.1, no vacía)
+              if (ipLine) {
+                const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
+                if (ipCandidates.length > 0) {
+                  ip = ipCandidates[ipCandidates.length - 1];
+                }
+              }
+              if (!ip) ip = config.host;
               // Buscar distro en os-release
               const osReleaseText = parts.slice(-10).join('\n'); // Últimas 10 líneas
               const distroMatch = osReleaseText.match(/^ID="?([^"\n]*)"?$/m);
               if (distroMatch && distroMatch[1]) {
                 finalDistroId = distroMatch[1].toLowerCase();
               }
-              
               const stats = {
                 cpu: cpuLoad,
                 mem,
@@ -519,7 +529,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 network,
                 hostname,
                 distro: finalDistroId,
-                ip: config.host
+                ip
               };
               
               console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
@@ -1248,7 +1258,7 @@ async function findSSHConnection(tabId, sshConfig = null) {
 
 // --- INICIO BLOQUE RESTAURACIÓN STATS ---
 // Función de statsLoop para conexiones directas (SSH2Promise)
-async function statsLoop(tabId, hostname, distro, ip) {
+async function statsLoop(tabId, hostname, distro, fallbackIp) {
   const conn = sshConnections[tabId];
   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
     return;
@@ -1273,7 +1283,7 @@ async function statsLoop(tabId, hostname, distro, ip) {
     }
     conn.previousCpu = currentCpu;
     // Memoria, disco, uptime, red
-    const allStatsRes = await conn.ssh.exec("free -b && df -P && uptime && cat /proc/net/dev");
+    const allStatsRes = await conn.ssh.exec("free -b && df -P && uptime && cat /proc/net/dev && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo ''");
     const parts = allStatsRes.trim().split('\n');
     // Memoria
     const memLine = parts.find(line => line.startsWith('Mem:')) || '';
@@ -1312,6 +1322,16 @@ async function statsLoop(tabId, hostname, distro, ip) {
     }
     conn.previousNet = currentNet;
     conn.previousTime = currentTime;
+    // Buscar IP real (última línea, tomar la última IP válida)
+    let ip = '';
+    if (parts.length > 0) {
+      const ipLine = parts[parts.length - 1].trim();
+      const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
+      if (ipCandidates.length > 0) {
+        ip = ipCandidates[ipCandidates.length - 1];
+      }
+    }
+    if (!ip) ip = fallbackIp;
     // Enviar stats
     const stats = {
       cpu: cpuLoad,
@@ -1329,7 +1349,7 @@ async function statsLoop(tabId, hostname, distro, ip) {
   } finally {
     const finalConn = sshConnections[tabId];
     if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
-      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, hostname, distro, ip), 2000);
+      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, hostname, distro, fallbackIp), 2000);
     }
   }
 }
