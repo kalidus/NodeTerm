@@ -519,7 +519,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               const osReleaseText = parts.slice(-10).join('\n'); // Últimas 10 líneas
               const distroMatch = osReleaseText.match(/^ID="?([^"\n]*)"?$/m);
               if (distroMatch && distroMatch[1]) {
-                finalDistroId = distroMatch[1].toLowerCase();
+                let rawDistro = distroMatch[1].toLowerCase();
+                if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
+                  finalDistroId = "rhel";
+                } else {
+                  finalDistroId = rawDistro;
+                }
               }
               const stats = {
                 cpu: cpuLoad,
@@ -1332,7 +1337,38 @@ async function statsLoop(tabId, hostname, distro, fallbackIp) {
       }
     }
     if (!ip) ip = fallbackIp;
-    // Enviar stats
+    // Normalización de distro (RedHat) y obtención de versionId
+    let finalDistroId = distro;
+    let versionId = '';
+    try {
+      // Buscar ID, ID_LIKE y VERSION_ID en todo el output
+      const osReleaseLines = parts;
+      let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
+      let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
+      let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
+      let rawDistro = '';
+      if (idLine) {
+        const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
+        if (match) rawDistro = match[2].toLowerCase();
+      }
+      if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
+        finalDistroId = "rhel";
+      } else if (rawDistro === 'linux' && idLikeLine) {
+        const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
+        const idLike = match ? match[2].toLowerCase() : '';
+        if (idLike.includes('rhel') || idLike.includes('redhat')) {
+          finalDistroId = "rhel";
+        } else {
+          finalDistroId = rawDistro;
+        }
+      } else if (rawDistro) {
+        finalDistroId = rawDistro;
+      }
+      if (versionIdLine) {
+        const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
+        if (match) versionId = match[2];
+      }
+    } catch (e) {}
     const stats = {
       cpu: cpuLoad,
       mem,
@@ -1340,7 +1376,8 @@ async function statsLoop(tabId, hostname, distro, fallbackIp) {
       uptime,
       network,
       hostname,
-      distro,
+      distro: finalDistroId,
+      versionId,
       ip
     };
     sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
