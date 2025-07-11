@@ -76,11 +76,6 @@ const StatusBar = ({ stats }) => {
                     <div className="status-bar-section">
                         <DistroIcon distro={distro} />
                         <span>{hostname}</span>
-                        {distro && (
-                            <span style={{ marginLeft: 8, fontWeight: 500, color: '#888' }}>
-                                {distro.toUpperCase()}
-                            </span>
-                        )}
                     </div>
                 )}
                 {cpu !== undefined && (
