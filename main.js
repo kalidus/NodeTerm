@@ -359,7 +359,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
 
       try {
-        console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
+        // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
         
         if (connObj.ssh.execCommand) {
           const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
@@ -387,13 +387,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             }
             
             const output = result.stdout;
-            console.log('[WallixStats] Output recibido, length:', output.length);
-            console.log('[WallixStats] Raw output preview:', JSON.stringify(output.substring(0, 300)));
+            // console.log('[WallixStats] Output recibido, length:', output.length);
+            // console.log('[WallixStats] Raw output preview:', JSON.stringify(output.substring(0, 300)));
             
             try {
               const parts = output.trim().split('\n');
-              console.log('[WallixStats] Parts found:', parts.length);
-              console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
+              // console.log('[WallixStats] Parts found:', parts.length);
+              // console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
               
               // CPU - buscar línea que empiece con "cpu "
               const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
@@ -515,17 +515,36 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 }
               }
               if (!ip) ip = config.host;
-              // Buscar distro en os-release
-              const osReleaseText = parts.slice(-10).join('\n'); // Últimas 10 líneas
-              const distroMatch = osReleaseText.match(/^ID="?([^"\n]*)"?$/m);
-              if (distroMatch && distroMatch[1]) {
-                let rawDistro = distroMatch[1].toLowerCase();
+              // Buscar distro y versionId en os-release (todo el output)
+              let versionId = '';
+              try {
+                const osReleaseLines = parts;
+                let idLine = osReleaseLines.find(line => line.trim().startsWith('ID='));
+                let idLikeLine = osReleaseLines.find(line => line.trim().startsWith('ID_LIKE='));
+                let versionIdLine = osReleaseLines.find(line => line.trim().startsWith('VERSION_ID='));
+                let rawDistro = '';
+                if (idLine) {
+                  const match = idLine.match(/^ID=("?)([^"\n]*)\1$/);
+                  if (match) rawDistro = match[2].toLowerCase();
+                }
                 if (["rhel", "redhat", "redhatenterpriseserver", "red hat enterprise linux"].includes(rawDistro)) {
                   finalDistroId = "rhel";
-                } else {
+                } else if (rawDistro === 'linux' && idLikeLine) {
+                  const match = idLikeLine.match(/^ID_LIKE=("?)([^"\n]*)\1$/);
+                  const idLike = match ? match[2].toLowerCase() : '';
+                  if (idLike.includes('rhel') || idLike.includes('redhat')) {
+                    finalDistroId = "rhel";
+                  } else {
+                    finalDistroId = rawDistro;
+                  }
+                } else if (rawDistro) {
                   finalDistroId = rawDistro;
                 }
-              }
+                if (versionIdLine) {
+                  const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
+                  if (match) versionId = match[2];
+                }
+              } catch (e) {}
               const stats = {
                 cpu: cpuLoad,
                 mem,
@@ -534,10 +553,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 network,
                 hostname,
                 distro: finalDistroId,
+                versionId,
                 ip
               };
               
-              console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
+              // console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
               sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
               
             } catch (parseErr) {
