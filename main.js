@@ -85,6 +85,8 @@ let mainWindow;
 
 // Store active SSH connections and their shells
 const sshConnections = {};
+// Estado persistente para stats de bastión (CPU, red, etc.) por tabId
+const bastionStatsState = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
@@ -312,6 +314,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           originalKey: config.originalKey || tabId,
           tabId: tabId
         });
+        // Limpiar estado persistente de bastión al cerrar la pestaña
+        delete bastionStatsState[tabId];
         delete sshConnections[tabId];
       },
       (err) => {
@@ -397,7 +401,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               if (cpuLineIndex >= 0) {
                 const cpuLine = parts[cpuLineIndex];
                 const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-                const previousCpu = connObj.previousCpu;
+                // Usar estado persistente para bastión
+                const previousCpu = bastionStatsState[tabId]?.previousCpu;
                 if (cpuTimes.length >= 8) {
                   const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
                   if (previousCpu) {
@@ -411,7 +416,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                       cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
                     }
                   }
-                  connObj.previousCpu = currentCpu;
+                  // Guardar estado persistente para bastión
+                  if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
+                  bastionStatsState[tabId].previousCpu = currentCpu;
                 }
               }
               
@@ -464,8 +471,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                     totalTx += parseInt(p[9], 10) || 0;
                   }
                 });
-                const previousNet = connObj.previousNet;
-                const previousTime = connObj.previousTime;
+                // Usar estado persistente para bastión
+                const previousNet = bastionStatsState[tabId]?.previousNet;
+                const previousTime = bastionStatsState[tabId]?.previousTime;
                 const currentTime = Date.now();
                 if (previousNet && previousTime) {
                   const timeDiff = (currentTime - previousTime) / 1000;
@@ -474,8 +482,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                   network.rx_speed = Math.max(0, rxDiff / timeDiff);
                   network.tx_speed = Math.max(0, txDiff / timeDiff);
                 }
-                connObj.previousNet = { totalRx, totalTx };
-                connObj.previousTime = currentTime;
+                if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
+                bastionStatsState[tabId].previousNet = { totalRx, totalTx };
+                bastionStatsState[tabId].previousTime = currentTime;
               }
               
               // Hostname y distro
