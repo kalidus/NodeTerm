@@ -349,41 +349,72 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // Función de bucle de stats para Wallix/bastión
     function wallixStatsLoop() {
       const connObj = sshConnections[tabId];
-      if (!connObj || !connObj.ssh || !connObj.stream) return;
+      if (!connObj || !connObj.ssh || !connObj.stream) {
+        console.log('[WallixStats] Conexión no disponible, saltando stats');
+        return;
+      }
+
       try {
-        console.log('[WallixStats] Lanzando bucle de stats para', tabId);
-        connObj.ssh.exec('grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && cat /etc/os-release', (err, stream) => {
-          if (err || !stream) { 
-            console.warn('[WallixStats] Error en exec:', err); 
-            return; 
-          }
-          let output = '';
-          stream.on('data', (data) => { output += data.toString('utf-8'); });
-          stream.on('close', () => {
-            console.log('[WallixStats] Output recibido:', output);
-            // Parsear y enviar stats igual que en statsLoop
+        console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
+        
+        if (connObj.ssh.execCommand) {
+          const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && cat /etc/os-release';
+          connObj.ssh.execCommand(command, (err, result) => {
+            if (err || !result) {
+              console.warn('[WallixStats] Error ejecutando comando:', err);
+              // Enviar stats básicas en caso de error
+              const fallbackStats = {
+                cpu: '0.00',
+                mem: { total: 0, used: 0 },
+                disk: [],
+                uptime: 'Error',
+                network: { rx_speed: 0, tx_speed: 0 },
+                hostname: 'Bastión',
+                distro: 'linux',
+                ip: config.host
+              };
+              sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, fallbackStats);
+              
+              // Reintentar en 5 segundos
+              if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
+                sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+              }
+              return;
+            }
+            
+            const output = result.stdout;
+            console.log('[WallixStats] Output recibido, length:', output.length);
+            console.log('[WallixStats] Raw output preview:', JSON.stringify(output.substring(0, 300)));
+            
             try {
               const parts = output.trim().split('\n');
-              // CPU
-              const cpuLine = parts[0] || '';
-              const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+              console.log('[WallixStats] Parts found:', parts.length);
+              console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
+              
+              // CPU - buscar línea que empiece con "cpu "
+              const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
               let cpuLoad = '0.00';
-              const previousCpu = connObj.previousCpu;
-              if (cpuTimes.length >= 8) {
-                const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
-                if (previousCpu) {
-                  const prevIdle = previousCpu.idle + previousCpu.iowait;
-                  const currentIdle = currentCpu.idle + currentCpu.iowait;
-                  const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
-                  const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
-                  const totalDiff = currentTotal - prevTotal;
-                  const idleDiff = currentIdle - prevIdle;
-                  if (totalDiff > 0) {
-                    cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
+              if (cpuLineIndex >= 0) {
+                const cpuLine = parts[cpuLineIndex];
+                const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
+                const previousCpu = connObj.previousCpu;
+                if (cpuTimes.length >= 8) {
+                  const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
+                  if (previousCpu) {
+                    const prevIdle = previousCpu.idle + previousCpu.iowait;
+                    const currentIdle = currentCpu.idle + currentCpu.iowait;
+                    const prevTotal = Object.values(previousCpu).reduce((a, b) => a + b, 0);
+                    const currentTotal = Object.values(currentCpu).reduce((a, b) => a + b, 0);
+                    const totalDiff = currentTotal - prevTotal;
+                    const idleDiff = currentIdle - prevIdle;
+                    if (totalDiff > 0) {
+                      cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
+                    }
                   }
+                  connObj.previousCpu = currentCpu;
                 }
-                connObj.previousCpu = currentCpu;
               }
+              
               // Memoria
               const memLine = parts.find(line => line.startsWith('Mem:')) || '';
               const memParts = memLine.split(/\s+/);
@@ -391,11 +422,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 total: parseInt(memParts[1], 10) || 0,
                 used: parseInt(memParts[2], 10) || 0,
               };
+              
               // Disco
               const dfIndex = parts.findIndex(line => line.trim().startsWith('Filesystem'));
-              const disks = dfIndex >= 0 ? (function(dfOutput) {
+              const disks = dfIndex >= 0 ? (function() {
                 const lines = parts.slice(dfIndex).filter(l => l.trim() !== '');
-                lines.shift();
+                lines.shift(); // Remove header
                 return lines.map(line => {
                   const p = line.trim().split(/\s+/);
                   if (p.length >= 6) {
@@ -408,26 +440,28 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                   return null;
                 }).filter(Boolean);
               })() : [];
+              
               // Uptime
               const uptimeLine = parts.find(line => line.includes(' up '));
-              let uptime = '';
+              let uptime = 'N/A';
               if (uptimeLine) {
                 const match = uptimeLine.match(/up (.*?),/);
                 if (match && match[1]) {
                   uptime = match[1].trim();
                 }
               }
+              
               // Network
               const netIndex = parts.findIndex(line => line.trim().includes('Inter-|   Receive'));
               let network = { rx_speed: 0, tx_speed: 0 };
               if (netIndex >= 0) {
-                const netLines = parts.slice(netIndex + 2, netIndex + 4); // Solo dos interfaces
+                const netLines = parts.slice(netIndex + 2, netIndex + 4);
                 let totalRx = 0, totalTx = 0;
                 netLines.forEach(line => {
                   const p = line.trim().split(/\s+/);
                   if (p.length >= 10) {
-                    totalRx += parseInt(p[1], 10);
-                    totalTx += parseInt(p[9], 10);
+                    totalRx += parseInt(p[1], 10) || 0;
+                    totalTx += parseInt(p[9], 10) || 0;
                   }
                 });
                 const previousNet = connObj.previousNet;
@@ -443,12 +477,31 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 connObj.previousNet = { totalRx, totalTx };
                 connObj.previousTime = currentTime;
               }
+              
               // Hostname y distro
-              const hostname = parts[parts.length - 2] || '';
-              const osRelease = parts[parts.length - 1] || '';
-              const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
-              const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-              // Enviar stats
+              let hostname = 'Bastión';
+              let finalDistroId = 'linux';
+              
+              // Buscar hostname real
+              const hostnameLineIndex = parts.findIndex(line => 
+                line && !line.includes('=') && !line.includes(':') && 
+                !line.includes('/') && !line.includes('$') && 
+                line.trim().length > 0 && line.trim().length < 50 &&
+                !line.includes('cpu') && !line.includes('Mem') && 
+                !line.includes('total') && !line.includes('Filesystem')
+              );
+              
+              if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 5) {
+                hostname = parts[hostnameLineIndex].trim();
+              }
+              
+              // Buscar distro en os-release
+              const osReleaseText = parts.slice(-10).join('\n'); // Últimas 10 líneas
+              const distroMatch = osReleaseText.match(/^ID="?([^"\n]*)"?$/m);
+              if (distroMatch && distroMatch[1]) {
+                finalDistroId = distroMatch[1].toLowerCase();
+              }
+              
               const stats = {
                 cpu: cpuLoad,
                 mem,
@@ -459,19 +512,42 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 distro: finalDistroId,
                 ip: config.host
               };
-              console.log('[WallixStats] Enviando stats:', stats);
+              
+              console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
               sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+              
             } catch (parseErr) {
               console.warn('[WallixStats] Error parseando stats:', parseErr);
             }
-            // Repetir si la conexión sigue viva
+            
+            // Programar siguiente ejecución
             if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
               sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
             }
           });
-        });
-      } catch (e) { 
-        console.warn('[WallixStats] Error general:', e); 
+          
+        } else {
+          console.warn('[WallixStats] execCommand no disponible en conexión bastión');
+          // Fallback con stats básicas
+          const stats = {
+            cpu: '0.00',
+            mem: { total: 0, used: 0 },
+            disk: [],
+            uptime: 'N/A',
+            network: { rx_speed: 0, tx_speed: 0 },
+            hostname: 'Bastión',
+            distro: 'linux',
+            ip: config.host
+          };
+          sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
+        }
+        
+      } catch (e) {
+        console.warn('[WallixStats] Error general:', e);
+        // Reintentar en 5 segundos
+        if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
+          sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+        }
       }
     }
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
