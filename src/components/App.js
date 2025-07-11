@@ -229,11 +229,10 @@ const App = () => {
       if (!activeListenersRef.current.has(tabId)) {
         const eventName = `ssh-stats:update:${tabId}`;
         const listener = (stats) => {
+          setSshStatsByTabId(prev => ({ ...prev, [tabId]: stats }));
+          // Mantener compatibilidad con distro tracking
           if (stats && stats.distro) {
-            setTabDistros(prev => ({
-              ...prev,
-              [tabId]: stats.distro
-            }));
+            setTabDistros(prev => ({ ...prev, [tabId]: stats.distro }));
           }
         };
         
@@ -1836,6 +1835,9 @@ const App = () => {
     } catch {}
   }, [explorerFontSize]);
 
+  // 1. Estado global para stats por tabId
+  const [sshStatsByTabId, setSshStatsByTabId] = useState({});
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
@@ -2417,13 +2419,16 @@ const App = () => {
                     <div 
                       key={tab.key}
                       style={{ 
-                        display: isActiveTab ? 'flex' : 'none',
+                        display: 'flex',
                         flexDirection: 'column',
                         height: '100%',
                         width: '100%',
                         position: 'absolute',
                         top: 0,
-                        left: 0
+                        left: 0,
+                        visibility: isActiveTab ? 'visible' : 'hidden',
+                        zIndex: isActiveTab ? 1 : 0,
+                        pointerEvents: isActiveTab ? 'auto' : 'none'
                       }}
                     >
                       {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
@@ -2437,6 +2442,7 @@ const App = () => {
                         />
                       ) : (
                         <TerminalComponent
+                          key={tab.key}
                           ref={el => terminalRefs.current[tab.key] = el}
                           tabId={tab.key}
                           sshConfig={tab.sshConfig}
@@ -2445,6 +2451,7 @@ const App = () => {
                           theme={terminalTheme.theme}
                           onContextMenu={handleTerminalContextMenu}
                           active={isActiveTab}
+                          stats={sshStatsByTabId[tab.key]}
                         />
                       )}
                     </div>

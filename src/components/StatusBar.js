@@ -38,7 +38,8 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats }) => {
+const StatusBar = ({ stats, active }) => {
+    console.log('[RENDER] StatusBar', stats, active);
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
@@ -86,7 +87,7 @@ const StatusBar = ({ stats }) => {
                             style={{ color: 'var(--statusbar-cpu-color, var(--statusbar-icon-color, inherit))' }}
                         />
                         <span>{cpu}%</span>
-                        <CpuSparkline history={cpuHistory} />
+                        <CpuSparkline history={cpuHistory || []} />
                     </div>
                 )}
                 {mem && mem.total > 0 && (
