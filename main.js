@@ -860,6 +860,27 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       previousNet: null, 
       previousTime: null 
     };
+    // Log para depuración: mostrar todos los tabId activos
+    console.log('[DEBUG] Conexiones SSH activas:', Object.keys(sshConnections));
+
+    // Lanzar statsLoop para conexiones SSH directas (no bastion)
+    if (!config.useBastionWallix) {
+      let realHostname = 'unknown';
+      let osRelease = '';
+      try {
+        realHostname = (await ssh.exec('hostname')).trim();
+      } catch (e) {}
+      try {
+        osRelease = await ssh.exec('cat /etc/os-release');
+      } catch (e) { osRelease = 'ID=linux'; }
+      const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+      const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+      // Si ya hay un statsTimeout para este tabId, lo limpio antes de lanzar uno nuevo
+      if (sshConnections[tabId].statsTimeout) {
+        clearTimeout(sshConnections[tabId].statsTimeout);
+      }
+      statsLoop(tabId, realHostname, finalDistroId, config.host);
+    }
 
     // Set up the data listener immediately to capture the MOTD
     let isFirstPacket = true;
@@ -919,21 +940,21 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     });
 
     // After setting up the shell, get the hostname/distro and start the stats loop
-    let realHostname = 'unknown';
-    let osRelease = '';
-    try {
-      realHostname = (await ssh.exec('hostname')).trim();
-    } catch (e) {
-      // Si falla, dejamos 'unknown'
-    }
-    try {
-      osRelease = await ssh.exec('cat /etc/os-release');
-    } catch (e) {
-      osRelease = 'ID=linux'; // fallback si no existe el archivo
-    }
-    const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
-    const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
-    statsLoop(tabId, realHostname, finalDistroId, config.host);
+    // let realHostname = 'unknown';
+    // let osRelease = '';
+    // try {
+    //   realHostname = (await ssh.exec('hostname')).trim();
+    // } catch (e) {
+    //   // Si falla, dejamos 'unknown'
+    // }
+    // try {
+    //   osRelease = await ssh.exec('cat /etc/os-release');
+    // } catch (e) {
+    //   osRelease = 'ID=linux'; // fallback si no existe el archivo
+    // }
+    // const distroId = (osRelease.match(/^ID=(.*)$/m) || [])[1] || 'linux';
+    // const finalDistroId = distroId.replace(/"/g, '').toLowerCase();
+    // statsLoop(tabId, realHostname, finalDistroId, config.host);
 
   } catch (err) {
     console.error(`Error en conexión SSH para ${tabId}:`, err);
@@ -1397,11 +1418,14 @@ async function statsLoop(tabId, hostname, distro, fallbackIp) {
       disk: disks,
       uptime,
       network,
-      hostname,
+      hostname: hostname,
       distro: finalDistroId,
       versionId,
       ip
     };
+    
+    // LOG DEBUG: Enviar stats a cada tabId
+    console.log('[DEBUG][BACKEND] Enviando stats a', `ssh-stats:update:${tabId}`, JSON.stringify(stats));
     sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
   } catch (e) {
     // Silenciar errores de stats

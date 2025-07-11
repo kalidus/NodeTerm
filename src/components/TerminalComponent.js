@@ -8,11 +8,11 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [remoteStats, setRemoteStats] = useState({ cpu: '0.00', mem: {}, disk: [], cpuHistory: [], network: { rx_speed: 0, tx_speed: 0 }, uptime: '...' });
+    const [forceUpdateCounter, setForceUpdateCounter] = useState(0); // <-- NUEVO
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -197,19 +197,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
             });
 
-            // Listen for stats updates for this specific tab
-            const onStatsUpdate = (stats) => {
-                setRemoteStats(prevStats => {
-                    // Ensure cpu value is a valid number before adding to history
-                    const cpuValue = parseFloat(stats.cpu);
-                    if (isNaN(cpuValue)) return prevStats; // Don't update if cpu is not a number
-
-                    const newHistory = [...prevStats.cpuHistory, cpuValue].slice(-50);
-                    return { ...stats, cpuHistory: newHistory };
-                });
-            };
-            const onStatsUnsubscribe = window.electron.ipcRenderer.on(`ssh-stats:update:${tabId}`, onStatsUpdate);
-
             // Cleanup on component unmount
             return () => {
                 resizeObserver.disconnect();
@@ -218,7 +205,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
-                if (onStatsUnsubscribe) onStatsUnsubscribe();
                 dataHandler.dispose();
                 resizeHandler.dispose();
                 if (term.current) {
@@ -266,13 +252,14 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (active && term.current) {
             term.current.focus();
+            setForceUpdateCounter(c => c + 1); // <-- Forzar re-render StatusBar
         }
     }, [active]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: theme?.background }}>
             <div ref={terminalRef} style={{ flex: 1, width: '100%', minHeight: 0 }} />
-            <StatusBar stats={remoteStats} />
+            <StatusBar stats={stats} key={tabId + '-' + forceUpdateCounter + '-' + (active ? '1' : '0') + '-' + Date.now()} active={active} />
         </div>
     );
 });
