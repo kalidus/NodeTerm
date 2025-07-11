@@ -189,9 +189,11 @@ function parseNetDev(netDevOutput) {
     lines.slice(2).forEach(line => {
         const parts = line.trim().split(/\s+/);
         const iface = parts[0];
-        if (iface && iface !== 'lo:') {
-            totalRx += parseInt(parts[1], 10);
-            totalTx += parseInt(parts[9], 10);
+        if (iface && iface !== 'lo:' && parts.length >= 10) {
+            const rx = parseInt(parts[1], 10);
+            const tx = parseInt(parts[9], 10);
+            if (!isNaN(rx)) totalRx += rx;
+            if (!isNaN(tx)) totalTx += tx;
         }
     });
 
