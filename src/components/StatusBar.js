@@ -51,7 +51,7 @@ const StatusBar = ({ stats }) => {
         );
     }
 
-    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip } = stats;
+    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip, versionId = '' } = stats;
 
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -76,6 +76,11 @@ const StatusBar = ({ stats }) => {
                     <div className="status-bar-section">
                         <DistroIcon distro={distro} />
                         <span>{hostname}</span>
+                        {distro && (
+                            <span style={{ marginLeft: 8, fontWeight: 500, color: '#888' }}>
+                                {distro.toUpperCase()}{versionId ? ` ${versionId}` : ''}
+                            </span>
+                        )}
                     </div>
                 )}
                 {cpu !== undefined && (
