@@ -78,7 +78,7 @@ const StatusBar = ({ stats }) => {
                         <span>{hostname}</span>
                         {distro && (
                             <span style={{ marginLeft: 8, fontWeight: 500, color: '#888' }}>
-                                {distro.toUpperCase()}{versionId ? ` ${versionId}` : ''}
+                                {distro.toUpperCase()}
                             </span>
                         )}
                     </div>
