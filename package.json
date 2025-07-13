@@ -27,12 +27,12 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "src/assets/app-icon.png"
+      "icon": "build/icons/512x512.png"
     },
     "linux": {
       "target": "AppImage",
       "category": "Utility",
-      "icon": "src/assets/app-icon.png"
+      "icon": "build/icons"
     },
     "nsis": {
       "oneClick": true,
