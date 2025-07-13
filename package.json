@@ -26,11 +26,13 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "src/assets/app-icon.png"
     },
     "linux": {
       "target": "AppImage",
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "src/assets/app-icon.png"
     },
     "nsis": {
       "oneClick": true,
