@@ -42,6 +42,10 @@
       "provider": "github",
       "owner": "kalidus",
       "repo": "NodeTerm"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icons/512x512.png"
     }
   },
   "keywords": [],
