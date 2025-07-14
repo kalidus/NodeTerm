@@ -321,7 +321,8 @@ function parseDfOutput(dfOutput) {
                 !name.startsWith('/opt') && 
                 !name.startsWith('/run') && 
                 name !== '/boot/efi' && 
-                !name.startsWith('/dev')) {
+                !name.startsWith('/dev') &&
+                !name.startsWith('/var')) {
                 return { fs: name, use };
             }
         }
@@ -519,7 +520,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         return;
       }
       if (connObj.statsLoopRunning) {
-        console.log(`[STATS] EVITANDO wallixStatsLoop duplicado para tabId ${tabId} - ya está corriendo`);
+        console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
         return;
       }
       
@@ -611,7 +612,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                   if (p.length >= 6) {
                     const use = parseInt(p[p.length - 2], 10);
                     const name = p[p.length - 1];
-                    if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt') && !name.startsWith('/run') && name !== '/boot/efi' && !name.startsWith('/dev')) {
+                    if (name && name.startsWith('/') && !isNaN(use) && !name.startsWith('/sys') && !name.startsWith('/opt') && !name.startsWith('/run') && name !== '/boot/efi' && !name.startsWith('/dev') && !name.startsWith('/var')) {
                       return { fs: name, use };
                     }
                   }
