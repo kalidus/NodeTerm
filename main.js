@@ -507,7 +507,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         connObj.statsTimeout = null;
         return;
       }
-      console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
+      // Eliminar o comentar console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
       if (!connObj || !connObj.ssh || !connObj.stream) {
         // console.log('[WallixStats] Conexión no disponible, saltando stats');
         return;
@@ -1613,7 +1613,7 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
     conn.statsTimeout = null;
     return;
   }
-  console.log(`[STATS] Ejecutando statsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
+  // Eliminar o comentar console.log(`[STATS] Ejecutando statsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
     return;
   }
