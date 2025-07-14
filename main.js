@@ -50,7 +50,7 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => 
         await new Promise((resolve) => setTimeout(resolve, 300));
         stream.removeListener('data', onData);
         // LOGS DE DEPURACIÓN
-        console.log('[ssh:get-home-directory][BASTION] output bruto:', JSON.stringify(output));
+        // console.log('[ssh:get-home-directory][BASTION] output bruto:', JSON.stringify(output));
         // Split por líneas ANTES de limpiar
         const lines = output.replace(command.trim(), '').replace(/\r/g, '').split('\n');
         const cleanedLines = lines.map(line => line
@@ -59,9 +59,9 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => 
           .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Otros controles
           .trim()
         );
-        console.log('[ssh:get-home-directory][BASTION] cleanedLines:', cleanedLines);
+        // console.log('[ssh:get-home-directory][BASTION] cleanedLines:', cleanedLines);
         const home = cleanedLines.find(l => l.startsWith('/')) || '/';
-        console.log('[ssh:get-home-directory][BASTION] home final:', home);
+        // console.log('[ssh:get-home-directory][BASTION] home final:', home);
         return { success: true, home };
       } else {
         // Nuevo: usar SFTP para obtener el home si no hay stream interactivo
@@ -94,9 +94,9 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => 
 
 ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
   try {
-    console.log('ssh:list-files: tabId:', tabId);
-    console.log('ssh:list-files: path recibido:', path);
-    console.log('ssh:list-files: sshConfig recibido:', sshConfig);
+    // console.log('ssh:list-files: tabId:', tabId);
+    // console.log('ssh:list-files: path recibido:', path);
+    // console.log('ssh:list-files: sshConfig recibido:', sshConfig);
     // Validación robusta de path
     let safePath = '/';
     if (typeof path === 'string') {
@@ -104,7 +104,7 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
     } else if (path && typeof path.path === 'string') {
       safePath = path.path;
     } else {
-      console.warn('ssh:list-files: path inválido recibido:', path);
+      // console.warn('ssh:list-files: path inválido recibido:', path);
     }
 
     let ssh;
@@ -179,7 +179,7 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
       return { success: true, files: parseLsOutput(cleanOutput) };
     }
   } catch (err) {
-    console.error('ssh:list-files: ERROR:', err);
+    // console.error('ssh:list-files: ERROR:', err);
     return { success: false, error: err.message || err };
   }
 });
@@ -249,7 +249,7 @@ const connectionThrottle = {
   async throttle(cacheKey, connectionFn) {
     // Si ya hay una conexión pendiente para este servidor, esperar
     if (this.pending.has(cacheKey)) {
-      console.log(`Esperando conexión pendiente para ${cacheKey}...`);
+      // console.log(`Esperando conexión pendiente para ${cacheKey}...`);
       return await this.pending.get(cacheKey);
     }
     
@@ -260,7 +260,7 @@ const connectionThrottle = {
     
     if (timeSinceLastAttempt < this.minInterval) {
       const waitTime = this.minInterval - timeSinceLastAttempt;
-      console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
+      // console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
@@ -287,7 +287,7 @@ setInterval(() => {
       // Verificar si la conexión es realmente antigua (más de 5 minutos sin uso)
       const connectionAge = Date.now() - (poolConnection._lastUsed || poolConnection._createdAt || 0);
       if (connectionAge > 5 * 60 * 1000) { // 5 minutos
-        console.log(`Limpiando conexión SSH huérfana: ${poolKey} (sin uso por ${Math.round(connectionAge/1000)}s)`);
+        // console.log(`Limpiando conexión SSH huérfana: ${poolKey} (sin uso por ${Math.round(connectionAge/1000)}s)`);
         try {
           // Limpiar listeners antes de cerrar
           if (poolConnection.ssh) {
@@ -295,7 +295,7 @@ setInterval(() => {
           }
           poolConnection.close();
         } catch (e) {
-          console.warn(`Error closing orphaned connection: ${e.message}`);
+          // console.warn(`Error closing orphaned connection: ${e.message}`);
         }
         delete sshConnectionPool[poolKey];
       }
@@ -426,13 +426,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     if (timeSinceLastAttempt < connectionThrottle.minInterval) {
       const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
-      console.log(`Throttling conexión SSH directa a ${cacheKey}, esperando ${waitTime}ms...`);
+      // console.log(`Throttling conexión SSH directa a ${cacheKey}, esperando ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
     connectionThrottle.lastAttempt.set(cacheKey, Date.now());
   } else {
-    console.log(`Conexión bastión - sin throttling (pooling habilitado)`);
+    // console.log(`Conexión bastión - sin throttling (pooling habilitado)`);
   }
   
   // Para bastiones: cada terminal tiene su propia conexión independiente (no pooling)
@@ -442,7 +442,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
   if (config.useBastionWallix) {
     // BASTIÓN: Usar ssh2 puro para crear una conexión y shell independientes
-    console.log(`Bastión ${cacheKey} - creando nueva conexión con ssh2 (bastion-ssh.js)`);
+    // console.log(`Bastión ${cacheKey} - creando nueva conexión con ssh2 (bastion-ssh.js)`);
     const bastionConfig = {
       bastionHost: config.bastionHost,
       port: 22,
@@ -503,19 +503,24 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // Función de bucle de stats para Wallix/bastión
     function wallixStatsLoop() {
       const connObj = sshConnections[tabId];
+      if (activeStatsTabId !== tabId) {
+        connObj.statsTimeout = null;
+        return;
+      }
+      console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
       if (!connObj || !connObj.ssh || !connObj.stream) {
-        console.log('[WallixStats] Conexión no disponible, saltando stats');
+        // console.log('[WallixStats] Conexión no disponible, saltando stats');
         return;
       }
 
       try {
-        // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
+        // // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
         
         if (connObj.ssh.execCommand) {
           const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
-              console.warn('[WallixStats] Error ejecutando comando:', err);
+              // console.warn('[WallixStats] Error ejecutando comando:', err);
               // Enviar stats básicas en caso de error
               const fallbackStats = {
                 cpu: '0.00',
@@ -537,13 +542,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             }
             
             const output = result.stdout;
-            // console.log('[WallixStats] Output recibido, length:', output.length);
-            // console.log('[WallixStats] Raw output preview:', JSON.stringify(output.substring(0, 300)));
+            // // console.log('[WallixStats] Output recibido, length:', output.length);
+            // // console.log('[WallixStats] Raw output preview:', JSON.stringify(output.substring(0, 300)));
             
             try {
               const parts = output.trim().split('\n');
-              // console.log('[WallixStats] Parts found:', parts.length);
-              // console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
+              // // console.log('[WallixStats] Parts found:', parts.length);
+              // // console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
               
               // CPU - buscar línea que empiece con "cpu "
               const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
@@ -707,11 +712,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                 ip
               };
               
-              // console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
+              // // console.log('[WallixStats] Enviando stats:', JSON.stringify(stats, null, 2));
               sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, stats);
               
             } catch (parseErr) {
-              console.warn('[WallixStats] Error parseando stats:', parseErr);
+              // console.warn('[WallixStats] Error parseando stats:', parseErr);
             }
             
             // Programar siguiente ejecución
@@ -721,7 +726,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           });
           
         } else {
-          console.warn('[WallixStats] execCommand no disponible en conexión bastión');
+          // console.warn('[WallixStats] execCommand no disponible en conexión bastión');
           // Fallback con stats básicas
           const stats = {
             cpu: '0.00',
@@ -737,7 +742,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         }
         
       } catch (e) {
-        console.warn('[WallixStats] Error general:', e);
+        // console.warn('[WallixStats] Error general:', e);
         // Reintentar en 5 segundos
         if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
           sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
@@ -758,9 +763,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         await existingPoolConnection.exec('echo "test"');
         ssh = existingPoolConnection;
         isReusedConnection = true;
-        console.log(`Reutilizando conexión del pool para terminal SSH directo ${cacheKey}`);
+        // console.log(`Reutilizando conexión del pool para terminal SSH directo ${cacheKey}`);
       } catch (testError) {
-        console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
+        // console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
         try {
           existingPoolConnection.close();
         } catch (e) {}
@@ -768,7 +773,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     if (!ssh) {
-      console.log(`Creando nueva conexión SSH directa para terminal ${cacheKey}`);
+      // console.log(`Creando nueva conexión SSH directa para terminal ${cacheKey}`);
       const directConfig = {
         host: config.host,
         username: config.username,
@@ -888,34 +893,34 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // Conectar SSH si es necesario
     if (!isReusedConnection) {
       // Solo conectar si es una conexión nueva (no reutilizada del pool)
-      console.log(`Conectando SSH para terminal ${cacheKey}...`);
+      // console.log(`Conectando SSH para terminal ${cacheKey}...`);
       
       // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
       ssh.setMaxListeners(300);
       
-      console.log(`Iniciando conexión SSH para ${cacheKey}...`);
-      console.log(`Configuración: Host=${config.host}, Usuario=${config.username}, Puerto=${config.port || 22}`);
-      if (config.useBastionWallix) {
-        console.log(`Bastión Wallix: Host=${config.bastionHost}, Usuario=${config.bastionUser}`);
-      }
+      // console.log(`Iniciando conexión SSH para ${cacheKey}...`);
+      // console.log(`Configuración: Host=${config.host}, Usuario=${config.username}, Puerto=${config.port || 22}`);
+      // if (config.useBastionWallix) {
+      //   console.log(`Bastión Wallix: Host=${config.bastionHost}, Usuario=${config.bastionUser}`);
+      // }
       
       await ssh.connect();
-      console.log(`Conectado exitosamente a terminal ${cacheKey}`);
+      // console.log(`Conectado exitosamente a terminal ${cacheKey}`);
       
       // SSH2Promise está conectado y listo para usar
-      console.log('SSH2Promise conectado correctamente, procediendo a crear shell...');
+      // console.log('SSH2Promise conectado correctamente, procediendo a crear shell...');
       
       // Guardar en el pool solo para SSH directo (bastiones son independientes)
       if (!config.useBastionWallix) {
         ssh._createdAt = Date.now();
         ssh._lastUsed = Date.now();
         sshConnectionPool[cacheKey] = ssh;
-        console.log(`Conexión SSH directa ${cacheKey} guardada en pool para reutilización`);
+        // console.log(`Conexión SSH directa ${cacheKey} guardada en pool para reutilización`);
       } else {
-        console.log(`Conexión bastión ${cacheKey} - NO guardada en pool (independiente)`);
+        // console.log(`Conexión bastión ${cacheKey} - NO guardada en pool (independiente)`);
       }
     } else {
-      console.log(`Usando conexión SSH directa existente del pool para terminal ${cacheKey}`);
+      // console.log(`Usando conexión SSH directa existente del pool para terminal ${cacheKey}`);
     }
     
     // Crear shell con reintentos
@@ -932,13 +937,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         
         // Si es una conexión Wallix, usar configuración específica para bastiones
         if (ssh._isWallixConnection && ssh._wallixTarget) {
-          console.log(`Conexión Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
+          // console.log(`Conexión Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
           
           // Para bastiones Wallix, esperar un poco antes de crear shell
-          console.log('Esperando estabilización de conexión Wallix...');
+          // console.log('Esperando estabilización de conexión Wallix...');
           await new Promise(resolve => setTimeout(resolve, 1000));
           
-          console.log('Creando shell usando SSH2Promise con configuración Wallix...');
+          // console.log('Creando shell usando SSH2Promise con configuración Wallix...');
           
           // Intentar con configuración específica para Wallix
           try {
@@ -953,15 +958,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               }
             });
           } catch (shellError) {
-            console.warn('Error con configuración Wallix, intentando configuración básica:', shellError.message);
+            // console.warn('Error con configuración Wallix, intentando configuración básica:', shellError.message);
             // Fallback con configuración mínima
             stream = await ssh.shell('xterm-256color');
           }
           
-          console.log('Shell de bastión Wallix creado exitosamente');
+          // console.log('Shell de bastión Wallix creado exitosamente');
           
           // Para Wallix, verificar dónde estamos conectados
-          console.log('Verificando estado de conexión Wallix...');
+          // console.log('Verificando estado de conexión Wallix...');
           
           // Enviar comando para verificar hostname
           stream.write('hostname\n');
@@ -969,11 +974,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           // Esperar un poco para procesar
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          console.log('Para conexiones Wallix, el bastión maneja automáticamente la conexión al servidor destino');
+          // console.log('Para conexiones Wallix, el bastión maneja automáticamente la conexión al servidor destino');
           
         } else {
           // Conexión SSH directa normal
-          console.log('Creando shell SSH directo...');
+          // console.log('Creando shell SSH directo...');
           stream = await ssh.shell({ 
             term: 'xterm-256color',
             cols: 80,
@@ -984,7 +989,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         break;
       } catch (shellError) {
         shellAttempts++;
-        console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
+        // console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
         
         if (shellAttempts >= maxShellAttempts) {
           throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError?.message || shellError || 'Unknown error'}`);
@@ -996,7 +1001,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     stream.setMaxListeners(0); // Sin límite para streams individuales
 
     const storedOriginalKey = config.originalKey || tabId;
-    console.log('Guardando conexión SSH con originalKey:', storedOriginalKey, 'para tabId:', tabId);
+    // console.log('Guardando conexión SSH con originalKey:', storedOriginalKey, 'para tabId:', tabId);
     sshConnections[tabId] = { 
       ssh, 
       stream, 
@@ -1009,7 +1014,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       previousTime: null 
     };
     // Log para depuración: mostrar todos los tabId activos
-    console.log('[DEBUG] Conexiones SSH activas:', Object.keys(sshConnections));
+    // console.log('[DEBUG] Conexiones SSH activas:', Object.keys(sshConnections));
 
     // Lanzar statsLoop para conexiones SSH directas (no bastion)
     if (!config.useBastionWallix) {
@@ -1066,7 +1071,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       
       // Enviar evento de desconexión
       const disconnectOriginalKey = conn?.originalKey || tabId;
-      console.log('🔌 SSH desconectado - enviando evento para originalKey:', disconnectOriginalKey);
+      // console.log('🔌 SSH desconectado - enviando evento para originalKey:', disconnectOriginalKey);
       sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
         originalKey: disconnectOriginalKey,
         tabId: tabId 
@@ -1081,7 +1086,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     // Enviar evento de conexión exitosa
     const originalKey = config.originalKey || tabId;
-    console.log('✅ SSH conectado - enviando evento para originalKey:', originalKey);
+    // console.log('✅ SSH conectado - enviando evento para originalKey:', originalKey);
     sendToRenderer(event.sender, 'ssh-connection-ready', { 
       originalKey: originalKey,
       tabId: tabId 
@@ -1105,7 +1110,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // statsLoop(tabId, realHostname, finalDistroId, config.host);
 
   } catch (err) {
-    console.error(`Error en conexión SSH para ${tabId}:`, err);
+    // console.error(`Error en conexión SSH para ${tabId}:`, err);
     
     // Limpiar conexión problemática del pool
     if (ssh && cacheKey && sshConnectionPool[cacheKey] === ssh) {
@@ -1139,7 +1144,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     // Enviar evento de error de conexión
     const errorOriginalKey = config.originalKey || tabId;
-    console.log('❌ SSH error - enviando evento para originalKey:', errorOriginalKey, 'error:', errorMsg);
+    // console.log('❌ SSH error - enviando evento para originalKey:', errorOriginalKey, 'error:', errorMsg);
     sendToRenderer(event.sender, 'ssh-connection-error', { 
       originalKey: errorOriginalKey,
       tabId: tabId,
@@ -1169,7 +1174,7 @@ ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
                 conn.stream.setWindow(safeRows, safeCols);
                 conn._pendingResize = null; // Aplicado correctamente
             } catch (resizeError) {
-                console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
+                // console.warn(`Error redimensionando terminal ${tabId}:`, resizeError?.message || resizeError || 'Unknown error');
             }
         }
     }
@@ -1188,7 +1193,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       
       // Para conexiones Wallix, solo necesitamos cerrar el stream principal
       if (conn.ssh && conn.ssh._isWallixConnection) {
-        console.log('Cerrando conexión Wallix');
+        // console.log('Cerrando conexión Wallix');
       }
       
       // Limpiar listeners del stream de forma más agresiva
@@ -1199,7 +1204,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
             conn.stream.destroy();
           }
         } catch (streamError) {
-          console.warn(`Error destroying stream: ${streamError?.message || streamError || 'Unknown error'}`);
+          // console.warn(`Error destroying stream: ${streamError?.message || streamError || 'Unknown error'}`);
         }
       }
       
@@ -1211,11 +1216,11 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       // (Para bastiones, cada terminal es independiente, así que siempre cerrar)
       if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
         try {
-                console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
+                // console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
       
       // Enviar evento de desconexión
       const disconnectOriginalKey = conn.originalKey || conn.cacheKey;
-      console.log('🔌 SSH cerrado - enviando evento para originalKey:', disconnectOriginalKey);
+      // console.log('🔌 SSH cerrado - enviando evento para originalKey:', disconnectOriginalKey);
       sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
         originalKey: disconnectOriginalKey
       });
@@ -1236,14 +1241,14 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       conn.ssh.close();
       delete sshConnectionPool[conn.cacheKey];
         } catch (closeError) {
-          console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
+          // console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
         }
       } else {
-        console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
+        // console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
       }
       
     } catch (error) {
-      console.error(`Error cleaning up SSH connection ${tabId}:`, error);
+      // console.error(`Error cleaning up SSH connection ${tabId}:`, error);
     } finally {
       // Always delete the connection
       delete sshConnections[tabId];
@@ -1526,14 +1531,14 @@ function sendToRenderer(sender, eventName, ...args) {
     if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
       // Solo logear eventos SSH para debugging
       if (eventName.startsWith('ssh-connection-')) {
-        console.log('📡 Enviando evento SSH:', eventName, 'con args:', args);
+        // console.log('📡 Enviando evento SSH:', eventName, 'con args:', args);
       }
       sender.send(eventName, ...args);
     } else {
-      console.error('Sender no válido o destruido para evento:', eventName);
+      // console.error('Sender no válido o destruido para evento:', eventName);
     }
   } catch (error) {
-    console.error('Error sending to renderer:', eventName, error);
+    // console.error('Error sending to renderer:', eventName, error);
   }
 }
 
@@ -1545,7 +1550,7 @@ function cleanupOrphanedConnections() {
     const hasActiveConnections = Object.values(sshConnections).some(conn => conn.cacheKey === cacheKey);
     
     if (!hasActiveConnections) {
-      console.log(`Limpiando conexión SSH huérfana: ${cacheKey}`);
+      // console.log(`Limpiando conexión SSH huérfana: ${cacheKey}`);
       try {
         // Limpiar listeners antes de cerrar
         poolConnection.removeAllListeners('error');
@@ -1602,8 +1607,13 @@ async function findSSHConnection(tabId, sshConfig = null) {
 
 // --- INICIO BLOQUE RESTAURACIÓN STATS ---
 // Función de statsLoop para conexiones directas (SSH2Promise)
-async function statsLoop(tabId, hostname, distro, fallbackIp) {
+async function statsLoop(tabId, realHostname, finalDistroId, host) {
   const conn = sshConnections[tabId];
+  if (activeStatsTabId !== tabId) {
+    conn.statsTimeout = null;
+    return;
+  }
+  console.log(`[STATS] Ejecutando statsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
     return;
   }
@@ -1675,9 +1685,8 @@ async function statsLoop(tabId, hostname, distro, fallbackIp) {
         ip = ipCandidates[ipCandidates.length - 1];
       }
     }
-    if (!ip) ip = fallbackIp;
+    if (!ip) ip = host;
     // Normalización de distro (RedHat) y obtención de versionId
-    let finalDistroId = distro;
     let versionId = '';
     try {
       // Buscar ID, ID_LIKE y VERSION_ID en todo el output
@@ -1714,22 +1723,46 @@ async function statsLoop(tabId, hostname, distro, fallbackIp) {
       disk: disks,
       uptime,
       network,
-      hostname: hostname,
+      hostname: realHostname,
       distro: finalDistroId,
       versionId,
       ip
     };
     
     // LOG DEBUG: Enviar stats a cada tabId
-    console.log('[DEBUG][BACKEND] Enviando stats a', `ssh-stats:update:${tabId}`, JSON.stringify(stats));
+    // console.log('[DEBUG][BACKEND] Enviando stats a', `ssh-stats:update:${tabId}`, JSON.stringify(stats));
     sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
   } catch (e) {
     // Silenciar errores de stats
   } finally {
     const finalConn = sshConnections[tabId];
     if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
-      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, hostname, distro, fallbackIp), 2000);
+      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, realHostname, finalDistroId, host), 2000);
     }
   }
 }
 // --- FIN BLOQUE RESTAURACIÓN STATS ---
+
+let activeStatsTabId = null;
+
+ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
+  activeStatsTabId = tabId;
+  Object.entries(sshConnections).forEach(([id, conn]) => {
+    if (id !== String(tabId) && conn.statsTimeout) {
+      clearTimeout(conn.statsTimeout);
+      conn.statsTimeout = null;
+    }
+  });
+  const conn = sshConnections[tabId];
+  if (conn && !conn.statsTimeout) {
+    if (conn.config.useBastionWallix) {
+      if (typeof conn.wallixStatsLoop === 'function') {
+        conn.wallixStatsLoop();
+      }
+    } else {
+      if (typeof statsLoop === 'function') {
+        statsLoop(tabId, conn.realHostname || 'unknown', conn.finalDistroId || 'linux', conn.config.host);
+      }
+    }
+  }
+});
