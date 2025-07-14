@@ -38,7 +38,9 @@ const SettingsDialog = ({
   sidebarFontSize,
   setSidebarFontSize,
   explorerFontSize,
-  setExplorerFontSize
+  setExplorerFontSize,
+  statusBarPollingInterval,
+  setStatusBarPollingInterval
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -344,6 +346,29 @@ const SettingsDialog = ({
                     currentTheme={statusBarTheme}
                     onThemeChange={setStatusBarTheme}
                   />
+                  <div style={{ marginTop: 24, width: 320 }}>
+                    <label htmlFor="statusbar-polling-interval" style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem'
+                    }}>
+                      Intervalo de actualización de la Status Bar (segundos)
+                    </label>
+                    <InputNumber
+                      id="statusbar-polling-interval"
+                      value={statusBarPollingInterval}
+                      onValueChange={e => setStatusBarPollingInterval(Math.max(1, Math.min(20, e.value || 1)))}
+                      min={1}
+                      max={20}
+                      showButtons
+                      buttonLayout="horizontal"
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 4 }}>
+                      Puedes elegir entre 1 y 20 segundos. Aplica a todas las conexiones.
+                    </div>
+                  </div>
                 </div>
               </TabPanel>
               <TabPanel header={<span><i className="pi pi-sitemap" style={{ marginRight: 8 }}></i>Explorador de Sesiones</span>}>

@@ -1857,6 +1857,20 @@ const App = () => {
     }
   }, [activeTabIndex, sshTabs]);
 
+  // Estado global para el intervalo de pooling de la status bar
+  const [statusBarPollingInterval, setStatusBarPollingInterval] = useState(() => {
+    const saved = localStorage.getItem('statusBarPollingInterval');
+    return saved ? parseInt(saved, 10) : 5;
+  });
+
+  // Sincronizar con localStorage y enviar al backend
+  useEffect(() => {
+    localStorage.setItem('statusBarPollingInterval', statusBarPollingInterval);
+    if (window?.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.send('statusbar:set-polling-interval', statusBarPollingInterval);
+    }
+  }, [statusBarPollingInterval]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
@@ -2690,6 +2704,8 @@ const App = () => {
         setSidebarFontSize={setSidebarFontSize}
         explorerFontSize={explorerFontSize}
         setExplorerFontSize={setExplorerFontSize}
+        statusBarPollingInterval={statusBarPollingInterval}
+        setStatusBarPollingInterval={setStatusBarPollingInterval}
       />
 
       {/* Diálogo para crear nuevo grupo */}
