@@ -2553,6 +2553,7 @@ const App = () => {
               min={1} 
               max={65535} 
               placeholder="22"
+              useGrouping={false}
             />
           </div>
           <div className="p-field">
@@ -2612,6 +2613,7 @@ const App = () => {
               min={1} 
               max={65535} 
               placeholder="22"
+              useGrouping={false}
             />
           </div>
           <div className="p-field">
