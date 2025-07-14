@@ -272,45 +272,45 @@ const App = () => {
 
     // Función para manejar estado de conexión
     const handleConnectionStatus = (originalKey, status) => {
-      console.log('🔄 SSH estado:', originalKey, '->', status);
+      // console.log('🔄 SSH estado:', originalKey, '->', status); // ELIMINADO
       setSshConnectionStatus(prevStatus => {
         const newStatus = { ...prevStatus, [originalKey]: status };
-        console.log('Nuevo estado sshConnectionStatus:', newStatus);
+        // console.log('Nuevo estado sshConnectionStatus:', newStatus); // ELIMINADO
         return newStatus;
       });
     };
 
     // Listeners estables con referencias fijas
     const handleSSHReady = (data) => {
-      console.log('✅ SSH conectado para originalKey:', data?.originalKey);
+      // console.log('✅ SSH conectado para originalKey:', data?.originalKey); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'connected');
       }
     };
 
     const handleSSHError = (data) => {
-      console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error);
+      // console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'error');
       }
     };
 
     const handleSSHDisconnected = (data) => {
-      console.log('🔌 SSH desconectado para originalKey:', data?.originalKey);
+      // console.log('🔌 SSH desconectado para originalKey:', data?.originalKey); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'disconnected');
       }
     };
 
     // Registrar listeners
-    console.log('🚀 Registrando listeners SSH IPC');
+    // console.log('Registrando listeners SSH IPC'); // ELIMINADO
     window.electron.ipcRenderer.on('ssh-connection-ready', handleSSHReady);
     window.electron.ipcRenderer.on('ssh-connection-error', handleSSHError);
     window.electron.ipcRenderer.on('ssh-connection-disconnected', handleSSHDisconnected);
 
     // Cleanup usando removeAllListeners para asegurar limpieza completa
     return () => {
-      console.log('🧹 Limpiando listeners SSH IPC');
+      // console.log('🧹 Limpiando listeners SSH IPC'); // ELIMINADO
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-ready');
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-error');
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-disconnected');

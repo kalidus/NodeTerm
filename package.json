@@ -70,6 +70,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
+    "react-split-pane": "^0.1.92",
     "ssh2-promise": "^1.0.3",
     "ssh2-sftp-client": "^12.0.1",
     "xterm": "^5.3.0",
