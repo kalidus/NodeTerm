@@ -259,7 +259,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: theme?.background }}>
             <div ref={terminalRef} style={{ flex: 1, width: '100%', minHeight: 0 }} />
-            <StatusBar stats={stats} key={tabId + '-' + forceUpdateCounter + '-' + (active ? '1' : '0') + '-' + Date.now()} active={active} />
+            <StatusBar stats={stats} key={tabId + '-' + forceUpdateCounter + '-' + (active ? '1' : '0')} active={active} />
         </div>
     );
 });
