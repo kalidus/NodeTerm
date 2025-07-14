@@ -1412,6 +1412,43 @@ ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, 
   }
 });
 
+ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
+  try {
+    const SftpClient = require('ssh2-sftp-client');
+    const sftp = new SftpClient();
+    let connectConfig;
+    if (sshConfig.useBastionWallix) {
+      connectConfig = {
+        host: sshConfig.bastionHost,
+        port: sshConfig.port || 22,
+        username: sshConfig.bastionUser,
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+    } else {
+      connectConfig = {
+        host: sshConfig.host,
+        port: sshConfig.port || 22,
+        username: sshConfig.username,
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+    }
+    await sftp.connect(connectConfig);
+    if (isDirectory) {
+      // Eliminar directorio recursivamente
+      await sftp.rmdir(remotePath, true);
+    } else {
+      // Eliminar archivo
+      await sftp.delete(remotePath);
+    }
+    await sftp.end();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message || err };
+  }
+});
+
 // Function to safely send to mainWindow
 function sendToRenderer(sender, eventName, ...args) {
   try {
