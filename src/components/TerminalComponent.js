@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -99,10 +99,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         fitAddon.current.fit();
         term.current.focus();
         
+        // ResizeObserver robusto: fit en cada cambio de tamaño
         const resizeObserver = new ResizeObserver(() => {
-            fitAddon.current?.fit();
+            if (fitAddon.current) {
+                try { fitAddon.current.fit(); } catch (e) {}
+            }
         });
-        resizeObserver.observe(terminalRef.current);
+        if (terminalRef.current) resizeObserver.observe(terminalRef.current);
 
         // --- Clipboard and Event Handling ---
         // We wrap this in a check to ensure the electron API is ready.
@@ -256,11 +259,35 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         }
     }, [active]);
 
+    // Forzar fit tras cada render (por si el layout cambia después del render)
+    useEffect(() => {
+        if (fitAddon.current) {
+            setTimeout(() => {
+                try { fitAddon.current.fit(); } catch (e) {}
+            }, 0);
+        }
+    });
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: theme?.background }}>
-            <div ref={terminalRef} style={{ flex: 1, width: '100%', minHeight: 0 }} />
-            <StatusBar stats={stats} key={tabId + '-' + forceUpdateCounter + '-' + (active ? '1' : '0')} active={active} />
-        </div>
+        <div 
+            ref={terminalRef} 
+            style={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                flex: 1, 
+                width: '100%', 
+                minWidth: 0,
+                minHeight: 0,
+                height: '100%',
+                overflow: 'hidden',
+                position: 'relative',
+                border: '2px solid cyan',
+                background: 'rgba(0,255,255,0.08)',
+                padding: 0,
+                margin: 0
+            }} 
+        />
     );
 });
 

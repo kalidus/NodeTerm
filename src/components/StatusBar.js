@@ -39,7 +39,6 @@ const DistroIcon = ({ distro }) => {
 };
 
 const StatusBar = ({ stats, active }) => {
-    console.log('[RENDER] StatusBar', stats, active);
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
