@@ -13,6 +13,22 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     const term = useRef(null);
     const fitAddon = useRef(null);
     const [forceUpdateCounter, setForceUpdateCounter] = useState(0); // <-- NUEVO
+    const [cpuHistory, setCpuHistory] = useState([]);
+
+    // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es válido
+    useEffect(() => {
+        const cpuValue = stats && typeof stats.cpu === 'string'
+            ? parseFloat(stats.cpu)
+            : stats && typeof stats.cpu === 'number'
+                ? stats.cpu
+                : null;
+        if (cpuValue !== null && !isNaN(cpuValue)) {
+            setCpuHistory(prev => {
+                const newArr = [...prev, cpuValue].slice(-30);
+                return newArr;
+            });
+        }
+    }, [stats?.cpu]);
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -269,40 +285,28 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     });
 
     return (
-        <div 
-            style={{ 
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'stretch',
-                flex: 1, 
-                width: '100%', 
-                minWidth: 0,
-                minHeight: 0,
-                height: '100%',
-                overflow: 'hidden',
-                position: 'relative',
-                padding: 0,
-                margin: 0
-            }} 
-        >
-            <div
-                ref={terminalRef}
-                style={{
-                    flex: 1,
-                    minHeight: 0,
+        <>
+            <div 
+                ref={terminalRef} 
+                style={{ 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    flex: 1, 
+                    width: '100%', 
                     minWidth: 0,
-                    width: '100%',
+                    minHeight: 0,
                     height: '100%',
                     overflow: 'hidden',
                     position: 'relative',
+                    border: '2px solid cyan',
+                    background: 'rgba(0,255,255,0.08)',
                     padding: 0,
                     margin: 0
-                }}
+                }} 
             />
-            {!hideStatusBar && (
-                <StatusBar stats={stats} active={active} />
-            )}
-        </div>
+            {!hideStatusBar && <StatusBar stats={{...stats, cpuHistory: cpuHistory}} active={active} />}
+        </>
     );
 });
 
