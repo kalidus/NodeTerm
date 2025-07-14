@@ -15,19 +15,16 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
   
   // Método para ejecutar comandos usando conexión SSH separada (protocolo Wallix oficial)
   conn.execCommand = function(command, callback) {
-    console.log('[BastionExec] Ejecutando comando via SSH separado (protocolo Wallix):', command);
     
     // Usar el protocolo oficial de Wallix para ejecutar comandos remotos
     // Crear una nueva conexión SSH específicamente para este comando
     const statsConn = new Client();
     
     statsConn.on('ready', () => {
-      console.log('[BastionExec] Conexión SSH para stats establecida');
       
       // Ejecutar el comando directamente sin interferir con la shell del usuario
       statsConn.exec(command, (err, stream) => {
         if (err) {
-          console.warn('[BastionExec] Error ejecutando comando:', err);
           if (callback) callback(err, null);
           statsConn.end();
           return;
@@ -45,7 +42,6 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
         });
         
         stream.on('close', (code) => {
-          console.log('[BastionExec] Comando completado, código:', code, 'output length:', output.length);
           statsConn.end();
           
           if (callback) {
@@ -60,7 +56,6 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
     });
     
     statsConn.on('error', (err) => {
-      console.warn('[BastionExec] Error en conexión SSH para stats:', err);
       if (callback) callback(err, null);
     });
     
@@ -92,7 +87,6 @@ function createBastionShell(config, onData, onClose, onError, onShellReady) {
       }
       
       shellStream = stream;
-      console.log('[BastionExec] Shell interactiva creada exitosamente');
       
       if (onShellReady) onShellReady(stream);
       
