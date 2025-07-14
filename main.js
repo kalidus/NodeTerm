@@ -37,34 +37,49 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => 
     if (sshConfig.useBastionWallix) {
       // Buscar la conexión existente para bastion
       const existingConn = await findSSHConnection(tabId, sshConfig);
-      if (!existingConn || !existingConn.ssh || !existingConn.stream) {
-        return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
+      if (existingConn && existingConn.ssh && existingConn.stream) {
+        // Modo antiguo: usar stream interactivo si existe
+        const stream = existingConn.stream;
+        const command = 'echo $HOME\n';
+        let output = '';
+        const onData = (data) => {
+          output += data.toString('utf-8');
+        };
+        stream.on('data', onData);
+        stream.write(command);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        stream.removeListener('data', onData);
+        // LOGS DE DEPURACIÓN
+        console.log('[ssh:get-home-directory][BASTION] output bruto:', JSON.stringify(output));
+        // Split por líneas ANTES de limpiar
+        const lines = output.replace(command.trim(), '').replace(/\r/g, '').split('\n');
+        const cleanedLines = lines.map(line => line
+          .replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, '') // OSC
+          .replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, '') // CSI/SGR
+          .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Otros controles
+          .trim()
+        );
+        console.log('[ssh:get-home-directory][BASTION] cleanedLines:', cleanedLines);
+        const home = cleanedLines.find(l => l.startsWith('/')) || '/';
+        console.log('[ssh:get-home-directory][BASTION] home final:', home);
+        return { success: true, home };
+      } else {
+        // Nuevo: usar SFTP para obtener el home si no hay stream interactivo
+        const SftpClient = require('ssh2-sftp-client');
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        // Obtener el home real del usuario conectado
+        const home = await sftp.realPath('.');
+        await sftp.end();
+        return { success: true, home };
       }
-      const stream = existingConn.stream;
-      const command = 'echo $HOME\n';
-      let output = '';
-      const onData = (data) => {
-        output += data.toString('utf-8');
-      };
-      stream.on('data', onData);
-      stream.write(command);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      stream.removeListener('data', onData);
-      // LOGS DE DEPURACIÓN
-      console.log('[ssh:get-home-directory][BASTION] output bruto:', JSON.stringify(output));
-      // Split por líneas ANTES de limpiar
-      const lines = output.replace(command.trim(), '').replace(/\r/g, '').split('\n');
-      // Limpiar cada línea y buscar la que empiece por '/'
-      const cleanedLines = lines.map(line => line
-        .replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, '') // OSC
-        .replace(/\x1b\[[0-9;?]*[ -\/]*[@-~]/g, '') // CSI/SGR
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Otros controles
-        .trim()
-      );
-      console.log('[ssh:get-home-directory][BASTION] cleanedLines:', cleanedLines);
-      const home = cleanedLines.find(l => l.startsWith('/')) || '/';
-      console.log('[ssh:get-home-directory][BASTION] home final:', home);
-      return { success: true, home };
     } else {
       const ssh = new SSH2Promise(sshConfig);
       await ssh.connect();
@@ -98,33 +113,58 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
     if (sshConfig.useBastionWallix) {
       // Buscar la conexión existente para bastion
       const existingConn = await findSSHConnection(tabId, sshConfig);
-      if (!existingConn || !existingConn.ssh || !existingConn.stream) {
-        return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
+      if (existingConn && existingConn.ssh && existingConn.stream) {
+        // Modo antiguo: usar stream interactivo si existe
+        ssh = existingConn.ssh;
+        const stream = existingConn.stream;
+        shouldCloseConnection = false;
+        // Ejecutar el comando en el stream interactivo
+        const command = `ls -la --color=never "${safePath}"\n`;
+        let output = '';
+        let resolved = false;
+        // Listener temporal para capturar la salida
+        const onData = (data) => {
+          output += data.toString('utf-8');
+        };
+        stream.on('data', onData);
+        // Escribir el comando
+        stream.write(command);
+        // Esperar la respuesta (timeout corto o hasta que llegue el prompt)
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        stream.removeListener('data', onData);
+        // Limpiar la salida: quitar el comando enviado y posibles prompts
+        let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
+        // Eliminar códigos ANSI
+        cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
+        // Quitar líneas vacías y posibles prompts
+        cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
+        return { success: true, files: parseLsOutput(cleanOutput) };
+      } else {
+        // Nuevo: usar SFTP para listar archivos si no hay stream interactivo
+        const SftpClient = require('ssh2-sftp-client');
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        const sftpList = await sftp.list(safePath);
+        await sftp.end();
+        // Adaptar el formato a lo que espera el frontend
+        const files = sftpList.map(item => ({
+          name: item.name,
+          permissions: item.longname?.split(' ')[0] || '',
+          owner: '',
+          group: '',
+          size: item.size,
+          modified: item.modifyTime ? new Date(item.modifyTime * 1000).toLocaleString() : '',
+          type: item.type === 'd' ? 'directory' : (item.type === 'l' ? 'symlink' : 'file'),
+        }));
+        return { success: true, files };
       }
-      ssh = existingConn.ssh;
-      const stream = existingConn.stream;
-      shouldCloseConnection = false;
-      // Ejecutar el comando en el stream interactivo
-      const command = `ls -la --color=never "${safePath}"\n`;
-      let output = '';
-      let resolved = false;
-      // Listener temporal para capturar la salida
-      const onData = (data) => {
-        output += data.toString('utf-8');
-      };
-      stream.on('data', onData);
-      // Escribir el comando
-      stream.write(command);
-      // Esperar la respuesta (timeout corto o hasta que llegue el prompt)
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      stream.removeListener('data', onData);
-      // Limpiar la salida: quitar el comando enviado y posibles prompts
-      let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-      // Eliminar códigos ANSI
-      cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
-      // Quitar líneas vacías y posibles prompts
-      cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
-      return { success: true, files: parseLsOutput(cleanOutput) };
     } else {
       // SSH directo: crear nueva conexión
       ssh = new SSH2Promise(sshConfig);
