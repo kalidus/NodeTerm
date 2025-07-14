@@ -1756,7 +1756,9 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
       versionId,
       ip
     };
-    
+    // Actualizar los valores en la conexión para que siempre estén correctos al reactivar la pestaña
+    conn.realHostname = realHostname;
+    conn.finalDistroId = finalDistroId;
     // LOG DEBUG: Enviar stats a cada tabId
     // console.log('[DEBUG][BACKEND] Enviando stats a', `ssh-stats:update:${tabId}`, JSON.stringify(stats));
     sendToRenderer(mainWindow.webContents, `ssh-stats:update:${tabId}`, stats);
