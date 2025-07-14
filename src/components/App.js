@@ -13,6 +13,7 @@ import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import Sidebar from './Sidebar';
+import SplitLayout from './SplitLayout';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
@@ -212,8 +213,17 @@ const App = () => {
   useEffect(() => {
     if (!window.electron) return;
 
-    // Obtener todos los tabIds actuales de terminales SSH
-    const currentTerminalTabs = sshTabs.filter(tab => tab.type === 'terminal').map(tab => tab.key);
+    // Obtener todos los tabIds actuales de terminales SSH (incluyendo splits)
+    const currentTerminalTabs = [];
+    sshTabs.forEach(tab => {
+      if (tab.type === 'terminal') {
+        currentTerminalTabs.push(tab.key);
+      } else if (tab.type === 'split') {
+        // Agregar ambos terminales del split
+        if (tab.leftTerminal) currentTerminalTabs.push(tab.leftTerminal.key);
+        if (tab.rightTerminal) currentTerminalTabs.push(tab.rightTerminal.key);
+      }
+    });
     
     // Remover listeners de pestañas que ya no existen
     activeListenersRef.current.forEach(tabId => {
@@ -1287,6 +1297,20 @@ const App = () => {
         icon: 'pi pi-folder-open',
         command: () => openFileExplorer(node)
       });
+
+      // Submenu para abrir en split solo si hay pestañas SSH abiertas
+      const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
+      if (sshTabsFiltered.length > 0) {
+        items.push({
+          label: 'Abrir en Split →',
+          icon: 'pi pi-window-maximize',
+          items: sshTabsFiltered.map(tab => ({
+            label: tab.label,
+            icon: 'pi pi-desktop',
+            command: () => openInSplit(node, tab)
+          }))
+        });
+      }
       
       items.push({ separator: true });
       
@@ -1603,20 +1627,31 @@ const App = () => {
   const resizeTimeoutRef = useRef(null);
   
   const handleResize = () => {
-    const activeTabKey = sshTabs[activeTabIndex]?.key;
-    if (activeTabKey && terminalRefs.current[activeTabKey]) {
-      // Cancelar resize anterior si existe
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-      
-      // Usar requestAnimationFrame para optimizar el redimensionamiento
-      requestAnimationFrame(() => {
-        if (terminalRefs.current[activeTabKey]) {
-          terminalRefs.current[activeTabKey].fit();
-        }
-      });
+    const filteredTabs = getFilteredTabs();
+    const activeTab = filteredTabs[activeTabIndex];
+    
+    if (!activeTab) return;
+
+    // Cancelar resize anterior si existe
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
     }
+    
+    // Usar requestAnimationFrame para optimizar el redimensionamiento
+    requestAnimationFrame(() => {
+      if (activeTab.type === 'split') {
+        // Para splits, redimensionar ambos terminales
+        if (activeTab.leftTerminal && terminalRefs.current[activeTab.leftTerminal.key]) {
+          terminalRefs.current[activeTab.leftTerminal.key].fit();
+        }
+        if (activeTab.rightTerminal && terminalRefs.current[activeTab.rightTerminal.key]) {
+          terminalRefs.current[activeTab.rightTerminal.key].fit();
+        }
+      } else if (activeTab.type === 'terminal' && terminalRefs.current[activeTab.key]) {
+        // Para terminales normales
+        terminalRefs.current[activeTab.key].fit();
+      }
+    });
   };
   
   // Versión con throttling para onResize
@@ -1631,6 +1666,75 @@ const App = () => {
   };
 
   // Función para abrir explorador de archivos SSH
+  // Función para abrir una sesión en split con otra pestaña existente
+  const openInSplit = (sshNode, existingTab) => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    // Crear nueva sesión SSH para el split
+    const newTabId = `${sshNode.key}_${Date.now()}`;
+    const sshConfig = {
+      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
+      username: sshNode.data.user,
+      password: sshNode.data.password,
+      port: sshNode.data.port || 22,
+      originalKey: sshNode.key,
+      useBastionWallix: sshNode.data.useBastionWallix || false,
+      bastionHost: sshNode.data.bastionHost || '',
+      bastionUser: sshNode.data.bastionUser || ''
+    };
+
+    const newTerminal = {
+      key: newTabId,
+      label: `${sshNode.label} (${sshTabs.filter(t => t.originalKey === sshNode.key).length + 1})`,
+      originalKey: sshNode.key,
+      sshConfig: sshConfig,
+      type: 'terminal'
+    };
+
+    // Modificar la pestaña existente para convertirla en split
+    setSshTabs(prevTabs => {
+      const updatedTabs = prevTabs.map(tab => {
+        if (tab.key === existingTab.key) {
+          return {
+            ...tab,
+            type: 'split',
+            leftTerminal: { ...tab, type: 'terminal' }, // Terminal izquierdo (existente)
+            rightTerminal: newTerminal, // Terminal derecho (nuevo)
+            label: `Split: ${tab.label.split(' (')[0]} | ${sshNode.label}`
+          };
+        }
+        return tab;
+      });
+      
+      // Encontrar el índice de la pestaña modificada y activarla
+      const splitTabIndex = updatedTabs.findIndex(tab => tab.key === existingTab.key);
+      if (splitTabIndex !== -1) {
+        setActiveTabIndex(splitTabIndex);
+        setGroupActiveIndices(prev => ({
+          ...prev,
+          'no-group': splitTabIndex
+        }));
+      }
+      
+      return updatedTabs;
+    });
+
+    toast.current.show({
+      severity: 'success',
+      summary: 'Split creado',
+      detail: `Nueva sesión de ${sshNode.label} abierta en split`,
+      life: 3000
+    });
+  };
+
   const openFileExplorer = (sshNode) => {
     // Buscar si ya existe un explorador para este host+usuario
     const existingExplorerIndex = sshTabs.findIndex(tab => 
@@ -1840,10 +1944,20 @@ const App = () => {
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
-    const allTabs = [...sshTabs, ...fileExplorerTabs];
-    const activeTab = allTabs[activeTabIndex];
+    const filteredTabs = getFilteredTabs();
+    const activeTab = filteredTabs[activeTabIndex];
     if (activeTab && window.electron && window.electron.ipcRenderer) {
-      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
+      if (activeTab.type === 'split') {
+        // Para splits, activar stats en ambos terminales
+        if (activeTab.leftTerminal) {
+          window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.leftTerminal.key);
+        }
+        if (activeTab.rightTerminal) {
+          window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.rightTerminal.key);
+        }
+      } else if (activeTab.type === 'terminal') {
+        window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
+      }
     }
   }, [activeTabIndex, sshTabs, fileExplorerTabs]);
 
@@ -2079,6 +2193,10 @@ const App = () => {
                             {tab.type === 'terminal' && tabDistros[tab.key] && (
                               <DistroIcon distro={tabDistros[tab.key]} size={12} />
                             )}
+                            {/* Icono específico para splits */}
+                            {tab.type === 'split' && (
+                              <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+                            )}
                             {/* Icono específico para exploradores */}
                             {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
                               <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
@@ -2097,19 +2215,35 @@ const App = () => {
                                 cleanupTabDistro(closedTab.key);
                                 
                                 if (isSSHTab) {
-                                  // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                  if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-                                    // Terminal SSH - siempre desconectar
-                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                  } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                    // Explorador con conexión propia - desconectar
-                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  // Manejar cierre de pestañas split
+                                  if (closedTab.type === 'split') {
+                                    // Desconectar ambos terminales del split
+                                    if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
+                                      delete terminalRefs.current[closedTab.leftTerminal.key];
+                                      cleanupTabDistro(closedTab.leftTerminal.key);
+                                    }
+                                    if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
+                                      delete terminalRefs.current[closedTab.rightTerminal.key];
+                                      cleanupTabDistro(closedTab.rightTerminal.key);
+                                    }
+                                  } else {
+                                    // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                    if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                      // Terminal SSH - siempre desconectar
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                      // Explorador con conexión propia - desconectar
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    }
+                                    // Los exploradores que usan el pool NO necesitan desconectarse
+                                    if (!closedTab.isExplorerInSSH) {
+                                      delete terminalRefs.current[closedTab.key];
+                                    }
                                   }
-                                  // Los exploradores que usan el pool NO necesitan desconectarse
+                                  
                                   const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                  if (!closedTab.isExplorerInSSH) {
-                                    delete terminalRefs.current[closedTab.key];
-                                  }
                                   // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
                                   const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
                                   if (remainingTabs.length === 0) {
@@ -2472,6 +2606,17 @@ const App = () => {
                           explorerFont={explorerFont}
                           explorerColorTheme={explorerColorTheme}
                           explorerFontSize={explorerFontSize}
+                        />
+                      ) : tab.type === 'split' ? (
+                        <SplitLayout
+                          leftTerminal={tab.leftTerminal}
+                          rightTerminal={tab.rightTerminal}
+                          fontFamily={fontFamily}
+                          fontSize={fontSize}
+                          theme={terminalTheme.theme}
+                          onContextMenu={handleTerminalContextMenu}
+                          sshStatsByTabId={sshStatsByTabId}
+                          terminalRefs={terminalRefs}
                         />
                       ) : (
                         <TerminalComponent
