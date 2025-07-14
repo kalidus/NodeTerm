@@ -270,7 +270,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
 
     return (
         <div 
-            ref={terminalRef} 
             style={{ 
                 display: 'flex',
                 flexDirection: 'column',
@@ -282,12 +281,28 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 height: '100%',
                 overflow: 'hidden',
                 position: 'relative',
-                border: '2px solid cyan',
-                background: 'rgba(0,255,255,0.08)',
                 padding: 0,
                 margin: 0
             }} 
-        />
+        >
+            <div
+                ref={terminalRef}
+                style={{
+                    flex: 1,
+                    minHeight: 0,
+                    minWidth: 0,
+                    width: '100%',
+                    height: '100%',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    padding: 0,
+                    margin: 0
+                }}
+            />
+            {!hideStatusBar && (
+                <StatusBar stats={stats} active={active} />
+            )}
+        </div>
     );
 });
 

@@ -517,14 +517,17 @@ html, body, #root {
 
 /* Añade un margen interno al área del terminal para que el texto no esté pegado a los bordes */
 .xterm-viewport {
-  padding: 10px !important;
+  padding: 2px !important;
   /* Asegura que el padding no afecte al cálculo de tamaño del addon 'fit' */
   box-sizing: border-box !important;
 }
 
-.xterm {
-    padding: 10px !important;
-    box-sizing: border-box !important;
+.xterm, .xterm-viewport, .xterm-screen {
+  height: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* --- Status Bar --- */
@@ -538,7 +541,7 @@ html, body, #root {
     height: 24px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
     font-size: 12px;
-    border-top: 1px solid var(--statusbar-border, #333) !important;
+    /* border-top: 1px solid var(--statusbar-border, #333) !important; */
 }
 
 .status-group {
