@@ -1768,7 +1768,7 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
   } finally {
     const finalConn = sshConnections[tabId];
     if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
-      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, realHostname, finalDistroId, host), 2000);
+      finalConn.statsTimeout = setTimeout(() => statsLoop(tabId, realHostname, finalDistroId, host), statusBarPollingIntervalMs);
     }
   }
 }
@@ -1799,4 +1799,10 @@ ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
       }
     }
   }
+});
+
+let statusBarPollingIntervalMs = 5000;
+ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
+  const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 5));
+  statusBarPollingIntervalMs = sec * 1000;
 });
