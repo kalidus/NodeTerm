@@ -109,6 +109,12 @@ const App = () => {
   // Estado para mantener el índice activo de cada grupo
   const [groupActiveIndices, setGroupActiveIndices] = useState({});
 
+  // === ESTADO PARA SPLITS ===
+  // Ahora el split es específico por pestaña
+  const [tabSplits, setTabSplits] = useState({}); // { tabKey: { topTab, bottomTab, activePanel } }
+  const [showSplitDialog, setShowSplitDialog] = useState(false);
+  const [selectedNodeForSplit, setSelectedNodeForSplit] = useState(null);
+
   // Colores predefinidos para grupos
   const GROUP_COLORS = [
     '#e74c3c', '#3498db', '#2ecc71', '#f39c12', 
@@ -194,6 +200,112 @@ const App = () => {
   // Obtener pestañas filtradas según el grupo activo
   const getFilteredTabs = () => {
     return getTabsInGroup(activeGroupId);
+  };
+
+  // === FUNCIONES DE SPLITS ===
+  
+  // Crear split con una nueva sesión terminal
+  const createSplitWithNewTerminal = (node) => {
+    setSelectedNodeForSplit(node);
+    setShowSplitDialog(true);
+  };
+
+  // Inicializar split mode para una pestaña específica
+  const initializeSplit = (selectedTabKey) => {
+    // Buscar la pestaña seleccionada
+    const allTabs = [...sshTabs, ...fileExplorerTabs];
+    const selectedTab = allTabs.find(tab => tab.key === selectedTabKey);
+    
+    if (!selectedTab) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Pestaña seleccionada no encontrada',
+        life: 3000
+      });
+      return;
+    }
+
+    // Crear nueva pestaña de terminal para el split
+    const tabId = `${selectedNodeForSplit.key}_${Date.now()}`;
+    const sshConfig = {
+      host: selectedNodeForSplit.data.useBastionWallix ? selectedNodeForSplit.data.targetServer : selectedNodeForSplit.data.host,
+      username: selectedNodeForSplit.data.user,
+      password: selectedNodeForSplit.data.password,
+      port: selectedNodeForSplit.data.port || 22,
+      originalKey: selectedNodeForSplit.key,
+      useBastionWallix: selectedNodeForSplit.data.useBastionWallix || false,
+      bastionHost: selectedNodeForSplit.data.bastionHost || '',
+      bastionUser: selectedNodeForSplit.data.bastionUser || ''
+    };
+
+    const newTab = {
+      key: tabId,
+      label: `${selectedNodeForSplit.label} (Split)`,
+      originalKey: selectedNodeForSplit.key,
+      sshConfig: sshConfig,
+      type: 'terminal'
+    };
+
+    // Configurar el split para esta pestaña específica
+    setTabSplits(prev => ({
+      ...prev,
+      [selectedTabKey]: {
+        topTab: selectedTab,
+        bottomTab: newTab,
+        activePanel: 'top'
+      }
+    }));
+    
+    // NO agregar la nueva pestaña a la lista - solo existe en el split
+    
+    setShowSplitDialog(false);
+    setSelectedNodeForSplit(null);
+
+    toast.current.show({
+      severity: 'success',
+      summary: 'Split creado',
+      detail: `Terminal dividido para ${selectedTab.label}`,
+      life: 3000
+    });
+  };
+
+  // Cerrar split para una pestaña específica
+  const closeSplit = (tabKey) => {
+    setTabSplits(prev => {
+      const newSplits = { ...prev };
+      
+      // Limpiar la configuración del split
+      const splitConfig = newSplits[tabKey];
+      if (splitConfig && splitConfig.bottomTab) {
+        // Solo limpiar el distro, no eliminar de sshTabs ya que no está ahí
+        cleanupTabDistro(splitConfig.bottomTab.key);
+      }
+      
+      delete newSplits[tabKey];
+      return newSplits;
+    });
+  };
+
+  // Cambiar el foco entre los paneles del split para una pestaña específica
+  const switchSplitFocus = (tabKey, panel) => {
+    setTabSplits(prev => ({
+      ...prev,
+      [tabKey]: {
+        ...prev[tabKey],
+        activePanel: panel
+      }
+    }));
+  };
+
+  // Verificar si una pestaña tiene split activo
+  const isTabSplit = (tabKey) => {
+    return tabSplits[tabKey] !== undefined;
+  };
+
+  // Obtener configuración de split para una pestaña
+  const getTabSplitConfig = (tabKey) => {
+    return tabSplits[tabKey] || null;
   };
 
   // Manejar menú contextual de pestañas
@@ -1287,6 +1399,16 @@ const App = () => {
         icon: 'pi pi-folder-open',
         command: () => openFileExplorer(node)
       });
+
+      // Mostrar opción de split solo si hay pestañas abiertas
+      const allTabs = [...sshTabs, ...fileExplorerTabs];
+      if (allTabs.length > 0) {
+        items.push({
+          label: 'Abrir terminal en split',
+          icon: 'pi pi-window-maximize',
+          command: () => createSplitWithNewTerminal(node)
+        });
+      }
       
       items.push({ separator: true });
       
@@ -2417,55 +2539,231 @@ const App = () => {
                 )}
               </div>
                               <div style={{ flexGrow: 1, position: 'relative' }}>
-                {/* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */}
-                {[...sshTabs, ...fileExplorerTabs].map((tab) => {
+                {(() => {
+                  // Verificar si la pestaña activa tiene split configurado
                   const filteredTabs = getFilteredTabs();
-                  const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
-                  const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
-                  const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                  const activeTab = filteredTabs[activeTabIndex];
+                  const splitConfig = activeTab ? getTabSplitConfig(activeTab.key) : null;
                   
-                  return (
-                    <div 
-                      key={tab.key}
-                      style={{ 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
-                        width: '100%',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        visibility: isActiveTab ? 'visible' : 'hidden',
-                        zIndex: isActiveTab ? 1 : 0,
-                        pointerEvents: isActiveTab ? 'auto' : 'none'
-                      }}
-                    >
-                      {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
-                        <FileExplorer
-                          sshConfig={tab.sshConfig}
-                          tabId={tab.key}
-                          iconTheme={iconTheme}
-                          explorerFont={explorerFont}
-                          explorerColorTheme={explorerColorTheme}
-                          explorerFontSize={explorerFontSize}
-                        />
-                      ) : (
-                        <TerminalComponent
-                          key={tab.key}
-                          ref={el => terminalRefs.current[tab.key] = el}
-                          tabId={tab.key}
-                          sshConfig={tab.sshConfig}
-                          fontFamily={fontFamily}
-                          fontSize={fontSize}
-                          theme={terminalTheme.theme}
-                          onContextMenu={handleTerminalContextMenu}
-                          active={isActiveTab}
-                          stats={sshStatsByTabId[tab.key]}
-                        />
-                      )}
+                  return splitConfig ? (
+                    /* Modo Split: Dividir pantalla horizontalmente para la pestaña activa */
+                    <div className="split-container split-enter">
+                      {/* Panel superior */}
+                      <div 
+                        className="split-panel"
+                        style={{ 
+                          height: '50%', 
+                          width: '100%', 
+                          borderBottom: '2px solid #dee2e6'
+                        }}
+                        onClick={() => switchSplitFocus(activeTab.key, 'top')}
+                      >
+                        {/* Barra de título del panel superior */}
+                        <div className={`split-panel-header ${splitConfig.activePanel === 'top' ? 'active' : 'inactive'}`}>
+                          <span>{splitConfig.topTab?.label || 'Panel Superior'}</span>
+                          <Button
+                            icon="pi pi-times"
+                            className="p-button-text p-button-sm split-close-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              closeSplit(activeTab.key);
+                            }}
+                            tooltip="Cerrar split"
+                          />
+                        </div>
+                        {/* Contenido del panel superior */}
+                        <div className="split-panel-content">
+                          {splitConfig.topTab && (
+                            <div style={{ 
+                              height: '100%', 
+                              width: '100%', 
+                              display: 'flex', 
+                              flexDirection: 'column' 
+                            }}>
+                              {(splitConfig.topTab.type === 'explorer' || splitConfig.topTab.isExplorerInSSH) ? (
+                                <FileExplorer
+                                  sshConfig={splitConfig.topTab.sshConfig}
+                                  tabId={splitConfig.topTab.key}
+                                  iconTheme={iconTheme}
+                                  explorerFont={explorerFont}
+                                  explorerColorTheme={explorerColorTheme}
+                                  explorerFontSize={explorerFontSize}
+                                />
+                              ) : (
+                                <TerminalComponent
+                                  key={splitConfig.topTab.key}
+                                  ref={el => terminalRefs.current[splitConfig.topTab.key] = el}
+                                  tabId={splitConfig.topTab.key}
+                                  sshConfig={splitConfig.topTab.sshConfig}
+                                  fontFamily={fontFamily}
+                                  fontSize={fontSize}
+                                  theme={terminalTheme.theme}
+                                  onContextMenu={handleTerminalContextMenu}
+                                  active={splitConfig.activePanel === 'top'}
+                                  stats={sshStatsByTabId[splitConfig.topTab.key]}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Panel inferior */}
+                      <div 
+                        className="split-panel"
+                        style={{ 
+                          height: '50%', 
+                          width: '100%'
+                        }}
+                        onClick={() => switchSplitFocus(activeTab.key, 'bottom')}
+                      >
+                        {/* Barra de título del panel inferior */}
+                        <div className={`split-panel-header ${splitConfig.activePanel === 'bottom' ? 'active' : 'inactive'}`}>
+                          <span>{splitConfig.bottomTab?.label || 'Panel Inferior'}</span>
+                        </div>
+                        {/* Contenido del panel inferior */}
+                        <div className="split-panel-content">
+                          {splitConfig.bottomTab && (
+                            <div style={{ 
+                              height: '100%', 
+                              width: '100%', 
+                              display: 'flex', 
+                              flexDirection: 'column' 
+                            }}>
+                              {(splitConfig.bottomTab.type === 'explorer' || splitConfig.bottomTab.isExplorerInSSH) ? (
+                                <FileExplorer
+                                  sshConfig={splitConfig.bottomTab.sshConfig}
+                                  tabId={splitConfig.bottomTab.key}
+                                  iconTheme={iconTheme}
+                                  explorerFont={explorerFont}
+                                  explorerColorTheme={explorerColorTheme}
+                                  explorerFontSize={explorerFontSize}
+                                />
+                              ) : (
+                                <TerminalComponent
+                                  key={splitConfig.bottomTab.key}
+                                  ref={el => terminalRefs.current[splitConfig.bottomTab.key] = el}
+                                  tabId={splitConfig.bottomTab.key}
+                                  sshConfig={splitConfig.bottomTab.sshConfig}
+                                  fontFamily={fontFamily}
+                                  fontSize={fontSize}
+                                  theme={terminalTheme.theme}
+                                  onContextMenu={handleTerminalContextMenu}
+                                  active={splitConfig.activePanel === 'bottom'}
+                                  stats={sshStatsByTabId[splitConfig.bottomTab.key]}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  );
-                })}
+                  ) : (
+                    /* Modo normal: Pestañas regulares */
+                    <>
+                      {/* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */}
+                      {[...sshTabs, ...fileExplorerTabs].map((tab) => {
+                        const filteredTabs = getFilteredTabs();
+                        const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
+                        const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
+                        const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                  
+                      return (
+                        <div 
+                          key={tab.key}
+                          style={{ 
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                            width: '100%',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            visibility: isActiveTab ? 'visible' : 'hidden',
+                            zIndex: isActiveTab ? 1 : 0,
+                            pointerEvents: isActiveTab ? 'auto' : 'none'
+                          }}
+                        >
+                          {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
+                            <FileExplorer
+                              sshConfig={tab.sshConfig}
+                              tabId={tab.key}
+                              iconTheme={iconTheme}
+                              explorerFont={explorerFont}
+                              explorerColorTheme={explorerColorTheme}
+                              explorerFontSize={explorerFontSize}
+                            />
+                          ) : (
+                            <TerminalComponent
+                              key={tab.key}
+                              ref={el => terminalRefs.current[tab.key] = el}
+                              tabId={tab.key}
+                              sshConfig={tab.sshConfig}
+                              fontFamily={fontFamily}
+                              fontSize={fontSize}
+                              theme={terminalTheme.theme}
+                              onContextMenu={handleTerminalContextMenu}
+                              active={isActiveTab}
+                              stats={sshStatsByTabId[tab.key]}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                );
+              })()}
+              
+              {/* Renderizar pestañas del split en el fondo para mantener conexiones SSH */}
+              {Object.entries(tabSplits).map(([parentTabKey, splitConfig]) => {
+                const filteredTabs = getFilteredTabs();
+                const activeTab = filteredTabs[activeTabIndex];
+                const isCurrentTabSplit = activeTab && activeTab.key === parentTabKey;
+                
+                return (
+                  <div key={`split-${parentTabKey}`}>
+                    {/* Pestaña bottom del split - siempre renderizada pero oculta si no está activa */}
+                    {splitConfig.bottomTab && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          visibility: isCurrentTabSplit ? 'hidden' : 'hidden', // Siempre oculta en el fondo
+                          zIndex: -1,
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        {(splitConfig.bottomTab.type === 'explorer' || splitConfig.bottomTab.isExplorerInSSH) ? (
+                          <FileExplorer
+                            sshConfig={splitConfig.bottomTab.sshConfig}
+                            tabId={splitConfig.bottomTab.key}
+                            iconTheme={iconTheme}
+                            explorerFont={explorerFont}
+                            explorerColorTheme={explorerColorTheme}
+                            explorerFontSize={explorerFontSize}
+                          />
+                        ) : (
+                          <TerminalComponent
+                            key={splitConfig.bottomTab.key}
+                            ref={el => terminalRefs.current[splitConfig.bottomTab.key] = el}
+                            tabId={splitConfig.bottomTab.key}
+                            sshConfig={splitConfig.bottomTab.sshConfig}
+                            fontFamily={fontFamily}
+                            fontSize={fontSize}
+                            theme={terminalTheme.theme}
+                            onContextMenu={handleTerminalContextMenu}
+                            active={false} // Nunca activa en el fondo
+                            stats={sshStatsByTabId[splitConfig.bottomTab.key]}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               </div>
             </div>
           ) : (
@@ -2650,6 +2948,70 @@ const App = () => {
           <div className="p-field">
             <label htmlFor="editFolderName">Nombre de la carpeta</label>
             <InputText id="editFolderName" value={editFolderName} onChange={e => setEditFolderName(e.target.value)} autoFocus />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Dialog para seleccionar pestaña para split */}
+      <Dialog
+        header="Dividir pantalla"
+        visible={showSplitDialog}
+        style={{ width: '28rem' }}
+        onHide={() => setShowSplitDialog(false)}
+        footer={
+          <div>
+            <Button 
+              label="Cancelar" 
+              icon="pi pi-times" 
+              className="p-button-text" 
+              onClick={() => {
+                setShowSplitDialog(false);
+                setSelectedNodeForSplit(null);
+              }} 
+            />
+          </div>
+        }
+      >
+        <div className="p-fluid">
+          <div style={{ marginBottom: '1rem' }}>
+            <p>Selecciona con qué pestaña quieres dividir la pantalla:</p>
+            {selectedNodeForSplit && (
+              <small style={{ color: '#666' }}>
+                Se creará una nueva sesión de "{selectedNodeForSplit.label}" en la parte inferior
+              </small>
+            )}
+          </div>
+          
+          <div className="p-field">
+            <label htmlFor="splitTabSelector">Pestaña superior:</label>
+            <Dropdown 
+              id="splitTabSelector"
+              value={null}
+              options={[...sshTabs, ...fileExplorerTabs].map(tab => ({
+                label: tab.label,
+                value: tab.key,
+                icon: tab.type === 'terminal' ? 'pi pi-desktop' : 'pi pi-folder-open'
+              }))}
+              onChange={(e) => {
+                if (e.value) {
+                  initializeSplit(e.value);
+                }
+              }}
+              placeholder="Seleccionar pestaña..."
+              style={{ width: '100%' }}
+              itemTemplate={(option) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className={option.icon}></i>
+                  <span>{option.label}</span>
+                </div>
+              )}
+              valueTemplate={(option) => option && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <i className={option.icon}></i>
+                  <span>{option.label}</span>
+                </div>
+              )}
+            />
           </div>
         </div>
       </Dialog>

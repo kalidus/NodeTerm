@@ -863,6 +863,116 @@ html, body, #root {
   color: #ffc107; /* Amarillo */
 }
 
+/* --- Estilos para Split de Terminal --- */
+.split-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.split-panel {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.split-panel:hover {
+  border-color: #007ad9 !important;
+}
+
+.split-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  border-bottom: 1px solid #dee2e6;
+  user-select: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.split-panel-header.active {
+  background: #007ad9;
+  color: white;
+}
+
+.split-panel-header.inactive {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.split-panel-header:hover {
+  opacity: 0.8;
+}
+
+.split-panel-content {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.split-divider {
+  height: 2px;
+  background: #dee2e6;
+  cursor: row-resize;
+  transition: background 0.2s ease;
+}
+
+.split-divider:hover {
+  background: #007ad9;
+}
+
+.split-close-button {
+  color: inherit;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  min-width: unset;
+  margin-left: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.split-close-button:hover {
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Animaciones para entrada/salida del split */
+@keyframes splitEnter {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes splitExit {
+  from {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+}
+
+.split-enter {
+  animation: splitEnter 0.3s ease-out;
+}
+
+.split-exit {
+  animation: splitExit 0.3s ease-out;
+}
+
 /* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
 .sidebar-tree .p-treenode {
   margin-bottom: 1px;
