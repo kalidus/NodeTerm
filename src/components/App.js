@@ -1847,6 +1847,16 @@ const App = () => {
     }
   }, [activeTabIndex, sshTabs, fileExplorerTabs]);
 
+  // Reactivar stats para bastión al volver a la pestaña
+  useEffect(() => {
+    if (!window.electron || !window.electron.ipcRenderer) return;
+    const filteredTabs = getFilteredTabs();
+    const activeTab = filteredTabs[activeTabIndex];
+    if (activeTab && activeTab.sshConfig && activeTab.sshConfig.useBastionWallix) {
+      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
+    }
+  }, [activeTabIndex, sshTabs]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />

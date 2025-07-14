@@ -497,7 +497,8 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       previousCpu: null,
       statsTimeout: null,
       previousNet: null,
-      previousTime: null
+      previousTime: null,
+      wallixStatsLoop // <-- añade la función aquí
     };
     
     // Función de bucle de stats para Wallix/bastión
