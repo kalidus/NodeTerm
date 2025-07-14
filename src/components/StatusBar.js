@@ -12,7 +12,7 @@ const CpuSparkline = ({ history }) => (
                 <div
                     key={index}
                     className="sparkline-bar"
-                    style={{ height: `${Math.max(value, 1)}%` }} // Ensure a minimum height of 1% for visibility
+                    style={{ height: `${Math.max(value, 1)}%` }}
                 />
             ))}
         </div>
@@ -42,6 +42,8 @@ const StatusBar = ({ stats, active }) => {
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
+    console.log('cpuHistory', stats?.cpuHistory);
+
     if (!stats) {
         // Mostrar solo la barra vacía si no hay stats
         return (
