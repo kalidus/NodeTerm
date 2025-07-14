@@ -1838,6 +1838,15 @@ const App = () => {
   // 1. Estado global para stats por tabId
   const [sshStatsByTabId, setSshStatsByTabId] = useState({});
 
+  useEffect(() => {
+    // Cuando cambia la pestaña activa, notificar al backend
+    const allTabs = [...sshTabs, ...fileExplorerTabs];
+    const activeTab = allTabs[activeTabIndex];
+    if (activeTab && window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
+    }
+  }, [activeTabIndex, sshTabs, fileExplorerTabs]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
