@@ -1379,6 +1379,39 @@ ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath
   }
 });
 
+ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
+  try {
+    const SftpClient = require('ssh2-sftp-client');
+    const sftp = new SftpClient();
+    let connectConfig;
+    if (sshConfig.useBastionWallix) {
+      // Bastion: usar string Wallix
+      connectConfig = {
+        host: sshConfig.bastionHost,
+        port: sshConfig.port || 22,
+        username: sshConfig.bastionUser,
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+    } else {
+      // SSH directo
+      connectConfig = {
+        host: sshConfig.host,
+        port: sshConfig.port || 22,
+        username: sshConfig.username,
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+    }
+    await sftp.connect(connectConfig);
+    await sftp.fastPut(localPath, remotePath);
+    await sftp.end();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message || err };
+  }
+});
+
 // Function to safely send to mainWindow
 function sendToRenderer(sender, eventName, ...args) {
   try {
