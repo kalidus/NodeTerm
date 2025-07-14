@@ -483,7 +483,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             sshConnections[tabId]._pendingResize = null;
           }
           // Lanzar bucle de stats SOLO cuando el stream está listo
-          wallixStatsLoop();
+          // Solo iniciar stats si esta pestaña está activa
+          if (activeStatsTabId === tabId) {
+            wallixStatsLoop();
+          }
         }
       }
     );
@@ -498,21 +501,30 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsTimeout: null,
       previousNet: null,
       previousTime: null,
-      wallixStatsLoop // <-- añade la función aquí
+      statsLoopRunning: false
     };
     
     // Función de bucle de stats para Wallix/bastión
     function wallixStatsLoop() {
       const connObj = sshConnections[tabId];
       if (activeStatsTabId !== tabId) {
-        connObj.statsTimeout = null;
+        if (connObj) {
+          connObj.statsTimeout = null;
+          connObj.statsLoopRunning = false;
+        }
         return;
       }
-      // Eliminar o comentar console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
       if (!connObj || !connObj.ssh || !connObj.stream) {
         // console.log('[WallixStats] Conexión no disponible, saltando stats');
         return;
       }
+      if (connObj.statsLoopRunning) {
+        console.log(`[STATS] EVITANDO wallixStatsLoop duplicado para tabId ${tabId} - ya está corriendo`);
+        return;
+      }
+      
+      connObj.statsLoopRunning = true;
+      console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
 
       try {
         // // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
@@ -536,8 +548,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               sendToRenderer(event.sender, `ssh-stats:update:${tabId}`, fallbackStats);
               
               // Reintentar en 5 segundos
-              if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
+              if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+                sshConnections[tabId].statsLoopRunning = false;
                 sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+              } else {
+                if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
               }
               return;
             }
@@ -721,8 +736,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             }
             
             // Programar siguiente ejecución
-            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
+            if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+              sshConnections[tabId].statsLoopRunning = false;
               sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
+            } else {
+              if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
             }
           });
           
@@ -745,11 +763,18 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       } catch (e) {
         // console.warn('[WallixStats] Error general:', e);
         // Reintentar en 5 segundos
-        if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed) {
+        if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
+          sshConnections[tabId].statsLoopRunning = false;
           sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 5000);
+        } else {
+          if (sshConnections[tabId]) sshConnections[tabId].statsLoopRunning = false;
         }
       }
     }
+    
+    // Asignar la función wallixStatsLoop al objeto de conexión
+    sshConnections[tabId].wallixStatsLoop = wallixStatsLoop;
+    
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
     sendToRenderer(event.sender, 'ssh-connection-ready', {
       originalKey: config.originalKey || tabId,
@@ -1611,7 +1636,9 @@ async function findSSHConnection(tabId, sshConfig = null) {
 async function statsLoop(tabId, realHostname, finalDistroId, host) {
   const conn = sshConnections[tabId];
   if (activeStatsTabId !== tabId) {
-    conn.statsTimeout = null;
+    if (conn) {
+      conn.statsTimeout = null;
+    }
     return;
   }
   // Eliminar o comentar console.log(`[STATS] Ejecutando statsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
@@ -1749,13 +1776,16 @@ let activeStatsTabId = null;
 ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
   activeStatsTabId = tabId;
   Object.entries(sshConnections).forEach(([id, conn]) => {
-    if (id !== String(tabId) && conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
-      conn.statsTimeout = null;
+    if (id !== String(tabId)) {
+      if (conn.statsTimeout) {
+        clearTimeout(conn.statsTimeout);
+        conn.statsTimeout = null;
+      }
+      conn.statsLoopRunning = false;
     }
   });
   const conn = sshConnections[tabId];
-  if (conn && !conn.statsTimeout) {
+  if (conn && !conn.statsTimeout && !conn.statsLoopRunning) {
     if (conn.config.useBastionWallix) {
       if (typeof conn.wallixStatsLoop === 'function') {
         conn.wallixStatsLoop();
