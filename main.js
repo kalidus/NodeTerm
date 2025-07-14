@@ -1449,6 +1449,37 @@ ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory
   }
 });
 
+ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
+  try {
+    const SftpClient = require('ssh2-sftp-client');
+    const sftp = new SftpClient();
+    let connectConfig;
+    if (sshConfig.useBastionWallix) {
+      connectConfig = {
+        host: sshConfig.bastionHost,
+        port: sshConfig.port || 22,
+        username: sshConfig.bastionUser,
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+    } else {
+      connectConfig = {
+        host: sshConfig.host,
+        port: sshConfig.port || 22,
+        username: sshConfig.username,
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+    }
+    await sftp.connect(connectConfig);
+    await sftp.mkdir(remotePath, true); // true = recursive
+    await sftp.end();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message || err };
+  }
+});
+
 // Function to safely send to mainWindow
 function sendToRenderer(sender, eventName, ...args) {
   try {
