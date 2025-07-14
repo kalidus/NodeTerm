@@ -9,6 +9,7 @@ const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
+const SftpClient = require('ssh2-sftp-client');
 
 // Parser simple para 'ls -la'
 function parseLsOutput(output) {
@@ -1328,6 +1329,54 @@ ipcMain.handle('clipboard:readText', () => {
 
 ipcMain.handle('clipboard:writeText', (event, text) => {
   clipboard.writeText(text);
+});
+
+// Handler para mostrar el diálogo de guardado
+ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
+  const win = BrowserWindow.getFocusedWindow();
+  return await dialog.showSaveDialog(win, options);
+});
+
+// Handler para descargar archivos por SSH
+const fs = require('fs');
+
+ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
+  try {
+    if (sshConfig.useBastionWallix) {
+      // Construir string de conexión Wallix para SFTP
+      // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
+      // En la mayoría de los casos, bastionUser ya tiene el formato correcto
+      const sftp = new SftpClient();
+      const connectConfig = {
+        host: sshConfig.bastionHost,
+        port: sshConfig.port || 22,
+        username: sshConfig.bastionUser, // Wallix espera el string especial aquí
+        password: sshConfig.password,
+        readyTimeout: 20000,
+      };
+      await sftp.connect(connectConfig);
+      await sftp.fastGet(remotePath, localPath);
+      await sftp.end();
+      return { success: true };
+    } else {
+      // SSH directo
+      const ssh = new SSH2Promise(sshConfig);
+      await ssh.connect();
+      const sftp = await ssh.sftp();
+      await new Promise((resolve, reject) => {
+        const writeStream = require('fs').createWriteStream(localPath);
+        const readStream = sftp.createReadStream(remotePath);
+        readStream.pipe(writeStream);
+        readStream.on('error', reject);
+        writeStream.on('error', reject);
+        writeStream.on('finish', resolve);
+      });
+      await ssh.close();
+      return { success: true };
+    }
+  } catch (err) {
+    return { success: false, error: err.message || err };
+  }
 });
 
 // Function to safely send to mainWindow
