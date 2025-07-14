@@ -16,9 +16,9 @@ const SplitLayout = ({
   const rightTerminalRef = useRef(null);
 
   return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'row', flex: 1, minWidth: 0, minHeight: 0 }}>
       <SplitPane
-        split="horizontal"
+        split="vertical"
         minSize={50}
         defaultSize="50%"
         style={{ position: 'relative', height: '100%', width: '100%' }}
