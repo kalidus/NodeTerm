@@ -64,6 +64,7 @@
 ```bash
 # Descargar la última versión desde GitHub Releases
 # Archivo: NodeTerm-1.3.1-Setup.exe (Windows)
+[Descargar última release (v1.3.1)](https://github.com/kalidus/NodeTerm/releases/tag/v1.3.1)
 ```
 
 ### 🛠️ Desarrollo Local

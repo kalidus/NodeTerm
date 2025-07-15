@@ -32,7 +32,7 @@
     "linux": {
       "target": "AppImage",
       "category": "Utility",
-      "icon": "src/assets"
+      "icon": "src/assets/app-icon.png"
     },
     "nsis": {
       "oneClick": true,
