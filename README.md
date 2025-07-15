@@ -3,7 +3,7 @@
 
 <div align="center">
   
-[![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)](https://github.com/kalidus/NodeTerm/releases)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/kalidus/NodeTerm/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Electron](https://img.shields.io/badge/electron-latest-brightgreen.svg)](https://electronjs.org/)
 [![Donate](https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg)](#-donaciones)
@@ -27,7 +27,7 @@
 
 ## ✨ Características Principales
 
-### 🔄 **Sistema de Splits Avanzado** *(Nuevo en v1.3.1)*
+### 🔄 **Sistema de Splits Avanzado** *(Nuevo en v1.4.0)*
 - 🔀 Splits **horizontales y verticales** con redimensionamiento fluido
 - 🎯 Menú contextual intuitivo para elegir orientación
 - 📐 Barras de separación responsive con constraints dinámicos
@@ -63,8 +63,8 @@
 ### 📦 Descargar Ejecutable
 ```bash
 # Descargar la última versión desde GitHub Releases
-# Archivo: NodeTerm-1.3.1-Setup.exe (Windows)
-[Descargar última release (v1.3.1)](https://github.com/kalidus/NodeTerm/releases/tag/v1.3.1)
+# Archivo: NodeTerm-1.4.0-Setup.exe (Windows)
+[Descargar última release (v1.4.0)](https://github.com/kalidus/NodeTerm/releases/tag/v1.4.0)
 ```
 
 ### 🛠️ Desarrollo Local
@@ -83,7 +83,7 @@ npm run dev
 npm run build:win
 ```
 
-## 🆕 Novedades en v1.3.1
+## 🆕 Novedades en v1.4.0
 
 ### 🔀 **Sistema de Splits Completamente Rediseñado**
 - ✅ **Split horizontal y vertical** con interfaz intuitiva
@@ -107,18 +107,6 @@ npm run build:win
 - **UI**: Light, Dark, Auto (según sistema)
 - **Iconos**: Material, VSCode, Feather
 - **Fuentes**: FiraCode Nerd Font, JetBrains Mono, Cascadia Code
-
----
-
-<<<<<<< HEAD
-## 📊 **Gestión de Versiones**
-
-| Comando | Acción | Ejemplo |
-|---------|--------|---------|
-| `npm run version:patch` | 🔧 Bug fixes | `1.3.0` → `1.3.1` |
-| `npm run version:minor` | ✨ Nuevas características | `1.3.0` → `1.4.0` |
-| `npm run version:major` | 💥 Cambios importantes | `1.3.0` → `2.0.0` |
-| `npm run version:build` | 🏗️ Compilar después de versionar | - |
 
 ---
 
@@ -239,29 +227,19 @@ NodeTerm/
 
 ## 📝 **Changelog**
 
-### **v1.3.0** *(Actual)*
+### **v1.4.0** *(Actual)*
+- 📤 Exportación/importación de configuraciones
+- 🖥️ Mejoras en la interfaz y experiencia de usuario
+- 🐛 Corrección de bugs y optimizaciones
+
+<details>
+<summary><strong>Ver versiones anteriores...</strong></summary>
+
+### **v1.3.0**
 - ✨ Menús contextuales para explorador de sesiones
 - 🆕 Menú contextual en área vacía del árbol
 - 🐛 Corrección de confirmaciones duplicadas
 - 🧹 Interface más limpia sin botones inline
-
-### Cambios integrados desde 'refactor'
-
-- Add StatusBarThemeManager for dynamic theme managemen
-- Reducir tamaño de botones de cierre de pestañas
-- chore: eliminar información sobre temas en la configuración de temas globales
-- chore: guardar todos los archivos y sincronizar estado actual
-- fix: corregir apertura de configuración en Sidebar eliminando referencias a funciones obsoletas
-- refactor: integrar 'Acerca de NodeTerm' en la configuración y eliminar referencias y diálogo AboutDialog
-- refactor: mover botón de desplegar/plegar todo al menú inferior del sidebar
-- fix: el explorador de archivos respeta el tema seleccionado en toda la UI
-- Fix: Importar archivo CSS de parches para temas de sidebar en index.js
-- Feat: Crear archivo CSS de parches para temas de sidebar con alta prioridad
-- Fix: Agregar estilos CSS para sidebar footer, dividers y tree en themeManager
-- Fix: Remover background hardcodeado de Sidebar.js y agregar className para temas
-- Regenerar componente ThemeSelector.js para selección de temas de UI
-- fix(ui): el centrado vertical de paneles de configuración ya no afecta las pestañas principales (terminal)
-- fix(ui): centrado y visibilidad del contenido en paneles de configuración (SettingsDialog)
 
 ### **v1.1.0**
 - 🎉 Sistema de versionado implementado
@@ -269,15 +247,13 @@ NodeTerm/
 - 📍 Versión mostrada en barra de estado
 - 🎨 Interfaz mejorada con diseño profesional
 
-<details>
-<summary><strong>Ver más versiones...</strong></summary>
-
 ### **v1.0.0**
 - 📏 Panel lateral optimizado
 - 🐧 Iconos automáticos por distribución Linux
 - 🔄 Sistema de overflow inteligente
 - 📋 Funcionalidad move-to-front
 - 🐛 Corrección de memory leaks
+
 </details>
 
 ---

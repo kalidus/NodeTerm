@@ -651,7 +651,7 @@ const SettingsDialog = ({
               fontSize: '1.1rem',
               marginBottom: '1.5rem'
             }}>
-              {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.3.1'}
+              {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.4.0'}
             </div>
 
             <Divider />
