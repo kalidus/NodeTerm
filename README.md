@@ -121,14 +121,18 @@ Tu apoyo ayuda a mantener y mejorar NodeTerm, añadiendo nuevas funcionalidades 
 **📡 Redes EVM (Ethereum, Polygon, BSC, etc.):**
 <div align="center">
 
-<pre style="max-width:340px; margin:0 auto; text-align:center;">0xE6df364718CCFB96025eF24078b7C8D387a47242</pre>
+```
+0xE6df364718CCFB96025eF24078b7C8D387a47242
+```
 
 </div>
 
 **⚡ Red Solana:**
 <div align="center">
 
-<pre style="max-width:340px; margin:0 auto; text-align:center;">3b4UFMaXHmuincSXKpfgCoroFV1RYZVaAWbGTcfeNh5q</pre>
+```
+3b4UFMaXHmuincSXKpfgCoroFV1RYZVaAWbGTcfeNh5q
+```
 
 </div>
 
@@ -138,7 +142,6 @@ Tu apoyo ayuda a mantener y mejorar NodeTerm, añadiendo nuevas funcionalidades 
 - 💵 **USDC** - Ethereum/Polygon/Solana
 - 🔶 **Binance Coin (BNB)** - BSC
 - 🟣 **Polygon (MATIC)** - Red Polygon
-- 💚 **Tether (USDT)** - Múltiples redes
 - ✨ **Y cualquier otra crypto compatible**
 
 <sub>⚠️ **Importante:** Verifica siempre la compatibilidad de red antes de enviar.</sub>
