@@ -288,7 +288,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         <>
             <div 
                 ref={terminalRef} 
-                className={!hideStatusBar ? 'terminal-outer-padding' : ''}
+                className={'terminal-outer-padding'}
                 style={{ 
                     display: 'flex',
                     flexDirection: 'column',
