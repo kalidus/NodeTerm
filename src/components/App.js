@@ -13,8 +13,15 @@ import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import Sidebar from './Sidebar';
+<<<<<<< HEAD
+=======
+import SplitLayout from './SplitLayout';
+>>>>>>> v1.3.1
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
+import { iconThemes } from '../themes/icon-themes';
+import { explorerFonts } from '../themes';
+import { uiThemes } from '../themes/ui-themes';
 // Importar iconos para distribuciones
 import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
@@ -67,6 +74,10 @@ const App = () => {
   const [editSSHUser, setEditSSHUser] = useState('');
   const [editSSHPassword, setEditSSHPassword] = useState('');
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
+<<<<<<< HEAD
+=======
+  const [editSSHPort, setEditSSHPort] = useState(22);
+>>>>>>> v1.3.1
 
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -78,6 +89,7 @@ const App = () => {
   const [pendingExplorerSession, setPendingExplorerSession] = useState(null);
   const [sshPassword, setSSHPassword] = useState('');
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
+  const [sshPort, setSSHPort] = useState(22);
   const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
 
@@ -207,8 +219,17 @@ const App = () => {
   useEffect(() => {
     if (!window.electron) return;
 
-    // Obtener todos los tabIds actuales de terminales SSH
-    const currentTerminalTabs = sshTabs.filter(tab => tab.type === 'terminal').map(tab => tab.key);
+    // Obtener todos los tabIds actuales de terminales SSH (incluyendo splits)
+    const currentTerminalTabs = [];
+    sshTabs.forEach(tab => {
+      if (tab.type === 'terminal') {
+        currentTerminalTabs.push(tab.key);
+      } else if (tab.type === 'split') {
+        // Agregar ambos terminales del split
+        if (tab.leftTerminal) currentTerminalTabs.push(tab.leftTerminal.key);
+        if (tab.rightTerminal) currentTerminalTabs.push(tab.rightTerminal.key);
+      }
+    });
     
     // Remover listeners de pestañas que ya no existen
     activeListenersRef.current.forEach(tabId => {
@@ -224,11 +245,10 @@ const App = () => {
       if (!activeListenersRef.current.has(tabId)) {
         const eventName = `ssh-stats:update:${tabId}`;
         const listener = (stats) => {
+          setSshStatsByTabId(prev => ({ ...prev, [tabId]: stats }));
+          // Mantener compatibilidad con distro tracking
           if (stats && stats.distro) {
-            setTabDistros(prev => ({
-              ...prev,
-              [tabId]: stats.distro
-            }));
+            setTabDistros(prev => ({ ...prev, [tabId]: stats.distro }));
           }
         };
         
@@ -244,6 +264,11 @@ const App = () => {
         window.electron.ipcRenderer.removeAllListeners(eventName);
       });
       activeListenersRef.current.clear();
+      
+      // Limpiar timeout de resize si existe
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
     };
   }, [sshTabs]);
 
@@ -253,45 +278,45 @@ const App = () => {
 
     // Función para manejar estado de conexión
     const handleConnectionStatus = (originalKey, status) => {
-      console.log('🔄 SSH estado:', originalKey, '->', status);
+      // console.log('🔄 SSH estado:', originalKey, '->', status); // ELIMINADO
       setSshConnectionStatus(prevStatus => {
         const newStatus = { ...prevStatus, [originalKey]: status };
-        console.log('Nuevo estado sshConnectionStatus:', newStatus);
+        // console.log('Nuevo estado sshConnectionStatus:', newStatus); // ELIMINADO
         return newStatus;
       });
     };
 
     // Listeners estables con referencias fijas
     const handleSSHReady = (data) => {
-      console.log('✅ SSH conectado para originalKey:', data?.originalKey);
+      // console.log('✅ SSH conectado para originalKey:', data?.originalKey); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'connected');
       }
     };
 
     const handleSSHError = (data) => {
-      console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error);
+      // console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'error');
       }
     };
 
     const handleSSHDisconnected = (data) => {
-      console.log('🔌 SSH desconectado para originalKey:', data?.originalKey);
+      // console.log('🔌 SSH desconectado para originalKey:', data?.originalKey); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'disconnected');
       }
     };
 
     // Registrar listeners
-    console.log('🚀 Registrando listeners SSH IPC');
+    // console.log('Registrando listeners SSH IPC'); // ELIMINADO
     window.electron.ipcRenderer.on('ssh-connection-ready', handleSSHReady);
     window.electron.ipcRenderer.on('ssh-connection-error', handleSSHError);
     window.electron.ipcRenderer.on('ssh-connection-disconnected', handleSSHDisconnected);
 
     // Cleanup usando removeAllListeners para asegurar limpieza completa
     return () => {
-      console.log('🧹 Limpiando listeners SSH IPC');
+      // console.log('🧹 Limpiando listeners SSH IPC'); // ELIMINADO
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-ready');
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-error');
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-disconnected');
@@ -345,6 +370,31 @@ const App = () => {
   
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
+
+  // Función para detectar y parsear formato Wallix
+  const parseWallixUser = (userString) => {
+    // Formato Wallix: usuario@dominio@servidor:protocolo:usuario_destino
+    // Ejemplo: rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119
+    const wallixPattern = /^(.+)@(.+)@(.+):(.+):(.+)$/;
+    const match = userString.match(wallixPattern);
+    
+    if (match) {
+      const [, bastionUser, domain, targetServer, protocol, targetUser] = match;
+      return {
+        isWallix: true,
+        bastionUser: userString, // El usuario completo para el bastión
+        targetUser: targetUser,
+        targetServer: targetServer,
+        protocol: protocol,
+        domain: domain
+      };
+    }
+    
+    return {
+      isWallix: false,
+      targetUser: userString
+    };
+  };
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
@@ -620,13 +670,37 @@ const App = () => {
   useEffect(() => {
     const savedNodes = localStorage.getItem(STORAGE_KEY);
     if (savedNodes) {
-      setNodes(JSON.parse(savedNodes));
+      const loadedNodes = JSON.parse(savedNodes);
+      // Migrar nodos existentes para asegurar que las sesiones SSH tengan droppable: false
+      const migrateNodes = (nodes) => {
+        return nodes.map(node => {
+          const migratedNode = { ...node };
+          // Si es una sesión SSH y no tiene droppable definido o es true, establecerlo como false
+          if (node.data && node.data.type === 'ssh') {
+            migratedNode.droppable = false;
+          }
+          // Migrar recursivamente los hijos
+          if (node.children && node.children.length > 0) {
+            migratedNode.children = migrateNodes(node.children);
+          }
+          return migratedNode;
+        });
+      };
+      const migratedNodes = migrateNodes(loadedNodes);
+      setNodes(migratedNodes);
     } else {
       setNodes(getDefaultNodes());
     }
     
+<<<<<<< HEAD
     // Cargar tema UI guardado
     themeManager.loadSavedTheme();
+=======
+    // Cargar tema UI guardado (forzar recarga)
+    setTimeout(() => {
+      themeManager.loadSavedTheme();
+    }, 100);
+>>>>>>> v1.3.1
     
     // Cargar tema de status bar guardado
     statusBarThemeManager.loadSavedTheme();
@@ -896,8 +970,14 @@ const App = () => {
   // Handle drag and drop with UID preservation
   const onDragDrop = (event) => {
     const { dragNode, dropNode, dropPoint, value } = event;
-    if (dropPoint === 0 && dropNode && dropNode.droppable) {
-      // Clonar el árbol y actualizar solo la carpeta destino
+    
+    // Solo permitir drag and drop si el nodo de destino es una carpeta (droppable = true)
+    // Esto evita que se pueda arrastrar cualquier cosa a una sesión SSH
+    const isDropNodeFolder = dropNode && dropNode.droppable === true;
+    const isDropNodeSession = dropNode && dropNode.data && dropNode.data.type === 'ssh';
+    
+    if (dropPoint === 0 && isDropNodeFolder) {
+      // Permitir arrastrar cualquier cosa (carpetas o sesiones) a una carpeta
       const newValue = cloneTreeWithUpdatedNode(value, dropNode.key, (parent) => {
         // Eliminar cualquier instancia del nodo movido
         parent.children = parent.children.filter(n => n.key !== dragNode.key);
@@ -906,6 +986,14 @@ const App = () => {
         return parent;
       });
       setNodes(newValue);
+    } else if (dropPoint === 0 && isDropNodeSession) {
+      // Si se intenta arrastrar algo a una sesión SSH, mostrar mensaje de error
+      toast.current.show({
+        severity: 'warn',
+        summary: 'Operación no permitida',
+        detail: 'No se puede arrastrar elementos dentro de una sesión SSH. Solo las carpetas pueden contener otros elementos.',
+        life: 4000
+      });
     } else {
       setNodes([...value]);
     }
@@ -1076,18 +1164,20 @@ const App = () => {
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
-    let iconClass = '';
+    // Icono según tema seleccionado para la sidebar
+    let icon = null;
     if (isSSH) {
-      iconClass = 'pi pi-desktop';
+      icon = iconThemes[iconThemeSidebar]?.icons?.ssh || <span className="pi pi-desktop" />;
     } else if (isFolder) {
-      iconClass = options.expanded ? 'pi pi-folder-open' : 'pi pi-folder';
+      icon = options.expanded
+        ? (iconThemes[iconThemeSidebar]?.icons?.folderOpen || <span className="pi pi-folder-open" />)
+        : (iconThemes[iconThemeSidebar]?.icons?.folder || <span className="pi pi-folder" />);
     }
 
     // Obtener estado de conexión para sesiones SSH
     const connectionStatus = isSSH ? sshConnectionStatus[node.key] : null;
     const getConnectionIndicator = () => {
       if (!isSSH) return null;
-      
       switch (connectionStatus) {
         case 'connected':
           return <span className="connection-indicator connected" title="Conectado">●</span>;
@@ -1096,7 +1186,6 @@ const App = () => {
         case 'disconnected':
           return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
         default:
-          // Por defecto: gris (desconectado), amarillo para otros estados
           return <span className="connection-indicator disconnected" title="Desconectado">●</span>;
       }
     };
@@ -1106,26 +1195,26 @@ const App = () => {
         onContextMenu={(e) => onNodeContextMenu(e, node)}
         onDoubleClick={isSSH ? (e) => {
           e.stopPropagation();
-          // Si no estamos en el grupo Home, cambiar a Home primero
           if (activeGroupId !== null) {
-            // Guardar el índice activo del grupo actual antes de cambiar
             const currentGroupKey = activeGroupId || 'no-group';
             setGroupActiveIndices(prev => ({
               ...prev,
               [currentGroupKey]: activeTabIndex
             }));
-            
-            // Cambiar al grupo Home
             setActiveGroupId(null);
           }
-          
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
-              host: node.data.host,
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
               username: node.data.user,
               password: node.data.password,
+              port: node.data.port || 22,
               originalKey: node.key,
+              // Datos del bastión Wallix
+              useBastionWallix: node.data.useBastionWallix || false,
+              bastionHost: node.data.bastionHost || '',
+              bastionUser: node.data.bastionUser || ''
             };
             const newTab = {
               key: tabId,
@@ -1136,7 +1225,6 @@ const App = () => {
             };
             const newTabs = [newTab, ...prevTabs];
             setActiveTabIndex(0);
-            // También actualizar el índice guardado para el grupo Home
             setGroupActiveIndices(prev => ({
               ...prev,
               'no-group': 0
@@ -1144,13 +1232,11 @@ const App = () => {
             return newTabs;
           });
         } : undefined}
-        onClick={isSSH ? (e) => {
-          // No mostrar log: console.log('🖱️ Click simple en nodo SSH:', node.key, '- NO debería cambiar estado de conexión');
-        } : undefined}
-        style={{ cursor: 'pointer' }}
+        onClick={isSSH ? (e) => {} : undefined}
+        style={{ cursor: 'pointer', fontFamily: sidebarFont }}
         title="Click derecho para más opciones"
       >
-        <span className={iconClass} style={{ minWidth: 16 }}></span>
+        <span style={{ minWidth: 16 }}>{icon}</span>
         <span className="node-label">{node.label}</span>
         {getConnectionIndicator()}
       </div>
@@ -1188,10 +1274,15 @@ const App = () => {
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
-              host: node.data.host,
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
               username: node.data.user,
               password: node.data.password,
+              port: node.data.port || 22,
               originalKey: node.key,
+              // Datos del bastión Wallix
+              useBastionWallix: node.data.useBastionWallix || false,
+              bastionHost: node.data.bastionHost || '',
+              bastionUser: node.data.bastionUser || ''
             };
             const newTab = {
               key: tabId,
@@ -1217,6 +1308,32 @@ const App = () => {
         icon: 'pi pi-folder-open',
         command: () => openFileExplorer(node)
       });
+
+      // Submenu para abrir en split solo si hay pestañas SSH abiertas
+      const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
+      if (sshTabsFiltered.length > 0) {
+        items.push({
+          label: 'Abrir en Split',
+          icon: 'pi pi-window-maximize',
+          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'), // Clic directo: vertical con primera pestaña
+          items: sshTabsFiltered.map(tab => ({
+            label: tab.label,
+            icon: 'pi pi-desktop',
+            items: [
+              {
+                label: 'Split vertical',
+                icon: 'pi pi-arrows-v',
+                command: () => openInSplit(node, tab, 'vertical')
+              },
+              {
+                label: 'Split horizontal',
+                icon: 'pi pi-arrows-h',
+                command: () => openInSplit(node, tab, 'horizontal')
+              }
+            ]
+          }))
+        });
+      }
       
       items.push({ separator: true });
       
@@ -1332,18 +1449,29 @@ const App = () => {
       });
       return;
     }
+    
+    // Detectar automáticamente si es formato Wallix
+    const userInfo = parseWallixUser(sshUser.trim());
+    
     const newKey = generateUniqueKey();
     const newSSHNode = {
       key: newKey,
       label: sshName.trim(),
       data: {
         host: sshHost.trim(),
-        user: sshUser.trim(),
+        user: userInfo.isWallix ? userInfo.targetUser : sshUser.trim(),
         password: sshPassword.trim(),
         remoteFolder: sshRemoteFolder.trim(),
-        type: 'ssh'
+        port: sshPort,
+        type: 'ssh',
+        // Datos del bastión Wallix (si aplica)
+        useBastionWallix: userInfo.isWallix,
+        bastionHost: userInfo.isWallix ? sshHost.trim() : '', // En Wallix, el host es el bastión
+        bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
+        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
       },
       draggable: true,
+      droppable: false, // Las sesiones SSH NO pueden contener otros elementos
       uid: newKey,
       createdAt: new Date().toISOString(),
       isUserCreated: true
@@ -1362,7 +1490,7 @@ const App = () => {
     }
     setNodes(nodesCopy);
     setShowSSHDialog(false);
-    setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder('');
+    setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder(''); setSSHPort(22);
     toast.current.show({
       severity: 'success',
       summary: 'SSH añadida',
@@ -1375,10 +1503,12 @@ const App = () => {
   const openEditSSHDialog = (node) => {
     setEditSSHNode(node);
     setEditSSHName(node.label);
-    setEditSSHHost(node.data?.host || '');
-    setEditSSHUser(node.data?.user || '');
+    setEditSSHHost(node.data?.bastionHost || node.data?.host || '');
+    // Mostrar el usuario original completo si es Wallix, o el usuario simple si es directo
+    setEditSSHUser(node.data?.useBastionWallix ? node.data?.bastionUser || '' : node.data?.user || '');
     setEditSSHPassword(node.data?.password || '');
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
+    setEditSSHPort(node.data?.port || 22);
     setShowEditSSHDialog(true);
   };
 
@@ -1393,18 +1523,29 @@ const App = () => {
       });
       return;
     }
+    
+    // Detectar automáticamente si es formato Wallix
+    const userInfo = parseWallixUser(editSSHUser.trim());
+    
     const nodesCopy = deepCopy(nodes);
     const nodeToEdit = findNodeByKey(nodesCopy, editSSHNode.key);
     if (nodeToEdit) {
       nodeToEdit.label = editSSHName.trim();
       nodeToEdit.data = { 
         ...nodeToEdit.data, 
-        host: editSSHHost.trim(), 
-        user: editSSHUser.trim(),
+        host: userInfo.isWallix ? userInfo.targetServer : editSSHHost.trim(), // Si es Wallix, el host real es el targetServer
+        user: userInfo.isWallix ? userInfo.targetUser : editSSHUser.trim(),
         password: editSSHPassword.trim(),
         remoteFolder: editSSHRemoteFolder.trim(),
-        type: 'ssh'
+        port: editSSHPort,
+        type: 'ssh',
+        // Datos del bastión Wallix (si aplica)
+        useBastionWallix: userInfo.isWallix,
+        bastionHost: userInfo.isWallix ? editSSHHost.trim() : '', // En Wallix, el host ingresado es el bastión
+        bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
+        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
       };
+      nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
     }
     setNodes(nodesCopy);
     setShowEditSSHDialog(false);
@@ -1414,6 +1555,7 @@ const App = () => {
     setEditSSHUser('');
     setEditSSHPassword('');
     setEditSSHRemoteFolder('');
+    setEditSSHPort(22);
     toast.current.show({
       severity: 'success',
       summary: 'SSH editada',
@@ -1474,14 +1616,152 @@ const App = () => {
     return () => clearTimeout(timeoutId);
   }, [sidebarCollapsed]); // Se ejecuta cuando cambia el estado del sidebar
 
+<<<<<<< HEAD
+=======
+  // Optimización para redimensionamiento fluido
+  useEffect(() => {
+    const splitterElement = document.querySelector('.p-splitter');
+    if (!splitterElement) return;
+
+    const handleResizeStart = (e) => {
+      // Solo aplicar optimizaciones si el click es en el gutter
+      if (e.target.classList.contains('p-splitter-gutter')) {
+        splitterElement.classList.add('p-splitter-resizing');
+        // Desactivar transiciones en sidebar durante redimensionamiento
+        document.documentElement.style.setProperty('--sidebar-transition', 'none');
+      }
+    };
+
+    const handleResizeEnd = () => {
+      splitterElement.classList.remove('p-splitter-resizing');
+      // Reactivar transiciones después del redimensionamiento
+      document.documentElement.style.removeProperty('--sidebar-transition');
+    };
+
+    // Eventos para detectar inicio y fin del redimensionamiento
+    splitterElement.addEventListener('mousedown', handleResizeStart);
+    document.addEventListener('mouseup', handleResizeEnd);
+    
+    return () => {
+      splitterElement.removeEventListener('mousedown', handleResizeStart);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, []);
+
+  // Ref para throttling del resize
+  const resizeTimeoutRef = useRef(null);
+  
+>>>>>>> v1.3.1
   const handleResize = () => {
-    const activeTabKey = sshTabs[activeTabIndex]?.key;
-    if (activeTabKey && terminalRefs.current[activeTabKey]) {
-      terminalRefs.current[activeTabKey].fit();
+    const filteredTabs = getFilteredTabs();
+    const activeTab = filteredTabs[activeTabIndex];
+    
+    if (!activeTab) return;
+
+    // Cancelar resize anterior si existe
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
     }
+    
+    // Usar requestAnimationFrame para optimizar el redimensionamiento
+    requestAnimationFrame(() => {
+      if (activeTab.type === 'split') {
+        // Para splits, redimensionar ambos terminales
+        if (activeTab.leftTerminal && terminalRefs.current[activeTab.leftTerminal.key]) {
+          terminalRefs.current[activeTab.leftTerminal.key].fit();
+        }
+        if (activeTab.rightTerminal && terminalRefs.current[activeTab.rightTerminal.key]) {
+          terminalRefs.current[activeTab.rightTerminal.key].fit();
+        }
+      } else if (activeTab.type === 'terminal' && terminalRefs.current[activeTab.key]) {
+        // Para terminales normales
+        terminalRefs.current[activeTab.key].fit();
+      }
+    });
+  };
+  
+  // Versión con throttling para onResize
+  const handleResizeThrottled = () => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    
+    resizeTimeoutRef.current = setTimeout(() => {
+      handleResize();
+    }, 16); // ~60fps
   };
 
   // Función para abrir explorador de archivos SSH
+  // Función para abrir una sesión en split con otra pestaña existente
+  const openInSplit = (sshNode, existingTab, orientation = 'vertical') => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    // Crear nueva sesión SSH para el split
+    const newTabId = `${sshNode.key}_${Date.now()}`;
+    const sshConfig = {
+      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
+      username: sshNode.data.user,
+      password: sshNode.data.password,
+      port: sshNode.data.port || 22,
+      originalKey: sshNode.key,
+      useBastionWallix: sshNode.data.useBastionWallix || false,
+      bastionHost: sshNode.data.bastionHost || '',
+      bastionUser: sshNode.data.bastionUser || ''
+    };
+
+    const newTerminal = {
+      key: newTabId,
+      label: `${sshNode.label} (${sshTabs.filter(t => t.originalKey === sshNode.key).length + 1})`,
+      originalKey: sshNode.key,
+      sshConfig: sshConfig,
+      type: 'terminal'
+    };
+
+    // Modificar la pestaña existente para convertirla en split
+    setSshTabs(prevTabs => {
+      const updatedTabs = prevTabs.map(tab => {
+        if (tab.key === existingTab.key) {
+          return {
+            ...tab,
+            type: 'split',
+            orientation: orientation, // Guardar la orientación
+            leftTerminal: { ...tab, type: 'terminal' }, // Terminal izquierdo (existente)
+            rightTerminal: newTerminal, // Terminal derecho (nuevo)
+            label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label.split(' (')[0]} | ${sshNode.label}`
+          };
+        }
+        return tab;
+      });
+      
+      // Encontrar el índice de la pestaña modificada y activarla
+      const splitTabIndex = updatedTabs.findIndex(tab => tab.key === existingTab.key);
+      if (splitTabIndex !== -1) {
+        setActiveTabIndex(splitTabIndex);
+        setGroupActiveIndices(prev => ({
+          ...prev,
+          'no-group': splitTabIndex
+        }));
+      }
+      
+      return updatedTabs;
+    });
+
+    toast.current.show({
+      severity: 'success',
+      summary: 'Split creado',
+      detail: `Nueva sesión de ${sshNode.label} abierta en split ${orientation}`,
+      life: 3000
+    });
+  };
+
   const openFileExplorer = (sshNode) => {
     // Buscar si ya existe un explorador para este host+usuario
     const existingExplorerIndex = sshTabs.findIndex(tab => 
@@ -1499,11 +1779,15 @@ const App = () => {
     // Crear el explorador SIN conexión SSH propia - reutilizará conexiones existentes del pool
     const explorerTabId = `explorer_${sshNode.key}_${Date.now()}`;
     const sshConfig = {
-      host: sshNode.data.host,
+      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
       port: sshNode.data.port || 22,
       originalKey: sshNode.key,
+      // Datos del bastión Wallix
+      useBastionWallix: sshNode.data.useBastionWallix || false,
+      bastionHost: sshNode.data.bastionHost || '',
+      bastionUser: sshNode.data.bastionUser || ''
     };
     
     // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
@@ -1589,6 +1873,145 @@ const App = () => {
     } catch {}
   }, [tabGroups]);
 
+  const [iconTheme, setIconTheme] = useState(() => {
+    try {
+      return localStorage.getItem('iconTheme') || 'material';
+    } catch {
+      return 'material';
+    }
+  });
+  const [explorerFont, setExplorerFont] = useState(() => {
+    try {
+      return localStorage.getItem('explorerFont') || explorerFonts[0];
+    } catch {
+      return explorerFonts[0];
+    }
+  });
+  const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
+    try {
+      return localStorage.getItem('explorerColorTheme') || 'Light';
+    } catch {
+      return 'Light';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('iconTheme', iconTheme);
+    } catch {}
+  }, [iconTheme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorerFont', explorerFont);
+    } catch {}
+  }, [explorerFont]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorerColorTheme', explorerColorTheme);
+    } catch {}
+  }, [explorerColorTheme]);
+
+  const [iconThemeSidebar, setIconThemeSidebar] = useState(() => {
+    try {
+      return localStorage.getItem('iconThemeSidebar') || 'material';
+    } catch {
+      return 'material';
+    }
+  });
+  const [sidebarFont, setSidebarFont] = useState(() => {
+    try {
+      return localStorage.getItem('sidebarFont') || explorerFonts[0];
+    } catch {
+      return explorerFonts[0];
+    }
+  });
+  const [sidebarFontSize, setSidebarFontSize] = useState(() => {
+    try {
+      const savedSize = localStorage.getItem('sidebarFontSize');
+      return savedSize ? parseInt(savedSize, 10) : 14; // Default sidebar font size is 14
+    } catch {
+      return 14;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
+    } catch {}
+  }, [iconThemeSidebar]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebarFont', sidebarFont);
+    } catch {}
+  }, [sidebarFont]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebarFontSize', sidebarFontSize.toString());
+    } catch {}
+  }, [sidebarFontSize]);
+
+  const [explorerFontSize, setExplorerFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('explorerFontSize');
+      return saved ? parseInt(saved, 10) : 15;
+    } catch {
+      return 15;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('explorerFontSize', explorerFontSize.toString());
+    } catch {}
+  }, [explorerFontSize]);
+
+  // 1. Estado global para stats por tabId
+  const [sshStatsByTabId, setSshStatsByTabId] = useState({});
+
+  useEffect(() => {
+    // Cuando cambia la pestaña activa, notificar al backend
+    const filteredTabs = getFilteredTabs();
+    const activeTab = filteredTabs[activeTabIndex];
+    if (activeTab && window.electron && window.electron.ipcRenderer) {
+      if (activeTab.type === 'split') {
+        // Para splits, activar stats en ambos terminales
+        if (activeTab.leftTerminal) {
+          window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.leftTerminal.key);
+        }
+        if (activeTab.rightTerminal) {
+          window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.rightTerminal.key);
+        }
+      } else if (activeTab.type === 'terminal') {
+        window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
+      }
+    }
+  }, [activeTabIndex, sshTabs, fileExplorerTabs]);
+
+  // Reactivar stats para bastión al volver a la pestaña
+  useEffect(() => {
+    if (!window.electron || !window.electron.ipcRenderer) return;
+    const filteredTabs = getFilteredTabs();
+    const activeTab = filteredTabs[activeTabIndex];
+    if (activeTab && activeTab.sshConfig && activeTab.sshConfig.useBastionWallix) {
+      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
+    }
+  }, [activeTabIndex, sshTabs]);
+
+  // Estado global para el intervalo de pooling de la status bar
+  const [statusBarPollingInterval, setStatusBarPollingInterval] = useState(() => {
+    const saved = localStorage.getItem('statusBarPollingInterval');
+    return saved ? parseInt(saved, 10) : 5;
+  });
+
+  // Sincronizar con localStorage y enviar al backend
+  useEffect(() => {
+    localStorage.setItem('statusBarPollingInterval', statusBarPollingInterval);
+    if (window?.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.send('statusbar:set-polling-interval', statusBarPollingInterval);
+    }
+  }, [statusBarPollingInterval]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
@@ -1596,10 +2019,17 @@ const App = () => {
       <Splitter 
         style={{ height: '100%' }} 
         onResizeEnd={sidebarCollapsed ? undefined : handleResize}
+        onResize={sidebarCollapsed ? undefined : handleResizeThrottled}
         disabled={sidebarCollapsed}
+        className="main-splitter"
         pt={{
           gutter: {
-            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {}
+            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {
+              transition: 'none',
+              background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
+              borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
+              width: '2px'
+            }
           }
         }}
       >
@@ -1630,6 +2060,12 @@ const App = () => {
             onDragDrop={onDragDrop}
             setDraggedNodeKey={setDraggedNodeKey}
             nodeTemplate={nodeTemplate}
+<<<<<<< HEAD
+=======
+            iconTheme={iconThemeSidebar}
+            explorerFont={sidebarFont}
+            explorerFontSize={sidebarFontSize}
+>>>>>>> v1.3.1
           />
         </SplitterPanel>
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
@@ -1787,6 +2223,10 @@ const App = () => {
                             {tab.type === 'terminal' && tabDistros[tab.key] && (
                               <DistroIcon distro={tabDistros[tab.key]} size={12} />
                             )}
+                            {/* Icono específico para splits */}
+                            {tab.type === 'split' && (
+                              <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+                            )}
                             {/* Icono específico para exploradores */}
                             {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
                               <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
@@ -1805,19 +2245,35 @@ const App = () => {
                                 cleanupTabDistro(closedTab.key);
                                 
                                 if (isSSHTab) {
-                                  // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                  if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-                                    // Terminal SSH - siempre desconectar
-                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                  } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                    // Explorador con conexión propia - desconectar
-                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                  // Manejar cierre de pestañas split
+                                  if (closedTab.type === 'split') {
+                                    // Desconectar ambos terminales del split
+                                    if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
+                                      delete terminalRefs.current[closedTab.leftTerminal.key];
+                                      cleanupTabDistro(closedTab.leftTerminal.key);
+                                    }
+                                    if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
+                                      delete terminalRefs.current[closedTab.rightTerminal.key];
+                                      cleanupTabDistro(closedTab.rightTerminal.key);
+                                    }
+                                  } else {
+                                    // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                    if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                      // Terminal SSH - siempre desconectar
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                      // Explorador con conexión propia - desconectar
+                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                    }
+                                    // Los exploradores que usan el pool NO necesitan desconectarse
+                                    if (!closedTab.isExplorerInSSH) {
+                                      delete terminalRefs.current[closedTab.key];
+                                    }
                                   }
-                                  // Los exploradores que usan el pool NO necesitan desconectarse
+                                  
                                   const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                  if (!closedTab.isExplorerInSSH) {
-                                    delete terminalRefs.current[closedTab.key];
-                                  }
                                   // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
                                   const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
                                   if (remainingTabs.length === 0) {
@@ -2158,24 +2614,44 @@ const App = () => {
                   
                   return (
                     <div 
-                      key={tab.key} 
+                      key={tab.key}
                       style={{ 
-                        display: isActiveTab ? 'flex' : 'none',
+                        display: 'flex',
                         flexDirection: 'column',
                         height: '100%',
                         width: '100%',
                         position: 'absolute',
                         top: 0,
-                        left: 0
+                        left: 0,
+                        visibility: isActiveTab ? 'visible' : 'hidden',
+                        zIndex: isActiveTab ? 1 : 0,
+                        pointerEvents: isActiveTab ? 'auto' : 'none'
                       }}
                     >
                       {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
                         <FileExplorer
                           sshConfig={tab.sshConfig}
                           tabId={tab.key}
+                          iconTheme={iconTheme}
+                          explorerFont={explorerFont}
+                          explorerColorTheme={explorerColorTheme}
+                          explorerFontSize={explorerFontSize}
+                        />
+                      ) : tab.type === 'split' ? (
+                        <SplitLayout
+                          leftTerminal={tab.leftTerminal}
+                          rightTerminal={tab.rightTerminal}
+                          fontFamily={fontFamily}
+                          fontSize={fontSize}
+                          theme={terminalTheme.theme}
+                          onContextMenu={handleTerminalContextMenu}
+                          sshStatsByTabId={sshStatsByTabId}
+                          terminalRefs={terminalRefs}
+                          orientation={tab.orientation || 'vertical'}
                         />
                       ) : (
                         <TerminalComponent
+                          key={tab.key}
                           ref={el => terminalRefs.current[tab.key] = el}
                           tabId={tab.key}
                           sshConfig={tab.sshConfig}
@@ -2184,6 +2660,7 @@ const App = () => {
                           theme={terminalTheme.theme}
                           onContextMenu={handleTerminalContextMenu}
                           active={isActiveTab}
+                          stats={sshStatsByTabId[tab.key]}
                         />
                       )}
                     </div>
@@ -2262,11 +2739,31 @@ const App = () => {
           </div>
           <div className="p-field">
             <label htmlFor="sshUser">Usuario</label>
-            <InputText id="sshUser" value={sshUser} onChange={e => setSSHUser(e.target.value)} />
+            <InputText 
+              id="sshUser" 
+              value={sshUser} 
+              onChange={e => setSSHUser(e.target.value)} 
+              placeholder="usuario o rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119"
+            />
+            <small className="p-d-block" style={{ color: '#666', marginTop: '0.25rem' }}>
+              Para Wallix usar formato: usuario@dominio@servidor:protocolo:usuario_destino
+            </small>
           </div>
           <div className="p-field">
             <label htmlFor="sshPassword">Contraseña</label>
             <InputText id="sshPassword" type="password" value={sshPassword} onChange={e => setSSHPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="sshPort">Puerto</label>
+            <InputNumber 
+              id="sshPort" 
+              value={sshPort} 
+              onValueChange={e => setSSHPort(e.value || 22)} 
+              min={1} 
+              max={65535} 
+              placeholder="22"
+              useGrouping={false}
+            />
           </div>
           <div className="p-field">
             <label htmlFor="sshRemoteFolder">Carpeta remota</label>
@@ -2302,11 +2799,31 @@ const App = () => {
           </div>
           <div className="p-field">
             <label htmlFor="editSSHUser">Usuario</label>
-            <InputText id="editSSHUser" value={editSSHUser} onChange={e => setEditSSHUser(e.target.value)} />
+            <InputText 
+              id="editSSHUser" 
+              value={editSSHUser} 
+              onChange={e => setEditSSHUser(e.target.value)} 
+              placeholder="usuario o rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119"
+            />
+            <small className="p-d-block" style={{ color: '#666', marginTop: '0.25rem' }}>
+              Para Wallix usar formato: usuario@dominio@servidor:protocolo:usuario_destino
+            </small>
           </div>
           <div className="p-field">
             <label htmlFor="editSSHPassword">Contraseña</label>
             <InputText id="editSSHPassword" type="password" value={editSSHPassword} onChange={e => setEditSSHPassword(e.target.value)} />
+          </div>
+          <div className="p-field">
+            <label htmlFor="editSSHPort">Puerto</label>
+            <InputNumber 
+              id="editSSHPort" 
+              value={editSSHPort} 
+              onValueChange={e => setEditSSHPort(e.value || 22)} 
+              min={1} 
+              max={65535} 
+              placeholder="22"
+              useGrouping={false}
+            />
           </div>
           <div className="p-field">
             <label htmlFor="editSSHRemoteFolder">Carpeta remota</label>
@@ -2349,6 +2866,25 @@ const App = () => {
         statusBarTheme={statusBarTheme}
         setStatusBarTheme={setStatusBarTheme}
         availableFonts={availableFonts}
+<<<<<<< HEAD
+=======
+        iconTheme={iconTheme}
+        setIconTheme={setIconTheme}
+        explorerFont={explorerFont}
+        setExplorerFont={setExplorerFont}
+        explorerColorTheme={explorerColorTheme}
+        setExplorerColorTheme={setExplorerColorTheme}
+        iconThemeSidebar={iconThemeSidebar}
+        setIconThemeSidebar={setIconThemeSidebar}
+        sidebarFont={sidebarFont}
+        setSidebarFont={setSidebarFont}
+        sidebarFontSize={sidebarFontSize}
+        setSidebarFontSize={setSidebarFontSize}
+        explorerFontSize={explorerFontSize}
+        setExplorerFontSize={setExplorerFontSize}
+        statusBarPollingInterval={statusBarPollingInterval}
+        setStatusBarPollingInterval={setStatusBarPollingInterval}
+>>>>>>> v1.3.1
       />
 
       {/* Diálogo para crear nuevo grupo */}

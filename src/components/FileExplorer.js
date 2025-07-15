@@ -11,8 +11,10 @@ import { Message } from 'primereact/message';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { iconThemes } from '../themes/icon-themes';
+import { uiThemes } from '../themes/ui-themes';
 
-const FileExplorer = ({ sshConfig, tabId }) => {
+const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
     const [currentPath, setCurrentPath] = useState(null); // null indica que aún no hemos cargado el path inicial
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -28,6 +30,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const toast = React.useRef(null);
     const [isDragActive, setIsDragActive] = useState(false);
     const [homeDir, setHomeDir] = useState(null);
+    const [forceUpdate, setForceUpdate] = useState(0);
 
     // Para FileExplorer, no necesitamos esperar conexión SSH propia
     // Usaremos las conexiones del pool directamente
@@ -36,19 +39,113 @@ const FileExplorer = ({ sshConfig, tabId }) => {
         setSshReady(true);
     }, []);
 
+    // Forzar actualización cuando cambia el tema de iconos, la fuente o el tema de colores
+    useEffect(() => {
+        setForceUpdate(prev => prev + 1);
+    }, [iconTheme, explorerFont, explorerColorTheme]);
+
+    // Aplicar tema de colores del explorador
+    useEffect(() => {
+        const theme = uiThemes[explorerColorTheme];
+        if (!theme) return;
+
+        const colors = theme.colors;
+        const styleId = `explorer-color-theme-${tabId}`;
+        
+        // Remover estilo previo si existe
+        const existingStyle = document.getElementById(styleId);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        // Crear nuevo estilo
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .file-explorer-container[data-tab-id="${tabId}"] {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-card {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-card .p-card-header {
+                background: ${colors.tabBackground} !important;
+                color: ${colors.dialogText} !important;
+                border-bottom: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-card .p-card-title {
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-toolbar {
+                background: ${colors.tabBackground} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-thead > tr > th {
+                background: ${colors.tabBackground} !important;
+                color: ${colors.dialogText} !important;
+                border-color: ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr > td {
+                background: ${colors.contentBackground} !important;
+                color: ${colors.dialogText} !important;
+                border-color: ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr:hover > td {
+                background: ${colors.sidebarHover} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-datatable .p-datatable-tbody > tr.p-highlight > td {
+                background: ${colors.sidebarSelected} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb {
+                background: ${colors.tabBackground} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb .p-breadcrumb-list li .p-menuitem-link {
+                color: ${colors.dialogText} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-breadcrumb .p-breadcrumb-list li .p-menuitem-link:hover {
+                background: ${colors.sidebarHover} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-progressbar {
+                background: ${colors.tabBackground} !important;
+            }
+            .file-explorer-container[data-tab-id="${tabId}"] .p-message {
+                background: ${colors.tabBackground} !important;
+                color: ${colors.dialogText} !important;
+                border: 1px solid ${colors.contentBorder} !important;
+            }
+        `;
+        
+        document.head.appendChild(style);
+
+        // Cleanup function
+        return () => {
+            const styleElement = document.getElementById(styleId);
+            if (styleElement) {
+                styleElement.remove();
+            }
+        };
+    }, [explorerColorTheme, tabId]);
+
     // Cargar directorio inicial cuando SSH esté listo
     useEffect(() => {
         const initializeExplorer = async () => {
             if (!window.electron || !tabId || !sshReady) return;
-            
             setLoading(true);
             setError(null);
-            
             try {
                 // Obtener el directorio home del usuario
-                const homeDir = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
-                setHomeDir(homeDir || '/');
-                setCurrentPath(homeDir || '/');
+                const homeResult = await window.electron.fileExplorer.getHomeDirectory(tabId, sshConfig);
+                const homeDir = (homeResult && homeResult.success && typeof homeResult.home === 'string') ? homeResult.home : '/';
+                setHomeDir(homeDir);
+                setCurrentPath(homeDir);
             } catch (err) {
                 console.error('Error getting home directory:', err);
                 setError('No se pudo obtener el directorio home del usuario.');
@@ -58,7 +155,6 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                 setLoading(false);
             }
         };
-
         if (sshReady) {
             initializeExplorer();
         }
@@ -82,7 +178,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
             
             if (result.success) {
                 setFiles(result.files);
-                updateBreadcrumb(path);
+                updateBreadcrumb(typeof path === 'string' ? path : '/');
             } else {
                 setError(result.error || 'Error al cargar archivos');
                 setFiles([]);
@@ -97,6 +193,10 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     };
 
     const updateBreadcrumb = (path) => {
+        if (typeof path !== 'string') {
+            console.warn('updateBreadcrumb: path no es string:', path);
+            path = '/';
+        }
         const pathParts = path.split('/').filter(part => part !== '');
         const items = pathParts.map((part, index) => {
             const fullPath = '/' + pathParts.slice(0, index + 1).join('/');
@@ -152,50 +252,30 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     };
 
     const getFileIcon = (file) => {
+        // Asegurar que tenemos el tema correcto y que existe
+        const theme = (iconThemes && iconThemes[iconTheme]) ? iconThemes[iconTheme] : iconThemes['material'];
+        
         if (file.type === 'directory') {
-            return file.name === '..' ? 'pi pi-arrow-up' : 'pi pi-folder';
+            return file.name === '..'
+                ? <i className="pi pi-arrow-up file-icon directory-icon"></i>
+                : (theme?.icons?.folder || <i className="pi pi-folder file-icon directory-icon"></i>);
         }
-        
         if (file.type === 'symlink') {
-            return 'pi pi-link';
+            return <i className="pi pi-link file-icon symlink-icon"></i>;
         }
-        
-        const extension = file.name.split('.').pop().toLowerCase();
-        switch (extension) {
-            case 'txt':
-            case 'md':
-                return 'pi pi-file-o';
-            case 'sh':
-            case 'py':
-            case 'js':
-                return 'pi pi-code';
-            case 'jpg':
-            case 'png':
-            case 'gif':
-                return 'pi pi-image';
-            case 'zip':
-            case 'tar':
-            case 'gz':
-                return 'pi pi-file-archive';
-            case 'pdf':
-                return 'pi pi-file-pdf';
-            default:
-                return 'pi pi-file';
-        }
+        // Para archivos, usar icono de archivo del tema
+        return theme?.icons?.file || <i className="pi pi-file file-icon"></i>;
     };
 
     const nameBodyTemplate = (file) => {
-        let iconClass = 'file-type-icon';
-        if (file.type === 'directory') {
-            iconClass = 'directory-icon';
-        } else if (file.type === 'symlink') {
-            iconClass = 'symlink-icon';
-        }
-
+        const isPrimeIcon = file.type === 'directory' && file.name === '..' || file.type === 'symlink';
         return (
             <div className="flex align-items-center">
-                <i className={`${getFileIcon(file)} file-icon ${iconClass}`}></i>
-                <span className={file.type === 'symlink' ? 'symlink-name' : ''}>{file.name}</span>
+                {isPrimeIcon
+                    ? getFileIcon(file)
+                    : <span style={{ display: 'inline-flex', alignItems: 'center', width: 20 }}>{getFileIcon(file)}</span>
+                }
+                <span className={file.type === 'symlink' ? 'symlink-name' : ''} style={{ marginLeft: 8 }}>{file.name}</span>
             </div>
         );
     };
@@ -426,44 +506,49 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     const toolbarLeft = (
         <div className="flex align-items-center gap-2 flex-wrap">
             <Button 
-                icon="pi pi-arrow-left" 
+                label="⬅" 
                 onClick={() => {
                     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
                     navigateToPath(parentPath);
                 }}
                 disabled={!sshReady || !currentPath || currentPath === '/'}
-                tooltip="Atrás"
+                tooltip="Ir al directorio padre"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-refresh" 
+                label="⟲" 
                 onClick={() => currentPath && loadFiles(currentPath)}
                 disabled={!sshReady || !currentPath}
-                tooltip="Actualizar"
+                tooltip="Actualizar contenido del directorio"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-home" 
+                label="⌂" 
                 onClick={() => homeDir && navigateToPath(homeDir)}
                 disabled={!sshReady || !currentPath}
-                tooltip="Inicio"
+                tooltip="Ir al directorio home"
                 size="small"
+                text
             />
             <Button 
-                icon={showDotfiles ? "pi pi-eye" : "pi pi-eye-slash"}
+                label={showDotfiles ? "◉" : "○"}
                 onClick={() => setShowDotfiles(v => !v)}
-                tooltip={showDotfiles ? "Ocultar archivos ocultos" : "Mostrar archivos ocultos"}
+                tooltip={showDotfiles ? "Ocultar archivos y carpetas ocultos" : "Mostrar archivos y carpetas ocultos"}
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-upload" 
+                label="↑" 
                 onClick={handleUploadFiles}
                 disabled={!sshReady || !currentPath || loading}
-                tooltip="Subir archivos"
+                tooltip="Subir archivos desde el equipo local"
                 size="small"
+                text
             />
             <Button
-                icon="pi pi-download"
+                label="↓"
                 onClick={async () => {
                     for (const file of selectedFiles) {
                         if (file.type === 'file') {
@@ -472,23 +557,26 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                     }
                 }}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
-                tooltip="Descargar archivos seleccionados"
+                tooltip="Descargar archivos seleccionados al equipo local"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-folder" 
+                label="+" 
                 onClick={() => setNewFolderDialog(true)}
                 disabled={!sshReady || !currentPath || loading}
-                tooltip="Crear nueva carpeta"
+                tooltip="Crear nueva carpeta en el directorio actual"
                 size="small"
+                text
             />
             <Button 
-                icon="pi pi-trash" 
+                label="×" 
                 className="p-button-danger" 
                 onClick={() => handleDeleteFiles(selectedFiles)}
                 disabled={!sshReady || !currentPath || loading || selectedFiles.length === 0}
-                tooltip="Eliminar archivos seleccionados"
+                tooltip="Eliminar permanentemente archivos seleccionados"
                 size="small"
+                text
             />
         </div>
     );
@@ -503,20 +591,28 @@ const FileExplorer = ({ sshConfig, tabId }) => {
     );
 
     return (
-        <div className="file-explorer-container">
+        <div 
+            key={`file-explorer-${iconTheme}-${explorerFont}-${explorerColorTheme}-${forceUpdate}`} 
+            className="file-explorer-container" 
+            data-tab-id={tabId}
+            style={{ fontFamily: explorerFont, fontSize: explorerFontSize, '--explorer-font': explorerFont }}
+        >
             <Card 
                 title={`Explorador de Archivos - ${sshConfig.host}`}
                 className="file-explorer-card"
+                style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
             >
                 <Toolbar 
                     start={toolbarLeft} 
                     end={toolbarRight}
                     className="file-explorer-toolbar"
+                    style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                 />
                 
                 <BreadCrumb 
                     model={breadcrumbItems} 
                     className="file-explorer-breadcrumb"
+                    style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                 />
                 
                 {!sshReady && (
@@ -543,6 +639,7 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                         onDrop={handleDrop}
                         onDragOver={handleDragOver}
                         onDragLeave={handleDragLeave}
+                        style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                     >
                         <DataTable 
                             value={visibleFiles}
@@ -552,13 +649,16 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                             onRowDoubleClick={(e) => onFileDoubleClick(e.data)}
                             rowHover={true}
                             className="file-explorer-datatable"
+                            style={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
+                            tableStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                         >
                         <Column 
                             field="name" 
                             header="Nombre" 
                             body={nameBodyTemplate}
                             sortable
-                            style={{ minWidth: '200px' }}
+                            style={{ minWidth: '200px', fontFamily: explorerFont, fontSize: explorerFontSize }}
+                            bodyStyle={{ fontFamily: explorerFont, fontSize: explorerFontSize }}
                         />
                         <Column 
                             field="size" 
@@ -592,14 +692,14 @@ const FileExplorer = ({ sshConfig, tabId }) => {
                                     {file.type === 'file' && (
                                         <>
                                             <Button 
-                                                icon="pi pi-download" 
+                                                label="↓" 
                                                 size="small"
                                                 className="p-button-text" 
                                                 onClick={() => handleDownloadFile(file)}
                                                 tooltip="Descargar archivo"
                                             />
                                             <Button
-                                                icon="pi pi-trash"
+                                                label="×"
                                                 size="small"
                                                 className="p-button-text p-button-danger"
                                                 onClick={() => handleDeleteFiles([file])}

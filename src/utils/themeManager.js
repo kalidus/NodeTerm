@@ -79,6 +79,14 @@ class ThemeManager {
         --ui-context-hover: ${colors.contextMenuHover};
         --ui-context-border: ${colors.contextMenuBorder};
         --ui-context-shadow: ${colors.contextMenuShadow};
+<<<<<<< HEAD
+=======
+        
+        /* File Explorer Button Colors */
+        --ui-file-button-text: ${colors.sidebarText};
+        --ui-file-button-hover: ${colors.buttonHover};
+        --ui-file-button-bg: transparent;
+>>>>>>> v1.3.1
       }
 
       /* === SIDEBAR STYLES === */

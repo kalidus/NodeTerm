@@ -21,13 +21,24 @@ const Sidebar = ({
   onTreeAreaContextMenu,
   onDragDrop,
   setDraggedNodeKey,
+<<<<<<< HEAD
   nodeTemplate
+=======
+  nodeTemplate,
+  iconTheme,
+  explorerFont,
+  explorerFontSize = 14
+>>>>>>> v1.3.1
 }) => {
   return (
     <div 
       className="sidebar-container"
       style={{
+<<<<<<< HEAD
         transition: 'max-width 0.2s, min-width 0.2s, width 0.2s',
+=======
+        transition: sidebarCollapsed ? 'max-width 0.2s, min-width 0.2s, width 0.2s' : 'width 0.2s',
+>>>>>>> v1.3.1
         width: sidebarCollapsed ? 44 : undefined,
         minWidth: sidebarCollapsed ? 44 : 240,
         maxWidth: sidebarCollapsed ? 44 : undefined,
@@ -37,6 +48,11 @@ const Sidebar = ({
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
+<<<<<<< HEAD
+=======
+        fontFamily: explorerFont,
+        fontSize: `${explorerFontSize}px`
+>>>>>>> v1.3.1
       }}>
       {sidebarCollapsed ? (
         // Iconos alineados arriba, más juntos y barra más fina
@@ -67,6 +83,7 @@ const Sidebar = ({
             tooltipOptions={{ position: 'right' }} 
             style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
           />
+<<<<<<< HEAD
           <Button 
             icon="pi pi-plus" 
             className="p-button-rounded p-button-text sidebar-action-button" 
@@ -83,6 +100,30 @@ const Sidebar = ({
             tooltipOptions={{ position: 'right' }} 
             style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
           />
+=======
+          {/* Ocultar el botón de crear carpeta cuando la sidebar está colapsada */}
+          {!sidebarCollapsed && (
+            <Button 
+              icon="pi pi-plus" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={() => openNewFolderDialog(null)} 
+              tooltip="Crear carpeta" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            />
+          )}
+          {/* Ocultar el botón de desplegar/plegar todo cuando la sidebar está colapsada */}
+          {!sidebarCollapsed && (
+            <Button 
+              icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"} 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={toggleExpandAll} 
+              tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            />
+          )}
+>>>>>>> v1.3.1
           <Button 
             icon="pi pi-th-large" 
             className="p-button-rounded p-button-text sidebar-action-button" 
@@ -103,6 +144,7 @@ const Sidebar = ({
             alignItems: 'center', 
             gap: 4 
           }}>
+<<<<<<< HEAD
             <Button 
               icon="pi pi-info-circle" 
               className="p-button-rounded p-button-text sidebar-action-button" 
@@ -111,6 +153,20 @@ const Sidebar = ({
               tooltipOptions={{ position: 'right' }} 
               style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
             />
+=======
+            {/* Solo mostrar el botón de Acerca de NodeTerm si la sidebar NO está colapsada */}
+            {/* {sidebarCollapsed ? null : ( */}
+            {/*   <Button  */}
+            {/*     icon="pi pi-info-circle"  */}
+            {/*     className="p-button-rounded p-button-text sidebar-action-button"  */}
+            {/*     onClick={() => setShowSettingsDialog(true)}  */}
+            {/*     tooltip="Acerca de NodeTerm"  */}
+            {/*     tooltipOptions={{ position: 'right' }}  */}
+            {/*     style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }}  */}
+            {/*   /> */}
+            {/* )} */}
+            {/* Mostrar solo el botón de configuración cuando la sidebar está colapsada */}
+>>>>>>> v1.3.1
             <Button 
               icon="pi pi-cog" 
               className="p-button-rounded p-button-text sidebar-action-button" 
@@ -165,7 +221,12 @@ const Sidebar = ({
               minHeight: 0, 
               overflowY: 'auto', 
               overflowX: 'hidden',
+<<<<<<< HEAD
               position: 'relative' 
+=======
+              position: 'relative',
+              fontSize: `${explorerFontSize}px`
+>>>>>>> v1.3.1
             }}
             onContextMenu={onTreeAreaContextMenu}
             className="tree-container"
@@ -186,6 +247,10 @@ const Sidebar = ({
               }}
               onDragEnd={() => {}}
               className="sidebar-tree"
+<<<<<<< HEAD
+=======
+              style={{ fontSize: `${explorerFontSize}px` }}
+>>>>>>> v1.3.1
               nodeTemplate={nodeTemplate}
               filter
               filterMode="strict"
