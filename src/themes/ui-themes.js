@@ -48,13 +48,8 @@ export const uiThemes = {
       // Buttons
       buttonPrimary: '#1976d2',
       buttonPrimaryText: '#ffffff',
-<<<<<<< HEAD
       buttonSecondary: '#6c757d',
       buttonSecondaryText: '#ffffff',
-=======
-      buttonSecondary: '#e3f2fd',
-      buttonSecondaryText: '#1976d2',
->>>>>>> v1.3.1
       buttonHover: '#1565c0',
       
       // Context Menus
@@ -374,8 +369,6 @@ export const uiThemes = {
       contextMenuBorder: '#434c5e',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
     }
-<<<<<<< HEAD
-=======
   },
   
   'Tokyo Night': {
@@ -1584,6 +1577,5 @@ export const uiThemes = {
       contextMenuBorder: '#555555',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
     }
->>>>>>> v1.3.1
   }
 }; 

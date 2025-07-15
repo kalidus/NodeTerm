@@ -8,13 +8,10 @@ import { InputNumber } from 'primereact/inputnumber';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import { themes } from '../themes';
-<<<<<<< HEAD
-=======
 import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
->>>>>>> v1.3.1
 
 const SettingsDialog = ({ 
   visible, 
@@ -27,11 +24,6 @@ const SettingsDialog = ({
   setTerminalTheme,
   statusBarTheme,
   setStatusBarTheme,
-<<<<<<< HEAD
-  availableFonts 
-}) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-=======
   availableFonts,
   iconTheme,
   setIconTheme,
@@ -58,7 +50,6 @@ const SettingsDialog = ({
     const info = getVersionInfo();
     setVersionInfo(info);
   }, []);
->>>>>>> v1.3.1
 
   // Configuración de temas de terminal
   const availableTerminalThemes = themes ? Object.keys(themes) : [];
@@ -85,15 +76,12 @@ const SettingsDialog = ({
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleSidebarFontSizeChange = (value) => {
     if (value && value >= 8 && value <= 32) {
       setSidebarFontSize(value);
     }
   };
 
->>>>>>> v1.3.1
   const TerminalPreview = () => {
     if (!terminalTheme || !terminalTheme.theme) return null;
 
@@ -178,15 +166,10 @@ const SettingsDialog = ({
       visible={visible}
       className="settings-dialog"
       style={{ 
-<<<<<<< HEAD
-        width: '800px', 
-        height: '80vh'
-=======
         maxWidth: '98vw',
         maxHeight: '98vh',
         minWidth: '600px',
         minHeight: '500px'
->>>>>>> v1.3.1
       }}
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
@@ -221,133 +204,6 @@ const SettingsDialog = ({
         className="settings-dialog-tabview"
       >
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
-<<<<<<< HEAD
-          <div style={{
-            padding: '1rem 0',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '50vh',
-            width: '100%'
-          }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-              <i className="pi pi-eye" style={{ marginRight: '0.5rem' }}></i>
-              Tema de la Interfaz
-            </h3>
-            <p style={{ 
-              marginBottom: '1rem', 
-              color: 'var(--text-color-secondary)',
-              fontSize: '0.9rem'
-            }}>
-              Personaliza los colores de la interfaz de usuario (sidebar, menús, pestañas, etc.)
-            </p>
-            
-            <ThemeSelector showPreview={true} />
-          </div>
-        </TabPanel>
-
-        <TabPanel header="Terminal" leftIcon="pi pi-desktop">
-          <div style={{
-            padding: '1rem 0',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '50vh',
-            width: '100%'
-          }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-              <i className="pi pi-desktop" style={{ marginRight: '0.5rem' }}></i>
-              Configuración del Terminal
-            </h3>
-            
-            {/* Fuente */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                Fuente
-              </h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label htmlFor="font-family" style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
-                    fontWeight: 'bold',
-                    fontSize: '0.9rem'
-                  }}>
-                    Familia de fuente
-                  </label>
-                  <Dropdown
-                    id="font-family"
-                    value={fontFamily}
-                    options={availableFonts}
-                    onChange={handleFontFamilyChange}
-                    placeholder="Selecciona una fuente"
-                    style={{ width: '100%' }}
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="font-size" style={{ 
-                    display: 'block', 
-                    marginBottom: '0.5rem',
-                    fontWeight: 'bold',
-                    fontSize: '0.9rem'
-                  }}>
-                    Tamaño (px)
-                  </label>
-                  <InputNumber
-                    id="font-size"
-                    value={fontSize}
-                    onValueChange={(e) => handleFontSizeChange(e.value)}
-                    min={8}
-                    max={32}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Divider />
-
-            {/* Tema del Terminal */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-                Tema del Terminal
-              </h4>
-              
-              <div style={{ marginBottom: '1rem' }}>
-                <label htmlFor="terminal-theme" style={{ 
-                  display: 'block', 
-                  marginBottom: '0.5rem',
-                  fontWeight: 'bold',
-                  fontSize: '0.9rem'
-                }}>
-                  Esquema de colores
-                </label>
-                <Dropdown
-                  id="terminal-theme"
-                  value={terminalTheme?.name || 'Default Dark'}
-                  options={terminalThemeOptions}
-                  onChange={handleTerminalThemeChange}
-                  placeholder="Selecciona un tema"
-                  style={{ width: '100%' }}
-                />
-              </div>
-
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                marginBottom: '10px',
-                fontStyle: 'italic'
-              }}>
-                Vista previa del terminal:
-              </div>
-              
-              <TerminalPreview />
-            </div>
-=======
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
             <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>
               <TabPanel header={<span><i className="pi pi-eye" style={{ marginRight: 8 }}></i>Interfaz</span>}>
@@ -739,7 +595,6 @@ const SettingsDialog = ({
                 </div>
               </TabPanel>
             </TabView>
->>>>>>> v1.3.1
           </div>
         </TabPanel>
 
@@ -796,12 +651,7 @@ const SettingsDialog = ({
               fontSize: '1.1rem',
               marginBottom: '1.5rem'
             }}>
-<<<<<<< HEAD
-              {/* Puedes reemplazar esto por la versión real si la tienes en props o contexto */}
-              v1.3.0
-=======
               {versionInfo.appVersion ? `v${versionInfo.appVersion}` : 'v1.3.1'}
->>>>>>> v1.3.1
             </div>
 
             <Divider />
@@ -878,26 +728,6 @@ const SettingsDialog = ({
             </div>
           </div>
         </TabPanel>
-<<<<<<< HEAD
-
-        <TabPanel header="Status Bar" leftIcon="pi pi-minus">
-          <div style={{
-            padding: '1rem 0',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '50vh',
-            width: '100%'
-          }}>
-            <StatusBarThemeSelector 
-              currentTheme={statusBarTheme}
-              onThemeChange={setStatusBarTheme}
-            />
-          </div>
-        </TabPanel>
-=======
->>>>>>> v1.3.1
       </TabView>
     </Dialog>
   );
