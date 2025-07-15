@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
-import SplitPane from 'react-split-pane';
+import React, { useRef, useState } from 'react';
+import { Resizable } from 'react-resizable';
+import 'react-resizable/css/styles.css';
 import TerminalComponent from './TerminalComponent';
 
 const SplitLayout = ({ 
@@ -10,43 +11,102 @@ const SplitLayout = ({
   theme, 
   onContextMenu, 
   sshStatsByTabId,
-  terminalRefs
+  terminalRefs,
+  orientation = 'vertical'
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
+  const containerRef = useRef(null);
+  
+  // Estado para el tamaño del panel izquierdo/superior
+  const [primaryPaneSize, setPrimaryPaneSize] = useState(
+    orientation === 'vertical' ? 400 : 300
+  );
+
+  const handleResize = (event, { size }) => {
+    setPrimaryPaneSize(orientation === 'vertical' ? size.width : size.height);
+  };
+
+  const isVertical = orientation === 'vertical';
+  const containerStyle = {
+    height: '100%',
+    width: '100%',
+    display: 'flex',
+    flexDirection: isVertical ? 'row' : 'column',
+    overflow: 'hidden'
+  };
+
+  const primaryPaneStyle = {
+    width: isVertical ? `${primaryPaneSize}px` : '100%',
+    height: isVertical ? '100%' : `${primaryPaneSize}px`,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  const secondaryPaneStyle = {
+    width: isVertical ? `calc(100% - ${primaryPaneSize}px)` : '100%',
+    height: isVertical ? '100%' : `calc(100% - ${primaryPaneSize}px)`,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  const resizeHandleStyle = {
+    position: 'absolute',
+    backgroundColor: '#ddd',
+    zIndex: 1,
+    ...(isVertical ? {
+      width: '4px',
+      height: '100%',
+      right: '-2px',
+      top: 0,
+      cursor: 'col-resize'
+    } : {
+      height: '4px',
+      width: '100%',
+      bottom: '-2px',
+      left: 0,
+      cursor: 'row-resize'
+    })
+  };
 
   return (
-    <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'row', flex: 1, minWidth: 0, minHeight: 0 }}>
-      <SplitPane
-        split="vertical"
-        minSize={50}
-        defaultSize="50%"
-        style={{ position: 'relative', height: '100%', width: '100%' }}
-        paneStyle={{ display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}
-        pane1Style={{ display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}
-        pane2Style={{ display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}
-        allowResize
+    <div ref={containerRef} style={containerStyle}>
+      <Resizable
+        width={isVertical ? primaryPaneSize : 0}
+        height={isVertical ? 0 : primaryPaneSize}
+        onResize={handleResize}
+        resizeHandles={[isVertical ? 'e' : 's']}
+        handle={<div style={resizeHandleStyle} />}
       >
-        <TerminalComponent
-          ref={el => {
-            leftTerminalRef.current = el;
-            if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
-          }}
-          tabId={leftTerminal.key}
-          sshConfig={leftTerminal.sshConfig}
-          fontFamily={fontFamily}
-          fontSize={fontSize}
-          theme={theme}
-          onContextMenu={onContextMenu}
-          active={true}
-          stats={sshStatsByTabId[leftTerminal.key]}
-          hideStatusBar={true}
-        />
+        <div style={primaryPaneStyle}>
+          <TerminalComponent
+            ref={el => {
+              leftTerminalRef.current = el;
+              if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+            }}
+            key={leftTerminal.key}
+            tabId={leftTerminal.key}
+            sshConfig={leftTerminal.sshConfig}
+            fontFamily={fontFamily}
+            fontSize={fontSize}
+            theme={theme}
+            onContextMenu={onContextMenu}
+            active={true}
+            stats={sshStatsByTabId[leftTerminal.key]}
+            hideStatusBar={true}
+          />
+        </div>
+      </Resizable>
+      
+      <div style={secondaryPaneStyle}>
         <TerminalComponent
           ref={el => {
             rightTerminalRef.current = el;
             if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
           }}
+          key={rightTerminal.key}
           tabId={rightTerminal.key}
           sshConfig={rightTerminal.sshConfig}
           fontFamily={fontFamily}
@@ -57,7 +117,7 @@ const SplitLayout = ({
           stats={sshStatsByTabId[rightTerminal.key]}
           hideStatusBar={true}
         />
-      </SplitPane>
+      </div>
     </div>
   );
 };
