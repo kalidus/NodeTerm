@@ -71,6 +71,23 @@ const SplitLayout = ({
     })
   };
 
+  const minPanelSize = 50;
+  const [containerSize, setContainerSize] = useState(0);
+
+  // Actualizar el tamaño del contenedor al montar y redimensionar
+  React.useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        setContainerSize(isVertical ? containerRef.current.offsetWidth : containerRef.current.offsetHeight);
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, [isVertical]);
+
+  const maxPrimaryPaneSize = Math.max(containerSize - minPanelSize, minPanelSize);
+
   return (
     <div ref={containerRef} style={containerStyle}>
       <Resizable
@@ -79,6 +96,8 @@ const SplitLayout = ({
         onResize={handleResize}
         resizeHandles={[isVertical ? 'e' : 's']}
         handle={<div style={resizeHandleStyle} />}
+        minConstraints={isVertical ? [minPanelSize, 0] : [0, minPanelSize]}
+        maxConstraints={isVertical ? [maxPrimaryPaneSize, 0] : [0, maxPrimaryPaneSize]}
       >
         <div style={primaryPaneStyle}>
           <TerminalComponent
