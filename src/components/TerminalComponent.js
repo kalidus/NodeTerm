@@ -8,11 +8,27 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [remoteStats, setRemoteStats] = useState({ cpu: '0.00', mem: {}, disk: [], cpuHistory: [], network: { rx_speed: 0, tx_speed: 0 }, uptime: '...' });
+    const [forceUpdateCounter, setForceUpdateCounter] = useState(0); // <-- NUEVO
+    const [cpuHistory, setCpuHistory] = useState([]);
+
+    // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es válido
+    useEffect(() => {
+        const cpuValue = stats && typeof stats.cpu === 'string'
+            ? parseFloat(stats.cpu)
+            : stats && typeof stats.cpu === 'number'
+                ? stats.cpu
+                : null;
+        if (cpuValue !== null && !isNaN(cpuValue)) {
+            setCpuHistory(prev => {
+                const newArr = [...prev, cpuValue].slice(-30);
+                return newArr;
+            });
+        }
+    }, [stats?.cpu]);
 
     // Expose fit method to parent component
     useImperativeHandle(ref, () => ({
@@ -99,10 +115,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         fitAddon.current.fit();
         term.current.focus();
         
+        // ResizeObserver robusto: fit en cada cambio de tamaño
         const resizeObserver = new ResizeObserver(() => {
-            fitAddon.current?.fit();
+            if (fitAddon.current) {
+                try { fitAddon.current.fit(); } catch (e) {}
+            }
         });
-        resizeObserver.observe(terminalRef.current);
+        if (terminalRef.current) resizeObserver.observe(terminalRef.current);
 
         // --- Clipboard and Event Handling ---
         // We wrap this in a check to ensure the electron API is ready.
@@ -197,19 +216,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
             });
 
-            // Listen for stats updates for this specific tab
-            const onStatsUpdate = (stats) => {
-                setRemoteStats(prevStats => {
-                    // Ensure cpu value is a valid number before adding to history
-                    const cpuValue = parseFloat(stats.cpu);
-                    if (isNaN(cpuValue)) return prevStats; // Don't update if cpu is not a number
-
-                    const newHistory = [...prevStats.cpuHistory, cpuValue].slice(-50);
-                    return { ...stats, cpuHistory: newHistory };
-                });
-            };
-            const onStatsUnsubscribe = window.electron.ipcRenderer.on(`ssh-stats:update:${tabId}`, onStatsUpdate);
-
             // Cleanup on component unmount
             return () => {
                 resizeObserver.disconnect();
@@ -218,7 +224,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
-                if (onStatsUnsubscribe) onStatsUnsubscribe();
                 dataHandler.dispose();
                 resizeHandler.dispose();
                 if (term.current) {
@@ -266,14 +271,43 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     useEffect(() => {
         if (active && term.current) {
             term.current.focus();
+            setForceUpdateCounter(c => c + 1); // <-- Forzar re-render StatusBar
         }
     }, [active]);
 
+    // Forzar fit tras cada render (por si el layout cambia después del render)
+    useEffect(() => {
+        if (fitAddon.current) {
+            setTimeout(() => {
+                try { fitAddon.current.fit(); } catch (e) {}
+            }, 0);
+        }
+    });
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: theme?.background }}>
-            <div ref={terminalRef} style={{ flex: 1, width: '100%', minHeight: 0 }} />
-            <StatusBar stats={remoteStats} />
-        </div>
+        <>
+            <div 
+                ref={terminalRef} 
+                className={'terminal-outer-padding'}
+                style={{ 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    flex: 1, 
+                    width: '100%', 
+                    minWidth: 0,
+                    minHeight: 0,
+                    height: '100%',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    border: '2px solid cyan',
+                    background: 'rgba(0,255,255,0.08)',
+                    padding: 0,
+                    margin: 0
+                }} 
+            />
+            {!hideStatusBar && <StatusBar stats={{...stats, cpuHistory: cpuHistory}} active={active} />}
+        </>
     );
 });
 

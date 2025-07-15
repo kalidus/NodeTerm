@@ -12,7 +12,7 @@ const CpuSparkline = ({ history }) => (
                 <div
                     key={index}
                     className="sparkline-bar"
-                    style={{ height: `${Math.max(value, 1)}%` }} // Ensure a minimum height of 1% for visibility
+                    style={{ height: `${Math.max(value, 1)}%` }}
                 />
             ))}
         </div>
@@ -38,10 +38,11 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats }) => {
+const StatusBar = ({ stats, active }) => {
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
+
     if (!stats) {
         // Mostrar solo la barra vacía si no hay stats
         return (
@@ -51,7 +52,7 @@ const StatusBar = ({ stats }) => {
         );
     }
 
-    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip } = stats;
+    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip, versionId = '' } = stats;
 
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -86,7 +87,7 @@ const StatusBar = ({ stats }) => {
                             style={{ color: 'var(--statusbar-cpu-color, var(--statusbar-icon-color, inherit))' }}
                         />
                         <span>{cpu}%</span>
-                        <CpuSparkline history={cpuHistory} />
+                        <CpuSparkline history={cpuHistory || []} />
                     </div>
                 )}
                 {mem && mem.total > 0 && (

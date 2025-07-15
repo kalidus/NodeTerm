@@ -86,6 +86,11 @@
   color: var(--ui-sidebar-text) !important;
 }
 
+<<<<<<< HEAD
+=======
+/* Regla movida a themeManager.js para usar color directo del tema */
+
+>>>>>>> v1.3.1
 /* Label de los nodos */
 .sidebar-tree .p-treenode-label {
   color: var(--ui-sidebar-text) !important;
@@ -108,3 +113,55 @@
 .connection-indicator.disconnected {
   color: #6b7280 !important;
 }
+<<<<<<< HEAD
+=======
+
+/* Forzar tamaño de fuente en el árbol de sesiones */
+.sidebar-tree {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-tree {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-treenode {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-treenode-content {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-treenode-label {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-tree .p-treenode-content .p-treenode-label {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-tree .p-treenode {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-tree-filter-container .p-inputtext {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-tree-filter {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .pi {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .node-label {
+  font-size: inherit !important;
+}
+
+.sidebar-tree .p-treenode-content .connection-indicator {
+  font-size: inherit !important;
+}
+>>>>>>> v1.3.1

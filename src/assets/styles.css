@@ -89,7 +89,12 @@ html, body, #root {
 .sidebar-tree .p-treenode::before,
 .sidebar-tree .p-treenode-children::before,
 .sidebar-tree .p-treenode-children > .p-treenode::before {
-  display: block !important;
+  display: none !important;
+  background: none !important;
+  border: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  content: none !important;
 }
 .sidebar-tree .p-treenode-leaf > .p-treenode-content .pi {
   color: #b0b0b0;
@@ -365,6 +370,13 @@ html, body, #root {
   overflow: hidden;
 }
 
+<<<<<<< HEAD
+=======
+.file-explorer-container, .file-explorer-container * {
+  font-family: var(--explorer-font, inherit) !important;
+}
+
+>>>>>>> v1.3.1
 .file-explorer-card,
 .file-explorer-card .p-card,
 .file-explorer-card .p-card-body,
@@ -508,14 +520,17 @@ html, body, #root {
 
 /* Añade un margen interno al área del terminal para que el texto no esté pegado a los bordes */
 .xterm-viewport {
-  padding: 10px !important;
+  padding: 2px !important;
   /* Asegura que el padding no afecte al cálculo de tamaño del addon 'fit' */
   box-sizing: border-box !important;
 }
 
-.xterm {
-    padding: 10px !important;
-    box-sizing: border-box !important;
+.xterm, .xterm-viewport, .xterm-screen {
+  height: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* --- Status Bar --- */
@@ -529,7 +544,11 @@ html, body, #root {
     height: 24px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
     font-size: 12px;
+<<<<<<< HEAD
     border-top: 1px solid var(--statusbar-border, #333) !important;
+=======
+    /* border-top: 1px solid var(--statusbar-border, #333) !important; */
+>>>>>>> v1.3.1
 }
 
 .status-group {
@@ -623,6 +642,14 @@ html, body, #root {
   min-width: 44px;
   min-height: 44px;
   border-radius: 10px;
+  background: var(--ui-file-button-bg, transparent) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.3s ease;
+}
+
+.file-explorer-toolbar .p-button:hover {
+  background: var(--ui-file-button-hover, rgba(0,0,0,0.1)) !important;
+  transform: translateY(-1px);
 }
 
 .file-explorer-toolbar .p-button .p-button-icon {
@@ -631,18 +658,35 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  transition: color 0.3s ease;
 }
 
 .file-explorer-toolbar .p-button .p-button-label {
-  display: none;
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  transition: color 0.3s ease;
 }
+
+/* .file-explorer-toolbar .p-button .p-button-label {
+  display: none;
+} */
 
 .file-explorer-toolbar .p-button.p-button-danger {
   background: #f87171 !important;
   color: #fff !important;
-  border: none !important;
+  border: 1px solid #f87171 !important;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger .p-button-label {
+  color: #fff !important;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger:hover {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
 }
 
 /* Estilos para progreso de transferencia */
@@ -668,11 +712,31 @@ html, body, #root {
   margin-right: 0;
 }
 
+/* Estilos para botones de acciones en la tabla */
+.file-explorer-datatable .p-button-text .p-button-label {
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.file-explorer-datatable .p-button-text:hover .p-button-label {
+  color: var(--ui-button-primary, #007ad9) !important;
+}
+
+.file-explorer-datatable .p-button-text.p-button-danger .p-button-label {
+  color: #f87171 !important;
+}
+
+.file-explorer-datatable .p-button-text.p-button-danger:hover .p-button-label {
+  color: #dc2626 !important;
+}
+
 /* Estilos responsivos para pantallas pequeñas */
 @media (max-width: 768px) {
-  .file-explorer-toolbar .p-button .p-button-label {
+  /* .file-explorer-toolbar .p-button .p-button-label {
     display: none;
-  }
+  } */
   
   .file-explorer-table-container {
     max-height: calc(100vh - 320px);
@@ -703,6 +767,20 @@ html, body, #root {
   background-color: var(--primary-color, #007ad9);
   opacity: 0.8;
   z-index: 1000;
+}
+
+/* --- Split Terminal Styles --- */
+.split-terminal-splitter {
+  height: 100% !important;
+}
+
+.split-terminal-splitter .p-splitter-gutter {
+  transition: background 0.2s;
+  cursor: col-resize;
+}
+
+.split-terminal-splitter .p-splitter-gutter:hover {
+  background: var(--ui-button-hover, #ddd) !important;
 }
 
 /* Estilos para la pestaña que se está arrastrando */
@@ -837,12 +915,9 @@ html, body, #root {
 }
 
 /* Colores de iconos personalizados */
-.sidebar-tree .pi-folder,
-.sidebar-tree .pi-folder-open {
-  color: #f4b400 !important; /* Amarillo carpeta claro */
-}
+/* Los colores de carpetas e iconos ahora se manejan por tema específico */
 .sidebar-tree .pi-desktop {
-  color: #42a5f5 !important; /* Azul para SSH/RDP */
+  color: #42a5f5 !important; /* Azul fijo para iconos de sesión */
 }
 /* Color de toggler (flecha) */
 .sidebar-tree .p-tree-toggler {
@@ -865,7 +940,7 @@ html, body, #root {
 /* Alineación: cada nivel mantiene padding y compensa margen */
 .sidebar-tree .p-treenode-children {
   padding-left: var(--tree-indent) !important;
-  border-left: 1px solid var(--surface-border, #d5d5d5) !important;
+  border-left: none !important;
 }
 .sidebar-tree .p-treenode-content {
   margin-left: calc(-1 * var(--tree-indent));
@@ -941,14 +1016,170 @@ html, body, #root {
   border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
 }
 
+<<<<<<< HEAD
+=======
+/* === Splitter principal === */
+.main-splitter .p-splitter-gutter {
+  background: var(--ui-sidebar-gutter-bg, #dee2e6) !important;
+  border-left: 1px solid var(--ui-sidebar-border, #e0e0e0) !important;
+  border-right: 1px solid var(--ui-sidebar-border, #e0e0e0) !important;
+  width: 2px !important;
+  min-width: 2px !important;
+  max-width: 2px !important;
+}
+
+.main-splitter .p-splitter-gutter:hover {
+  background: var(--ui-sidebar-hover, #adb5bd) !important;
+}
+
+.main-splitter .p-splitter-gutter:active {
+  background: var(--primary-color, #007ad9) !important;
+}
+
+/* === Optimización del Splitter para redimensionamiento fluido === */
+.p-splitter {
+  border: none;
+}
+
+.p-splitter-gutter {
+  background: var(--ui-sidebar-gutter-bg, #dee2e6) !important;
+  border: none !important;
+  width: 2px !important;
+  min-width: 2px !important;
+  max-width: 2px !important;
+  cursor: col-resize !important;
+  transition: background-color 0.2s ease !important;
+  position: relative !important;
+  z-index: 2 !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  pointer-events: auto !important;
+}
+
+.p-splitter-gutter:hover {
+  background: var(--ui-sidebar-hover, #adb5bd) !important;
+}
+
+.p-splitter-gutter:active {
+  background: var(--primary-color, #007ad9) !important;
+}
+
+/* Mejoras de rendimiento para el redimensionamiento */
+.p-splitter-panel {
+  transition: none !important;
+  overflow: hidden !important;
+}
+
+/* Optimización específica para el gutter horizontal */
+.p-splitter.p-splitter-horizontal > .p-splitter-gutter {
+  width: 2px !important;
+  min-width: 2px !important;
+  max-width: 2px !important;
+  flex: 0 0 2px !important;
+  cursor: col-resize !important;
+}
+
+/* Desactivar transiciones durante el redimensionamiento */
+.p-splitter.p-splitter-resizing .p-splitter-panel {
+  transition: none !important;
+  /* NO desactivar pointer-events en los paneles, solo en elementos específicos si es necesario */
+}
+
+.p-splitter.p-splitter-resizing .sidebar-container {
+  transition: none !important;
+  /* Mantener pointer-events activos para que funcionen los clicks */
+}
+
+/* Optimización con GPU para un redimensionamiento más fluido */
+.p-splitter-panel {
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  perspective: 1000px !important;
+}
+
+/* Sidebar optimizada sin interferir con eventos */
+.sidebar-container {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Solo aplicar will-change durante el redimensionamiento */
+.p-splitter.p-splitter-resizing .sidebar-container {
+  will-change: width, min-width, max-width !important;
+}
+
+/* Indicador visual mejorado para el gutter */
+.p-splitter-gutter::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 16px;
+  background: var(--ui-sidebar-text, #6c757d);
+  border-radius: 0.5px;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.p-splitter-gutter:hover::before {
+  opacity: 0.7;
+}
+
+.p-splitter-gutter:active::before {
+  opacity: 0.9;
+  background: var(--primary-color, #007ad9);
+}
+
+/* Restablecer estilos del árbol para asegurar funcionalidad */
+.sidebar-tree .p-tree,
+.sidebar-tree .p-treenode,
+.sidebar-tree .p-treenode-content {
+  pointer-events: auto;
+  cursor: default;
+  user-select: none;
+}
+
+/* Cursor pointer solo para elementos clicables */
+.sidebar-tree .p-treenode-content:hover {
+  cursor: pointer;
+}
+
+/* Botones de la sidebar */
+.sidebar-container .p-button {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Drag & drop */
+.sidebar-tree .p-treenode-content[draggable="true"] {
+  cursor: grab;
+}
+
+.sidebar-tree .p-treenode-content[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+>>>>>>> v1.3.1
 /* El gutter del Splitter ahora es temático, ver themeManager.js */
 
 /* Centrado vertical SOLO para el contenido de los paneles de configuración */
 .settings-dialog-tabview .p-tabview-panels {
+<<<<<<< HEAD
   height: 50vh !important;
   min-height: 300px !important;
   max-height: 60vh !important;
   overflow-y: auto !important;
+=======
+  width: 100% !important;
+  min-height: unset !important;
+  max-height: unset !important;
+  height: auto !important;
+  overflow: visible !important;
+>>>>>>> v1.3.1
 }
 .settings-dialog-tabview .p-tabview-panel {
   display: flex !important;
@@ -1175,4 +1406,34 @@ html, body, #root {
 .file-explorer-table-container * {
   background: inherit !important;
   background-color: inherit !important;
+<<<<<<< HEAD
+=======
+}
+
+/* Estilo para el divisor de react-split-pane vertical */
+.SplitPane .Resizer {
+  background: #888;
+  opacity: 0.7;
+  z-index: 1;
+  box-sizing: border-box;
+  background-clip: padding-box;
+}
+.SplitPane .Resizer.vertical {
+  width: 8px;
+  margin: 0 -4px;
+  cursor: col-resize;
+  border-left: 2px solid #666;
+  border-right: 2px solid #666;
+}
+.SplitPane .Resizer:hover {
+  transition: all 0.2s ease;
+  opacity: 1;
+  background: #555;
+}
+
+.terminal-outer-padding .xterm-viewport,
+.terminal-outer-padding .xterm {
+  padding: 10px !important;
+  box-sizing: border-box !important;
+>>>>>>> v1.3.1
 }

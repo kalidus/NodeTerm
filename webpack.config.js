@@ -47,35 +47,33 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env.REACT_APP_VERSION': JSON.stringify(packageJson.version),
       'process.env.REACT_APP_NAME': JSON.stringify(packageJson.name),
-      'process.env.REACT_APP_BUILD_DATE': JSON.stringify(new Date().toLocaleDateString())
+      'process.env.REACT_APP_BUILD_DATE': JSON.stringify(new Date().toLocaleDateString()),
+      'global': 'globalThis'
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',
       Buffer: ['buffer', 'Buffer']
-    }),
-    new webpack.DefinePlugin({
-      'global': 'globalThis'
     })
   ],
   resolve: {
     extensions: ['.js', '.jsx'],
     fallback: {
       "process": require.resolve("process/browser"),
+      "buffer": require.resolve("buffer"),
       "path": require.resolve("path-browserify"),
       "os": require.resolve("os-browserify/browser"),
       "crypto": require.resolve("crypto-browserify"),
       "stream": require.resolve("stream-browserify"),
-      "buffer": require.resolve("buffer"),
-      "util": require.resolve("util/"),
-      "url": require.resolve("url/"),
+      "util": require.resolve("util"),
+      "url": require.resolve("url"),
       "querystring": require.resolve("querystring-es3"),
+      "assert": require.resolve("assert"),
       "fs": false,
       "net": false,
       "tls": false
     }
   },
   externals: {
-    // Excluir módulos problemáticos de Node.js
     'utf-8-validate': 'commonjs utf-8-validate',
     'bufferutil': 'commonjs bufferutil'
   },
