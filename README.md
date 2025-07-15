@@ -18,7 +18,7 @@
 <div align="center">
   
   <b>Vista previa de NodeTerm</b><br><br>
-  <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" style="border-radius:12px; box-shadow:0 2px 16px #0003; max-width:90%; margin: 0 auto;">
+  <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="700" style="display:block; margin:auto; border-radius:12px; box-shadow:0 2px 16px #0003;">
   
 </div>
 
