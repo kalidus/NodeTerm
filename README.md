@@ -1,4 +1,4 @@
-# 🚀 NodeTerm - Terminal SSH Avanzado para Electron
+# 🚀 NodeTerm - Cliente SSH para Adminstradores
 
 <div align="center">
   
@@ -7,9 +7,9 @@
 [![Electron](https://img.shields.io/badge/electron-latest-brightgreen.svg)](https://electronjs.org/)
 [![Donate](https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg)](#-donaciones)
 
-**Una aplicación de terminal SSH moderna y potente construida con Electron y React**
+**Una aplicación de terminal SSH moderna y potente y construida con Electron y React**
 
-✨ Gestión avanzada de sesiones SSH | 🔀 Sistema de splits horizontal/vertical | 📊 Monitoreo en tiempo real | 🎨 Múltiples temas
+✨ Gestión avanzada de sesiones SSH | 🔀 Sistema de splits horizontal/vertical | 📊 Monitoreo en tiempo real |  🎨 Múltiples temas
   
 </div>
 
