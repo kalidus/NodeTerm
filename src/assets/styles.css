@@ -1411,3 +1411,9 @@ html, body, #root {
   opacity: 1;
   background: #555;
 }
+
+.terminal-outer-padding .xterm-viewport,
+.terminal-outer-padding .xterm {
+  padding: 10px !important;
+  box-sizing: border-box !important;
+}
