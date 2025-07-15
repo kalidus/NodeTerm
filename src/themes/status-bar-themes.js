@@ -178,8 +178,6 @@ export const statusBarThemes = {
       networkDownColor: '#21c7a8',
       sparklineColor: '#82aaff'
     }
-<<<<<<< HEAD
-=======
   },
   'Tokyo Night': {
     name: 'Tokyo Night',
@@ -510,6 +508,5 @@ export const statusBarThemes = {
       networkDownColor: '#00bcd4',
       sparklineColor: '#2196f3'
     }
->>>>>>> v1.3.1
   }
 };

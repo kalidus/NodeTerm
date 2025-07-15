@@ -13,10 +13,7 @@ import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import Sidebar from './Sidebar';
-<<<<<<< HEAD
-=======
 import SplitLayout from './SplitLayout';
->>>>>>> v1.3.1
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
@@ -74,10 +71,7 @@ const App = () => {
   const [editSSHUser, setEditSSHUser] = useState('');
   const [editSSHPassword, setEditSSHPassword] = useState('');
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
-<<<<<<< HEAD
-=======
   const [editSSHPort, setEditSSHPort] = useState(22);
->>>>>>> v1.3.1
 
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -692,15 +686,8 @@ const App = () => {
       setNodes(getDefaultNodes());
     }
     
-<<<<<<< HEAD
     // Cargar tema UI guardado
     themeManager.loadSavedTheme();
-=======
-    // Cargar tema UI guardado (forzar recarga)
-    setTimeout(() => {
-      themeManager.loadSavedTheme();
-    }, 100);
->>>>>>> v1.3.1
     
     // Cargar tema de status bar guardado
     statusBarThemeManager.loadSavedTheme();
@@ -1616,8 +1603,6 @@ const App = () => {
     return () => clearTimeout(timeoutId);
   }, [sidebarCollapsed]); // Se ejecuta cuando cambia el estado del sidebar
 
-<<<<<<< HEAD
-=======
   // Optimización para redimensionamiento fluido
   useEffect(() => {
     const splitterElement = document.querySelector('.p-splitter');
@@ -1651,7 +1636,6 @@ const App = () => {
   // Ref para throttling del resize
   const resizeTimeoutRef = useRef(null);
   
->>>>>>> v1.3.1
   const handleResize = () => {
     const filteredTabs = getFilteredTabs();
     const activeTab = filteredTabs[activeTabIndex];
@@ -2060,12 +2044,9 @@ const App = () => {
             onDragDrop={onDragDrop}
             setDraggedNodeKey={setDraggedNodeKey}
             nodeTemplate={nodeTemplate}
-<<<<<<< HEAD
-=======
             iconTheme={iconThemeSidebar}
             explorerFont={sidebarFont}
             explorerFontSize={sidebarFontSize}
->>>>>>> v1.3.1
           />
         </SplitterPanel>
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
@@ -2866,8 +2847,6 @@ const App = () => {
         statusBarTheme={statusBarTheme}
         setStatusBarTheme={setStatusBarTheme}
         availableFonts={availableFonts}
-<<<<<<< HEAD
-=======
         iconTheme={iconTheme}
         setIconTheme={setIconTheme}
         explorerFont={explorerFont}
@@ -2884,7 +2863,6 @@ const App = () => {
         setExplorerFontSize={setExplorerFontSize}
         statusBarPollingInterval={statusBarPollingInterval}
         setStatusBarPollingInterval={setStatusBarPollingInterval}
->>>>>>> v1.3.1
       />
 
       {/* Diálogo para crear nuevo grupo */}
