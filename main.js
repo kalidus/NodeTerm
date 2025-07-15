@@ -520,12 +520,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         return;
       }
       if (connObj.statsLoopRunning) {
-        console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
+        // console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
         return;
       }
       
       connObj.statsLoopRunning = true;
-      console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
+      // console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
 
       try {
         // // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
