@@ -1302,12 +1302,24 @@ const App = () => {
       const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
       if (sshTabsFiltered.length > 0) {
         items.push({
-          label: 'Abrir en Split →',
+          label: 'Abrir en Split',
           icon: 'pi pi-window-maximize',
+          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'), // Clic directo: vertical con primera pestaña
           items: sshTabsFiltered.map(tab => ({
             label: tab.label,
             icon: 'pi pi-desktop',
-            command: () => openInSplit(node, tab)
+            items: [
+              {
+                label: 'Split vertical',
+                icon: 'pi pi-arrows-v',
+                command: () => openInSplit(node, tab, 'vertical')
+              },
+              {
+                label: 'Split horizontal',
+                icon: 'pi pi-arrows-h',
+                command: () => openInSplit(node, tab, 'horizontal')
+              }
+            ]
           }))
         });
       }
@@ -1667,7 +1679,7 @@ const App = () => {
 
   // Función para abrir explorador de archivos SSH
   // Función para abrir una sesión en split con otra pestaña existente
-  const openInSplit = (sshNode, existingTab) => {
+  const openInSplit = (sshNode, existingTab, orientation = 'vertical') => {
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -1706,9 +1718,10 @@ const App = () => {
           return {
             ...tab,
             type: 'split',
+            orientation: orientation, // Guardar la orientación
             leftTerminal: { ...tab, type: 'terminal' }, // Terminal izquierdo (existente)
             rightTerminal: newTerminal, // Terminal derecho (nuevo)
-            label: `Split: ${tab.label.split(' (')[0]} | ${sshNode.label}`
+            label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label.split(' (')[0]} | ${sshNode.label}`
           };
         }
         return tab;
@@ -1730,7 +1743,7 @@ const App = () => {
     toast.current.show({
       severity: 'success',
       summary: 'Split creado',
-      detail: `Nueva sesión de ${sshNode.label} abierta en split`,
+      detail: `Nueva sesión de ${sshNode.label} abierta en split ${orientation}`,
       life: 3000
     });
   };
@@ -2617,6 +2630,7 @@ const App = () => {
                           onContextMenu={handleTerminalContextMenu}
                           sshStatsByTabId={sshStatsByTabId}
                           terminalRefs={terminalRefs}
+                          orientation={tab.orientation || 'vertical'}
                         />
                       ) : (
                         <TerminalComponent
