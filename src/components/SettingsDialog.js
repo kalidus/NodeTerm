@@ -5,6 +5,7 @@ import { Divider } from 'primereact/divider';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
+import { Slider } from 'primereact/slider';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import { themes } from '../themes';
@@ -12,6 +13,8 @@ import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
+
+const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 
 const SettingsDialog = ({ 
   visible, 
@@ -44,12 +47,21 @@ const SettingsDialog = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
+  const [statusBarHeight, setStatusBarHeight] = useState(() => {
+    const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
+    return saved ? parseInt(saved, 10) : 24;
+  });
 
   useEffect(() => {
     // Obtener la versión real de la app
     const info = getVersionInfo();
     setVersionInfo(info);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(STATUSBAR_HEIGHT_STORAGE_KEY, statusBarHeight);
+    document.documentElement.style.setProperty('--statusbar-height', `${statusBarHeight}px`);
+  }, [statusBarHeight]);
 
   // Configuración de temas de terminal
   const availableTerminalThemes = themes ? Object.keys(themes) : [];
@@ -346,6 +358,28 @@ const SettingsDialog = ({
                     currentTheme={statusBarTheme}
                     onThemeChange={setStatusBarTheme}
                   />
+                  <div style={{ marginTop: 24, width: 320 }}>
+                    <label htmlFor="statusbar-height-slider" style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: 'bold',
+                      fontSize: '0.9rem'
+                    }}>
+                      Altura de la Status Bar (px)
+                    </label>
+                    <Slider
+                      id="statusbar-height-slider"
+                      value={statusBarHeight}
+                      onChange={e => setStatusBarHeight(e.value)}
+                      min={20}
+                      max={60}
+                      step={1}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 4 }}>
+                      {statusBarHeight} px (mínimo 20, máximo 60)
+                    </div>
+                  </div>
                   <div style={{ marginTop: 24, width: 320 }}>
                     <label htmlFor="statusbar-polling-interval" style={{
                       display: 'block',
