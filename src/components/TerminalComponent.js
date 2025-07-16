@@ -8,7 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 
-const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false }, ref) => {
+const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, theme, onContextMenu, active, stats, hideStatusBar = false, statusBarIconTheme = 'classic' }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -306,7 +306,7 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     margin: 0
                 }} 
             />
-            {!hideStatusBar && <StatusBar stats={{...stats, cpuHistory: cpuHistory}} active={active} />}
+            {!hideStatusBar && <StatusBar stats={{...stats, cpuHistory: cpuHistory}} active={active} statusBarIconTheme={statusBarIconTheme} />}
         </>
     );
 });

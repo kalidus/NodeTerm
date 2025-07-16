@@ -340,6 +340,7 @@ const App = () => {
   // Theme configuration
   const THEME_STORAGE_KEY = 'basicapp_terminal_theme';
   const STATUSBAR_THEME_STORAGE_KEY = 'basicapp_statusbar_theme';
+  const STATUSBAR_ICON_THEME_STORAGE_KEY = 'basicapp_statusbar_icon_theme';
   const availableThemes = themes ? Object.keys(themes) : [];
   const [terminalTheme, setTerminalTheme] = useState(() => {
       const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
@@ -347,6 +348,9 @@ const App = () => {
   });
   const [statusBarTheme, setStatusBarTheme] = useState(() => {
       return localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
+  });
+  const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
+      return localStorage.getItem(STATUSBAR_ICON_THEME_STORAGE_KEY) || 'classic';
   });
 
   // Estado para drag & drop de pestañas
@@ -1996,6 +2000,11 @@ const App = () => {
     }
   }, [statusBarPollingInterval]);
 
+  // Auto-save status bar icon theme to localStorage
+  useEffect(() => {
+    localStorage.setItem(STATUSBAR_ICON_THEME_STORAGE_KEY, statusBarIconTheme);
+  }, [statusBarIconTheme]);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />
@@ -2630,6 +2639,7 @@ const App = () => {
                           sshStatsByTabId={sshStatsByTabId}
                           terminalRefs={terminalRefs}
                           orientation={tab.orientation || 'vertical'}
+                          statusBarIconTheme={statusBarIconTheme}
                         />
                       ) : (
                         <TerminalComponent
@@ -2643,6 +2653,7 @@ const App = () => {
                           onContextMenu={handleTerminalContextMenu}
                           active={isActiveTab}
                           stats={sshStatsByTabId[tab.key]}
+                          statusBarIconTheme={statusBarIconTheme}
                         />
                       )}
                     </div>
@@ -2847,6 +2858,8 @@ const App = () => {
         setTerminalTheme={setTerminalTheme}
         statusBarTheme={statusBarTheme}
         setStatusBarTheme={setStatusBarTheme}
+        statusBarIconTheme={statusBarIconTheme}
+        setStatusBarIconTheme={setStatusBarIconTheme}
         availableFonts={availableFonts}
         iconTheme={iconTheme}
         setIconTheme={setIconTheme}

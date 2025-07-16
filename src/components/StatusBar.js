@@ -4,6 +4,7 @@ import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer
 import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import { getVersionInfo } from '../version-info';
+import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -38,9 +39,12 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats, active }) => {
+const StatusBar = ({ stats, active, statusBarIconTheme = 'classic' }) => {
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
+    
+    // Obtener el tema de iconos actual
+    const currentIconTheme = statusBarIconThemes[statusBarIconTheme] || statusBarIconThemes.classic;
     
 
     if (!stats) {
@@ -81,38 +85,42 @@ const StatusBar = ({ stats, active }) => {
                 )}
                 {cpu !== undefined && (
                     <div className="status-bar-section cpu-section">
-                        <FontAwesomeIcon 
-                            icon={faMicrochip} 
+                        <span 
                             className="status-bar-icon cpu" 
-                            style={{}}
-                        />
+                            style={{ color: currentIconTheme.colors.cpu }}
+                        >
+                            {currentIconTheme.icons.cpu}
+                        </span>
                         <span>{cpu}%</span>
                         <CpuSparkline history={cpuHistory || []} />
                     </div>
                 )}
                 {mem && mem.total > 0 && (
                     <div className="status-bar-section">
-                        <FontAwesomeIcon 
-                            icon={faMemory} 
+                        <span 
                             className="status-bar-icon mem" 
-                            style={{}}
-                        />
+                            style={{ color: currentIconTheme.colors.memory }}
+                        >
+                            {currentIconTheme.icons.memory}
+                        </span>
                         <span>{formatBytes(mem.used)} / {formatBytes(mem.total)}</span>
                     </div>
                 )}
                 {network && (
                     <div className="status-bar-section network-section">
-                        <FontAwesomeIcon 
-                            icon={faArrowDown} 
+                        <span 
                             className="status-bar-icon net-down" 
-                            style={{}}
-                        />
+                            style={{ color: currentIconTheme.colors.networkDown }}
+                        >
+                            {currentIconTheme.icons.networkDown}
+                        </span>
                         <span>{formatSpeed(network.rx_speed)}</span>
-                        <FontAwesomeIcon 
-                            icon={faArrowUp} 
+                        <span 
                             className="status-bar-icon net-up" 
-                            style={{ marginLeft: '5px' }}
-                        />
+                            style={{ color: currentIconTheme.colors.networkUp, marginLeft: '5px' }}
+                        >
+                            {currentIconTheme.icons.networkUp}
+                        </span>
                         <span>{formatSpeed(network.tx_speed)}</span>
                     </div>
                 )}
@@ -120,11 +128,12 @@ const StatusBar = ({ stats, active }) => {
                     <div className="status-bar-section disk-section">
                         {disk.map((d, index) => (
                             <div key={index} className="disk-info-item">
-                                <FontAwesomeIcon 
-                                    icon={faHdd} 
+                                <span 
                                     className="status-bar-icon disk" 
-                                    style={{}}
-                                />
+                                    style={{ color: currentIconTheme.colors.disk }}
+                                >
+                                    {currentIconTheme.icons.disk}
+                                </span>
                                 <span className="disk-info-text">{d.fs}: {d.use}%</span>
                             </div>
                         ))}
@@ -132,21 +141,23 @@ const StatusBar = ({ stats, active }) => {
                 )}
                 {uptime && (
                     <div className="status-bar-section">
-                        <FontAwesomeIcon 
-                            icon={faClock} 
+                        <span 
                             className="status-bar-icon" 
-                            style={{ color: 'var(--statusbar-icon-color, inherit)' }}
-                        />
+                            style={{ color: currentIconTheme.colors.uptime }}
+                        >
+                            {currentIconTheme.icons.uptime}
+                        </span>
                         <span>{uptime}</span>
                     </div>
                 )}
                 {ip && (
                     <div className="status-bar-section">
-                        <FontAwesomeIcon 
-                            icon={faServer} 
+                        <span 
                             className="status-bar-icon" 
-                            style={{ color: 'var(--statusbar-icon-color, inherit)' }}
-                        />
+                            style={{ color: currentIconTheme.colors.server }}
+                        >
+                            {currentIconTheme.icons.server}
+                        </span>
                         <span>{ip}</span>
                     </div>
                 )}
