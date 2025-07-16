@@ -356,6 +356,7 @@ function createWindow() {
     minWidth: 1400,
     minHeight: 600,
     title: 'NodeTerm',
+    frame: false, // Oculta la barra de título nativa para usar una personalizada
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -1856,4 +1857,21 @@ let statusBarPollingIntervalMs = 5000;
 ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
   const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 5));
   statusBarPollingIntervalMs = sec * 1000;
+});
+
+ipcMain.handle('window:minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow) mainWindow.maximize();
+});
+ipcMain.handle('window:unmaximize', () => {
+  if (mainWindow) mainWindow.unmaximize();
+});
+ipcMain.handle('window:isMaximized', () => {
+  if (mainWindow) return mainWindow.isMaximized();
+  return false;
+});
+ipcMain.handle('window:close', () => {
+  if (mainWindow) mainWindow.close();
 });

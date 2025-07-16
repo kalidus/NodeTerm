@@ -27,6 +27,7 @@ import { themeManager } from '../utils/themeManager';
 import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import ThemeSelector from './ThemeSelector';
 import SettingsDialog from './SettingsDialog';
+import TitleBar from './TitleBar';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -2006,358 +2007,338 @@ const App = () => {
   }, [statusBarIconTheme]);
 
   return (
-    <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
-      <Toast ref={toast} />
-      <ConfirmDialog />
-      <Splitter 
-        style={{ height: '100%' }} 
-        onResizeEnd={sidebarCollapsed ? undefined : handleResize}
-        onResize={sidebarCollapsed ? undefined : handleResizeThrottled}
-        disabled={sidebarCollapsed}
-        className="main-splitter"
-        pt={{
-          gutter: {
-            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {
-              transition: 'none',
-              background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
-              borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
-              width: '2px'
+    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
+      <TitleBar />
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
+        <Splitter 
+          style={{ height: '100%', width: '100%' }} 
+          onResizeEnd={sidebarCollapsed ? undefined : handleResize}
+          onResize={sidebarCollapsed ? undefined : handleResizeThrottled}
+          disabled={sidebarCollapsed}
+          className="main-splitter"
+          pt={{
+            gutter: {
+              style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {
+                transition: 'none',
+                background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
+                borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
+                width: '2px'
+              }
             }
-          }
-        }}
-      >
-        <SplitterPanel 
-          size={sidebarCollapsed ? 4 : 15} 
-          minSize={sidebarCollapsed ? 44 : 10} 
-          maxSize={sidebarCollapsed ? 44 : 600}
-          style={sidebarCollapsed 
-            ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'all 0.2s' }
-            : { minWidth: 240, maxWidth: 400, padding: 0, height: '100%', transition: 'all 0.2s' }
-          }
+          }}
         >
-          <Sidebar
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
-            nodes={nodes}
-            selectedNodeKey={selectedNodeKey}
-            setSelectedNodeKey={setSelectedNodeKey}
-            expandedKeys={expandedKeys}
-            setExpandedKeys={setExpandedKeys}
-            allExpanded={allExpanded}
-            toggleExpandAll={toggleExpandAll}
-            setShowSSHDialog={setShowSSHDialog}
-            openNewFolderDialog={openNewFolderDialog}
-            setShowCreateGroupDialog={setShowCreateGroupDialog}
-            setShowSettingsDialog={setShowSettingsDialog}
-            onTreeAreaContextMenu={onTreeAreaContextMenu}
-            onDragDrop={onDragDrop}
-            setDraggedNodeKey={setDraggedNodeKey}
-            nodeTemplate={nodeTemplate}
-            iconTheme={iconThemeSidebar}
-            explorerFont={sidebarFont}
-            explorerFontSize={sidebarFontSize}
-            uiTheme={terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light'}
-          />
-        </SplitterPanel>
-        <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
-          {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
-            <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
-              {/* Barra de grupos como TabView scrollable */}
-              {tabGroups.length > 0 && (
-                <TabView
-                  scrollable
-                  activeIndex={(() => {
-                    if (activeGroupId === null) return 0;
-                    const idx = tabGroups.findIndex(g => g.id === activeGroupId);
-                    return idx === -1 ? 0 : idx + 1;
-                  })()}
-                  onTabChange={e => {
-                    // Guardar el índice activo del grupo actual antes de cambiar
-                    const currentGroupKey = activeGroupId || 'no-group';
-                    setGroupActiveIndices(prev => ({
-                      ...prev,
-                      [currentGroupKey]: activeTabIndex
-                    }));
-                    
-                    // Cambiar al nuevo grupo
-                    const newGroupId = e.index === 0 ? null : tabGroups[e.index - 1].id;
-                    setActiveGroupId(newGroupId);
-                    
-                    // Restaurar el índice activo del nuevo grupo (o 0 si es la primera vez)
-                    const newGroupKey = newGroupId || 'no-group';
-                    const savedIndex = groupActiveIndices[newGroupKey] || 0;
-                    const tabsInNewGroup = getTabsInGroup(newGroupId);
-                    const validIndex = Math.min(savedIndex, Math.max(0, tabsInNewGroup.length - 1));
-                    setActiveTabIndex(validIndex);
-                  }}
-                  style={{ 
-                    marginBottom: 0, 
-                    '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb')
-                  }}
-                  className="tabview-groups-bar"
-                >
-                  <TabPanel key="no-group" 
-                    style={{
-                      '--tab-bg-color': '#f5f5f5',
-                      '--tab-border-color': '#d0d0d0'
+          <SplitterPanel 
+            size={sidebarCollapsed ? 4 : 15} 
+            minSize={sidebarCollapsed ? 44 : 10} 
+            maxSize={sidebarCollapsed ? 44 : 600}
+            style={sidebarCollapsed 
+              ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'all 0.2s', display: 'flex', flexDirection: 'column' }
+              : { minWidth: 240, maxWidth: 400, padding: 0, height: '100%', transition: 'all 0.2s', display: 'flex', flexDirection: 'column' }
+            }
+          >
+            <Sidebar
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
+              nodes={nodes}
+              selectedNodeKey={selectedNodeKey}
+              setSelectedNodeKey={setSelectedNodeKey}
+              expandedKeys={expandedKeys}
+              setExpandedKeys={setExpandedKeys}
+              allExpanded={allExpanded}
+              toggleExpandAll={toggleExpandAll}
+              setShowSSHDialog={setShowSSHDialog}
+              openNewFolderDialog={openNewFolderDialog}
+              setShowCreateGroupDialog={setShowCreateGroupDialog}
+              setShowSettingsDialog={setShowSettingsDialog}
+              onTreeAreaContextMenu={onTreeAreaContextMenu}
+              onDragDrop={onDragDrop}
+              setDraggedNodeKey={setDraggedNodeKey}
+              nodeTemplate={nodeTemplate}
+              iconTheme={iconThemeSidebar}
+              explorerFont={sidebarFont}
+              explorerFontSize={sidebarFontSize}
+              uiTheme={terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light'}
+            />
+          </SplitterPanel>
+          <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
+            {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
+              <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
+                {/* Barra de grupos como TabView scrollable */}
+                {tabGroups.length > 0 && (
+                  <TabView
+                    scrollable
+                    activeIndex={(() => {
+                      if (activeGroupId === null) return 0;
+                      const idx = tabGroups.findIndex(g => g.id === activeGroupId);
+                      return idx === -1 ? 0 : idx + 1;
+                    })()}
+                    onTabChange={e => {
+                      // Guardar el índice activo del grupo actual antes de cambiar
+                      const currentGroupKey = activeGroupId || 'no-group';
+                      setGroupActiveIndices(prev => ({
+                        ...prev,
+                        [currentGroupKey]: activeTabIndex
+                      }));
+                      
+                      // Cambiar al nuevo grupo
+                      const newGroupId = e.index === 0 ? null : tabGroups[e.index - 1].id;
+                      setActiveGroupId(newGroupId);
+                      
+                      // Restaurar el índice activo del nuevo grupo (o 0 si es la primera vez)
+                      const newGroupKey = newGroupId || 'no-group';
+                      const savedIndex = groupActiveIndices[newGroupKey] || 0;
+                      const tabsInNewGroup = getTabsInGroup(newGroupId);
+                      const validIndex = Math.min(savedIndex, Math.max(0, tabsInNewGroup.length - 1));
+                      setActiveTabIndex(validIndex);
                     }}
-                    header={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
-                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Home</span>
-                      </span>
-                    }
+                    style={{ 
+                      marginBottom: 0, 
+                      '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb')
+                    }}
+                    className="tabview-groups-bar"
                   >
-                    <div style={{display:'none'}} />
-                  </TabPanel>
-                  {tabGroups.map((group) => (
-                    <TabPanel
-                      key={group.id}
+                    <TabPanel key="no-group" 
                       style={{
-                        '--tab-bg-color': group.color + '33',
-                        '--tab-border-color': group.color + '66'
+                        '--tab-bg-color': '#f5f5f5',
+                        '--tab-border-color': '#d0d0d0'
                       }}
                       header={
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
-                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
-                          <Button
-                            icon="pi pi-times"
-                            className="p-button-rounded p-button-text p-button-sm"
-                            style={{ marginLeft: 6, width: 16, height: 16, color: group.color, padding: 0 }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              // Mover todas las pestañas del grupo a 'Home' antes de eliminar
-                              const tabsInGroup = getTabsInGroup(group.id);
-                              tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
-                              deleteGroup(group.id);
-                            }}
-                            tooltip={"Eliminar grupo"}
-                          />
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Home</span>
                         </span>
                       }
                     >
                       <div style={{display:'none'}} />
                     </TabPanel>
-                  ))}
-                </TabView>
-              )}
-              <div style={{ height: '4px', background: 'transparent' }} />
-              
-              <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                <TabView 
-                  activeIndex={activeTabIndex} 
-                  onTabChange={(e) => {
-                    setActiveTabIndex(e.index);
-                    // También guardar el nuevo índice para el grupo actual
-                    const currentGroupKey = activeGroupId || 'no-group';
-                    setGroupActiveIndices(prev => ({
-                      ...prev,
-                      [currentGroupKey]: e.index
-                    }));
-                  }}
-                  renderActiveOnly={false}
-                  scrollable={false}
-                  className=""
-                >
-                {getFilteredTabs().map((tab, idx) => {
-                  // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
-                  const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
-                  const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
-                  
-                  return (
-                    <TabPanel 
-                      key={tab.key} 
-                      header={tab.label}
-                      headerTemplate={(options) => {
-                        const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
-                        const isDragging = draggedTabIndex === idx;
-                        const isDragOver = dragOverTabIndex === idx;
-                        
-                        return (
-                          <div
-                            className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
-                            style={{ 
-                              ...style, 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              maxWidth: 220,
-                              opacity: isDragging ? 0.5 : 1,
-                              borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
-                              transition: 'opacity 0.2s, border-left 0.2s',
-                              cursor: isDragging ? 'grabbing' : 'grab'
-                            }}
-                            onClick={(e) => {
-                              // Prevenir click si está en proceso de drag o hay un timer activo
-                              if (draggedTabIndex !== null || dragStartTimer !== null) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                              }
-                              onClick(e);
-                            }}
-                            onKeyDown={onKeyDown}
-                            tabIndex={0}
-                            aria-selected={selected}
-                            role="tab"
-                            draggable="true"
-                            onDragStart={(e) => handleTabDragStart(e, idx)}
-                            onDragOver={(e) => handleTabDragOver(e, idx)}
-                            onDragLeave={handleTabDragLeave}
-                            onDrop={(e) => handleTabDrop(e, idx)}
-                            onDragEnd={handleTabDragEnd}
-                            onContextMenu={(e) => handleTabContextMenu(e, tab.key)}
-                            title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
-                          >
-                            {leftIcon}
-                            {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
-                            {tab.type === 'terminal' && tabDistros[tab.key] && (
-                              <DistroIcon distro={tabDistros[tab.key]} size={12} />
-                            )}
-                            {/* Icono específico para splits */}
-                            {tab.type === 'split' && (
-                              <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
-                            )}
-                            {/* Icono específico para exploradores */}
-                            {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
-                              <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
-                            )}
-                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                    {tabGroups.map((group) => (
+                      <TabPanel
+                        key={group.id}
+                        style={{
+                          '--tab-bg-color': group.color + '33',
+                          '--tab-border-color': group.color + '66'
+                        }}
+                        header={
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
                             <Button
                               icon="pi pi-times"
-                              className="p-button-rounded p-button-text p-button-sm ml-2"
-                              style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
+                              className="p-button-rounded p-button-text p-button-sm"
+                              style={{ marginLeft: 6, width: 16, height: 16, color: group.color, padding: 0 }}
                               onClick={e => {
                                 e.stopPropagation();
-                                // Cierre robusto de pestaña
-                                const closedTab = tab;
-                                
-                                // Limpiar distro de la pestaña cerrada
-                                cleanupTabDistro(closedTab.key);
-                                
-                                if (isSSHTab) {
-                                  // Manejar cierre de pestañas split
-                                  if (closedTab.type === 'split') {
-                                    // Desconectar ambos terminales del split
-                                    if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
-                                      delete terminalRefs.current[closedTab.leftTerminal.key];
-                                      cleanupTabDistro(closedTab.leftTerminal.key);
+                                // Mover todas las pestañas del grupo a 'Home' antes de eliminar
+                                const tabsInGroup = getTabsInGroup(group.id);
+                                tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
+                                deleteGroup(group.id);
+                              }}
+                              tooltip={"Eliminar grupo"}
+                            />
+                          </span>
+                        }
+                      >
+                        <div style={{display:'none'}} />
+                      </TabPanel>
+                    ))}
+                  </TabView>
+                )}
+                <div style={{ height: '4px', background: 'transparent' }} />
+                
+                <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                  <TabView 
+                    activeIndex={activeTabIndex} 
+                    onTabChange={(e) => {
+                      setActiveTabIndex(e.index);
+                      // También guardar el nuevo índice para el grupo actual
+                      const currentGroupKey = activeGroupId || 'no-group';
+                      setGroupActiveIndices(prev => ({
+                        ...prev,
+                        [currentGroupKey]: e.index
+                      }));
+                    }}
+                    renderActiveOnly={false}
+                    scrollable={false}
+                    className=""
+                  >
+                  {getFilteredTabs().map((tab, idx) => {
+                    // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
+                    const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
+                    const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
+                    
+                    return (
+                      <TabPanel 
+                        key={tab.key} 
+                        header={tab.label}
+                        headerTemplate={(options) => {
+                          const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                          const isDragging = draggedTabIndex === idx;
+                          const isDragOver = dragOverTabIndex === idx;
+                          
+                          return (
+                            <div
+                              className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
+                              style={{ 
+                                ...style, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                maxWidth: 220,
+                                opacity: isDragging ? 0.5 : 1,
+                                borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
+                                transition: 'opacity 0.2s, border-left 0.2s',
+                                cursor: isDragging ? 'grabbing' : 'grab'
+                              }}
+                              onClick={(e) => {
+                                // Prevenir click si está en proceso de drag o hay un timer activo
+                                if (draggedTabIndex !== null || dragStartTimer !== null) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                onClick(e);
+                              }}
+                              onKeyDown={onKeyDown}
+                              tabIndex={0}
+                              aria-selected={selected}
+                              role="tab"
+                              draggable="true"
+                              onDragStart={(e) => handleTabDragStart(e, idx)}
+                              onDragOver={(e) => handleTabDragOver(e, idx)}
+                              onDragLeave={handleTabDragLeave}
+                              onDrop={(e) => handleTabDrop(e, idx)}
+                              onDragEnd={handleTabDragEnd}
+                              onContextMenu={(e) => handleTabContextMenu(e, tab.key)}
+                              title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
+                            >
+                              {leftIcon}
+                              {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
+                              {tab.type === 'terminal' && tabDistros[tab.key] && (
+                                <DistroIcon distro={tabDistros[tab.key]} size={12} />
+                              )}
+                              {/* Icono específico para splits */}
+                              {tab.type === 'split' && (
+                                <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+                              )}
+                              {/* Icono específico para exploradores */}
+                              {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+                                <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                              )}
+                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                              <Button
+                                icon="pi pi-times"
+                                className="p-button-rounded p-button-text p-button-sm ml-2"
+                                style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  // Cierre robusto de pestaña
+                                  const closedTab = tab;
+                                  
+                                  // Limpiar distro de la pestaña cerrada
+                                  cleanupTabDistro(closedTab.key);
+                                  
+                                  if (isSSHTab) {
+                                    // Manejar cierre de pestañas split
+                                    if (closedTab.type === 'split') {
+                                      // Desconectar ambos terminales del split
+                                      if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
+                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
+                                        delete terminalRefs.current[closedTab.leftTerminal.key];
+                                        cleanupTabDistro(closedTab.leftTerminal.key);
+                                      }
+                                      if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
+                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
+                                        delete terminalRefs.current[closedTab.rightTerminal.key];
+                                        cleanupTabDistro(closedTab.rightTerminal.key);
+                                      }
+                                    } else {
+                                      // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                      if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                        // Terminal SSH - siempre desconectar
+                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                      } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                        // Explorador con conexión propia - desconectar
+                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                      }
+                                      // Los exploradores que usan el pool NO necesitan desconectarse
+                                      if (!closedTab.isExplorerInSSH) {
+                                        delete terminalRefs.current[closedTab.key];
+                                      }
                                     }
-                                    if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
-                                      delete terminalRefs.current[closedTab.rightTerminal.key];
-                                      cleanupTabDistro(closedTab.rightTerminal.key);
+                                    
+                                    const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+                                    // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
+                                    const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
+                                    if (remainingTabs.length === 0) {
+                                        setSshConnectionStatus(prev => {
+                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                            console.log('�� Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                            return updated;
+                                        });
                                     }
+                                    setSshTabs(newSshTabs);
                                   } else {
-                                    // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                    if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-                                      // Terminal SSH - siempre desconectar
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                    } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                      // Explorador con conexión propia - desconectar
+                                    if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
                                       window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
                                     }
-                                    // Los exploradores que usan el pool NO necesitan desconectarse
-                                    if (!closedTab.isExplorerInSSH) {
-                                      delete terminalRefs.current[closedTab.key];
-                                    }
+                                    const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
+                                    setFileExplorerTabs(newExplorerTabs);
                                   }
                                   
-                                  const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                  // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
-                                  const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
-                                  if (remainingTabs.length === 0) {
-                                      setSshConnectionStatus(prev => {
-                                          const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
-                                          console.log('🔌 Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
-                                          return updated;
-                                      });
+                                  // Ajustar índice activo
+                                  if (activeTabIndex === idx) {
+                                    const newIndex = Math.max(0, idx - 1);
+                                    setActiveTabIndex(newIndex);
+                                    // También actualizar el índice guardado para el grupo actual
+                                    const currentGroupKey = activeGroupId || 'no-group';
+                                    setGroupActiveIndices(prev => ({
+                                      ...prev,
+                                      [currentGroupKey]: newIndex
+                                    }));
+                                  } else if (activeTabIndex > idx) {
+                                    const newIndex = activeTabIndex - 1;
+                                    setActiveTabIndex(newIndex);
+                                    // También actualizar el índice guardado para el grupo actual
+                                    const currentGroupKey = activeGroupId || 'no-group';
+                                    setGroupActiveIndices(prev => ({
+                                      ...prev,
+                                      [currentGroupKey]: newIndex
+                                    }));
                                   }
-                                  setSshTabs(newSshTabs);
-                                } else {
-                                  if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                    window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                  }
-                                  const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
-                                  setFileExplorerTabs(newExplorerTabs);
-                                }
-                                
-                                // Ajustar índice activo
-                                if (activeTabIndex === idx) {
-                                  const newIndex = Math.max(0, idx - 1);
-                                  setActiveTabIndex(newIndex);
-                                  // También actualizar el índice guardado para el grupo actual
-                                  const currentGroupKey = activeGroupId || 'no-group';
-                                  setGroupActiveIndices(prev => ({
-                                    ...prev,
-                                    [currentGroupKey]: newIndex
-                                  }));
-                                } else if (activeTabIndex > idx) {
-                                  const newIndex = activeTabIndex - 1;
-                                  setActiveTabIndex(newIndex);
-                                  // También actualizar el índice guardado para el grupo actual
-                                  const currentGroupKey = activeGroupId || 'no-group';
-                                  setGroupActiveIndices(prev => ({
-                                    ...prev,
-                                    [currentGroupKey]: newIndex
-                                  }));
-                                }
-                              }}
-                              // tooltip="Cerrar pestaña"
-                              // tooltipOptions={{ position: 'top' }}
-                            />
-                            {rightIcon}
-                          </div>
-                        );
+                                }}
+                                // tooltip="Cerrar pestaña"
+                                // tooltipOptions={{ position: 'top' }}
+                              />
+                              {rightIcon}
+                            </div>
+                          );
+                        }}
+                      />
+                    );
+                  })}
+                  </TabView>
+                  
+                  {/* Menú contextual para grupos de pestañas */}
+                  {tabContextMenu && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        left: tabContextMenu.x,
+                        top: tabContextMenu.y,
+                        backgroundColor: 'white',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        zIndex: 10000,
+                        minWidth: '180px',
+                        overflow: 'hidden'
                       }}
-                    />
-                  );
-                })}
-                </TabView>
-                
-                {/* Menú contextual para grupos de pestañas */}
-                {tabContextMenu && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      left: tabContextMenu.x,
-                      top: tabContextMenu.y,
-                      backgroundColor: 'white',
-                      border: '1px solid #ccc',
-                      borderRadius: '6px',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                      zIndex: 10000,
-                      minWidth: '180px',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {tabGroups.length > 0 && (
-                      <>
-                        <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
-                          Mover a grupo:
-                        </div>
-                        <div
-                          style={{
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                          onClick={() => {
-                            moveTabToGroup(tabContextMenu.tabKey, null);
-                            setTabContextMenu(null);
-                          }}
-                        >
-                          <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
-                          Home
-                        </div>
-                        {tabGroups.map(group => (
+                    >
+                      {tabGroups.length > 0 && (
+                        <>
+                          <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
+                            Mover a grupo:
+                          </div>
                           <div
-                            key={group.id}
                             style={{
                               padding: '8px 12px',
                               cursor: 'pointer',
@@ -2368,485 +2349,339 @@ const App = () => {
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                             onClick={() => {
-                              moveTabToGroup(tabContextMenu.tabKey, group.id);
+                              moveTabToGroup(tabContextMenu.tabKey, null);
                               setTabContextMenu(null);
                             }}
                           >
-                            <div 
-                              style={{ 
-                                width: '12px', 
-                                height: '12px', 
-                                backgroundColor: group.color, 
-                                borderRadius: '2px' 
-                              }}
-                            ></div>
-                            {group.name}
+                            <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
+                            Home
                           </div>
-                        ))}
-                        <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                      </>
-                    )}
-                    <div
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      onClick={() => {
-                        setTabContextMenu(null);
-                        setShowCreateGroupDialog(true);
-                      }}
-                    >
-                      <i className="pi pi-plus" style={{ width: '16px' }}></i>
-                      Crear nuevo grupo
-                    </div>
-                  </div>
-                )}
-
-                {/* Overlay para cerrar menú contextual de grupos */}
-                {tabContextMenu && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 9999
-                    }}
-                    onClick={() => setTabContextMenu(null)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setTabContextMenu(null);
-                    }}
-                  />
-                )}
-                
-                {/* Menú contextual personalizado */}
-                {terminalContextMenu && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      left: terminalContextMenu.mouseX,
-                      top: terminalContextMenu.mouseY,
-                      backgroundColor: 'white',
-                      border: '1px solid #ccc',
-                      borderRadius: '6px',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                      zIndex: 9999,
-                      minWidth: '180px',
-                      overflow: 'hidden'
-                    }}
-                    onMouseLeave={() => setTerminalContextMenu(null)}
-                  >
-                    <div
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      onClick={() => handleCopyFromTerminal(terminalContextMenu.tabKey)}
-                    >
-                      <i className="pi pi-copy" style={{ width: '16px' }}></i>
-                      Copiar selección
-                    </div>
-                    <div
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      onClick={() => handlePasteToTerminal(terminalContextMenu.tabKey)}
-                    >
-                      <i className="pi pi-clone" style={{ width: '16px' }}></i>
-                      Pegar
-                    </div>
-                    <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                    <div
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      onClick={() => handleSelectAllTerminal(terminalContextMenu.tabKey)}
-                    >
-                      <i className="pi pi-list" style={{ width: '16px' }}></i>
-                      Seleccionar todo
-                    </div>
-                    <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                    <div
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      onClick={() => handleClearTerminal(terminalContextMenu.tabKey)}
-                    >
-                      <i className="pi pi-trash" style={{ width: '16px' }}></i>
-                      Limpiar terminal
-                    </div>
-                  </div>
-                )}
-                
-                {/* Overlay para cerrar menú al hacer clic fuera */}
-                {terminalContextMenu && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 9998
-                    }}
-                    onClick={() => setTerminalContextMenu(null)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setTerminalContextMenu(null);
-                    }}
-                  />
-                )}
-
-                {/* Menú de overflow personalizado */}
-                {showOverflowMenu && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      left: overflowMenuPosition.x,
-                      top: overflowMenuPosition.y,
-                      backgroundColor: 'white',
-                      border: '1px solid #ccc',
-                      borderRadius: '6px',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                      zIndex: 9999,
-                      minWidth: '200px',
-                      maxHeight: '300px',
-                      overflow: 'auto',
-                      animation: 'contextMenuFadeIn 0.15s ease-out'
-                    }}
-                    onMouseLeave={() => setShowOverflowMenu(false)}
-                  >
-                    {overflowMenuItems.map((item, index) => (
+                          {tabGroups.map(group => (
+                            <div
+                              key={group.id}
+                              style={{
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                              onClick={() => {
+                                moveTabToGroup(tabContextMenu.tabKey, group.id);
+                                setTabContextMenu(null);
+                              }}
+                            >
+                              <div 
+                                style={{ 
+                                  width: '12px', 
+                                  height: '12px', 
+                                  backgroundColor: group.color, 
+                                  borderRadius: '2px' 
+                                }}
+                              ></div>
+                              {group.name}
+                            </div>
+                          ))}
+                          <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                        </>
+                      )}
                       <div
-                        key={index}
                         style={{
                           padding: '8px 12px',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
-                          borderBottom: index < overflowMenuItems.length - 1 ? '1px solid #f0f0f0' : 'none'
+                          gap: '8px'
                         }}
                         onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
                         onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                         onClick={() => {
-                          item.command();
-                          setShowOverflowMenu(false);
+                          setTabContextMenu(null);
+                          setShowCreateGroupDialog(true);
                         }}
                       >
-                        <i className={item.icon} style={{ width: '16px', fontSize: '14px' }}></i>
-                        <span style={{ flex: 1, fontSize: '14px' }}>{item.label}</span>
+                        <i className="pi pi-plus" style={{ width: '16px' }}></i>
+                        Crear nuevo grupo
                       </div>
-                    ))}
-                    {overflowMenuItems.length === 0 && (
-                      <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '14px' }}>
-                        No hay pestañas ocultas
-                      </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
 
-                {/* Overlay para cerrar menú de overflow al hacer clic fuera */}
-                {showOverflowMenu && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 9998
-                    }}
-                    onClick={() => setShowOverflowMenu(false)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setShowOverflowMenu(false);
-                    }}
-                  />
-                )}
-              </div>
-                              <div style={{ flexGrow: 1, position: 'relative' }}>
-                {/* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */}
-                {[...sshTabs, ...fileExplorerTabs].map((tab) => {
-                  const filteredTabs = getFilteredTabs();
-                  const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
-                  const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
-                  const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
-                  
-                  return (
-                    <div 
-                      key={tab.key}
-                      style={{ 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
-                        width: '100%',
-                        position: 'absolute',
+                  {/* Overlay para cerrar menú contextual de grupos */}
+                  {tabContextMenu && (
+                    <div
+                      style={{
+                        position: 'fixed',
                         top: 0,
                         left: 0,
-                        visibility: isActiveTab ? 'visible' : 'hidden',
-                        zIndex: isActiveTab ? 1 : 0,
-                        pointerEvents: isActiveTab ? 'auto' : 'none'
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9999
                       }}
+                      onClick={() => setTabContextMenu(null)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setTabContextMenu(null);
+                      }}
+                    />
+                  )}
+                  
+                  {/* Menú contextual personalizado */}
+                  {terminalContextMenu && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        left: terminalContextMenu.mouseX,
+                        top: terminalContextMenu.mouseY,
+                        backgroundColor: 'white',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        zIndex: 9999,
+                        minWidth: '180px',
+                        overflow: 'hidden'
+                      }}
+                      onMouseLeave={() => setTerminalContextMenu(null)}
                     >
-                      {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
-                        <FileExplorer
-                          sshConfig={tab.sshConfig}
-                          tabId={tab.key}
-                          iconTheme={iconTheme}
-                          explorerFont={explorerFont}
-                          explorerColorTheme={explorerColorTheme}
-                          explorerFontSize={explorerFontSize}
-                        />
-                      ) : tab.type === 'split' ? (
-                        <SplitLayout
-                          leftTerminal={tab.leftTerminal}
-                          rightTerminal={tab.rightTerminal}
-                          fontFamily={fontFamily}
-                          fontSize={fontSize}
-                          theme={terminalTheme.theme}
-                          onContextMenu={handleTerminalContextMenu}
-                          sshStatsByTabId={sshStatsByTabId}
-                          terminalRefs={terminalRefs}
-                          orientation={tab.orientation || 'vertical'}
-                          statusBarIconTheme={statusBarIconTheme}
-                        />
-                      ) : (
-                        <TerminalComponent
-                          key={tab.key}
-                          ref={el => terminalRefs.current[tab.key] = el}
-                          tabId={tab.key}
-                          sshConfig={tab.sshConfig}
-                          fontFamily={fontFamily}
-                          fontSize={fontSize}
-                          theme={terminalTheme.theme}
-                          onContextMenu={handleTerminalContextMenu}
-                          active={isActiveTab}
-                          stats={sshStatsByTabId[tab.key]}
-                          statusBarIconTheme={statusBarIconTheme}
-                        />
+                      <div
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        onClick={() => handleCopyFromTerminal(terminalContextMenu.tabKey)}
+                      >
+                        <i className="pi pi-copy" style={{ width: '16px' }}></i>
+                        Copiar selección
+                      </div>
+                      <div
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        onClick={() => handlePasteToTerminal(terminalContextMenu.tabKey)}
+                      >
+                        <i className="pi pi-clone" style={{ width: '16px' }}></i>
+                        Pegar
+                      </div>
+                      <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                      <div
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        onClick={() => handleSelectAllTerminal(terminalContextMenu.tabKey)}
+                      >
+                        <i className="pi pi-list" style={{ width: '16px' }}></i>
+                        Seleccionar todo
+                      </div>
+                      <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                      <div
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                        onClick={() => handleClearTerminal(terminalContextMenu.tabKey)}
+                      >
+                        <i className="pi pi-trash" style={{ width: '16px' }}></i>
+                        Limpiar terminal
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Overlay para cerrar menú al hacer clic fuera */}
+                  {terminalContextMenu && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9998
+                      }}
+                      onClick={() => setTerminalContextMenu(null)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setTerminalContextMenu(null);
+                      }}
+                    />
+                  )}
+
+                  {/* Menú de overflow personalizado */}
+                  {showOverflowMenu && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        left: overflowMenuPosition.x,
+                        top: overflowMenuPosition.y,
+                        backgroundColor: 'white',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        zIndex: 9999,
+                        minWidth: '200px',
+                        maxHeight: '300px',
+                        overflow: 'auto',
+                        animation: 'contextMenuFadeIn 0.15s ease-out'
+                      }}
+                      onMouseLeave={() => setShowOverflowMenu(false)}
+                    >
+                      {overflowMenuItems.map((item, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            borderBottom: index < overflowMenuItems.length - 1 ? '1px solid #f0f0f0' : 'none'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                          onClick={() => {
+                            item.command();
+                            setShowOverflowMenu(false);
+                          }}
+                        >
+                          <i className={item.icon} style={{ width: '16px', fontSize: '14px' }}></i>
+                          <span style={{ flex: 1, fontSize: '14px' }}>{item.label}</span>
+                        </div>
+                      ))}
+                      {overflowMenuItems.length === 0 && (
+                        <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '14px' }}>
+                          No hay pestañas ocultas
+                        </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <Card title="Contenido Principal" style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}>
-              <p className="m-0">
-                Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
-              </p>
-              {selectedNodeKey && (
-                <div className="mt-3">
-                  <p>Elemento seleccionado: {Object.keys(selectedNodeKey)[0]}</p>
+                  )}
+
+                  {/* Overlay para cerrar menú de overflow al hacer clic fuera */}
+                  {showOverflowMenu && (
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9998
+                      }}
+                      onClick={() => setShowOverflowMenu(false)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setShowOverflowMenu(false);
+                      }}
+                    />
+                  )}
                 </div>
-              )}
-              <div className="mt-3">
-                <p>Puedes arrastrar y soltar elementos en el panel lateral para reorganizarlos.</p>
-                <p>Haz clic en el botón "+" para crear carpetas nuevas.</p>
-                <p>Para eliminar un elemento, haz clic en el botón de la papelera que aparece al pasar el ratón.</p>
+                                <div style={{ flexGrow: 1, position: 'relative' }}>
+                  {/* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */}
+                  {[...sshTabs, ...fileExplorerTabs].map((tab) => {
+                    const filteredTabs = getFilteredTabs();
+                    const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
+                    const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
+                    const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
+                    
+                    return (
+                      <div 
+                        key={tab.key}
+                        style={{ 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          height: '100%',
+                          width: '100%',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          visibility: isActiveTab ? 'visible' : 'hidden',
+                          zIndex: isActiveTab ? 1 : 0,
+                          pointerEvents: isActiveTab ? 'auto' : 'none'
+                        }}
+                      >
+                        {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
+                          <FileExplorer
+                            sshConfig={tab.sshConfig}
+                            tabId={tab.key}
+                            iconTheme={iconTheme}
+                            explorerFont={explorerFont}
+                            explorerColorTheme={explorerColorTheme}
+                            explorerFontSize={explorerFontSize}
+                          />
+                        ) : tab.type === 'split' ? (
+                          <SplitLayout
+                            leftTerminal={tab.leftTerminal}
+                            rightTerminal={tab.rightTerminal}
+                            fontFamily={fontFamily}
+                            fontSize={fontSize}
+                            theme={terminalTheme.theme}
+                            onContextMenu={handleTerminalContextMenu}
+                            sshStatsByTabId={sshStatsByTabId}
+                            terminalRefs={terminalRefs}
+                            orientation={tab.orientation || 'vertical'}
+                            statusBarIconTheme={statusBarIconTheme}
+                          />
+                        ) : (
+                          <TerminalComponent
+                            key={tab.key}
+                            ref={el => terminalRefs.current[tab.key] = el}
+                            tabId={tab.key}
+                            sshConfig={tab.sshConfig}
+                            fontFamily={fontFamily}
+                            fontSize={fontSize}
+                            theme={terminalTheme.theme}
+                            onContextMenu={handleTerminalContextMenu}
+                            active={isActiveTab}
+                            stats={sshStatsByTabId[tab.key]}
+                            statusBarIconTheme={statusBarIconTheme}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </Card>
-          )}
-        </SplitterPanel>
-      </Splitter>
-      
-      <Dialog 
-        header="Crear Nueva Carpeta" 
-        visible={showFolderDialog} 
-        style={{ width: '30rem' }}
-        onHide={() => setShowFolderDialog(false)}
-        footer={(
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowFolderDialog(false)} className="p-button-text" />
-            <Button label="Crear" icon="pi pi-check" onClick={createNewFolder} autoFocus />
-          </div>
-        )}
-      >
-        <div className="p-fluid">
-          <div className="p-field">
-            <label htmlFor="folderName">Nombre de la carpeta</label>
-            <InputText
-              id="folderName"
-              value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') createNewFolder();
-              }}
-            />
-          </div>
-        </div>
-      </Dialog>
-
-      <Dialog
-        header="Nueva sesión SSH"
-        visible={showSSHDialog}
-        style={{ width: '25rem' }}
-        onHide={() => setShowSSHDialog(false)}
-        footer={
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowSSHDialog(false)} className="p-button-text" />
-            <Button label="Crear" icon="pi pi-check" onClick={createNewSSH} autoFocus />
-          </div>
-        }
-      >
-        <div className="p-fluid">
-          <div className="p-field">
-            <label htmlFor="sshName">Nombre</label>
-            <InputText id="sshName" value={sshName} onChange={e => setSSHName(e.target.value)} autoFocus />
-          </div>
-          <div className="p-field">
-            <label htmlFor="sshHost">Host</label>
-            <InputText id="sshHost" value={sshHost} onChange={e => setSSHHost(e.target.value)} />
-          </div>
-          <div className="p-field">
-            <label htmlFor="sshUser">Usuario</label>
-            <InputText 
-              id="sshUser" 
-              value={sshUser} 
-              onChange={e => setSSHUser(e.target.value)} 
-              placeholder="usuario o rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119"
-            />
-            <small className="p-d-block" style={{ color: '#666', marginTop: '0.25rem' }}>
-              Para Wallix usar formato: usuario@dominio@servidor:protocolo:usuario_destino
-            </small>
-          </div>
-          <div className="p-field">
-            <label htmlFor="sshPassword">Contraseña</label>
-            <InputText id="sshPassword" type="password" value={sshPassword} onChange={e => setSSHPassword(e.target.value)} />
-          </div>
-          <div className="p-field">
-            <label htmlFor="sshPort">Puerto</label>
-            <InputNumber 
-              id="sshPort" 
-              value={sshPort} 
-              onValueChange={e => setSSHPort(e.value || 22)} 
-              min={1} 
-              max={65535} 
-              placeholder="22"
-              useGrouping={false}
-            />
-          </div>
-          <div className="p-field">
-            <label htmlFor="sshRemoteFolder">Carpeta remota</label>
-            <InputText id="sshRemoteFolder" value={sshRemoteFolder} onChange={e => setSSHRemoteFolder(e.target.value)} placeholder="/home/usuario" />
-          </div>
-          <div className="p-field">
-            <label htmlFor="sshTargetFolder">Carpeta destino</label>
-            <Dropdown id="sshTargetFolder" value={sshTargetFolder} options={getAllFolders(nodes)} onChange={e => setSSHTargetFolder(e.value)} placeholder="Selecciona una carpeta (opcional)" showClear filter />
-          </div>
-        </div>
-      </Dialog>
-
-      <Dialog
-        header="Editar sesión SSH"
-        visible={showEditSSHDialog}
-        style={{ width: '25rem' }}
-        onHide={() => setShowEditSSHDialog(false)}
-        footer={
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowEditSSHDialog(false)} className="p-button-text" />
-            <Button label="Guardar" icon="pi pi-check" onClick={saveEditSSH} autoFocus />
-          </div>
-        }
-      >
-        <div className="p-fluid">
-          <div className="p-field">
-            <label htmlFor="editSSHName">Nombre</label>
-            <InputText id="editSSHName" value={editSSHName} onChange={e => setEditSSHName(e.target.value)} autoFocus />
-          </div>
-          <div className="p-field">
-            <label htmlFor="editSSHHost">Host</label>
-            <InputText id="editSSHHost" value={editSSHHost} onChange={e => setEditSSHHost(e.target.value)} />
-          </div>
-          <div className="p-field">
-            <label htmlFor="editSSHUser">Usuario</label>
-            <InputText 
-              id="editSSHUser" 
-              value={editSSHUser} 
-              onChange={e => setEditSSHUser(e.target.value)} 
-              placeholder="usuario o rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119"
-            />
-            <small className="p-d-block" style={{ color: '#666', marginTop: '0.25rem' }}>
-              Para Wallix usar formato: usuario@dominio@servidor:protocolo:usuario_destino
-            </small>
-          </div>
-          <div className="p-field">
-            <label htmlFor="editSSHPassword">Contraseña</label>
-            <InputText id="editSSHPassword" type="password" value={editSSHPassword} onChange={e => setEditSSHPassword(e.target.value)} />
-          </div>
-          <div className="p-field">
-            <label htmlFor="editSSHPort">Puerto</label>
-            <InputNumber 
-              id="editSSHPort" 
-              value={editSSHPort} 
-              onValueChange={e => setEditSSHPort(e.value || 22)} 
-              min={1} 
-              max={65535} 
-              placeholder="22"
-              useGrouping={false}
-            />
-          </div>
-          <div className="p-field">
-            <label htmlFor="editSSHRemoteFolder">Carpeta remota</label>
-            <InputText id="editSSHRemoteFolder" value={editSSHRemoteFolder} onChange={e => setEditSSHRemoteFolder(e.target.value)} placeholder="/home/usuario" />
-          </div>
-        </div>
-      </Dialog>
-
-
-
-      <Dialog
-        header="Editar carpeta"
-        visible={showEditFolderDialog}
-        style={{ width: '25rem' }}
-        onHide={() => setShowEditFolderDialog(false)}
-        footer={
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowEditFolderDialog(false)} className="p-button-text" />
-            <Button label="Guardar" icon="pi pi-check" onClick={saveEditFolder} autoFocus />
-          </div>
-        }
-      >
-        <div className="p-fluid">
-          <div className="p-field">
-            <label htmlFor="editFolderName">Nombre de la carpeta</label>
-            <InputText id="editFolderName" value={editFolderName} onChange={e => setEditFolderName(e.target.value)} autoFocus />
-          </div>
-        </div>
-      </Dialog>
-
+            ) : (
+              <Card title="Contenido Principal" style={{ flex: 1, minWidth: 0, minHeight: 0, height: '100%' }}>
+                <p className="m-0">
+                  Bienvenido a la aplicación de escritorio. Seleccione un archivo del panel lateral para ver su contenido.
+                </p>
+                {selectedNodeKey && (
+                  <div className="mt-3">
+                    <p>Elemento seleccionado: {Object.keys(selectedNodeKey)[0]}</p>
+                  </div>
+                )}
+                <div className="mt-3">
+                  <p>Puedes arrastrar y soltar elementos en el panel lateral para reorganizarlos.</p>
+                  <p>Haz clic en el botón "+" para crear carpetas nuevas.</p>
+                  <p>Para eliminar un elemento, haz clic en el botón de la papelera que aparece al pasar el ratón.</p>
+                </div>
+              </Card>
+            )}
+          </SplitterPanel>
+        </Splitter>
+      </div>
       <SettingsDialog
         visible={showSettingsDialog}
         onHide={() => setShowSettingsDialog(false)}
@@ -2858,8 +2693,6 @@ const App = () => {
         setTerminalTheme={setTerminalTheme}
         statusBarTheme={statusBarTheme}
         setStatusBarTheme={setStatusBarTheme}
-        statusBarIconTheme={statusBarIconTheme}
-        setStatusBarIconTheme={setStatusBarIconTheme}
         availableFonts={availableFonts}
         iconTheme={iconTheme}
         setIconTheme={setIconTheme}
@@ -2877,124 +2710,8 @@ const App = () => {
         setExplorerFontSize={setExplorerFontSize}
         statusBarPollingInterval={statusBarPollingInterval}
         setStatusBarPollingInterval={setStatusBarPollingInterval}
-      />
-
-      {/* Diálogo para crear nuevo grupo */}
-      <Dialog
-        header="Crear Nuevo Grupo de Pestañas"
-        visible={showCreateGroupDialog}
-        style={{ width: '25rem' }}
-        onHide={() => {
-          setShowCreateGroupDialog(false);
-          setNewGroupName('');
-        }}
-        footer={
-          <div>
-            <Button 
-              label="Cancelar" 
-              icon="pi pi-times" 
-              onClick={() => {
-                setShowCreateGroupDialog(false);
-                setNewGroupName('');
-              }} 
-              className="p-button-text" 
-            />
-            <Button 
-              label="Crear" 
-              icon="pi pi-check" 
-              onClick={createNewGroup} 
-              autoFocus 
-              disabled={!newGroupName.trim()}
-            />
-          </div>
-        }
-      >
-        <div className="p-fluid">
-          <div className="p-field">
-            <label htmlFor="groupName">Nombre del grupo</label>
-            <InputText
-              id="groupName"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="Ej: Producción, Desarrollo, Testing..."
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newGroupName.trim()) {
-                  createNewGroup();
-                }
-              }}
-            />
-          </div>
-          {/* {tabGroups.length > 0 && (
-            <div className="mt-3">
-              <small className="text-muted">
-                Grupos existentes: {tabGroups.map(g => g.name).join(', ')}
-              </small>
-            </div>
-          )} */}
-          <div className="p-field">
-            <label>Color del grupo</label>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap', margin: '10px 0 0 0' }}>
-              {GROUP_COLORS.map(color => (
-                <div
-                  key={color}
-                  onClick={() => setSelectedGroupColor(color)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: color,
-                    border: selectedGroupColor === color ? '3px solid #333' : '2px solid #fff',
-                    boxShadow: '0 0 2px #888',
-                    cursor: 'pointer',
-                    transition: 'border 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                  }}
-                  title={color}
-                >
-                  {selectedGroupColor === color && (
-                    <i className="pi pi-check" style={{ color: '#fff', fontSize: 18, textShadow: '0 0 2px #333' }}></i>
-                  )}
-                </div>
-              ))}
-              {/* Paleta de color personalizada */}
-              <label style={{ margin: 0, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Elegir color personalizado">
-                <div style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? selectedGroupColor : '#eee',
-                  border: selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? '3px solid #333' : '2px dashed #bbb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 0 2px #888',
-                }}>
-                  <i className="pi pi-palette" style={{ color: '#888', fontSize: 18 }}></i>
-                </div>
-                <input
-                  type="color"
-                  style={{ display: 'none' }}
-                  value={selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? selectedGroupColor : '#888888'}
-                  onChange={e => setSelectedGroupColor(e.target.value)}
-                />
-              </label>
-            </div>
-          </div>
-        </div>
-      </Dialog>
-      
-      {/* Menú contextual del árbol de sesiones */}
-      <ContextMenu
-        ref={treeContextMenuRef}
-        model={
-          isGeneralTreeMenu 
-            ? getGeneralTreeContextMenuItems() 
-            : (selectedNode ? getTreeContextMenuItems(selectedNode) : [])
-        }
+        statusBarIconTheme={statusBarIconTheme}
+        setStatusBarIconTheme={setStatusBarIconTheme}
       />
     </div>
   );
