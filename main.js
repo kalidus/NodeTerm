@@ -2,7 +2,7 @@ try {
   require('electron-reloader')(module);
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu } = require('electron');
 const path = require('path');
 const url = require('url');
 const SSH2Promise = require('ssh2-promise');
@@ -384,6 +384,28 @@ function createWindow() {
   });
 
   mainWindow.removeMenu();
+
+  // Menú de desarrollo para abrir DevTools
+  const isMac = process.platform === 'darwin';
+  const template = [
+    ...(isMac ? [{ role: 'appMenu' }] : []),
+    {
+      label: 'Ver',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forcereload' },
+        { role: 'toggledevtools', accelerator: 'F12' },
+        { type: 'separator' },
+        { role: 'resetzoom' },
+        { role: 'zoomin' },
+        { role: 'zoomout' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    }
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 app.on('ready', createWindow);
