@@ -1424,3 +1424,87 @@ html, body, #root {
   padding: 10px !important;
   box-sizing: border-box !important;
 }
+
+/* Estilos para el menú de la aplicación */
+.app-context-menu, .app-submenu {
+  font-family: var(--font-family, 'Public Sans', Arial, sans-serif) !important;
+  color: var(--ui-text-primary) !important;
+  background: var(--ui-sidebar-bg) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  user-select: none;
+}
+
+.app-context-menu .menu-item,
+.app-submenu .menu-item {
+  transition: background-color 0.15s ease !important;
+  position: relative;
+}
+
+.app-context-menu .menu-item:hover,
+.app-submenu .menu-item:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.app-context-menu .menu-item:active,
+.app-submenu .menu-item:active {
+  background: var(--ui-active-bg, rgba(255, 255, 255, 0.2)) !important;
+}
+
+/* Efecto de hover para elementos con submenú */
+.app-context-menu .menu-item[data-has-submenu="true"]:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+}
+
+/* Animación para submenús */
+.app-submenu {
+  animation: slideIn 0.15s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Estilos para separadores en menús */
+.app-context-menu .menu-separator,
+.app-submenu .menu-separator {
+  height: 1px;
+  background: var(--ui-sidebar-border) !important;
+  margin: 4px 8px;
+  opacity: 0.5;
+}
+
+/* Estilos para atajos de teclado */
+.menu-shortcut {
+  font-size: 12px !important;
+  color: var(--ui-text-secondary, #888) !important;
+  font-weight: normal !important;
+}
+
+/* Estilos para iconos en menús */
+.app-context-menu .menu-item i,
+.app-submenu .menu-item i {
+  color: var(--ui-text-secondary, #888) !important;
+  transition: color 0.15s ease;
+}
+
+.app-context-menu .menu-item:hover i,
+.app-submenu .menu-item:hover i {
+  color: var(--ui-text-primary) !important;
+}
+
+/* Estilos para el botón de menú en el sidebar footer */
+.sidebar-footer .sidebar-action-button.p-button-text {
+  transition: all 0.2s ease !important;
+}
+
+.sidebar-footer .sidebar-action-button.p-button-text:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+}

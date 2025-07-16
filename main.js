@@ -409,6 +409,55 @@ ipcMain.handle('get-version-info', () => {
   };
 });
 
+// IPC handlers para funciones de View
+ipcMain.handle('app:reload', () => {
+  if (mainWindow) {
+    mainWindow.reload();
+  }
+});
+
+ipcMain.handle('app:force-reload', () => {
+  if (mainWindow) {
+    mainWindow.webContents.reloadIgnoringCache();
+  }
+});
+
+ipcMain.handle('app:toggle-dev-tools', () => {
+  if (mainWindow) {
+    if (mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.closeDevTools();
+    } else {
+      mainWindow.webContents.openDevTools();
+    }
+  }
+});
+
+ipcMain.handle('app:zoom-in', () => {
+  if (mainWindow) {
+    const currentZoom = mainWindow.webContents.getZoomLevel();
+    mainWindow.webContents.setZoomLevel(Math.min(currentZoom + 0.5, 3));
+  }
+});
+
+ipcMain.handle('app:zoom-out', () => {
+  if (mainWindow) {
+    const currentZoom = mainWindow.webContents.getZoomLevel();
+    mainWindow.webContents.setZoomLevel(Math.max(currentZoom - 0.5, -3));
+  }
+});
+
+ipcMain.handle('app:actual-size', () => {
+  if (mainWindow) {
+    mainWindow.webContents.setZoomLevel(0);
+  }
+});
+
+ipcMain.handle('app:toggle-fullscreen', () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+});
+
 // IPC handlers para clipboard - Ya están definidos más adelante en el archivo
 
 // IPC handler to establish an SSH connection
