@@ -12,7 +12,8 @@ const SplitLayout = ({
   onContextMenu, 
   sshStatsByTabId,
   terminalRefs,
-  orientation = 'vertical'
+  orientation = 'vertical',
+  statusBarIconTheme = 'classic'
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
@@ -115,6 +116,7 @@ const SplitLayout = ({
             active={true}
             stats={sshStatsByTabId[leftTerminal.key]}
             hideStatusBar={true}
+            statusBarIconTheme={statusBarIconTheme}
           />
         </div>
       </Resizable>
@@ -135,6 +137,7 @@ const SplitLayout = ({
           active={true}
           stats={sshStatsByTabId[rightTerminal.key]}
           hideStatusBar={true}
+          statusBarIconTheme={statusBarIconTheme}
         />
       </div>
     </div>

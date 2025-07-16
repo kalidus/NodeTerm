@@ -8,6 +8,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import { Slider } from 'primereact/slider';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
+import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
 import { themes } from '../themes';
 import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
@@ -43,7 +44,9 @@ const SettingsDialog = ({
   explorerFontSize,
   setExplorerFontSize,
   statusBarPollingInterval,
-  setStatusBarPollingInterval
+  setStatusBarPollingInterval,
+  statusBarIconTheme,
+  setStatusBarIconTheme
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -357,6 +360,13 @@ const SettingsDialog = ({
                   <StatusBarThemeSelector 
                     currentTheme={statusBarTheme}
                     onThemeChange={setStatusBarTheme}
+                  />
+                  
+                  <Divider style={{ margin: '2rem 0' }} />
+                  
+                  <StatusBarIconThemeSelector 
+                    currentTheme={statusBarIconTheme}
+                    onThemeChange={setStatusBarIconTheme}
                   />
                   <div style={{ marginTop: 24, width: 320 }}>
                     <label htmlFor="statusbar-height-slider" style={{
