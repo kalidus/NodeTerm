@@ -2047,6 +2047,7 @@ const App = () => {
             iconTheme={iconThemeSidebar}
             explorerFont={sidebarFont}
             explorerFontSize={sidebarFontSize}
+            uiTheme={terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light'}
           />
         </SplitterPanel>
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>

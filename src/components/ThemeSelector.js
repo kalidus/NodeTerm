@@ -239,7 +239,10 @@ const ThemeSelector = ({ showPreview = false }) => {
               style={{ 
                 width: '100%', 
                 marginTop: '15px',
-                padding: '8px'
+                padding: '8px',
+                backgroundColor: colors.buttonPrimary,
+                color: colors.buttonPrimaryText,
+                border: 'none'
               }}
               onClick={(e) => {
                 e.stopPropagation();
