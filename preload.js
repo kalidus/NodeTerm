@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld('electron', {
     showSaveDialog: (options) => ipcRenderer.invoke('dialog:show-save-dialog', options),
     showOpenDialog: (options) => ipcRenderer.invoke('dialog:show-open-dialog', options)
   },
+  app: {
+    getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
+    quit: () => ipcRenderer.send('app-quit')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -78,4 +82,17 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.removeAllListeners(channel);
     }
   }
+});
+
+// Crear alias para compatibilidad con el código existente
+contextBridge.exposeInMainWorld('electronAPI', {
+  getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
+  quitApp: () => ipcRenderer.send('app-quit'),
+  reload: () => ipcRenderer.invoke('app:reload'),
+  forceReload: () => ipcRenderer.invoke('app:force-reload'),
+  toggleDevTools: () => ipcRenderer.invoke('app:toggle-dev-tools'),
+  zoomIn: () => ipcRenderer.invoke('app:zoom-in'),
+  zoomOut: () => ipcRenderer.invoke('app:zoom-out'),
+  actualSize: () => ipcRenderer.invoke('app:actual-size'),
+  toggleFullscreen: () => ipcRenderer.invoke('app:toggle-fullscreen')
 }); 
