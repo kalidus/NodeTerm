@@ -1,5 +1,16 @@
 import { uiThemes } from '../themes/ui-themes';
 
+// Convierte un color hex a rgba con opacidad
+function hexToRgba(hex, alpha = 1) {
+  let c = hex.replace('#', '');
+  if (c.length === 3) c = c.split('').map(x => x + x).join('');
+  const num = parseInt(c, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 class ThemeManager {
   constructor() {
     this.currentTheme = null;
@@ -29,6 +40,19 @@ class ThemeManager {
   }
 
   generateCSS(colors) {
+    // Determinar si el fondo de la sidebar es claro u oscuro
+    function isColorLight(hex) {
+      let c = hex.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      // Percepción de luminosidad
+      return (0.299 * r + 0.587 * g + 0.114 * b) > 186;
+    }
+    const sidebarBgIsLight = isColorLight(colors.sidebarBackground);
+    const sidebarButtonText = colors.sidebarText;
     const css = `
       /* === ROOT VARIABLES === */
       :root {
@@ -74,19 +98,18 @@ class ThemeManager {
         --ui-button-secondary-text: ${colors.buttonSecondaryText};
         --ui-button-hover: ${colors.buttonHover};
         
+        --ui-sidebar-button-bg: ${hexToRgba(colors.buttonPrimary, 0.12)};
+        --ui-sidebar-button-text: ${sidebarButtonText};
         --ui-context-bg: ${colors.contextMenuBackground};
         --ui-context-text: ${colors.contextMenuText};
         --ui-context-hover: ${colors.contextMenuHover};
         --ui-context-border: ${colors.contextMenuBorder};
         --ui-context-shadow: ${colors.contextMenuShadow};
-<<<<<<< HEAD
-=======
         
         /* File Explorer Button Colors */
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
->>>>>>> v1.3.1
       }
 
       /* === SIDEBAR STYLES === */
