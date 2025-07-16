@@ -17,8 +17,8 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed 
             background: 'var(--ui-sidebar-footer-bg, #223)',
             color: 'var(--ui-sidebar-footer-fg, #fff)',
             border: 'none',
-            display: 'flex',
-            alignItems: 'center',
+    display: 'flex',
+    alignItems: 'center',
             justifyContent: 'center',
             fontSize: 22,
             cursor: 'pointer',
@@ -451,8 +451,8 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed 
     />
     <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={onConfigClick} tooltip="Configuración" />
       </div>
-    </div>
-  );
+  </div>
+);
 };
 
 export default SidebarFooter; 

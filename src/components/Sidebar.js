@@ -20,6 +20,7 @@ const Sidebar = ({
   setShowCreateGroupDialog,
   setShowSettingsDialog,
   onTreeAreaContextMenu,
+  onNodeContextMenu, // <-- Añadir prop
   onDragDrop,
   setDraggedNodeKey,
   nodeTemplate,
@@ -233,7 +234,7 @@ const Sidebar = ({
               onDragEnd={() => {}}
               className="sidebar-tree"
               style={{ fontSize: `${explorerFontSize}px` }}
-              nodeTemplate={nodeTemplate}
+              nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })} // <-- Pasar handler a nodeTemplate
               filter
               filterMode="strict"
               filterPlaceholder="Buscar..."
