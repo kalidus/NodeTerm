@@ -3,6 +3,7 @@ import { Button } from 'primereact/button';
 import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
+import { uiThemes } from '../themes/ui-themes';
 
 const Sidebar = ({
   sidebarCollapsed,
@@ -24,8 +25,10 @@ const Sidebar = ({
   nodeTemplate,
   iconTheme,
   explorerFont,
-  explorerFontSize = 14
+  explorerFontSize = 14,
+  uiTheme = 'Light' // Nuevo prop para el tema activo
 }) => {
+  const colors = uiThemes[uiTheme]?.colors || uiThemes['Light'].colors;
   return (
     <div 
       className="sidebar-container"
@@ -62,7 +65,17 @@ const Sidebar = ({
             onClick={() => setSidebarCollapsed(v => !v)} 
             tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
             tooltipOptions={{ position: 'right' }} 
-            style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            style={{ 
+              margin: 0, 
+              width: 40, 
+              height: 40, 
+              minWidth: 40, 
+              minHeight: 40, 
+              fontSize: 18,
+              backgroundColor: colors.sidebarBackground,
+              color: colors.sidebarText,
+              border: 'none'
+            }} 
           />
           <Button 
             icon="pi pi-server" 
@@ -70,7 +83,17 @@ const Sidebar = ({
             onClick={() => setShowSSHDialog(true)} 
             tooltip="Nueva conexión SSH" 
             tooltipOptions={{ position: 'right' }} 
-            style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            style={{ 
+              margin: 0, 
+              width: 40, 
+              height: 40, 
+              minWidth: 40, 
+              minHeight: 40, 
+              fontSize: 18,
+              backgroundColor: colors.sidebarBackground,
+              color: colors.sidebarText,
+              border: 'none'
+            }} 
           />
           {/* Ocultar el botón de crear carpeta cuando la sidebar está colapsada */}
           {!sidebarCollapsed && (
@@ -80,7 +103,17 @@ const Sidebar = ({
               onClick={() => openNewFolderDialog(null)} 
               tooltip="Crear carpeta" 
               tooltipOptions={{ position: 'right' }} 
-              style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                backgroundColor: colors.sidebarBackground,
+                color: colors.sidebarText,
+                border: 'none'
+              }} 
             />
           )}
           {/* Ocultar el botón de desplegar/plegar todo cuando la sidebar está colapsada */}
@@ -91,7 +124,17 @@ const Sidebar = ({
               onClick={toggleExpandAll} 
               tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"} 
               tooltipOptions={{ position: 'right' }} 
-              style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                backgroundColor: colors.sidebarBackground,
+                color: colors.sidebarText,
+                border: 'none'
+              }} 
             />
           )}
           <Button 
@@ -100,7 +143,17 @@ const Sidebar = ({
             onClick={() => setShowCreateGroupDialog(true)} 
             tooltip="Crear grupo de pestañas" 
             tooltipOptions={{ position: 'right' }} 
-            style={{ margin: 0, width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }} 
+            style={{ 
+              margin: 0, 
+              width: 40, 
+              height: 40, 
+              minWidth: 40, 
+              minHeight: 40, 
+              fontSize: 18,
+              backgroundColor: colors.sidebarBackground,
+              color: colors.sidebarText,
+              border: 'none'
+            }} 
           />
           
           {/* Botones fijos abajo */}
@@ -132,7 +185,16 @@ const Sidebar = ({
               onClick={() => setShowSettingsDialog(true)} 
               tooltip="Configuración" 
               tooltipOptions={{ position: 'right' }} 
-              style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18, marginTop: 2 }} 
+              style={{ 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                backgroundColor: colors.sidebarBackground,
+                color: colors.sidebarText,
+                border: 'none'
+              }} 
             />
           </div>
         </div>
