@@ -94,5 +94,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   zoomIn: () => ipcRenderer.invoke('app:zoom-in'),
   zoomOut: () => ipcRenderer.invoke('app:zoom-out'),
   actualSize: () => ipcRenderer.invoke('app:actual-size'),
-  toggleFullscreen: () => ipcRenderer.invoke('app:toggle-fullscreen')
+  toggleFullscreen: () => ipcRenderer.invoke('app:toggle-fullscreen'),
+  minimize: () => ipcRenderer.invoke('window:minimize'),
+  maximize: () => ipcRenderer.invoke('window:maximize'),
+  unmaximize: () => ipcRenderer.invoke('window:unmaximize'),
+  isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  close: () => ipcRenderer.invoke('window:close')
 }); 

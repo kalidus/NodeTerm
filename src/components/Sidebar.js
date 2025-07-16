@@ -156,45 +156,13 @@ const Sidebar = ({
             }} 
           />
           
-          {/* Botones fijos abajo */}
-          <div style={{ 
-            position: 'absolute', 
-            bottom: 8, 
-            left: 0, 
-            width: '100%', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            gap: 4 
-          }}>
-            {/* Solo mostrar el botón de Acerca de NodeTerm si la sidebar NO está colapsada */}
-            {/* {sidebarCollapsed ? null : ( */}
-            {/*   <Button  */}
-            {/*     icon="pi pi-info-circle"  */}
-            {/*     className="p-button-rounded p-button-text sidebar-action-button"  */}
-            {/*     onClick={() => setShowSettingsDialog(true)}  */}
-            {/*     tooltip="Acerca de NodeTerm"  */}
-            {/*     tooltipOptions={{ position: 'right' }}  */}
-            {/*     style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, fontSize: 18 }}  */}
-            {/*   /> */}
-            {/* )} */}
-            {/* Mostrar solo el botón de configuración cuando la sidebar está colapsada */}
-            <Button 
-              icon="pi pi-cog" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowSettingsDialog(true)} 
-              tooltip="Configuración" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                backgroundColor: colors.sidebarBackground,
-                color: colors.sidebarText,
-                border: 'none'
-              }} 
+          {/* Footer unificado abajo */}
+          <div style={{ position: 'absolute', bottom: 8, left: 0, width: '100%' }}>
+            <SidebarFooter 
+              onConfigClick={() => setShowSettingsDialog(true)} 
+              allExpanded={allExpanded}
+              toggleExpandAll={toggleExpandAll}
+              collapsed={sidebarCollapsed}
             />
           </div>
         </div>
@@ -278,6 +246,7 @@ const Sidebar = ({
             onConfigClick={() => setShowSettingsDialog(true)} 
             allExpanded={allExpanded}
             toggleExpandAll={toggleExpandAll}
+            collapsed={sidebarCollapsed}
           />
         </>
       )}

@@ -1,7 +1,33 @@
 import React from 'react';
 import { Button } from 'primereact/button';
 
-const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
+const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed }) => {
+  if (collapsed) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+        <Button
+          icon="pi pi-cog"
+          className="p-button-rounded p-button-text sidebar-action-button"
+          onClick={onConfigClick}
+          tooltip="Configuración"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: 'var(--ui-sidebar-footer-bg, #223)',
+            color: 'var(--ui-sidebar-footer-fg, #fff)',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 22,
+            cursor: 'pointer',
+            margin: 4
+          }}
+        />
+      </div>
+    );
+  }
   const handleAppMenuClick = (event) => {
     // Estructura del menú con submenús
     const menuStructure = [
@@ -408,17 +434,8 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
   };
   
   return (
-    <div className="sidebar-footer" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0.5rem 1rem',
-      borderTop: '1px solid var(--ui-sidebar-border)',
-      background: 'var(--ui-sidebar-bg)',
-      minHeight: '48px',
-      boxSizing: 'border-box',
-      gap: '0.5rem'
-    }}>
+    <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '4px 8px' }}>
+      {/* Botón menú, expandir/plegar, config, etc. */}
       <Button
         icon="pi pi-bars"
         className="p-button-rounded p-button-text sidebar-action-button"
@@ -426,16 +443,16 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
         tooltip="Menú de la aplicación"
       />
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <Button
-          icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"}
-          className="p-button-rounded p-button-text sidebar-action-button"
-          onClick={toggleExpandAll}
-          tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"}
-        />
-        <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={onConfigClick} tooltip="Configuración" />
+    <Button
+      icon={allExpanded ? "pi pi-angle-double-up" : "pi pi-angle-double-down"}
+      className="p-button-rounded p-button-text sidebar-action-button"
+      onClick={toggleExpandAll}
+      tooltip={allExpanded ? "Plegar todo" : "Desplegar todo"}
+    />
+    <Button icon="pi pi-cog" className="p-button-rounded p-button-text sidebar-action-button" onClick={onConfigClick} tooltip="Configuración" />
       </div>
     </div>
   );
 };
 
-export default SidebarFooter;
+export default SidebarFooter; 
