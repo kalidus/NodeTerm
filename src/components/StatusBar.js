@@ -83,8 +83,8 @@ const StatusBar = ({ stats, active }) => {
                     <div className="status-bar-section cpu-section">
                         <FontAwesomeIcon 
                             icon={faMicrochip} 
-                            className="status-bar-icon" 
-                            style={{ color: 'var(--statusbar-cpu-color, var(--statusbar-icon-color, inherit))' }}
+                            className="status-bar-icon cpu" 
+                            style={{}}
                         />
                         <span>{cpu}%</span>
                         <CpuSparkline history={cpuHistory || []} />
@@ -94,8 +94,8 @@ const StatusBar = ({ stats, active }) => {
                     <div className="status-bar-section">
                         <FontAwesomeIcon 
                             icon={faMemory} 
-                            className="status-bar-icon" 
-                            style={{ color: 'var(--statusbar-memory-color, var(--statusbar-icon-color, inherit))' }}
+                            className="status-bar-icon mem" 
+                            style={{}}
                         />
                         <span>{formatBytes(mem.used)} / {formatBytes(mem.total)}</span>
                     </div>
@@ -104,17 +104,14 @@ const StatusBar = ({ stats, active }) => {
                     <div className="status-bar-section network-section">
                         <FontAwesomeIcon 
                             icon={faArrowDown} 
-                            className="status-bar-icon" 
-                            style={{ color: 'var(--statusbar-network-down-color, var(--statusbar-icon-color, inherit))' }}
+                            className="status-bar-icon net-down" 
+                            style={{}}
                         />
                         <span>{formatSpeed(network.rx_speed)}</span>
                         <FontAwesomeIcon 
                             icon={faArrowUp} 
-                            className="status-bar-icon" 
-                            style={{ 
-                                marginLeft: '5px',
-                                color: 'var(--statusbar-network-up-color, var(--statusbar-icon-color, inherit))' 
-                            }}
+                            className="status-bar-icon net-up" 
+                            style={{ marginLeft: '5px' }}
                         />
                         <span>{formatSpeed(network.tx_speed)}</span>
                     </div>
@@ -125,8 +122,8 @@ const StatusBar = ({ stats, active }) => {
                             <div key={index} className="disk-info-item">
                                 <FontAwesomeIcon 
                                     icon={faHdd} 
-                                    className="status-bar-icon" 
-                                    style={{ color: 'var(--statusbar-disk-color, var(--statusbar-icon-color, inherit))' }}
+                                    className="status-bar-icon disk" 
+                                    style={{}}
                                 />
                                 <span className="disk-info-text">{d.fs}: {d.use}%</span>
                             </div>
