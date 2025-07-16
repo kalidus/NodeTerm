@@ -162,6 +162,29 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
       return;
     }
     
+    // Variables globales para el menú
+    let activeSubmenu = null;
+    let submenuTimer = null;
+    
+    // Función para cerrar submenú con delay
+    const scheduleSubmenuClose = () => {
+      if (submenuTimer) clearTimeout(submenuTimer);
+      submenuTimer = setTimeout(() => {
+        if (activeSubmenu && document.body.contains(activeSubmenu)) {
+          document.body.removeChild(activeSubmenu);
+          activeSubmenu = null;
+        }
+      }, 500); // Aumentar delay a 500ms
+    };
+    
+    // Función para cancelar el cierre
+    const cancelSubmenuClose = () => {
+      if (submenuTimer) {
+        clearTimeout(submenuTimer);
+        submenuTimer = null;
+      }
+    };
+    
     // Crear el menú contextual principal
     const contextMenu = document.createElement('div');
     contextMenu.className = 'app-context-menu';
@@ -177,8 +200,6 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
       font-family: var(--font-family);
       font-size: 14px;
     `;
-    
-    let activeSubmenu = null;
     
     const createMenuItem = (item, isSubmenu = false) => {
       if (item.separator) {
@@ -242,18 +263,18 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
         menuItem.appendChild(arrow);
       }
       
-      // Eventos del menú
-      menuItem.addEventListener('mouseenter', () => {
-        menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
-        
-        // Limpiar submenú anterior
-        if (activeSubmenu && activeSubmenu.parentNode) {
-          activeSubmenu.parentNode.removeChild(activeSubmenu);
-          activeSubmenu = null;
-        }
-        
-        // Crear submenú si existe
-        if (item.submenu) {
+      // Eventos para elementos con submenú
+      if (item.submenu) {
+        menuItem.addEventListener('mouseenter', () => {
+          cancelSubmenuClose();
+          menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
+          
+          // Limpiar submenú anterior
+          if (activeSubmenu && document.body.contains(activeSubmenu)) {
+            document.body.removeChild(activeSubmenu);
+          }
+          
+          // Crear nuevo submenú
           activeSubmenu = document.createElement('div');
           activeSubmenu.className = 'app-submenu';
           activeSubmenu.style.cssText = `
@@ -269,6 +290,10 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
             font-size: 14px;
           `;
           
+          // Agregar eventos al submenú ANTES de agregar items
+          activeSubmenu.addEventListener('mouseenter', cancelSubmenuClose);
+          activeSubmenu.addEventListener('mouseleave', scheduleSubmenuClose);
+          
           item.submenu.forEach(subItem => {
             const subMenuItem = createMenuItem(subItem, true);
             activeSubmenu.appendChild(subMenuItem);
@@ -281,12 +306,12 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
             const menuRect = menuItem.getBoundingClientRect();
             const submenuRect = activeSubmenu.getBoundingClientRect();
             
-            let left = menuRect.right + 5;
+            let left = menuRect.right - 1; // Casi sin gap
             let top = menuRect.top;
             
             // Ajustar si se sale de la pantalla
             if (left + submenuRect.width > window.innerWidth) {
-              left = menuRect.left - submenuRect.width - 5;
+              left = menuRect.left - submenuRect.width + 1;
             }
             if (top + submenuRect.height > window.innerHeight) {
               top = window.innerHeight - submenuRect.height - 8;
@@ -294,19 +319,30 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
             
             activeSubmenu.style.left = `${left}px`;
             activeSubmenu.style.top = `${top}px`;
-          }, 10);
-        }
-      });
-      
-      menuItem.addEventListener('mouseleave', () => {
-        menuItem.style.backgroundColor = 'transparent';
-      });
+          }, 5);
+        });
+        
+        menuItem.addEventListener('mouseleave', scheduleSubmenuClose);
+      } else {
+        // Eventos para elementos normales
+        menuItem.addEventListener('mouseenter', () => {
+          menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
+        });
+        
+        menuItem.addEventListener('mouseleave', () => {
+          menuItem.style.backgroundColor = 'transparent';
+        });
+      }
       
       if (item.command) {
         menuItem.addEventListener('click', () => {
           item.command();
-          // Cerrar todos los menús
-          const allMenus = document.querySelectorAll('.app-context-menu, .app-submenu');
+          // Cerrar todo
+          if (submenuTimer) clearTimeout(submenuTimer);
+          if (activeSubmenu && document.body.contains(activeSubmenu)) {
+            document.body.removeChild(activeSubmenu);
+          }
+          const allMenus = document.querySelectorAll('.app-context-menu');
           allMenus.forEach(menu => {
             if (document.body.contains(menu)) {
               document.body.removeChild(menu);
@@ -352,7 +388,11 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
       const isClickOnSubmenu = document.querySelector('.app-submenu')?.contains(e.target);
       
       if (!isClickOnButton && !isClickOnMenu && !isClickOnSubmenu) {
-        const allMenus = document.querySelectorAll('.app-context-menu, .app-submenu');
+        if (submenuTimer) clearTimeout(submenuTimer);
+        if (activeSubmenu && document.body.contains(activeSubmenu)) {
+          document.body.removeChild(activeSubmenu);
+        }
+        const allMenus = document.querySelectorAll('.app-context-menu');
         allMenus.forEach(menu => {
           if (document.body.contains(menu)) {
             document.body.removeChild(menu);
