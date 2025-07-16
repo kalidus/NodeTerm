@@ -58,6 +58,16 @@ export const uiThemes = {
       contextMenuHover: '#f5f5f5',
       contextMenuBorder: '#e0e0e0',
       contextMenuShadow: 'rgba(0, 0, 0, 0.15)'
+    },
+    statusBarPalette: {
+      fondo: '#f8f9fa',
+      texto: '#495057',
+      disco: '#ffb300',
+      redUp: '#00c853',
+      redDown: '#1976d2',
+      cpu: '#1976d2',
+      memoria: '#00c853',
+      iconos: '#1976d2'
     }
   },
   
@@ -120,6 +130,16 @@ export const uiThemes = {
       contextMenuHover: '#3e3e42',
       contextMenuBorder: '#3e3e42',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#007acc',
+      texto: '#ffffff',
+      disco: '#ffb300',
+      redUp: '#00e676',
+      redDown: '#2196f3',
+      cpu: '#2196f3',
+      memoria: '#00e676',
+      iconos: '#2196f3'
     }
   },
   
@@ -182,6 +202,16 @@ export const uiThemes = {
       contextMenuHover: '#eee8d5',
       contextMenuBorder: '#d9d2c4',
       contextMenuShadow: 'rgba(0, 0, 0, 0.15)'
+    },
+    statusBarPalette: {
+      fondo: '#93a1a1',
+      texto: '#fdf6e3',
+      disco: '#b58900',
+      redUp: '#859900',
+      redDown: '#268bd2',
+      cpu: '#268bd2',
+      memoria: '#859900',
+      iconos: '#268bd2'
     }
   },
   
@@ -244,6 +274,16 @@ export const uiThemes = {
       contextMenuHover: '#073642',
       contextMenuBorder: '#586e75',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#268bd2',
+      texto: '#002b36',
+      disco: '#b58900',
+      redUp: '#859900',
+      redDown: '#268bd2',
+      cpu: '#268bd2',
+      memoria: '#859900',
+      iconos: '#268bd2'
     }
   },
   
@@ -306,6 +346,16 @@ export const uiThemes = {
       contextMenuHover: '#44475a',
       contextMenuBorder: '#6272a4',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#282a36',
+      texto: '#f8f8f2',
+      disco: '#ffb86c',
+      redUp: '#50fa7b',
+      redDown: '#8be9fd',
+      cpu: '#8be9fd',
+      memoria: '#50fa7b',
+      iconos: '#8be9fd'
     }
   },
   
@@ -368,6 +418,16 @@ export const uiThemes = {
       contextMenuHover: '#3b4252',
       contextMenuBorder: '#434c5e',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#2e3440',
+      texto: '#eceff4',
+      disco: '#ebcb8b',
+      redUp: '#a3be8c',
+      redDown: '#5e81ac',
+      cpu: '#5e81ac',
+      memoria: '#a3be8c',
+      iconos: '#5e81ac'
     }
   },
   
@@ -421,6 +481,16 @@ export const uiThemes = {
       contextMenuHover: '#283457',
       contextMenuBorder: '#414868',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#1a1b26',
+      texto: '#d6deeb',
+      disco: '#ecc48d',
+      redUp: '#addb67',
+      redDown: '#82aaff',
+      cpu: '#82aaff',
+      memoria: '#addb67',
+      iconos: '#82aaff'
     }
   },
   
@@ -474,6 +544,16 @@ export const uiThemes = {
       contextMenuHover: '#313244',
       contextMenuBorder: '#45475a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#1e1e2e',
+      texto: '#cdd6f4',
+      disco: '#fabd2f',
+      redUp: '#b8bb26',
+      redDown: '#89b4fa',
+      cpu: '#89b4fa',
+      memoria: '#b8bb26',
+      iconos: '#89b4fa'
     }
   },
   
@@ -527,6 +607,16 @@ export const uiThemes = {
       contextMenuHover: '#495495',
       contextMenuBorder: '#6b5b95',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#2a2139',
+      texto: '#f92aad',
+      disco: '#ffb86c',
+      redUp: '#72f1b8',
+      redDown: '#03edf9',
+      cpu: '#03edf9',
+      memoria: '#72f1b8',
+      iconos: '#03edf9'
     }
   },
   
@@ -580,6 +670,16 @@ export const uiThemes = {
       contextMenuHover: '#717cb4',
       contextMenuBorder: '#676e95',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#292d3e',
+      texto: '#a6accd',
+      disco: '#ebcb8b',
+      redUp: '#89ddff',
+      redDown: '#82aaff',
+      cpu: '#82aaff',
+      memoria: '#89ddff',
+      iconos: '#82aaff'
     }
   },
   
@@ -633,6 +733,16 @@ export const uiThemes = {
       contextMenuHover: '#404040',
       contextMenuBorder: '#808080',
       contextMenuShadow: 'rgba(0, 0, 0, 0.6)'
+    },
+    statusBarPalette: {
+      fondo: '#000000',
+      texto: '#ffffff',
+      disco: '#ffb300',
+      redUp: '#00e676',
+      redDown: '#0000ff',
+      cpu: '#0000ff',
+      memoria: '#00e676',
+      iconos: '#0000ff'
     }
   },
   
@@ -686,6 +796,16 @@ export const uiThemes = {
       contextMenuHover: '#253340',
       contextMenuBorder: '#323232',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#0f1419',
+      texto: '#e6e1cf',
+      disco: '#ebcb8b',
+      redUp: '#95e6cb',
+      redDown: '#59c2ff',
+      cpu: '#59c2ff',
+      memoria: '#95e6cb',
+      iconos: '#59c2ff'
     }
   },
   
@@ -739,6 +859,16 @@ export const uiThemes = {
       contextMenuHover: '#2f2f2f',
       contextMenuBorder: '#709080',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#3f3f3f',
+      texto: '#dcdccc',
+      disco: '#fabd2f',
+      redUp: '#93e0e3',
+      redDown: '#709080',
+      cpu: '#709080',
+      memoria: '#93e0e3',
+      iconos: '#709080'
     }
   },
   
@@ -792,6 +922,16 @@ export const uiThemes = {
       contextMenuHover: '#373b41',
       contextMenuBorder: '#969896',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#1d1f21',
+      texto: '#c5c8c6',
+      disco: '#ebcb8b',
+      redUp: '#8abeb7',
+      redDown: '#81a2be',
+      cpu: '#81a2be',
+      memoria: '#8abeb7',
+      iconos: '#81a2be'
     }
   },
   
@@ -845,6 +985,16 @@ export const uiThemes = {
       contextMenuHover: '#4f5b66',
       contextMenuBorder: '#65737e',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#1b2b34',
+      texto: '#d8dee9',
+      disco: '#ebcb8b',
+      redUp: '#5fb3b3',
+      redDown: '#6699cc',
+      cpu: '#6699cc',
+      memoria: '#5fb3b3',
+      iconos: '#6699cc'
     }
   },
   
@@ -898,6 +1048,16 @@ export const uiThemes = {
       contextMenuHover: '#e5e5e6',
       contextMenuBorder: '#4f525d',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    },
+    statusBarPalette: {
+      fondo: '#fafafa',
+      texto: '#383a42',
+      disco: '#fabd2f',
+      redUp: '#a626a4',
+      redDown: '#4078f2',
+      cpu: '#4078f2',
+      memoria: '#a626a4',
+      iconos: '#4078f2'
     }
   },
   
@@ -951,6 +1111,16 @@ export const uiThemes = {
       contextMenuHover: '#414649',
       contextMenuBorder: '#7f8c8d',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#232629',
+      texto: '#fcfcfc',
+      disco: '#fabd2f',
+      redUp: '#1cdc9a',
+      redDown: '#3daee9',
+      cpu: '#3daee9',
+      memoria: '#1cdc9a',
+      iconos: '#3daee9'
     }
   },
   
@@ -1004,6 +1174,16 @@ export const uiThemes = {
       contextMenuHover: '#444155',
       contextMenuBorder: '#5d4d7a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#292b2e',
+      texto: '#b2b2b2',
+      disco: '#ebcb8b',
+      redUp: '#2d9574',
+      redDown: '#4f97d7',
+      cpu: '#4f97d7',
+      memoria: '#2d9574',
+      iconos: '#4f97d7'
     }
   },
   'Night Owl': {
@@ -1056,6 +1236,16 @@ export const uiThemes = {
       contextMenuHover: '#1d3b53',
       contextMenuBorder: '#575656',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#011627',
+      texto: '#d6deeb',
+      disco: '#ebcb8b',
+      redUp: '#21c7a8',
+      redDown: '#82aaff',
+      cpu: '#82aaff',
+      memoria: '#21c7a8',
+      iconos: '#82aaff'
     }
   },
   'Silver': {
@@ -1108,6 +1298,16 @@ export const uiThemes = {
       contextMenuHover: '#e6e6e6',
       contextMenuBorder: '#d0d0d0',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    },
+    statusBarPalette: {
+      fondo: '#f5f5f5',
+      texto: '#404040',
+      disco: '#fabd2f',
+      redUp: '#729fcf',
+      redDown: '#3465a4',
+      cpu: '#3465a4',
+      memoria: '#729fcf',
+      iconos: '#3465a4'
     }
   },
   'Minimal Gray': {
@@ -1160,6 +1360,16 @@ export const uiThemes = {
       contextMenuHover: '#f0f0f0',
       contextMenuBorder: '#e0e0e0',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    },
+    statusBarPalette: {
+      fondo: '#fafafa',
+      texto: '#505050',
+      disco: '#fabd2f',
+      redUp: '#2196f3',
+      redDown: '#1976d2',
+      cpu: '#1976d2',
+      memoria: '#2196f3',
+      iconos: '#1976d2'
     }
   },
   'Paper': {
@@ -1212,6 +1422,16 @@ export const uiThemes = {
       contextMenuHover: '#f0f8ff',
       contextMenuBorder: '#e1e4e8',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    },
+    statusBarPalette: {
+      fondo: '#fefefe',
+      texto: '#2b2b2b',
+      disco: '#fabd2f',
+      redUp: '#0598bc',
+      redDown: '#0366d6',
+      cpu: '#0366d6',
+      memoria: '#0598bc',
+      iconos: '#0366d6'
     }
   },
   'Soft Gray': {
@@ -1264,6 +1484,16 @@ export const uiThemes = {
       contextMenuHover: '#eeeeee',
       contextMenuBorder: '#e8e8e8',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    },
+    statusBarPalette: {
+      fondo: '#f7f7f7',
+      texto: '#4a4a4a',
+      disco: '#fabd2f',
+      redUp: '#1565c0',
+      redDown: '#64b5f6',
+      cpu: '#64b5f6',
+      memoria: '#1565c0',
+      iconos: '#64b5f6'
     }
   },
   'Arctic': {
@@ -1316,6 +1546,16 @@ export const uiThemes = {
       contextMenuHover: '#e8f4f8',
       contextMenuBorder: '#ecf0f1',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+    },
+    statusBarPalette: {
+      fondo: '#fcfcfc',
+      texto: '#2c3e50',
+      disco: '#fabd2f',
+      redUp: '#74b9ff',
+      redDown: '#3498db',
+      cpu: '#3498db',
+      memoria: '#74b9ff',
+      iconos: '#3498db'
     }
   },
   'Neon Blue': {
@@ -1368,6 +1608,16 @@ export const uiThemes = {
       contextMenuHover: '#1a1a3a',
       contextMenuBorder: '#444444',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#0a0a0f',
+      texto: '#00d4ff',
+      disco: '#fabd2f',
+      redUp: '#40c4ff',
+      redDown: '#0080ff',
+      cpu: '#0080ff',
+      memoria: '#40c4ff',
+      iconos: '#0080ff'
     }
   },
   'Cyberpunk': {
@@ -1420,6 +1670,16 @@ export const uiThemes = {
       contextMenuHover: '#1a2332',
       contextMenuBorder: '#555555',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#0d1117',
+      texto: '#00ff41',
+      disco: '#fabd2f',
+      redUp: '#00d4ff',
+      redDown: '#0099ff',
+      cpu: '#0099ff',
+      memoria: '#00d4ff',
+      iconos: '#0099ff'
     }
   },
   'Matrix': {
@@ -1472,6 +1732,16 @@ export const uiThemes = {
       contextMenuHover: '#002200',
       contextMenuBorder: '#003300',
       contextMenuShadow: 'rgba(0, 0, 0, 0.6)'
+    },
+    statusBarPalette: {
+      fondo: '#000000',
+      texto: '#00ff00',
+      disco: '#fabd2f',
+      redUp: '#00ee00',
+      redDown: '#00cc00',
+      cpu: '#00cc00',
+      memoria: '#00ee00',
+      iconos: '#00cc00'
     }
   },
   'Hologram': {
@@ -1524,6 +1794,16 @@ export const uiThemes = {
       contextMenuHover: '#1a1a3a',
       contextMenuBorder: '#4a4a6a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#05050a',
+      texto: '#88ccff',
+      disco: '#fabd2f',
+      redUp: '#44ffcc',
+      redDown: '#4499ff',
+      cpu: '#4499ff',
+      memoria: '#44ffcc',
+      iconos: '#4499ff'
     }
   },
   'Plasma': {
@@ -1576,6 +1856,87 @@ export const uiThemes = {
       contextMenuHover: '#2a1b3d',
       contextMenuBorder: '#555555',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#0f0f23',
+      texto: '#ff69b4',
+      disco: '#fabd2f',
+      redUp: '#e91e63',
+      redDown: '#2196f3',
+      cpu: '#2196f3',
+      memoria: '#e91e63',
+      iconos: '#2196f3'
+    }
+  },
+  'Default Dark': {
+    name: 'Default Dark',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#252526',
+      sidebarBorder: '#3e3e42',
+      sidebarText: '#cccccc',
+      sidebarHover: '#2a2d2e',
+      sidebarSelected: '#094771',
+      sidebarGutter: '#323236',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#2d2d30',
+      menuBarText: '#cccccc',
+      menuBarBorder: '#3e3e42',
+      menuBarHover: '#3e3e42',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#007acc',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#3e3e42',
+      
+      // Tabs
+      tabBackground: '#2d2d30',
+      tabActiveBackground: '#1e1e1e',
+      tabHoverBackground: '#3e3e42',
+      tabText: '#cccccc',
+      tabActiveText: '#ffffff',
+      tabBorder: '#3e3e42',
+      tabCloseHover: '#f48771',
+      
+      // Tab Groups
+      tabGroupBackground: '#383838',
+      tabGroupText: '#cccccc',
+      tabGroupBorder: '#3e3e42',
+      
+      // Content Area
+      contentBackground: '#1e1e1e',
+      contentBorder: '#3e3e42',
+      
+      // Dialogs
+      dialogBackground: '#2d2d30',
+      dialogText: '#cccccc',
+      dialogBorder: '#3e3e42',
+      dialogShadow: 'rgba(0, 0, 0, 0.4)',
+      
+      // Buttons
+      buttonPrimary: '#0e639c',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#3c3c3c',
+      buttonSecondaryText: '#cccccc',
+      buttonHover: '#1177bb',
+      
+      // Context Menus
+      contextMenuBackground: '#2d2d30',
+      contextMenuText: '#cccccc',
+      contextMenuHover: '#3e3e42',
+      contextMenuBorder: '#3e3e42',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+    },
+    statusBarPalette: {
+      fondo: '#007acc',
+      texto: '#ffffff',
+      disco: '#ffb300',
+      redUp: '#00e676',
+      redDown: '#2196f3',
+      cpu: '#2196f3',
+      memoria: '#00e676',
+      iconos: '#2196f3'
     }
   }
 }; 

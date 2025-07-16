@@ -43,6 +43,14 @@ class StatusBarThemeManager {
     root.style.setProperty('--statusbar-network-down-color', colors.networkDownColor);
     root.style.setProperty('--statusbar-sparkline-color', colors.sparklineColor);
 
+    // Variables CSS globales para iconos (compatibles con el CSS de status bar)
+    root.style.setProperty('--statusbar-cpu', colors.cpuBarColor);
+    root.style.setProperty('--statusbar-mem', colors.memoryBarColor);
+    root.style.setProperty('--statusbar-disk', colors.diskBarColor);
+    root.style.setProperty('--statusbar-red-up', colors.networkUpColor);
+    root.style.setProperty('--statusbar-red-down', colors.networkDownColor);
+    root.style.setProperty('--statusbar-icons', colors.iconColor);
+
     this.cssVariables = colors;
   }
 
