@@ -57,7 +57,8 @@ export const uiThemes = {
       contextMenuText: '#495057',
       contextMenuHover: '#f5f5f5',
       contextMenuBorder: '#e0e0e0',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.15)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.15)',
+      '--ui-titlebar-accent': '#eee8d5'
     },
     statusBarPalette: {
       fondo: '#f8f9fa',
@@ -129,7 +130,8 @@ export const uiThemes = {
       contextMenuText: '#cccccc',
       contextMenuHover: '#3e3e42',
       contextMenuBorder: '#3e3e42',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#073642'
     },
     statusBarPalette: {
       fondo: '#007acc',
@@ -201,7 +203,8 @@ export const uiThemes = {
       contextMenuText: '#657b83',
       contextMenuHover: '#eee8d5',
       contextMenuBorder: '#d9d2c4',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.15)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.15)',
+      '--ui-titlebar-accent': '#eee8d5'
     },
     statusBarPalette: {
       fondo: '#93a1a1',
@@ -273,7 +276,8 @@ export const uiThemes = {
       contextMenuText: '#839496',
       contextMenuHover: '#073642',
       contextMenuBorder: '#586e75',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#bd93f9'
     },
     statusBarPalette: {
       fondo: '#268bd2',
@@ -345,7 +349,8 @@ export const uiThemes = {
       contextMenuText: '#f8f8f2',
       contextMenuHover: '#44475a',
       contextMenuBorder: '#6272a4',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#bd93f9'
     },
     statusBarPalette: {
       fondo: '#282a36',
@@ -417,7 +422,8 @@ export const uiThemes = {
       contextMenuText: '#d8dee9',
       contextMenuHover: '#3b4252',
       contextMenuBorder: '#434c5e',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#5e81ac'
     },
     statusBarPalette: {
       fondo: '#2e3440',
@@ -480,7 +486,8 @@ export const uiThemes = {
       contextMenuText: '#c0caf5',
       contextMenuHover: '#283457',
       contextMenuBorder: '#414868',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#7aa2f7'
     },
     statusBarPalette: {
       fondo: '#1a1b26',
@@ -543,7 +550,8 @@ export const uiThemes = {
       contextMenuText: '#cdd6f4',
       contextMenuHover: '#313244',
       contextMenuBorder: '#45475a',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#f5c2e7'
     },
     statusBarPalette: {
       fondo: '#1e1e2e',
@@ -606,7 +614,8 @@ export const uiThemes = {
       contextMenuText: '#f92aad',
       contextMenuHover: '#495495',
       contextMenuBorder: '#6b5b95',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#03edf9'
     },
     statusBarPalette: {
       fondo: '#2a2139',
@@ -669,7 +678,8 @@ export const uiThemes = {
       contextMenuText: '#a6accd',
       contextMenuHover: '#717cb4',
       contextMenuBorder: '#676e95',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#c792ea'
     },
     statusBarPalette: {
       fondo: '#292d3e',
@@ -732,7 +742,8 @@ export const uiThemes = {
       contextMenuText: '#ffffff',
       contextMenuHover: '#404040',
       contextMenuBorder: '#808080',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.6)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.6)',
+      '--ui-titlebar-accent': '#0000ff'
     },
     statusBarPalette: {
       fondo: '#000000',
@@ -795,7 +806,8 @@ export const uiThemes = {
       contextMenuText: '#e6e1cf',
       contextMenuHover: '#253340',
       contextMenuBorder: '#323232',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#59c2ff'
     },
     statusBarPalette: {
       fondo: '#0f1419',
@@ -858,7 +870,8 @@ export const uiThemes = {
       contextMenuText: '#dcdccc',
       contextMenuHover: '#2f2f2f',
       contextMenuBorder: '#709080',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#94bff3'
     },
     statusBarPalette: {
       fondo: '#3f3f3f',
@@ -921,7 +934,8 @@ export const uiThemes = {
       contextMenuText: '#c5c8c6',
       contextMenuHover: '#373b41',
       contextMenuBorder: '#969896',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#81a2be'
     },
     statusBarPalette: {
       fondo: '#1d1f21',
@@ -984,7 +998,8 @@ export const uiThemes = {
       contextMenuText: '#d8dee9',
       contextMenuHover: '#4f5b66',
       contextMenuBorder: '#65737e',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#5fb3b3'
     },
     statusBarPalette: {
       fondo: '#1b2b34',
@@ -1047,7 +1062,8 @@ export const uiThemes = {
       contextMenuText: '#383a42',
       contextMenuHover: '#e5e5e6',
       contextMenuBorder: '#4f525d',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
+      '--ui-titlebar-accent': '#4078f2'
     },
     statusBarPalette: {
       fondo: '#fafafa',
@@ -1110,7 +1126,8 @@ export const uiThemes = {
       contextMenuText: '#fcfcfc',
       contextMenuHover: '#414649',
       contextMenuBorder: '#7f8c8d',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#3daee9'
     },
     statusBarPalette: {
       fondo: '#232629',
@@ -1173,7 +1190,8 @@ export const uiThemes = {
       contextMenuText: '#b2b2b2',
       contextMenuHover: '#444155',
       contextMenuBorder: '#5d4d7a',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#a31db1'
     },
     statusBarPalette: {
       fondo: '#292b2e',
@@ -1235,7 +1253,8 @@ export const uiThemes = {
       contextMenuText: '#d6deeb',
       contextMenuHover: '#1d3b53',
       contextMenuBorder: '#575656',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#21c7a8'
     },
     statusBarPalette: {
       fondo: '#011627',
@@ -1297,7 +1316,8 @@ export const uiThemes = {
       contextMenuText: '#404040',
       contextMenuHover: '#e6e6e6',
       contextMenuBorder: '#d0d0d0',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
+      '--ui-titlebar-accent': '#729fcf'
     },
     statusBarPalette: {
       fondo: '#f5f5f5',
@@ -1359,7 +1379,8 @@ export const uiThemes = {
       contextMenuText: '#505050',
       contextMenuHover: '#f0f0f0',
       contextMenuBorder: '#e0e0e0',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
+      '--ui-titlebar-accent': '#2196f3'
     },
     statusBarPalette: {
       fondo: '#fafafa',
@@ -1421,7 +1442,8 @@ export const uiThemes = {
       contextMenuText: '#2b2b2b',
       contextMenuHover: '#f0f8ff',
       contextMenuBorder: '#e1e4e8',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
+      '--ui-titlebar-accent': '#0366d6'
     },
     statusBarPalette: {
       fondo: '#fefefe',
@@ -1483,7 +1505,8 @@ export const uiThemes = {
       contextMenuText: '#4a4a4a',
       contextMenuHover: '#eeeeee',
       contextMenuBorder: '#e8e8e8',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
+      '--ui-titlebar-accent': '#64b5f6'
     },
     statusBarPalette: {
       fondo: '#f7f7f7',
@@ -1545,7 +1568,8 @@ export const uiThemes = {
       contextMenuText: '#2c3e50',
       contextMenuHover: '#e8f4f8',
       contextMenuBorder: '#ecf0f1',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.1)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
+      '--ui-titlebar-accent': '#3498db'
     },
     statusBarPalette: {
       fondo: '#fcfcfc',
@@ -1607,7 +1631,8 @@ export const uiThemes = {
       contextMenuText: '#00d4ff',
       contextMenuHover: '#1a1a3a',
       contextMenuBorder: '#444444',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#00d4ff'
     },
     statusBarPalette: {
       fondo: '#0a0a0f',
@@ -1669,7 +1694,8 @@ export const uiThemes = {
       contextMenuText: '#00ff41',
       contextMenuHover: '#1a2332',
       contextMenuBorder: '#555555',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#00ff41'
     },
     statusBarPalette: {
       fondo: '#0d1117',
@@ -1731,7 +1757,8 @@ export const uiThemes = {
       contextMenuText: '#00ff00',
       contextMenuHover: '#002200',
       contextMenuBorder: '#003300',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.6)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.6)',
+      '--ui-titlebar-accent': '#00ff00'
     },
     statusBarPalette: {
       fondo: '#000000',
@@ -1793,7 +1820,8 @@ export const uiThemes = {
       contextMenuText: '#88ccff',
       contextMenuHover: '#1a1a3a',
       contextMenuBorder: '#4a4a6a',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#44ffcc'
     },
     statusBarPalette: {
       fondo: '#05050a',
@@ -1855,7 +1883,8 @@ export const uiThemes = {
       contextMenuText: '#ff69b4',
       contextMenuHover: '#2a1b3d',
       contextMenuBorder: '#555555',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#e91e63'
     },
     statusBarPalette: {
       fondo: '#0f0f23',
@@ -1926,7 +1955,8 @@ export const uiThemes = {
       contextMenuText: '#cccccc',
       contextMenuHover: '#3e3e42',
       contextMenuBorder: '#3e3e42',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)'
+      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
+      '--ui-titlebar-accent': '#232a36'
     },
     statusBarPalette: {
       fondo: '#007acc',

@@ -122,6 +122,7 @@ class ThemeManager {
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
+        --ui-titlebar-accent: ${colors.buttonPrimary || '#1976d2'};
       }
 
       /* === SIDEBAR STYLES === */
