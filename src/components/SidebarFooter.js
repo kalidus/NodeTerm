@@ -220,7 +220,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        color: var(--ui-text-primary);
+        color: var(--ui-sidebar-text, #fff);
         transition: background-color 0.15s ease;
         position: relative;
       `;
@@ -245,7 +245,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll }) => {
         const shortcut = document.createElement('span');
         shortcut.style.cssText = `
           font-size: 12px;
-          color: var(--ui-text-secondary, #888);
+          color: var(--ui-sidebar-text, #fff);
           margin-left: 20px;
         `;
         shortcut.textContent = item.shortcut;
