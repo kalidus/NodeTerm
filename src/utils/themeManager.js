@@ -33,13 +33,14 @@ class ThemeManager {
     }
 
     this.currentTheme = theme;
-    this.generateCSS(theme.colors);
+    this.generateCSS(theme);
     
     // Guardar el tema seleccionado
     localStorage.setItem('ui_theme', themeName);
   }
 
-  generateCSS(colors) {
+  generateCSS(theme) {
+    const colors = theme.colors;
     // Determinar si el fondo de la sidebar es claro u oscuro
     function isColorLight(hex) {
       let c = hex.replace('#', '');
@@ -53,7 +54,18 @@ class ThemeManager {
     }
     const sidebarBgIsLight = isColorLight(colors.sidebarBackground);
     const sidebarButtonText = colors.sidebarText;
+    const palette = theme.statusBarPalette || {};
     const css = `
+      :root {
+        --statusbar-bg: ${palette.fondo || colors.statusBarBackground};
+        --statusbar-text: ${palette.texto || colors.statusBarText};
+        --statusbar-disk: ${palette.disco || '#ffb300'};
+        --statusbar-red-up: ${palette.redUp || '#00e676'};
+        --statusbar-red-down: ${palette.redDown || '#2196f3'};
+        --statusbar-cpu: ${palette.cpu || '#2196f3'};
+        --statusbar-mem: ${palette.memoria || '#00e676'};
+        --statusbar-icons: ${palette.iconos || '#2196f3'};
+      }
       /* === ROOT VARIABLES === */
       :root {
         --ui-sidebar-bg: ${colors.sidebarBackground};

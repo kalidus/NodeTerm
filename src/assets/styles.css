@@ -609,6 +609,13 @@ html, body, #root {
     color: var(--statusbar-icon-color, inherit) !important;
 }
 
+.status-bar-icon.cpu { color: var(--statusbar-cpu) !important; }
+.status-bar-icon.disk { color: var(--statusbar-disk) !important; }
+.status-bar-icon.mem { color: var(--statusbar-mem) !important; }
+.status-bar-icon.net-up { color: var(--statusbar-red-up) !important; }
+.status-bar-icon.net-down { color: var(--statusbar-red-down) !important; }
+.status-bar-icon.icons { color: var(--statusbar-icons) !important; }
+
 .disk-info {
     margin-right: 10px;
 }
