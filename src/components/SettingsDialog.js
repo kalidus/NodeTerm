@@ -372,12 +372,12 @@ const SettingsDialog = ({
                       value={statusBarHeight}
                       onChange={e => setStatusBarHeight(e.value)}
                       min={20}
-                      max={60}
+                      max={40}
                       step={1}
                       style={{ width: '100%' }}
                     />
                     <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 4 }}>
-                      {statusBarHeight} px (mínimo 20, máximo 60)
+                      {statusBarHeight} px (mínimo 20, máximo 40)
                     </div>
                   </div>
                   <div style={{ marginTop: 24, width: 320 }}>
