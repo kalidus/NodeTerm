@@ -43,7 +43,13 @@
 
 /* Botones de acción de la sidebar */
 .sidebar-action-button {
-  color: var(--ui-sidebar-text) !important;
+  background: var(--ui-sidebar-button-bg, var(--ui-sidebar-bg)) !important;
+  /* Fallback para navegadores sin color-mix: */
+  /* background: rgba(0,0,0,0.06) !important; */
+  color: var(--ui-sidebar-button-text, var(--ui-sidebar-text)) !important;
+  border: none !important;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.04);
+  transition: background 0.2s, box-shadow 0.2s;
 }
 
 .sidebar-action-button:hover {
