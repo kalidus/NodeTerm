@@ -1996,6 +1996,54 @@ const App = () => {
     }
   }, [statusBarPollingInterval]);
 
+  // Estado para la configuración global
+  const [config, setConfig] = useState(null);
+
+  // Función para cargar la configuración desde la API
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch('/api/config');
+      if (res.ok) {
+        const data = await res.json();
+        setConfig(data);
+      }
+    } catch (e) {
+      // Puedes mostrar un toast de error si lo deseas
+    }
+  };
+
+  // Cargar la configuración al iniciar
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  // Conexión WebSocket para refresco automático
+  useEffect(() => {
+    let ws;
+    try {
+      ws = new window.WebSocket('ws://localhost:8080');
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'refresh') {
+            fetchConfig();
+            if (toast.current) {
+              toast.current.show({
+                severity: 'info',
+                summary: 'Datos actualizados',
+                detail: 'La configuración se ha sincronizado automáticamente.',
+                life: 2500
+              });
+            }
+          }
+        } catch {}
+      };
+    } catch {}
+    return () => {
+      if (ws) ws.close();
+    };
+  }, []);
+
   return (
     <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
       <Toast ref={toast} />

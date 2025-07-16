@@ -10,6 +10,134 @@ const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
 const SftpClient = require('ssh2-sftp-client');
+const express = require('express');
+const fs = require('fs');
+const CONFIG_PATH = path.join(__dirname, 'config.json');
+// WebSocket
+const WebSocket = require('ws');
+let wsServer = null;
+let wsClients = new Set();
+
+// Servidor web integrado para PWA
+let webServer = null;
+const WEB_PORT = 8080;
+
+// Helper para leer config
+function readConfig() {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      const data = fs.readFileSync(CONFIG_PATH, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error leyendo config.json:', e);
+  }
+  return {};
+}
+
+// Helper para guardar config
+function writeConfig(data) {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (e) {
+    console.error('Error guardando config.json:', e);
+    return false;
+  }
+}
+
+function startWebServer() {
+  if (webServer) {
+    console.log('🌐 Servidor web ya está corriendo en puerto', WEB_PORT);
+    return;
+  }
+  
+  const webApp = express();
+  
+  // Servir archivos estáticos desde dist/
+  webApp.use(express.static(path.join(__dirname, 'dist')));
+  
+  // Servir manifest.json para PWA
+  webApp.get('/manifest.json', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/manifest.json'));
+  });
+  
+  // Servir service worker
+  webApp.get('/sw.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/sw.js'));
+  });
+  
+  // Servir iconos PWA desde assets (validación manual de nombre de archivo)
+  webApp.get('/assets/:file', (req, res) => {
+    const file = req.params.file;
+    // Solo permitir extensiones seguras y nombres válidos
+    if (!/^[\w\-.]+\.(png|svg|woff2?|ttf|eot|ico)$/i.test(file)) {
+      return res.status(404).send('Archivo no permitido');
+    }
+    res.sendFile(path.join(__dirname, 'src/assets', file));
+  });
+  
+  // SPA fallback - servir index.html para todas las rutas restantes excepto assets, sw.js y manifest.json
+  webApp.get(/^\/(?!assets\/|sw\.js$|manifest\.json$).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist/index.html'));
+  });
+  
+  // Iniciar servidor
+  webServer = webApp.listen(WEB_PORT, () => {
+    console.log(`🚀 NodeTerm Web Server iniciado en http://localhost:${WEB_PORT}`);
+    console.log('📱 Accesible desde navegador y dispositivos móviles en la red local');
+    // Iniciar WebSocket server cuando Express esté listo
+    if (!wsServer) {
+      wsServer = new WebSocket.Server({ server: webServer });
+      wsServer.on('connection', (ws) => {
+        wsClients.add(ws);
+        ws.on('close', () => wsClients.delete(ws));
+      });
+      console.log('🔌 WebSocket server iniciado');
+    }
+  });
+  
+  webServer.on('error', (err) => {
+    console.error('❌ Error en servidor web:', err.message);
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Puerto ${WEB_PORT} ocupado, intentando con puerto alternativo...`);
+      // Intentar con puerto alternativo
+      webServer = webApp.listen(0, () => {
+        const actualPort = webServer.address().port;
+        console.log(`🚀 NodeTerm Web Server iniciado en http://localhost:${actualPort}`);
+      });
+    }
+  });
+
+  // API REST para sincronizar datos
+  webApp.get('/api/config', (req, res) => {
+    res.json(readConfig());
+  });
+
+  webApp.post('/api/config', express.json(), (req, res) => {
+    const ok = writeConfig(req.body);
+    if (ok) {
+      // Notificar a todos los clientes WebSocket que hubo un cambio
+      wsClients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ type: 'refresh' }));
+        }
+      });
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ success: false, error: 'No se pudo guardar la configuración' });
+    }
+  });
+}
+
+function stopWebServer() {
+  if (webServer) {
+    webServer.close(() => {
+      console.log('🛑 Servidor web detenido');
+      webServer = null;
+    });
+  }
+}
 
 // Parser simple para 'ls -la'
 function parseLsOutput(output) {
@@ -350,6 +478,9 @@ function parseNetDev(netDevOutput) {
 }
 
 function createWindow() {
+  // Iniciar servidor web para PWA
+  startWebServer();
+  
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 1000,
@@ -380,6 +511,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    stopWebServer();
   });
 }
 
@@ -1410,8 +1542,6 @@ ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
 });
 
 // Handler para descargar archivos por SSH
-const fs = require('fs');
-
 ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
   try {
     if (sshConfig.useBastionWallix) {
@@ -1805,4 +1935,23 @@ let statusBarPollingIntervalMs = 5000;
 ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
   const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 5));
   statusBarPollingIntervalMs = sec * 1000;
+});
+
+// Handler para abrir NodeTerm en navegador web (PWA)
+ipcMain.on('open-in-browser', () => {
+  const port = webServer ? webServer.address().port : WEB_PORT;
+  const url = `http://localhost:${port}`;
+  
+  console.log(`🌐 Abriendo NodeTerm en navegador: ${url}`);
+  require('electron').shell.openExternal(url);
+  
+  // Mostrar mensaje informativo
+  const { dialog } = require('electron');
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'NodeTerm Web',
+    message: 'NodeTerm se ha abierto en tu navegador',
+    detail: `Accede desde: ${url}\n\n📱 También puedes acceder desde dispositivos móviles en tu red local.\n\n💡 Desde el navegador podrás "instalar" NodeTerm como una app nativa (PWA).`,
+    buttons: ['Entendido']
+  });
 });

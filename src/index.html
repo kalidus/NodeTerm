@@ -1,10 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>NodeTerm</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NodeTerm - Cliente SSH</title>
+    <meta name="description" content="Cliente SSH moderno y potente para administradores" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Meta tags PWA -->
+    <meta name="theme-color" content="#1976d2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="NodeTerm" />
+    <meta name="application-name" content="NodeTerm" />
+    
+    <!-- Iconos para diferentes dispositivos -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/app-icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/assets/app-icon-512.png" />
+    <link rel="apple-touch-icon" href="/assets/app-icon-192.png" />
+    <link rel="shortcut icon" href="/assets/app-icon.png" />
+    
+    <!-- Preload crítico para performance -->
+    <link rel="preload" href="/bundle.js" as="script" />
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('🚀 Service Worker registrado:', registration.scope);
+              
+              // Verificar actualizaciones cada 5 minutos
+              setInterval(() => {
+                registration.update();
+              }, 5 * 60 * 1000);
+              
+              // Escuchar nuevas versiones
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Nueva versión disponible
+                    if (confirm('🔄 Nueva versión de NodeTerm disponible. ¿Recargar?')) {
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('❌ Error registrando Service Worker:', error);
+            });
+        });
+        
+        // Escuchar cuando el SW toma control
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- PWA Install Banner -->
+    <script>
+      let deferredPrompt;
+      let installButton;
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Mostrar botón de instalación personalizado
+        if (!installButton) {
+          installButton = document.createElement('div');
+          installButton.innerHTML = `
+            <div style="
+              position: fixed; 
+              bottom: 20px; 
+              right: 20px; 
+              background: #1976d2; 
+              color: white; 
+              padding: 12px 24px; 
+              border-radius: 8px; 
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+              cursor: pointer;
+              z-index: 9999;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+              font-size: 14px;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            " onclick="installPWA()">
+              📱 Instalar NodeTerm
+              <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; font-size: 12px;">
+                PWA
+              </span>
+            </div>
+          `;
+          document.body.appendChild(installButton);
+          
+          // Auto-ocultar después de 10 segundos
+          setTimeout(() => {
+            if (installButton) {
+              installButton.style.opacity = '0';
+              installButton.style.transition = 'opacity 0.5s';
+              setTimeout(() => {
+                if (installButton) installButton.remove();
+              }, 500);
+            }
+          }, 10000);
+        }
+      });
+      
+      window.installPWA = async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          console.log(outcome === 'accepted' ? '✅ PWA instalada' : '❌ Instalación cancelada');
+          deferredPrompt = null;
+          if (installButton) installButton.remove();
+        }
+      };
+      
+      window.addEventListener('appinstalled', () => {
+        console.log('🎉 NodeTerm PWA instalada correctamente');
+        if (installButton) installButton.remove();
+      });
+    </script>
   </body>
 </html> 

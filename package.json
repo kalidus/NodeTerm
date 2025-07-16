@@ -66,6 +66,7 @@
     "@xterm/xterm": "^5.5.0",
     "assert": "^2.1.0",
     "browserify-zlib": "^0.2.0",
+    "express": "^5.1.0",
     "https-browserify": "^1.0.0",
     "node-ssh": "^13.2.0",
     "primeflex": "^3.3.1",
@@ -79,6 +80,7 @@
     "ssh2-promise": "^1.0.3",
     "ssh2-sftp-client": "^12.0.1",
     "stream-http": "^3.2.0",
+    "ws": "^8.18.3",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0"
   },

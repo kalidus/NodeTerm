@@ -1,0 +1,47 @@
+{
+  "name": "NodeTerm - Cliente SSH",
+  "short_name": "NodeTerm",
+  "description": "Cliente SSH moderno y potente para administradores",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "theme_color": "#1976d2",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["utilities", "productivity", "development"],
+  "icons": [
+    {
+      "src": "/assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/app-icon-512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/app-icon-1024.png",
+      "sizes": "1024x1024", 
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/screenshot-main.png",
+      "sizes": "1600x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vista principal de NodeTerm"
+    }
+  ],
+  "features": [
+    "Cross Platform",
+    "VPN Support"
+  ],
+  "prefer_related_applications": false
+} 
