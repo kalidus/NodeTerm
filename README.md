@@ -22,6 +22,15 @@ NodeTerm es un cliente SSH visual, rápido y personalizable, pensado para admini
 - 🎨 **Personalizable**: Temas, iconos, fuentes y más.
 - 🌐 **Multiplataforma**: Windows, Linux, Mac y versión web progresiva.
 
+<details>
+<summary>🖼️ <strong>Ver vista previa</strong></summary>
+
+<div align="center">
+  <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="600"/>
+</div>
+
+</details>
+
 ---
 
 ## 🚀 Instalación Rápida
