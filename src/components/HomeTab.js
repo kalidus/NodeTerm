@@ -1,4 +1,5 @@
 import React from 'react';
+import SplitLayout from './SplitLayout';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
@@ -12,7 +13,8 @@ const HomeTab = ({
 }) => {
   const versionInfo = getVersionInfo();
 
-  return (
+  // Panel superior: contenido de bienvenida
+  const topPanel = (
     <div style={{ 
       padding: '2rem', 
       height: '100%', 
@@ -197,6 +199,42 @@ const HomeTab = ({
         </p>
       </div>
     </div>
+  );
+
+  // Panel inferior: placeholder visible
+  const bottomPanel = (
+    <div style={{
+      height: '100%',
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#1976d2',
+      fontSize: '1.5rem',
+      background: 'var(--surface-ground, #fafafa)',
+      fontWeight: 'bold',
+      border: '2px dashed #1976d2'
+    }}>
+      Panel inferior visible
+    </div>
+  );
+
+  // Usar SplitLayout para el split horizontal
+  return (
+    <SplitLayout
+      leftTerminal={{ key: 'home_top', content: topPanel }}
+      rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
+      orientation="horizontal"
+      // No se usan sshConfig ni stats aquí
+      fontFamily={''}
+      fontSize={16}
+      theme={{}}
+      onContextMenu={() => {}}
+      sshStatsByTabId={{}}
+      terminalRefs={{ current: {} }}
+      statusBarIconTheme="classic"
+      isHomeTab={true}
+    />
   );
 };
 

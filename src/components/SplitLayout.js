@@ -101,44 +101,52 @@ const SplitLayout = ({
         maxConstraints={isVertical ? [maxPrimaryPaneSize, 0] : [0, maxPrimaryPaneSize]}
       >
         <div style={primaryPaneStyle}>
+          {leftTerminal.content ? (
+            leftTerminal.content
+          ) : (
+            <TerminalComponent
+              ref={el => {
+                leftTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+              }}
+              key={leftTerminal.key}
+              tabId={leftTerminal.key}
+              sshConfig={leftTerminal.sshConfig}
+              fontFamily={fontFamily}
+              fontSize={fontSize}
+              theme={theme}
+              onContextMenu={onContextMenu}
+              active={true}
+              stats={sshStatsByTabId[leftTerminal.key]}
+              hideStatusBar={true}
+              statusBarIconTheme={statusBarIconTheme}
+            />
+          )}
+        </div>
+      </Resizable>
+      
+      <div style={secondaryPaneStyle}>
+        {rightTerminal.content ? (
+          rightTerminal.content
+        ) : (
           <TerminalComponent
             ref={el => {
-              leftTerminalRef.current = el;
-              if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+              rightTerminalRef.current = el;
+              if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
             }}
-            key={leftTerminal.key}
-            tabId={leftTerminal.key}
-            sshConfig={leftTerminal.sshConfig}
+            key={rightTerminal.key}
+            tabId={rightTerminal.key}
+            sshConfig={rightTerminal.sshConfig}
             fontFamily={fontFamily}
             fontSize={fontSize}
             theme={theme}
             onContextMenu={onContextMenu}
             active={true}
-            stats={sshStatsByTabId[leftTerminal.key]}
+            stats={sshStatsByTabId[rightTerminal.key]}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
           />
-        </div>
-      </Resizable>
-      
-      <div style={secondaryPaneStyle}>
-        <TerminalComponent
-          ref={el => {
-            rightTerminalRef.current = el;
-            if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
-          }}
-          key={rightTerminal.key}
-          tabId={rightTerminal.key}
-          sshConfig={rightTerminal.sshConfig}
-          fontFamily={fontFamily}
-          fontSize={fontSize}
-          theme={theme}
-          onContextMenu={onContextMenu}
-          active={true}
-          stats={sshStatsByTabId[rightTerminal.key]}
-          hideStatusBar={true}
-          statusBarIconTheme={statusBarIconTheme}
-        />
+        )}
       </div>
     </div>
   );
