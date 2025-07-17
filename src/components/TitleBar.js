@@ -30,93 +30,123 @@ const TitleBar = () => {
 
   return (
     <div
-      className="custom-titlebar"
+      className="titlebar"
       style={{
+        height: 28,
+        minHeight: 28,
+        maxHeight: 28,
         display: 'flex',
         alignItems: 'center',
-        height: 32,
-        width: '100%',
+        justifyContent: 'space-between',
         background: 'var(--ui-titlebar-accent, #1976d2)',
-        color: 'var(--ui-titlebar-text, #fff)',
-        WebkitUserSelect: 'none',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        padding: '0 6px',
+        userSelect: 'none',
         WebkitAppRegion: 'drag',
-        padding: '0 8px',
-        boxSizing: 'border-box',
-        borderBottom: '1px solid var(--ui-sidebar-border, #222)',
-        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.07)'
+        zIndex: 1000
       }}
     >
-      <img src={appIcon} alt="NodeTerm" style={{ width: 20, height: 20, marginRight: 8, pointerEvents: 'none' }} draggable={false} />
-      <span style={{ fontWeight: 600, fontSize: 15, letterSpacing: 0.5 }}>NodeTerm</span>
-      <div style={{ flex: 1 }} />
-      {/* Botones de ventana */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, WebkitAppRegion: 'no-drag' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 15, height: 15, marginRight: 5, marginLeft: 1 }} />
+        <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1 }}>NodeTerm</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, WebkitAppRegion: 'no-drag' }}>
+        {/* Botón de menú (3 puntos) */}
         <button
-          className="titlebar-btn"
+          title="Menú"
           style={{
-            width: 36,
-            height: 28,
-            background: 'none',
+            width: 22,
+            height: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
             border: 'none',
-            color: 'inherit',
-            cursor: 'pointer',
             borderRadius: 4,
-            transition: 'background 0.18s',
-            outline: 'none',
-            marginLeft: 2
+            margin: 0,
+            padding: 0,
+            transition: 'background 0.15s',
+            cursor: 'pointer',
+            verticalAlign: 'middle',
+            position: 'relative',
+            top: '1px'
           }}
-          title="Minimizar"
+          onMouseEnter={e => (e.currentTarget.style.background = '#e3e6ea')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="#fff"/><circle cy="6" cx="6" r="1.2" fill="#fff"/><circle cy="6" cx="9.5" r="1.2" fill="#fff"/></svg>
+        </button>
+        {/* Minimizar */}
+        <button
           onClick={handleMinimize}
-          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-          onMouseOut={e => e.currentTarget.style.background = 'none'}
-        >
-          <svg width="10" height="2"><rect width="10" height="2" fill="currentColor" /></svg>
-        </button>
-        <button
-          className="titlebar-btn"
+          title="Minimizar"
           style={{
-            width: 36,
-            height: 28,
-            background: 'none',
+            width: 22,
+            height: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
             border: 'none',
-            color: 'inherit',
-            cursor: 'pointer',
             borderRadius: 4,
-            transition: 'background 0.18s',
-            outline: 'none',
-            marginLeft: 2
+            margin: 0,
+            padding: 0,
+            transition: 'background 0.15s',
+            cursor: 'pointer',
+            verticalAlign: 'middle',
+            position: 'relative',
+            top: '1px'
           }}
-          title={isMaximized ? 'Restaurar' : 'Maximizar'}
+          onMouseEnter={e => (e.currentTarget.style.background = '#e3e6ea')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6.5" width="8" height="1.7" rx="0.85" fill="#fff" /></svg>
+        </button>
+        {/* Maximizar/Restaurar */}
+        <button
           onClick={handleMaximizeRestore}
-          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-          onMouseOut={e => e.currentTarget.style.background = 'none'}
-        >
-          {isMaximized ? (
-            <svg width="10" height="10"><rect x="2" y="2" width="6" height="6" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
-          ) : (
-            <svg width="10" height="10"><rect x="1" y="1" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
-          )}
-        </button>
-        <button
-          className="titlebar-btn"
+          title="Maximizar/Restaurar"
           style={{
-            width: 36,
-            height: 28,
-            background: 'none',
+            width: 22,
+            height: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
             border: 'none',
-            color: '#e74c3c',
-            cursor: 'pointer',
             borderRadius: 4,
-            transition: 'background 0.18s',
-            outline: 'none',
-            marginLeft: 2
+            margin: 0,
+            padding: 0,
+            transition: 'background 0.15s',
+            cursor: 'pointer'
           }}
-          title="Cerrar"
-          onClick={handleClose}
-          onMouseOver={e => { e.currentTarget.style.background = 'rgba(231,76,60,0.15)'; e.currentTarget.style.color = '#fff'; }}
-          onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#e74c3c'; }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#e3e6ea')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <svg width="10" height="10"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" strokeWidth="1.5" /><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" strokeWidth="1.5" /></svg>
+          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="#fff" strokeWidth="1.2" /></svg>
+        </button>
+        {/* Cerrar */}
+        <button
+          onClick={handleClose}
+          title="Cerrar"
+          style={{
+            width: 22,
+            height: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 4,
+            margin: 0,
+            padding: 0,
+            transition: 'background 0.15s',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#e57373')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14"><line x1="4" y1="4" x2="10" y2="10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" /><line x1="10" y1="4" x2="4" y2="10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" /></svg>
         </button>
       </div>
     </div>
