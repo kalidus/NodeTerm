@@ -2247,94 +2247,96 @@ const App = () => {
                                 <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
                               )}
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
-                              <Button
-                                icon="pi pi-times"
-                                className="p-button-rounded p-button-text p-button-sm ml-2"
-                                style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  // Cierre robusto de pestaña
-                                  const closedTab = tab;
-                                  
-                                  // Limpiar distro de la pestaña cerrada
-                                  cleanupTabDistro(closedTab.key);
-                                  
-                                  if (isHomeTab) {
-                                    // Manejar cierre de pestañas de inicio
-                                    const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
-                                    setHomeTabs(newHomeTabs);
-                                  } else if (isSSHTab) {
-                                    // Manejar cierre de pestañas split
-                                    if (closedTab.type === 'split') {
-                                      // Desconectar ambos terminales del split
-                                      if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
-                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
-                                        delete terminalRefs.current[closedTab.leftTerminal.key];
-                                        cleanupTabDistro(closedTab.leftTerminal.key);
+                              {tab.type !== 'home' && (
+                                <Button
+                                  icon="pi pi-times"
+                                  className="p-button-rounded p-button-text p-button-sm ml-2"
+                                  style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    // Cierre robusto de pestaña
+                                    const closedTab = tab;
+                                    
+                                    // Limpiar distro de la pestaña cerrada
+                                    cleanupTabDistro(closedTab.key);
+                                    
+                                    if (isHomeTab) {
+                                      // Manejar cierre de pestañas de inicio
+                                      const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
+                                      setHomeTabs(newHomeTabs);
+                                    } else if (isSSHTab) {
+                                      // Manejar cierre de pestañas split
+                                      if (closedTab.type === 'split') {
+                                        // Desconectar ambos terminales del split
+                                        if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
+                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
+                                          delete terminalRefs.current[closedTab.leftTerminal.key];
+                                          cleanupTabDistro(closedTab.leftTerminal.key);
+                                        }
+                                        if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
+                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
+                                          delete terminalRefs.current[closedTab.rightTerminal.key];
+                                          cleanupTabDistro(closedTab.rightTerminal.key);
+                                        }
+                                      } else {
+                                        // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                        if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                          // Terminal SSH - siempre desconectar
+                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                        } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                          // Explorador con conexión propia - desconectar
+                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                        }
+                                        // Los exploradores que usan el pool NO necesitan desconectarse
+                                        if (!closedTab.isExplorerInSSH) {
+                                          delete terminalRefs.current[closedTab.key];
+                                        }
                                       }
-                                      if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
-                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
-                                        delete terminalRefs.current[closedTab.rightTerminal.key];
-                                        cleanupTabDistro(closedTab.rightTerminal.key);
+                                      
+                                      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+                                      // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
+                                      const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
+                                      if (remainingTabs.length === 0) {
+                                          setSshConnectionStatus(prev => {
+                                              const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                              console.log(' Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                              return updated;
+                                          });
                                       }
+                                      setSshTabs(newSshTabs);
                                     } else {
-                                      // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                      if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-                                        // Terminal SSH - siempre desconectar
-                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                      } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                        // Explorador con conexión propia - desconectar
+                                      if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
                                         window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
                                       }
-                                      // Los exploradores que usan el pool NO necesitan desconectarse
-                                      if (!closedTab.isExplorerInSSH) {
-                                        delete terminalRefs.current[closedTab.key];
-                                      }
+                                      const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
+                                      setFileExplorerTabs(newExplorerTabs);
                                     }
                                     
-                                    const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                    // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
-                                    const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
-                                    if (remainingTabs.length === 0) {
-                                        setSshConnectionStatus(prev => {
-                                            const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
-                                            console.log('�� Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
-                                            return updated;
-                                        });
+                                    // Ajustar índice activo
+                                    if (activeTabIndex === idx) {
+                                      const newIndex = Math.max(0, idx - 1);
+                                      setActiveTabIndex(newIndex);
+                                      // También actualizar el índice guardado para el grupo actual
+                                      const currentGroupKey = activeGroupId || 'no-group';
+                                      setGroupActiveIndices(prev => ({
+                                        ...prev,
+                                        [currentGroupKey]: newIndex
+                                      }));
+                                    } else if (activeTabIndex > idx) {
+                                      const newIndex = activeTabIndex - 1;
+                                      setActiveTabIndex(newIndex);
+                                      // También actualizar el índice guardado para el grupo actual
+                                      const currentGroupKey = activeGroupId || 'no-group';
+                                      setGroupActiveIndices(prev => ({
+                                        ...prev,
+                                        [currentGroupKey]: newIndex
+                                      }));
                                     }
-                                    setSshTabs(newSshTabs);
-                                  } else {
-                                    if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                      window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                    }
-                                    const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
-                                    setFileExplorerTabs(newExplorerTabs);
-                                  }
-                                  
-                                  // Ajustar índice activo
-                                  if (activeTabIndex === idx) {
-                                    const newIndex = Math.max(0, idx - 1);
-                                    setActiveTabIndex(newIndex);
-                                    // También actualizar el índice guardado para el grupo actual
-                                    const currentGroupKey = activeGroupId || 'no-group';
-                                    setGroupActiveIndices(prev => ({
-                                      ...prev,
-                                      [currentGroupKey]: newIndex
-                                    }));
-                                  } else if (activeTabIndex > idx) {
-                                    const newIndex = activeTabIndex - 1;
-                                    setActiveTabIndex(newIndex);
-                                    // También actualizar el índice guardado para el grupo actual
-                                    const currentGroupKey = activeGroupId || 'no-group';
-                                    setGroupActiveIndices(prev => ({
-                                      ...prev,
-                                      [currentGroupKey]: newIndex
-                                    }));
-                                  }
-                                }}
-                                // tooltip="Cerrar pestaña"
-                                // tooltipOptions={{ position: 'top' }}
-                              />
+                                  }}
+                                  // tooltip="Cerrar pestaña"
+                                  // tooltipOptions={{ position: 'top' }}
+                                />
+                              )}
                               {rightIcon}
                             </div>
                           );
