@@ -1724,7 +1724,6 @@ const App = () => {
       type: 'terminal'
     };
 
-    // Modificar la pestaña existente para convertirla en split
     setSshTabs(prevTabs => {
       const updatedTabs = prevTabs.map(tab => {
         if (tab.key === existingTab.key) {
@@ -1739,9 +1738,10 @@ const App = () => {
         }
         return tab;
       });
-      
-      // Encontrar el índice de la pestaña modificada y activarla
-      const splitTabIndex = updatedTabs.findIndex(tab => tab.key === existingTab.key);
+      // Buscar el índice real de la pestaña split (por si la posición cambia)
+      const splitTabKey = existingTab.key;
+      const allTabs = [...homeTabs, ...updatedTabs, ...fileExplorerTabs];
+      const splitTabIndex = allTabs.findIndex(tab => tab.key === splitTabKey);
       if (splitTabIndex !== -1) {
         setActiveTabIndex(splitTabIndex);
         setGroupActiveIndices(prev => ({
@@ -1749,7 +1749,6 @@ const App = () => {
           'no-group': splitTabIndex
         }));
       }
-      
       return updatedTabs;
     });
 
