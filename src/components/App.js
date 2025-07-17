@@ -28,6 +28,7 @@ import { statusBarThemeManager } from '../utils/statusBarThemeManager';
 import ThemeSelector from './ThemeSelector';
 import SettingsDialog from './SettingsDialog';
 import TitleBar from './TitleBar';
+import HomeTab from './HomeTab';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -80,6 +81,13 @@ const App = () => {
   const [editFolderName, setEditFolderName] = useState('');
   const [sshTabs, setSshTabs] = useState([]);
   const [fileExplorerTabs, setFileExplorerTabs] = useState([]);
+  const [homeTabs, setHomeTabs] = useState(() => [
+    {
+      key: 'home_tab_default',
+      label: 'Inicio',
+      type: 'home'
+    }
+  ]);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [pendingExplorerSession, setPendingExplorerSession] = useState(null);
   const [sshPassword, setSSHPassword] = useState('');
@@ -177,6 +185,9 @@ const App = () => {
 
   // Mover pestaña a grupo
   const moveTabToGroup = (tabKey, groupId) => {
+    setHomeTabs(prev => prev.map(tab => 
+      tab.key === tabKey ? { ...tab, groupId } : tab
+    ));
     setSshTabs(prev => prev.map(tab => 
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
@@ -187,7 +198,7 @@ const App = () => {
 
   // Obtener pestañas de un grupo específico
   const getTabsInGroup = (groupId) => {
-    const allTabs = [...sshTabs, ...fileExplorerTabs];
+    const allTabs = [...homeTabs, ...sshTabs, ...fileExplorerTabs];
     return groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
   };
 
@@ -395,14 +406,16 @@ const App = () => {
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
-    return [...sshTabs, ...fileExplorerTabs];
+    return [...homeTabs, ...sshTabs, ...fileExplorerTabs];
   };
 
   const getTabTypeAndIndex = (globalIndex) => {
-    if (globalIndex < sshTabs.length) {
-      return { type: 'ssh', index: globalIndex };
+    if (globalIndex < homeTabs.length) {
+      return { type: 'home', index: globalIndex };
+    } else if (globalIndex < homeTabs.length + sshTabs.length) {
+      return { type: 'ssh', index: globalIndex - homeTabs.length };
     } else {
-      return { type: 'explorer', index: globalIndex - sshTabs.length };
+      return { type: 'explorer', index: globalIndex - homeTabs.length - sshTabs.length };
     }
   };
 
@@ -2068,7 +2081,7 @@ const App = () => {
             />
           </SplitterPanel>
           <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
-            {(sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
+            {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
                 {/* Barra de grupos como TabView scrollable */}
                 {tabGroups.length > 0 && (
@@ -2169,9 +2182,10 @@ const App = () => {
                     className=""
                   >
                   {getFilteredTabs().map((tab, idx) => {
-                    // Con las pestañas híbridas, todas las pestañas visibles están en el contexto SSH o explorer
-                    const isSSHTab = idx < sshTabs.length || tab.isExplorerInSSH;
-                    const originalIdx = isSSHTab ? idx : idx - sshTabs.length;
+                    // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
+                    const isHomeTab = idx < homeTabs.length;
+                    const isSSHTab = !isHomeTab && (idx < homeTabs.length + sshTabs.length || tab.isExplorerInSSH);
+                    const originalIdx = isHomeTab ? idx : (isSSHTab ? idx - homeTabs.length : idx - homeTabs.length - sshTabs.length);
                     
                     return (
                       <TabPanel 
@@ -2222,6 +2236,10 @@ const App = () => {
                               {tab.type === 'terminal' && tabDistros[tab.key] && (
                                 <DistroIcon distro={tabDistros[tab.key]} size={12} />
                               )}
+                              {/* Icono específico para pestaña de inicio */}
+                              {tab.type === 'home' && (
+                                <i className="pi pi-home" style={{ fontSize: '12px', marginRight: '6px', color: '#28a745' }}></i>
+                              )}
                               {/* Icono específico para splits */}
                               {tab.type === 'split' && (
                                 <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
@@ -2243,7 +2261,11 @@ const App = () => {
                                   // Limpiar distro de la pestaña cerrada
                                   cleanupTabDistro(closedTab.key);
                                   
-                                  if (isSSHTab) {
+                                  if (isHomeTab) {
+                                    // Manejar cierre de pestañas de inicio
+                                    const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
+                                    setHomeTabs(newHomeTabs);
+                                  } else if (isSSHTab) {
                                     // Manejar cierre de pestañas split
                                     if (closedTab.type === 'split') {
                                       // Desconectar ambos terminales del split
@@ -2605,7 +2627,7 @@ const App = () => {
                 </div>
                                 <div style={{ flexGrow: 1, position: 'relative' }}>
                   {/* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */}
-                  {[...sshTabs, ...fileExplorerTabs].map((tab) => {
+                  {[...homeTabs, ...sshTabs, ...fileExplorerTabs].map((tab) => {
                     const filteredTabs = getFilteredTabs();
                     const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                     const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
@@ -2627,7 +2649,50 @@ const App = () => {
                           pointerEvents: isActiveTab ? 'auto' : 'none'
                         }}
                       >
-                        {(tab.type === 'explorer' || tab.isExplorerInSSH) ? (
+                        {tab.type === 'home' ? (
+                          <HomeTab
+                            onCreateSSHConnection={() => setShowSSHDialog(true)}
+                            onCreateFolder={() => openNewFolderDialog(null)}
+                            sshConnectionsCount={(() => {
+                              // Contar sesiones SSH únicas (sin incluir exploradores)
+                              const uniqueSSHSessions = new Set();
+                              nodes.forEach(node => {
+                                if (node.data && node.data.type === 'ssh') {
+                                  uniqueSSHSessions.add(node.key);
+                                }
+                                // Función recursiva para contar en hijos
+                                const countInChildren = (children) => {
+                                  if (children && children.length > 0) {
+                                    children.forEach(child => {
+                                      if (child.data && child.data.type === 'ssh') {
+                                        uniqueSSHSessions.add(child.key);
+                                      }
+                                      countInChildren(child.children);
+                                    });
+                                  }
+                                };
+                                countInChildren(node.children);
+                              });
+                              return uniqueSSHSessions.size;
+                            })()}
+                            foldersCount={(() => {
+                              // Contar carpetas únicas
+                              let folderCount = 0;
+                              const countFolders = (nodeList) => {
+                                nodeList.forEach(node => {
+                                  if (node.droppable && (!node.data || node.data.type !== 'ssh')) {
+                                    folderCount++;
+                                  }
+                                  if (node.children && node.children.length > 0) {
+                                    countFolders(node.children);
+                                  }
+                                });
+                              };
+                              countFolders(nodes);
+                              return folderCount;
+                            })()}
+                          />
+                        ) : (tab.type === 'explorer' || tab.isExplorerInSSH) ? (
                           <FileExplorer
                             sshConfig={tab.sshConfig}
                             tabId={tab.key}
