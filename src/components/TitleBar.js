@@ -46,9 +46,9 @@ const TitleBar = () => {
         zIndex: 1000
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 15, height: 15, marginRight: 5, marginLeft: 1 }} />
-        <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1 }}>NodeTerm</span>
+      <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
+        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 15, height: 15, marginRight: 6, marginLeft: 0, display: 'block' }} />
+        <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1, lineHeight: '15px', display: 'flex', alignItems: 'center', height: 15 }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, WebkitAppRegion: 'no-drag' }}>
         {/* Botón de menú (3 puntos) */}
