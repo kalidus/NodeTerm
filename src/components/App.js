@@ -1227,10 +1227,10 @@ const App = () => {
               type: 'terminal'
             };
             const newTabs = [newTab, ...prevTabs];
-            setActiveTabIndex(0);
+            setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
             setGroupActiveIndices(prev => ({
               ...prev,
-              'no-group': 0
+              'no-group': homeTabs.length
             }));
             return newTabs;
           });
@@ -1295,11 +1295,10 @@ const App = () => {
               type: 'terminal'
             };
             const newTabs = [newTab, ...prevTabs];
-            setActiveTabIndex(0);
-            // También actualizar el índice guardado para el grupo Home
+            setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
             setGroupActiveIndices(prev => ({
               ...prev,
-              'no-group': 0
+              'no-group': homeTabs.length
             }));
             return newTabs;
           });
@@ -1804,7 +1803,7 @@ const App = () => {
     // Insertar como primera pestaña
     setSshTabs(prevSshTabs => {
       const newSshTabs = [newExplorerTab, ...prevSshTabs];
-      setActiveTabIndex(0);
+      setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
       return newSshTabs;
     });
   };
