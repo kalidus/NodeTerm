@@ -15,6 +15,7 @@ const TabbedTerminal = () => {
     ]);
     const [nextTabId, setNextTabId] = useState(2);
     const [selectedTerminalType, setSelectedTerminalType] = useState('powershell');
+    const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const terminalRefs = useRef({});
 
     // Registrar eventos para la pestaña inicial
@@ -25,9 +26,52 @@ const TabbedTerminal = () => {
             window.electron.ipcRenderer.send('register-tab-events', 'tab-1');
         }
         
+        // Listener para redimensionamiento de ventana
+        const handleResize = () => {
+            const activeTab = tabs.find(tab => tab.active);
+            if (activeTab) {
+                setTimeout(() => {
+                    const terminalRef = terminalRefs.current[activeTab.id];
+                    if (terminalRef && terminalRef.fit) {
+                        try {
+                            terminalRef.fit();
+                            console.log(`Terminal ${activeTab.id} resized on window resize`);
+                        } catch (error) {
+                            console.error(`Error resizing terminal on window resize:`, error);
+                        }
+                    }
+                }, 100);
+            }
+        };
+        
+        // Listener para cambios de visibilidad
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                const activeTab = tabs.find(tab => tab.active);
+                if (activeTab) {
+                    setTimeout(() => {
+                        const terminalRef = terminalRefs.current[activeTab.id];
+                        if (terminalRef && terminalRef.fit) {
+                            try {
+                                terminalRef.fit();
+                                console.log(`Terminal ${activeTab.id} resized on visibility change`);
+                            } catch (error) {
+                                console.error(`Error resizing terminal on visibility change:`, error);
+                            }
+                        }
+                    }, 100);
+                }
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
         // Cleanup al desmontar el componente
         return () => {
             console.log('TabbedTerminal unmounting, cleaning up processes');
+            window.removeEventListener('resize', handleResize);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             if (window.electron) {
                 // Detener todos los procesos activos
                 tabs.forEach(tab => {
@@ -37,6 +81,71 @@ const TabbedTerminal = () => {
             }
         };
     }, []);
+    
+    // Efecto para redimensionar terminales cuando cambian las pestañas
+    useEffect(() => {
+        const activeTab = tabs.find(tab => tab.active);
+        if (activeTab) {
+            console.log(`Tab change effect triggered for tab: ${activeTab.id}, key: ${activeTabKey}`);
+            
+            // Forzar re-render del terminal activo con múltiples intentos
+            const resizeTerminal = () => {
+                const terminalRef = terminalRefs.current[activeTab.id];
+                if (terminalRef && terminalRef.fit) {
+                    try {
+                        terminalRef.fit();
+                        console.log(`Terminal ${activeTab.id} resized successfully (key: ${activeTabKey})`);
+                    } catch (error) {
+                        console.error(`Error resizing terminal ${activeTab.id}:`, error);
+                    }
+                } else {
+                    console.warn(`Terminal ref not found for tab ${activeTab.id}`);
+                }
+            };
+            
+            // Intentar redimensionar con diferentes delays para asegurar que el DOM esté listo
+            resizeTerminal();
+            setTimeout(resizeTerminal, 10);
+            setTimeout(resizeTerminal, 50);
+            setTimeout(resizeTerminal, 100);
+            setTimeout(resizeTerminal, 200);
+            setTimeout(resizeTerminal, 500);
+            
+            // También intentar después de que el navegador haya procesado el cambio de visibilidad
+            requestAnimationFrame(() => {
+                setTimeout(resizeTerminal, 0);
+                setTimeout(resizeTerminal, 50);
+            });
+        }
+    }, [tabs, activeTabKey]);
+
+    // Efecto adicional que se ejecuta cuando cambia la key activa
+    useEffect(() => {
+        const activeTab = tabs.find(tab => tab.active);
+        if (activeTab && activeTabKey > 0) {
+            console.log(`Active tab key changed to ${activeTabKey}, forcing resize for tab: ${activeTab.id}`);
+            
+            const forceResize = () => {
+                const terminalRef = terminalRefs.current[activeTab.id];
+                if (terminalRef && terminalRef.fit) {
+                    try {
+                        terminalRef.fit();
+                        console.log(`Force resize successful for tab ${activeTab.id} (key: ${activeTabKey})`);
+                    } catch (error) {
+                        console.error(`Force resize error for tab ${activeTab.id}:`, error);
+                    }
+                }
+            };
+            
+            // Forzar redimensionamiento inmediato y con delays
+            forceResize();
+            setTimeout(forceResize, 0);
+            setTimeout(forceResize, 10);
+            setTimeout(forceResize, 50);
+            setTimeout(forceResize, 100);
+            setTimeout(forceResize, 200);
+        }
+    }, [activeTabKey, tabs]);
 
     // Opciones para el selector de tipo de terminal
     const terminalOptions = [
@@ -72,16 +181,46 @@ const TabbedTerminal = () => {
         });
         
         setNextTabId(prev => prev + 1);
+        
+        // Redimensionar el terminal de la nueva pestaña después de que se renderice
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[newTabId];
+            if (terminalRef && terminalRef.fit) {
+                terminalRef.fit();
+            }
+        }, 200);
     };
 
     // Función para cambiar de pestaña activa
     const switchTab = (tabId) => {
+        console.log(`Switching to tab: ${tabId}`);
         setTabs(prevTabs => 
             prevTabs.map(tab => ({
                 ...tab,
                 active: tab.id === tabId
             }))
         );
+        
+        // Incrementar la key para forzar re-render
+        setActiveTabKey(prev => prev + 1);
+        
+        // Forzar redimensionamiento agresivo
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[tabId];
+            if (terminalRef && terminalRef.fit) {
+                console.log(`Forcing aggressive resize for tab: ${tabId}`);
+                try {
+                    terminalRef.fit();
+                    // Intentar múltiples veces
+                    setTimeout(() => terminalRef.fit(), 10);
+                    setTimeout(() => terminalRef.fit(), 50);
+                    setTimeout(() => terminalRef.fit(), 100);
+                    setTimeout(() => terminalRef.fit(), 200);
+                } catch (error) {
+                    console.error(`Error in aggressive resize for tab ${tabId}:`, error);
+                }
+            }
+        }, 0);
     };
 
     // Función para cerrar una pestaña
@@ -318,9 +457,15 @@ const TabbedTerminal = () => {
                     <div
                         key={tab.id}
                         style={{
-                            display: tab.active ? 'block' : 'none',
-                            height: '100%',
-                            width: '100%'
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            transform: tab.active ? 'translateX(0)' : 'translateX(100%)',
+                            transition: 'transform 0.1s ease-out',
+                            visibility: tab.active ? 'visible' : 'hidden',
+                            opacity: tab.active ? 1 : 0
                         }}
                     >
                         {tab.type === 'powershell' ? (
