@@ -30,6 +30,10 @@ contextBridge.exposeInMainWorld('electron', {
     invoke: (channel, ...args) => {
       const validChannels = [
         'get-version-info',
+        'get-system-stats',
+        'get-connection-history',
+        'add-connection-to-history',
+        'toggle-favorite-connection',
         'clipboard:writeText',
         'clipboard:readText',
         'register-tab-events',
@@ -92,6 +96,10 @@ contextBridge.exposeInMainWorld('electron', {
 // Crear alias para compatibilidad con el código existente
 contextBridge.exposeInMainWorld('electronAPI', {
   getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
+  getSystemStats: () => ipcRenderer.invoke('get-system-stats'),
+  getConnectionHistory: () => ipcRenderer.invoke('get-connection-history'),
+  addConnectionToHistory: (connection) => ipcRenderer.invoke('add-connection-to-history', connection),
+  toggleFavoriteConnection: (connectionId) => ipcRenderer.invoke('toggle-favorite-connection', connectionId),
   quitApp: () => ipcRenderer.send('app-quit'),
   reload: () => ipcRenderer.invoke('app:reload'),
   forceReload: () => ipcRenderer.invoke('app:force-reload'),

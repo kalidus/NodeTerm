@@ -1,203 +1,347 @@
 import React, { useState } from 'react';
 import SplitLayout from './SplitLayout';
 import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
+import { TabView, TabPanel } from 'primereact/tabview';
 import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
+import SystemStats from './SystemStats';
+import ConnectionHistory from './ConnectionHistory';
+import QuickActions from './QuickActions';
 
 const HomeTab = ({ 
   onCreateSSHConnection, 
   onCreateFolder,
+  onOpenFileExplorer,
+  onOpenSettings,
   sshConnectionsCount = 0,
   foldersCount = 0 
 }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
   const versionInfo = getVersionInfo();
 
-  // Panel superior: contenido de bienvenida
+  const handleConnectToHistory = (connection) => {
+    console.log('Conectando a:', connection);
+    if (onCreateSSHConnection) {
+      onCreateSSHConnection(connection);
+    }
+  };
+
+  // Panel superior: Dashboard moderno con pestañas
   const topPanel = (
     <div style={{ 
-      padding: '2rem', 
       height: '100%', 
-      overflow: 'auto',
+      overflow: 'hidden',
       background: 'var(--surface-ground, #fafafa)',
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '2rem'
+      flexDirection: 'column'
     }}>
-      {/* Header de bienvenida */}
-      <div style={{ textAlign: 'center', maxWidth: '800px' }}>
-        <h1 style={{ 
-          color: 'var(--primary-color, #1976d2)', 
-          marginBottom: '1rem',
-          fontSize: '2.5rem',
-          fontWeight: 'bold'
-        }}>
-          ¡Bienvenido a NodeTerm!
-        </h1>
-        <p style={{ 
-          fontSize: '1.2rem', 
-          color: 'var(--text-color-secondary, #666)',
-          lineHeight: '1.6',
-          marginBottom: '2rem'
-        }}>
-          Tu terminal moderno para conexiones SSH y exploración de archivos remotos.
-          Conecta con servidores, explora sistemas de archivos y gestiona sesiones de forma eficiente.
-        </p>
-      </div>
-
-      {/* Tarjetas de acción rápida */}
+      {/* Header del dashboard */}
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '1.5rem',
-        width: '100%',
-        maxWidth: '1000px'
+        padding: '1.5rem 2rem 1rem 2rem',
+        background: 'linear-gradient(135deg, var(--primary-color, #1976d2) 0%, #1565C0 100%)',
+        color: 'white',
+        borderBottom: '1px solid var(--surface-border)'
       }}>
-        {/* Tarjeta de conexiones SSH */}
-        <Card 
-          title="Conexiones SSH"
-          style={{ 
-            height: '100%',
-            background: 'var(--surface-card, white)',
-            border: '1px solid var(--surface-border, #dee2e6)'
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <p style={{ color: 'var(--text-color-secondary, #666)' }}>
-              Crea y gestiona conexiones SSH a servidores remotos.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="pi pi-server" style={{ color: 'var(--primary-color, #1976d2)' }}></i>
-              <span style={{ fontWeight: 'bold' }}>Conexiones activas: {sshConnectionsCount}</span>
-            </div>
-            <Button
-              label="Nueva Conexión SSH"
-              icon="pi pi-plus"
-              onClick={onCreateSSHConnection}
-              className="p-button-primary"
-              style={{ marginTop: 'auto' }}
-            />
-          </div>
-        </Card>
-
-        {/* Tarjeta de organización */}
-        <Card 
-          title="Organización"
-          style={{ 
-            height: '100%',
-            background: 'var(--surface-card, white)',
-            border: '1px solid var(--surface-border, #dee2e6)'
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <p style={{ color: 'var(--text-color-secondary, #666)' }}>
-              Organiza tus conexiones en carpetas y grupos para un mejor flujo de trabajo.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="pi pi-folder" style={{ color: 'var(--primary-color, #1976d2)' }}></i>
-              <span style={{ fontWeight: 'bold' }}>Carpetas creadas: {foldersCount}</span>
-            </div>
-            <Button
-              label="Nueva Carpeta"
-              icon="pi pi-folder-plus"
-              onClick={onCreateFolder}
-              className="p-button-secondary"
-              style={{ marginTop: 'auto' }}
-            />
-          </div>
-        </Card>
-      </div>
-
-      <Divider />
-
-      {/* Sección de características */}
-      <div style={{ maxWidth: '800px', width: '100%' }}>
-        <h2 style={{ 
-          textAlign: 'center', 
-          color: 'var(--text-color, #333)',
-          marginBottom: '2rem'
-        }}>
-          Características principales
-        </h2>
-        
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '1.5rem'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
         }}>
-          {[
-            {
-              icon: 'pi pi-desktop',
-              title: 'Terminal SSH',
-              description: 'Conexiones SSH completas con soporte para múltiples sesiones y splits.'
-            },
-            {
-              icon: 'pi pi-folder-open',
-              title: 'Explorador de Archivos',
-              description: 'Navega y gestiona archivos remotos de forma intuitiva.'
-            },
-            {
-              icon: 'pi pi-th-large',
-              title: 'Grupos de Pestañas',
-              description: 'Organiza tus sesiones en grupos para mejor productividad.'
-            },
-            {
-              icon: 'pi pi-palette',
-              title: 'Temas Personalizables',
-              description: 'Múltiples temas y opciones de personalización visual.'
-            }
-          ].map((feature, index) => (
-            <div 
-              key={index}
-              style={{ 
-                textAlign: 'center',
-                padding: '1.5rem',
-                background: 'var(--surface-card, white)',
-                borderRadius: '8px',
-                border: '1px solid var(--surface-border, #dee2e6)'
-              }}
-            >
-              <i 
-                className={feature.icon} 
-                style={{ 
-                  fontSize: '2rem', 
-                  color: 'var(--primary-color, #1976d2)',
-                  marginBottom: '1rem',
-                  display: 'block'
-                }}
-              ></i>
-              <h3 style={{ 
-                marginBottom: '0.5rem',
-                color: 'var(--text-color, #333)'
-              }}>
-                {feature.title}
-              </h3>
-              <p style={{ 
-                color: 'var(--text-color-secondary, #666)',
-                lineHeight: '1.4',
-                margin: 0
-              }}>
-                {feature.description}
-              </p>
+          <div>
+            <h1 style={{ 
+              margin: '0 0 0.5rem 0',
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            }}>
+              NodeTerm Dashboard
+            </h1>
+            <p style={{ 
+              margin: 0,
+              fontSize: '1rem',
+              opacity: 0.9
+            }}>
+              Terminal moderno para conexiones SSH y gestión de sistemas remotos
+            </p>
+          </div>
+          
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2rem',
+            fontSize: '0.9rem'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                {sshConnectionsCount}
+              </div>
+              <div style={{ opacity: 0.8 }}>Conexiones</div>
             </div>
-          ))}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                {foldersCount}
+              </div>
+              <div style={{ opacity: 0.8 }}>Carpetas</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                v{versionInfo.version}
+              </div>
+              <div style={{ opacity: 0.8 }}>NodeTerm</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Footer con información de versión */}
-      <div style={{ 
-        textAlign: 'center',
-        marginTop: 'auto',
-        padding: '2rem 0',
-        color: 'var(--text-color-secondary, #666)',
-        fontSize: '0.9rem'
-      }}>
-        <p>NodeTerm v{versionInfo.version}</p>
-        <p style={{ margin: '0.5rem 0 0 0' }}>
-          Desarrollado con Electron {versionInfo.electron} y React
-        </p>
+      {/* Contenido principal con pestañas */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <TabView 
+          activeIndex={activeIndex} 
+          onTabChange={(e) => setActiveIndex(e.index)}
+          style={{ height: '100%' }}
+          className="dashboard-tabs"
+        >
+          {/* Pestaña de Estadísticas del Sistema */}
+          <TabPanel header="📊 Sistema">
+            <div style={{ 
+              height: 'calc(100vh - 240px)',
+              overflow: 'auto',
+              padding: '1rem'
+            }}>
+              <h2 style={{ 
+                margin: '0 0 1rem 0',
+                color: 'var(--text-color)',
+                fontSize: '1.5rem',
+                textAlign: 'center'
+              }}>
+                Estadísticas del Sistema
+              </h2>
+              <SystemStats />
+            </div>
+          </TabPanel>
+
+          {/* Pestaña de Historial de Conexiones */}
+          <TabPanel header="🕒 Historial">
+            <div style={{ 
+              height: 'calc(100vh - 240px)',
+              overflow: 'auto',
+              padding: '1rem'
+            }}>
+              <h2 style={{ 
+                margin: '0 0 1rem 0',
+                color: 'var(--text-color)',
+                fontSize: '1.5rem',
+                textAlign: 'center'
+              }}>
+                Historial de Conexiones
+              </h2>
+              <ConnectionHistory onConnectToHistory={handleConnectToHistory} />
+            </div>
+          </TabPanel>
+
+          {/* Pestaña de Acciones Rápidas */}
+          <TabPanel header="⚡ Acciones">
+            <div style={{ 
+              height: 'calc(100vh - 240px)',
+              overflow: 'auto',
+              padding: '1rem'
+            }}>
+              <h2 style={{ 
+                margin: '0 0 1rem 0',
+                color: 'var(--text-color)',
+                fontSize: '1.5rem',
+                textAlign: 'center'
+              }}>
+                Acciones Rápidas
+              </h2>
+              <QuickActions 
+                onCreateSSHConnection={onCreateSSHConnection}
+                onCreateFolder={onCreateFolder}
+                onOpenFileExplorer={onOpenFileExplorer}
+                onOpenSettings={onOpenSettings}
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+              />
+            </div>
+          </TabPanel>
+
+          {/* Pestaña de Información */}
+          <TabPanel header="ℹ️ Info">
+            <div style={{ 
+              height: 'calc(100vh - 240px)',
+              overflow: 'auto',
+              padding: '2rem'
+            }}>
+              <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <h2 style={{ 
+                  margin: '0 0 0.5rem 0',
+                  color: 'var(--text-color)',
+                  fontSize: '1.5rem'
+                }}>
+                  Acerca de NodeTerm
+                </h2>
+                <p style={{ 
+                  margin: 0,
+                  color: 'var(--text-color-secondary)',
+                  fontSize: '1rem'
+                }}>
+                  Terminal moderno y potente para profesionales
+                </p>
+              </div>
+
+              {/* Características principales */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '1.5rem',
+                marginBottom: '2rem'
+              }}>
+                {[
+                  {
+                    icon: 'pi pi-desktop',
+                    title: 'Terminal SSH Avanzado',
+                    description: 'Conexiones SSH completas con soporte para múltiples sesiones simultáneas y splits de pantalla.'
+                  },
+                  {
+                    icon: 'pi pi-folder-open',
+                    title: 'Explorador de Archivos',
+                    description: 'Navega y gestiona archivos remotos de forma intuitiva con interfaz gráfica moderna.'
+                  },
+                  {
+                    icon: 'pi pi-chart-line',
+                    title: 'Monitoreo del Sistema',
+                    description: 'Estadísticas en tiempo real de CPU, memoria, discos y red para optimizar el rendimiento.'
+                  },
+                  {
+                    icon: 'pi pi-palette',
+                    title: 'Personalización Total',
+                    description: 'Múltiples temas, configuraciones avanzadas y opciones de personalización visual.'
+                  }
+                ].map((feature, index) => (
+                  <Card 
+                    key={index}
+                    style={{ 
+                      background: 'var(--surface-card)',
+                      border: '1px solid var(--surface-border)',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ padding: '1.5rem' }}>
+                      <i 
+                        className={feature.icon} 
+                        style={{ 
+                          fontSize: '2.5rem', 
+                          color: 'var(--primary-color)',
+                          marginBottom: '1rem',
+                          display: 'block'
+                        }}
+                      />
+                      <h3 style={{ 
+                        marginBottom: '0.75rem',
+                        color: 'var(--text-color)',
+                        fontSize: '1.1rem'
+                      }}>
+                        {feature.title}
+                      </h3>
+                      <p style={{ 
+                        color: 'var(--text-color-secondary)',
+                        lineHeight: '1.5',
+                        margin: 0,
+                        fontSize: '0.9rem'
+                      }}>
+                        {feature.description}
+                      </p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Información técnica */}
+              <Card style={{ 
+                background: 'var(--surface-section)',
+                border: '1px solid var(--surface-border)'
+              }}>
+                <div style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '1.5rem',
+                  textAlign: 'center'
+                }}>
+                  <div>
+                    <h4 style={{ 
+                      margin: '0 0 0.5rem 0',
+                      color: 'var(--text-color)'
+                    }}>
+                      Versión
+                    </h4>
+                    <p style={{ 
+                      margin: 0,
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {versionInfo.version}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 style={{ 
+                      margin: '0 0 0.5rem 0',
+                      color: 'var(--text-color)'
+                    }}>
+                      Electron
+                    </h4>
+                    <p style={{ 
+                      margin: 0,
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {versionInfo.electron}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 style={{ 
+                      margin: '0 0 0.5rem 0',
+                      color: 'var(--text-color)'
+                    }}>
+                      Node.js
+                    </h4>
+                    <p style={{ 
+                      margin: 0,
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {versionInfo.node}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 style={{ 
+                      margin: '0 0 0.5rem 0',
+                      color: 'var(--text-color)'
+                    }}>
+                      Chrome
+                    </h4>
+                    <p style={{ 
+                      margin: 0,
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {versionInfo.chrome}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </TabPanel>
+        </TabView>
       </div>
     </div>
   );
@@ -215,13 +359,11 @@ const HomeTab = ({
     </div>
   );
 
-  // Usar SplitLayout para el split horizontal
   return (
     <SplitLayout
       leftTerminal={{ key: 'home_top', content: topPanel }}
       rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
       orientation="horizontal"
-      // No se usan sshConfig ni stats aquí
       fontFamily={''}
       fontSize={16}
       theme={{}}
@@ -234,4 +376,4 @@ const HomeTab = ({
   );
 };
 
-export default HomeTab; 
+export default HomeTab;
