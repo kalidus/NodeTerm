@@ -2032,13 +2032,28 @@ function startPowerShellSession(tabId, { cols, rows }) {
   }
   
   try {
-    // Kill existing process if any
+    // Verificar si ya hay un proceso activo
     if (powershellProcesses[tabId]) {
-      try {
-        powershellProcesses[tabId].kill();
-      } catch (e) {
-        console.error(`Error killing existing PowerShell process for tab ${tabId}:`, e);
+      console.log(`PowerShell ya existe para ${tabId}, reutilizando proceso existente`);
+      
+      // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
+      if (mainWindow && mainWindow.webContents) {
+        const welcomeMsg = '\r\n\x1b[32m=== Sesión PowerShell reutilizada ===\x1b[0m\r\n';
+        mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
       }
+      
+      // Refrescar prompt para mostrar estado actual
+      setTimeout(() => {
+        if (powershellProcesses[tabId]) {
+          try {
+            powershellProcesses[tabId].write('\r');
+          } catch (e) {
+            console.log(`Error refrescando prompt para ${tabId}:`, e.message);
+          }
+        }
+      }, 300);
+      
+      return;
     }
 
     // Determine shell and arguments based on OS
@@ -2046,22 +2061,13 @@ function startPowerShellSession(tabId, { cols, rows }) {
     const platform = os.platform();
     
     if (platform === 'win32') {
-      // Try PowerShell 7 first, fallback to Windows PowerShell
-      shell = 'pwsh.exe';
-      args = ['-NoLogo', '-NoExit', '-Command', 'Clear-Host; $Host.UI.RawUI.WindowTitle = "PowerShell"'];
-      
-      // Test if PowerShell 7 is available
-      try {
-        require('child_process').execSync('pwsh.exe -Version', { stdio: 'ignore' });
-      } catch (e) {
-        // Fallback to Windows PowerShell
-        shell = 'powershell.exe';
-        args = ['-NoLogo', '-NoExit', '-Command', 'Clear-Host; $Host.UI.RawUI.WindowTitle = "PowerShell"'];
-      }
+      // Usar Windows PowerShell directamente para mayor estabilidad
+      shell = 'powershell.exe';
+      args = ['-NoExit'];
     } else {
       // For non-Windows platforms, try pwsh (PowerShell Core)
       shell = 'pwsh';
-      args = ['-NoLogo', '-NoExit', '-Command', 'Clear-Host; $Host.UI.RawUI.WindowTitle = "PowerShell"'];
+      args = ['-NoExit'];
     }
 
     // Spawn PowerShell process con configuración ultra-conservative
@@ -2154,6 +2160,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
         mainWindow.webContents.send(`powershell:data:${tabId}`, data);
       }
     });
+    
+
 
     // Handle PowerShell exit
     powershellProcesses[tabId].onExit((exitCode, signal) => {
@@ -2183,15 +2191,16 @@ function startPowerShellSession(tabId, { cols, rows }) {
       // Limpiar el proceso actual
       delete powershellProcesses[tabId];
       
-      // Determinar si es una terminación normal que requiere reinicio
-      const isNormalExit = actualExitCode === 0 || actualExitCode === -1073741510 || actualExitCode === 1;
+      // Determinar si es una terminación que requiere reinicio automático
+      // Solo reiniciar para códigos específicos de fallo de ConPTY, no para terminaciones normales
+      const needsRestart = actualExitCode === -1073741510; // Solo fallo de ConPTY
       
-      if (isNormalExit) {
-        // Para terminaciones normales, reiniciar automáticamente después de un delay corto
-        console.log(`PowerShell ${tabId} terminó normalmente, reiniciando en 1 segundo...`);
+      if (needsRestart) {
+        // Para fallos específicos como ConPTY, reiniciar automáticamente
+        console.log(`PowerShell ${tabId} falló con código ${actualExitCode}, reiniciando en 1 segundo...`);
         setTimeout(() => {
           if (!isAppQuitting && mainWindow && mainWindow.webContents) {
-            console.log(`Reiniciando PowerShell ${tabId}...`);
+            console.log(`Reiniciando PowerShell ${tabId} después de fallo...`);
             // Usar las dimensiones originales o por defecto
             const originalCols = cols || 120;
             const originalRows = rows || 30;
@@ -2199,10 +2208,15 @@ function startPowerShellSession(tabId, { cols, rows }) {
           }
         }, 1000);
       } else {
-        // Solo reportar como error si no es una terminación intencional
-        if (mainWindow && mainWindow.webContents) {
-          const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
-          mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
+        // Para terminaciones normales (código 0) o errores (código 1), no reiniciar automáticamente
+        if (actualExitCode === 0) {
+          console.log(`PowerShell ${tabId} terminó normalmente (código ${actualExitCode})`);
+        } else {
+          console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
+          if (mainWindow && mainWindow.webContents) {
+            const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
+            mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
+          }
         }
       }
     });
@@ -2211,18 +2225,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     if (powershellProcesses[tabId] && powershellProcesses[tabId].pty) {
       powershellProcesses[tabId].pty.on('error', (error) => {
         if (error.message && error.message.includes('AttachConsole failed')) {
-          console.warn(`Error AttachConsole en PowerShell ${tabId}, intentando reiniciar...`);
-          
-          // Reiniciar el proceso después de un delay más largo
-          setTimeout(() => {
-            if (!isAppQuitting && !powershellProcesses[tabId]) {
-              console.log(`Reiniciando PowerShell ${tabId}...`);
-              // Usar las dimensiones originales o por defecto
-              const originalCols = cols || 120;
-              const originalRows = rows || 30;
-              startPowerShellSession(tabId, { cols: originalCols, rows: originalRows });
-            }
-          }, 3000);
+          console.warn(`Error AttachConsole en PowerShell ${tabId}:`, error.message);
         } else {
           console.error(`Error en proceso PowerShell ${tabId}:`, error);
         }
@@ -2236,6 +2239,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
     //   }
     // }, 500);
 
+    console.log(`PowerShell ${tabId} iniciado exitosamente`);
+
   } catch (error) {
     console.error(`Error starting PowerShell for tab ${tabId}:`, error);
     if (mainWindow && mainWindow.webContents) {
@@ -2244,30 +2249,20 @@ function startPowerShellSession(tabId, { cols, rows }) {
   }
 }
 
-// Start PowerShell session with specific tab ID
+// Start PowerShell session with specific tab ID - Global listener with auto-registration
 ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
   const channel = event.senderFrame ? event.channel : arguments[1];
   const tabId = channel.split(':')[2];
+  
+  // Registrar eventos para este tab si no están registrados
+  if (!registeredTabEvents.has(tabId)) {
+    registerTabEvents(tabId);
+  }
+  
   startPowerShellSession(tabId, { cols, rows });
 });
 
-// Send data to PowerShell
-ipcMain.on('powershell:data', (event, data) => {
-  const tabId = 'default';
-  handlePowerShellData(tabId, data);
-});
-
-// Resize PowerShell terminal
-ipcMain.on('powershell:resize', (event, { cols, rows }) => {
-  const tabId = 'default';
-  handlePowerShellResize(tabId, { cols, rows });
-});
-
-// Stop PowerShell session
-ipcMain.on('powershell:stop', () => {
-  const tabId = 'default';
-  handlePowerShellStop(tabId);
-});
+// Using only tab-specific PowerShell handlers for better control
 
 // Funciones de manejo para PowerShell
 function handlePowerShellStart(tabId, { cols, rows }) {
@@ -2284,6 +2279,8 @@ function handlePowerShellData(tabId, data) {
         mainWindow.webContents.send(`powershell:error:${tabId}`, `Write error: ${error.message}`);
       }
     }
+  } else {
+    console.warn(`No PowerShell process found for ${tabId}`);
   }
 }
 
@@ -2300,7 +2297,7 @@ function handlePowerShellResize(tabId, { cols, rows }) {
 function handlePowerShellStop(tabId) {
   if (powershellProcesses[tabId]) {
     try {
-      console.log(`Deteniendo proceso PowerShell para tab ${tabId}`);
+      console.log(`Stopping PowerShell process for tab ${tabId}`);
       const process = powershellProcesses[tabId];
       
       // Remover listeners antes de terminar el proceso
@@ -2568,8 +2565,12 @@ function handleWSLStop(tabId) {
   }
 }
 
+// Set para trackear tabs con eventos registrados
+const registeredTabEvents = new Set();
+
 // Sistema de registro dinámico para eventos de pestañas
 function registerTabEvents(tabId) {
+  registeredTabEvents.add(tabId);
   // PowerShell events
   ipcMain.removeAllListeners(`powershell:start:${tabId}`);
   ipcMain.removeAllListeners(`powershell:data:${tabId}`);
@@ -2621,10 +2622,7 @@ ipcMain.on('register-tab-events', (event, tabId) => {
   registerTabEvents(tabId);
 });
 
-// También registrar eventos al inicio automáticamente para pestañas comunes
-['tab-1', 'tab-2', 'tab-3', 'tab-4', 'tab-5'].forEach(tabId => {
-  registerTabEvents(tabId);
-});
+// Using dynamic tab registration instead of predefined tabs
 
 // Cleanup terminals on app quit
 app.on('before-quit', (event) => {
