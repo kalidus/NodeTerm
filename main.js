@@ -56,7 +56,20 @@ class SafeWindowsTerminal {
     });
 
     this.process.on('exit', (code, signal) => {
-      this.exitCallbacks.forEach(callback => callback(code, signal));
+      console.log(`SafeWindowsTerminal exit - code:`, code, 'signal:', signal, 'type:', typeof code);
+      // Asegurar que code sea un número válido
+      let exitCode = 0;
+      if (typeof code === 'number') {
+        exitCode = code;
+      } else if (typeof code === 'string') {
+        exitCode = parseInt(code, 10) || 0;
+      } else if (code && typeof code === 'object' && code.exitCode !== undefined) {
+        exitCode = code.exitCode;
+      } else {
+        exitCode = 0;
+      }
+      console.log(`SafeWindowsTerminal actual exit code:`, exitCode);
+      this.exitCallbacks.forEach(callback => callback(exitCode, signal));
     });
 
     return this;
@@ -2035,7 +2048,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     if (platform === 'win32') {
       // Try PowerShell 7 first, fallback to Windows PowerShell
       shell = 'pwsh.exe';
-      args = ['-NoLogo', '-NoExit'];
+      args = ['-NoLogo', '-NoExit', '-Command', 'Clear-Host; $Host.UI.RawUI.WindowTitle = "PowerShell"'];
       
       // Test if PowerShell 7 is available
       try {
@@ -2043,12 +2056,12 @@ function startPowerShellSession(tabId, { cols, rows }) {
       } catch (e) {
         // Fallback to Windows PowerShell
         shell = 'powershell.exe';
-        args = ['-NoLogo', '-NoExit'];
+        args = ['-NoLogo', '-NoExit', '-Command', 'Clear-Host; $Host.UI.RawUI.WindowTitle = "PowerShell"'];
       }
     } else {
       // For non-Windows platforms, try pwsh (PowerShell Core)
       shell = 'pwsh';
-      args = ['-NoLogo', '-NoExit'];
+      args = ['-NoLogo', '-NoExit', '-Command', 'Clear-Host; $Host.UI.RawUI.WindowTitle = "PowerShell"'];
     }
 
     // Spawn PowerShell process con configuración ultra-conservative
@@ -2144,16 +2157,54 @@ function startPowerShellSession(tabId, { cols, rows }) {
 
     // Handle PowerShell exit
     powershellProcesses[tabId].onExit((exitCode, signal) => {
-      console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
+      console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
       
-      // Solo reportar como error si no es una terminación intencional
-      if (exitCode !== 0 && exitCode !== -1073741510 && exitCode !== 1 && mainWindow && mainWindow.webContents) {
-        // -1073741510 es un código de terminación común en Windows (STATUS_CONTROL_C_EXIT)
-        // 1 es un código de terminación normal
-        mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCode}`);
+      // Extraer el código de salida real
+      let actualExitCode = exitCode;
+      if (typeof exitCode === 'object' && exitCode !== null) {
+        // Si es un objeto con propiedad exitCode, usar ese valor
+        if (exitCode.exitCode !== undefined) {
+          actualExitCode = exitCode.exitCode;
+        } else {
+          // Si es otro tipo de objeto, intentar convertirlo
+          actualExitCode = parseInt(JSON.stringify(exitCode), 10) || 0;
+        }
+      } else if (typeof exitCode === 'string') {
+        // Si es string, intentar parsearlo
+        actualExitCode = parseInt(exitCode, 10) || 0;
+      } else if (typeof exitCode === 'number') {
+        actualExitCode = exitCode;
+      } else {
+        actualExitCode = 0;
       }
       
+      console.log(`PowerShell ${tabId} actual exit code:`, actualExitCode);
+      
+      // Limpiar el proceso actual
       delete powershellProcesses[tabId];
+      
+      // Determinar si es una terminación normal que requiere reinicio
+      const isNormalExit = actualExitCode === 0 || actualExitCode === -1073741510 || actualExitCode === 1;
+      
+      if (isNormalExit) {
+        // Para terminaciones normales, reiniciar automáticamente después de un delay corto
+        console.log(`PowerShell ${tabId} terminó normalmente, reiniciando en 1 segundo...`);
+        setTimeout(() => {
+          if (!isAppQuitting && mainWindow && mainWindow.webContents) {
+            console.log(`Reiniciando PowerShell ${tabId}...`);
+            // Usar las dimensiones originales o por defecto
+            const originalCols = cols || 120;
+            const originalRows = rows || 30;
+            startPowerShellSession(tabId, { cols: originalCols, rows: originalRows });
+          }
+        }, 1000);
+      } else {
+        // Solo reportar como error si no es una terminación intencional
+        if (mainWindow && mainWindow.webContents) {
+          const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
+          mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
+        }
+      }
     });
     
     // Agregar manejador de errores del proceso
@@ -2162,13 +2213,16 @@ function startPowerShellSession(tabId, { cols, rows }) {
         if (error.message && error.message.includes('AttachConsole failed')) {
           console.warn(`Error AttachConsole en PowerShell ${tabId}, intentando reiniciar...`);
           
-          // Reiniciar el proceso después de un breve delay
+          // Reiniciar el proceso después de un delay más largo
           setTimeout(() => {
             if (!isAppQuitting && !powershellProcesses[tabId]) {
               console.log(`Reiniciando PowerShell ${tabId}...`);
-              startPowerShellSession(tabId, { cols, rows });
+              // Usar las dimensiones originales o por defecto
+              const originalCols = cols || 120;
+              const originalRows = rows || 30;
+              startPowerShellSession(tabId, { cols: originalCols, rows: originalRows });
             }
-          }, 1000);
+          }, 3000);
         } else {
           console.error(`Error en proceso PowerShell ${tabId}:`, error);
         }
@@ -2176,11 +2230,11 @@ function startPowerShellSession(tabId, { cols, rows }) {
     }
 
     // Send ready signal
-    setTimeout(() => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`powershell:ready:${tabId}`);
-      }
-    }, 500);
+    // setTimeout(() => {
+    //   if (mainWindow && mainWindow.webContents) {
+    //     mainWindow.webContents.send(`powershell:ready:${tabId}`);
+    //   }
+    // }, 500);
 
   } catch (error) {
     console.error(`Error starting PowerShell for tab ${tabId}:`, error);
@@ -2382,19 +2436,62 @@ function startWSLSession(tabId, { cols, rows }) {
 
     // Handle WSL exit
     wslProcesses[tabId].onExit((exitCode, signal) => {
-      console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`wsl:error:${tabId}`, `WSL process exited with code ${exitCode}`);
+      console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
+      
+      // Extraer el código de salida real
+      let actualExitCode = exitCode;
+      if (typeof exitCode === 'object' && exitCode !== null) {
+        // Si es un objeto con propiedad exitCode, usar ese valor
+        if (exitCode.exitCode !== undefined) {
+          actualExitCode = exitCode.exitCode;
+        } else {
+          // Si es otro tipo de objeto, intentar convertirlo
+          actualExitCode = parseInt(JSON.stringify(exitCode), 10) || 0;
+        }
+      } else if (typeof exitCode === 'string') {
+        // Si es string, intentar parsearlo
+        actualExitCode = parseInt(exitCode, 10) || 0;
+      } else if (typeof exitCode === 'number') {
+        actualExitCode = exitCode;
+      } else {
+        actualExitCode = 0;
       }
+      
+      console.log(`WSL ${tabId} actual exit code:`, actualExitCode);
+      
+      // Limpiar el proceso actual
       delete wslProcesses[tabId];
+      
+      // Determinar si es una terminación normal que requiere reinicio
+      const isNormalExit = actualExitCode === 0 || actualExitCode === 1;
+      
+      if (isNormalExit) {
+        // Para terminaciones normales, reiniciar automáticamente después de un delay corto
+        console.log(`WSL ${tabId} terminó normalmente, reiniciando en 1 segundo...`);
+        setTimeout(() => {
+          if (!isAppQuitting && mainWindow && mainWindow.webContents) {
+            console.log(`Reiniciando WSL ${tabId}...`);
+            // Usar las dimensiones originales o por defecto
+            const originalCols = cols || 120;
+            const originalRows = rows || 30;
+            startWSLSession(tabId, { cols: originalCols, rows: originalRows });
+          }
+        }, 1000);
+      } else {
+        // Solo reportar como error si no es una terminación normal
+        if (mainWindow && mainWindow.webContents) {
+          const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
+          mainWindow.webContents.send(`wsl:error:${tabId}`, `WSL process exited with code ${exitCodeStr}`);
+        }
+      }
     });
 
     // Send ready signal
-    setTimeout(() => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`wsl:ready:${tabId}`);
-      }
-    }, 500);
+    // setTimeout(() => {
+    //   if (mainWindow && mainWindow.webContents) {
+    //     mainWindow.webContents.send(`wsl:ready:${tabId}`);
+    //   }
+    // }, 500);
 
   } catch (error) {
     console.error(`Error starting WSL for tab ${tabId}:`, error);
