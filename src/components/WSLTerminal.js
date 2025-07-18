@@ -6,7 +6,12 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 
-const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospace', fontSize = 14, theme = {} }, ref) => {
+const WSLTerminal = forwardRef(({ 
+    fontFamily = 'Consolas, "Courier New", monospace', 
+    fontSize = 14, 
+    theme = {},
+    tabId = 'default'
+}, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -39,7 +44,7 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
         },
         paste: (text) => {
             if (term.current && text) {
-                window.electron?.ipcRenderer.send('wsl:data', text);
+                window.electron?.ipcRenderer.send(`wsl:data:${tabId}`, text);
             }
         }
     }));
@@ -130,7 +135,7 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
         if (window.electron) {
             // Initialize WSL session
             term.current.writeln('\x1b[36mInitializing WSL...\x1b[0m');
-            window.electron.ipcRenderer.send('wsl:start', {
+            window.electron.ipcRenderer.send(`wsl:start:${tabId}`, {
                 cols: term.current.cols,
                 rows: term.current.rows
             });
@@ -151,7 +156,7 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
                     domEvent.preventDefault();
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                            window.electron.ipcRenderer.send('wsl:data', text);
+                            window.electron.ipcRenderer.send(`wsl:data:${tabId}`, text);
                         }
                     });
                     return;
@@ -160,12 +165,12 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
 
             // Handle user input - send to WSL
             const dataHandler = term.current.onData(data => {
-                window.electron.ipcRenderer.send('wsl:data', data);
+                window.electron.ipcRenderer.send(`wsl:data:${tabId}`, data);
             });
 
             // Handle terminal resize
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
-                window.electron.ipcRenderer.send('wsl:resize', { cols, rows });
+                window.electron.ipcRenderer.send(`wsl:resize:${tabId}`, { cols, rows });
             });
 
             // Listen for WSL output
@@ -174,20 +179,20 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
                     term.current.write(data);
                 }
             };
-            const onDataUnsubscribe = window.electron.ipcRenderer.on('wsl:data', dataListener);
+            const onDataUnsubscribe = window.electron.ipcRenderer.on(`wsl:data:${tabId}`, dataListener);
 
             // Listen for WSL ready event
             const readyListener = () => {
                 setIsConnected(true);
                 term.current?.writeln('\x1b[32mWSL ready!\x1b[0m');
             };
-            const onReadyUnsubscribe = window.electron.ipcRenderer.on('wsl:ready', readyListener);
+            const onReadyUnsubscribe = window.electron.ipcRenderer.on(`wsl:ready:${tabId}`, readyListener);
 
             // Listen for WSL errors
             const errorListener = (error) => {
                 term.current?.writeln(`\x1b[31mWSL Error: ${error}\x1b[0m`);
             };
-            const onErrorUnsubscribe = window.electron.ipcRenderer.on('wsl:error', errorListener);
+            const onErrorUnsubscribe = window.electron.ipcRenderer.on(`wsl:error:${tabId}`, errorListener);
 
             // Handle right-click context menu
             const contextMenuHandler = (e) => {
@@ -195,7 +200,7 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
                 // Simple paste functionality on right-click
                 window.electron.clipboard.readText().then(text => {
                     if (text) {
-                        window.electron.ipcRenderer.send('wsl:data', text);
+                        window.electron.ipcRenderer.send(`wsl:data:${tabId}`, text);
                     }
                 });
             };
@@ -204,7 +209,7 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
             // Cleanup function
             return () => {
                 resizeObserver.disconnect();
-                window.electron.ipcRenderer.send('wsl:stop');
+                window.electron.ipcRenderer.send(`wsl:stop:${tabId}`);
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
@@ -227,7 +232,7 @@ const WSLTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospa
                 }
             };
         }
-    }, []);
+    }, [tabId]);
 
     // Update font family dynamically
     useEffect(() => {

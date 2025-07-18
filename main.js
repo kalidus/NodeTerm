@@ -1902,18 +1902,24 @@ ipcMain.handle('window:close', () => {
 const pty = require('node-pty');
 const os = require('os');
 
-let powershellProcess = null;
-let wslProcess = null;
+let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
+let wslProcesses = {}; // Cambiar a objeto para múltiples procesos
 
 // Start PowerShell session
 ipcMain.on('powershell:start', (event, { cols, rows }) => {
+  const tabId = 'default'; // Fallback para compatibilidad
+  startPowerShellSession(tabId, { cols, rows });
+});
+
+// Start PowerShell session with tab ID
+function startPowerShellSession(tabId, { cols, rows }) {
   try {
     // Kill existing process if any
-    if (powershellProcess) {
+    if (powershellProcesses[tabId]) {
       try {
-        powershellProcess.kill();
+        powershellProcesses[tabId].kill();
       } catch (e) {
-        console.error('Error killing existing PowerShell process:', e);
+        console.error(`Error killing existing PowerShell process for tab ${tabId}:`, e);
       }
     }
 
@@ -1941,7 +1947,7 @@ ipcMain.on('powershell:start', (event, { cols, rows }) => {
     }
 
     // Spawn PowerShell process
-    powershellProcess = pty.spawn(shell, args, {
+    powershellProcesses[tabId] = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols: cols || 120,
       rows: rows || 30,
@@ -1957,84 +1963,139 @@ ipcMain.on('powershell:start', (event, { cols, rows }) => {
     });
 
     // Handle PowerShell output
-    powershellProcess.onData((data) => {
+    powershellProcesses[tabId].onData((data) => {
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('powershell:data', data);
+        mainWindow.webContents.send(`powershell:data:${tabId}`, data);
       }
     });
 
     // Handle PowerShell exit
-    powershellProcess.onExit((exitCode, signal) => {
-      console.log('PowerShell process exited with code:', exitCode, 'signal:', signal);
+    powershellProcesses[tabId].onExit((exitCode, signal) => {
+      console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('powershell:error', `PowerShell process exited with code ${exitCode}`);
+        mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCode}`);
       }
-      powershellProcess = null;
+      delete powershellProcesses[tabId];
     });
 
     // Send ready signal
     setTimeout(() => {
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('powershell:ready');
+        mainWindow.webContents.send(`powershell:ready:${tabId}`);
       }
     }, 500);
 
   } catch (error) {
-    console.error('Error starting PowerShell:', error);
+    console.error(`Error starting PowerShell for tab ${tabId}:`, error);
     if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('powershell:error', `Failed to start PowerShell: ${error.message}`);
+      mainWindow.webContents.send(`powershell:error:${tabId}`, `Failed to start PowerShell: ${error.message}`);
     }
   }
+}
+
+// Start PowerShell session with specific tab ID
+ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
+  const channel = event.senderFrame ? event.channel : arguments[1];
+  const tabId = channel.split(':')[2];
+  startPowerShellSession(tabId, { cols, rows });
 });
 
 // Send data to PowerShell
 ipcMain.on('powershell:data', (event, data) => {
-  if (powershellProcess) {
-    try {
-      powershellProcess.write(data);
-    } catch (error) {
-      console.error('Error writing to PowerShell:', error);
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('powershell:error', `Write error: ${error.message}`);
-      }
-    }
-  }
+  const tabId = 'default';
+  handlePowerShellData(tabId, data);
 });
 
 // Resize PowerShell terminal
 ipcMain.on('powershell:resize', (event, { cols, rows }) => {
-  if (powershellProcess) {
-    try {
-      powershellProcess.resize(cols, rows);
-    } catch (error) {
-      console.error('Error resizing PowerShell:', error);
-    }
-  }
+  const tabId = 'default';
+  handlePowerShellResize(tabId, { cols, rows });
 });
 
 // Stop PowerShell session
 ipcMain.on('powershell:stop', () => {
-  if (powershellProcess) {
+  const tabId = 'default';
+  handlePowerShellStop(tabId);
+});
+
+// Funciones de manejo para PowerShell
+function handlePowerShellStart(tabId, { cols, rows }) {
+  startPowerShellSession(tabId, { cols, rows });
+}
+
+function handlePowerShellData(tabId, data) {
+  if (powershellProcesses[tabId]) {
     try {
-      powershellProcess.kill();
-      powershellProcess = null;
+      powershellProcesses[tabId].write(data);
     } catch (error) {
-      console.error('Error stopping PowerShell:', error);
+      console.error(`Error writing to PowerShell ${tabId}:`, error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send(`powershell:error:${tabId}`, `Write error: ${error.message}`);
+      }
     }
   }
-});
+}
+
+function handlePowerShellResize(tabId, { cols, rows }) {
+  if (powershellProcesses[tabId]) {
+    try {
+      powershellProcesses[tabId].resize(cols, rows);
+    } catch (error) {
+      console.error(`Error resizing PowerShell ${tabId}:`, error);
+    }
+  }
+}
+
+function handlePowerShellStop(tabId) {
+  if (powershellProcesses[tabId]) {
+    try {
+      powershellProcesses[tabId].kill();
+      delete powershellProcesses[tabId];
+    } catch (error) {
+      console.error(`Error stopping PowerShell ${tabId}:`, error);
+    }
+  }
+}
 
 // === WSL Terminal Support ===
 
 // Start WSL session
 ipcMain.on('wsl:start', (event, { cols, rows }) => {
+  const tabId = 'default';
+  handleWSLStart(tabId, { cols, rows });
+});
+
+// Send data to WSL
+ipcMain.on('wsl:data', (event, data) => {
+  const tabId = 'default';
+  handleWSLData(tabId, data);
+});
+
+// Resize WSL terminal
+ipcMain.on('wsl:resize', (event, { cols, rows }) => {
+  const tabId = 'default';
+  handleWSLResize(tabId, { cols, rows });
+});
+
+// Stop WSL session
+ipcMain.on('wsl:stop', () => {
+  const tabId = 'default';
+  handleWSLStop(tabId);
+});
+
+// Funciones de manejo para WSL
+function handleWSLStart(tabId, { cols, rows }) {
+  startWSLSession(tabId, { cols, rows });
+}
+
+function startWSLSession(tabId, { cols, rows }) {
   try {
     // Kill existing process if any
-    if (wslProcess) {
+    if (wslProcesses[tabId]) {
       try {
-        wslProcess.kill();
+        wslProcesses[tabId].kill();
       } catch (e) {
-        console.error('Error killing existing WSL process:', e);
+        console.error(`Error killing existing WSL process for tab ${tabId}:`, e);
       }
     }
 
@@ -2053,7 +2114,7 @@ ipcMain.on('wsl:start', (event, { cols, rows }) => {
     }
 
     // Spawn WSL process
-    wslProcess = pty.spawn(shell, args, {
+    wslProcesses[tabId] = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols: cols || 120,
       rows: rows || 30,
@@ -2067,87 +2128,145 @@ ipcMain.on('wsl:start', (event, { cols, rows }) => {
     });
 
     // Handle WSL output
-    wslProcess.onData((data) => {
+    wslProcesses[tabId].onData((data) => {
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('wsl:data', data);
+        mainWindow.webContents.send(`wsl:data:${tabId}`, data);
       }
     });
 
     // Handle WSL exit
-    wslProcess.onExit((exitCode, signal) => {
-      console.log('WSL process exited with code:', exitCode, 'signal:', signal);
+    wslProcesses[tabId].onExit((exitCode, signal) => {
+      console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('wsl:error', `WSL process exited with code ${exitCode}`);
+        mainWindow.webContents.send(`wsl:error:${tabId}`, `WSL process exited with code ${exitCode}`);
       }
-      wslProcess = null;
+      delete wslProcesses[tabId];
     });
 
     // Send ready signal
     setTimeout(() => {
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('wsl:ready');
+        mainWindow.webContents.send(`wsl:ready:${tabId}`);
       }
     }, 500);
 
   } catch (error) {
-    console.error('Error starting WSL:', error);
+    console.error(`Error starting WSL for tab ${tabId}:`, error);
     if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('wsl:error', `Failed to start WSL: ${error.message}`);
+      mainWindow.webContents.send(`wsl:error:${tabId}`, `Failed to start WSL: ${error.message}`);
     }
   }
-});
+}
 
-// Send data to WSL
-ipcMain.on('wsl:data', (event, data) => {
-  if (wslProcess) {
+function handleWSLData(tabId, data) {
+  if (wslProcesses[tabId]) {
     try {
-      wslProcess.write(data);
+      wslProcesses[tabId].write(data);
     } catch (error) {
-      console.error('Error writing to WSL:', error);
+      console.error(`Error writing to WSL ${tabId}:`, error);
       if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('wsl:error', `Write error: ${error.message}`);
+        mainWindow.webContents.send(`wsl:error:${tabId}`, `Write error: ${error.message}`);
       }
     }
   }
-});
+}
 
-// Resize WSL terminal
-ipcMain.on('wsl:resize', (event, { cols, rows }) => {
-  if (wslProcess) {
+function handleWSLResize(tabId, { cols, rows }) {
+  if (wslProcesses[tabId]) {
     try {
-      wslProcess.resize(cols, rows);
+      wslProcesses[tabId].resize(cols, rows);
     } catch (error) {
-      console.error('Error resizing WSL:', error);
+      console.error(`Error resizing WSL ${tabId}:`, error);
     }
   }
-});
+}
 
-// Stop WSL session
-ipcMain.on('wsl:stop', () => {
-  if (wslProcess) {
+function handleWSLStop(tabId) {
+  if (wslProcesses[tabId]) {
     try {
-      wslProcess.kill();
-      wslProcess = null;
+      wslProcesses[tabId].kill();
+      delete wslProcesses[tabId];
     } catch (error) {
-      console.error('Error stopping WSL:', error);
+      console.error(`Error stopping WSL ${tabId}:`, error);
     }
   }
+}
+
+// Sistema de registro dinámico para eventos de pestañas
+function registerTabEvents(tabId) {
+  // PowerShell events
+  ipcMain.removeAllListeners(`powershell:start:${tabId}`);
+  ipcMain.removeAllListeners(`powershell:data:${tabId}`);
+  ipcMain.removeAllListeners(`powershell:resize:${tabId}`);
+  ipcMain.removeAllListeners(`powershell:stop:${tabId}`);
+  
+  ipcMain.on(`powershell:start:${tabId}`, (event, data) => {
+    handlePowerShellStart(tabId, data);
+  });
+  
+  ipcMain.on(`powershell:data:${tabId}`, (event, data) => {
+    handlePowerShellData(tabId, data);
+  });
+  
+  ipcMain.on(`powershell:resize:${tabId}`, (event, data) => {
+    handlePowerShellResize(tabId, data);
+  });
+  
+  ipcMain.on(`powershell:stop:${tabId}`, (event) => {
+    handlePowerShellStop(tabId);
+  });
+  
+  // WSL events
+  ipcMain.removeAllListeners(`wsl:start:${tabId}`);
+  ipcMain.removeAllListeners(`wsl:data:${tabId}`);
+  ipcMain.removeAllListeners(`wsl:resize:${tabId}`);
+  ipcMain.removeAllListeners(`wsl:stop:${tabId}`);
+  
+  ipcMain.on(`wsl:start:${tabId}`, (event, data) => {
+    handleWSLStart(tabId, data);
+  });
+  
+  ipcMain.on(`wsl:data:${tabId}`, (event, data) => {
+    handleWSLData(tabId, data);
+  });
+  
+  ipcMain.on(`wsl:resize:${tabId}`, (event, data) => {
+    handleWSLResize(tabId, data);
+  });
+  
+  ipcMain.on(`wsl:stop:${tabId}`, (event) => {
+    handleWSLStop(tabId);
+  });
+}
+
+// Evento para registrar nuevas pestañas
+ipcMain.on('register-tab-events', (event, tabId) => {
+  console.log(`Registering events for tab: ${tabId}`);
+  registerTabEvents(tabId);
+});
+
+// También registrar eventos al inicio automáticamente para pestañas comunes
+['tab-1', 'tab-2', 'tab-3', 'tab-4', 'tab-5'].forEach(tabId => {
+  registerTabEvents(tabId);
 });
 
 // Cleanup terminals on app quit
 app.on('before-quit', () => {
-  if (powershellProcess) {
+  // Cleanup all PowerShell processes
+  Object.keys(powershellProcesses).forEach(tabId => {
     try {
-      powershellProcess.kill();
+      powershellProcesses[tabId].kill();
     } catch (error) {
-      console.error('Error cleaning up PowerShell on quit:', error);
+      console.error(`Error cleaning up PowerShell ${tabId} on quit:`, error);
     }
-  }
-  if (wslProcess) {
+  });
+  
+  // Cleanup all WSL processes
+  Object.keys(wslProcesses).forEach(tabId => {
     try {
-      wslProcess.kill();
+      wslProcesses[tabId].kill();
     } catch (error) {
-      console.error('Error cleaning up WSL on quit:', error);
+      console.error(`Error cleaning up WSL ${tabId} on quit:`, error);
     }
-  }
+  });
 });

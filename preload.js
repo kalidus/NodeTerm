@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electron', {
         'get-version-info',
         'clipboard:writeText',
         'clipboard:readText',
+        'register-tab-events',
         /^ssh:.*$/,
         /^dialog:.*$/
       ];
