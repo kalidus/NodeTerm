@@ -24,6 +24,18 @@ const TabbedTerminal = () => {
             console.log('Registering tab-1 events');
             window.electron.ipcRenderer.send('register-tab-events', 'tab-1');
         }
+        
+        // Cleanup al desmontar el componente
+        return () => {
+            console.log('TabbedTerminal unmounting, cleaning up processes');
+            if (window.electron) {
+                // Detener todos los procesos activos
+                tabs.forEach(tab => {
+                    window.electron.ipcRenderer.send(`powershell:stop:${tab.id}`);
+                    window.electron.ipcRenderer.send(`wsl:stop:${tab.id}`);
+                });
+            }
+        };
     }, []);
 
     // Opciones para el selector de tipo de terminal
@@ -74,6 +86,14 @@ const TabbedTerminal = () => {
 
     // Función para cerrar una pestaña
     const closeTab = (tabId) => {
+        console.log('Cerrando pestaña:', tabId);
+        
+        // Detener procesos del terminal antes de cerrar
+        if (window.electron) {
+            window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
+            window.electron.ipcRenderer.send(`wsl:stop:${tabId}`);
+        }
+        
         setTabs(prevTabs => {
             const filteredTabs = prevTabs.filter(tab => tab.id !== tabId);
             

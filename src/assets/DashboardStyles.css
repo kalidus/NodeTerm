@@ -1,0 +1,250 @@
+/* Estilos para el Dashboard de NodeTerm */
+
+/* Tabs del dashboard */
+.dashboard-tabs .p-tabview-nav {
+  background: var(--surface-card);
+  border-bottom: 2px solid var(--surface-border);
+  padding: 0 1rem;
+}
+
+.dashboard-tabs .p-tabview-nav li .p-tabview-nav-link {
+  border: none;
+  border-radius: 8px 8px 0 0;
+  margin: 0 0.25rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.dashboard-tabs .p-tabview-nav li .p-tabview-nav-link:hover {
+  background: var(--primary-color-light, rgba(25, 118, 210, 0.1));
+  color: var(--primary-color);
+}
+
+.dashboard-tabs .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+}
+
+.dashboard-tabs .p-tabview-panels {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+/* Tarjetas de estadísticas del sistema */
+.system-stat-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.system-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  pointer-events: none;
+}
+
+.system-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Tarjetas de historial de conexiones */
+.connection-history-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.connection-history-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-color: var(--primary-color);
+}
+
+/* Tarjetas de acciones rápidas */
+.quick-action-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.quick-action-card:hover::before {
+  opacity: 1;
+}
+
+.quick-action-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary-color);
+}
+
+/* Progress bars personalizados */
+.p-progressbar {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  overflow: hidden;
+}
+
+.p-progressbar .p-progressbar-value {
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+/* Badges personalizados */
+.p-badge {
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Botones de herramientas */
+.p-button.p-button-outlined:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Animaciones para carga */
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dashboard-tabs .p-tabview-nav li .p-tabview-nav-link {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .system-stat-card {
+    margin-bottom: 1rem;
+  }
+  
+  .quick-action-card {
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-tabs .p-tabview-nav {
+    padding: 0 0.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .dashboard-tabs .p-tabview-nav li {
+    display: inline-block;
+  }
+  
+  .dashboard-tabs .p-tabview-nav li .p-tabview-nav-link {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Ajustes para ventanas pequeñas */
+@media (max-width: 1024px) {
+  .system-stat-card {
+    min-height: 100px;
+  }
+  
+  .system-stat-card h3 {
+    font-size: 1rem;
+  }
+  
+  .system-stat-card p {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .system-stat-card {
+    min-height: 90px;
+  }
+  
+  .system-stat-card i {
+    font-size: 2rem !important;
+  }
+  
+  .quick-action-card {
+    padding: 0.75rem;
+  }
+  
+  .quick-action-card h4 {
+    font-size: 0.9rem;
+  }
+  
+  .quick-action-card p {
+    font-size: 0.75rem;
+  }
+}
+
+/* Efectos de glassmorphism para cards modernas */
+.glass-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Gradientes para diferentes tipos de tarjetas */
+.gradient-cpu {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-memory {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.gradient-disk {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.gradient-network {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Tooltips personalizados */
+.p-tooltip .p-tooltip-text {
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+}

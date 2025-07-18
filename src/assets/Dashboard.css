@@ -1,0 +1,175 @@
+/* Estilos para los componentes del Dashboard */
+
+/* Tarjetas de estadísticas del sistema */
+.system-stat-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.system-stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Tarjetas de historial de conexiones */
+.connection-history-card {
+  transition: all 0.2s ease;
+}
+
+.connection-history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Tarjetas de acciones rápidas */
+.quick-action-card {
+  transition: all 0.2s ease;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Herramientas del sistema */
+.system-tool-card {
+  transition: all 0.2s ease;
+}
+
+.system-tool-card:hover {
+  transform: scale(1.02);
+}
+
+/* Animaciones para las barras de progreso */
+.p-progressbar .p-progressbar-value {
+  transition: width 0.5s ease-in-out;
+}
+
+/* Mejoras para el TabView */
+.p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s ease;
+}
+
+.p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+  background-color: var(--surface-hover);
+}
+
+.p-tabview .p-tabview-panels {
+  background: transparent;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .system-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  
+  .system-tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header h1 {
+    font-size: 2rem !important;
+  }
+  
+  .dashboard-header p {
+    font-size: 1rem !important;
+  }
+}
+
+/* Animaciones suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Efectos de hover para las tarjetas */
+.hover-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Estilos para los badges */
+.p-badge {
+  font-size: 0.75rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Mejoras para la legibilidad */
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-color-text));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Estilos para el modo oscuro */
+.p-component.dark-theme .system-stat-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+}
+
+/* Indicadores de estado */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.status-success {
+  background-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+.status-warning {
+  background-color: #FF9800;
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.3);
+}
+
+.status-error {
+  background-color: #F44336;
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3);
+}
+
+.status-connecting {
+  background-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+  }
+}

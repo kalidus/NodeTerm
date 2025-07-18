@@ -1,3 +1,75 @@
+// Configuraciones alternativas para node-pty
+const alternativePtyConfig = {
+  conservative: {
+    name: 'xterm',
+    cols: 80,
+    rows: 24,
+    windowsHide: false,
+    useConpty: false,
+    conptyLegacy: false,
+    experimentalUseConpty: false
+  },
+  minimal: {
+    name: 'xterm',
+    cols: 80,
+    rows: 24,
+    windowsHide: false
+  },
+  winpty: {
+    name: 'xterm-256color',
+    cols: 120,
+    rows: 30,
+    windowsHide: false,
+    backend: 'winpty',
+    useConpty: false
+  }
+};
+
+// Terminal alternativo para casos extremos
+class SafeWindowsTerminal {
+  constructor(shell, args, options) {
+    this.shell = shell;
+    this.args = args;
+    this.options = options;
+    this.process = null;
+    this.dataCallbacks = [];
+    this.exitCallbacks = [];
+    this.isDestroyed = false;
+  }
+
+  spawn() {
+    if (this.isDestroyed) throw new Error('Terminal already destroyed');
+    
+    this.process = require('child_process').spawn(this.shell, this.args, {
+      cwd: this.options.cwd || require('os').homedir(),
+      env: this.options.env || process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: this.options.windowsHide || false
+    });
+
+    this.process.stdout.on('data', (data) => {
+      this.dataCallbacks.forEach(callback => callback(data));
+    });
+
+    this.process.stderr.on('data', (data) => {
+      this.dataCallbacks.forEach(callback => callback(data));
+    });
+
+    this.process.on('exit', (code, signal) => {
+      this.exitCallbacks.forEach(callback => callback(code, signal));
+    });
+
+    return this;
+  }
+
+  onData(callback) { this.dataCallbacks.push(callback); }
+  onExit(callback) { this.exitCallbacks.push(callback); }
+  write(data) { if (this.process?.stdin && !this.process.stdin.destroyed) this.process.stdin.write(data); }
+  kill() { if (this.process && !this.process.killed) this.process.kill(); }
+  destroy() { this.isDestroyed = true; this.kill(); this.dataCallbacks = []; this.exitCallbacks = []; }
+  resize() { console.log('Resize not supported in fallback mode'); }
+}
+
 try {
   require('electron-reloader')(module);
 } catch (_) {}
@@ -5,6 +77,8 @@ try {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu } = require('electron');
 const path = require('path');
 const url = require('url');
+const os = require('os');
+const fs = require('fs');
 const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
@@ -230,6 +304,29 @@ ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) 
 });
 
 let mainWindow;
+let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
+
+// Manejador global para errores no capturados relacionados con ConPTY
+process.on('uncaughtException', (error) => {
+  if (error.message && error.message.includes('AttachConsole failed')) {
+    console.warn('Error AttachConsole capturado y suprimido:', error.message);
+    return; // Suprimir el error sin crashear la aplicación
+  }
+  
+  // Para otros errores no capturados, mantener el comportamiento por defecto
+  console.error('Error no capturado:', error);
+  throw error;
+});
+
+// Manejador para promesas rechazadas no capturadas
+process.on('unhandledRejection', (reason, promise) => {
+  if (reason && reason.message && reason.message.includes('AttachConsole failed')) {
+    console.warn('Promise rechazada con error AttachConsole capturado:', reason.message);
+    return; // Suprimir el error
+  }
+  
+  console.error('Promise rechazada no manejada:', reason);
+});
 
 // Store active SSH connections and their shells
 const sshConnections = {};
@@ -1359,6 +1456,8 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
 
 // Permite cerrar la app desde el renderer (React) usando ipcRenderer
 ipcMain.on('app-quit', () => {
+  isAppQuitting = true;
+  
   // Close all SSH connections and clear timeouts before quitting
   Object.values(sshConnections).forEach(conn => {
     if (conn.statsTimeout) {
@@ -1416,6 +1515,8 @@ ipcMain.on('app-quit', () => {
 
 // Limpieza robusta también en before-quit
 app.on('before-quit', () => {
+  isAppQuitting = true;
+  
   Object.values(sshConnections).forEach(conn => {
     if (conn.statsTimeout) {
       clearTimeout(conn.statsTimeout);
@@ -1484,7 +1585,6 @@ ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
 });
 
 // Handler para descargar archivos por SSH
-const fs = require('fs');
 
 ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
   try {
@@ -1900,7 +2000,6 @@ ipcMain.handle('window:close', () => {
 
 // === PowerShell Terminal Support ===
 const pty = require('node-pty');
-const os = require('os');
 
 let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
 let wslProcesses = {}; // Cambiar a objeto para múltiples procesos
@@ -1913,6 +2012,12 @@ ipcMain.on('powershell:start', (event, { cols, rows }) => {
 
 // Start PowerShell session with tab ID
 function startPowerShellSession(tabId, { cols, rows }) {
+  // No iniciar nuevos procesos si la app está cerrando
+  if (isAppQuitting) {
+    console.log(`Evitando iniciar PowerShell para ${tabId} - aplicación cerrando`);
+    return;
+  }
+  
   try {
     // Kill existing process if any
     if (powershellProcesses[tabId]) {
@@ -1946,8 +2051,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
       args = ['-NoLogo', '-NoExit'];
     }
 
-    // Spawn PowerShell process
-    powershellProcesses[tabId] = pty.spawn(shell, args, {
+    // Spawn PowerShell process con configuración ultra-conservative
+    const spawnOptions = {
       name: 'xterm-256color',
       cols: cols || 120,
       rows: rows || 30,
@@ -1957,10 +2062,78 @@ function startPowerShellSession(tabId, { cols, rows }) {
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor'
       },
-      windowsHide: false,
-      conptyLegacy: false, // Use modern ConPTY on Windows
-      experimentalUseConpty: true
-    });
+      windowsHide: false
+    };
+    
+    // En Windows, usar configuración específica para evitar ConPTY
+    if (os.platform() === 'win32') {
+      spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
+      spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
+      spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
+      spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
+    }
+    
+    // Intentar crear el proceso con manejo de errores robusto
+    let spawnSuccess = false;
+    let lastError = null;
+    
+    // Intentar con diferentes configuraciones hasta que una funcione
+    const configsToTry = [
+      // Configuración principal
+      spawnOptions,
+      // Configuración conservadora
+      { ...alternativePtyConfig.conservative, cwd: os.homedir() },
+      // Configuración con WinPTY
+      { ...alternativePtyConfig.winpty, cwd: os.homedir() },
+      // Configuración mínima
+      { ...alternativePtyConfig.minimal, cwd: os.homedir() }
+    ];
+    
+    for (let i = 0; i < configsToTry.length && !spawnSuccess; i++) {
+      try {
+        console.log(`Intentando configuración ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
+        powershellProcesses[tabId] = pty.spawn(shell, args, configsToTry[i]);
+        spawnSuccess = true;
+        console.log(`Configuración ${i + 1} exitosa para PowerShell ${tabId}`);
+      } catch (spawnError) {
+        lastError = spawnError;
+        console.warn(`Configuración ${i + 1} falló para PowerShell ${tabId}:`, spawnError.message);
+        
+        // Limpiar proceso parcialmente creado
+        if (powershellProcesses[tabId]) {
+          try {
+            powershellProcesses[tabId].kill();
+          } catch (e) {
+            // Ignorar errores de limpieza
+          }
+          delete powershellProcesses[tabId];
+        }
+      }
+    }
+    
+    if (!spawnSuccess) {
+      // Último recurso: usar SafeWindowsTerminal para Windows
+      if (os.platform() === 'win32') {
+        try {
+          console.log(`Intentando SafeWindowsTerminal como último recurso para ${tabId}...`);
+          const safeTerminal = new SafeWindowsTerminal(shell, args, {
+            cwd: os.homedir(),
+            env: process.env,
+            windowsHide: false
+          });
+          
+          powershellProcesses[tabId] = safeTerminal.spawn();
+          spawnSuccess = true;
+          console.log(`SafeWindowsTerminal exitoso para ${tabId}`);
+        } catch (safeError) {
+          console.error(`SafeWindowsTerminal también falló para ${tabId}:`, safeError.message);
+        }
+      }
+      
+      if (!spawnSuccess) {
+        throw new Error(`No se pudo iniciar PowerShell para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
+      }
+    }
 
     // Handle PowerShell output
     powershellProcesses[tabId].onData((data) => {
@@ -1972,11 +2145,35 @@ function startPowerShellSession(tabId, { cols, rows }) {
     // Handle PowerShell exit
     powershellProcesses[tabId].onExit((exitCode, signal) => {
       console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
-      if (mainWindow && mainWindow.webContents) {
+      
+      // Solo reportar como error si no es una terminación intencional
+      if (exitCode !== 0 && exitCode !== -1073741510 && exitCode !== 1 && mainWindow && mainWindow.webContents) {
+        // -1073741510 es un código de terminación común en Windows (STATUS_CONTROL_C_EXIT)
+        // 1 es un código de terminación normal
         mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCode}`);
       }
+      
       delete powershellProcesses[tabId];
     });
+    
+    // Agregar manejador de errores del proceso
+    if (powershellProcesses[tabId] && powershellProcesses[tabId].pty) {
+      powershellProcesses[tabId].pty.on('error', (error) => {
+        if (error.message && error.message.includes('AttachConsole failed')) {
+          console.warn(`Error AttachConsole en PowerShell ${tabId}, intentando reiniciar...`);
+          
+          // Reiniciar el proceso después de un breve delay
+          setTimeout(() => {
+            if (!isAppQuitting && !powershellProcesses[tabId]) {
+              console.log(`Reiniciando PowerShell ${tabId}...`);
+              startPowerShellSession(tabId, { cols, rows });
+            }
+          }, 1000);
+        } else {
+          console.error(`Error en proceso PowerShell ${tabId}:`, error);
+        }
+      });
+    }
 
     // Send ready signal
     setTimeout(() => {
@@ -2049,7 +2246,40 @@ function handlePowerShellResize(tabId, { cols, rows }) {
 function handlePowerShellStop(tabId) {
   if (powershellProcesses[tabId]) {
     try {
-      powershellProcesses[tabId].kill();
+      console.log(`Deteniendo proceso PowerShell para tab ${tabId}`);
+      const process = powershellProcesses[tabId];
+      
+      // Remover listeners antes de terminar el proceso
+      process.removeAllListeners();
+      
+      // En Windows, usar destroy() para forzar terminación
+      if (os.platform() === 'win32') {
+        try {
+          process.kill(); // Intento graceful primero
+        } catch (e) {
+          // Si kill() falla, usar destroy()
+          try {
+            process.destroy();
+          } catch (destroyError) {
+            console.warn(`Error con destroy() en PowerShell ${tabId}:`, destroyError.message);
+          }
+        }
+      } else {
+        // En sistemas POSIX, usar SIGTERM
+        process.kill('SIGTERM');
+        
+        // Dar tiempo para que termine graciosamente
+        setTimeout(() => {
+          if (powershellProcesses[tabId]) {
+            try {
+              powershellProcesses[tabId].kill('SIGKILL');
+            } catch (e) {
+              // Ignorar errores de terminación forzada
+            }
+          }
+        }, 1000);
+      }
+      
       delete powershellProcesses[tabId];
     } catch (error) {
       console.error(`Error stopping PowerShell ${tabId}:`, error);
@@ -2089,6 +2319,12 @@ function handleWSLStart(tabId, { cols, rows }) {
 }
 
 function startWSLSession(tabId, { cols, rows }) {
+  // No iniciar nuevos procesos si la app está cerrando
+  if (isAppQuitting) {
+    console.log(`Evitando iniciar WSL para ${tabId} - aplicación cerrando`);
+    return;
+  }
+  
   try {
     // Kill existing process if any
     if (wslProcesses[tabId]) {
@@ -2113,8 +2349,8 @@ function startWSLSession(tabId, { cols, rows }) {
       args = ['--login'];
     }
 
-    // Spawn WSL process
-    wslProcesses[tabId] = pty.spawn(shell, args, {
+    // Spawn WSL process con configuración ultra-conservative
+    const spawnOptions = {
       name: 'xterm-256color',
       cols: cols || 120,
       rows: rows || 30,
@@ -2125,7 +2361,17 @@ function startWSLSession(tabId, { cols, rows }) {
         COLORTERM: 'truecolor'
       },
       windowsHide: false
-    });
+    };
+    
+    // En Windows, usar configuración específica para evitar ConPTY
+    if (os.platform() === 'win32') {
+      spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
+      spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
+      spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
+      spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
+    }
+    
+    wslProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
 
     // Handle WSL output
     wslProcesses[tabId].onData((data) => {
@@ -2184,7 +2430,40 @@ function handleWSLResize(tabId, { cols, rows }) {
 function handleWSLStop(tabId) {
   if (wslProcesses[tabId]) {
     try {
-      wslProcesses[tabId].kill();
+      console.log(`Deteniendo proceso WSL para tab ${tabId}`);
+      const process = wslProcesses[tabId];
+      
+      // Remover listeners antes de terminar el proceso
+      process.removeAllListeners();
+      
+      // En Windows, usar destroy() para forzar terminación
+      if (os.platform() === 'win32') {
+        try {
+          process.kill(); // Intento graceful primero
+        } catch (e) {
+          // Si kill() falla, usar destroy()
+          try {
+            process.destroy();
+          } catch (destroyError) {
+            console.warn(`Error con destroy() en WSL ${tabId}:`, destroyError.message);
+          }
+        }
+      } else {
+        // En sistemas POSIX, usar SIGTERM
+        process.kill('SIGTERM');
+        
+        // Dar tiempo para que termine graciosamente
+        setTimeout(() => {
+          if (wslProcesses[tabId]) {
+            try {
+              wslProcesses[tabId].kill('SIGKILL');
+            } catch (e) {
+              // Ignorar errores de terminación forzada
+            }
+          }
+        }, 1000);
+      }
+      
       delete wslProcesses[tabId];
     } catch (error) {
       console.error(`Error stopping WSL ${tabId}:`, error);
@@ -2251,11 +2530,42 @@ ipcMain.on('register-tab-events', (event, tabId) => {
 });
 
 // Cleanup terminals on app quit
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  isAppQuitting = true;
+  
   // Cleanup all PowerShell processes
   Object.keys(powershellProcesses).forEach(tabId => {
     try {
-      powershellProcesses[tabId].kill();
+      const process = powershellProcesses[tabId];
+      if (process) {
+        process.removeAllListeners();
+        
+        // En Windows, usar destroy() para forzar terminación
+        if (os.platform() === 'win32') {
+          try {
+            process.kill(); // Intento graceful primero
+          } catch (e) {
+            // Si kill() falla, usar destroy()
+            try {
+              process.destroy();
+            } catch (destroyError) {
+              console.warn(`Error con destroy() en PowerShell ${tabId} on quit:`, destroyError.message);
+            }
+          }
+        } else {
+          process.kill('SIGTERM');
+          // Terminación forzada después de 500ms en sistemas POSIX
+          setTimeout(() => {
+            if (powershellProcesses[tabId]) {
+              try {
+                powershellProcesses[tabId].kill('SIGKILL');
+              } catch (e) {
+                // Ignorar errores
+              }
+            }
+          }, 500);
+        }
+      }
     } catch (error) {
       console.error(`Error cleaning up PowerShell ${tabId} on quit:`, error);
     }
@@ -2264,9 +2574,234 @@ app.on('before-quit', () => {
   // Cleanup all WSL processes
   Object.keys(wslProcesses).forEach(tabId => {
     try {
-      wslProcesses[tabId].kill();
+      const process = wslProcesses[tabId];
+      if (process) {
+        process.removeAllListeners();
+        
+        // En Windows, usar destroy() para forzar terminación
+        if (os.platform() === 'win32') {
+          try {
+            process.kill(); // Intento graceful primero
+          } catch (e) {
+            // Si kill() falla, usar destroy()
+            try {
+              process.destroy();
+            } catch (destroyError) {
+              console.warn(`Error con destroy() en WSL ${tabId} on quit:`, destroyError.message);
+            }
+          }
+        } else {
+          process.kill('SIGTERM');
+          // Terminación forzada después de 500ms en sistemas POSIX
+          setTimeout(() => {
+            if (wslProcesses[tabId]) {
+              try {
+                wslProcesses[tabId].kill('SIGKILL');
+              } catch (e) {
+                // Ignorar errores
+              }
+            }
+          }, 500);
+        }
+      }
     } catch (error) {
       console.error(`Error cleaning up WSL ${tabId} on quit:`, error);
     }
   });
 });
+
+// Sistema de estadísticas del sistema
+function getSystemStats() {
+  const platform = os.platform();
+  const stats = {
+    cpu: {
+      usage: 0,
+      cores: os.cpus().length,
+      model: os.cpus()[0]?.model || 'Desconocido'
+    },
+    memory: {
+      used: 0,
+      total: 0,
+      percentage: 0
+    },
+    disks: [],
+    network: {
+      download: 0,
+      upload: 0
+    },
+    temperature: {
+      cpu: 0,
+      gpu: 0
+    }
+  };
+
+  // Información de memoria
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  
+  stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10; // GB
+  stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10; // GB
+  stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
+
+  // CPU usage (simulado - en producción necesitaríamos una librería específica)
+  stats.cpu.usage = Math.random() * 100;
+
+  // Información de discos (simulada para evitar problemas de compatibilidad)
+  if (platform === 'win32') {
+    // Simular información de discos con datos realistas
+    const simulatedDisks = [
+      { 
+        name: 'C:', 
+        used: Math.floor(Math.random() * 400) + 200, // Entre 200-600 GB
+        total: 1000,
+        get percentage() { return Math.round((this.used / this.total) * 100); }
+      },
+      { 
+        name: 'D:', 
+        used: Math.floor(Math.random() * 800) + 200, // Entre 200-1000 GB
+        total: 2000,
+        get percentage() { return Math.round((this.used / this.total) * 100); }
+      }
+    ];
+    
+    stats.disks = simulatedDisks.map(disk => ({
+      name: disk.name,
+      used: disk.used,
+      total: disk.total,
+      percentage: disk.percentage
+    }));
+  } else {
+    // Para Linux/Mac, usar datos de ejemplo por ahora
+    stats.disks = [
+      { name: '/', used: 150, total: 500, percentage: 30 },
+      { name: '/home', used: 200, total: 1000, percentage: 20 }
+    ];
+  }
+
+  // Red y temperatura (simulados)
+  stats.network.download = Math.random() * 100;
+  stats.network.upload = Math.random() * 50;
+  stats.temperature.cpu = 45 + Math.random() * 20;
+  stats.temperature.gpu = 40 + Math.random() * 25;
+
+  return stats;
+}
+
+// Manejador IPC para obtener estadísticas del sistema
+ipcMain.handle('get-system-stats', async () => {
+  try {
+    return getSystemStats();
+  } catch (error) {
+    console.error('Error obteniendo estadísticas del sistema:', error);
+    return {
+      cpu: { usage: 0, cores: 0, model: 'Error' },
+      memory: { used: 0, total: 0, percentage: 0 },
+      disks: [],
+      network: { download: 0, upload: 0 },
+      temperature: { cpu: 0, gpu: 0 }
+    };
+  }
+});
+
+// Historial de conexiones
+let connectionHistory = {
+  recent: [],
+  favorites: []
+};
+
+// Cargar historial de conexiones
+function loadConnectionHistory() {
+  try {
+    const historyPath = path.join(os.homedir(), '.nodeterm', 'connection_history.json');
+    if (fs.existsSync(historyPath)) {
+      const data = fs.readFileSync(historyPath, 'utf8');
+      connectionHistory = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error cargando historial de conexiones:', error);
+  }
+}
+
+// Guardar historial de conexiones
+function saveConnectionHistory() {
+  try {
+    const historyDir = path.join(os.homedir(), '.nodeterm');
+    if (!fs.existsSync(historyDir)) {
+      fs.mkdirSync(historyDir, { recursive: true });
+    }
+    
+    const historyPath = path.join(historyDir, 'connection_history.json');
+    fs.writeFileSync(historyPath, JSON.stringify(connectionHistory, null, 2));
+  } catch (error) {
+    console.error('Error guardando historial de conexiones:', error);
+  }
+}
+
+// Agregar conexión al historial
+function addToConnectionHistory(connection) {
+  const historyItem = {
+    id: Date.now().toString(),
+    name: connection.name || `${connection.username}@${connection.host}`,
+    host: connection.host,
+    username: connection.username,
+    port: connection.port || 22,
+    lastConnected: new Date(),
+    status: 'success',
+    connectionTime: Math.random() * 3 + 0.5 // Simular tiempo de conexión
+  };
+  
+  // Remover entrada existente si ya existe
+  connectionHistory.recent = connectionHistory.recent.filter(
+    item => !(item.host === connection.host && item.username === connection.username && item.port === (connection.port || 22))
+  );
+  
+  // Agregar al inicio
+  connectionHistory.recent.unshift(historyItem);
+  
+  // Mantener solo las últimas 10 conexiones
+  connectionHistory.recent = connectionHistory.recent.slice(0, 10);
+  
+  saveConnectionHistory();
+}
+
+// Manejadores IPC para historial de conexiones
+ipcMain.handle('get-connection-history', async () => {
+  loadConnectionHistory();
+  return connectionHistory;
+});
+
+ipcMain.handle('add-connection-to-history', async (event, connection) => {
+  addToConnectionHistory(connection);
+  return true;
+});
+
+ipcMain.handle('toggle-favorite-connection', async (event, connectionId) => {
+  try {
+    loadConnectionHistory();
+    
+    // Buscar en recientes
+    const recentIndex = connectionHistory.recent.findIndex(conn => conn.id === connectionId);
+    if (recentIndex !== -1) {
+      const connection = connectionHistory.recent[recentIndex];
+      if (connection.isFavorite) {
+        // Quitar de favoritos
+        connection.isFavorite = false;
+        connectionHistory.favorites = connectionHistory.favorites.filter(fav => fav.id !== connectionId);
+      } else {
+        // Agregar a favoritos
+        connection.isFavorite = true;
+        connectionHistory.favorites.push({ ...connection });
+      }
+    }
+    
+    saveConnectionHistory();
+    return connectionHistory;
+  } catch (error) {
+    console.error('Error toggle favorite connection:', error);
+    return connectionHistory;
+  }
+});
+
+// Inicializar historial al inicio
+loadConnectionHistory();
