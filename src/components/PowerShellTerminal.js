@@ -6,7 +6,12 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 
-const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", monospace', fontSize = 14, theme = {} }, ref) => {
+const PowerShellTerminal = forwardRef(({ 
+    fontFamily = 'Consolas, "Courier New", monospace', 
+    fontSize = 14, 
+    theme = {},
+    tabId = 'default'
+}, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
@@ -39,7 +44,7 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
         },
         paste: (text) => {
             if (term.current && text) {
-                window.electron?.ipcRenderer.send('powershell:data', text);
+                window.electron?.ipcRenderer.send(`powershell:data:${tabId}`, text);
             }
         }
     }));
@@ -131,7 +136,7 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
         if (window.electron) {
             // Initialize PowerShell session
             term.current.writeln('\x1b[36mInitializing PowerShell...\x1b[0m');
-            window.electron.ipcRenderer.send('powershell:start', {
+            window.electron.ipcRenderer.send(`powershell:start:${tabId}`, {
                 cols: term.current.cols,
                 rows: term.current.rows
             });
@@ -152,7 +157,7 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
                     domEvent.preventDefault();
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                            window.electron.ipcRenderer.send('powershell:data', text);
+                            window.electron.ipcRenderer.send(`powershell:data:${tabId}`, text);
                         }
                     });
                     return;
@@ -161,12 +166,12 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
 
             // Handle user input - send to PowerShell
             const dataHandler = term.current.onData(data => {
-                window.electron.ipcRenderer.send('powershell:data', data);
+                window.electron.ipcRenderer.send(`powershell:data:${tabId}`, data);
             });
 
             // Handle terminal resize
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
-                window.electron.ipcRenderer.send('powershell:resize', { cols, rows });
+                window.electron.ipcRenderer.send(`powershell:resize:${tabId}`, { cols, rows });
             });
 
             // Listen for PowerShell output
@@ -175,20 +180,20 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
                     term.current.write(data);
                 }
             };
-            const onDataUnsubscribe = window.electron.ipcRenderer.on('powershell:data', dataListener);
+            const onDataUnsubscribe = window.electron.ipcRenderer.on(`powershell:data:${tabId}`, dataListener);
 
             // Listen for PowerShell ready event
             const readyListener = () => {
                 setIsConnected(true);
                 term.current?.writeln('\x1b[32mPowerShell ready!\x1b[0m');
             };
-            const onReadyUnsubscribe = window.electron.ipcRenderer.on('powershell:ready', readyListener);
+            const onReadyUnsubscribe = window.electron.ipcRenderer.on(`powershell:ready:${tabId}`, readyListener);
 
             // Listen for PowerShell errors
             const errorListener = (error) => {
                 term.current?.writeln(`\x1b[31mPowerShell Error: ${error}\x1b[0m`);
             };
-            const onErrorUnsubscribe = window.electron.ipcRenderer.on('powershell:error', errorListener);
+            const onErrorUnsubscribe = window.electron.ipcRenderer.on(`powershell:error:${tabId}`, errorListener);
 
             // Handle right-click context menu
             const contextMenuHandler = (e) => {
@@ -196,7 +201,7 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
                 // Simple paste functionality on right-click
                 window.electron.clipboard.readText().then(text => {
                     if (text) {
-                        window.electron.ipcRenderer.send('powershell:data', text);
+                        window.electron.ipcRenderer.send(`powershell:data:${tabId}`, text);
                     }
                 });
             };
@@ -205,7 +210,7 @@ const PowerShellTerminal = forwardRef(({ fontFamily = 'Consolas, "Courier New", 
             // Cleanup function
             return () => {
                 resizeObserver.disconnect();
-                window.electron.ipcRenderer.send('powershell:stop');
+                window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
