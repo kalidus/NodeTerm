@@ -69,11 +69,12 @@ const TabbedTerminal = () => {
         
         // Cleanup al desmontar el componente
         return () => {
-            console.log('TabbedTerminal unmounting, cleaning up processes');
             window.removeEventListener('resize', handleResize);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            if (window.electron) {
-                // Detener todos los procesos activos
+            
+            // Solo limpiar procesos cuando se cierra realmente la aplicación, no durante reloads
+            const isReloading = performance.navigation?.type === 1;
+            if (!isReloading && window.electron) {
                 tabs.forEach(tab => {
                     window.electron.ipcRenderer.send(`powershell:stop:${tab.id}`);
                     window.electron.ipcRenderer.send(`wsl:stop:${tab.id}`);

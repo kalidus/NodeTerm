@@ -166,10 +166,15 @@ const PowerShellTerminal = forwardRef(({
             // Limpiar el terminal antes de iniciar
             term.current.clear();
             
-            window.electron.ipcRenderer.send(`powershell:start:${tabId}`, {
-                cols: term.current.cols,
-                rows: term.current.rows
-            });
+            // Delay pequeño solo para tab-1 inicial para dar tiempo al backend
+            const delay = tabId === 'tab-1' ? 300 : 0;
+            
+            setTimeout(() => {
+                window.electron.ipcRenderer.send(`powershell:start:${tabId}`, {
+                    cols: term.current.cols,
+                    rows: term.current.rows
+                });
+            }, delay);
 
             // Handle keyboard events for copy/paste
             term.current.onKey(({ key, domEvent }) => {
@@ -241,7 +246,13 @@ const PowerShellTerminal = forwardRef(({
             return () => {
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
-                window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
+                
+                // Solo enviar stop cuando realmente se cierra el tab (no durante reloads)
+                const isReloading = performance.navigation?.type === 1 || document.readyState === 'loading';
+                if (!isReloading) {
+                    window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
+                }
+                
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
