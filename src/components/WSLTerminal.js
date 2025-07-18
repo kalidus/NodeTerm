@@ -282,7 +282,7 @@ const WSLTerminal = forwardRef(({
                 overflow: 'hidden',
                 position: 'relative',
                 background: '#300A24',
-                padding: 0,
+                padding: '0 0 0 8px',
                 margin: 0
             }} 
         />

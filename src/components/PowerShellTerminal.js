@@ -283,7 +283,7 @@ const PowerShellTerminal = forwardRef(({
                 overflow: 'hidden',
                 position: 'relative',
                 background: '#012456',
-                padding: 0,
+                padding: '0 0 0 8px',
                 margin: 0
             }} 
         />
