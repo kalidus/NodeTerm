@@ -1897,3 +1897,139 @@ ipcMain.handle('window:isMaximized', () => {
 ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
 });
+
+// === PowerShell Terminal Support ===
+const pty = require('node-pty');
+const os = require('os');
+
+let powershellProcess = null;
+
+// Start PowerShell session
+ipcMain.on('powershell:start', (event, { cols, rows }) => {
+  try {
+    // Kill existing process if any
+    if (powershellProcess) {
+      try {
+        powershellProcess.kill();
+      } catch (e) {
+        console.error('Error killing existing PowerShell process:', e);
+      }
+    }
+
+    // Determine shell and arguments based on OS
+    let shell, args;
+    const platform = os.platform();
+    
+    if (platform === 'win32') {
+      // Try PowerShell 7 first, fallback to Windows PowerShell
+      shell = 'pwsh.exe';
+      args = ['-NoLogo', '-NoExit'];
+      
+      // Test if PowerShell 7 is available
+      try {
+        require('child_process').execSync('pwsh.exe -Version', { stdio: 'ignore' });
+      } catch (e) {
+        // Fallback to Windows PowerShell
+        shell = 'powershell.exe';
+        args = ['-NoLogo', '-NoExit'];
+      }
+    } else {
+      // For non-Windows platforms, try pwsh (PowerShell Core)
+      shell = 'pwsh';
+      args = ['-NoLogo', '-NoExit'];
+    }
+
+    // Spawn PowerShell process
+    powershellProcess = pty.spawn(shell, args, {
+      name: 'xterm-256color',
+      cols: cols || 120,
+      rows: rows || 30,
+      cwd: os.homedir(),
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor'
+      },
+      windowsHide: false,
+      conptyLegacy: false, // Use modern ConPTY on Windows
+      experimentalUseConpty: true
+    });
+
+    // Handle PowerShell output
+    powershellProcess.onData((data) => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('powershell:data', data);
+      }
+    });
+
+    // Handle PowerShell exit
+    powershellProcess.onExit((exitCode, signal) => {
+      console.log('PowerShell process exited with code:', exitCode, 'signal:', signal);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('powershell:error', `PowerShell process exited with code ${exitCode}`);
+      }
+      powershellProcess = null;
+    });
+
+    // Send ready signal
+    setTimeout(() => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('powershell:ready');
+      }
+    }, 500);
+
+  } catch (error) {
+    console.error('Error starting PowerShell:', error);
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('powershell:error', `Failed to start PowerShell: ${error.message}`);
+    }
+  }
+});
+
+// Send data to PowerShell
+ipcMain.on('powershell:data', (event, data) => {
+  if (powershellProcess) {
+    try {
+      powershellProcess.write(data);
+    } catch (error) {
+      console.error('Error writing to PowerShell:', error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('powershell:error', `Write error: ${error.message}`);
+      }
+    }
+  }
+});
+
+// Resize PowerShell terminal
+ipcMain.on('powershell:resize', (event, { cols, rows }) => {
+  if (powershellProcess) {
+    try {
+      powershellProcess.resize(cols, rows);
+    } catch (error) {
+      console.error('Error resizing PowerShell:', error);
+    }
+  }
+});
+
+// Stop PowerShell session
+ipcMain.on('powershell:stop', () => {
+  if (powershellProcess) {
+    try {
+      powershellProcess.kill();
+      powershellProcess = null;
+    } catch (error) {
+      console.error('Error stopping PowerShell:', error);
+    }
+  }
+});
+
+// Cleanup PowerShell on app quit
+app.on('before-quit', () => {
+  if (powershellProcess) {
+    try {
+      powershellProcess.kill();
+    } catch (error) {
+      console.error('Error cleaning up PowerShell on quit:', error);
+    }
+  }
+});
