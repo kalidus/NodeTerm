@@ -161,7 +161,11 @@ const PowerShellTerminal = forwardRef(({
         // Setup Electron IPC if available
         if (window.electron) {
             // Initialize PowerShell session
-            term.current.writeln('\x1b[36mInitializing PowerShell...\x1b[0m');
+            // term.current.writeln('\x1b[36mInitializing PowerShell...\x1b[0m');
+            
+            // Limpiar el terminal antes de iniciar
+            term.current.clear();
+            
             window.electron.ipcRenderer.send(`powershell:start:${tabId}`, {
                 cols: term.current.cols,
                 rows: term.current.rows
@@ -211,7 +215,7 @@ const PowerShellTerminal = forwardRef(({
             // Listen for PowerShell ready event
             const readyListener = () => {
                 setIsConnected(true);
-                term.current?.writeln('\x1b[32mPowerShell ready!\x1b[0m');
+                // term.current?.writeln('\x1b[32mPowerShell ready!\x1b[0m');
             };
             const onReadyUnsubscribe = window.electron.ipcRenderer.on(`powershell:ready:${tabId}`, readyListener);
 

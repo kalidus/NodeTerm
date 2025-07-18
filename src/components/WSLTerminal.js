@@ -134,7 +134,11 @@ const WSLTerminal = forwardRef(({
         // Setup Electron IPC if available
         if (window.electron) {
             // Initialize WSL session
-            term.current.writeln('\x1b[36mInitializing WSL...\x1b[0m');
+            // term.current.writeln('\x1b[36mInitializing WSL...\x1b[0m');
+            
+            // Limpiar el terminal antes de iniciar
+            term.current.clear();
+            
             window.electron.ipcRenderer.send(`wsl:start:${tabId}`, {
                 cols: term.current.cols,
                 rows: term.current.rows
@@ -184,7 +188,7 @@ const WSLTerminal = forwardRef(({
             // Listen for WSL ready event
             const readyListener = () => {
                 setIsConnected(true);
-                term.current?.writeln('\x1b[32mWSL ready!\x1b[0m');
+                // term.current?.writeln('\x1b[32mWSL ready!\x1b[0m');
             };
             const onReadyUnsubscribe = window.electron.ipcRenderer.on(`wsl:ready:${tabId}`, readyListener);
 
