@@ -4,6 +4,7 @@ import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
+import PowerShellTerminal from './PowerShellTerminal';
 
 const HomeTab = ({ 
   onCreateSSHConnection, 
@@ -201,21 +202,53 @@ const HomeTab = ({
     </div>
   );
 
-  // Panel inferior: placeholder visible
+  // Panel inferior: Terminal de PowerShell
   const bottomPanel = (
     <div style={{
       height: '100%',
       width: '100%',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: '#1976d2',
-      fontSize: '1.5rem',
-      background: 'var(--surface-ground, #fafafa)',
-      fontWeight: 'bold',
-      border: '2px dashed #1976d2'
+      flexDirection: 'column',
+      background: '#012456',
+      overflow: 'hidden'
     }}>
-      Panel inferior visible
+      {/* Header del terminal */}
+      <div style={{
+        background: '#1e3a5f',
+        padding: '8px 16px',
+        borderBottom: '1px solid #2a4a6b',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '14px',
+        color: '#ffffff',
+        fontWeight: '500'
+      }}>
+        <i className="pi pi-desktop" style={{ color: '#4fc3f7' }}></i>
+        <span>PowerShell Terminal</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            background: '#ff5f57'
+          }}></div>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            background: '#ffbd2e'
+          }}></div>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            background: '#28ca42'
+          }}></div>
+        </div>
+      </div>
+      {/* Terminal component */}
+      <PowerShellTerminal />
     </div>
   );
 
