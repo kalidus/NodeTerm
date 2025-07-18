@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SplitLayout from './SplitLayout';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import PowerShellTerminal from './PowerShellTerminal';
+import WSLTerminal from './WSLTerminal';
+import TerminalTypeSelector from './TerminalTypeSelector';
 
 const HomeTab = ({ 
   onCreateSSHConnection, 
@@ -13,6 +15,14 @@ const HomeTab = ({
   foldersCount = 0 
 }) => {
   const versionInfo = getVersionInfo();
+  const [terminalType, setTerminalType] = useState('powershell');
+  const [initializedTerminals, setInitializedTerminals] = useState(new Set());
+
+  // Función para manejar el cambio de terminal
+  const handleTerminalChange = (newType) => {
+    setTerminalType(newType);
+    setInitializedTerminals(prev => new Set([...prev, newType]));
+  };
 
   // Panel superior: contenido de bienvenida
   const topPanel = (
@@ -202,31 +212,31 @@ const HomeTab = ({
     </div>
   );
 
-  // Panel inferior: Terminal de PowerShell
+  // Panel inferior: Terminal (PowerShell o WSL)
   const bottomPanel = (
     <div style={{
       height: '100%',
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: '#012456',
+      background: terminalType === 'powershell' ? '#012456' : '#300A24',
       overflow: 'hidden'
     }}>
-      {/* Header del terminal */}
+      {/* Header del terminal con selector */}
       <div style={{
         background: '#1e3a5f',
-        padding: '8px 16px',
         borderBottom: '1px solid #2a4a6b',
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        fontSize: '14px',
-        color: '#ffffff',
-        fontWeight: '500'
+        justifyContent: 'space-between'
       }}>
-        <i className="pi pi-desktop" style={{ color: '#4fc3f7' }}></i>
-        <span>PowerShell Terminal</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+        {/* Selector de tipo de terminal */}
+        <TerminalTypeSelector 
+          value={terminalType} 
+          onChange={handleTerminalChange} 
+        />
+        {/* Botones de control de ventana */}
+        <div style={{ display: 'flex', gap: '4px', padding: '8px 16px' }}>
           <div style={{
             width: '12px',
             height: '12px',
@@ -248,7 +258,22 @@ const HomeTab = ({
         </div>
       </div>
       {/* Terminal component */}
-      <PowerShellTerminal />
+      <div style={{ position: 'relative', flex: 1 }}>
+        <div style={{ 
+          display: terminalType === 'powershell' ? 'block' : 'none',
+          height: '100%',
+          width: '100%'
+        }}>
+          <PowerShellTerminal key="powershell-terminal" />
+        </div>
+        <div style={{ 
+          display: terminalType === 'wsl' ? 'block' : 'none',
+          height: '100%',
+          width: '100%'
+        }}>
+          <WSLTerminal key="wsl-terminal" />
+        </div>
+      </div>
     </div>
   );
 

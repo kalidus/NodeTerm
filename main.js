@@ -1903,6 +1903,7 @@ const pty = require('node-pty');
 const os = require('os');
 
 let powershellProcess = null;
+let wslProcess = null;
 
 // Start PowerShell session
 ipcMain.on('powershell:start', (event, { cols, rows }) => {
@@ -2023,13 +2024,130 @@ ipcMain.on('powershell:stop', () => {
   }
 });
 
-// Cleanup PowerShell on app quit
+// === WSL Terminal Support ===
+
+// Start WSL session
+ipcMain.on('wsl:start', (event, { cols, rows }) => {
+  try {
+    // Kill existing process if any
+    if (wslProcess) {
+      try {
+        wslProcess.kill();
+      } catch (e) {
+        console.error('Error killing existing WSL process:', e);
+      }
+    }
+
+    // Determine shell and arguments for WSL
+    let shell, args;
+    const platform = os.platform();
+    
+    if (platform === 'win32') {
+      // Use WSL on Windows
+      shell = 'wsl.exe';
+      args = ['--cd', '~']; // Start in home directory
+    } else {
+      // For non-Windows platforms, use bash directly
+      shell = '/bin/bash';
+      args = ['--login'];
+    }
+
+    // Spawn WSL process
+    wslProcess = pty.spawn(shell, args, {
+      name: 'xterm-256color',
+      cols: cols || 120,
+      rows: rows || 30,
+      cwd: os.homedir(),
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor'
+      },
+      windowsHide: false
+    });
+
+    // Handle WSL output
+    wslProcess.onData((data) => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('wsl:data', data);
+      }
+    });
+
+    // Handle WSL exit
+    wslProcess.onExit((exitCode, signal) => {
+      console.log('WSL process exited with code:', exitCode, 'signal:', signal);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('wsl:error', `WSL process exited with code ${exitCode}`);
+      }
+      wslProcess = null;
+    });
+
+    // Send ready signal
+    setTimeout(() => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('wsl:ready');
+      }
+    }, 500);
+
+  } catch (error) {
+    console.error('Error starting WSL:', error);
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('wsl:error', `Failed to start WSL: ${error.message}`);
+    }
+  }
+});
+
+// Send data to WSL
+ipcMain.on('wsl:data', (event, data) => {
+  if (wslProcess) {
+    try {
+      wslProcess.write(data);
+    } catch (error) {
+      console.error('Error writing to WSL:', error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('wsl:error', `Write error: ${error.message}`);
+      }
+    }
+  }
+});
+
+// Resize WSL terminal
+ipcMain.on('wsl:resize', (event, { cols, rows }) => {
+  if (wslProcess) {
+    try {
+      wslProcess.resize(cols, rows);
+    } catch (error) {
+      console.error('Error resizing WSL:', error);
+    }
+  }
+});
+
+// Stop WSL session
+ipcMain.on('wsl:stop', () => {
+  if (wslProcess) {
+    try {
+      wslProcess.kill();
+      wslProcess = null;
+    } catch (error) {
+      console.error('Error stopping WSL:', error);
+    }
+  }
+});
+
+// Cleanup terminals on app quit
 app.on('before-quit', () => {
   if (powershellProcess) {
     try {
       powershellProcess.kill();
     } catch (error) {
       console.error('Error cleaning up PowerShell on quit:', error);
+    }
+  }
+  if (wslProcess) {
+    try {
+      wslProcess.kill();
+    } catch (error) {
+      console.error('Error cleaning up WSL on quit:', error);
     }
   }
 });
