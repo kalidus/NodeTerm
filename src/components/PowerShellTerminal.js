@@ -21,9 +21,15 @@ const PowerShellTerminal = forwardRef(({
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
-                fitAddon.current?.fit();
+                console.log(`PowerShellTerminal fit() called for tab ${tabId}`);
+                if (fitAddon.current) {
+                    fitAddon.current.fit();
+                    console.log(`PowerShellTerminal fit() successful for tab ${tabId}`);
+                } else {
+                    console.warn(`PowerShellTerminal fitAddon not available for tab ${tabId}`);
+                }
             } catch (e) {
-                console.error('Error fitting terminal:', e);
+                console.error(`PowerShellTerminal fit() error for tab ${tabId}:`, e);
             }
         },
         focus: () => {
@@ -119,18 +125,38 @@ const PowerShellTerminal = forwardRef(({
         term.current.focus();
 
         // ResizeObserver for dynamic resizing
-        const resizeObserver = new ResizeObserver(() => {
+        const resizeObserver = new ResizeObserver((entries) => {
+            console.log(`PowerShellTerminal resize observer triggered for tab ${tabId}`);
             if (fitAddon.current) {
                 try { 
                     fitAddon.current.fit(); 
+                    console.log(`PowerShellTerminal resize observer fit successful for tab ${tabId}`);
                 } catch (e) {
-                    console.error('Error during fit:', e);
+                    console.error(`PowerShellTerminal resize observer error for tab ${tabId}:`, e);
                 }
             }
         });
         if (terminalRef.current) {
             resizeObserver.observe(terminalRef.current);
         }
+
+        // Listener para cambios de visibilidad del documento
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                console.log(`PowerShellTerminal visibility change detected for tab ${tabId}`);
+                setTimeout(() => {
+                    if (fitAddon.current) {
+                        try {
+                            fitAddon.current.fit();
+                            console.log(`PowerShellTerminal visibility change fit successful for tab ${tabId}`);
+                        } catch (e) {
+                            console.error(`PowerShellTerminal visibility change fit error for tab ${tabId}:`, e);
+                        }
+                    }
+                }, 100);
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         // Setup Electron IPC if available
         if (window.electron) {
@@ -210,6 +236,7 @@ const PowerShellTerminal = forwardRef(({
             // Cleanup function
             return () => {
                 resizeObserver.disconnect();
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
                 window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
@@ -228,6 +255,7 @@ const PowerShellTerminal = forwardRef(({
             term.current.writeln('\x1b[31mError: Electron API not available. PowerShell integration will not work.\x1b[0m');
             return () => {
                 resizeObserver.disconnect();
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
                 if (term.current) {
                     term.current.dispose();
                 }
@@ -264,12 +292,33 @@ const PowerShellTerminal = forwardRef(({
             setTimeout(() => {
                 try { 
                     fitAddon.current.fit(); 
+                    console.log(`PowerShellTerminal auto-fit successful for tab ${tabId}`);
                 } catch (e) {
-                    console.error('Error in auto-fit:', e);
+                    console.error(`PowerShellTerminal auto-fit error for tab ${tabId}:`, e);
                 }
             }, 0);
         }
     });
+
+    // Efecto adicional para forzar redimensionamiento después del montaje
+    useEffect(() => {
+        const forceResize = () => {
+            if (fitAddon.current) {
+                try {
+                    fitAddon.current.fit();
+                    console.log(`PowerShellTerminal force resize successful for tab ${tabId}`);
+                } catch (e) {
+                    console.error(`PowerShellTerminal force resize error for tab ${tabId}:`, e);
+                }
+            }
+        };
+        
+        // Intentar múltiples veces después del montaje
+        forceResize();
+        setTimeout(forceResize, 50);
+        setTimeout(forceResize, 150);
+        setTimeout(forceResize, 300);
+    }, [tabId]);
 
     return (
         <div 
