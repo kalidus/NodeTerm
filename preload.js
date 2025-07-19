@@ -38,9 +38,11 @@ contextBridge.exposeInMainWorld('electron', {
         'clipboard:readText',
         'register-tab-events',
         'detect-ubuntu-availability',
+        'detect-wsl-distributions',
         /^ssh:.*$/,
         /^dialog:.*$/,
-        /^ubuntu:.*$/
+        /^ubuntu:.*$/,
+        /^wsl-distro:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

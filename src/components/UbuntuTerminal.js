@@ -11,12 +11,24 @@ const UbuntuTerminal = forwardRef(({
     fontSize = 14, 
     theme = {},
     tabId = 'default',
-    ubuntuInfo = null
+    ubuntuInfo = null // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
+
+    // Determinar el canal IPC basado en la categoría de la distribución
+    const getChannelPrefix = () => {
+        if (ubuntuInfo?.category === 'ubuntu') {
+            return 'ubuntu';
+        } else if (ubuntuInfo?.category) {
+            return 'wsl-distro';
+        } else {
+            // Fallback para compatibilidad con versiones anteriores
+            return 'ubuntu';
+        }
+    };
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -51,7 +63,7 @@ const UbuntuTerminal = forwardRef(({
         },
         paste: (text) => {
             if (term.current && text) {
-                window.electron?.ipcRenderer.send(`ubuntu:data:${tabId}`, text);
+                window.electron?.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
             }
         }
     }));
@@ -167,13 +179,15 @@ const UbuntuTerminal = forwardRef(({
             const delay = tabId === 'tab-1' ? 300 : 0;
             
             setTimeout(() => {
-                window.electron.ipcRenderer.send(`ubuntu:start:${tabId}`, {
+                const channelPrefix = getChannelPrefix();
+                window.electron.ipcRenderer.send(`${channelPrefix}:start:${tabId}`, {
                     cols: term.current.cols,
                     rows: term.current.rows,
                     ubuntuInfo: ubuntuInfo
                 });
                 
-                console.log('🚀 Iniciando Ubuntu con info:', ubuntuInfo);
+                const distroLabel = ubuntuInfo?.label || 'WSL Distribution';
+                console.log(`🚀 Iniciando ${distroLabel} con info:`, ubuntuInfo);
             }, delay);
 
             // Handle keyboard events for copy/paste
@@ -192,42 +206,44 @@ const UbuntuTerminal = forwardRef(({
                     domEvent.preventDefault();
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                            window.electron.ipcRenderer.send(`ubuntu:data:${tabId}`, text);
+                            window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
                         }
                     });
                     return;
                 }
             });
 
-            // Handle user input - send to Ubuntu
+            // Handle user input - send to WSL distribution
             const dataHandler = term.current.onData(data => {
-                window.electron.ipcRenderer.send(`ubuntu:data:${tabId}`, data);
+                window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, data);
             });
 
             // Handle terminal resize
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
-                window.electron.ipcRenderer.send(`ubuntu:resize:${tabId}`, { cols, rows });
+                window.electron.ipcRenderer.send(`${getChannelPrefix()}:resize:${tabId}`, { cols, rows });
             });
 
-            // Listen for Ubuntu output
+            // Listen for WSL distribution output
             const dataListener = (data) => {
                 if (term.current) {
                     term.current.write(data);
                 }
             };
-            const onDataUnsubscribe = window.electron.ipcRenderer.on(`ubuntu:data:${tabId}`, dataListener);
+            const channelPrefix = getChannelPrefix();
+            const onDataUnsubscribe = window.electron.ipcRenderer.on(`${channelPrefix}:data:${tabId}`, dataListener);
 
-            // Listen for Ubuntu ready event
+            // Listen for WSL distribution ready event
             const readyListener = () => {
                 setIsConnected(true);
             };
-            const onReadyUnsubscribe = window.electron.ipcRenderer.on(`ubuntu:ready:${tabId}`, readyListener);
+            const onReadyUnsubscribe = window.electron.ipcRenderer.on(`${channelPrefix}:ready:${tabId}`, readyListener);
 
-            // Listen for Ubuntu errors
+            // Listen for WSL distribution errors
             const errorListener = (error) => {
-                term.current?.writeln(`\x1b[31mUbuntu Error: ${error}\x1b[0m`);
+                const distroLabel = ubuntuInfo?.label || 'WSL Distribution';
+                term.current?.writeln(`\x1b[31m${distroLabel} Error: ${error}\x1b[0m`);
             };
-            const onErrorUnsubscribe = window.electron.ipcRenderer.on(`ubuntu:error:${tabId}`, errorListener);
+            const onErrorUnsubscribe = window.electron.ipcRenderer.on(`${channelPrefix}:error:${tabId}`, errorListener);
 
             // Handle right-click context menu
             const contextMenuHandler = (e) => {
@@ -235,7 +251,7 @@ const UbuntuTerminal = forwardRef(({
                 // Simple paste functionality on right-click
                 window.electron.clipboard.readText().then(text => {
                     if (text) {
-                        window.electron.ipcRenderer.send(`ubuntu:data:${tabId}`, text);
+                        window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
                     }
                 });
             };
@@ -249,7 +265,7 @@ const UbuntuTerminal = forwardRef(({
                 // Solo enviar stop cuando realmente se cierra el tab (no durante reloads)
                 const isReloading = performance.navigation?.type === 1 || document.readyState === 'loading';
                 if (!isReloading) {
-                    window.electron.ipcRenderer.send(`ubuntu:stop:${tabId}`);
+                    window.electron.ipcRenderer.send(`${getChannelPrefix()}:stop:${tabId}`);
                 }
                 
                 if (onDataUnsubscribe) onDataUnsubscribe();
