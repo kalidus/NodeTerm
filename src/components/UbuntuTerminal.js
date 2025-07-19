@@ -196,8 +196,7 @@ const UbuntuTerminal = forwardRef(({
                 window.electron.ipcRenderer.send(`${channelPrefix}:start:${tabId}`, dataToSend);
                 
                 const distroLabel = ubuntuInfo?.label || 'WSL Distribution';
-                console.log(`🚀 Iniciando ${distroLabel} con info:`, ubuntuInfo);
-                console.log(`🔧 Canal usado: ${channelPrefix}, parámetro: ${channelPrefix === 'ubuntu' ? 'ubuntuInfo' : 'distroInfo'}`);
+                console.log(`Starting ${distroLabel} terminal session`);
             }, delay);
 
             // Handle keyboard events for copy/paste
@@ -237,6 +236,8 @@ const UbuntuTerminal = forwardRef(({
             const dataListener = (data) => {
                 if (term.current) {
                     term.current.write(data);
+                } else {
+                    console.warn(`Terminal ${tabId} not ready to receive data`);
                 }
             };
             const channelPrefix = getChannelPrefix();
@@ -245,6 +246,7 @@ const UbuntuTerminal = forwardRef(({
             // Listen for WSL distribution ready event
             const readyListener = () => {
                 setIsConnected(true);
+                console.log(`Terminal ${tabId} ready and connected`);
             };
             const onReadyUnsubscribe = window.electron.ipcRenderer.on(`${channelPrefix}:ready:${tabId}`, readyListener);
 
