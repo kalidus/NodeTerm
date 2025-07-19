@@ -3,6 +3,7 @@ import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
+import UbuntuTerminal from './UbuntuTerminal';
 
 const TabbedTerminal = () => {
     const [tabs, setTabs] = useState([
@@ -16,7 +17,48 @@ const TabbedTerminal = () => {
     const [nextTabId, setNextTabId] = useState(2);
     const [selectedTerminalType, setSelectedTerminalType] = useState('powershell');
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
+    const [ubuntuVersions, setUbuntuVersions] = useState([]);
     const terminalRefs = useRef({});
+
+    // Detectar Ubuntu usando el backend
+    useEffect(() => {
+        console.log('🔍 Iniciando detección de Ubuntu...');
+        
+        const detectUbuntu = async () => {
+            try {
+                if (window.electron && window.electron.ipcRenderer) {
+                    console.log('🚀 Invocando detección de versiones de Ubuntu...');
+                    const versions = await window.electron.ipcRenderer.invoke('detect-ubuntu-availability');
+                    console.log('✅ Versiones de Ubuntu detectadas:', versions);
+                    
+                    // Verificar que recibimos un array válido
+                    if (Array.isArray(versions)) {
+                        setUbuntuVersions(versions);
+                        console.log('🎯 Estado actualizado con', versions.length, 'versiones de Ubuntu');
+                    } else {
+                        console.log('⚠️ Respuesta no es un array, fallback a array vacío');
+                        setUbuntuVersions([]);
+                    }
+                } else {
+                    console.log('❌ No hay acceso a electron IPC');
+                    setUbuntuVersions([]);
+                }
+            } catch (error) {
+                console.error('❌ Error en detección de Ubuntu:', error);
+                setUbuntuVersions([]);
+            }
+        };
+        
+        detectUbuntu();
+    }, []);
+
+    // LEGACY: Detección frontend temporal (DESACTIVADA - usando solo backend)
+    /*
+    useEffect(() => {
+        console.log('🎯 LEGACY: Detección directa de Ubuntu en frontend (DESACTIVADA)');
+        // Código legacy comentado para usar solo detección del backend
+    }, []);
+    */
 
     // Registrar eventos para la pestaña inicial
     useEffect(() => {
@@ -78,6 +120,7 @@ const TabbedTerminal = () => {
                 tabs.forEach(tab => {
                     window.electron.ipcRenderer.send(`powershell:stop:${tab.id}`);
                     window.electron.ipcRenderer.send(`wsl:stop:${tab.id}`);
+                    window.electron.ipcRenderer.send(`ubuntu:stop:${tab.id}`);
                 });
             }
         };
@@ -148,17 +191,65 @@ const TabbedTerminal = () => {
         }
     }, [activeTabKey, tabs]);
 
-    // Opciones para el selector de tipo de terminal
+    // Opciones para el selector de tipo de terminal (dinámicas basadas en versiones disponibles)
     const terminalOptions = [
         { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
-        { label: 'WSL', value: 'wsl', icon: 'pi pi-server' }
+        { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
+        // Agregar cada versión de Ubuntu como opción separada
+        ...ubuntuVersions.map(version => ({
+            label: version.label,
+            value: `ubuntu-${version.name}`,
+            icon: 'pi pi-circle',
+            executable: version.executable,
+            ubuntuName: version.name
+        }))
     ];
+    
+    // Log para depuración
+    console.log('🎯 Terminal options:', {
+        ubuntuVersionsCount: ubuntuVersions.length,
+        optionsCount: terminalOptions.length,
+        options: terminalOptions.map(opt => opt.label),
+        ubuntuVersions: ubuntuVersions
+    });
 
     // Función para crear una nueva pestaña
     const createNewTab = () => {
         console.log('Creating new tab, type:', selectedTerminalType);
         const newTabId = `tab-${nextTabId}`;
-        const title = selectedTerminalType === 'powershell' ? 'Windows PowerShell' : 'WSL';
+        
+        // Determinar título y tipo basado en la selección
+        let title, terminalType, ubuntuInfo = null;
+        
+        if (selectedTerminalType === 'powershell') {
+            title = 'Windows PowerShell';
+            terminalType = 'powershell';
+        } else if (selectedTerminalType === 'wsl') {
+            title = 'WSL';
+            terminalType = 'wsl';
+        } else if (selectedTerminalType.startsWith('ubuntu-')) {
+            // Extraer información de la versión de Ubuntu seleccionada
+            const ubuntuName = selectedTerminalType.replace('ubuntu-', '');
+            const ubuntuVersion = ubuntuVersions.find(v => v.name === ubuntuName);
+            
+            if (ubuntuVersion) {
+                title = ubuntuVersion.label;
+                terminalType = 'ubuntu';
+                ubuntuInfo = {
+                    name: ubuntuVersion.name,
+                    executable: ubuntuVersion.executable,
+                    label: ubuntuVersion.label
+                };
+            } else {
+                title = 'Ubuntu';
+                terminalType = 'ubuntu';
+            }
+        } else {
+            title = 'Terminal';
+            terminalType = selectedTerminalType;
+        }
+        
+        console.log('🎯 Nueva pestaña:', { title, terminalType, ubuntuInfo });
         
         // Registrar eventos para la nueva pestaña
         if (window.electron) {
@@ -174,7 +265,8 @@ const TabbedTerminal = () => {
             const newTabs = [...prevTabs, {
                 id: newTabId,
                 title,
-                type: selectedTerminalType,
+                type: terminalType,
+                ubuntuInfo: ubuntuInfo, // Información específica para versiones de Ubuntu
                 active: true
             }];
             console.log('New tabs state:', newTabs);
@@ -232,6 +324,7 @@ const TabbedTerminal = () => {
         if (window.electron) {
             window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
             window.electron.ipcRenderer.send(`wsl:stop:${tabId}`);
+            window.electron.ipcRenderer.send(`ubuntu:stop:${tabId}`);
         }
         
         setTabs(prevTabs => {
@@ -260,7 +353,8 @@ const TabbedTerminal = () => {
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: activeTab?.type === 'powershell' ? '#012456' : '#300A24',
+            background: activeTab?.type === 'powershell' ? '#012456' : 
+                       activeTab?.type === 'ubuntu' ? '#300A24' : '#300A24',
             overflow: 'hidden'
         }}>
             {/* Barra de pestañas */}
@@ -310,9 +404,11 @@ const TabbedTerminal = () => {
                                 onClick={() => switchTab(tab.id)}
                             >
                                 <i 
-                                    className={tab.type === 'powershell' ? 'pi pi-desktop' : 'pi pi-server'} 
+                                    className={tab.type === 'powershell' ? 'pi pi-desktop' : 
+                                              tab.type === 'wsl' ? 'pi pi-server' : 'pi pi-circle'} 
                                     style={{ 
-                                        color: tab.type === 'powershell' ? '#4fc3f7' : '#8ae234',
+                                        color: tab.type === 'powershell' ? '#4fc3f7' : 
+                                               tab.type === 'wsl' ? '#8ae234' : '#e95420',
                                         fontSize: '12px',
                                         marginRight: '6px'
                                     }}
@@ -388,7 +484,8 @@ const TabbedTerminal = () => {
                                     <i 
                                         className={option.icon} 
                                         style={{ 
-                                            color: option.value === 'powershell' ? '#4fc3f7' : '#8ae234',
+                                            color: option.value === 'powershell' ? '#4fc3f7' : 
+                                                   option.value === 'wsl' ? '#8ae234' : '#e95420',
                                             fontSize: '12px'
                                         }}
                                     />
@@ -400,7 +497,8 @@ const TabbedTerminal = () => {
                                     <i 
                                         className={option.icon} 
                                         style={{ 
-                                            color: option.value === 'powershell' ? '#4fc3f7' : '#8ae234',
+                                            color: option.value === 'powershell' ? '#4fc3f7' : 
+                                                   option.value === 'wsl' ? '#8ae234' : '#e95420',
                                             fontSize: '12px'
                                         }}
                                     />
@@ -422,6 +520,32 @@ const TabbedTerminal = () => {
                         }}
                         onClick={createNewTab}
                         aria-label="Nueva pestaña"
+                    />
+                    
+                    {/* Botón temporal de debug para Ubuntu */}
+                    <Button
+                        icon="pi pi-refresh"
+                        className="p-button-text p-button-sm"
+                        style={{
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            padding: '4px 8px',
+                            minWidth: '32px',
+                            height: '32px'
+                        }}
+                        onClick={async () => {
+                            console.log('🔄 Forzando detección manual de Ubuntu...');
+                            if (window.electron) {
+                                try {
+                                    const available = await window.electron.ipcRenderer.invoke('detect-ubuntu-availability');
+                                    console.log('🔄 Resultado manual:', available);
+                                    setUbuntuAvailable(available);
+                                } catch (error) {
+                                    console.error('🔄 Error en detección manual:', error);
+                                }
+                            }
+                        }}
+                        aria-label="Debug Ubuntu"
+                        title="Debug: Forzar detección Ubuntu"
                     />
 
                     {/* Botones de control de ventana */}
@@ -477,13 +601,22 @@ const TabbedTerminal = () => {
                                 }}
                                 tabId={tab.id}
                             />
-                        ) : (
+                        ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                            />
+                        ) : (
+                            <UbuntuTerminal 
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                ubuntuInfo={tab.ubuntuInfo}
                             />
                         )}
                     </div>

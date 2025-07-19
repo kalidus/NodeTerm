@@ -37,8 +37,10 @@ contextBridge.exposeInMainWorld('electron', {
         'clipboard:writeText',
         'clipboard:readText',
         'register-tab-events',
+        'detect-ubuntu-availability',
         /^ssh:.*$/,
-        /^dialog:.*$/
+        /^dialog:.*$/,
+        /^ubuntu:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -59,7 +61,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-connection-disconnected$/,
         /^ssh-connection-error$/,
         /^powershell:.*$/,
-        /^wsl:.*$/
+        /^wsl:.*$/,
+        /^ubuntu:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -81,7 +84,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-connection-disconnected$/,
         /^ssh-connection-error$/,
         /^powershell:.*$/,
-        /^wsl:.*$/
+        /^wsl:.*$/,
+        /^ubuntu:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);
