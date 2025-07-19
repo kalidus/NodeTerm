@@ -518,101 +518,170 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 }
 
-// Función para detectar todas las versiones de Ubuntu disponibles
-async function detectAllUbuntuVersions() {
+// Función para detectar todas las distribuciones WSL disponibles
+async function detectAllWSLDistributions() {
   return new Promise((resolve) => {
     const { exec } = require('child_process');
-    const availableVersions = [];
+    const availableDistributions = [];
+    
+    // Mapeo de distribuciones WSL a sus ejecutables y metadata
+    const distroMapping = {
+      // Ubuntu
+      'Ubuntu': { executable: 'ubuntu.exe', label: 'Ubuntu', icon: 'pi pi-circle', category: 'ubuntu' },
+      'Ubuntu-20.04': { executable: 'ubuntu2004.exe', label: 'Ubuntu 20.04 LTS', icon: 'pi pi-circle', category: 'ubuntu' },
+      'Ubuntu-22.04': { executable: 'ubuntu2204.exe', label: 'Ubuntu 22.04 LTS', icon: 'pi pi-circle', category: 'ubuntu' },
+      'Ubuntu-24.04': { executable: 'ubuntu2404.exe', label: 'Ubuntu 24.04 LTS', icon: 'pi pi-circle', category: 'ubuntu' },
+      
+      // Debian
+      'Debian': { executable: 'debian.exe', label: 'Debian', icon: 'pi pi-server', category: 'debian' },
+      
+      // Kali Linux
+      'kali-linux': { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' },
+      'Kali': { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' },
+      
+      // Alpine
+      'Alpine': { executable: 'alpine.exe', label: 'Alpine Linux', icon: 'pi pi-cloud', category: 'alpine' },
+      
+      // openSUSE
+      'openSUSE-Leap-15.1': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.1', icon: 'pi pi-cog', category: 'opensuse' },
+      'openSUSE-Leap-15.2': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.2', icon: 'pi pi-cog', category: 'opensuse' },
+      'openSUSE-Leap-15.3': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.3', icon: 'pi pi-cog', category: 'opensuse' },
+      'openSUSE-Leap-15.4': { executable: 'opensuse-15.exe', label: 'openSUSE Leap 15.4', icon: 'pi pi-cog', category: 'opensuse' },
+      'openSUSE-Tumbleweed': { executable: 'opensuse-tumbleweed.exe', label: 'openSUSE Tumbleweed', icon: 'pi pi-cog', category: 'opensuse' },
+      
+      // Fedora
+      'Fedora': { executable: 'fedora.exe', label: 'Fedora', icon: 'pi pi-bookmark', category: 'fedora' },
+      
+      // Oracle Linux
+      'OracleLinux_7_9': { executable: 'oraclelinux.exe', label: 'Oracle Linux 7.9', icon: 'pi pi-database', category: 'oracle' },
+      'OracleLinux_8_7': { executable: 'oraclelinux.exe', label: 'Oracle Linux 8.7', icon: 'pi pi-database', category: 'oracle' },
+      
+      // CentOS
+      'CentOS7': { executable: 'centos7.exe', label: 'CentOS 7', icon: 'pi pi-server', category: 'centos' },
+      'CentOS8': { executable: 'centos8.exe', label: 'CentOS 8', icon: 'pi pi-server', category: 'centos' }
+    };
     
     // Obtener lista de distribuciones WSL
     exec('wsl --list --verbose', { timeout: 5000, windowsHide: true }, (error, stdout, stderr) => {
-      console.log('🔍 Detectando versiones de Ubuntu...');
+      console.log('🔍 Detectando distribuciones WSL...');
       
       if (!error && stdout) {
         // Limpiar caracteres null UTF-16 antes de procesar
         const cleanedOutput = stdout.replace(/\u0000/g, '');
         const lines = cleanedOutput.split('\n');
-        console.log('🔍 Detectando versiones de Ubuntu...');
+        console.log('🔍 Procesando', lines.length - 1, 'líneas...');
         
         lines.forEach((line) => {
           const trimmed = line.trim();
           
-          if (trimmed && trimmed.toLowerCase().includes('ubuntu')) {
+          // Buscar cualquier distribución Linux (excluir docker-desktop y otras herramientas)
+          if (trimmed && !trimmed.toLowerCase().includes('docker') && 
+              !trimmed.toLowerCase().includes('name') && 
+              !trimmed.toLowerCase().includes('state') &&
+              trimmed.length > 5) {
+                
             // Extraer nombre de la distribución (primer token)
             const tokens = trimmed.split(/\s+/);
             
             if (tokens.length > 0) {
               let distroName = tokens[0].replace('*', '').trim();
               
-              if (distroName && distroName !== 'NAME' && distroName.toLowerCase().includes('ubuntu')) {
-                console.log('🐧 Ubuntu encontrado:', distroName);
+              if (distroName && distroName !== 'NAME') {
+                console.log('🐧 Distribución encontrada:', distroName);
                 
-                // Determinar ejecutable y etiqueta
-                let executable, label;
-                if (distroName === 'Ubuntu') {
-                  executable = 'ubuntu.exe';
-                  label = 'Ubuntu';
-                } else if (distroName.includes('20.04')) {
-                  executable = 'ubuntu2004.exe';
-                  label = 'Ubuntu 20.04 LTS';
-                } else if (distroName.includes('22.04')) {
-                  executable = 'ubuntu2204.exe';
-                  label = 'Ubuntu 22.04 LTS';
-                } else if (distroName.includes('24.04')) {
-                  executable = 'ubuntu2404.exe';
-                  label = 'Ubuntu 24.04 LTS';
-                } else {
-                  // Fallback para versiones no reconocidas
-                  executable = 'ubuntu.exe';
-                  label = distroName;
+                // Buscar en el mapeo exacto o hacer matching parcial
+                let distroInfo = distroMapping[distroName];
+                
+                // Si no hay match exacto, intentar matching parcial
+                if (!distroInfo) {
+                  const lowerDistroName = distroName.toLowerCase();
+                  
+                  if (lowerDistroName.includes('ubuntu')) {
+                    distroInfo = { executable: 'ubuntu.exe', label: distroName, icon: 'pi pi-circle', category: 'ubuntu' };
+                  } else if (lowerDistroName.includes('debian')) {
+                    distroInfo = { executable: 'debian.exe', label: 'Debian', icon: 'pi pi-server', category: 'debian' };
+                  } else if (lowerDistroName.includes('kali')) {
+                    distroInfo = { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' };
+                  } else if (lowerDistroName.includes('alpine')) {
+                    distroInfo = { executable: 'alpine.exe', label: 'Alpine Linux', icon: 'pi pi-cloud', category: 'alpine' };
+                  } else if (lowerDistroName.includes('opensuse')) {
+                    distroInfo = { executable: 'opensuse-15.exe', label: distroName, icon: 'pi pi-cog', category: 'opensuse' };
+                  } else if (lowerDistroName.includes('fedora')) {
+                    distroInfo = { executable: 'fedora.exe', label: 'Fedora', icon: 'pi pi-bookmark', category: 'fedora' };
+                  } else {
+                    // Fallback genérico para distribuciones no reconocidas
+                    distroInfo = { executable: 'wsl.exe', label: distroName, icon: 'pi pi-desktop', category: 'generic' };
+                  }
                 }
                 
-                availableVersions.push({
-                  name: distroName,
-                  executable: executable,
-                  label: label,
-                  version: distroName.includes('.') ? distroName.split('-')[1] : 'latest'
-                });
+                if (distroInfo) {
+                  availableDistributions.push({
+                    name: distroName,
+                    executable: distroInfo.executable,
+                    label: distroInfo.label,
+                    icon: distroInfo.icon,
+                    category: distroInfo.category,
+                    version: distroName.includes('.') || distroName.includes('-') ? distroName.split(/[-_]/)[1] || 'latest' : 'latest'
+                  });
+                  console.log('✅ Agregada:', distroInfo.label);
+                }
               }
             }
           }
         });
       }
       
-      // Si no encontramos versiones específicas, probar ubuntu.exe directamente
-      if (availableVersions.length === 0) {
-        console.log('🔄 No se encontraron versiones específicas, probando ubuntu.exe...');
+      // Si no encontramos distribuciones específicas, probar ubuntu.exe como fallback
+      if (availableDistributions.length === 0) {
+        console.log('🔄 No se encontraron distribuciones WSL, probando ubuntu.exe...');
         exec('ubuntu.exe --help', { timeout: 2000, windowsHide: true }, (ubuntuError) => {
           if (!ubuntuError || ubuntuError.code !== 'ENOENT') {
             console.log('✅ Ubuntu genérico disponible');
-            availableVersions.push({
+            availableDistributions.push({
               name: 'Ubuntu',
               executable: 'ubuntu.exe',
               label: 'Ubuntu',
+              icon: 'pi pi-circle',
+              category: 'ubuntu',
               version: 'latest'
             });
           }
-          console.log('🎯 Versiones Ubuntu detectadas:', availableVersions.length);
-          resolve(availableVersions);
+          console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length);
+          resolve(availableDistributions);
         });
       } else {
-        console.log('🎯 Versiones Ubuntu detectadas:', availableVersions.length);
-        resolve(availableVersions);
+        console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length);
+        resolve(availableDistributions);
       }
     });
   });
 }
 
-// IPC handler para detectar todas las versiones de Ubuntu
-ipcMain.handle('detect-ubuntu-availability', async () => {
-  console.log('🚀 Detectando versiones de Ubuntu...');
+// IPC handler para detectar todas las distribuciones WSL
+ipcMain.handle('detect-wsl-distributions', async () => {
+  console.log('🚀 Detectando distribuciones WSL...');
   
   try {
-    const versions = await detectAllUbuntuVersions();
-    console.log('✅ Detección completada:', versions);
-    return versions;
+    const distributions = await detectAllWSLDistributions();
+    console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas');
+    distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.executable})`));
+    return distributions;
   } catch (error) {
-    console.error('❌ Error en detección de Ubuntu:', error);
+    console.error('❌ Error en detección de distribuciones WSL:', error);
+    return [];
+  }
+});
+
+// Mantener compatibilidad con el handler anterior para Ubuntu
+ipcMain.handle('detect-ubuntu-availability', async () => {
+  console.log('🚀 Detectando distribuciones WSL (compatibilidad Ubuntu)...');
+  
+  try {
+    const distributions = await detectAllWSLDistributions();
+    console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas');
+    return distributions;
+  } catch (error) {
+    console.error('❌ Error en detección de distribuciones WSL:', error);
     return [];
   }
 });
@@ -2664,9 +2733,12 @@ function handleWSLStop(tabId) {
   }
 }
 
-// === Ubuntu Terminal Support ===
+// === WSL Distributions Terminal Support ===
 
-// Store active Ubuntu processes
+// Store active WSL distribution processes
+const wslDistroProcesses = {};
+
+// Store active Ubuntu processes (for backward compatibility)
 const ubuntuProcesses = {};
 
 // Función para detectar si Ubuntu está disponible
@@ -2766,12 +2838,132 @@ function detectUbuntuAvailability() {
   });
 }
 
-// Funciones de manejo para Ubuntu
-function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
-  console.log('🚀 Iniciando Ubuntu para', tabId, 'con info:', ubuntuInfo);
-  startUbuntuSession(tabId, { cols, rows, ubuntuInfo });
+// Funciones de manejo para distribuciones WSL (genéricas)
+function handleWSLDistroStart(tabId, { cols, rows, distroInfo }) {
+    console.log('🚀 Iniciando distribución WSL para', tabId, 'con info:', distroInfo);
+    startWSLDistroSession(tabId, { cols, rows, distroInfo });
 }
 
+// Funciones de manejo para Ubuntu (compatibilidad)
+function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
+    console.log('🚀 Iniciando Ubuntu para', tabId, 'con info:', ubuntuInfo);
+    
+    // Convertir ubuntuInfo a distroInfo para usar la función genérica
+    const distroInfo = ubuntuInfo ? {
+        ...ubuntuInfo,
+        category: 'ubuntu'
+    } : null;
+    
+    startWSLDistroSession(tabId, { cols, rows, distroInfo });
+}
+
+// Función genérica para iniciar cualquier distribución WSL
+function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
+    if (isAppQuitting) {
+        console.log(`Evitando iniciar distribución WSL para ${tabId} - aplicación cerrando`);
+        return;
+    }
+
+    try {
+        // Kill existing process if it exists
+        if (wslDistroProcesses[tabId]) {
+            try {
+                wslDistroProcesses[tabId].kill();
+            } catch (e) {
+                console.error(`Error killing existing WSL distro process for tab ${tabId}:`, e);
+            }
+        }
+
+        // Determine shell and arguments for WSL distribution
+        let shell, args;
+        
+        // Usar el ejecutable específico de la distribución
+        if (distroInfo && distroInfo.executable) {
+            shell = distroInfo.executable;
+            console.log(`🎯 Usando ejecutable específico: ${shell} para ${distroInfo.label || distroInfo.name}`);
+        } else {
+            // Fallback a wsl.exe genérico
+            shell = 'wsl.exe';
+            console.log('⚠️ Sin info específica, usando wsl.exe genérico');
+        }
+        
+        args = []; // Las distribuciones WSL funcionan mejor sin argumentos específicos
+
+        // Environment variables
+        const env = {
+            ...process.env,
+        };
+
+        // Options para spawn PTY
+        const spawnOptions = {
+            env,
+            cwd: undefined,
+            name: 'xterm-color',
+            cols: cols,
+            rows: rows,
+            encoding: null
+        };
+
+        // Para distribuciones WSL, usar configuración simple sin modificaciones ConPTY
+        // La mayoría de distribuciones WSL funcionan mejor con configuración por defecto
+
+        wslDistroProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
+
+        // Handle distribution output
+        wslDistroProcesses[tabId].onData((data) => {
+            if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+                const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                mainWindow.webContents.send(`${channelName}:data:${tabId}`, data);
+            }
+        });
+
+        // Handle distribution exit
+        wslDistroProcesses[tabId].onExit((exitCode, signal) => {
+            console.log(`WSL distro process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
+
+            if (isAppQuitting) {
+                console.log(`App is closing, ignoring exit for ${tabId}`);
+                return;
+            }
+
+            if (!mainWindow || mainWindow.isDestroyed()) {
+                console.log(`Main window destroyed, ignoring exit for ${tabId}`);
+                return;
+            }
+
+            let actualExitCode = exitCode;
+            if (exitCode === null && signal) {
+                actualExitCode = `killed by ${signal}`;
+            }
+
+            if (exitCode !== 0 && exitCode !== null) {
+                console.warn(`WSL distro process for tab ${tabId} exited unexpectedly`);
+                const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                mainWindow.webContents.send(`${channelName}:error:${tabId}`,
+                    `${distroInfo?.label || 'WSL Distribution'} session ended unexpectedly (code: ${actualExitCode})`);
+            }
+
+            // Clean up
+            delete wslDistroProcesses[tabId];
+        });
+
+        // Notificar que el terminal está listo
+        if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+            const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+            mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
+        }
+
+    } catch (error) {
+        console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
+        if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+            const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+            mainWindow.webContents.send(`${channelName}:error:${tabId}`,
+                `Failed to start ${distroInfo?.label || 'WSL Distribution'}: ${error.message}`);
+        }
+    }
+}
+
+// Función original para Ubuntu (para compatibilidad)
 function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
   // No iniciar nuevos procesos si la app está cerrando
   if (isAppQuitting) {
@@ -2878,8 +3070,36 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
   }
 }
 
+// Funciones de manejo para distribuciones WSL genéricas
+function handleWSLDistroData(tabId, data) {
+  // Intentar primero con WSL distro processes
+  if (wslDistroProcesses[tabId]) {
+    try {
+      wslDistroProcesses[tabId].write(data);
+    } catch (error) {
+      console.error(`Error writing to WSL distro ${tabId}:`, error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send(`wsl-distro:error:${tabId}`, `Write error: ${error.message}`);
+      }
+    }
+  } else {
+    console.warn(`No WSL distro process found for ${tabId}`);
+  }
+}
+
 function handleUbuntuData(tabId, data) {
-  if (ubuntuProcesses[tabId]) {
+  // Si hay un proceso en wslDistroProcesses, usarlo (nuevo sistema)
+  if (wslDistroProcesses[tabId]) {
+    try {
+      wslDistroProcesses[tabId].write(data);
+    } catch (error) {
+      console.error(`Error writing to Ubuntu ${tabId}:`, error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Write error: ${error.message}`);
+      }
+    }
+  } else if (ubuntuProcesses[tabId]) {
+    // Fallback al sistema legacy de Ubuntu
     try {
       ubuntuProcesses[tabId].write(data);
     } catch (error) {
@@ -2893,8 +3113,26 @@ function handleUbuntuData(tabId, data) {
   }
 }
 
+function handleWSLDistroResize(tabId, { cols, rows }) {
+  if (wslDistroProcesses[tabId]) {
+    try {
+      wslDistroProcesses[tabId].resize(cols, rows);
+    } catch (error) {
+      console.error(`Error resizing WSL distro ${tabId}:`, error);
+    }
+  }
+}
+
 function handleUbuntuResize(tabId, { cols, rows }) {
-  if (ubuntuProcesses[tabId]) {
+  // Si hay un proceso en wslDistroProcesses, usarlo (nuevo sistema)
+  if (wslDistroProcesses[tabId]) {
+    try {
+      wslDistroProcesses[tabId].resize(cols, rows);
+    } catch (error) {
+      console.error(`Error resizing Ubuntu ${tabId}:`, error);
+    }
+  } else if (ubuntuProcesses[tabId]) {
+    // Fallback al sistema legacy de Ubuntu
     try {
       ubuntuProcesses[tabId].resize(cols, rows);
     } catch (error) {
@@ -2903,8 +3141,93 @@ function handleUbuntuResize(tabId, { cols, rows }) {
   }
 }
 
+function handleWSLDistroStop(tabId) {
+  if (wslDistroProcesses[tabId]) {
+    try {
+      console.log(`Deteniendo proceso WSL distro para tab ${tabId}`);
+      const process = wslDistroProcesses[tabId];
+      
+      // Remover listeners antes de terminar el proceso
+      process.removeAllListeners();
+      
+      // En Windows, usar destroy() para forzar terminación
+      if (os.platform() === 'win32') {
+        try {
+          process.kill(); // Intento graceful primero
+        } catch (e) {
+          // Si kill() falla, usar destroy()
+          try {
+            process.destroy();
+          } catch (destroyError) {
+            console.warn(`Error con destroy() en WSL distro ${tabId}:`, destroyError.message);
+          }
+        }
+      } else {
+        // En sistemas POSIX, usar SIGTERM
+        process.kill('SIGTERM');
+        
+        // Dar tiempo para que termine graciosamente
+        setTimeout(() => {
+          if (wslDistroProcesses[tabId]) {
+            try {
+              wslDistroProcesses[tabId].kill('SIGKILL');
+            } catch (e) {
+              // Ignorar errores de terminación forzada
+            }
+          }
+        }, 1000);
+      }
+      
+      delete wslDistroProcesses[tabId];
+    } catch (error) {
+      console.error(`Error stopping WSL distro ${tabId}:`, error);
+    }
+  }
+}
+
 function handleUbuntuStop(tabId) {
-  if (ubuntuProcesses[tabId]) {
+  // Si hay un proceso en wslDistroProcesses, usarlo (nuevo sistema)
+  if (wslDistroProcesses[tabId]) {
+    try {
+      console.log(`Deteniendo proceso Ubuntu para tab ${tabId} (nuevo sistema)`);
+      const process = wslDistroProcesses[tabId];
+      
+      // Remover listeners antes de terminar el proceso
+      process.removeAllListeners();
+      
+      // En Windows, usar destroy() para forzar terminación
+      if (os.platform() === 'win32') {
+        try {
+          process.kill(); // Intento graceful primero
+        } catch (e) {
+          // Si kill() falla, usar destroy()
+          try {
+            process.destroy();
+          } catch (destroyError) {
+            console.warn(`Error con destroy() en Ubuntu ${tabId}:`, destroyError.message);
+          }
+        }
+      } else {
+        // En sistemas POSIX, usar SIGTERM
+        process.kill('SIGTERM');
+        
+        // Dar tiempo para que termine graciosamente
+        setTimeout(() => {
+          if (wslDistroProcesses[tabId]) {
+            try {
+              wslDistroProcesses[tabId].kill('SIGKILL');
+            } catch (e) {
+              // Ignorar errores de terminación forzada
+            }
+          }
+        }, 1000);
+      }
+      
+      delete wslDistroProcesses[tabId];
+    } catch (error) {
+      console.error(`Error stopping Ubuntu ${tabId}:`, error);
+    }
+  } else if (ubuntuProcesses[tabId]) {
     try {
       console.log(`Deteniendo proceso Ubuntu para tab ${tabId}`);
       const process = ubuntuProcesses[tabId];
@@ -3049,7 +3372,31 @@ function registerTabEvents(tabId) {
   ipcMain.on(`ubuntu:stop:${tabId}`, (event) => {
     handleUbuntuStop(tabId);
   });
+  
+  // WSL Distribution events (generic for all non-Ubuntu distributions)
+  ipcMain.removeAllListeners(`wsl-distro:start:${tabId}`);
+  ipcMain.removeAllListeners(`wsl-distro:data:${tabId}`);
+  ipcMain.removeAllListeners(`wsl-distro:resize:${tabId}`);
+  ipcMain.removeAllListeners(`wsl-distro:stop:${tabId}`);
+  
+  ipcMain.on(`wsl-distro:start:${tabId}`, (event, data) => {
+    handleWSLDistroStart(tabId, data);
+  });
+  
+  ipcMain.on(`wsl-distro:data:${tabId}`, (event, data) => {
+    handleWSLDistroData(tabId, data);
+  });
+  
+  ipcMain.on(`wsl-distro:resize:${tabId}`, (event, data) => {
+    handleWSLDistroResize(tabId, data);
+  });
+  
+  ipcMain.on(`wsl-distro:stop:${tabId}`, (event) => {
+    handleWSLDistroStop(tabId);
+  });
 }
+
+
 
 // Evento para registrar nuevas pestañas
 ipcMain.on('register-tab-events', (event, tabId) => {

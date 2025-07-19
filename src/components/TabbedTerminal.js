@@ -17,39 +17,40 @@ const TabbedTerminal = () => {
     const [nextTabId, setNextTabId] = useState(2);
     const [selectedTerminalType, setSelectedTerminalType] = useState('powershell');
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
-    const [ubuntuVersions, setUbuntuVersions] = useState([]);
+    const [wslDistributions, setWSLDistributions] = useState([]);
     const terminalRefs = useRef({});
 
-    // Detectar Ubuntu usando el backend
+    // Detectar distribuciones WSL usando el backend
     useEffect(() => {
-        console.log('🔍 Iniciando detección de Ubuntu...');
+        console.log('🔍 Iniciando detección de distribuciones WSL...');
         
-        const detectUbuntu = async () => {
+        const detectWSLDistributions = async () => {
             try {
                 if (window.electron && window.electron.ipcRenderer) {
-                    console.log('🚀 Invocando detección de versiones de Ubuntu...');
-                    const versions = await window.electron.ipcRenderer.invoke('detect-ubuntu-availability');
-                    console.log('✅ Versiones de Ubuntu detectadas:', versions);
+                    console.log('🚀 Invocando detección de distribuciones WSL...');
+                    const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+                    console.log('✅ Distribuciones WSL detectadas:', distributions);
                     
                     // Verificar que recibimos un array válido
-                    if (Array.isArray(versions)) {
-                        setUbuntuVersions(versions);
-                        console.log('🎯 Estado actualizado con', versions.length, 'versiones de Ubuntu');
+                    if (Array.isArray(distributions)) {
+                        setWSLDistributions(distributions);
+                        console.log('🎯 Estado actualizado con', distributions.length, 'distribuciones WSL');
+                        distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.category})`));
                     } else {
                         console.log('⚠️ Respuesta no es un array, fallback a array vacío');
-                        setUbuntuVersions([]);
+                        setWSLDistributions([]);
                     }
                 } else {
                     console.log('❌ No hay acceso a electron IPC');
-                    setUbuntuVersions([]);
+                    setWSLDistributions([]);
                 }
             } catch (error) {
-                console.error('❌ Error en detección de Ubuntu:', error);
-                setUbuntuVersions([]);
+                console.error('❌ Error en detección de distribuciones WSL:', error);
+                setWSLDistributions([]);
             }
         };
         
-        detectUbuntu();
+        detectWSLDistributions();
     }, []);
 
     // LEGACY: Detección frontend temporal (DESACTIVADA - usando solo backend)
@@ -191,26 +192,28 @@ const TabbedTerminal = () => {
         }
     }, [activeTabKey, tabs]);
 
-    // Opciones para el selector de tipo de terminal (dinámicas basadas en versiones disponibles)
+    // Opciones para el selector de tipo de terminal (dinámicas basadas en distribuciones disponibles)
     const terminalOptions = [
         { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
         { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
-        // Agregar cada versión de Ubuntu como opción separada
-        ...ubuntuVersions.map(version => ({
-            label: version.label,
-            value: `ubuntu-${version.name}`,
-            icon: 'pi pi-circle',
-            executable: version.executable,
-            ubuntuName: version.name
+        // Agregar cada distribución WSL como opción separada
+        ...wslDistributions.map(distro => ({
+            label: distro.label,
+            value: `wsl-${distro.name}`,
+            icon: distro.icon,
+            executable: distro.executable,
+            category: distro.category,
+            distroName: distro.name,
+            distroInfo: distro
         }))
     ];
     
     // Log para depuración
     console.log('🎯 Terminal options:', {
-        ubuntuVersionsCount: ubuntuVersions.length,
+        wslDistributionsCount: wslDistributions.length,
         optionsCount: terminalOptions.length,
         options: terminalOptions.map(opt => opt.label),
-        ubuntuVersions: ubuntuVersions
+        distributions: wslDistributions.map(distro => `${distro.label} (${distro.category})`)
     });
 
     // Función para crear una nueva pestaña
@@ -219,7 +222,7 @@ const TabbedTerminal = () => {
         const newTabId = `tab-${nextTabId}`;
         
         // Determinar título y tipo basado en la selección
-        let title, terminalType, ubuntuInfo = null;
+        let title, terminalType, distroInfo = null;
         
         if (selectedTerminalType === 'powershell') {
             title = 'Windows PowerShell';
@@ -227,29 +230,31 @@ const TabbedTerminal = () => {
         } else if (selectedTerminalType === 'wsl') {
             title = 'WSL';
             terminalType = 'wsl';
-        } else if (selectedTerminalType.startsWith('ubuntu-')) {
-            // Extraer información de la versión de Ubuntu seleccionada
-            const ubuntuName = selectedTerminalType.replace('ubuntu-', '');
-            const ubuntuVersion = ubuntuVersions.find(v => v.name === ubuntuName);
+        } else if (selectedTerminalType.startsWith('wsl-')) {
+            // Extraer información de la distribución WSL seleccionada
+            const distroName = selectedTerminalType.replace('wsl-', '');
+            const selectedDistro = wslDistributions.find(d => d.name === distroName);
             
-            if (ubuntuVersion) {
-                title = ubuntuVersion.label;
-                terminalType = 'ubuntu';
-                ubuntuInfo = {
-                    name: ubuntuVersion.name,
-                    executable: ubuntuVersion.executable,
-                    label: ubuntuVersion.label
+            if (selectedDistro) {
+                title = selectedDistro.label;
+                terminalType = selectedDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                distroInfo = {
+                    name: selectedDistro.name,
+                    executable: selectedDistro.executable,
+                    label: selectedDistro.label,
+                    icon: selectedDistro.icon,
+                    category: selectedDistro.category
                 };
             } else {
-                title = 'Ubuntu';
-                terminalType = 'ubuntu';
+                title = 'WSL';
+                terminalType = 'wsl-distro';
             }
         } else {
             title = 'Terminal';
             terminalType = selectedTerminalType;
         }
         
-        console.log('🎯 Nueva pestaña:', { title, terminalType, ubuntuInfo });
+        console.log('🎯 Nueva pestaña:', { title, terminalType, distroInfo });
         
         // Registrar eventos para la nueva pestaña
         if (window.electron) {
@@ -266,7 +271,7 @@ const TabbedTerminal = () => {
                 id: newTabId,
                 title,
                 type: terminalType,
-                ubuntuInfo: ubuntuInfo, // Información específica para versiones de Ubuntu
+                distroInfo: distroInfo, // Información específica para distribuciones WSL
                 active: true
             }];
             console.log('New tabs state:', newTabs);
@@ -609,15 +614,25 @@ const TabbedTerminal = () => {
                                 }}
                                 tabId={tab.id}
                             />
-                        ) : (
+                        ) : (tab.type === 'ubuntu' || tab.type === 'wsl-distro') ? (
                             <UbuntuTerminal 
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
-                                ubuntuInfo={tab.ubuntuInfo}
+                                ubuntuInfo={tab.distroInfo}
                             />
+                        ) : (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                color: 'rgba(255,255,255,0.7)'
+                            }}>
+                                <span>Tipo de terminal no soportado: {tab.type}</span>
+                            </div>
                         )}
                     </div>
                 ))}
