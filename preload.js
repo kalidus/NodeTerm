@@ -64,7 +64,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-connection-error$/,
         /^powershell:.*$/,
         /^wsl:.*$/,
-        /^ubuntu:.*$/
+        /^ubuntu:.*$/,
+        /^wsl-distro:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -87,7 +88,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-connection-error$/,
         /^powershell:.*$/,
         /^wsl:.*$/,
-        /^ubuntu:.*$/
+        /^ubuntu:.*$/,
+        /^wsl-distro:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);
