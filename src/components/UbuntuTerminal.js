@@ -180,14 +180,24 @@ const UbuntuTerminal = forwardRef(({
             
             setTimeout(() => {
                 const channelPrefix = getChannelPrefix();
-                window.electron.ipcRenderer.send(`${channelPrefix}:start:${tabId}`, {
+                
+                // Usar el nombre de parámetro correcto según el canal
+                const dataToSend = {
                     cols: term.current.cols,
-                    rows: term.current.rows,
-                    ubuntuInfo: ubuntuInfo
-                });
+                    rows: term.current.rows
+                };
+                
+                if (channelPrefix === 'ubuntu') {
+                    dataToSend.ubuntuInfo = ubuntuInfo;
+                } else {
+                    dataToSend.distroInfo = ubuntuInfo; // Para wsl-distro, usar distroInfo
+                }
+                
+                window.electron.ipcRenderer.send(`${channelPrefix}:start:${tabId}`, dataToSend);
                 
                 const distroLabel = ubuntuInfo?.label || 'WSL Distribution';
                 console.log(`🚀 Iniciando ${distroLabel} con info:`, ubuntuInfo);
+                console.log(`🔧 Canal usado: ${channelPrefix}, parámetro: ${channelPrefix === 'ubuntu' ? 'ubuntuInfo' : 'distroInfo'}`);
             }, delay);
 
             // Handle keyboard events for copy/paste
