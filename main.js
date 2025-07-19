@@ -518,6 +518,105 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 }
 
+// Función para detectar todas las versiones de Ubuntu disponibles
+async function detectAllUbuntuVersions() {
+  return new Promise((resolve) => {
+    const { exec } = require('child_process');
+    const availableVersions = [];
+    
+    // Obtener lista de distribuciones WSL
+    exec('wsl --list --verbose', { timeout: 5000, windowsHide: true }, (error, stdout, stderr) => {
+      console.log('🔍 Detectando versiones de Ubuntu...');
+      
+      if (!error && stdout) {
+        // Limpiar caracteres null UTF-16 antes de procesar
+        const cleanedOutput = stdout.replace(/\u0000/g, '');
+        const lines = cleanedOutput.split('\n');
+        console.log('🔍 Detectando versiones de Ubuntu...');
+        
+        lines.forEach((line) => {
+          const trimmed = line.trim();
+          
+          if (trimmed && trimmed.toLowerCase().includes('ubuntu')) {
+            // Extraer nombre de la distribución (primer token)
+            const tokens = trimmed.split(/\s+/);
+            
+            if (tokens.length > 0) {
+              let distroName = tokens[0].replace('*', '').trim();
+              
+              if (distroName && distroName !== 'NAME' && distroName.toLowerCase().includes('ubuntu')) {
+                console.log('🐧 Ubuntu encontrado:', distroName);
+                
+                // Determinar ejecutable y etiqueta
+                let executable, label;
+                if (distroName === 'Ubuntu') {
+                  executable = 'ubuntu.exe';
+                  label = 'Ubuntu';
+                } else if (distroName.includes('20.04')) {
+                  executable = 'ubuntu2004.exe';
+                  label = 'Ubuntu 20.04 LTS';
+                } else if (distroName.includes('22.04')) {
+                  executable = 'ubuntu2204.exe';
+                  label = 'Ubuntu 22.04 LTS';
+                } else if (distroName.includes('24.04')) {
+                  executable = 'ubuntu2404.exe';
+                  label = 'Ubuntu 24.04 LTS';
+                } else {
+                  // Fallback para versiones no reconocidas
+                  executable = 'ubuntu.exe';
+                  label = distroName;
+                }
+                
+                availableVersions.push({
+                  name: distroName,
+                  executable: executable,
+                  label: label,
+                  version: distroName.includes('.') ? distroName.split('-')[1] : 'latest'
+                });
+              }
+            }
+          }
+        });
+      }
+      
+      // Si no encontramos versiones específicas, probar ubuntu.exe directamente
+      if (availableVersions.length === 0) {
+        console.log('🔄 No se encontraron versiones específicas, probando ubuntu.exe...');
+        exec('ubuntu.exe --help', { timeout: 2000, windowsHide: true }, (ubuntuError) => {
+          if (!ubuntuError || ubuntuError.code !== 'ENOENT') {
+            console.log('✅ Ubuntu genérico disponible');
+            availableVersions.push({
+              name: 'Ubuntu',
+              executable: 'ubuntu.exe',
+              label: 'Ubuntu',
+              version: 'latest'
+            });
+          }
+          console.log('🎯 Versiones Ubuntu detectadas:', availableVersions.length);
+          resolve(availableVersions);
+        });
+      } else {
+        console.log('🎯 Versiones Ubuntu detectadas:', availableVersions.length);
+        resolve(availableVersions);
+      }
+    });
+  });
+}
+
+// IPC handler para detectar todas las versiones de Ubuntu
+ipcMain.handle('detect-ubuntu-availability', async () => {
+  console.log('🚀 Detectando versiones de Ubuntu...');
+  
+  try {
+    const versions = await detectAllUbuntuVersions();
+    console.log('✅ Detección completada:', versions);
+    return versions;
+  } catch (error) {
+    console.error('❌ Error en detección de Ubuntu:', error);
+    return [];
+  }
+});
+
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
@@ -2565,6 +2664,320 @@ function handleWSLStop(tabId) {
   }
 }
 
+// === Ubuntu Terminal Support ===
+
+// Store active Ubuntu processes
+const ubuntuProcesses = {};
+
+// Función para detectar si Ubuntu está disponible
+function detectUbuntuAvailability() {
+  return new Promise((resolve) => {
+    const platform = os.platform();
+    console.log('🔍 Detectando Ubuntu, plataforma:', platform);
+    
+    if (platform !== 'win32') {
+      // En sistemas no Windows, verificar si bash está disponible
+      const { spawn } = require('child_process');
+      const bashCheck = spawn('bash', ['--version'], { stdio: 'pipe' });
+      
+      bashCheck.on('close', (code) => {
+        console.log('🐧 Bash check completed with code:', code);
+        resolve(code === 0);
+      });
+      
+      bashCheck.on('error', (error) => {
+        console.log('❌ Bash check error:', error.message);
+        resolve(false);
+      });
+      
+      // Timeout de 2 segundos
+      setTimeout(() => {
+        console.log('⏰ Bash check timeout');
+        bashCheck.kill();
+        resolve(false);
+      }, 2000);
+    } else {
+      // En Windows, verificar si ubuntu está disponible
+      const { spawn } = require('child_process');
+      console.log('🔍 Verificando ubuntu en Windows...');
+      
+      const ubuntuCheck = spawn('ubuntu', ['--help'], { 
+        stdio: 'pipe',
+        windowsHide: true 
+      });
+      
+      let resolved = false;
+      
+      ubuntuCheck.on('close', (code) => {
+        if (!resolved) {
+          resolved = true;
+                  console.log('🟢 Ubuntu check completed with code:', code);
+        // Ubuntu devuelve código 0 cuando está disponible
+        // También puede devolver null o undefined en algunos casos válidos
+        const isAvailable = (code === 0 || code === null || code === undefined);
+        console.log('🔍 Ubuntu detectado como disponible:', isAvailable);
+          resolve(isAvailable);
+        }
+      });
+      
+      ubuntuCheck.on('error', (error) => {
+        if (!resolved) {
+          resolved = true;
+                  console.log('❌ Ubuntu check error:', error.message);
+        // Si ubuntu no existe, devolverá ENOENT
+          resolve(false);
+        }
+      });
+      
+      ubuntuCheck.on('exit', (code, signal) => {
+        if (!resolved) {
+          resolved = true;
+          console.log('🚪 Ubuntu exit with code:', code, 'signal:', signal);
+          const isAvailable = (code === 0 || code === null || code === undefined);
+          console.log('🔍 Ubuntu detectado como disponible (exit):', isAvailable);
+          resolve(isAvailable);
+        }
+      });
+      
+      // Capturar stdout/stderr para debug
+      let output = '';
+      let errorOutput = '';
+      
+      ubuntuCheck.stdout?.on('data', (data) => {
+        output += data.toString();
+      });
+      
+      ubuntuCheck.stderr?.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+      
+      // Timeout de 5 segundos (más tiempo para Windows)
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.log('⏰ Ubuntu check timeout');
+          console.log('📝 Output:', output.substring(0, 200));
+          console.log('📝 Error output:', errorOutput.substring(0, 200));
+          ubuntuCheck.kill();
+          resolve(false);
+        }
+      }, 5000);
+    }
+  });
+}
+
+// Funciones de manejo para Ubuntu
+function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
+  console.log('🚀 Iniciando Ubuntu para', tabId, 'con info:', ubuntuInfo);
+  startUbuntuSession(tabId, { cols, rows, ubuntuInfo });
+}
+
+function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
+  // No iniciar nuevos procesos si la app está cerrando
+  if (isAppQuitting) {
+    console.log(`Evitando iniciar Ubuntu para ${tabId} - aplicación cerrando`);
+    return;
+  }
+  
+  try {
+    // Kill existing process if any
+    if (ubuntuProcesses[tabId]) {
+      try {
+        ubuntuProcesses[tabId].kill();
+      } catch (e) {
+        console.error(`Error killing existing Ubuntu process for tab ${tabId}:`, e);
+      }
+    }
+
+    // Determine shell and arguments for Ubuntu
+    let shell, args;
+    const platform = os.platform();
+    
+    if (platform === 'win32') {
+      // Usar el ejecutable específico de la versión de Ubuntu
+      if (ubuntuInfo && ubuntuInfo.executable) {
+        shell = ubuntuInfo.executable;
+        console.log(`🎯 Usando ejecutable específico: ${shell} para ${ubuntuInfo.label || 'Ubuntu'}`);
+      } else {
+        // Fallback a ubuntu.exe genérico
+        shell = 'ubuntu.exe';
+        console.log('⚠️ Sin info específica, usando ubuntu.exe genérico');
+      }
+      args = []; // Ubuntu funciona mejor sin argumentos
+    } else {
+      // For non-Windows platforms, use bash directly
+      shell = '/bin/bash';
+      args = ['--login'];
+    }
+
+    // Spawn Ubuntu process con configuración simplificada
+    const spawnOptions = {
+      name: 'xterm-256color',
+      cols: cols || 120,
+      rows: rows || 30,
+      cwd: os.homedir(),
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor'
+      },
+      windowsHide: false
+    };
+    
+    // Para Ubuntu, usar configuración simple sin modificaciones ConPTY
+    // Ubuntu funciona mejor con configuración por defecto
+    
+    ubuntuProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
+
+    // Handle Ubuntu output
+    ubuntuProcesses[tabId].onData((data) => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send(`ubuntu:data:${tabId}`, data);
+      }
+    });
+
+    // Handle Ubuntu exit
+    ubuntuProcesses[tabId].onExit((exitCode, signal) => {
+      console.log(`Ubuntu process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
+      
+      // Extraer el código de salida real
+      let actualExitCode = exitCode;
+      if (typeof exitCode === 'object' && exitCode !== null) {
+        if (exitCode.exitCode !== undefined) {
+          actualExitCode = exitCode.exitCode;
+        } else {
+          actualExitCode = parseInt(JSON.stringify(exitCode), 10) || 0;
+        }
+      } else if (typeof exitCode === 'string') {
+        actualExitCode = parseInt(exitCode, 10) || 0;
+      }
+      
+      if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
+        console.warn(`Ubuntu process for tab ${tabId} exited unexpectedly`);
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
+            `Ubuntu session ended unexpectedly (code: ${actualExitCode})`);
+        }
+      }
+      
+      // Cleanup
+      delete ubuntuProcesses[tabId];
+    });
+
+    // Send ready signal
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send(`ubuntu:ready:${tabId}`);
+    }
+
+  } catch (error) {
+    console.error(`Error starting Ubuntu session for tab ${tabId}:`, error);
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
+        `Failed to start Ubuntu: ${error.message}`);
+    }
+  }
+}
+
+function handleUbuntuData(tabId, data) {
+  if (ubuntuProcesses[tabId]) {
+    try {
+      ubuntuProcesses[tabId].write(data);
+    } catch (error) {
+      console.error(`Error writing to Ubuntu ${tabId}:`, error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Write error: ${error.message}`);
+      }
+    }
+  } else {
+    console.warn(`No Ubuntu process found for ${tabId}`);
+  }
+}
+
+function handleUbuntuResize(tabId, { cols, rows }) {
+  if (ubuntuProcesses[tabId]) {
+    try {
+      ubuntuProcesses[tabId].resize(cols, rows);
+    } catch (error) {
+      console.error(`Error resizing Ubuntu ${tabId}:`, error);
+    }
+  }
+}
+
+function handleUbuntuStop(tabId) {
+  if (ubuntuProcesses[tabId]) {
+    try {
+      console.log(`Deteniendo proceso Ubuntu para tab ${tabId}`);
+      const process = ubuntuProcesses[tabId];
+      
+      // Remover listeners antes de terminar el proceso
+      process.removeAllListeners();
+      
+      // En Windows, usar destroy() para forzar terminación
+      if (os.platform() === 'win32') {
+        try {
+          process.kill(); // Intento graceful primero
+        } catch (e) {
+          // Si kill() falla, usar destroy()
+          try {
+            process.destroy();
+          } catch (destroyError) {
+            console.warn(`Error con destroy() en Ubuntu ${tabId}:`, destroyError.message);
+          }
+        }
+      } else {
+        // En sistemas POSIX, usar SIGTERM
+        process.kill('SIGTERM');
+        
+        // Dar tiempo para que termine graciosamente
+        setTimeout(() => {
+          if (ubuntuProcesses[tabId]) {
+            try {
+              ubuntuProcesses[tabId].kill('SIGKILL');
+            } catch (e) {
+              // Ignorar errores de terminación forzada
+            }
+          }
+        }, 1000);
+      }
+      
+      delete ubuntuProcesses[tabId];
+    } catch (error) {
+      console.error(`Error stopping Ubuntu ${tabId}:`, error);
+    }
+  }
+}
+
+// Función de detección alternativa más simple
+function detectUbuntuSimple() {
+  return new Promise((resolve) => {
+    const platform = os.platform();
+    console.log('🔧 Función de detección simple iniciada, plataforma:', platform);
+    
+    if (platform !== 'win32') {
+      // En sistemas no Windows, asumir que bash está disponible
+      resolve(true);
+    } else {
+          // En Windows, intentar ejecutar ubuntu de forma más directa
+    const { exec } = require('child_process');
+    
+    exec('ubuntu', { 
+        timeout: 3000,
+        windowsHide: true 
+      }, (error, stdout, stderr) => {
+        console.log('🔧 Exec ubuntu result:');
+        console.log('   Error:', error?.code || 'none');
+        console.log('   Stdout length:', stdout?.length || 0);
+        console.log('   Stderr length:', stderr?.length || 0);
+        
+        // Si no hay error ENOENT, significa que ubuntu existe
+        const isAvailable = !error || error.code !== 'ENOENT';
+        console.log('🔧 Ubuntu detectado (simple):', isAvailable);
+        resolve(isAvailable);
+      });
+    }
+  });
+}
+
 // Set para trackear tabs con eventos registrados
 const registeredTabEvents = new Set();
 
@@ -2613,6 +3026,28 @@ function registerTabEvents(tabId) {
   
   ipcMain.on(`wsl:stop:${tabId}`, (event) => {
     handleWSLStop(tabId);
+  });
+  
+  // Ubuntu events
+  ipcMain.removeAllListeners(`ubuntu:start:${tabId}`);
+  ipcMain.removeAllListeners(`ubuntu:data:${tabId}`);
+  ipcMain.removeAllListeners(`ubuntu:resize:${tabId}`);
+  ipcMain.removeAllListeners(`ubuntu:stop:${tabId}`);
+  
+  ipcMain.on(`ubuntu:start:${tabId}`, (event, data) => {
+    handleUbuntuStart(tabId, data);
+  });
+  
+  ipcMain.on(`ubuntu:data:${tabId}`, (event, data) => {
+    handleUbuntuData(tabId, data);
+  });
+  
+  ipcMain.on(`ubuntu:resize:${tabId}`, (event, data) => {
+    handleUbuntuResize(tabId, data);
+  });
+  
+  ipcMain.on(`ubuntu:stop:${tabId}`, (event) => {
+    handleUbuntuStop(tabId);
   });
 }
 
@@ -2701,6 +3136,44 @@ app.on('before-quit', (event) => {
       }
     } catch (error) {
       console.error(`Error cleaning up WSL ${tabId} on quit:`, error);
+    }
+  });
+  
+  // Cleanup all Ubuntu processes
+  Object.keys(ubuntuProcesses).forEach(tabId => {
+    try {
+      const process = ubuntuProcesses[tabId];
+      if (process) {
+        process.removeAllListeners();
+        
+        // En Windows, usar destroy() para forzar terminación
+        if (os.platform() === 'win32') {
+          try {
+            process.kill(); // Intento graceful primero
+          } catch (e) {
+            // Si kill() falla, usar destroy()
+            try {
+              process.destroy();
+            } catch (destroyError) {
+              console.warn(`Error con destroy() en Ubuntu ${tabId} on quit:`, destroyError.message);
+            }
+          }
+        } else {
+          process.kill('SIGTERM');
+          // Terminación forzada después de 500ms en sistemas POSIX
+          setTimeout(() => {
+            if (ubuntuProcesses[tabId]) {
+              try {
+                ubuntuProcesses[tabId].kill('SIGKILL');
+              } catch (e) {
+                // Ignorar errores
+              }
+            }
+          }, 500);
+        }
+      }
+    } catch (error) {
+      console.error(`Error cleaning up Ubuntu ${tabId} on quit:`, error);
     }
   });
 });
