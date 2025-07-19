@@ -2907,19 +2907,40 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         // Para distribuciones WSL, usar configuración simple sin modificaciones ConPTY
         // La mayoría de distribuciones WSL funcionan mejor con configuración por defecto
 
-        wslDistroProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
+        console.log(`🚀 Intentando spawn de ${shell} con args:`, args);
+        console.log(`🔧 Opciones de spawn:`, spawnOptions);
+
+        // Test rápido de existencia del ejecutable
+        const { exec } = require('child_process');
+        exec(`where ${shell}`, { timeout: 2000 }, (whereError, whereStdout) => {
+            if (whereError) {
+                console.log(`⚠️ ${shell} no encontrado en PATH:`, whereError.message);
+            } else {
+                console.log(`✅ ${shell} encontrado en:`, whereStdout.trim());
+            }
+        });
+
+        try {
+            wslDistroProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
+            console.log(`✅ Spawn exitoso para ${shell} en tab ${tabId}`);
+        } catch (spawnError) {
+            console.error(`❌ Error en spawn de ${shell}:`, spawnError);
+            throw spawnError;
+        }
 
         // Handle distribution output
         wslDistroProcesses[tabId].onData((data) => {
+            console.log(`📡 Datos recibidos de ${shell} (${tabId}):`, data.slice(0, 50) + '...');
+            wslDistroProcesses[tabId]._hasReceivedData = true; // Marcar que recibimos datos
             if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
                 const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                 mainWindow.webContents.send(`${channelName}:data:${tabId}`, data);
             }
         });
 
-        // Handle distribution exit
+        // Handle distribution exit  
         wslDistroProcesses[tabId].onExit((exitCode, signal) => {
-            console.log(`WSL distro process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
+            console.log(`🚪 ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal);
 
             if (isAppQuitting) {
                 console.log(`App is closing, ignoring exit for ${tabId}`);
@@ -2948,10 +2969,21 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         });
 
         // Notificar que el terminal está listo
+        console.log(`🎯 Enviando ready para ${shell} (${tabId})`);
         if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
             const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+            console.log(`📢 Enviando ${channelName}:ready:${tabId}`);
             mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
+        } else {
+            console.log(`⚠️ No se puede enviar ready - App quitting: ${isAppQuitting}, Window destroyed: ${!mainWindow || mainWindow.isDestroyed()}`);
         }
+
+        // Timeout check - si no hay actividad en 5 segundos, algo está mal
+        setTimeout(() => {
+            if (wslDistroProcesses[tabId] && !wslDistroProcesses[tabId]._hasReceivedData) {
+                console.log(`⏰ Timeout: ${shell} (${tabId}) no ha enviado datos en 5 segundos`);
+            }
+        }, 5000);
 
     } catch (error) {
         console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
