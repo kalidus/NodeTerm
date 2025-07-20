@@ -603,46 +603,144 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                                 justifyContent: 'center'
                             }}
                             onClick={onMaximize}
-                            title="Maximizar terminal"
+                            title={terminalState === 'maximized' ? "Restaurar terminal" : "Maximizar terminal"}
                         >
-                            <div style={{ position: 'relative', width: '8px', height: '8px' }}>
-                                {/* Línea superior */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '8px',
-                                    height: '1px',
-                                    background: '#ffffff'
-                                }}></div>
-                                {/* Línea inferior */}
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: 0,
-                                    left: 0,
-                                    width: '8px',
-                                    height: '1px',
-                                    background: '#ffffff'
-                                }}></div>
-                                {/* Línea izquierda */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '1px',
-                                    height: '8px',
-                                    background: '#ffffff'
-                                }}></div>
-                                {/* Línea derecha */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    right: 0,
-                                    width: '1px',
-                                    height: '8px',
-                                    background: '#ffffff'
-                                }}></div>
-                            </div>
+                            {terminalState === 'maximized' ? (
+                                // Icono de restaurar: líneas que forman dos cuadrados superpuestos
+                                <div style={{ position: 'relative', width: '8px', height: '8px' }}>
+                                    {/* Cuadrado de fondo - líneas desplazadas */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '2px',
+                                        left: '2px',
+                                        width: '6px',
+                                        height: '6px'
+                                    }}>
+                                        {/* Línea superior del cuadrado de fondo */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '6px',
+                                            height: '1px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                        {/* Línea inferior del cuadrado de fondo */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            width: '6px',
+                                            height: '1px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                        {/* Línea izquierda del cuadrado de fondo */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '1px',
+                                            height: '6px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                        {/* Línea derecha del cuadrado de fondo */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: 0,
+                                            width: '1px',
+                                            height: '6px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                    </div>
+                                    
+                                    {/* Cuadrado de frente - líneas en posición original */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '0px',
+                                        left: '0px',
+                                        width: '6px',
+                                        height: '6px'
+                                    }}>
+                                        {/* Línea superior del cuadrado de frente */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '6px',
+                                            height: '1px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                        {/* Línea inferior del cuadrado de frente */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: 0,
+                                            left: 0,
+                                            width: '6px',
+                                            height: '1px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                        {/* Línea izquierda del cuadrado de frente */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '1px',
+                                            height: '6px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                        {/* Línea derecha del cuadrado de frente */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: 0,
+                                            width: '1px',
+                                            height: '6px',
+                                            background: '#ffffff'
+                                        }}></div>
+                                    </div>
+                                </div>
+                            ) : (
+                                // Icono de maximizar: cuadrado vacío (estado normal)
+                                <div style={{ position: 'relative', width: '8px', height: '8px' }}>
+                                    {/* Línea superior */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '8px',
+                                        height: '1px',
+                                        background: '#ffffff'
+                                    }}></div>
+                                    {/* Línea inferior */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 0,
+                                        left: 0,
+                                        width: '8px',
+                                        height: '1px',
+                                        background: '#ffffff'
+                                    }}></div>
+                                    {/* Línea izquierda */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '1px',
+                                        height: '8px',
+                                        background: '#ffffff'
+                                    }}></div>
+                                    {/* Línea derecha */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        width: '1px',
+                                        height: '8px',
+                                        background: '#ffffff'
+                                    }}></div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

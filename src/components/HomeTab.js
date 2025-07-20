@@ -85,7 +85,10 @@ const HomeTab = ({
       overflow: 'hidden',
       background: 'var(--surface-ground, #fafafa)',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      opacity: terminalState === 'maximized' ? 0 : 1, // Ocultar completamente cuando maximizado
+      visibility: terminalState === 'maximized' ? 'hidden' : 'visible', // Evitar interacciones
+      transition: 'opacity 0.1s ease, visibility 0.1s ease' // Transición más rápida como minimizar
     }}>
       {/* Contenido principal con pestañas */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
