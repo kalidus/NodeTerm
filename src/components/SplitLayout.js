@@ -14,7 +14,8 @@ const SplitLayout = ({
   terminalRefs,
   orientation = 'vertical',
   statusBarIconTheme = 'classic',
-  externalPaneSize = null // Nuevo prop para controlar el tamaño externamente
+  externalPaneSize = null, // Nuevo prop para controlar el tamaño externamente
+  onManualResize = null // Callback para notificar redimensionamiento manual
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
@@ -29,10 +30,16 @@ const SplitLayout = ({
   const primaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
 
   const handleResize = (event, { size }) => {
-    // Solo actualizar el tamaño interno si no se está usando tamaño externo
-    if (externalPaneSize === null) {
-      setInternalPaneSize(orientation === 'vertical' ? size.width : size.height);
+    const newSize = orientation === 'vertical' ? size.width : size.height;
+    
+    // Si había un tamaño externo activo y el usuario redimensiona manualmente,
+    // notificar que quiere volver al modo manual
+    if (externalPaneSize !== null && onManualResize) {
+      onManualResize();
     }
+    
+    // Actualizar el tamaño interno
+    setInternalPaneSize(newSize);
   };
 
   const isVertical = orientation === 'vertical';
@@ -66,7 +73,8 @@ const SplitLayout = ({
   const resizeHandleStyle = {
     position: 'absolute',
     backgroundColor: '#ddd',
-    zIndex: 1,
+    zIndex: 1000,
+    transition: 'background-color 0.2s ease',
     ...(isVertical ? {
       width: '4px',
       height: '100%',
@@ -74,15 +82,16 @@ const SplitLayout = ({
       top: 0,
       cursor: 'col-resize'
     } : {
-      height: '4px',
+      height: '6px', // Ligeramente más gruesa para mejor accesibilidad
       width: '100%',
-      bottom: '-2px',
+      bottom: '-3px',
       left: 0,
       cursor: 'row-resize'
     })
   };
 
-  const minPanelSize = 50;
+  const minPanelSize = 10; // Tamaño mínimo para mantener la barra siempre accesible
+  const minTerminalSize = 40; // Altura mínima para mostrar pestañas del terminal
   const [containerSize, setContainerSize] = useState(0);
 
   // Actualizar el tamaño del contenedor al montar y redimensionar
@@ -97,7 +106,11 @@ const SplitLayout = ({
     return () => window.removeEventListener('resize', updateSize);
   }, [isVertical]);
 
-  const maxPrimaryPaneSize = Math.max(containerSize - minPanelSize, minPanelSize);
+  // Para horizontal: permitir que el dashboard vaya hasta casi toda la pantalla (dejando 40px para terminal)
+  // Para vertical: usar límites normales
+  const maxPrimaryPaneSize = isVertical 
+    ? Math.max(containerSize - minPanelSize, minPanelSize)
+    : Math.max(containerSize - minTerminalSize, minPanelSize);
 
   return (
     <div ref={containerRef} style={containerStyle}>
@@ -106,7 +119,17 @@ const SplitLayout = ({
         height={isVertical ? 0 : primaryPaneSize}
         onResize={handleResize}
         resizeHandles={[isVertical ? 'e' : 's']}
-        handle={<div style={resizeHandleStyle} />}
+        handle={
+          <div 
+            style={resizeHandleStyle}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#bbb';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#ddd';
+            }}
+          />
+        }
         minConstraints={isVertical ? [minPanelSize, 0] : [0, minPanelSize]}
         maxConstraints={isVertical ? [maxPrimaryPaneSize, 0] : [0, maxPrimaryPaneSize]}
       >

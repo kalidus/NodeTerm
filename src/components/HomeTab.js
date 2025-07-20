@@ -41,6 +41,14 @@ const HomeTab = ({
     setTerminalState(newState);
   };
 
+  // Función para resetear a modo manual cuando el usuario redimensiona
+  const handleManualResize = () => {
+    if (terminalState !== 'normal') {
+      console.log('🖱️ Redimensionamiento manual detectado, volviendo a modo normal');
+      setTerminalState('normal');
+    }
+  };
+
   // Determinar el tamaño del panel superior (Dashboard) basado en el estado del terminal
   const getTopPanelSize = () => {
     const containerHeight = window.innerHeight;
@@ -56,8 +64,8 @@ const HomeTab = ({
         size = 0;
         break;
       default:
-        // Estado normal: Split balanceado
-        size = Math.min(300, containerHeight * 0.4); // Máximo 40% de la pantalla
+        // Estado normal: permitir redimensionamiento manual
+        return null; // No controlar externamente, usar redimensionamiento manual
     }
     
     console.log('📏 getTopPanelSize:', { 
@@ -420,6 +428,7 @@ const HomeTab = ({
       statusBarIconTheme="classic"
       isHomeTab={true}
       externalPaneSize={getTopPanelSize()}
+      onManualResize={handleManualResize}
     />
   );
 };

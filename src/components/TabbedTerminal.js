@@ -570,66 +570,79 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                     gap: '8px', 
                     padding: '0 16px' 
                 }}>
-                    {/* Botones de control de ventana - Estilo minimalista */}
+                    {/* Botones de control de ventana - EXACTAMENTE como la imagen */}
                     <div style={{ display: 'flex', gap: '8px', marginLeft: '8px' }}>
                         {/* Botón Minimizar */}
                         <div 
                             style={{
-                                width: '16px',
-                                height: '16px',
+                                width: '12px',
+                                height: '12px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease',
-                                borderRadius: '2px',
-                                background: 'rgba(255, 255, 255, 0.1)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                                justifyContent: 'center'
                             }}
                             onClick={onMinimize}
-                            title={terminalState === 'minimized' ? "Restaurar terminal" : "Minimizar terminal"}
+                            title="Minimizar terminal"
                         >
                             <div style={{
                                 width: '8px',
                                 height: '1px',
-                                background: '#ffffff',
-                                borderRadius: '0.5px'
+                                background: '#ffffff'
                             }}></div>
                         </div>
                         
                         {/* Botón Maximizar */}
                         <div 
                             style={{
-                                width: '16px',
-                                height: '16px',
+                                width: '12px',
+                                height: '12px',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.2s ease',
-                                borderRadius: '2px',
-                                background: 'rgba(255, 255, 255, 0.1)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                                justifyContent: 'center'
                             }}
                             onClick={onMaximize}
-                            title={terminalState === 'maximized' ? "Restaurar terminal" : "Maximizar terminal"}
+                            title="Maximizar terminal"
                         >
-                            <div style={{
-                                width: '8px',
-                                height: '8px',
-                                border: '1px solid #ffffff',
-                                borderRadius: '1px'
-                            }}></div>
+                            <div style={{ position: 'relative', width: '8px', height: '8px' }}>
+                                {/* Línea superior */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '8px',
+                                    height: '1px',
+                                    background: '#ffffff'
+                                }}></div>
+                                {/* Línea inferior */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: 0,
+                                    width: '8px',
+                                    height: '1px',
+                                    background: '#ffffff'
+                                }}></div>
+                                {/* Línea izquierda */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '1px',
+                                    height: '8px',
+                                    background: '#ffffff'
+                                }}></div>
+                                {/* Línea derecha */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: 0,
+                                    width: '1px',
+                                    height: '8px',
+                                    background: '#ffffff'
+                                }}></div>
+                            </div>
                         </div>
                     </div>
                 </div>
