@@ -13,19 +13,26 @@ const SplitLayout = ({
   sshStatsByTabId,
   terminalRefs,
   orientation = 'vertical',
-  statusBarIconTheme = 'classic'
+  statusBarIconTheme = 'classic',
+  externalPaneSize = null // Nuevo prop para controlar el tamaño externamente
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
   const containerRef = useRef(null);
   
   // Estado para el tamaño del panel izquierdo/superior
-  const [primaryPaneSize, setPrimaryPaneSize] = useState(
+  const [internalPaneSize, setInternalPaneSize] = useState(
     orientation === 'vertical' ? 400 : 300
   );
+  
+  // Usar tamaño externo si se proporciona, sino usar el interno
+  const primaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
 
   const handleResize = (event, { size }) => {
-    setPrimaryPaneSize(orientation === 'vertical' ? size.width : size.height);
+    // Solo actualizar el tamaño interno si no se está usando tamaño externo
+    if (externalPaneSize === null) {
+      setInternalPaneSize(orientation === 'vertical' ? size.width : size.height);
+    }
   };
 
   const isVertical = orientation === 'vertical';
@@ -42,15 +49,18 @@ const SplitLayout = ({
     height: isVertical ? '100%' : `${primaryPaneSize}px`,
     overflow: 'hidden',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    transition: externalPaneSize !== null ? 'all 0.3s ease' : 'none'
   };
 
   const secondaryPaneStyle = {
     width: isVertical ? `calc(100% - ${primaryPaneSize}px)` : '100%',
     height: isVertical ? '100%' : `calc(100% - ${primaryPaneSize}px)`,
+    minHeight: isVertical ? 'auto' : '40px', // Altura mínima para mostrar las pestañas
     overflow: 'hidden',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    transition: externalPaneSize !== null ? 'all 0.3s ease' : 'none'
   };
 
   const resizeHandleStyle = {
