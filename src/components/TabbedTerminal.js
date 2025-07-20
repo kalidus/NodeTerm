@@ -217,22 +217,23 @@ const TabbedTerminal = () => {
     });
 
     // Función para crear una nueva pestaña
-    const createNewTab = () => {
-        console.log('Creating new tab, type:', selectedTerminalType);
+    const createNewTab = (terminalTypeOverride = null) => {
+        const terminalTypeToUse = terminalTypeOverride || selectedTerminalType;
+        console.log('Creating new tab, type:', terminalTypeToUse);
         const newTabId = `tab-${nextTabId}`;
         
         // Determinar título y tipo basado en la selección
         let title, terminalType, distroInfo = null;
         
-        if (selectedTerminalType === 'powershell') {
+        if (terminalTypeToUse === 'powershell') {
             title = 'Windows PowerShell';
             terminalType = 'powershell';
-        } else if (selectedTerminalType === 'wsl') {
+        } else if (terminalTypeToUse === 'wsl') {
             title = 'WSL';
             terminalType = 'wsl';
-        } else if (selectedTerminalType.startsWith('wsl-')) {
+        } else if (terminalTypeToUse.startsWith('wsl-')) {
             // Extraer información de la distribución WSL seleccionada
-            const distroName = selectedTerminalType.replace('wsl-', '');
+            const distroName = terminalTypeToUse.replace('wsl-', '');
             const selectedDistro = wslDistributions.find(d => d.name === distroName);
             
             if (selectedDistro) {
@@ -251,7 +252,7 @@ const TabbedTerminal = () => {
             }
         } else {
             title = 'Terminal';
-            terminalType = selectedTerminalType;
+            terminalType = terminalTypeToUse;
         }
         
         console.log('🎯 Nueva pestaña:', { title, terminalType, distroInfo });
@@ -383,8 +384,7 @@ const TabbedTerminal = () => {
                         alignItems: 'center',
                         overflow: 'auto',
                         scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        flex: 1
+                        msOverflowStyle: 'none'
                     }}>
                         {tabs.map((tab, index) => (
                             <div
@@ -449,110 +449,127 @@ const TabbedTerminal = () => {
                                 )}
                             </div>
                         ))}
+                        
+                        {/* Botones estilo PowerShell al lado de las pestañas */}
+                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '4px' }}>
+                            {/* Botón para nueva pestaña */}
+                            <Button
+                                icon="pi pi-plus"
+                                className="p-button-text p-button-sm"
+                                style={{
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    padding: '4px 6px',
+                                    minWidth: '24px',
+                                    height: '24px',
+                                    fontSize: '10px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    borderRadius: '3px',
+                                    marginRight: '2px'
+                                }}
+                                onClick={() => {
+                                    // Usar el tipo de terminal actualmente seleccionado
+                                    createNewTab();
+                                }}
+                                aria-label="Nueva pestaña"
+                                title="Nueva pestaña"
+                            />
+                            
+                            {/* Botón dropdown para seleccionar tipo de terminal */}
+                            <Button
+                                icon="pi pi-chevron-down"
+                                className="p-button-text p-button-sm"
+                                style={{
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    padding: '4px 6px',
+                                    minWidth: '24px',
+                                    height: '24px',
+                                    fontSize: '8px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    borderRadius: '3px'
+                                }}
+                                onClick={(e) => {
+                                    // Crear un menú contextual
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    
+                                    // Crear un menú desplegable temporal
+                                    const menu = document.createElement('div');
+                                    menu.style.position = 'absolute';
+                                    menu.style.top = (e.target.getBoundingClientRect().bottom + 5) + 'px';
+                                    menu.style.left = e.target.getBoundingClientRect().left + 'px';
+                                    menu.style.background = '#2a4a6b';
+                                    menu.style.border = '1px solid #3a5a7b';
+                                    menu.style.borderRadius = '4px';
+                                    menu.style.padding = '4px 0';
+                                    menu.style.minWidth = '180px';
+                                    menu.style.zIndex = '1000';
+                                    menu.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                                    
+                                    terminalOptions.forEach(option => {
+                                        const item = document.createElement('div');
+                                        item.style.padding = '8px 12px';
+                                        item.style.cursor = 'pointer';
+                                        item.style.display = 'flex';
+                                        item.style.alignItems = 'center';
+                                        item.style.gap = '8px';
+                                        item.style.color = '#ffffff';
+                                        item.style.fontSize = '12px';
+                                        item.style.transition = 'background-color 0.2s';
+                                        
+                                        item.innerHTML = `
+                                            <i class="${option.icon}" style="color: ${
+                                                option.value === 'powershell' ? '#4fc3f7' : 
+                                                option.value === 'wsl' ? '#8ae234' : '#e95420'
+                                            }; font-size: 12px;"></i>
+                                            <span>${option.label}</span>
+                                        `;
+                                        
+                                        item.addEventListener('mouseenter', () => {
+                                            item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                        });
+                                        
+                                        item.addEventListener('mouseleave', () => {
+                                            item.style.backgroundColor = 'transparent';
+                                        });
+                                        
+                                        item.addEventListener('click', () => {
+                                            setSelectedTerminalType(option.value);
+                                            createNewTab(option.value);
+                                            document.body.removeChild(menu);
+                                        });
+                                        
+                                        menu.appendChild(item);
+                                    });
+                                    
+                                    // Agregar listener para cerrar el menú al hacer click fuera
+                                    const handleClickOutside = (event) => {
+                                        if (!menu.contains(event.target)) {
+                                            document.body.removeChild(menu);
+                                            document.removeEventListener('click', handleClickOutside);
+                                        }
+                                    };
+                                    
+                                    document.body.appendChild(menu);
+                                    setTimeout(() => {
+                                        document.addEventListener('click', handleClickOutside);
+                                    }, 0);
+                                }}
+                                aria-label="Seleccionar tipo de terminal"
+                                title="Seleccionar tipo de terminal"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* Controles del lado derecho */}
+                {/* Controles del lado derecho - Solo botones de control de ventana */}
                 <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '8px', 
                     padding: '0 16px' 
                 }}>
-                    {/* Selector de tipo de terminal */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ 
-                            color: 'rgba(255, 255, 255, 0.8)', 
-                            fontSize: '12px',
-                            fontWeight: '500'
-                        }}>
-                            Nuevo:
-                        </span>
-                        <Dropdown
-                            value={selectedTerminalType}
-                            options={terminalOptions}
-                            onChange={(e) => setSelectedTerminalType(e.value)}
-                            optionLabel="label"
-                            style={{
-                                width: '130px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRadius: '4px'
-                            }}
-                            panelStyle={{
-                                backgroundColor: '#2a4a6b',
-                                border: '1px solid #3a5a7b',
-                                borderRadius: '4px'
-                            }}
-                            itemTemplate={(option) => (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
-                                    <i 
-                                        className={option.icon} 
-                                        style={{ 
-                                            color: option.value === 'powershell' ? '#4fc3f7' : 
-                                                   option.value === 'wsl' ? '#8ae234' : '#e95420',
-                                            fontSize: '12px'
-                                        }}
-                                    />
-                                    <span>{option.label}</span>
-                                </div>
-                            )}
-                            valueTemplate={(option) => (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff' }}>
-                                    <i 
-                                        className={option.icon} 
-                                        style={{ 
-                                            color: option.value === 'powershell' ? '#4fc3f7' : 
-                                                   option.value === 'wsl' ? '#8ae234' : '#e95420',
-                                            fontSize: '12px'
-                                        }}
-                                    />
-                                    <span style={{ fontSize: '12px' }}>{option.label}</span>
-                                </div>
-                            )}
-                        />
-                    </div>
-
-                    {/* Botón para nueva pestaña */}
-                    <Button
-                        icon="pi pi-plus"
-                        className="p-button-text p-button-sm"
-                        style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            padding: '4px 8px',
-                            minWidth: '32px',
-                            height: '32px'
-                        }}
-                        onClick={createNewTab}
-                        aria-label="Nueva pestaña"
-                    />
-                    
-                    {/* Botón temporal de debug para Ubuntu */}
-                    <Button
-                        icon="pi pi-refresh"
-                        className="p-button-text p-button-sm"
-                        style={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            padding: '4px 8px',
-                            minWidth: '32px',
-                            height: '32px'
-                        }}
-                        onClick={async () => {
-                            console.log('🔄 Forzando detección manual de Ubuntu...');
-                            if (window.electron) {
-                                try {
-                                    const available = await window.electron.ipcRenderer.invoke('detect-ubuntu-availability');
-                                    console.log('🔄 Resultado manual:', available);
-                                    setUbuntuAvailable(available);
-                                } catch (error) {
-                                    console.error('🔄 Error en detección manual:', error);
-                                }
-                            }
-                        }}
-                        aria-label="Debug Ubuntu"
-                        title="Debug: Forzar detección Ubuntu"
-                    />
-
                     {/* Botones de control de ventana */}
                     <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
                         <div style={{
