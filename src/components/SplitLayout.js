@@ -57,7 +57,7 @@ const SplitLayout = ({
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    transition: externalPaneSize !== null ? 'all 0.3s ease' : 'none'
+    transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
   };
 
   const secondaryPaneStyle = {
@@ -67,7 +67,7 @@ const SplitLayout = ({
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    transition: externalPaneSize !== null ? 'all 0.3s ease' : 'none'
+    transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
   };
 
   const resizeHandleStyle = {
