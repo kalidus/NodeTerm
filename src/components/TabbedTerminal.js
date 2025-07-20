@@ -5,7 +5,7 @@ import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 
-const TabbedTerminal = () => {
+const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
     const [tabs, setTabs] = useState([
         { 
             id: 'tab-1', 
@@ -570,26 +570,67 @@ const TabbedTerminal = () => {
                     gap: '8px', 
                     padding: '0 16px' 
                 }}>
-                    {/* Botones de control de ventana */}
-                    <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
-                        <div style={{
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            background: '#ff5f57'
-                        }}></div>
-                        <div style={{
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            background: '#ffbd2e'
-                        }}></div>
-                        <div style={{
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            background: '#28ca42'
-                        }}></div>
+                    {/* Botones de control de ventana - Estilo minimalista */}
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: '8px' }}>
+                        {/* Botón Minimizar */}
+                        <div 
+                            style={{
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                                borderRadius: '2px',
+                                background: 'rgba(255, 255, 255, 0.1)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                            }}
+                            onClick={onMinimize}
+                            title={terminalState === 'minimized' ? "Restaurar terminal" : "Minimizar terminal"}
+                        >
+                            <div style={{
+                                width: '8px',
+                                height: '1px',
+                                background: '#ffffff',
+                                borderRadius: '0.5px'
+                            }}></div>
+                        </div>
+                        
+                        {/* Botón Maximizar */}
+                        <div 
+                            style={{
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                                borderRadius: '2px',
+                                background: 'rgba(255, 255, 255, 0.1)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                            }}
+                            onClick={onMaximize}
+                            title={terminalState === 'maximized' ? "Restaurar terminal" : "Maximizar terminal"}
+                        >
+                            <div style={{
+                                width: '8px',
+                                height: '8px',
+                                border: '1px solid #ffffff',
+                                borderRadius: '1px'
+                            }}></div>
+                        </div>
                     </div>
                 </div>
             </div>

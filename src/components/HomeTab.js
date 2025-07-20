@@ -18,6 +18,7 @@ const HomeTab = ({
   foldersCount = 0 
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
   const versionInfo = getVersionInfo();
 
   const handleConnectToHistory = (connection) => {
@@ -25,6 +26,48 @@ const HomeTab = ({
     if (onCreateSSHConnection) {
       onCreateSSHConnection(connection);
     }
+  };
+
+  // Funciones para controlar el estado del terminal
+  const handleMinimizeTerminal = () => {
+    const newState = terminalState === 'minimized' ? 'normal' : 'minimized';
+    console.log('🔽 Cambiando estado del terminal:', terminalState, '->', newState);
+    setTerminalState(newState);
+  };
+
+  const handleMaximizeTerminal = () => {
+    const newState = terminalState === 'maximized' ? 'normal' : 'maximized';
+    console.log('🔼 Cambiando estado del terminal:', terminalState, '->', newState);
+    setTerminalState(newState);
+  };
+
+  // Determinar el tamaño del panel superior (Dashboard) basado en el estado del terminal
+  const getTopPanelSize = () => {
+    const containerHeight = window.innerHeight;
+    let size;
+    
+    switch (terminalState) {
+      case 'minimized':
+        // Terminal minimizado: Dashboard ocupa casi todo, terminal solo 40px (pestañas)
+        size = Math.max(containerHeight - 40, 100); // Mínimo 100px para el dashboard
+        break;
+      case 'maximized':
+        // Terminal maximizado: Dashboard desaparece, terminal ocupa todo
+        size = 0;
+        break;
+      default:
+        // Estado normal: Split balanceado
+        size = Math.min(300, containerHeight * 0.4); // Máximo 40% de la pantalla
+    }
+    
+    console.log('📏 getTopPanelSize:', { 
+      terminalState, 
+      containerHeight, 
+      topPanelSize: size, 
+      terminalSize: containerHeight - size 
+    });
+    
+    return size;
   };
 
   // Panel superior: Dashboard moderno con pestañas
@@ -355,7 +398,11 @@ const HomeTab = ({
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      <TabbedTerminal />
+      <TabbedTerminal 
+        onMinimize={handleMinimizeTerminal}
+        onMaximize={handleMaximizeTerminal}
+        terminalState={terminalState}
+      />
     </div>
   );
 
@@ -372,6 +419,7 @@ const HomeTab = ({
       terminalRefs={{ current: {} }}
       statusBarIconTheme="classic"
       isHomeTab={true}
+      externalPaneSize={getTopPanelSize()}
     />
   );
 };
