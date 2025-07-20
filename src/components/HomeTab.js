@@ -87,66 +87,6 @@ const HomeTab = ({
       display: 'flex',
       flexDirection: 'column'
     }}>
-      {/* Header del dashboard */}
-      <div style={{ 
-        padding: '1.5rem 2rem 1rem 2rem',
-        background: 'linear-gradient(135deg, var(--primary-color, #1976d2) 0%, #1565C0 100%)',
-        color: 'white',
-        borderBottom: '1px solid var(--surface-border)'
-      }}>
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          <div>
-            <h1 style={{ 
-              margin: '0 0 0.5rem 0',
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-            }}>
-              NodeTerm Dashboard
-            </h1>
-            <p style={{ 
-              margin: 0,
-              fontSize: '1rem',
-              opacity: 0.9
-            }}>
-              Terminal moderno para conexiones SSH y gestión de sistemas remotos
-            </p>
-          </div>
-          
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2rem',
-            fontSize: '0.9rem'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                {sshConnectionsCount}
-              </div>
-              <div style={{ opacity: 0.8 }}>Conexiones</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                {foldersCount}
-              </div>
-              <div style={{ opacity: 0.8 }}>Carpetas</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                v{versionInfo.version}
-              </div>
-              <div style={{ opacity: 0.8 }}>NodeTerm</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Contenido principal con pestañas */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <TabView 
@@ -158,7 +98,7 @@ const HomeTab = ({
           {/* Pestaña de Estadísticas del Sistema */}
           <TabPanel header="📊 Sistema">
             <div style={{ 
-              height: 'calc(100vh - 240px)',
+              height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '1rem'
             }}>
@@ -177,7 +117,7 @@ const HomeTab = ({
           {/* Pestaña de Historial de Conexiones */}
           <TabPanel header="🕒 Historial">
             <div style={{ 
-              height: 'calc(100vh - 240px)',
+              height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '1rem'
             }}>
@@ -196,7 +136,7 @@ const HomeTab = ({
           {/* Pestaña de Acciones Rápidas */}
           <TabPanel header="⚡ Acciones">
             <div style={{ 
-              height: 'calc(100vh - 240px)',
+              height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '1rem'
             }}>
@@ -222,7 +162,7 @@ const HomeTab = ({
           {/* Pestaña de Información */}
           <TabPanel header="ℹ️ Info">
             <div style={{ 
-              height: 'calc(100vh - 240px)',
+              height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '2rem'
             }}>
