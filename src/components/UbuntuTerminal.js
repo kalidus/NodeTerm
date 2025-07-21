@@ -34,10 +34,8 @@ const UbuntuTerminal = forwardRef(({
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
-                console.log(`UbuntuTerminal fit() called for tab ${tabId}`);
                 if (fitAddon.current) {
                     fitAddon.current.fit();
-                    console.log(`UbuntuTerminal fit() successful for tab ${tabId}`);
                 } else {
                     console.warn(`UbuntuTerminal fitAddon not available for tab ${tabId}`);
                 }
@@ -138,11 +136,9 @@ const UbuntuTerminal = forwardRef(({
 
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver((entries) => {
-            console.log(`UbuntuTerminal resize observer triggered for tab ${tabId}`);
             if (fitAddon.current) {
                 try { 
                     fitAddon.current.fit(); 
-                    console.log(`UbuntuTerminal resize observer fit successful for tab ${tabId}`);
                 } catch (e) {
                     console.error(`UbuntuTerminal resize observer error for tab ${tabId}:`, e);
                 }
@@ -155,12 +151,10 @@ const UbuntuTerminal = forwardRef(({
         // Listener para cambios de visibilidad del documento
         const handleVisibilityChange = () => {
             if (!document.hidden) {
-                console.log(`UbuntuTerminal visibility change detected for tab ${tabId}`);
                 setTimeout(() => {
                     if (fitAddon.current) {
                         try {
                             fitAddon.current.fit();
-                            console.log(`UbuntuTerminal visibility change fit successful for tab ${tabId}`);
                         } catch (e) {
                             console.error(`UbuntuTerminal visibility change fit error for tab ${tabId}:`, e);
                         }
@@ -334,7 +328,6 @@ const UbuntuTerminal = forwardRef(({
             setTimeout(() => {
                 try { 
                     fitAddon.current.fit(); 
-                    console.log(`UbuntuTerminal auto-fit successful for tab ${tabId}`);
                 } catch (e) {
                     console.error(`UbuntuTerminal auto-fit error for tab ${tabId}:`, e);
                 }
@@ -348,7 +341,6 @@ const UbuntuTerminal = forwardRef(({
             if (fitAddon.current) {
                 try {
                     fitAddon.current.fit();
-                    console.log(`UbuntuTerminal force resize successful for tab ${tabId}`);
                 } catch (e) {
                     console.error(`UbuntuTerminal force resize error for tab ${tabId}:`, e);
                 }
