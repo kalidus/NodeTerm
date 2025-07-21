@@ -11,47 +11,38 @@ const SystemStats = () => {
     network: { download: 0, upload: 0 },
     temperature: { cpu: 0, gpu: 0 }
   });
-
   const [isLoading, setIsLoading] = useState(true);
+  // Sticky stats para todas las métricas
+  const lastStatsRef = React.useRef(stats);
 
   useEffect(() => {
     const updateStats = async () => {
       try {
         if (window.electronAPI) {
           const systemStats = await window.electronAPI.getSystemStats();
-          setStats(systemStats);
+          // Sticky para cada métrica
+          const mergedStats = { ...lastStatsRef.current };
+          // CPU
+          if (systemStats.cpu && systemStats.cpu.usage > 0) mergedStats.cpu = systemStats.cpu;
+          // Memoria
+          if (systemStats.memory && systemStats.memory.total > 0) mergedStats.memory = systemStats.memory;
+          // Discos
+          if (systemStats.disks && systemStats.disks.length > 0) mergedStats.disks = systemStats.disks;
+          // Red
+          if (systemStats.network && (systemStats.network.download > 0 || systemStats.network.upload > 0)) mergedStats.network = systemStats.network;
+          // Temperatura
+          if (systemStats.temperature && (systemStats.temperature.cpu > 0 || systemStats.temperature.gpu > 0)) mergedStats.temperature = systemStats.temperature;
+          lastStatsRef.current = mergedStats;
+          setStats(mergedStats);
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('Error obteniendo estadísticas del sistema:', error);
-        // Datos de ejemplo para desarrollo
-        setStats({
-          cpu: { usage: Math.random() * 100, cores: 8, model: 'Intel Core i7-9700K' },
-          memory: { 
-            used: 8.2, 
-            total: 16, 
-            percentage: 51.25 
-          },
-          disks: [
-            { name: 'C:', used: 450, total: 1000, percentage: 45 },
-            { name: 'D:', used: 720, total: 2000, percentage: 36 }
-          ],
-          network: { 
-            download: Math.random() * 100, 
-            upload: Math.random() * 50 
-          },
-          temperature: { 
-            cpu: 45 + Math.random() * 20, 
-            gpu: 40 + Math.random() * 25 
-          }
-        });
+        setStats(lastStatsRef.current);
         setIsLoading(false);
       }
     };
-
     updateStats();
     const interval = setInterval(updateStats, 2000); // Actualizar cada 2 segundos
-
     return () => clearInterval(interval);
   }, []);
 
