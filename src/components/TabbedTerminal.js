@@ -395,8 +395,10 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                                     background: tab.active ? 
                                         (tab.type === 'powershell' ? '#012456' : '#300A24') : 
                                         'transparent',
-                                    border: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
-                                    borderBottom: 'none',
+                                    borderTop: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
+                                    borderLeft: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
+                                    borderRight: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
+                                    borderBottom: tab.active ? 'none' : '1px solid transparent',
                                     padding: '6px 12px',
                                     cursor: 'pointer',
                                     position: 'relative',
@@ -546,7 +548,9 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                                     // Agregar listener para cerrar el menú al hacer click fuera
                                     const handleClickOutside = (event) => {
                                         if (!menu.contains(event.target)) {
-                                            document.body.removeChild(menu);
+                                            if (menu.parentNode) {
+                                                menu.parentNode.removeChild(menu);
+                                            }
                                             document.removeEventListener('click', handleClickOutside);
                                         }
                                     };
