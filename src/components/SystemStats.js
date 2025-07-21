@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { ProgressBar } from 'primereact/progressbar';
-import { Tooltip } from 'primereact/tooltip';
 
 const SystemStats = () => {
   const [stats, setStats] = useState({
     cpu: { usage: 0, cores: 0, model: 'Cargando...' },
     memory: { used: 0, total: 0, percentage: 0 },
     disks: [],
-    network: { download: 0, upload: 0 },
-    temperature: { cpu: 0, gpu: 0 }
+    network: { download: 0, upload: 0 }
   });
   const [isLoading, setIsLoading] = useState(true);
   // Sticky stats para todas las métricas
   const lastStatsRef = React.useRef(stats);
+  // Historial para barras adaptativas de red
+  const [downloadHistory, setDownloadHistory] = useState([]);
+  const [uploadHistory, setUploadHistory] = useState([]);
+  const HISTORY_LENGTH = 30;
 
   useEffect(() => {
     const updateStats = async () => {
@@ -30,10 +32,11 @@ const SystemStats = () => {
           if (systemStats.disks && systemStats.disks.length > 0) mergedStats.disks = systemStats.disks;
           // Red
           if (systemStats.network && (systemStats.network.download > 0 || systemStats.network.upload > 0)) mergedStats.network = systemStats.network;
-          // Temperatura
-          if (systemStats.temperature && (systemStats.temperature.cpu > 0 || systemStats.temperature.gpu > 0)) mergedStats.temperature = systemStats.temperature;
           lastStatsRef.current = mergedStats;
           setStats(mergedStats);
+          // Actualizar historial de red para barras adaptativas
+          setDownloadHistory(prev => ([...prev, mergedStats.network.download].slice(-HISTORY_LENGTH)));
+          setUploadHistory(prev => ([...prev, mergedStats.network.upload].slice(-HISTORY_LENGTH)));
           setIsLoading(false);
         }
       } catch (error) {
@@ -45,44 +48,6 @@ const SystemStats = () => {
     const interval = setInterval(updateStats, 2000); // Actualizar cada 2 segundos
     return () => clearInterval(interval);
   }, []);
-
-  const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
-  const getProgressColor = (percentage) => {
-    if (percentage < 50) return '#4CAF50'; // Verde
-    if (percentage < 80) return '#FF9800'; // Naranja
-    return '#F44336'; // Rojo
-  };
-
-  const getTemperatureColor = (temp) => {
-    if (temp < 60) return '#4CAF50';
-    if (temp < 80) return '#FF9800';
-    return '#F44336';
-  };
-
-  // Sparkline para red
-  const NetSparkline = ({ history, color }) => (
-    <div style={{ display: 'flex', alignItems: 'flex-end', height: 18, width: 60, gap: 1 }}>
-      {history.map((value, idx) => (
-        <div
-          key={idx}
-          style={{
-            width: 2,
-            height: `${Math.max(3, Math.min(16, value / Math.max(...history, 1) * 16))}px`,
-            background: color,
-            borderRadius: 1,
-            opacity: 0.8
-          }}
-        />
-      ))}
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -200,7 +165,7 @@ const SystemStats = () => {
         </div>
       </Card>
 
-      {/* Red y Temperatura */}
+      {/* Red */}
       <Card 
         className="system-stat-card"
         style={{ 
@@ -213,14 +178,29 @@ const SystemStats = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <i className="pi pi-wifi" style={{ fontSize: '2.5rem', opacity: 0.8 }}></i>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>Red & Temp</h3>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>Red</h3>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', opacity: 0.8, marginBottom: '0.3rem' }}>
               <span>↓ {stats.network.download.toFixed(1)} Mbps</span>
               <span>↑ {stats.network.upload.toFixed(1)} Mbps</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', opacity: 0.8 }}>
-              <span>CPU: {stats.temperature.cpu > 0 ? stats.temperature.cpu.toFixed(0) + '°C' : 'No disponible'}</span>
-              <span>GPU: {stats.temperature.gpu > 0 ? stats.temperature.gpu.toFixed(0) + '°C' : 'No disponible'}</span>
+            {/* Barras de progreso de red */}
+            <div style={{ marginBottom: '0.3rem' }}>
+              <div style={{ fontSize: '0.8rem', marginBottom: 2 }}>Descarga</div>
+              <ProgressBar 
+                value={stats.network.download}
+                showValue={false}
+                style={{ height: '6px', background: '#fff2', marginBottom: 4 }}
+                color="#007acc"
+                max={Math.max(100, Math.max(...downloadHistory, 0), stats.network.download, 1000)}
+              />
+              <div style={{ fontSize: '0.8rem', marginBottom: 2 }}>Subida</div>
+              <ProgressBar 
+                value={stats.network.upload}
+                showValue={false}
+                style={{ height: '6px', background: '#fff2', marginBottom: 0 }}
+                color="#f093fb"
+                max={Math.max(100, Math.max(...uploadHistory, 0), stats.network.upload, 1000)}
+              />
             </div>
           </div>
         </div>
