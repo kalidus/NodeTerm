@@ -22,7 +22,7 @@ const HomeTab = ({
   const versionInfo = getVersionInfo();
 
   const handleConnectToHistory = (connection) => {
-    console.log('Conectando a:', connection);
+    // console.log('Conectando a:', connection);
     if (onCreateSSHConnection) {
       onCreateSSHConnection(connection);
     }
@@ -31,20 +31,20 @@ const HomeTab = ({
   // Funciones para controlar el estado del terminal
   const handleMinimizeTerminal = () => {
     const newState = terminalState === 'minimized' ? 'normal' : 'minimized';
-    console.log('🔽 Cambiando estado del terminal:', terminalState, '->', newState);
+    // console.log('🔽 Cambiando estado del terminal:', terminalState, '->', newState);
     setTerminalState(newState);
   };
 
   const handleMaximizeTerminal = () => {
     const newState = terminalState === 'maximized' ? 'normal' : 'maximized';
-    console.log('🔼 Cambiando estado del terminal:', terminalState, '->', newState);
+    // console.log('🔼 Cambiando estado del terminal:', terminalState, '->', newState);
     setTerminalState(newState);
   };
 
   // Función para resetear a modo manual cuando el usuario redimensiona
   const handleManualResize = () => {
     if (terminalState !== 'normal') {
-      console.log('🖱️ Redimensionamiento manual detectado, volviendo a modo normal');
+      // console.log('🖱️ Redimensionamiento manual detectado, volviendo a modo normal');
       setTerminalState('normal');
     }
   };
@@ -68,12 +68,12 @@ const HomeTab = ({
         return null; // No controlar externamente, usar redimensionamiento manual
     }
     
-    console.log('📏 getTopPanelSize:', { 
-      terminalState, 
-      containerHeight, 
-      topPanelSize: size, 
-      terminalSize: containerHeight - size 
-    });
+    // console.log('📏 getTopPanelSize:', { 
+    //   terminalState, 
+    //   containerHeight, 
+    //   topPanelSize: size, 
+    //   terminalSize: containerHeight - size 
+    // });
     
     return size;
   };

@@ -22,30 +22,30 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
 
     // Detectar distribuciones WSL usando el backend
     useEffect(() => {
-        console.log('🔍 Iniciando detección de distribuciones WSL...');
+        // console.log('🔍 Iniciando detección de distribuciones WSL...');
         
         const detectWSLDistributions = async () => {
             try {
                 if (window.electron && window.electron.ipcRenderer) {
-                    console.log('🚀 Invocando detección de distribuciones WSL...');
+                    // console.log('🚀 Invocando detección de distribuciones WSL...');
                     const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
-                    console.log('✅ Distribuciones WSL detectadas:', distributions);
+                    // console.log('✅ Distribuciones WSL detectadas:', distributions);
                     
                     // Verificar que recibimos un array válido
                     if (Array.isArray(distributions)) {
                         setWSLDistributions(distributions);
-                        console.log('🎯 Estado actualizado con', distributions.length, 'distribuciones WSL');
-                        distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.category})`));
+                        // console.log('🎯 Estado actualizado con', distributions.length, 'distribuciones WSL');
+                        // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.category})`));
                     } else {
-                        console.log('⚠️ Respuesta no es un array, fallback a array vacío');
+                        // console.log('⚠️ Respuesta no es un array, fallback a array vacío');
                         setWSLDistributions([]);
                     }
                 } else {
-                    console.log('❌ No hay acceso a electron IPC');
+                    // console.log('❌ No hay acceso a electron IPC');
                     setWSLDistributions([]);
                 }
             } catch (error) {
-                console.error('❌ Error en detección de distribuciones WSL:', error);
+                // console.error('❌ Error en detección de distribuciones WSL:', error);
                 setWSLDistributions([]);
             }
         };
@@ -56,16 +56,16 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
     // LEGACY: Detección frontend temporal (DESACTIVADA - usando solo backend)
     /*
     useEffect(() => {
-        console.log('🎯 LEGACY: Detección directa de Ubuntu en frontend (DESACTIVADA)');
+        // console.log('🎯 LEGACY: Detección directa de Ubuntu en frontend (DESACTIVADA)');
         // Código legacy comentado para usar solo detección del backend
     }, []);
     */
 
     // Registrar eventos para la pestaña inicial
     useEffect(() => {
-        console.log('TabbedTerminal mounted, window.electron:', !!window.electron);
+        // console.log('TabbedTerminal mounted, window.electron:', !!window.electron);
         if (window.electron) {
-            console.log('Registering tab-1 events');
+            // console.log('Registering tab-1 events');
             window.electron.ipcRenderer.send('register-tab-events', 'tab-1');
         }
         
@@ -78,9 +78,9 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                     if (terminalRef && terminalRef.fit) {
                         try {
                             terminalRef.fit();
-                            console.log(`Terminal ${activeTab.id} resized on window resize`);
+                            // console.log(`Terminal ${activeTab.id} resized on window resize`);
                         } catch (error) {
-                            console.error(`Error resizing terminal on window resize:`, error);
+                            // console.error(`Error resizing terminal on window resize:`, error);
                         }
                     }
                 }, 100);
@@ -97,9 +97,9 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                         if (terminalRef && terminalRef.fit) {
                             try {
                                 terminalRef.fit();
-                                console.log(`Terminal ${activeTab.id} resized on visibility change`);
+                                // console.log(`Terminal ${activeTab.id} resized on visibility change`);
                             } catch (error) {
-                                console.error(`Error resizing terminal on visibility change:`, error);
+                                // console.error(`Error resizing terminal on visibility change:`, error);
                             }
                         }
                     }, 100);
@@ -131,7 +131,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
     useEffect(() => {
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab) {
-            console.log(`Tab change effect triggered for tab: ${activeTab.id}, key: ${activeTabKey}`);
+            // console.log(`Tab change effect triggered for tab: ${activeTab.id}, key: ${activeTabKey}`);
             
             // Forzar re-render del terminal activo con múltiples intentos
             const resizeTerminal = () => {
@@ -139,12 +139,12 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                 if (terminalRef && terminalRef.fit) {
                     try {
                         terminalRef.fit();
-                        console.log(`Terminal ${activeTab.id} resized successfully (key: ${activeTabKey})`);
+                        // console.log(`Terminal ${activeTab.id} resized successfully (key: ${activeTabKey})`);
                     } catch (error) {
-                        console.error(`Error resizing terminal ${activeTab.id}:`, error);
+                        // console.error(`Error resizing terminal ${activeTab.id}:`, error);
                     }
                 } else {
-                    console.warn(`Terminal ref not found for tab ${activeTab.id}`);
+                    // console.warn(`Terminal ref not found for tab ${activeTab.id}`);
                 }
             };
             
@@ -168,16 +168,16 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
     useEffect(() => {
         const activeTab = tabs.find(tab => tab.active);
         if (activeTab && activeTabKey > 0) {
-            console.log(`Active tab key changed to ${activeTabKey}, forcing resize for tab: ${activeTab.id}`);
+            // console.log(`Active tab key changed to ${activeTabKey}, forcing resize for tab: ${activeTab.id}`);
             
             const forceResize = () => {
                 const terminalRef = terminalRefs.current[activeTab.id];
                 if (terminalRef && terminalRef.fit) {
                     try {
                         terminalRef.fit();
-                        console.log(`Force resize successful for tab ${activeTab.id} (key: ${activeTabKey})`);
+                        // console.log(`Force resize successful for tab ${activeTab.id} (key: ${activeTabKey})`);
                     } catch (error) {
-                        console.error(`Force resize error for tab ${activeTab.id}:`, error);
+                        // console.error(`Force resize error for tab ${activeTab.id}:`, error);
                     }
                 }
             };
@@ -209,17 +209,17 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
     ];
     
     // Log para depuración
-    console.log('🎯 Terminal options:', {
-        wslDistributionsCount: wslDistributions.length,
-        optionsCount: terminalOptions.length,
-        options: terminalOptions.map(opt => opt.label),
-        distributions: wslDistributions.map(distro => `${distro.label} (${distro.category})`)
-    });
+    // console.log('🎯 Terminal options:', {
+    //     wslDistributionsCount: wslDistributions.length,
+    //     optionsCount: terminalOptions.length,
+    //     options: terminalOptions.map(opt => opt.label),
+    //     distributions: wslDistributions.map(distro => `${distro.label} (${distro.category})`)
+    // });
 
     // Función para crear una nueva pestaña
     const createNewTab = (terminalTypeOverride = null) => {
         const terminalTypeToUse = terminalTypeOverride || selectedTerminalType;
-        console.log('Creating new tab, type:', terminalTypeToUse);
+        // console.log('Creating new tab, type:', terminalTypeToUse);
         const newTabId = `tab-${nextTabId}`;
         
         // Determinar título y tipo basado en la selección
@@ -255,11 +255,11 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
             terminalType = terminalTypeToUse;
         }
         
-        console.log('🎯 Nueva pestaña:', { title, terminalType, distroInfo });
+        // console.log('🎯 Nueva pestaña:', { title, terminalType, distroInfo });
         
         // Registrar eventos para la nueva pestaña
         if (window.electron) {
-            console.log('Registering events for new tab:', newTabId);
+            // console.log('Registering events for new tab:', newTabId);
             window.electron.ipcRenderer.send('register-tab-events', newTabId);
         }
         
@@ -275,7 +275,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                 distroInfo: distroInfo, // Información específica para distribuciones WSL
                 active: true
             }];
-            console.log('New tabs state:', newTabs);
+            // console.log('New tabs state:', newTabs);
             return newTabs;
         });
         
@@ -292,7 +292,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
 
     // Función para cambiar de pestaña activa
     const switchTab = (tabId) => {
-        console.log(`Switching to tab: ${tabId}`);
+        // console.log(`Switching to tab: ${tabId}`);
         setTabs(prevTabs => 
             prevTabs.map(tab => ({
                 ...tab,
@@ -307,7 +307,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
         setTimeout(() => {
             const terminalRef = terminalRefs.current[tabId];
             if (terminalRef && terminalRef.fit) {
-                console.log(`Forcing aggressive resize for tab: ${tabId}`);
+                // console.log(`Forcing aggressive resize for tab: ${tabId}`);
                 try {
                     terminalRef.fit();
                     // Intentar múltiples veces
@@ -316,7 +316,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                     setTimeout(() => terminalRef.fit(), 100);
                     setTimeout(() => terminalRef.fit(), 200);
                 } catch (error) {
-                    console.error(`Error in aggressive resize for tab ${tabId}:`, error);
+                    // console.error(`Error in aggressive resize for tab ${tabId}:`, error);
                 }
             }
         }, 0);
@@ -324,7 +324,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
 
     // Función para cerrar una pestaña
     const closeTab = (tabId) => {
-        console.log('Cerrando pestaña:', tabId);
+        // console.log('Cerrando pestaña:', tabId);
         
         // Detener procesos del terminal antes de cerrar
         if (window.electron) {

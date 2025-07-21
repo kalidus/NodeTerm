@@ -104,6 +104,7 @@ const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
 const SftpClient = require('ssh2-sftp-client');
+const si = require('systeminformation');
 
 // Parser simple para 'ls -la'
 function parseLsOutput(output) {
@@ -3545,8 +3546,8 @@ app.on('before-quit', (event) => {
   });
 });
 
-// Sistema de estadísticas del sistema
-function getSystemStats() {
+// Sistema de estadísticas del sistema con datos reales
+async function getSystemStats() {
   const platform = os.platform();
   const stats = {
     cpu: {
@@ -3570,55 +3571,74 @@ function getSystemStats() {
     }
   };
 
-  // Información de memoria
+  // Memoria (siempre funciona con os nativo)
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
   const usedMem = totalMem - freeMem;
-  
-  stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10; // GB
-  stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10; // GB
+  stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
+  stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
   stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
 
-  // CPU usage (simulado - en producción necesitaríamos una librería específica)
-  stats.cpu.usage = Math.random() * 100;
-
-  // Información de discos (simulada para evitar problemas de compatibilidad)
-  if (platform === 'win32') {
-    // Simular información de discos con datos realistas
-    const simulatedDisks = [
-      { 
-        name: 'C:', 
-        used: Math.floor(Math.random() * 400) + 200, // Entre 200-600 GB
-        total: 1000,
-        get percentage() { return Math.round((this.used / this.total) * 100); }
-      },
-      { 
-        name: 'D:', 
-        used: Math.floor(Math.random() * 800) + 200, // Entre 200-1000 GB
-        total: 2000,
-        get percentage() { return Math.round((this.used / this.total) * 100); }
-      }
-    ];
-    
-    stats.disks = simulatedDisks.map(disk => ({
-      name: disk.name,
-      used: disk.used,
-      total: disk.total,
-      percentage: disk.percentage
-    }));
-  } else {
-    // Para Linux/Mac, usar datos de ejemplo por ahora
-    stats.disks = [
-      { name: '/', used: 150, total: 500, percentage: 30 },
-      { name: '/home', used: 200, total: 1000, percentage: 20 }
-    ];
+  // CPU con timeout individual
+  try {
+    const cpuData = await Promise.race([
+      si.currentLoad(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
+    ]);
+    stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
+    stats.cpu.cores = cpuData.cpus.length;
+    console.log('CPU obtenido:', stats.cpu.usage + '%');
+  } catch (error) {
+    console.log('Error obteniendo CPU:', error.message);
   }
 
-  // Red y temperatura (simulados)
-  stats.network.download = Math.random() * 100;
-  stats.network.upload = Math.random() * 50;
-  stats.temperature.cpu = 45 + Math.random() * 20;
-  stats.temperature.gpu = 40 + Math.random() * 25;
+  // Discos con timeout individual
+  try {
+    const diskData = await Promise.race([
+      si.fsSize(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 5000))
+    ]);
+    if (diskData && diskData.length > 0) {
+      stats.disks = diskData.map(disk => ({
+        name: disk.fs,
+        used: Math.round(disk.used / (1024 * 1024 * 1024) * 10) / 10,
+        total: Math.round(disk.size / (1024 * 1024 * 1024) * 10) / 10,
+        percentage: Math.round((disk.used / disk.size) * 100)
+      }));
+      console.log('Discos obtenidos:', stats.disks.length);
+    }
+  } catch (error) {
+    console.log('Error obteniendo discos:', error.message);
+  }
+
+  // Red con timeout individual
+  try {
+    const netData = await Promise.race([
+      si.networkStats(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout')), 3000))
+    ]);
+    if (netData && netData.length > 0) {
+      stats.network.download = Math.round(netData[0].rx_sec / 1024); // KB/s
+      stats.network.upload = Math.round(netData[0].tx_sec / 1024); // KB/s
+      console.log('Red obtenida:', `${stats.network.download}/${stats.network.upload} KB/s`);
+    }
+  } catch (error) {
+    console.log('Error obteniendo red:', error.message);
+  }
+
+  // Temperatura con timeout individual
+  try {
+    const tempData = await Promise.race([
+      si.cpuTemperature(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
+    ]);
+    stats.temperature.cpu = tempData.main || 0;
+    if (stats.temperature.cpu > 0) {
+      console.log('Temperatura obtenida:', stats.temperature.cpu + '°C');
+    }
+  } catch (error) {
+    console.log('Error obteniendo temperatura:', error.message);
+  }
 
   return stats;
 }
@@ -3626,7 +3646,7 @@ function getSystemStats() {
 // Manejador IPC para obtener estadísticas del sistema
 ipcMain.handle('get-system-stats', async () => {
   try {
-    return getSystemStats();
+    return await getSystemStats();
   } catch (error) {
     console.error('Error obteniendo estadísticas del sistema:', error);
     return {
