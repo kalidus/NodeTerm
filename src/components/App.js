@@ -421,6 +421,10 @@ const App = () => {
 
   // Funciones para drag & drop de pestañas
   const handleTabDragStart = (e, tabIndex) => {
+    const allTabs = getAllTabs();
+    const tab = allTabs[tabIndex];
+    // No permitir arrastrar la pestaña de Inicio
+    if (tab.type === 'home' || tab.label === 'Inicio') return;
     // Pequeño delay para distinguir entre click y drag
     const timer = setTimeout(() => {
       setDraggedTabIndex(tabIndex);
@@ -447,45 +451,50 @@ const App = () => {
   const handleTabDrop = (e, dropIndex) => {
     e.preventDefault();
     const dragIndex = draggedTabIndex;
-    
     if (dragIndex === null || dragIndex === dropIndex) {
       setDraggedTabIndex(null);
       setDragOverTabIndex(null);
       return;
     }
-
-    // Reordenar las pestañas
     const allTabs = getAllTabs();
     const draggedTab = allTabs[dragIndex];
-    const newTabs = [...allTabs];
-    
-    // Remover el tab de su posición original
-    newTabs.splice(dragIndex, 1);
-    // Insertar en la nueva posición
-    newTabs.splice(dropIndex, 0, draggedTab);
-    
-    // Separar nuevamente en SSH y Explorer tabs manteniendo el orden
-    const newSshTabs = [];
-    const newExplorerTabs = [];
-    
-    newTabs.forEach(tab => {
-      // Verificar si es una pestaña SSH (incluyendo exploradores en SSH)
-      const isSSHTab = sshTabs.some(sshTab => sshTab.key === tab.key);
-      if (isSSHTab) {
-        newSshTabs.push(tab);
-      } else {
-        newExplorerTabs.push(tab);
+    const dropTab = allTabs[dropIndex];
+    // No permitir soltar sobre Inicio ni mover Inicio
+    if (
+      draggedTab.type === 'home' || draggedTab.label === 'Inicio' ||
+      dropIndex === 0 || (dropTab && (dropTab.type === 'home' || dropTab.label === 'Inicio'))
+    ) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
+    }
+    // Determinar si es SSH o Explorer
+    const isSSHTab = sshTabs.some(tab => tab.key === draggedTab.key);
+    if (isSSHTab) {
+      // Eliminar de sshTabs y reinsertar en la nueva posición (ajustada por homeTabs)
+      const newSshTabs = [...sshTabs];
+      const oldIdx = newSshTabs.findIndex(tab => tab.key === draggedTab.key);
+      if (oldIdx !== -1) {
+        newSshTabs.splice(oldIdx, 1);
+        // dropIndex - 1 porque homeTabs siempre es la primera
+        const insertIdx = Math.max(0, Math.min(newSshTabs.length, dropIndex - homeTabs.length));
+        newSshTabs.splice(insertIdx, 0, draggedTab);
+        setSshTabs(newSshTabs);
+        setActiveTabIndex(dropIndex);
       }
-    });
-    
-    // Actualizar los estados manteniendo el orden correcto
-    setSshTabs(newSshTabs);
-    setFileExplorerTabs(newExplorerTabs);
-    
-    // Actualizar el índice activo
-    setActiveTabIndex(dropIndex);
-    
-    // Limpiar estado de drag
+    } else {
+      // Eliminar de fileExplorerTabs y reinsertar en la nueva posición
+      const newExplorerTabs = [...fileExplorerTabs];
+      const oldIdx = newExplorerTabs.findIndex(tab => tab.key === draggedTab.key);
+      if (oldIdx !== -1) {
+        newExplorerTabs.splice(oldIdx, 1);
+        // dropIndex - homeTabs.length - sshTabs.length
+        const insertIdx = Math.max(0, Math.min(newExplorerTabs.length, dropIndex - homeTabs.length - sshTabs.length));
+        newExplorerTabs.splice(insertIdx, 0, draggedTab);
+        setFileExplorerTabs(newExplorerTabs);
+        setActiveTabIndex(dropIndex);
+      }
+    }
     setDraggedTabIndex(null);
     setDragOverTabIndex(null);
   };
@@ -638,40 +647,34 @@ const App = () => {
   const moveTabToFirst = (globalIndex) => {
     const allTabs = getAllTabs();
     const tabToMove = allTabs[globalIndex];
-    
-    if (!tabToMove) return;
-    
+
+    // No permitir mover la pestaña de Inicio ni crear otra
+    if (!tabToMove || tabToMove.type === 'home' || tabToMove.label === 'Inicio') return;
+
     // Determinar si es una pestaña SSH o explorador
     const isSSHTab = globalIndex < sshTabs.length || tabToMove.isExplorerInSSH;
-    
+
     if (isSSHTab) {
-      // Mover pestaña SSH
+      // Mover pestaña SSH detrás de Inicio
       const currentSSHIndex = sshTabs.findIndex(tab => tab.key === tabToMove.key);
       if (currentSSHIndex !== -1) {
         const newSSHTabs = [...sshTabs];
         const [movedTab] = newSSHTabs.splice(currentSSHIndex, 1);
-        newSSHTabs.unshift(movedTab); // Mover al principio
+        // Insertar después de la pestaña de Inicio (posición 0)
+        newSSHTabs.splice(0, 0, movedTab);
         setSshTabs(newSSHTabs);
-        setActiveTabIndex(0); // Activar la primera pestaña
+        setActiveTabIndex(1); // Activar la pestaña movida (después de Inicio)
       }
     } else {
-      // Mover pestaña de explorador
+      // Mover pestaña de explorador detrás de Inicio y SSHs
       const currentExplorerIndex = fileExplorerTabs.findIndex(tab => tab.key === tabToMove.key);
       if (currentExplorerIndex !== -1) {
         const newExplorerTabs = [...fileExplorerTabs];
         const [movedTab] = newExplorerTabs.splice(currentExplorerIndex, 1);
-        
-        // Si hay pestañas SSH, mover el explorador al principio de los exploradores
-        // Si no hay pestañas SSH, mover al principio absoluto
-        if (sshTabs.length > 0) {
-          newExplorerTabs.unshift(movedTab);
-          setFileExplorerTabs(newExplorerTabs);
-          setActiveTabIndex(sshTabs.length); // Primera posición de exploradores
-        } else {
-          newExplorerTabs.unshift(movedTab);
-          setFileExplorerTabs(newExplorerTabs);
-          setActiveTabIndex(0); // Primera posición absoluta
-        }
+        // Insertar después de Inicio y SSHs
+        newExplorerTabs.splice(0, 0, movedTab);
+        setFileExplorerTabs(newExplorerTabs);
+        setActiveTabIndex(homeTabs.length + sshTabs.length); // Activar la pestaña movida
       }
     }
   };
