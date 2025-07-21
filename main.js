@@ -3587,10 +3587,7 @@ async function getSystemStats() {
     ]);
     stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
     stats.cpu.cores = cpuData.cpus.length;
-    console.log('CPU obtenido:', stats.cpu.usage + '%');
-  } catch (error) {
-    console.log('Error obteniendo CPU:', error.message);
-  }
+  } catch (error) {}
 
   // Discos con timeout individual
   try {
@@ -3605,26 +3602,39 @@ async function getSystemStats() {
         total: Math.round(disk.size / (1024 * 1024 * 1024) * 10) / 10,
         percentage: Math.round((disk.used / disk.size) * 100)
       }));
-      console.log('Discos obtenidos:', stats.disks.length);
     }
-  } catch (error) {
-    console.log('Error obteniendo discos:', error.message);
-  }
+  } catch (error) {}
 
-  // Red con timeout individual
+  // Red diferencial (solo interfaces activas y físicas, Mbps)
   try {
-    const netData = await Promise.race([
-      si.networkStats(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout')), 3000))
-    ]);
-    if (netData && netData.length > 0) {
-      stats.network.download = Math.round(netData[0].rx_sec / 1024); // KB/s
-      stats.network.upload = Math.round(netData[0].tx_sec / 1024); // KB/s
-      console.log('Red obtenida:', `${stats.network.download}/${stats.network.upload} KB/s`);
+    const netIfaces = await si.networkInterfaces();
+    const netStats = await si.networkStats();
+    const now = Date.now();
+    // Filtrar solo interfaces físicas y activas
+    const validIfaces = netIfaces.filter(i => i.operstate === 'up' && !i.virtual && !i.internal);
+    const validNames = validIfaces.map(i => i.iface);
+    const filteredStats = netStats.filter(s => validNames.includes(s.iface));
+    let rx = 0, tx = 0;
+    if (lastNetStats && lastNetTime) {
+      // Sumar la diferencia de bytes para todas las interfaces válidas
+      for (const stat of filteredStats) {
+        const prev = lastNetStats.find(s => s.iface === stat.iface);
+        if (prev) {
+          rx += Math.max(0, stat.rx_bytes - prev.rx_bytes);
+          tx += Math.max(0, stat.tx_bytes - prev.tx_bytes);
+        }
+      }
+      const dt = (now - lastNetTime) / 1000; // segundos
+      if (dt > 0) {
+        // Convertir a Mbps (1 byte = 8 bits, 1e6 bits = 1 Mbit)
+        stats.network.download = Math.round((rx * 8 / 1e6) / dt * 10) / 10;
+        stats.network.upload = Math.round((tx * 8 / 1e6) / dt * 10) / 10;
+      }
     }
-  } catch (error) {
-    console.log('Error obteniendo red:', error.message);
-  }
+    // Guardar para la próxima llamada
+    lastNetStats = filteredStats.map(s => ({ iface: s.iface, rx_bytes: s.rx_bytes, tx_bytes: s.tx_bytes }));
+    lastNetTime = now;
+  } catch (error) {}
 
   // Temperatura con timeout individual
   try {
@@ -3633,12 +3643,7 @@ async function getSystemStats() {
       new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
     ]);
     stats.temperature.cpu = tempData.main || 0;
-    if (stats.temperature.cpu > 0) {
-      console.log('Temperatura obtenida:', stats.temperature.cpu + '°C');
-    }
-  } catch (error) {
-    console.log('Error obteniendo temperatura:', error.message);
-  }
+  } catch (error) {}
 
   return stats;
 }
@@ -3760,3 +3765,7 @@ ipcMain.handle('toggle-favorite-connection', async (event, connectionId) => {
 
 // Inicializar historial al inicio
 loadConnectionHistory();
+
+// Variables estáticas para el cálculo diferencial de red
+let lastNetStats = null;
+let lastNetTime = null;
