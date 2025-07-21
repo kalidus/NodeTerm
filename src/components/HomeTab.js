@@ -105,14 +105,6 @@ const HomeTab = ({
               overflow: 'auto',
               padding: '1rem'
             }}>
-              <h2 style={{ 
-                margin: '0 0 1rem 0',
-                color: 'var(--text-color)',
-                fontSize: '1.5rem',
-                textAlign: 'center'
-              }}>
-                Estadísticas del Sistema
-              </h2>
               <SystemStats />
             </div>
           </TabPanel>
