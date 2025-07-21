@@ -2164,188 +2164,190 @@ const App = () => {
                 <div style={{ height: '4px', background: 'transparent' }} />
                 
                 <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                  <TabView 
-                    activeIndex={activeTabIndex} 
-                    onTabChange={(e) => {
-                      setActiveTabIndex(e.index);
-                      // También guardar el nuevo índice para el grupo actual
-                      const currentGroupKey = activeGroupId || 'no-group';
-                      setGroupActiveIndices(prev => ({
-                        ...prev,
-                        [currentGroupKey]: e.index
-                      }));
-                    }}
-                    renderActiveOnly={false}
-                    scrollable={false}
-                    className=""
-                  >
-                  {getFilteredTabs().map((tab, idx) => {
-                    // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
-                    const isHomeTab = idx < homeTabs.length;
-                    const isSSHTab = !isHomeTab && (idx < homeTabs.length + sshTabs.length || tab.isExplorerInSSH);
-                    const originalIdx = isHomeTab ? idx : (isSSHTab ? idx - homeTabs.length : idx - homeTabs.length - sshTabs.length);
-                    
-                    return (
-                      <TabPanel 
-                        key={tab.key} 
-                        header={tab.label}
-                        headerTemplate={(options) => {
-                          const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
-                          const isDragging = draggedTabIndex === idx;
-                          const isDragOver = dragOverTabIndex === idx;
-                          
-                          return (
-                            <div
-                              className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
-                              style={{ 
-                                ...style, 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                maxWidth: 220,
-                                opacity: isDragging ? 0.5 : 1,
-                                borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
-                                transition: 'opacity 0.2s, border-left 0.2s',
-                                cursor: isDragging ? 'grabbing' : 'grab'
-                              }}
-                              onClick={(e) => {
-                                // Prevenir click si está en proceso de drag o hay un timer activo
-                                if (draggedTabIndex !== null || dragStartTimer !== null) {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  return;
-                                }
-                                onClick(e);
-                              }}
-                              onKeyDown={onKeyDown}
-                              tabIndex={0}
-                              aria-selected={selected}
-                              role="tab"
-                              draggable="true"
-                              onDragStart={(e) => handleTabDragStart(e, idx)}
-                              onDragOver={(e) => handleTabDragOver(e, idx)}
-                              onDragLeave={handleTabDragLeave}
-                              onDrop={(e) => handleTabDrop(e, idx)}
-                              onDragEnd={handleTabDragEnd}
-                              onContextMenu={(e) => handleTabContextMenu(e, tab.key)}
-                              title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
-                            >
-                              {leftIcon}
-                              {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
-                              {tab.type === 'terminal' && tabDistros[tab.key] && (
-                                <DistroIcon distro={tabDistros[tab.key]} size={12} />
-                              )}
-                              {/* Icono específico para pestaña de inicio */}
-                              {tab.type === 'home' && (
-                                <i className="pi pi-home" style={{ fontSize: '12px', marginRight: '6px', color: '#28a745' }}></i>
-                              )}
-                              {/* Icono específico para splits */}
-                              {tab.type === 'split' && (
-                                <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
-                              )}
-                              {/* Icono específico para exploradores */}
-                              {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
-                                <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
-                              )}
-                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
-                              {tab.type !== 'home' && (
-                                <Button
-                                  icon="pi pi-times"
-                                  className="p-button-rounded p-button-text p-button-sm ml-2"
-                                  style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
-                                  onClick={e => {
+                  {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
+                  {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (
+                    <TabView 
+                      activeIndex={activeTabIndex} 
+                      onTabChange={(e) => {
+                        setActiveTabIndex(e.index);
+                        // También guardar el nuevo índice para el grupo actual
+                        const currentGroupKey = activeGroupId || 'no-group';
+                        setGroupActiveIndices(prev => ({
+                          ...prev,
+                          [currentGroupKey]: e.index
+                        }));
+                      }}
+                      renderActiveOnly={false}
+                      scrollable={false}
+                      className=""
+                    >
+                    {getFilteredTabs().map((tab, idx) => {
+                      // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
+                      const isHomeTab = idx < homeTabs.length;
+                      const isSSHTab = !isHomeTab && (idx < homeTabs.length + sshTabs.length || tab.isExplorerInSSH);
+                      const originalIdx = isHomeTab ? idx : (isSSHTab ? idx - homeTabs.length : idx - homeTabs.length - sshTabs.length);
+                      
+                      return (
+                        <TabPanel 
+                          key={tab.key} 
+                          header={tab.label}
+                          headerTemplate={(options) => {
+                            const { className, onClick, onKeyDown, leftIcon, rightIcon, style, selected } = options;
+                            const isDragging = draggedTabIndex === idx;
+                            const isDragOver = dragOverTabIndex === idx;
+                            
+                            return (
+                              <div
+                                className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
+                                style={{ 
+                                  ...style, 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  maxWidth: 220,
+                                  opacity: isDragging ? 0.5 : 1,
+                                  borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
+                                  transition: 'opacity 0.2s, border-left 0.2s',
+                                  cursor: isDragging ? 'grabbing' : 'grab'
+                                }}
+                                onClick={(e) => {
+                                  // Prevenir click si está en proceso de drag o hay un timer activo
+                                  if (draggedTabIndex !== null || dragStartTimer !== null) {
+                                    e.preventDefault();
                                     e.stopPropagation();
-                                    // Cierre robusto de pestaña
-                                    const closedTab = tab;
-                                    
-                                    // Limpiar distro de la pestaña cerrada
-                                    cleanupTabDistro(closedTab.key);
-                                    
-                                    if (isHomeTab) {
-                                      // Manejar cierre de pestañas de inicio
-                                      const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
-                                      setHomeTabs(newHomeTabs);
-                                    } else if (isSSHTab) {
-                                      // Manejar cierre de pestañas split
-                                      if (closedTab.type === 'split') {
-                                        // Desconectar ambos terminales del split
-                                        if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
-                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
-                                          delete terminalRefs.current[closedTab.leftTerminal.key];
-                                          cleanupTabDistro(closedTab.leftTerminal.key);
+                                    return;
+                                  }
+                                  onClick(e);
+                                }}
+                                onKeyDown={onKeyDown}
+                                tabIndex={0}
+                                aria-selected={selected}
+                                role="tab"
+                                draggable="true"
+                                onDragStart={(e) => handleTabDragStart(e, idx)}
+                                onDragOver={(e) => handleTabDragOver(e, idx)}
+                                onDragLeave={handleTabDragLeave}
+                                onDrop={(e) => handleTabDrop(e, idx)}
+                                onDragEnd={handleTabDragEnd}
+                                onContextMenu={(e) => handleTabContextMenu(e, tab.key)}
+                                title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
+                              >
+                                {leftIcon}
+                                {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
+                                {tab.type === 'terminal' && tabDistros[tab.key] && (
+                                  <DistroIcon distro={tabDistros[tab.key]} size={12} />
+                                )}
+                                {/* Icono específico para pestaña de inicio */}
+                                {tab.type === 'home' && (
+                                  <i className="pi pi-home" style={{ fontSize: '12px', marginRight: '6px', color: '#28a745' }}></i>
+                                )}
+                                {/* Icono específico para splits */}
+                                {tab.type === 'split' && (
+                                  <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+                                )}
+                                {/* Icono específico para exploradores */}
+                                {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+                                  <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+                                )}
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
+                                {tab.type !== 'home' && (
+                                  <Button
+                                    icon="pi pi-times"
+                                    className="p-button-rounded p-button-text p-button-sm ml-2"
+                                    style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      // Cierre robusto de pestaña
+                                      const closedTab = tab;
+                                      
+                                      // Limpiar distro de la pestaña cerrada
+                                      cleanupTabDistro(closedTab.key);
+                                      
+                                      if (isHomeTab) {
+                                        // Manejar cierre de pestañas de inicio
+                                        const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
+                                        setHomeTabs(newHomeTabs);
+                                      } else if (isSSHTab) {
+                                        // Manejar cierre de pestañas split
+                                        if (closedTab.type === 'split') {
+                                          // Desconectar ambos terminales del split
+                                          if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
+                                            window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
+                                            delete terminalRefs.current[closedTab.leftTerminal.key];
+                                            cleanupTabDistro(closedTab.leftTerminal.key);
+                                          }
+                                          if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
+                                            window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
+                                            delete terminalRefs.current[closedTab.rightTerminal.key];
+                                            cleanupTabDistro(closedTab.rightTerminal.key);
+                                          }
+                                        } else {
+                                          // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
+                                          if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
+                                            // Terminal SSH - siempre desconectar
+                                            window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                          } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
+                                            // Explorador con conexión propia - desconectar
+                                            window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
+                                          }
+                                          // Los exploradores que usan el pool NO necesitan desconectarse
+                                          if (!closedTab.isExplorerInSSH) {
+                                            delete terminalRefs.current[closedTab.key];
+                                          }
                                         }
-                                        if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
-                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
-                                          delete terminalRefs.current[closedTab.rightTerminal.key];
-                                          cleanupTabDistro(closedTab.rightTerminal.key);
+                                        
+                                        const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+                                        // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
+                                        const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
+                                        if (remainingTabs.length === 0) {
+                                            setSshConnectionStatus(prev => {
+                                                const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
+                                                console.log(' Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
+                                                return updated;
+                                            });
                                         }
+                                        setSshTabs(newSshTabs);
                                       } else {
-                                        // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-                                        if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-                                          // Terminal SSH - siempre desconectar
-                                          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                        } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                          // Explorador con conexión propia - desconectar
+                                        if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
                                           window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
                                         }
-                                        // Los exploradores que usan el pool NO necesitan desconectarse
-                                        if (!closedTab.isExplorerInSSH) {
-                                          delete terminalRefs.current[closedTab.key];
-                                        }
+                                        const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
+                                        setFileExplorerTabs(newExplorerTabs);
                                       }
                                       
-                                      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-                                      // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
-                                      const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
-                                      if (remainingTabs.length === 0) {
-                                          setSshConnectionStatus(prev => {
-                                              const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
-                                              console.log(' Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
-                                              return updated;
-                                          });
+                                      // Ajustar índice activo
+                                      if (activeTabIndex === idx) {
+                                        const newIndex = Math.max(0, idx - 1);
+                                        setActiveTabIndex(newIndex);
+                                        // También actualizar el índice guardado para el grupo actual
+                                        const currentGroupKey = activeGroupId || 'no-group';
+                                        setGroupActiveIndices(prev => ({
+                                          ...prev,
+                                          [currentGroupKey]: newIndex
+                                        }));
+                                      } else if (activeTabIndex > idx) {
+                                        const newIndex = activeTabIndex - 1;
+                                        setActiveTabIndex(newIndex);
+                                        // También actualizar el índice guardado para el grupo actual
+                                        const currentGroupKey = activeGroupId || 'no-group';
+                                        setGroupActiveIndices(prev => ({
+                                          ...prev,
+                                          [currentGroupKey]: newIndex
+                                        }));
                                       }
-                                      setSshTabs(newSshTabs);
-                                    } else {
-                                      if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-                                        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-                                      }
-                                      const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
-                                      setFileExplorerTabs(newExplorerTabs);
-                                    }
-                                    
-                                    // Ajustar índice activo
-                                    if (activeTabIndex === idx) {
-                                      const newIndex = Math.max(0, idx - 1);
-                                      setActiveTabIndex(newIndex);
-                                      // También actualizar el índice guardado para el grupo actual
-                                      const currentGroupKey = activeGroupId || 'no-group';
-                                      setGroupActiveIndices(prev => ({
-                                        ...prev,
-                                        [currentGroupKey]: newIndex
-                                      }));
-                                    } else if (activeTabIndex > idx) {
-                                      const newIndex = activeTabIndex - 1;
-                                      setActiveTabIndex(newIndex);
-                                      // También actualizar el índice guardado para el grupo actual
-                                      const currentGroupKey = activeGroupId || 'no-group';
-                                      setGroupActiveIndices(prev => ({
-                                        ...prev,
-                                        [currentGroupKey]: newIndex
-                                      }));
-                                    }
-                                  }}
-                                  // tooltip="Cerrar pestaña"
-                                  // tooltipOptions={{ position: 'top' }}
-                                />
-                              )}
-                              {rightIcon}
-                            </div>
-                          );
-                        }}
-                      />
-                    );
-                  })}
-                  </TabView>
-                  
+                                    }}
+                                    // tooltip="Cerrar pestaña"
+                                    // tooltipOptions={{ position: 'top' }}
+                                  />
+                                )}
+                                {rightIcon}
+                              </div>
+                            );
+                          }}
+                        />
+                      );
+                    })}
+                    </TabView>
+                  )}
                   {/* Menú contextual para grupos de pestañas */}
                   {tabContextMenu && (
                     <div
