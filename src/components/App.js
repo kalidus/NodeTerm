@@ -1971,7 +1971,9 @@ const App = () => {
     // Cuando cambia la pestaña activa, notificar al backend
     const filteredTabs = getFilteredTabs();
     const activeTab = filteredTabs[activeTabIndex];
-    if (activeTab && window.electron && window.electron.ipcRenderer) {
+    
+    // Solo proceder si hay pestañas en el grupo actual
+    if (filteredTabs.length > 0 && activeTab && window.electron && window.electron.ipcRenderer) {
       if (activeTab.type === 'split') {
         // Para splits, activar stats en ambos terminales
         if (activeTab.leftTerminal) {
@@ -1984,6 +1986,7 @@ const App = () => {
         window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
       }
     }
+    // Si filteredTabs.length === 0 (grupo vacío), no hacer nada para preservar stats loops existentes
   }, [activeTabIndex, sshTabs, fileExplorerTabs]);
 
   // Reactivar stats para bastión al volver a la pestaña
@@ -2091,12 +2094,16 @@ const App = () => {
                       return idx === -1 ? 0 : idx + 1;
                     })()}
                     onTabChange={e => {
-                      // Guardar el índice activo del grupo actual antes de cambiar
+                      // Solo guardar el índice activo si el grupo actual tiene pestañas
                       const currentGroupKey = activeGroupId || 'no-group';
-                      setGroupActiveIndices(prev => ({
-                        ...prev,
-                        [currentGroupKey]: activeTabIndex
-                      }));
+                      const currentTabs = getTabsInGroup(activeGroupId);
+                      
+                      if (currentTabs.length > 0) {
+                        setGroupActiveIndices(prev => ({
+                          ...prev,
+                          [currentGroupKey]: activeTabIndex
+                        }));
+                      }
                       
                       // Cambiar al nuevo grupo
                       const newGroupId = e.index === 0 ? null : tabGroups[e.index - 1].id;
@@ -2106,8 +2113,13 @@ const App = () => {
                       const newGroupKey = newGroupId || 'no-group';
                       const savedIndex = groupActiveIndices[newGroupKey] || 0;
                       const tabsInNewGroup = getTabsInGroup(newGroupId);
-                      const validIndex = Math.min(savedIndex, Math.max(0, tabsInNewGroup.length - 1));
-                      setActiveTabIndex(validIndex);
+                      
+                      if (tabsInNewGroup.length > 0) {
+                        const validIndex = Math.min(savedIndex, Math.max(0, tabsInNewGroup.length - 1));
+                        setActiveTabIndex(validIndex);
+                      } else {
+                        setActiveTabIndex(0); // Reset to 0 for empty groups
+                      }
                     }}
                     style={{ 
                       marginBottom: 0, 
@@ -2170,12 +2182,16 @@ const App = () => {
                       activeIndex={activeTabIndex} 
                       onTabChange={(e) => {
                         setActiveTabIndex(e.index);
-                        // También guardar el nuevo índice para el grupo actual
+                        // Solo guardar el nuevo índice si el grupo actual tiene pestañas
                         const currentGroupKey = activeGroupId || 'no-group';
-                        setGroupActiveIndices(prev => ({
-                          ...prev,
-                          [currentGroupKey]: e.index
-                        }));
+                        const currentTabs = getTabsInGroup(activeGroupId);
+                        
+                        if (currentTabs.length > 0) {
+                          setGroupActiveIndices(prev => ({
+                            ...prev,
+                            [currentGroupKey]: e.index
+                          }));
+                        }
                       }}
                       renderActiveOnly={false}
                       scrollable={false}
@@ -2318,21 +2334,29 @@ const App = () => {
                                       if (activeTabIndex === idx) {
                                         const newIndex = Math.max(0, idx - 1);
                                         setActiveTabIndex(newIndex);
-                                        // También actualizar el índice guardado para el grupo actual
+                                        // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
                                         const currentGroupKey = activeGroupId || 'no-group';
-                                        setGroupActiveIndices(prev => ({
-                                          ...prev,
-                                          [currentGroupKey]: newIndex
-                                        }));
+                                        const remainingTabs = getTabsInGroup(activeGroupId);
+                                        
+                                        if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
+                                          setGroupActiveIndices(prev => ({
+                                            ...prev,
+                                            [currentGroupKey]: newIndex
+                                          }));
+                                        }
                                       } else if (activeTabIndex > idx) {
                                         const newIndex = activeTabIndex - 1;
                                         setActiveTabIndex(newIndex);
-                                        // También actualizar el índice guardado para el grupo actual
+                                        // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
                                         const currentGroupKey = activeGroupId || 'no-group';
-                                        setGroupActiveIndices(prev => ({
-                                          ...prev,
-                                          [currentGroupKey]: newIndex
-                                        }));
+                                        const remainingTabs = getTabsInGroup(activeGroupId);
+                                        
+                                        if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
+                                          setGroupActiveIndices(prev => ({
+                                            ...prev,
+                                            [currentGroupKey]: newIndex
+                                          }));
+                                        }
                                       }
                                     }}
                                     // tooltip="Cerrar pestaña"
@@ -2628,11 +2652,17 @@ const App = () => {
                   )}
                 </div>
                                 <div style={{ flexGrow: 1, position: 'relative' }}>
-                  {/* Mostrar mensaje de grupo vacío o renderizar pestañas normalmente */}
-                  {activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0 ? (
+                  {/* SIEMPRE renderizar todas las pestañas para preservar conexiones SSH */}
+                  {/* Overlay para grupo vacío se muestra por encima */}
+                  {activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0 && (
                     <div style={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      height: '100%', width: '100%', color: '#888', textAlign: 'center', padding: '2rem 0'
+                      backgroundColor: 'rgba(248, 249, 250, 0.95)',
+                      color: '#888', textAlign: 'center', padding: '2rem 0',
+                      zIndex: 1000,
+                      backdropFilter: 'blur(2px)'
                     }}>
                       <i className="pi pi-folder-open" style={{ fontSize: 64, marginBottom: 16, opacity: 0.5 }} />
                       <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 8 }}>Este grupo está vacío</div>
@@ -2719,9 +2749,10 @@ const App = () => {
                         }}
                       />
                     </div>
-                  ) : (
-                    /* Renderizar TODAS las pestañas pero sólo mostrar la activa del grupo actual */
-                    [...homeTabs, ...sshTabs, ...fileExplorerTabs].map((tab) => {
+                  )}
+                  
+                  {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
+                  {[...homeTabs, ...sshTabs, ...fileExplorerTabs].map((tab) => {
                       const filteredTabs = getFilteredTabs();
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
@@ -2825,8 +2856,7 @@ const App = () => {
                           )}
                         </div>
                       );
-                    })
-                  )}
+                    })}
                 </div>
               </div>
             ) : (
