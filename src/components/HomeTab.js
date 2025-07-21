@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SplitLayout from './SplitLayout';
 import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
@@ -8,6 +8,8 @@ import TabbedTerminal from './TabbedTerminal';
 import SystemStats from './SystemStats';
 import ConnectionHistory from './ConnectionHistory';
 import QuickActions from './QuickActions';
+import { uiThemes } from '../themes/ui-themes';
+import { themeManager } from '../utils/themeManager';
 
 const HomeTab = ({ 
   onCreateSSHConnection, 
@@ -20,6 +22,22 @@ const HomeTab = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
   const versionInfo = getVersionInfo();
+
+  // Estado para forzar re-render al cambiar el tema
+  const [themeVersion, setThemeVersion] = useState(0);
+
+  // Escuchar cambios en el tema (evento global 'theme-changed')
+  useEffect(() => {
+    const onThemeChanged = () => {
+      setThemeVersion(v => v + 1); // Forzar re-render
+    };
+    window.addEventListener('theme-changed', onThemeChanged);
+    return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
+
+  // Obtener el color de fondo del tema actual
+  const currentTheme = themeManager.getCurrentTheme() || uiThemes['Light'];
+  const dashboardBg = currentTheme.colors?.contentBackground || '#fafafa';
 
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
@@ -83,7 +101,7 @@ const HomeTab = ({
     <div style={{ 
       height: '100%', 
       overflow: 'hidden',
-      background: 'var(--surface-ground, #fafafa)',
+      background: dashboardBg,
       display: 'flex',
       flexDirection: 'column',
       opacity: terminalState === 'maximized' ? 0 : 1, // Ocultar completamente cuando maximizado

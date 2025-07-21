@@ -37,6 +37,10 @@ class ThemeManager {
     
     // Guardar el tema seleccionado
     localStorage.setItem('ui_theme', themeName);
+    // Emitir evento global para notificar cambio de tema
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('theme-changed'));
+    }
   }
 
   generateCSS(theme) {
