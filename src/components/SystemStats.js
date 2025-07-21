@@ -66,6 +66,24 @@ const SystemStats = () => {
     return '#F44336';
   };
 
+  // Sparkline para red
+  const NetSparkline = ({ history, color }) => (
+    <div style={{ display: 'flex', alignItems: 'flex-end', height: 18, width: 60, gap: 1 }}>
+      {history.map((value, idx) => (
+        <div
+          key={idx}
+          style={{
+            width: 2,
+            height: `${Math.max(3, Math.min(16, value / Math.max(...history, 1) * 16))}px`,
+            background: color,
+            borderRadius: 1,
+            opacity: 0.8
+          }}
+        />
+      ))}
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div style={{ 
@@ -201,8 +219,8 @@ const SystemStats = () => {
               <span>↑ {stats.network.upload.toFixed(1)} Mbps</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', opacity: 0.8 }}>
-              <span>CPU: {stats.temperature.cpu.toFixed(0)}°C</span>
-              <span>GPU: {stats.temperature.gpu.toFixed(0)}°C</span>
+              <span>CPU: {stats.temperature.cpu > 0 ? stats.temperature.cpu.toFixed(0) + '°C' : 'No disponible'}</span>
+              <span>GPU: {stats.temperature.gpu > 0 ? stats.temperature.gpu.toFixed(0) + '°C' : 'No disponible'}</span>
             </div>
           </div>
         </div>
