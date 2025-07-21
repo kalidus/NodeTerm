@@ -2925,6 +2925,8 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
         // Handle distribution output
         wslDistroProcesses[tabId].onData((data) => {
+            // Proteger acceso si el proceso ya no existe
+            if (!wslDistroProcesses[tabId]) return;
             // Send ready only on first data reception
             if (!wslDistroProcesses[tabId]._hasReceivedData) {
                 wslDistroProcesses[tabId]._hasReceivedData = true;
