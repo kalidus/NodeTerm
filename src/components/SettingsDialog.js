@@ -52,7 +52,9 @@ const SettingsDialog = ({
   localFontFamily,
   setLocalFontFamily,
   localFontSize,
-  setLocalFontSize
+  setLocalFontSize,
+  localTerminalTheme,
+  setLocalTerminalTheme
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -123,8 +125,8 @@ const SettingsDialog = ({
         fontSize: `${localFontSize}px`
       }}>
         <div style={{ 
-          background: colors.background || '#000000',
-          color: colors.foreground || '#ffffff',
+          background: (themes[localTerminalTheme]?.theme?.background) || '#000',
+          color: (themes[localTerminalTheme]?.theme?.foreground) || '#fff',
           padding: '12px',
           borderRadius: '4px',
           fontFamily: 'inherit',
@@ -379,6 +381,19 @@ const SettingsDialog = ({
                         onValueChange={e => setLocalFontSize(e.value)}
                         min={8}
                         max={32}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="local-terminal-theme" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        Tema del Terminal Local
+                      </label>
+                      <Dropdown
+                        id="local-terminal-theme"
+                        value={localTerminalTheme}
+                        options={terminalThemeOptions}
+                        onChange={e => setLocalTerminalTheme(e.value)}
+                        placeholder="Selecciona un tema"
                         style={{ width: '100%' }}
                       />
                     </div>

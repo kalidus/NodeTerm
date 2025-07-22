@@ -2032,6 +2032,9 @@ const App = () => {
     return saved ? parseInt(saved, 10) : 14;
   });
 
+  const LOCAL_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_terminal_theme';
+  const [localTerminalTheme, setLocalTerminalTheme] = useState(() => localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark');
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
       <TitleBar />
@@ -2883,6 +2886,7 @@ const App = () => {
                               })()}
                               localFontFamily={localFontFamily}
                               localFontSize={localFontSize}
+                              localTerminalTheme={localTerminalTheme}
                             />
                           ) : (tab.type === 'explorer' || tab.isExplorerInSSH) ? (
                             <FileExplorer
@@ -2980,6 +2984,8 @@ const App = () => {
         setLocalFontFamily={value => { setLocalFontFamily(value); localStorage.setItem(LOCAL_FONT_FAMILY_STORAGE_KEY, value); }}
         localFontSize={localFontSize}
         setLocalFontSize={value => { setLocalFontSize(value); localStorage.setItem(LOCAL_FONT_SIZE_STORAGE_KEY, value); }}
+        localTerminalTheme={localTerminalTheme}
+        setLocalTerminalTheme={value => { setLocalTerminalTheme(value); localStorage.setItem(LOCAL_TERMINAL_THEME_STORAGE_KEY, value); }}
       />
 
       {/* Diálogo: Nueva conexión SSH */}

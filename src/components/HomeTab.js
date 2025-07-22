@@ -20,6 +20,7 @@ const HomeTab = ({
   foldersCount = 0,
   localFontFamily,
   localFontSize,
+  localTerminalTheme,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
@@ -367,6 +368,7 @@ const HomeTab = ({
         terminalState={terminalState}
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
+        localTerminalTheme={localTerminalTheme}
       />
     </div>
   );
