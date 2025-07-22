@@ -2937,7 +2937,6 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         // Usar el ejecutable específico de la distribución
         if (distroInfo && distroInfo.executable) {
             shell = distroInfo.executable;
-            console.log(`🎯 Usando ejecutable específico: ${shell} para ${distroInfo.label || distroInfo.name}`);
         } else {
             // Fallback a wsl.exe genérico
             shell = 'wsl.exe';
@@ -2996,7 +2995,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
             try {
                 // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`); // Eliminado por limpieza de logs
                 wslDistroProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
-                console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`);
+                // console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`); // Eliminado por limpieza de logs
                 spawnSuccess = true;
             } catch (spawnError) {
                 console.warn(`Configuración ${i + 1} falló para WSL ${shell} ${tabId}:`, spawnError.message);
@@ -3025,7 +3024,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
             // Send ready only on first data reception
             if (!wslDistroProcesses[tabId]._hasReceivedData) {
                 wslDistroProcesses[tabId]._hasReceivedData = true;
-                console.log(`WSL terminal ${shell} ready for ${tabId}`);
+                // console.log(`WSL terminal ${shell} ready for ${tabId}`); // Eliminado por limpieza de logs
                 if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
                     const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                     mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
@@ -3080,7 +3079,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         });
 
         // Ready will be sent when first data is received (see onData handler above)
-        console.log(`WSL terminal ${shell} configured for ${tabId}, waiting for data...`);
+        // console.log(`WSL terminal ${shell} configured for ${tabId}, waiting for data...`); // Eliminado por limpieza de logs
 
     } catch (error) {
         console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
