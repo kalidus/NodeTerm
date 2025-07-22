@@ -2900,14 +2900,11 @@ function detectUbuntuAvailability() {
 
 // Funciones de manejo para distribuciones WSL (genéricas)
 function handleWSLDistroStart(tabId, { cols, rows, distroInfo }) {
-    console.log('🚀 Iniciando distribución WSL para', tabId, 'con info:', distroInfo);
     startWSLDistroSession(tabId, { cols, rows, distroInfo });
 }
 
 // Funciones de manejo para Ubuntu (compatibilidad)
 function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
-    console.log('🚀 Iniciando Ubuntu para', tabId, 'con info:', ubuntuInfo);
-    
     // Convertir ubuntuInfo a distroInfo para usar la función genérica
     const distroInfo = ubuntuInfo ? {
         ...ubuntuInfo,
