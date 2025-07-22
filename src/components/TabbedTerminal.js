@@ -455,8 +455,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: activeTab?.type === 'powershell' ? '#012456' : 
-                       activeTab?.type === 'ubuntu' ? '#300A24' : '#300A24',
+            background: activeTab?.type === 'powershell' ? (themes[localTerminalTheme]?.theme?.background || '#222') : (activeTab?.type === 'ubuntu' ? '#300A24' : '#300A24'),
             overflow: 'hidden'
         }}>
             {/* Barra de pestañas */}

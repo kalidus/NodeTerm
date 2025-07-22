@@ -67,7 +67,8 @@ const SplitLayout = ({
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
+    transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none',
+    background: theme?.background || undefined
   };
 
   const resizeHandleStyle = {

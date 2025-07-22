@@ -10,6 +10,7 @@ import ConnectionHistory from './ConnectionHistory';
 import QuickActions from './QuickActions';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
+import { themes } from '../themes';
 
 const HomeTab = ({
   onCreateSSHConnection,
@@ -41,6 +42,7 @@ const HomeTab = ({
   // Obtener el color de fondo del tema actual
   const currentTheme = themeManager.getCurrentTheme() || uiThemes['Light'];
   const dashboardBg = currentTheme.colors?.contentBackground || '#fafafa';
+  const localTerminalBg = themes[localTerminalTheme]?.theme?.background || '#222';
 
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
@@ -360,7 +362,8 @@ const HomeTab = ({
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      background: localTerminalBg
     }}>
       <TabbedTerminal
         onMinimize={handleMinimizeTerminal}
@@ -380,7 +383,7 @@ const HomeTab = ({
       orientation="horizontal"
       fontFamily={''}
       fontSize={16}
-      theme={{}}
+      theme={{ background: localTerminalBg }}
       onContextMenu={() => {}}
       sshStatsByTabId={{}}
       terminalRefs={{ current: {} }}

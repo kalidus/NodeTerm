@@ -2035,6 +2035,9 @@ const App = () => {
   const LOCAL_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_terminal_theme';
   const [localTerminalTheme, setLocalTerminalTheme] = useState(() => localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark');
 
+  const localTerminalBg = themes[localTerminalTheme]?.theme?.background || '#222';
+  const isHomeTabActive = activeTabIndex === 0 && homeTabs.length > 0;
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
       <TitleBar />
@@ -2135,9 +2138,25 @@ const App = () => {
               }}
             />
           </SplitterPanel>
-          <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
+          <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ 
+    display: 'flex', 
+    flexDirection: 'column', 
+    minWidth: 0, 
+    width: '100%', 
+    height: '100%',
+    background: isHomeTabActive ? localTerminalBg : undefined
+}}>
             {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
-              <div style={{ width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
+              <div style={{ 
+    width: '100%', 
+    minWidth: 0, 
+    minHeight: 0, 
+    display: 'flex', 
+    flexDirection: 'column', 
+    flex: 1, 
+    height: '100%',
+    background: isHomeTabActive ? localTerminalBg : undefined
+  }}>
                 {/* Barra de grupos como TabView scrollable */}
                 {tabGroups.length > 0 && (
                   <TabView
@@ -2719,7 +2738,11 @@ const App = () => {
                     />
                   )}
                 </div>
-                                <div style={{ flexGrow: 1, position: 'relative' }}>
+                                <div style={{ 
+                  flexGrow: 1, 
+                  position: 'relative',
+                  background: isHomeTabActive ? localTerminalBg : undefined
+                }}>
                   {/* SIEMPRE renderizar todas las pestañas para preservar conexiones SSH */}
                   {/* Overlay para grupo vacío se muestra por encima */}
                   {activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0 && (
@@ -2839,7 +2862,8 @@ const App = () => {
                             left: 0,
                             visibility: isActiveTab ? 'visible' : 'hidden',
                             zIndex: isActiveTab ? 1 : 0,
-                            pointerEvents: isActiveTab ? 'auto' : 'none'
+                            pointerEvents: isActiveTab ? 'auto' : 'none',
+                            background: (tab.type === 'home' && isActiveTab) ? localTerminalBg : undefined
                           }}
                         >
                           {tab.type === 'home' ? (
