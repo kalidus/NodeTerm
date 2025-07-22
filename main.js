@@ -2619,9 +2619,9 @@ function startWSLSession(tabId, { cols, rows }) {
     // Intentar cada configuración hasta que una funcione
     for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
       try {
-        console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL genérico ${tabId}...`);
+        // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL genérico ${tabId}...`); // Eliminado por limpieza de logs
         wslProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
-        console.log(`Configuración ${i + 1} exitosa para WSL genérico ${tabId}`);
+        // console.log(`Configuración ${i + 1} exitosa para WSL genérico ${tabId}`); // Eliminado por limpieza de logs
         spawnSuccess = true;
       } catch (spawnError) {
         console.warn(`Configuración ${i + 1} falló para WSL genérico ${tabId}:`, spawnError.message);
@@ -2997,7 +2997,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         // Intentar cada configuración hasta que una funcione
         for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
             try {
-                console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`);
+                // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`); // Eliminado por limpieza de logs
                 wslDistroProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
                 console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`);
                 spawnSuccess = true;
@@ -3532,7 +3532,7 @@ function registerTabEvents(tabId) {
 
 // Evento para registrar nuevas pestañas
 ipcMain.on('register-tab-events', (event, tabId) => {
-  console.log(`Registering events for tab: ${tabId}`);
+  // console.log(`Registering events for tab: ${tabId}`); // Eliminado por limpieza de logs
   registerTabEvents(tabId);
 });
 
