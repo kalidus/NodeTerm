@@ -2185,11 +2185,53 @@ ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
 });
 
-// === PowerShell Terminal Support ===
+// === Terminal Support ===
 const pty = require('node-pty');
 
 let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
 let wslProcesses = {}; // Cambiar a objeto para múltiples procesos
+
+// Function to detect the best available Linux shell
+function getLinuxShell() {
+  const shells = [
+    '/usr/bin/zsh',      // Zsh - modern shell with great features
+    '/bin/zsh',
+    '/usr/bin/fish',     // Fish - user-friendly shell
+    '/bin/fish',
+    '/usr/bin/bash',     // Bash - most common default
+    '/bin/bash',
+    '/usr/bin/dash',     // Dash - lightweight
+    '/bin/dash',
+    '/bin/sh'            // POSIX shell - always available fallback
+  ];
+
+  // Check user's default shell first
+  try {
+    const userShell = process.env.SHELL;
+    if (userShell && fs.existsSync(userShell)) {
+      console.log(`Using user's default shell: ${userShell}`);
+      return userShell;
+    }
+  } catch (e) {
+    console.warn('Could not detect user shell:', e.message);
+  }
+
+  // Check available shells in order of preference
+  for (const shell of shells) {
+    try {
+      if (fs.existsSync(shell)) {
+        console.log(`Detected Linux shell: ${shell}`);
+        return shell;
+      }
+    } catch (e) {
+      // Continue to next shell
+    }
+  }
+
+  // Ultimate fallback
+  console.warn('No common shells found, falling back to /bin/sh');
+  return '/bin/sh';
+}
 
 // Start PowerShell session
 ipcMain.on('powershell:start', (event, { cols, rows }) => {
@@ -2197,7 +2239,7 @@ ipcMain.on('powershell:start', (event, { cols, rows }) => {
   startPowerShellSession(tabId, { cols, rows });
 });
 
-// Start PowerShell session with tab ID
+// Start terminal session with tab ID (PowerShell on Windows, native shell on Linux/macOS)
 function startPowerShellSession(tabId, { cols, rows }) {
   // No iniciar nuevos procesos si la app está cerrando
   if (isAppQuitting) {
@@ -2208,11 +2250,13 @@ function startPowerShellSession(tabId, { cols, rows }) {
   try {
     // Verificar si ya hay un proceso activo
     if (powershellProcesses[tabId]) {
-      console.log(`PowerShell ya existe para ${tabId}, reutilizando proceso existente`);
+      const platform = os.platform();
+      const shellName = platform === 'win32' ? 'PowerShell' : 'Terminal';
+      console.log(`${shellName} ya existe para ${tabId}, reutilizando proceso existente`);
       
       // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
       if (mainWindow && mainWindow.webContents) {
-        const welcomeMsg = '\r\n\x1b[32m=== Sesión PowerShell reutilizada ===\x1b[0m\r\n';
+        const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
         mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
       }
       
@@ -2238,8 +2282,12 @@ function startPowerShellSession(tabId, { cols, rows }) {
       // Usar Windows PowerShell directamente para mayor estabilidad
       shell = 'powershell.exe';
       args = ['-NoExit'];
+    } else if (platform === 'linux' || platform === 'darwin') {
+      // For Linux and macOS, detect the best available shell
+      shell = getLinuxShell();
+      args = []; // Most Linux shells don't need special args for interactive mode
     } else {
-      // For non-Windows platforms, try pwsh (PowerShell Core)
+      // Fallback to PowerShell Core for other platforms
       shell = 'pwsh';
       args = ['-NoExit'];
     }
@@ -2258,12 +2306,22 @@ function startPowerShellSession(tabId, { cols, rows }) {
       windowsHide: false
     };
     
-    // En Windows, usar configuración específica para evitar ConPTY
+    // Platform-specific configurations
     if (os.platform() === 'win32') {
       spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
       spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
       spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
       spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
+    } else if (os.platform() === 'linux' || os.platform() === 'darwin') {
+      // Linux/macOS specific configurations for better compatibility
+      spawnOptions.windowsHide = undefined;        // Not applicable on Unix
+      spawnOptions.env = {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+        LANG: process.env.LANG || 'en_US.UTF-8',   // Ensure proper locale
+        LC_ALL: process.env.LC_ALL || 'en_US.UTF-8'
+      };
     }
     
     // Intentar crear el proceso con manejo de errores robusto

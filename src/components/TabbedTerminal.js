@@ -6,16 +6,44 @@ import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 
 const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
-    const [tabs, setTabs] = useState([
-        { 
-            id: 'tab-1', 
-            title: 'Windows PowerShell', 
-            type: 'powershell', 
-            active: true 
+    // Determinar la pestaña inicial según el SO
+    const getInitialTab = () => {
+        const platform = window.electron?.platform || 'unknown';
+        if (platform === 'linux') {
+            return {
+                id: 'tab-1',
+                title: 'Terminal Linux',
+                type: 'powershell', // Reutilizar la lógica de PowerShell
+                active: true
+            };
+        } else if (platform === 'darwin') {
+            return {
+                id: 'tab-1',
+                title: 'Terminal macOS',
+                type: 'powershell', // Reutilizar la lógica de PowerShell
+                active: true
+            };
         }
-    ]);
+        return {
+            id: 'tab-1',
+            title: 'Windows PowerShell',
+            type: 'powershell',
+            active: true
+        };
+    };
+    
+    const [tabs, setTabs] = useState([getInitialTab()]);
     const [nextTabId, setNextTabId] = useState(2);
-    const [selectedTerminalType, setSelectedTerminalType] = useState('powershell');
+    // Determinar el tipo de terminal por defecto según el SO
+    const getDefaultTerminalType = () => {
+        const platform = window.electron?.platform || 'unknown';
+        if (platform === 'linux' || platform === 'darwin') {
+            return 'linux-terminal';
+        }
+        return 'powershell';
+    };
+    
+    const [selectedTerminalType, setSelectedTerminalType] = useState(getDefaultTerminalType());
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
     const terminalRefs = useRef({});
@@ -192,21 +220,40 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
         }
     }, [activeTabKey, tabs]);
 
-    // Opciones para el selector de tipo de terminal (dinámicas basadas en distribuciones disponibles)
-    const terminalOptions = [
-        { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
-        { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
-        // Agregar cada distribución WSL como opción separada
-        ...wslDistributions.map(distro => ({
-            label: distro.label,
-            value: `wsl-${distro.name}`,
-            icon: distro.icon,
-            executable: distro.executable,
-            category: distro.category,
-            distroName: distro.name,
-            distroInfo: distro
-        }))
-    ];
+    // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
+    const getTerminalOptions = () => {
+        const platform = window.electron?.platform || 'unknown';
+        
+        if (platform === 'win32') {
+            // En Windows: mostrar PowerShell y WSL
+            return [
+                { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
+                { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
+                // Agregar cada distribución WSL como opción separada
+                ...wslDistributions.map(distro => ({
+                    label: distro.label,
+                    value: `wsl-${distro.name}`,
+                    icon: distro.icon,
+                    executable: distro.executable,
+                    category: distro.category,
+                    distroName: distro.name,
+                    distroInfo: distro
+                }))
+            ];
+        } else if (platform === 'linux' || platform === 'darwin') {
+            // En Linux/macOS: mostrar terminal nativo
+            return [
+                { label: 'Terminal', value: 'linux-terminal', icon: 'pi pi-desktop' }
+            ];
+        } else {
+            // Fallback para otros sistemas
+            return [
+                { label: 'Terminal', value: 'powershell', icon: 'pi pi-desktop' }
+            ];
+        }
+    };
+    
+    const terminalOptions = getTerminalOptions();
     
     // Log para depuración
     // console.log('🎯 Terminal options:', {
@@ -228,6 +275,17 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
         if (terminalTypeToUse === 'powershell') {
             title = 'Windows PowerShell';
             terminalType = 'powershell';
+        } else if (terminalTypeToUse === 'linux-terminal') {
+            // Detectar el shell en Linux para mostrar el nombre apropiado
+            const platform = window.electron?.platform || 'unknown';
+            if (platform === 'linux') {
+                title = 'Terminal Linux';
+            } else if (platform === 'darwin') {
+                title = 'Terminal macOS';
+            } else {
+                title = 'Terminal';
+            }
+            terminalType = 'powershell'; // Reutilizar la lógica de PowerShell pero con shell Linux
         } else if (terminalTypeToUse === 'wsl') {
             title = 'WSL';
             terminalType = 'wsl';
