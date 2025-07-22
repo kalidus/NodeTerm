@@ -6,6 +6,18 @@ import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import { themes } from '../themes';
 
+// Utilidad para ajustar brillo de un color hex
+function adjustColorBrightness(hex, percent) {
+    if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return hex;
+    let r = parseInt(hex.slice(1, 3), 16);
+    let g = parseInt(hex.slice(3, 5), 16);
+    let b = parseInt(hex.slice(5, 7), 16);
+    r = Math.min(255, Math.max(0, Math.round(r + (percent / 100) * 255)));
+    g = Math.min(255, Math.max(0, Math.round(g + (percent / 100) * 255)));
+    b = Math.min(255, Math.max(0, Math.round(b + (percent / 100) * 255)));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localTerminalTheme }) => {
     // Determinar la pestaña inicial según el SO
     const getInitialTab = () => {
@@ -418,6 +430,25 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
     const getLocalFontFamily = () => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace';
     const getLocalFontSize = () => parseInt(localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY) || '14', 10);
 
+    // En el renderizado de la barra de pestañas:
+    const isLocalTabActive = tabs.find(tab => tab.active && tab.type === 'powershell');
+    let tabBarBg = '';
+    if (isLocalTabActive) {
+        const localBg = themes[localTerminalTheme]?.theme?.background || '#222';
+        // Determinar si el fondo es claro u oscuro
+        const isDark = (() => {
+            if (!localBg.startsWith('#') || localBg.length < 7) return true;
+            const r = parseInt(localBg.slice(1, 3), 16);
+            const g = parseInt(localBg.slice(3, 5), 16);
+            const b = parseInt(localBg.slice(5, 7), 16);
+            // Percepción de brillo
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
+        })();
+        tabBarBg = adjustColorBrightness(localBg, isDark ? 12 : -12); // 12% más claro si fondo oscuro, más oscuro si fondo claro
+    } else {
+        tabBarBg = '';
+    }
+
     return (
         <div style={{
             height: '100%',
@@ -430,7 +461,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
         }}>
             {/* Barra de pestañas */}
             <div style={{
-                background: '#1e3a5f',
+                background: tabBarBg || '#1e3a5f',
                 borderBottom: '1px solid #2a4a6b',
                 display: 'flex',
                 alignItems: 'center',
