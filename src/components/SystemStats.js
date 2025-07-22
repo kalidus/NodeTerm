@@ -18,35 +18,53 @@ const SystemStats = () => {
   const HISTORY_LENGTH = 30;
 
   useEffect(() => {
+    let interval = null;
+    let stopped = false;
+    let paused = false;
+
     const updateStats = async () => {
       try {
         if (window.electronAPI) {
           const systemStats = await window.electronAPI.getSystemStats();
-          // Sticky para cada métrica
+          console.log('[SystemStats] Datos recibidos:', systemStats);
           const mergedStats = { ...lastStatsRef.current };
-          // CPU
           if (systemStats.cpu && systemStats.cpu.usage > 0) mergedStats.cpu = systemStats.cpu;
-          // Memoria
           if (systemStats.memory && systemStats.memory.total > 0) mergedStats.memory = systemStats.memory;
-          // Discos
           if (systemStats.disks && systemStats.disks.length > 0) mergedStats.disks = systemStats.disks;
-          // Red
           if (systemStats.network && (systemStats.network.download > 0 || systemStats.network.upload > 0)) mergedStats.network = systemStats.network;
           lastStatsRef.current = mergedStats;
           setStats(mergedStats);
-          // Actualizar historial de red para barras adaptativas
           setDownloadHistory(prev => ([...prev, mergedStats.network.download].slice(-HISTORY_LENGTH)));
           setUploadHistory(prev => ([...prev, mergedStats.network.upload].slice(-HISTORY_LENGTH)));
           setIsLoading(false);
         }
       } catch (error) {
+        console.error('[SystemStats] Error al obtener stats:', error);
         setStats(lastStatsRef.current);
         setIsLoading(false);
       }
     };
+
+    function maybeUpdateStats() {
+      if (!paused) {
+        updateStats();
+      }
+    }
+
+    // Event listeners para pausar/reanudar
+    const pauseStats = () => { paused = true; };
+    const resumeStats = () => { paused = false; updateStats(); };
+    window.addEventListener('split-move-start', pauseStats);
+    window.addEventListener('split-move-stop', resumeStats);
+
     updateStats();
-    const interval = setInterval(updateStats, 2000); // Actualizar cada 2 segundos
-    return () => clearInterval(interval);
+    interval = setInterval(maybeUpdateStats, 5000);
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+      window.removeEventListener('split-move-start', pauseStats);
+      window.removeEventListener('split-move-stop', resumeStats);
+    };
   }, []);
 
   if (isLoading) {
