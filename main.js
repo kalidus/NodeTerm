@@ -68,7 +68,7 @@ class SafeWindowsTerminal {
       } else {
         exitCode = 0;
       }
-      console.log(`SafeWindowsTerminal actual exit code:`, exitCode);
+      //console.log(`SafeWindowsTerminal actual exit code:`, exitCode);
       this.exitCallbacks.forEach(callback => callback(exitCode, signal));
     });
 
@@ -2339,7 +2339,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
 
     // Handle PowerShell exit
     powershellProcesses[tabId].onExit((exitCode, signal) => {
-      console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
+      //console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
       
       // Extraer el código de salida real
       let actualExitCode = exitCode;
@@ -2360,7 +2360,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
         actualExitCode = 0;
       }
       
-      console.log(`PowerShell ${tabId} actual exit code:`, actualExitCode);
+      //console.log(`PowerShell ${tabId} actual exit code:`, actualExitCode);
       
       // Limpiar el proceso actual
       delete powershellProcesses[tabId];
@@ -2671,7 +2671,7 @@ function startWSLSession(tabId, { cols, rows }) {
         actualExitCode = 0;
       }
       
-      console.log(`WSL ${tabId} actual exit code:`, actualExitCode);
+      //console.log(`WSL ${tabId} actual exit code:`, actualExitCode);
       
       // Limpiar el proceso actual
       delete wslProcesses[tabId];
@@ -2681,19 +2681,19 @@ function startWSLSession(tabId, { cols, rows }) {
       const isNormalExit = actualExitCode === 0 || actualExitCode === 1;
       
       if (needsRestart) {
-        console.log(`WSL ${tabId} falló con error de ConPTY, reiniciando en 2 segundos...`);
+        // console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`); // Eliminado por limpieza de logs
         setTimeout(() => {
           if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
-            console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`);
+            // console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`); // Eliminado por limpieza de logs
             startWSLSession(tabId, { cols: cols || 120, rows: rows || 30 });
           }
         }, 2000);
       } else if (isNormalExit) {
         // Para terminaciones normales, reiniciar automáticamente después de un delay corto
-        console.log(`WSL ${tabId} terminó normalmente, reiniciando en 1 segundo...`);
+        // console.log(`WSL ${tabId} terminó normalmente, reiniciando en 1 segundo...`); // Eliminado por limpieza de logs
         setTimeout(() => {
           if (!isAppQuitting && mainWindow && mainWindow.webContents) {
-            console.log(`Reiniciando WSL ${tabId}...`);
+            // console.log(`Reiniciando WSL ${tabId}...`); // Eliminado por limpieza de logs
             // Usar las dimensiones originales o por defecto
             const originalCols = cols || 120;
             const originalRows = rows || 30;
@@ -3038,7 +3038,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         // Handle distribution exit  
         wslDistroProcesses[tabId].onExit((exitCode, signal) => {
             // console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal); // Eliminado por limpieza de logs
-            console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal);
+            //console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal);
 
             if (isAppQuitting) {
                 console.log(`App is closing, ignoring exit for ${tabId}`);
@@ -3067,7 +3067,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                     }
                 }, 2000);
             } else if (exitCode !== 0 && exitCode !== null) {
-                console.warn(`WSL distro process for tab ${tabId} exited unexpectedly`);
+               // console.warn(`WSL distro process for tab ${tabId} exited unexpectedly`);
                 const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                 mainWindow.webContents.send(`${channelName}:error:${tabId}`,
                     `${distroInfo?.label || 'WSL Distribution'} session ended unexpectedly (code: ${actualExitCode})`);
@@ -3157,7 +3157,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
 
     // Handle Ubuntu exit
     ubuntuProcesses[tabId].onExit((exitCode, signal) => {
-      console.log(`Ubuntu process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
+      //console.log(`Ubuntu process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
       
       // Extraer el código de salida real
       let actualExitCode = exitCode;
