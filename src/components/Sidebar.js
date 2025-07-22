@@ -5,6 +5,7 @@ import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
 import { uiThemes } from '../themes/ui-themes';
 import { SSHDialog, FolderDialog } from './Dialogs';
+import { iconThemes } from '../themes/icon-themes';
 
 const Sidebar = ({
   sidebarCollapsed,
@@ -371,13 +372,13 @@ const Sidebar = ({
     const isSSH = node.data && node.data.type === 'ssh';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
-    // Puedes adaptar aquí el iconTheme si lo necesitas
+    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['material'].icons;
     if (isSSH) {
-      icon = <span className="pi pi-desktop" />;
+      icon = themeIcons.ssh;
     } else if (isFolder) {
-      icon = options.expanded
-        ? <span className="pi pi-folder-open" />
-        : <span className="pi pi-folder" />;
+      icon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+    } else {
+      icon = themeIcons.file;
     }
     // Render básico, puedes añadir acciones/contextual aquí
     return (
