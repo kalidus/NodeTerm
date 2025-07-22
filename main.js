@@ -2651,8 +2651,7 @@ function startWSLSession(tabId, { cols, rows }) {
 
     // Handle WSL exit
     wslProcesses[tabId].onExit((exitCode, signal) => {
-      console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
-      
+      // console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode); // Eliminado por limpieza de logs
       // Extraer el código de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
@@ -2751,7 +2750,7 @@ function handleWSLResize(tabId, { cols, rows }) {
 function handleWSLStop(tabId) {
   if (wslProcesses[tabId]) {
     try {
-      console.log(`Deteniendo proceso WSL para tab ${tabId}`);
+      // console.log(`Deteniendo proceso WSL para tab ${tabId}`); // Eliminado por limpieza de logs
       const process = wslProcesses[tabId];
       
       // Remover listeners antes de terminar el proceso
@@ -3038,6 +3037,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
         // Handle distribution exit  
         wslDistroProcesses[tabId].onExit((exitCode, signal) => {
+            // console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal); // Eliminado por limpieza de logs
             console.log(`WSL ${shell} (${tabId}) exited with code:`, exitCode, 'signal:', signal);
 
             if (isAppQuitting) {
@@ -3271,7 +3271,7 @@ function handleUbuntuResize(tabId, { cols, rows }) {
 function handleWSLDistroStop(tabId) {
   if (wslDistroProcesses[tabId]) {
     try {
-      console.log(`Deteniendo proceso WSL distro para tab ${tabId}`);
+      // console.log(`Deteniendo proceso WSL distro para tab ${tabId}`); // Eliminado por limpieza de logs
       const process = wslDistroProcesses[tabId];
       
       // Remover listeners antes de terminar el proceso
@@ -3313,50 +3313,10 @@ function handleWSLDistroStop(tabId) {
 }
 
 function handleUbuntuStop(tabId) {
-  // Si hay un proceso en wslDistroProcesses, usarlo (nuevo sistema)
-  if (wslDistroProcesses[tabId]) {
+  if (ubuntuProcesses[tabId]) {
     try {
-      console.log(`Deteniendo proceso Ubuntu para tab ${tabId} (nuevo sistema)`);
-      const process = wslDistroProcesses[tabId];
-      
-      // Remover listeners antes de terminar el proceso
-      process.removeAllListeners();
-      
-      // En Windows, usar destroy() para forzar terminación
-      if (os.platform() === 'win32') {
-        try {
-          process.kill(); // Intento graceful primero
-        } catch (e) {
-          // Si kill() falla, usar destroy()
-          try {
-            process.destroy();
-          } catch (destroyError) {
-            console.warn(`Error con destroy() en Ubuntu ${tabId}:`, destroyError.message);
-          }
-        }
-      } else {
-        // En sistemas POSIX, usar SIGTERM
-        process.kill('SIGTERM');
-        
-        // Dar tiempo para que termine graciosamente
-        setTimeout(() => {
-          if (wslDistroProcesses[tabId]) {
-            try {
-              wslDistroProcesses[tabId].kill('SIGKILL');
-            } catch (e) {
-              // Ignorar errores de terminación forzada
-            }
-          }
-        }, 1000);
-      }
-      
-      delete wslDistroProcesses[tabId];
-    } catch (error) {
-      console.error(`Error stopping Ubuntu ${tabId}:`, error);
-    }
-  } else if (ubuntuProcesses[tabId]) {
-    try {
-      console.log(`Deteniendo proceso Ubuntu para tab ${tabId}`);
+      // console.log(`Deteniendo proceso Ubuntu para tab ${tabId} (nuevo sistema)`); // Eliminado por limpieza de logs
+      // console.log(`Deteniendo proceso Ubuntu para tab ${tabId}`); // Eliminado por limpieza de logs
       const process = ubuntuProcesses[tabId];
       
       // Remover listeners antes de terminar el proceso
