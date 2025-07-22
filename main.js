@@ -105,6 +105,7 @@ const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
 const SftpClient = require('ssh2-sftp-client');
 const si = require('systeminformation');
+const { fork } = require('child_process');
 
 // Parser simple para 'ls -la'
 function parseLsOutput(output) {
@@ -3650,22 +3651,6 @@ async function getSystemStats() {
   return stats;
 }
 
-// Manejador IPC para obtener estadísticas del sistema
-ipcMain.handle('get-system-stats', async () => {
-  try {
-    return await getSystemStats();
-  } catch (error) {
-    console.error('Error obteniendo estadísticas del sistema:', error);
-    return {
-      cpu: { usage: 0, cores: 0, model: 'Error' },
-      memory: { used: 0, total: 0, percentage: 0 },
-      disks: [],
-      network: { download: 0, upload: 0 },
-      temperature: { cpu: 0, gpu: 0 }
-    };
-  }
-});
-
 // Historial de conexiones
 let connectionHistory = {
   recent: [],
@@ -3771,3 +3756,80 @@ loadConnectionHistory();
 // Variables estáticas para el cálculo diferencial de red
 let lastNetStats = null;
 let lastNetTime = null;
+
+// --- Worker persistente para stats ---
+let statsWorker = null;
+let statsWorkerReady = false;
+let statsWorkerQueue = [];
+
+function startStatsWorker() {
+  if (statsWorker) {
+    try { statsWorker.kill(); } catch {}
+    statsWorker = null;
+    statsWorkerReady = false;
+  }
+  statsWorker = fork(path.join(__dirname, 'system-stats-worker.js'));
+  statsWorkerReady = true;
+  statsWorker.on('exit', () => {
+    statsWorkerReady = false;
+    // Reiniciar automáticamente si muere
+    setTimeout(startStatsWorker, 1000);
+  });
+  statsWorker.on('message', (msg) => {
+    if (statsWorkerQueue.length > 0) {
+      const { resolve, timeout } = statsWorkerQueue.shift();
+      clearTimeout(timeout);
+      if (msg.type === 'stats') {
+        resolve(msg.data);
+      } else {
+        resolve({
+          cpu: { usage: 0, cores: 0, model: 'Error' },
+          memory: { used: 0, total: 0, percentage: 0 },
+          disks: [],
+          network: { download: 0, upload: 0 },
+          temperature: { cpu: 0, gpu: 0 }
+        });
+      }
+    }
+  });
+}
+
+startStatsWorker();
+
+ipcMain.handle('get-system-stats', async () => {
+  return new Promise((resolve) => {
+    if (!statsWorkerReady) {
+      // Si el worker no está listo, devolver fallback
+      resolve({
+        cpu: { usage: 0, cores: 0, model: 'NoWorker' },
+        memory: { used: 0, total: 0, percentage: 0 },
+        disks: [],
+        network: { download: 0, upload: 0 },
+        temperature: { cpu: 0, gpu: 0 }
+      });
+      return;
+    }
+    const timeout = setTimeout(() => {
+      resolve({
+        cpu: { usage: 0, cores: 0, model: 'Timeout' },
+        memory: { used: 0, total: 0, percentage: 0 },
+        disks: [],
+        network: { download: 0, upload: 0 },
+        temperature: { cpu: 0, gpu: 0 }
+      });
+    }, 7000);
+    statsWorkerQueue.push({ resolve, timeout });
+    try {
+      statsWorker.send('get-stats');
+    } catch (e) {
+      clearTimeout(timeout);
+      resolve({
+        cpu: { usage: 0, cores: 0, model: 'ErrorSend' },
+        memory: { used: 0, total: 0, percentage: 0 },
+        disks: [],
+        network: { download: 0, upload: 0 },
+        temperature: { cpu: 0, gpu: 0 }
+      });
+    }
+  });
+});

@@ -118,6 +118,14 @@ const SplitLayout = ({
         width={isVertical ? primaryPaneSize : 0}
         height={isVertical ? 0 : primaryPaneSize}
         onResize={handleResize}
+        onResizeStart={() => { 
+          window.isMovingSplit = true; 
+          window.dispatchEvent(new Event('split-move-start'));
+        }}
+        onResizeStop={() => { 
+          window.isMovingSplit = false; 
+          window.dispatchEvent(new Event('split-move-stop'));
+        }}
         resizeHandles={[isVertical ? 'e' : 's']}
         handle={
           <div 
