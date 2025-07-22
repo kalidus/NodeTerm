@@ -570,13 +570,13 @@ async function detectAllWSLDistributions() {
     
     // Obtener lista de distribuciones WSL
     exec('wsl --list --verbose', { timeout: 5000, windowsHide: true }, (error, stdout, stderr) => {
-      console.log('🔍 Detectando distribuciones WSL...');
+      // console.log('🔍 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
       
       if (!error && stdout) {
         // Limpiar caracteres null UTF-16 antes de procesar
         const cleanedOutput = stdout.replace(/\u0000/g, '');
         const lines = cleanedOutput.split('\n');
-        console.log('🔍 Procesando', lines.length - 1, 'líneas...');
+        // console.log('🔍 Procesando', lines.length - 1, 'líneas...'); // Eliminado por limpieza de logs
         
         lines.forEach((line) => {
           const trimmed = line.trim();
@@ -594,8 +594,7 @@ async function detectAllWSLDistributions() {
               let distroName = tokens[0].replace('*', '').trim();
               
               if (distroName && distroName !== 'NAME') {
-                console.log('🐧 Distribución encontrada:', distroName);
-                
+                // console.log('🐧 Distribución encontrada:', distroName); // Eliminado por limpieza de logs
                 // Buscar en el mapeo exacto o hacer matching parcial
                 let distroInfo = distroMapping[distroName];
                 
@@ -630,7 +629,7 @@ async function detectAllWSLDistributions() {
                     category: distroInfo.category,
                     version: distroName.includes('.') || distroName.includes('-') ? distroName.split(/[-_]/)[1] || 'latest' : 'latest'
                   });
-                  console.log('✅ Agregada:', distroInfo.label);
+                  // console.log('✅ Agregada:', distroInfo.label); // Eliminado por limpieza de logs
                 }
               }
             }
@@ -653,11 +652,11 @@ async function detectAllWSLDistributions() {
               version: 'latest'
             });
           }
-          console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length);
+          // console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
           resolve(availableDistributions);
         });
       } else {
-        console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length);
+        // console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
         resolve(availableDistributions);
       }
     });
@@ -666,12 +665,12 @@ async function detectAllWSLDistributions() {
 
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
-  console.log('🚀 Detectando distribuciones WSL...');
+  // console.log('🚀 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
   
   try {
     const distributions = await detectAllWSLDistributions();
-    console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas');
-    distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.executable})`));
+    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
+    // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.executable})`)); // Eliminado por limpieza de logs
     return distributions;
   } catch (error) {
     console.error('❌ Error en detección de distribuciones WSL:', error);
@@ -681,11 +680,11 @@ ipcMain.handle('detect-wsl-distributions', async () => {
 
 // Mantener compatibilidad con el handler anterior para Ubuntu
 ipcMain.handle('detect-ubuntu-availability', async () => {
-  console.log('🚀 Detectando distribuciones WSL (compatibilidad Ubuntu)...');
+  // console.log('🚀 Detectando distribuciones WSL (compatibilidad Ubuntu)...'); // Eliminado por limpieza de logs
   
   try {
     const distributions = await detectAllWSLDistributions();
-    console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas');
+    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
     return distributions;
   } catch (error) {
     console.error('❌ Error en detección de distribuciones WSL:', error);
