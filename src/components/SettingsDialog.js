@@ -16,6 +16,8 @@ import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
+const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
+const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
 
 const SettingsDialog = ({ 
   visible, 
@@ -54,6 +56,11 @@ const SettingsDialog = ({
     const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 24;
   });
+  const [localFontFamily, setLocalFontFamily] = useState(() => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace');
+  const [localFontSize, setLocalFontSize] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
+    return saved ? parseInt(saved, 10) : 14;
+  });
 
   useEffect(() => {
     // Obtener la versión real de la app
@@ -91,9 +98,14 @@ const SettingsDialog = ({
     }
   };
 
-  const handleSidebarFontSizeChange = (value) => {
+  const handleLocalFontFamilyChange = (e) => {
+    setLocalFontFamily(e.value);
+    localStorage.setItem(LOCAL_FONT_FAMILY_STORAGE_KEY, e.value);
+  };
+  const handleLocalFontSizeChange = (value) => {
     if (value && value >= 8 && value <= 32) {
-      setSidebarFontSize(value);
+      setLocalFontSize(value);
+      localStorage.setItem(LOCAL_FONT_SIZE_STORAGE_KEY, value);
     }
   };
 
@@ -246,18 +258,10 @@ const SettingsDialog = ({
                 </div>
               </TabPanel>
               <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>Terminal</span>}>
-                <div style={{
-                  padding: '1rem 0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '50vh',
-                  width: '100%'
-                }}>
+                <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', width: '100%' }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                     <i className="pi pi-desktop" style={{ marginRight: '0.5rem' }}></i>
-                    Configuración del Terminal
+                    Configuración del Terminal SSH
                   </h3>
                   
                   {/* Fuente */}
@@ -344,6 +348,41 @@ const SettingsDialog = ({
                     </div>
                     
                     <TerminalPreview />
+                  </div>
+
+                  <Divider />
+
+                  <h3 style={{ margin: '2rem 0 1rem 0', color: 'var(--text-color)' }}>
+                    <i className="pi pi-desktop" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+                    Configuración del Terminal Local
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem', width: '100%' }}>
+                    <div>
+                      <label htmlFor="local-font-family" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        Familia de fuente (local)
+                      </label>
+                      <Dropdown
+                        id="local-font-family"
+                        value={localFontFamily}
+                        options={availableFonts}
+                        onChange={handleLocalFontFamilyChange}
+                        placeholder="Selecciona una fuente"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="local-font-size" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                        Tamaño (px)
+                      </label>
+                      <InputNumber
+                        id="local-font-size"
+                        value={localFontSize}
+                        onValueChange={e => handleLocalFontSizeChange(e.value)}
+                        min={8}
+                        max={32}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
                   </div>
                 </div>
               </TabPanel>
