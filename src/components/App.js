@@ -2316,7 +2316,21 @@ const App = () => {
                                       cleanupTabDistro(closedTab.key);
                                       
                                       if (isHomeTab) {
-                                        // Manejar cierre de pestañas de inicio
+                                        // Manejar cierre de pestañas de inicio según su tipo
+                                        if (closedTab.type === 'powershell' && window.electron && window.electron.ipcRenderer) {
+                                          // PowerShell - usar su handler específico existente
+                                          window.electron.ipcRenderer.send(`powershell:stop:${closedTab.key}`);
+                                        } else if (closedTab.type === 'wsl' && window.electron && window.electron.ipcRenderer) {
+                                          // WSL genérico - usar handler existente
+                                          window.electron.ipcRenderer.send(`wsl:stop:${closedTab.key}`);
+                                        } else if (closedTab.type === 'ubuntu' && window.electron && window.electron.ipcRenderer) {
+                                          // Ubuntu - usar handler específico existente
+                                          window.electron.ipcRenderer.send(`ubuntu:stop:${closedTab.key}`);
+                                        } else if (closedTab.type === 'wsl-distro' && window.electron && window.electron.ipcRenderer) {
+                                          // Otras distribuciones WSL - usar handler específico existente
+                                          window.electron.ipcRenderer.send(`wsl-distro:stop:${closedTab.key}`);
+                                        }
+                                        
                                         const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
                                         setHomeTabs(newHomeTabs);
                                       } else if (isSSHTab) {

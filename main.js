@@ -2577,29 +2577,73 @@ function startWSLSession(tabId, { cols, rows }) {
       args = ['--login'];
     }
 
-    // Spawn WSL process con configuración ultra-conservative
-    const spawnOptions = {
-      name: 'xterm-256color',
-      cols: cols || 120,
-      rows: rows || 30,
-      cwd: os.homedir(),
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor'
+    // Múltiples configuraciones para WSL genérico
+    const wslConfigurations = [
+      // Configuración 1: ConPTY deshabilitado con WinPTY
+      {
+        name: 'xterm-256color',
+        cols: cols || 120,
+        rows: rows || 30,
+        cwd: os.homedir(),
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor'
+        },
+        windowsHide: false,
+        useConpty: false,
+        conptyLegacy: false,
+        experimentalUseConpty: false,
+        backend: 'winpty'
       },
-      windowsHide: false
-    };
-    
-    // En Windows, usar configuración específica para evitar ConPTY
-    if (os.platform() === 'win32') {
-      spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
-      spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
-      spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
-      spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
+      // Configuración 2: Conservativa básica
+      {
+        name: 'xterm',
+        cols: cols || 80,
+        rows: rows || 24,
+        cwd: os.homedir(),
+        env: process.env,
+        windowsHide: false,
+        useConpty: false
+      },
+      // Configuración 3: Mínima
+      {
+        name: 'xterm',
+        cols: cols || 80,
+        rows: rows || 24,
+        windowsHide: false
+      }
+    ];
+
+    let spawnSuccess = false;
+    let lastError = null;
+
+    // Intentar cada configuración hasta que una funcione
+    for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
+      try {
+        console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL genérico ${tabId}...`);
+        wslProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
+        console.log(`Configuración ${i + 1} exitosa para WSL genérico ${tabId}`);
+        spawnSuccess = true;
+      } catch (spawnError) {
+        console.warn(`Configuración ${i + 1} falló para WSL genérico ${tabId}:`, spawnError.message);
+        lastError = spawnError;
+        
+        // Limpiar proceso fallido si existe
+        if (wslProcesses[tabId]) {
+          try {
+            wslProcesses[tabId].kill();
+          } catch (e) {
+            // Ignorar errores de limpieza
+          }
+          delete wslProcesses[tabId];
+        }
+      }
     }
-    
-    wslProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
+
+    if (!spawnSuccess) {
+      throw new Error(`No se pudo iniciar WSL genérico para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
+    }
 
     // Handle WSL output
     wslProcesses[tabId].onData((data) => {
@@ -2636,10 +2680,19 @@ function startWSLSession(tabId, { cols, rows }) {
       // Limpiar el proceso actual
       delete wslProcesses[tabId];
       
-      // Determinar si es una terminación normal que requiere reinicio
+      // Determinar si necesita reinicio automático (solo para errores específicos de ConPTY)
+      const needsRestart = actualExitCode === -1073741510; // Error específico de ConPTY
       const isNormalExit = actualExitCode === 0 || actualExitCode === 1;
       
-      if (isNormalExit) {
+      if (needsRestart) {
+        console.log(`WSL ${tabId} falló con error de ConPTY, reiniciando en 2 segundos...`);
+        setTimeout(() => {
+          if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+            console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`);
+            startWSLSession(tabId, { cols: cols || 120, rows: rows || 30 });
+          }
+        }, 2000);
+      } else if (isNormalExit) {
         // Para terminaciones normales, reiniciar automáticamente después de un delay corto
         console.log(`WSL ${tabId} terminó normalmente, reiniciando en 1 segundo...`);
         setTimeout(() => {
@@ -2903,25 +2956,71 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
             ...process.env,
         };
 
-        // Options para spawn PTY
-        const spawnOptions = {
-            env,
-            cwd: undefined,
-            name: 'xterm-color',
-            cols: cols,
-            rows: rows,
-            encoding: null
-        };
+        // Múltiples configuraciones para mayor compatibilidad con WSL
+        const wslConfigurations = [
+            // Configuración 1: Por defecto con ConPTY deshabilitado
+            {
+                env,
+                cwd: undefined,
+                name: 'xterm-color',
+                cols: cols,
+                rows: rows,
+                encoding: null,
+                useConpty: false,
+                windowsHide: false
+            },
+            // Configuración 2: Conservativa sin ConPTY 
+            {
+                env,
+                cwd: undefined,
+                name: 'xterm',
+                cols: cols || 80,
+                rows: rows || 24,
+                encoding: null,
+                useConpty: false,
+                conptyLegacy: false,
+                experimentalUseConpty: false,
+                windowsHide: false
+            },
+            // Configuración 3: Mínima
+            {
+                env,
+                cwd: undefined,
+                name: 'xterm',
+                cols: cols || 80,
+                rows: rows || 24,
+                windowsHide: false
+            }
+        ];
 
-        // Para distribuciones WSL, usar configuración simple sin modificaciones ConPTY
-        // La mayoría de distribuciones WSL funcionan mejor con configuración por defecto
+        let spawnSuccess = false;
+        let lastError = null;
 
-        try {
-            wslDistroProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
-            console.log(`WSL distribution ${shell} spawned for ${tabId}`);
-        } catch (spawnError) {
-            console.error(`Error spawning ${shell}:`, spawnError);
-            throw spawnError;
+        // Intentar cada configuración hasta que una funcione
+        for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
+            try {
+                console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`);
+                wslDistroProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
+                console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`);
+                spawnSuccess = true;
+            } catch (spawnError) {
+                console.warn(`Configuración ${i + 1} falló para WSL ${shell} ${tabId}:`, spawnError.message);
+                lastError = spawnError;
+                
+                // Limpiar proceso fallido si existe
+                if (wslDistroProcesses[tabId]) {
+                    try {
+                        wslDistroProcesses[tabId].kill();
+                    } catch (e) {
+                        // Ignorar errores de limpieza
+                    }
+                    delete wslDistroProcesses[tabId];
+                }
+            }
+        }
+
+        if (!spawnSuccess) {
+            throw new Error(`No se pudo iniciar WSL ${shell} para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
         }
 
         // Handle distribution output
@@ -2963,7 +3062,18 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 actualExitCode = `killed by ${signal}`;
             }
 
-            if (exitCode !== 0 && exitCode !== null) {
+            // Determinar si necesita reinicio automático (solo para errores específicos de ConPTY)
+            const needsRestart = exitCode === -1073741510; // Error específico de ConPTY
+            
+            if (needsRestart) {
+                console.log(`WSL ${shell} (${tabId}) falló con error de ConPTY, reiniciando en 2 segundos...`);
+                setTimeout(() => {
+                    if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
+                        console.log(`Reiniciando WSL ${shell} (${tabId}) después de error de ConPTY...`);
+                        startWSLDistroSession(tabId, { cols: cols || 80, rows: rows || 24, distroInfo });
+                    }
+                }, 2000);
+            } else if (exitCode !== 0 && exitCode !== null) {
                 console.warn(`WSL distro process for tab ${tabId} exited unexpectedly`);
                 const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
                 mainWindow.webContents.send(`${channelName}:error:${tabId}`,
