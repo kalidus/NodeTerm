@@ -411,6 +411,12 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
 
     const activeTab = tabs.find(tab => tab.active);
 
+    // Al inicio del componente:
+    const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
+    const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
+    const getLocalFontFamily = () => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace';
+    const getLocalFontSize = () => parseInt(localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY) || '14', 10);
+
     return (
         <div style={{
             height: '100%',
@@ -830,12 +836,14 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                         }}
                     >
                         {tab.type === 'powershell' ? (
-                            <PowerShellTerminal 
-                                key={`${tab.id}-terminal`}
+                            <PowerShellTerminal
+                                key={`${tab.id}-terminal-${getLocalFontFamily()}-${getLocalFontSize()}`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                fontFamily={getLocalFontFamily()}
+                                fontSize={getLocalFontSize()}
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
