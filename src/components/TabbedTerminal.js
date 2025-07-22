@@ -5,7 +5,7 @@ import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 
-const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
+const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize }) => {
     // Determinar la pestaña inicial según el SO
     const getInitialTab = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -837,13 +837,13 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState }) => {
                     >
                         {tab.type === 'powershell' ? (
                             <PowerShellTerminal
-                                key={`${tab.id}-terminal-${getLocalFontFamily()}-${getLocalFontSize()}`}
+                                key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
-                                fontFamily={getLocalFontFamily()}
-                                fontSize={getLocalFontSize()}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 

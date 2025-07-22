@@ -11,13 +11,15 @@ import QuickActions from './QuickActions';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 
-const HomeTab = ({ 
-  onCreateSSHConnection, 
+const HomeTab = ({
+  onCreateSSHConnection,
   onCreateFolder,
   onOpenFileExplorer,
   onOpenSettings,
   sshConnectionsCount = 0,
-  foldersCount = 0 
+  foldersCount = 0,
+  localFontFamily,
+  localFontSize,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
@@ -71,7 +73,7 @@ const HomeTab = ({
   const getTopPanelSize = () => {
     const containerHeight = window.innerHeight;
     let size;
-    
+
     switch (terminalState) {
       case 'minimized':
         // Terminal minimizado: Dashboard ocupa casi todo, terminal solo 40px (pestañas)
@@ -85,21 +87,21 @@ const HomeTab = ({
         // Estado normal: permitir redimensionamiento manual
         return null; // No controlar externamente, usar redimensionamiento manual
     }
-    
-    // console.log('📏 getTopPanelSize:', { 
-    //   terminalState, 
-    //   containerHeight, 
-    //   topPanelSize: size, 
-    //   terminalSize: containerHeight - size 
+
+    // console.log('📏 getTopPanelSize:', {
+    //   terminalState,
+    //   containerHeight,
+    //   topPanelSize: size,
+    //   terminalSize: containerHeight - size
     // });
-    
+
     return size;
   };
 
   // Panel superior: Dashboard moderno con pestañas
   const topPanel = (
-    <div style={{ 
-      height: '100%', 
+    <div style={{
+      height: '100%',
       overflow: 'hidden',
       background: dashboardBg,
       display: 'flex',
@@ -110,15 +112,15 @@ const HomeTab = ({
     }}>
       {/* Contenido principal con pestañas */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <TabView 
-          activeIndex={activeIndex} 
+        <TabView
+          activeIndex={activeIndex}
           onTabChange={(e) => setActiveIndex(e.index)}
           style={{ height: '100%' }}
           className="dashboard-tabs"
         >
           {/* Pestaña de Estadísticas del Sistema */}
           <TabPanel header="📊 Sistema">
-            <div style={{ 
+            <div style={{
               height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '1rem'
@@ -129,12 +131,12 @@ const HomeTab = ({
 
           {/* Pestaña de Historial de Conexiones */}
           <TabPanel header="🕒 Historial">
-            <div style={{ 
+            <div style={{
               height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '1rem'
             }}>
-              <h2 style={{ 
+              <h2 style={{
                 margin: '0 0 1rem 0',
                 color: 'var(--text-color)',
                 fontSize: '1.5rem',
@@ -148,12 +150,12 @@ const HomeTab = ({
 
           {/* Pestaña de Acciones Rápidas */}
           <TabPanel header="⚡ Acciones">
-            <div style={{ 
+            <div style={{
               height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '1rem'
             }}>
-              <h2 style={{ 
+              <h2 style={{
                 margin: '0 0 1rem 0',
                 color: 'var(--text-color)',
                 fontSize: '1.5rem',
@@ -161,7 +163,7 @@ const HomeTab = ({
               }}>
                 Acciones Rápidas
               </h2>
-              <QuickActions 
+              <QuickActions
                 onCreateSSHConnection={onCreateSSHConnection}
                 onCreateFolder={onCreateFolder}
                 onOpenFileExplorer={onOpenFileExplorer}
@@ -174,20 +176,20 @@ const HomeTab = ({
 
           {/* Pestaña de Información */}
           <TabPanel header="ℹ️ Info">
-            <div style={{ 
+            <div style={{
               height: 'calc(100vh - 80px)',
               overflow: 'auto',
               padding: '2rem'
             }}>
               <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ 
+                <h2 style={{
                   margin: '0 0 0.5rem 0',
                   color: 'var(--text-color)',
                   fontSize: '1.5rem'
                 }}>
                   Acerca de NodeTerm
                 </h2>
-                <p style={{ 
+                <p style={{
                   margin: 0,
                   color: 'var(--text-color-secondary)',
                   fontSize: '1rem'
@@ -197,8 +199,8 @@ const HomeTab = ({
               </div>
 
               {/* Características principales */}
-              <div style={{ 
-                display: 'grid', 
+              <div style={{
+                display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                 gap: '1.5rem',
                 marginBottom: '2rem'
@@ -225,32 +227,32 @@ const HomeTab = ({
                     description: 'Múltiples temas, configuraciones avanzadas y opciones de personalización visual.'
                   }
                 ].map((feature, index) => (
-                  <Card 
+                  <Card
                     key={index}
-                    style={{ 
+                    style={{
                       background: 'var(--surface-card)',
                       border: '1px solid var(--surface-border)',
                       textAlign: 'center'
                     }}
                   >
                     <div style={{ padding: '1.5rem' }}>
-                      <i 
-                        className={feature.icon} 
-                        style={{ 
-                          fontSize: '2.5rem', 
+                      <i
+                        className={feature.icon}
+                        style={{
+                          fontSize: '2.5rem',
                           color: 'var(--primary-color)',
                           marginBottom: '1rem',
                           display: 'block'
                         }}
                       />
-                      <h3 style={{ 
+                      <h3 style={{
                         marginBottom: '0.75rem',
                         color: 'var(--text-color)',
                         fontSize: '1.1rem'
                       }}>
                         {feature.title}
                       </h3>
-                      <p style={{ 
+                      <p style={{
                         color: 'var(--text-color-secondary)',
                         lineHeight: '1.5',
                         margin: 0,
@@ -264,24 +266,24 @@ const HomeTab = ({
               </div>
 
               {/* Información técnica */}
-              <Card style={{ 
+              <Card style={{
                 background: 'var(--surface-section)',
                 border: '1px solid var(--surface-border)'
               }}>
-                <div style={{ 
+                <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                   gap: '1.5rem',
                   textAlign: 'center'
                 }}>
                   <div>
-                    <h4 style={{ 
+                    <h4 style={{
                       margin: '0 0 0.5rem 0',
                       color: 'var(--text-color)'
                     }}>
                       Versión
                     </h4>
-                    <p style={{ 
+                    <p style={{
                       margin: 0,
                       color: 'var(--text-color-secondary)',
                       fontSize: '1.1rem',
@@ -290,15 +292,15 @@ const HomeTab = ({
                       {versionInfo.version}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 style={{ 
+                    <h4 style={{
                       margin: '0 0 0.5rem 0',
                       color: 'var(--text-color)'
                     }}>
                       Electron
                     </h4>
-                    <p style={{ 
+                    <p style={{
                       margin: 0,
                       color: 'var(--text-color-secondary)',
                       fontSize: '1.1rem',
@@ -307,15 +309,15 @@ const HomeTab = ({
                       {versionInfo.electron}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 style={{ 
+                    <h4 style={{
                       margin: '0 0 0.5rem 0',
                       color: 'var(--text-color)'
                     }}>
                       Node.js
                     </h4>
-                    <p style={{ 
+                    <p style={{
                       margin: 0,
                       color: 'var(--text-color-secondary)',
                       fontSize: '1.1rem',
@@ -324,15 +326,15 @@ const HomeTab = ({
                       {versionInfo.node}
                     </p>
                   </div>
-                  
+
                   <div>
-                    <h4 style={{ 
+                    <h4 style={{
                       margin: '0 0 0.5rem 0',
                       color: 'var(--text-color)'
                     }}>
                       Chrome
                     </h4>
-                    <p style={{ 
+                    <p style={{
                       margin: 0,
                       color: 'var(--text-color-secondary)',
                       fontSize: '1.1rem',
@@ -359,10 +361,12 @@ const HomeTab = ({
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      <TabbedTerminal 
+      <TabbedTerminal
         onMinimize={handleMinimizeTerminal}
         onMaximize={handleMaximizeTerminal}
         terminalState={terminalState}
+        localFontFamily={localFontFamily}
+        localFontSize={localFontSize}
       />
     </div>
   );

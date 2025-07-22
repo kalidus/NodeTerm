@@ -2024,6 +2024,14 @@ const App = () => {
     localStorage.setItem(STATUSBAR_ICON_THEME_STORAGE_KEY, statusBarIconTheme);
   }, [statusBarIconTheme]);
 
+  const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
+  const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
+  const [localFontFamily, setLocalFontFamily] = useState(() => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace');
+  const [localFontSize, setLocalFontSize] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
+    return saved ? parseInt(saved, 10) : 14;
+  });
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
       <TitleBar />
@@ -2873,6 +2881,8 @@ const App = () => {
                                 countFolders(nodes);
                                 return folderCount;
                               })()}
+                              localFontFamily={localFontFamily}
+                              localFontSize={localFontSize}
                             />
                           ) : (tab.type === 'explorer' || tab.isExplorerInSSH) ? (
                             <FileExplorer
@@ -2966,6 +2976,10 @@ const App = () => {
         setStatusBarPollingInterval={setStatusBarPollingInterval}
         statusBarIconTheme={statusBarIconTheme}
         setStatusBarIconTheme={setStatusBarIconTheme}
+        localFontFamily={localFontFamily}
+        setLocalFontFamily={value => { setLocalFontFamily(value); localStorage.setItem(LOCAL_FONT_FAMILY_STORAGE_KEY, value); }}
+        localFontSize={localFontSize}
+        setLocalFontSize={value => { setLocalFontSize(value); localStorage.setItem(LOCAL_FONT_SIZE_STORAGE_KEY, value); }}
       />
 
       {/* Diálogo: Nueva conexión SSH */}
