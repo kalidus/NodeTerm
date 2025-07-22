@@ -459,6 +459,31 @@ const App = () => {
           });
         }
       });
+      // Submenu para abrir en split solo si hay pestañas SSH abiertas
+      const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
+      if (sshTabsFiltered.length > 0) {
+        items.push({
+          label: 'Abrir en Split',
+          icon: 'pi pi-window-maximize',
+          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'), // Clic directo: vertical con primera pestaña
+          items: sshTabsFiltered.map(tab => ({
+            label: tab.label,
+            icon: 'pi pi-desktop',
+            items: [
+              {
+                label: 'Split vertical',
+                icon: 'pi pi-arrows-v',
+                command: () => openInSplit(node, tab, 'vertical')
+              },
+              {
+                label: 'Split horizontal',
+                icon: 'pi pi-arrows-h',
+                command: () => openInSplit(node, tab, 'horizontal')
+              }
+            ]
+          }))
+        });
+      }
       items.push({ separator: true });
       items.push({
         label: 'Editar Sesión',
