@@ -459,6 +459,12 @@ const App = () => {
           });
         }
       });
+      // <-- AÑADIR AQUÍ LA OPCIÓN DE EXPLORADOR DE ARCHIVOS -->
+      items.push({
+        label: 'Abrir Explorador de Archivos',
+        icon: 'pi pi-folder-open',
+        command: () => openFileExplorer(node)
+      });
       // Submenu para abrir en split solo si hay pestañas SSH abiertas
       const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
       if (sshTabsFiltered.length > 0) {
