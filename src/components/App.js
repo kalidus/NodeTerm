@@ -376,8 +376,157 @@ const App = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
   
+  // Referencias a funciones del Sidebar para menú contextual
+  const sidebarCallbacksRef = useRef({});
+  
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
+
+  // Context menu for nodes
+  const onNodeContextMenu = (event, node) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedNode(node);
+    setIsGeneralTreeMenu(false);
+    if (treeContextMenuRef.current) {
+      treeContextMenuRef.current.show(event);
+    }
+  };
+
+  // Context menu for tree area (general)
+  const onTreeAreaContextMenu = (event) => {
+    const targetElement = event.target;
+    const isNodeClick = targetElement.closest('.p-treenode-content') || 
+                       targetElement.closest('.p-treenode') ||
+                       targetElement.closest('.node-label') ||
+                       targetElement.closest('.align-items-center');
+    if (!isNodeClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedNode(null);
+      setIsGeneralTreeMenu(true);
+      if (treeContextMenuRef.current) {
+        treeContextMenuRef.current.show(event);
+      }
+    }
+  };
+
+  // Función para generar items del menú contextual del árbol
+  const getTreeContextMenuItems = (node) => {
+    if (!node) return [];
+    const isFolder = node.droppable;
+    const isSSH = node.data && node.data.type === 'ssh';
+    const items = [];
+    if (isSSH) {
+      items.push({
+        label: 'Abrir Terminal',
+        icon: 'pi pi-desktop',
+        command: () => {
+          if (activeGroupId !== null) {
+            const currentGroupKey = activeGroupId || 'no-group';
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              [currentGroupKey]: activeTabIndex
+            }));
+            setActiveGroupId(null);
+          }
+          setSshTabs(prevTabs => {
+            const tabId = `${node.key}_${Date.now()}`;
+            const sshConfig = {
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
+              username: node.data.user,
+              password: node.data.password,
+              port: node.data.port || 22,
+              originalKey: node.key,
+              useBastionWallix: node.data.useBastionWallix || false,
+              bastionHost: node.data.bastionHost || '',
+              bastionUser: node.data.bastionUser || ''
+            };
+            const newTab = {
+              key: tabId,
+              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+              originalKey: node.key,
+              sshConfig: sshConfig,
+              type: 'terminal'
+            };
+            const newTabs = [newTab, ...prevTabs];
+            setActiveTabIndex(homeTabs.length);
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              'no-group': homeTabs.length
+            }));
+            return newTabs;
+          });
+        }
+      });
+      items.push({ separator: true });
+      items.push({
+        label: 'Editar Sesión',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current.editSSH) {
+            sidebarCallbacksRef.current.editSSH(node);
+          }
+        }
+      });
+    }
+    if (isFolder) {
+      items.push({
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-plus',
+        command: () => {
+          if (sidebarCallbacksRef.current.createFolder) {
+            sidebarCallbacksRef.current.createFolder(node.key);
+          }
+        }
+      });
+      items.push({ separator: true });
+      items.push({
+        label: 'Editar Carpeta',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current.editFolder) {
+            sidebarCallbacksRef.current.editFolder(node);
+          }
+        }
+      });
+    }
+    items.push({ separator: true });
+    items.push({
+      label: 'Eliminar',
+      icon: 'pi pi-trash',
+      command: () => {
+        if (sidebarCallbacksRef.current.deleteNode) {
+          sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+        }
+      }
+    });
+    return items;
+  };
+
+  // Función para generar items del menú contextual general del árbol
+  const getGeneralTreeContextMenuItems = () => {
+    return [
+      {
+        label: 'Nueva Carpeta',
+        icon: 'pi pi-folder',
+        command: () => {
+          if (sidebarCallbacksRef.current.createFolder) {
+            sidebarCallbacksRef.current.createFolder(null); // null = crear en raíz
+          }
+        }
+      },
+      {
+        label: 'Nueva Conexión SSH',
+        icon: 'pi pi-desktop',
+        command: () => {
+          if (sidebarCallbacksRef.current.createSSH) {
+            sidebarCallbacksRef.current.createSSH();
+          }
+        }
+      }
+    ];
+  };
 
   // Función para detectar y parsear formato Wallix
   const parseWallixUser = (userString) => {
@@ -1217,7 +1366,6 @@ const App = () => {
               password: node.data.password,
               port: node.data.port || 22,
               originalKey: node.key,
-              // Datos del bastión Wallix
               useBastionWallix: node.data.useBastionWallix || false,
               bastionHost: node.data.bastionHost || '',
               bastionUser: node.data.bastionUser || ''
@@ -1249,185 +1397,9 @@ const App = () => {
     );
   };
 
-  // Función para generar items del menú contextual del árbol
-  const getTreeContextMenuItems = (node) => {
-    if (!node) return [];
-    
-    const isFolder = node.droppable;
-    const isSSH = node.data && node.data.type === 'ssh';
-    const items = [];
-    
-    if (isSSH) {
-      // Items para sesiones SSH
-      items.push({
-        label: 'Abrir Terminal',
-        icon: 'pi pi-desktop',
-        command: () => {
-          // Si no estamos en el grupo Home, cambiar a Home primero
-          if (activeGroupId !== null) {
-            // Guardar el índice activo del grupo actual antes de cambiar
-            const currentGroupKey = activeGroupId || 'no-group';
-            setGroupActiveIndices(prev => ({
-              ...prev,
-              [currentGroupKey]: activeTabIndex
-            }));
-            
-            // Cambiar al grupo Home
-            setActiveGroupId(null);
-          }
-          
-          // Abrir nueva pestaña de terminal (mismo código que onDoubleClick)
-          setSshTabs(prevTabs => {
-            const tabId = `${node.key}_${Date.now()}`;
-            const sshConfig = {
-              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
-              username: node.data.user,
-              password: node.data.password,
-              port: node.data.port || 22,
-              originalKey: node.key,
-              // Datos del bastión Wallix
-              useBastionWallix: node.data.useBastionWallix || false,
-              bastionHost: node.data.bastionHost || '',
-              bastionUser: node.data.bastionUser || ''
-            };
-            const newTab = {
-              key: tabId,
-              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
-              originalKey: node.key,
-              sshConfig: sshConfig,
-              type: 'terminal'
-            };
-            const newTabs = [newTab, ...prevTabs];
-            setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
-            setGroupActiveIndices(prev => ({
-              ...prev,
-              'no-group': homeTabs.length
-            }));
-            return newTabs;
-          });
-        }
-      });
-      
-      items.push({
-        label: 'Explorador de Archivos',
-        icon: 'pi pi-folder-open',
-        command: () => openFileExplorer(node)
-      });
 
-      // Submenu para abrir en split solo si hay pestañas SSH abiertas
-      const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
-      if (sshTabsFiltered.length > 0) {
-        items.push({
-          label: 'Abrir en Split',
-          icon: 'pi pi-window-maximize',
-          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'), // Clic directo: vertical con primera pestaña
-          items: sshTabsFiltered.map(tab => ({
-            label: tab.label,
-            icon: 'pi pi-desktop',
-            items: [
-              {
-                label: 'Split vertical',
-                icon: 'pi pi-arrows-v',
-                command: () => openInSplit(node, tab, 'vertical')
-              },
-              {
-                label: 'Split horizontal',
-                icon: 'pi pi-arrows-h',
-                command: () => openInSplit(node, tab, 'horizontal')
-              }
-            ]
-          }))
-        });
-      }
-      
-      items.push({ separator: true });
-      
-      items.push({
-        label: 'Editar Sesión',
-        icon: 'pi pi-pencil',
-        command: () => openEditSSHDialog(node)
-      });
-    }
-    
-    if (isFolder) {
-      // Items para carpetas
-      items.push({
-        label: 'Nueva Carpeta',
-        icon: 'pi pi-plus',
-        command: () => openNewFolderDialog(node.key)
-      });
-      
-      items.push({ separator: true });
-      
-      items.push({
-        label: 'Editar Carpeta',
-        icon: 'pi pi-pencil',
-        command: () => openEditFolderDialog(node)
-      });
-    }
-    
-    // Item eliminar para todos los tipos
-    if (items.length > 0) {
-      items.push({ separator: true });
-    }
-    
-    const hasChildren = isFolder && node.children && node.children.length > 0;
-    items.push({
-      label: 'Eliminar',
-      icon: 'pi pi-trash',
-      command: () => confirmDeleteNode(node.key, node.label, hasChildren),
-      className: 'p-menuitem-danger'
-    });
-    
-    return items;
-  };
 
-  // Función para generar items del menú contextual general del árbol
-  const getGeneralTreeContextMenuItems = () => {
-    return [
-      {
-        label: 'Nueva Carpeta',
-        icon: 'pi pi-folder',
-        command: () => openNewFolderDialog(null) // null = crear en raíz
-      },
-      {
-        label: 'Nueva Conexión SSH',
-        icon: 'pi pi-desktop',
-        command: () => setShowSSHDialog(true)
-      }
-    ];
-  };
 
-  // Context menu for nodes
-  const onNodeContextMenu = (event, node) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setSelectedNode(node);
-    setIsGeneralTreeMenu(false);
-    if (treeContextMenuRef.current) {
-      treeContextMenuRef.current.show(event);
-    }
-  };
-
-  // Context menu for tree area (general)
-  const onTreeAreaContextMenu = (event) => {
-    // Solo mostrar el menú si NO se hizo click en un nodo
-    const targetElement = event.target;
-    const isNodeClick = targetElement.closest('.p-treenode-content') || 
-                       targetElement.closest('.p-treenode') ||
-                       targetElement.closest('.node-label') ||
-                       targetElement.closest('.align-items-center');
-    
-    if (!isNodeClick) {
-      event.preventDefault();
-      event.stopPropagation();
-      setSelectedNode(null);
-      setIsGeneralTreeMenu(true);
-      if (treeContextMenuRef.current) {
-        treeContextMenuRef.current.show(event);
-      }
-    }
-  };
 
   // Función recursiva para obtener todas las carpetas del árbol
   const getAllFolders = (nodes, prefix = '') => {
@@ -2032,6 +2004,13 @@ const App = () => {
         breakpoint="600px"
         style={{ zIndex: 99999 }}
       />
+      {/* Menú contextual del árbol de la sidebar */}
+      <ContextMenu
+        model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
+        ref={treeContextMenuRef}
+        breakpoint="600px"
+        style={{ zIndex: 99999 }}
+      />
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
         <Splitter 
           style={{ height: '100%', width: '100%' }} 
@@ -2062,26 +2041,56 @@ const App = () => {
             <Sidebar
               sidebarCollapsed={sidebarCollapsed}
               setSidebarCollapsed={setSidebarCollapsed}
-              nodes={nodes}
-              selectedNodeKey={selectedNodeKey}
-              setSelectedNodeKey={setSelectedNodeKey}
-              expandedKeys={expandedKeys}
-              setExpandedKeys={setExpandedKeys}
               allExpanded={allExpanded}
               toggleExpandAll={toggleExpandAll}
-              setShowSSHDialog={setShowSSHDialog}
-              openNewFolderDialog={openNewFolderDialog}
               setShowCreateGroupDialog={setShowCreateGroupDialog}
               setShowSettingsDialog={setShowSettingsDialog}
-              onTreeAreaContextMenu={onTreeAreaContextMenu}
-              onNodeContextMenu={onNodeContextMenu}
-              onDragDrop={onDragDrop}
-              setDraggedNodeKey={setDraggedNodeKey}
-              nodeTemplate={nodeTemplate}
               iconTheme={iconThemeSidebar}
               explorerFont={sidebarFont}
               explorerFontSize={sidebarFontSize}
               uiTheme={terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light'}
+              showToast={toast.current && toast.current.show ? toast.current.show : undefined}
+                              onNodeContextMenu={onNodeContextMenu}
+                onTreeAreaContextMenu={onTreeAreaContextMenu}
+                sidebarCallbacksRef={sidebarCallbacksRef}
+              onOpenSSHConnection={(node) => {
+                // Lógica igual que antes en onDoubleClick
+                if (activeGroupId !== null) {
+                  const currentGroupKey = activeGroupId || 'no-group';
+                  setGroupActiveIndices(prev => ({
+                    ...prev,
+                    [currentGroupKey]: activeTabIndex
+                  }));
+                  setActiveGroupId(null);
+                }
+                setSshTabs(prevTabs => {
+                  const tabId = `${node.key}_${Date.now()}`;
+                  const sshConfig = {
+                    host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
+                    username: node.data.user,
+                    password: node.data.password,
+                    port: node.data.port || 22,
+                    originalKey: node.key,
+                    useBastionWallix: node.data.useBastionWallix || false,
+                    bastionHost: node.data.bastionHost || '',
+                    bastionUser: node.data.bastionUser || ''
+                  };
+                  const newTab = {
+                    key: tabId,
+                    label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+                    originalKey: node.key,
+                    sshConfig: sshConfig,
+                    type: 'terminal'
+                  };
+                  const newTabs = [newTab, ...prevTabs];
+                  setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
+                  setGroupActiveIndices(prev => ({
+                    ...prev,
+                    'no-group': homeTabs.length
+                  }));
+                  return newTabs;
+                });
+              }}
             />
           </SplitterPanel>
           <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', height: '100%' }}>
