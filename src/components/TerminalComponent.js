@@ -63,13 +63,22 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
     }));
 
     useEffect(() => {
-        if (!tabId || !sshConfig) return;
+        if (!tabId) return;
+
+        // Detectar si es terminal local (inicio) de forma robusta
+        const isLocalTerminal = !sshConfig || Object.keys(sshConfig).length === 0 || (!sshConfig.host && !sshConfig.username);
+        let defaultFont = fontFamily || 'monospace';
+        let defaultFontSize = fontSize;
+        if (isLocalTerminal) {
+            defaultFont = localStorage.getItem('basicapp_local_terminal_font_family') || '"FiraCode Nerd Font", monospace';
+            defaultFontSize = parseInt(localStorage.getItem('basicapp_local_terminal_font_size') || '14', 10);
+        }
 
         // Initialize Terminal
         term.current = new Terminal({
             cursorBlink: true,
-            fontFamily: fontFamily,
-            fontSize: fontSize,
+            fontFamily: defaultFont,
+            fontSize: defaultFontSize,
             allowProposedApi: true,
             theme: theme,
             // Configuraciones adicionales para compatibilidad con aplicaciones TUI

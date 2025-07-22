@@ -48,18 +48,17 @@ const SettingsDialog = ({
   statusBarPollingInterval,
   setStatusBarPollingInterval,
   statusBarIconTheme,
-  setStatusBarIconTheme
+  setStatusBarIconTheme,
+  localFontFamily,
+  setLocalFontFamily,
+  localFontSize,
+  setLocalFontSize
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
   const [statusBarHeight, setStatusBarHeight] = useState(() => {
     const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 24;
-  });
-  const [localFontFamily, setLocalFontFamily] = useState(() => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace');
-  const [localFontSize, setLocalFontSize] = useState(() => {
-    const saved = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
-    return saved ? parseInt(saved, 10) : 14;
   });
 
   useEffect(() => {
@@ -120,8 +119,8 @@ const SettingsDialog = ({
         border: '1px solid #ccc',
         borderRadius: '6px',
         marginTop: '10px',
-        fontFamily: fontFamily,
-        fontSize: `${fontSize}px`
+        fontFamily: localFontFamily,
+        fontSize: `${localFontSize}px`
       }}>
         <div style={{ 
           background: colors.background || '#000000',
@@ -365,7 +364,7 @@ const SettingsDialog = ({
                         id="local-font-family"
                         value={localFontFamily}
                         options={availableFonts}
-                        onChange={handleLocalFontFamilyChange}
+                        onChange={e => setLocalFontFamily(e.value)}
                         placeholder="Selecciona una fuente"
                         style={{ width: '100%' }}
                       />
@@ -377,7 +376,7 @@ const SettingsDialog = ({
                       <InputNumber
                         id="local-font-size"
                         value={localFontSize}
-                        onValueChange={e => handleLocalFontSizeChange(e.value)}
+                        onValueChange={e => setLocalFontSize(e.value)}
                         min={8}
                         max={32}
                         style={{ width: '100%' }}
