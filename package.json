@@ -23,6 +23,7 @@
       "node_modules/",
       "main.js",
       "preload.js",
+      "system-stats-worker.js",
       "package.json"
     ],
     "win": {
