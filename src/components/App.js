@@ -29,6 +29,7 @@ import ThemeSelector from './ThemeSelector';
 import SettingsDialog from './SettingsDialog';
 import TitleBar from './TitleBar';
 import HomeTab from './HomeTab';
+import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -2915,171 +2916,74 @@ const App = () => {
       />
 
       {/* Diálogo: Nueva conexión SSH */}
-      <Dialog header="Nueva conexión SSH" visible={showSSHDialog} style={{ width: '370px', borderRadius: 16, background: 'var(--surface-b, #23272f)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }} modal onHide={() => setShowSSHDialog(false)}>
-        <div className="p-fluid" style={{ padding: 8 }}>
-          <div className="p-field" style={{ marginBottom: 14 }}>
-            <label htmlFor="sshName" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Nombre</label>
-            <InputText id="sshName" value={sshName} onChange={e => setSSHName(e.target.value)} autoFocus style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ marginBottom: 14 }}>
-            <label htmlFor="sshHost" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Host</label>
-            <InputText id="sshHost" value={sshHost} onChange={e => setSSHHost(e.target.value)} style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ marginBottom: 14 }}>
-            <label htmlFor="sshUser" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Usuario</label>
-            <InputText id="sshUser" value={sshUser} onChange={e => setSSHUser(e.target.value)} style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ marginBottom: 14 }}>
-            <label htmlFor="sshPassword" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Contraseña</label>
-            <InputText id="sshPassword" type="password" value={sshPassword} onChange={e => setSSHPassword(e.target.value)} style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ marginBottom: 14 }}>
-            <label htmlFor="sshPort" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Puerto</label>
-            <InputText id="sshPort" value={sshPort} onChange={e => setSSHPort(e.target.value)} style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ marginBottom: 14 }}>
-            <label htmlFor="sshTargetFolder" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Carpeta destino (opcional)</label>
-            <Dropdown id="sshTargetFolder" value={sshTargetFolder} options={getAllFolders(nodes)} onChange={e => setSSHTargetFolder(e.value)} placeholder="Selecciona una carpeta" style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', fontSize: 15 }} showClear filter/>
-          </div>
-          <div className="p-field" style={{ marginBottom: 18 }}>
-            <label htmlFor="sshRemoteFolder" style={{ fontWeight: 600, color: 'var(--text-color, #e0e0e0)' }}>Carpeta remota (opcional)</label>
-            <InputText id="sshRemoteFolder" value={sshRemoteFolder} onChange={e => setSSHRemoteFolder(e.target.value)} style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 18, justifyContent: 'flex-end' }}>
-            <Button label="Cancelar" icon="pi pi-times" className="p-button-text" onClick={() => setShowSSHDialog(false)} style={{ minWidth: 120, fontSize: 16, borderRadius: 8 }} />
-            <Button label="Crear" icon="pi pi-check" className="p-button-primary" onClick={createNewSSH} style={{ minWidth: 120, fontSize: 16, borderRadius: 8 }} />
-          </div>
-        </div>
-      </Dialog>
-
-      {/* Diálogo: Nueva carpeta */}
-      <Dialog header="Nueva carpeta" visible={showFolderDialog} style={{ width: 350 }} modal onHide={() => setShowFolderDialog(false)}>
-        <div className="p-fluid">
-          <div className="p-field">
-            <label htmlFor="folderName">Nombre de la carpeta</label>
-            <InputText id="folderName" value={folderName} onChange={e => setFolderName(e.target.value)} autoFocus />
-          </div>
-        </div>
-        <div className="p-dialog-footer">
-          <Button label="Cancelar" icon="pi pi-times" className="p-button-text" onClick={() => setShowFolderDialog(false)} />
-          <Button label="Crear" icon="pi pi-check" className="p-button-primary" onClick={createNewFolder} autoFocus />
-        </div>
-      </Dialog>
-
-      {/* Diálogo: Nuevo grupo de pestañas */}
-      <Dialog header="Nuevo grupo de pestañas" visible={showCreateGroupDialog} style={{ width: '370px', borderRadius: 16, background: 'var(--surface-b, #23272f)', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }} modal onHide={() => setShowCreateGroupDialog(false)}>
-        <div className="p-fluid" style={{ padding: 8 }}>
-          <div className="p-field" style={{ marginBottom: 18 }}>
-            <label htmlFor="groupName" style={{ fontWeight: 600, marginBottom: 6, display: 'block', color: 'var(--text-color, #e0e0e0)' }}>Nombre del grupo</label>
-            <InputText id="groupName" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} autoFocus style={{ borderRadius: 8, background: 'var(--surface-c, #23272f)', color: 'var(--text-color, #e0e0e0)', border: '1.5px solid #353b48', padding: '10px 12px', fontSize: 16, transition: 'border 0.2s' }} />
-          </div>
-          <div className="p-field" style={{ marginBottom: 18 }}>
-            <label style={{ fontWeight: 600, marginBottom: 8, display: 'block', color: 'var(--text-color, #e0e0e0)' }}>Color del grupo</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8, justifyContent: 'center', alignItems: 'center' }}>
-              {GROUP_COLORS.map(color => (
-                <div
-                  key={color}
-                  onClick={() => setSelectedGroupColor(color)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: color,
-                    border: selectedGroupColor === color ? '3px solid #1976d2' : '2px solid #23272f',
-                    boxShadow: selectedGroupColor === color ? '0 0 0 4px #1976d2aa' : '0 1px 4px rgba(0,0,0,0.10)',
-                    cursor: 'pointer',
-                    transition: 'box-shadow 0.2s, border 0.2s',
-                    outline: selectedGroupColor === color ? '2px solid #1976d2' : 'none',
-                    margin: 0,
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title={color}
-                >
-                  {selectedGroupColor === color && (
-                    <span style={{
-                      position: 'absolute',
-                      color: '#fff',
-                      fontSize: 16,
-                      fontWeight: 900,
-                      pointerEvents: 'none',
-                      textShadow: '0 1px 4px #1976d2, 0 0 2px #23272f'
-                    }}>✓</span>
-                  )}
-                </div>
-              ))}
-              {/* Selector personalizado: círculo clicable con icono de paleta */}
-              <div
-                onClick={() => document.getElementById('custom-group-color-input').click()}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  background: selectedGroupColor && !GROUP_COLORS.includes(selectedGroupColor) ? selectedGroupColor : '#23272f',
-                  border: !GROUP_COLORS.includes(selectedGroupColor) ? '3px solid #1976d2' : '2px dashed #888',
-                  boxShadow: !GROUP_COLORS.includes(selectedGroupColor) ? '0 0 0 4px #1976d2aa' : '0 1px 4px rgba(0,0,0,0.10)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  transition: 'box-shadow 0.2s, border 0.2s',
-                  margin: 0
-                }}
-                title="Color personalizado"
-              >
-                <span style={{ fontSize: 16, color: !GROUP_COLORS.includes(selectedGroupColor) ? '#fff' : '#1976d2', pointerEvents: 'none', userSelect: 'none' }}>🎨</span>
-                <input
-                  id="custom-group-color-input"
-                  type="color"
-                  value={selectedGroupColor}
-                  onChange={e => setSelectedGroupColor(e.target.value)}
-                  style={{ display: 'none' }}
-                />
-                {!GROUP_COLORS.includes(selectedGroupColor) && selectedGroupColor && (
-                  <span style={{
-                    position: 'absolute',
-                    color: '#fff',
-                    fontSize: 16,
-                    fontWeight: 900,
-                    pointerEvents: 'none',
-                    textShadow: '0 1px 4px #1976d2, 0 0 2px #23272f',
-                    left: 0, right: 0, top: 0, bottom: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>✓</span>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="p-field" style={{ marginTop: 18 }}>
-            <Button
-              label="Crear grupo"
-              icon="pi pi-plus"
-              onClick={createNewGroup}
-              disabled={!newGroupName.trim()}
-              className="p-button-success"
-              style={{
-                width: '100%',
-                fontSize: 18,
-                fontWeight: 700,
-                borderRadius: 8,
-                padding: '14px 0',
-                background: !newGroupName.trim() ? '#2c2f36' : '#1976d2',
-                border: 'none',
-                boxShadow: !newGroupName.trim() ? 'none' : '0 4px 16px rgba(25,118,210,0.15)',
-                transition: 'background 0.2s, box-shadow 0.2s',
-                color: '#fff',
-                opacity: !newGroupName.trim() ? 0.6 : 1,
-                cursor: !newGroupName.trim() ? 'not-allowed' : 'pointer',
-                letterSpacing: 0.5,
-                margin: 0
-              }}
-            />
-          </div>
-        </div>
-      </Dialog>
+      <SSHDialog
+        visible={showSSHDialog}
+        onHide={() => setShowSSHDialog(false)}
+        mode="new"
+        name={sshName}
+        setName={setSSHName}
+        host={sshHost}
+        setHost={setSSHHost}
+        user={sshUser}
+        setUser={setSSHUser}
+        password={sshPassword}
+        setPassword={setSSHPassword}
+        port={sshPort}
+        setPort={setSSHPort}
+        remoteFolder={sshRemoteFolder}
+        setRemoteFolder={setSSHRemoteFolder}
+        targetFolder={sshTargetFolder}
+        setTargetFolder={setSSHTargetFolder}
+        foldersOptions={getAllFolders(nodes)}
+        onConfirm={createNewSSH}
+      />
+      <FolderDialog
+        visible={showFolderDialog}
+        onHide={() => setShowFolderDialog(false)}
+        mode="new"
+        folderName={folderName}
+        setFolderName={setFolderName}
+        onConfirm={createNewFolder}
+      />
+      <FolderDialog
+        visible={showEditFolderDialog}
+        onHide={() => setShowEditFolderDialog(false)}
+        mode="edit"
+        folderName={editFolderName}
+        setFolderName={setEditFolderName}
+        onConfirm={saveEditFolder}
+      />
+      <SSHDialog
+        visible={showEditSSHDialog}
+        onHide={() => setShowEditSSHDialog(false)}
+        mode="edit"
+        name={editSSHName}
+        setName={setEditSSHName}
+        host={editSSHHost}
+        setHost={setEditSSHHost}
+        user={editSSHUser}
+        setUser={setEditSSHUser}
+        password={editSSHPassword}
+        setPassword={setEditSSHPassword}
+        port={editSSHPort}
+        setPort={setEditSSHPort}
+        remoteFolder={editSSHRemoteFolder}
+        setRemoteFolder={setEditSSHRemoteFolder}
+        targetFolder={null}
+        setTargetFolder={() => {}}
+        foldersOptions={[]}
+        onConfirm={saveEditSSH}
+      />
+      <GroupDialog
+        visible={showCreateGroupDialog}
+        onHide={() => setShowCreateGroupDialog(false)}
+        groupName={newGroupName}
+        setGroupName={setNewGroupName}
+        groupColor={selectedGroupColor}
+        setGroupColor={setSelectedGroupColor}
+        colorOptions={GROUP_COLORS}
+        onConfirm={createNewGroup}
+      />
     </div>
   );
 };
