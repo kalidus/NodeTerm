@@ -4,8 +4,9 @@ import { Dropdown } from 'primereact/dropdown';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
+import { themes } from '../themes';
 
-const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize }) => {
+const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localTerminalTheme }) => {
     // Determinar la pestaña inicial según el SO
     const getInitialTab = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -844,6 +845,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 tabId={tab.id}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
+                                theme={themes[localTerminalTheme]?.theme || {}}
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
