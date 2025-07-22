@@ -2285,10 +2285,10 @@ function startPowerShellSession(tabId, { cols, rows }) {
     
     for (let i = 0; i < configsToTry.length && !spawnSuccess; i++) {
       try {
-        console.log(`Intentando configuración ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
+        // línea eliminada: console.log(`Intentando configuración ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
         powershellProcesses[tabId] = pty.spawn(shell, args, configsToTry[i]);
         spawnSuccess = true;
-        console.log(`Configuración ${i + 1} exitosa para PowerShell ${tabId}`);
+        // línea eliminada: console.log(`Configuración ${i + 1} exitosa para PowerShell ${tabId}`);
       } catch (spawnError) {
         lastError = spawnError;
         console.warn(`Configuración ${i + 1} falló para PowerShell ${tabId}:`, spawnError.message);
@@ -2318,7 +2318,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
           
           powershellProcesses[tabId] = safeTerminal.spawn();
           spawnSuccess = true;
-          console.log(`SafeWindowsTerminal exitoso para ${tabId}`);
+          // línea eliminada: console.log(`SafeWindowsTerminal exitoso para ${tabId}`);
         } catch (safeError) {
           console.error(`SafeWindowsTerminal también falló para ${tabId}:`, safeError.message);
         }
@@ -2414,7 +2414,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     //   }
     // }, 500);
 
-    console.log(`PowerShell ${tabId} iniciado exitosamente`);
+    // línea eliminada: console.log(`PowerShell ${tabId} iniciado exitosamente`);
 
   } catch (error) {
     console.error(`Error starting PowerShell for tab ${tabId}:`, error);
