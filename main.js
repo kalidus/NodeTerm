@@ -93,9 +93,7 @@ const url = require('url');
 
 // ============================================
 // 🚨 VERIFICACIÓN CRÍTICA DE CAMBIOS APLICADOS
-console.log('🔥🔥🔥 CÓDIGO NUEVO EJECUTÁNDOSE - CAMBIOS APLICADOS 🔥🔥🔥');
-console.log('🔥🔥🔥 SI VES ESTE LOG, LOS CAMBIOS FUNCIONAN 🔥🔥🔥');
-console.log('🔥🔥🔥 KALI LINUX DEBERÍA FUNCIONAR AHORA 🔥🔥🔥');
+// (logs temporales eliminados)
 // ============================================
 const os = require('os');
 const fs = require('fs');
