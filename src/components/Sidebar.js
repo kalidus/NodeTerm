@@ -594,9 +594,6 @@ const Sidebar = ({
               className="sidebar-tree"
               style={{ fontSize: `${explorerFontSize}px` }}
               nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
-              filter
-              filterMode="strict"
-              filterPlaceholder="Buscar..."
               expandedKeys={expandedKeys}
               onToggle={e => setExpandedKeys(e.value)}
             />
