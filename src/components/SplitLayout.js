@@ -94,13 +94,16 @@ const SplitLayout = ({
     const b = parseInt(baseColor.slice(5, 7), 16);
     return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
   })();
-  const handleColor = adjustColorBrightness(baseColor, isDark ? 18 : -18);
+  // Color base: ligeramente más claro/oscuro (12%)
+  const visibleBaseColor = adjustColorBrightness(baseColor, isDark ? 12 : -12);
+  // Hover: aún más contraste (24%)
+  const handleColor = adjustColorBrightness(baseColor, isDark ? 24 : -24);
 
   const [isHover, setIsHover] = React.useState(false);
 
   const resizeHandleStyle = {
     position: 'absolute',
-    backgroundColor: isHover ? handleColor : baseColor,
+    backgroundColor: isHover ? handleColor : visibleBaseColor,
     zIndex: 1000,
     transition: 'background-color 0.2s ease',
     ...(isVertical ? {
