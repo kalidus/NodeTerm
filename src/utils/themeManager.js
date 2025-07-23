@@ -1,14 +1,37 @@
 import { uiThemes } from '../themes/ui-themes';
 
 // Convierte un color hex a rgba con opacidad
-function hexToRgba(hex, alpha = 1) {
-  let c = hex.replace('#', '');
-  if (c.length === 3) c = c.split('').map(x => x + x).join('');
-  const num = parseInt(c, 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
+function hexToRgba(hex, alpha) {
+  if (!hex || typeof hex !== 'string') return 'rgba(0,0,0,0)';
+  if (!hex.startsWith('#')) return hex;
+  
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Función para ajustar el brillo de un color hex
+function adjustColorBrightness(hex, percent) {
+  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return hex;
+  
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  
+  // Determinar si el color es claro u oscuro
+  const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+  const isDark = brightness < 128;
+  
+  // Ajustar el brillo: si es oscuro, hacerlo más claro; si es claro, hacerlo más oscuro
+  const adjustment = isDark ? percent : -percent;
+  
+  r = Math.min(255, Math.max(0, Math.round(r + (adjustment / 100) * 255)));
+  g = Math.min(255, Math.max(0, Math.round(g + (adjustment / 100) * 255)));
+  b = Math.min(255, Math.max(0, Math.round(b + (adjustment / 100) * 255)));
+  
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 class ThemeManager {
@@ -126,7 +149,7 @@ class ThemeManager {
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
-        --ui-titlebar-accent: ${colors.buttonPrimary || '#1976d2'};
+        --ui-titlebar-accent: ${adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2'};
       }
 
       /* === SIDEBAR STYLES === */
