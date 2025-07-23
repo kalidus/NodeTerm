@@ -378,6 +378,8 @@ const HomeTab = ({
     </div>
   );
 
+  const splitterColor = currentTheme.colors?.splitter || dashboardBg;
+
   return (
     <SplitLayout
       leftTerminal={{ key: 'home_top', content: topPanel }}
@@ -393,6 +395,7 @@ const HomeTab = ({
       isHomeTab={true}
       externalPaneSize={getTopPanelSize()}
       onManualResize={handleManualResize}
+      splitterColor={splitterColor}
     />
   );
 };
