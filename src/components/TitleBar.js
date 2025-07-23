@@ -67,7 +67,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     >
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
         <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'block' }} />
-        <span style={{ fontWeight: 600, fontSize: 12, color: '#fff', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18 }}>NodeTerm</span>
+        <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18 }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 250, maxWidth: 520, width: '22vw', WebkitAppRegion: 'no-drag' }}>
@@ -165,7 +165,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           onMouseEnter={e => (e.currentTarget.style.background = '#e3e6ea')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="#fff"/><circle cy="6" cx="6" r="1.2" fill="#fff"/><circle cy="6" cx="9.5" r="1.2" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="var(--ui-titlebar-text, #fff)"/><circle cy="6" cx="6" r="1.2" fill="var(--ui-titlebar-text, #fff)"/><circle cy="6" cx="9.5" r="1.2" fill="var(--ui-titlebar-text, #fff)"/></svg>
         </button>
         {/* Minimizar */}
         <button
@@ -191,7 +191,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           onMouseEnter={e => (e.currentTarget.style.background = '#e3e6ea')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6.5" width="8" height="1.7" rx="0.85" fill="#fff" /></svg>
+          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6.5" width="8" height="1.7" rx="0.85" fill="var(--ui-titlebar-text, #fff)" /></svg>
         </button>
         {/* Maximizar/Restaurar */}
         <button
@@ -214,7 +214,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           onMouseEnter={e => (e.currentTarget.style.background = '#e3e6ea')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="#fff" strokeWidth="1.2" /></svg>
+          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" /></svg>
         </button>
         {/* Cerrar */}
         <button
@@ -237,7 +237,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           onMouseEnter={e => (e.currentTarget.style.background = '#e57373')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <svg width="12" height="12" viewBox="0 0 14 14"><line x1="4" y1="4" x2="10" y2="10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" /><line x1="10" y1="4" x2="4" y2="10" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          <svg width="12" height="12" viewBox="0 0 14 14"><line x1="4" y1="4" x2="10" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.8" strokeLinecap="round" /><line x1="10" y1="4" x2="4" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.8" strokeLinecap="round" /></svg>
         </button>
       </div>
     </div>
