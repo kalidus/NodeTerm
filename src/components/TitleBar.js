@@ -67,7 +67,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     >
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
         <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'block' }} />
-        {/* <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1, lineHeight: '15px', display: 'flex', alignItems: 'center', height: 15 }}>NodeTerm</span> */}
+        <span style={{ fontWeight: 600, fontSize: 12, color: '#fff', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18 }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 250, maxWidth: 520, width: '22vw', WebkitAppRegion: 'no-drag' }}>
