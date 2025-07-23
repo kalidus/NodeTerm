@@ -57,7 +57,7 @@ const WSLTerminal = forwardRef(({
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
-                background: '#300A24',
+                background: theme.background || '#300A24', // Usar theme.background con fallback
                 foreground: '#FFFFFF',
                 cursor: '#FFFFFF',
                 selection: 'rgba(255, 255, 255, 0.3)',
@@ -77,7 +77,7 @@ const WSLTerminal = forwardRef(({
                 brightCyan: '#34E2E2',
                 white: '#D3D7CF',
                 brightWhite: '#EEEEEC',
-                ...theme
+                ...theme  // Permitir que theme sobrescriba cualquier color
             },
             // WSL/Linux optimized settings
             convertEol: true,

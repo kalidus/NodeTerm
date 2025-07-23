@@ -52,6 +52,10 @@ export const uiThemes = {
       buttonSecondaryText: '#ffffff',
       buttonHover: '#1565c0',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',  // Blanco para PowerShell en tema claro
+      linuxTerminalBackground: '#f5f5f5',       // Gris claro para Ubuntu/WSL en tema claro
+      
       // Context Menus
       contextMenuBackground: '#ffffff',
       contextMenuText: '#495057',
@@ -124,6 +128,10 @@ export const uiThemes = {
       buttonSecondary: '#3c3c3c',
       buttonSecondaryText: '#cccccc',
       buttonHover: '#1177bb',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#1e1e1e',  // Gris oscuro para PowerShell
+      linuxTerminalBackground: '#2d112b',       // Púrpura oscuro típico de Ubuntu
       
       // Context Menus
       contextMenuBackground: '#2d2d30',
@@ -198,6 +206,10 @@ export const uiThemes = {
       buttonSecondaryText: '#fdf6e3',
       buttonHover: '#2aa198',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#fdf6e3',  // Base3 de Solarized
+      linuxTerminalBackground: '#eee8d5',       // Base2 de Solarized (más oscuro)
+      
       // Context Menus
       contextMenuBackground: '#fdf6e3',
       contextMenuText: '#657b83',
@@ -270,6 +282,10 @@ export const uiThemes = {
       buttonSecondary: '#586e75',
       buttonSecondaryText: '#839496',
       buttonHover: '#2aa198',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#002b36',  // Base03 de Solarized
+      linuxTerminalBackground: '#073642',       // Base02 de Solarized (más claro)
       
       // Context Menus
       contextMenuBackground: '#002b36',
@@ -344,6 +360,10 @@ export const uiThemes = {
       buttonSecondaryText: '#f8f8f2',
       buttonHover: '#50fa7b',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#282a36',  // Background principal de Dracula
+      linuxTerminalBackground: '#44475a',       // Current line de Dracula
+      
       // Context Menus
       contextMenuBackground: '#282a36',
       contextMenuText: '#f8f8f2',
@@ -416,6 +436,10 @@ export const uiThemes = {
       buttonSecondary: '#4c566a',
       buttonSecondaryText: '#d8dee9',
       buttonHover: '#81a1c1',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#2e3440',  // Polar Night 0
+      linuxTerminalBackground: '#3b4252',       // Polar Night 1
       
       // Context Menus
       contextMenuBackground: '#2e3440',
@@ -1949,6 +1973,10 @@ export const uiThemes = {
       buttonSecondary: '#3c3c3c',
       buttonSecondaryText: '#cccccc',
       buttonHover: '#1177bb',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#282c34',  // Background principal
+      linuxTerminalBackground: '#21252b',       // Ligeramente más oscuro
       
       // Context Menus
       contextMenuBackground: '#2d2d30',

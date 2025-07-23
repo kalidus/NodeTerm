@@ -74,7 +74,7 @@ const UbuntuTerminal = forwardRef(({
             fontSize: fontSize,
             allowProposedApi: true,
             theme: {
-                background: '#300A24', // Ubuntu terminal background
+                background: theme.background || '#300A24', // Usar theme.background con fallback
                 foreground: '#FFFFFF',
                 cursor: '#FFFFFF',
                 selection: 'rgba(255, 255, 255, 0.3)',
@@ -94,7 +94,7 @@ const UbuntuTerminal = forwardRef(({
                 brightCyan: '#34E2E2',
                 white: '#D3D7CF',
                 brightWhite: '#EEEEEC',
-                ...theme
+                ...theme  // Permitir que theme sobrescriba cualquier color
             },
             // Ubuntu/Linux optimized settings
             convertEol: true,
