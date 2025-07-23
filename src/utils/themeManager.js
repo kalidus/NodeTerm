@@ -150,6 +150,7 @@ class ThemeManager {
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
         --ui-titlebar-accent: ${adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2'};
+        --ui-titlebar-text: ${colors['--ui-titlebar-text'] || '#fff'};
       }
 
       /* === SIDEBAR STYLES === */

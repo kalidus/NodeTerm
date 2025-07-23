@@ -62,7 +62,8 @@ export const uiThemes = {
       contextMenuHover: '#f5f5f5',
       contextMenuBorder: '#e0e0e0',
       contextMenuShadow: 'rgba(0, 0, 0, 0.15)',
-      '--ui-titlebar-accent': '#eee8d5'
+      '--ui-titlebar-accent': '#1976d2',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#f8f9fa',
@@ -139,7 +140,8 @@ export const uiThemes = {
       contextMenuHover: '#3e3e42',
       contextMenuBorder: '#3e3e42',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#073642'
+      '--ui-titlebar-accent': '#073642',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#007acc',
@@ -216,7 +218,8 @@ export const uiThemes = {
       contextMenuHover: '#eee8d5',
       contextMenuBorder: '#d9d2c4',
       contextMenuShadow: 'rgba(0, 0, 0, 0.15)',
-      '--ui-titlebar-accent': '#eee8d5'
+      '--ui-titlebar-accent': '#eee8d5',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#93a1a1',
@@ -293,7 +296,8 @@ export const uiThemes = {
       contextMenuHover: '#073642',
       contextMenuBorder: '#586e75',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#bd93f9'
+      '--ui-titlebar-accent': '#bd93f9',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#268bd2',
@@ -370,7 +374,8 @@ export const uiThemes = {
       contextMenuHover: '#44475a',
       contextMenuBorder: '#6272a4',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#bd93f9'
+      '--ui-titlebar-accent': '#bd93f9',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#282a36',
@@ -447,7 +452,8 @@ export const uiThemes = {
       contextMenuHover: '#3b4252',
       contextMenuBorder: '#434c5e',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#5e81ac'
+      '--ui-titlebar-accent': '#5e81ac',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#2e3440',
@@ -511,7 +517,8 @@ export const uiThemes = {
       contextMenuHover: '#283457',
       contextMenuBorder: '#414868',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#7aa2f7'
+      '--ui-titlebar-accent': '#7aa2f7',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#1a1b26',
@@ -575,7 +582,8 @@ export const uiThemes = {
       contextMenuHover: '#313244',
       contextMenuBorder: '#45475a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#f5c2e7'
+      '--ui-titlebar-accent': '#f5c2e7',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#1e1e2e',
@@ -639,7 +647,8 @@ export const uiThemes = {
       contextMenuHover: '#495495',
       contextMenuBorder: '#6b5b95',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#03edf9'
+      '--ui-titlebar-accent': '#03edf9',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#2a2139',
@@ -703,7 +712,8 @@ export const uiThemes = {
       contextMenuHover: '#717cb4',
       contextMenuBorder: '#676e95',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#c792ea'
+      '--ui-titlebar-accent': '#c792ea',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#292d3e',
@@ -767,7 +777,8 @@ export const uiThemes = {
       contextMenuHover: '#404040',
       contextMenuBorder: '#808080',
       contextMenuShadow: 'rgba(0, 0, 0, 0.6)',
-      '--ui-titlebar-accent': '#0000ff'
+      '--ui-titlebar-accent': '#0000ff',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#000000',
@@ -831,7 +842,8 @@ export const uiThemes = {
       contextMenuHover: '#253340',
       contextMenuBorder: '#323232',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#59c2ff'
+      '--ui-titlebar-accent': '#59c2ff',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#0f1419',
@@ -895,7 +907,8 @@ export const uiThemes = {
       contextMenuHover: '#2f2f2f',
       contextMenuBorder: '#709080',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#94bff3'
+      '--ui-titlebar-accent': '#94bff3',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#3f3f3f',
@@ -959,7 +972,8 @@ export const uiThemes = {
       contextMenuHover: '#373b41',
       contextMenuBorder: '#969896',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#81a2be'
+      '--ui-titlebar-accent': '#81a2be',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#1d1f21',
@@ -1023,7 +1037,8 @@ export const uiThemes = {
       contextMenuHover: '#4f5b66',
       contextMenuBorder: '#65737e',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#5fb3b3'
+      '--ui-titlebar-accent': '#5fb3b3',
+      '--ui-titlebar-text': '#fff'
     },
     statusBarPalette: {
       fondo: '#1b2b34',
@@ -1087,7 +1102,8 @@ export const uiThemes = {
       contextMenuHover: '#e5e5e6',
       contextMenuBorder: '#4f525d',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
-      '--ui-titlebar-accent': '#4078f2'
+      '--ui-titlebar-accent': '#4078f2',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#fafafa',
@@ -1151,7 +1167,8 @@ export const uiThemes = {
       contextMenuHover: '#414649',
       contextMenuBorder: '#7f8c8d',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#3daee9'
+      '--ui-titlebar-accent': '#3daee9',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#232629',
@@ -1215,7 +1232,8 @@ export const uiThemes = {
       contextMenuHover: '#444155',
       contextMenuBorder: '#5d4d7a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#a31db1'
+      '--ui-titlebar-accent': '#a31db1',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#292b2e',
@@ -1278,7 +1296,8 @@ export const uiThemes = {
       contextMenuHover: '#1d3b53',
       contextMenuBorder: '#575656',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#21c7a8'
+      '--ui-titlebar-accent': '#21c7a8',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#011627',
@@ -1341,7 +1360,8 @@ export const uiThemes = {
       contextMenuHover: '#e6e6e6',
       contextMenuBorder: '#d0d0d0',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
-      '--ui-titlebar-accent': '#729fcf'
+      '--ui-titlebar-accent': '#729fcf',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#f5f5f5',
@@ -1404,7 +1424,8 @@ export const uiThemes = {
       contextMenuHover: '#f0f0f0',
       contextMenuBorder: '#e0e0e0',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
-      '--ui-titlebar-accent': '#2196f3'
+      '--ui-titlebar-accent': '#2196f3',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#fafafa',
@@ -1467,7 +1488,8 @@ export const uiThemes = {
       contextMenuHover: '#f0f8ff',
       contextMenuBorder: '#e1e4e8',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
-      '--ui-titlebar-accent': '#0366d6'
+      '--ui-titlebar-accent': '#0366d6',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#fefefe',
@@ -1530,7 +1552,8 @@ export const uiThemes = {
       contextMenuHover: '#eeeeee',
       contextMenuBorder: '#e8e8e8',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
-      '--ui-titlebar-accent': '#64b5f6'
+      '--ui-titlebar-accent': '#64b5f6',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#f7f7f7',
@@ -1593,7 +1616,8 @@ export const uiThemes = {
       contextMenuHover: '#e8f4f8',
       contextMenuBorder: '#ecf0f1',
       contextMenuShadow: 'rgba(0, 0, 0, 0.1)',
-      '--ui-titlebar-accent': '#3498db'
+      '--ui-titlebar-accent': '#3498db',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#fcfcfc',
@@ -1656,7 +1680,8 @@ export const uiThemes = {
       contextMenuHover: '#1a1a3a',
       contextMenuBorder: '#444444',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#00d4ff'
+      '--ui-titlebar-accent': '#00d4ff',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#0a0a0f',
@@ -1719,7 +1744,8 @@ export const uiThemes = {
       contextMenuHover: '#1a2332',
       contextMenuBorder: '#555555',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#00ff41'
+      '--ui-titlebar-accent': '#00ff41',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#0d1117',
@@ -1782,7 +1808,8 @@ export const uiThemes = {
       contextMenuHover: '#002200',
       contextMenuBorder: '#003300',
       contextMenuShadow: 'rgba(0, 0, 0, 0.6)',
-      '--ui-titlebar-accent': '#00ff00'
+      '--ui-titlebar-accent': '#00ff00',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#000000',
@@ -1845,7 +1872,8 @@ export const uiThemes = {
       contextMenuHover: '#1a1a3a',
       contextMenuBorder: '#4a4a6a',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#44ffcc'
+      '--ui-titlebar-accent': '#44ffcc',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#05050a',
@@ -1908,7 +1936,8 @@ export const uiThemes = {
       contextMenuHover: '#2a1b3d',
       contextMenuBorder: '#555555',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#e91e63'
+      '--ui-titlebar-accent': '#e91e63',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#0f0f23',
@@ -1984,7 +2013,8 @@ export const uiThemes = {
       contextMenuHover: '#3e3e42',
       contextMenuBorder: '#3e3e42',
       contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#232a36'
+      '--ui-titlebar-accent': '#232a36',
+      '--ui-titlebar-text': '#222'
     },
     statusBarPalette: {
       fondo: '#007acc',
