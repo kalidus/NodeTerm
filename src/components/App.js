@@ -2311,7 +2311,7 @@ const App = () => {
                     ))}
                   </TabView>
                 )}
-                <div style={{ height: '4px', background: 'transparent' }} />
+                <div style={{ height: '1px', background: 'var(--ui-tabgroup-border, #444)' }} />
                 
                 <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                   {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
