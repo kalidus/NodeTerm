@@ -1011,9 +1011,11 @@ html, body, #root {
 }
 
 /* Pestaña activa con color del grupo más saturado */
+.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link,
 .tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  background-color: #e3f2fd !important; /* Azul fijo para pestaña activa */
-  border-color: #bbdefb !important; /* Borde azul fijo para pestaña activa */
+  background: var(--ui-tab-active-bg) !important;
+  color: var(--ui-tab-active-text) !important;
+  border-color: var(--ui-tab-border) !important;
 }
 
 /* === Splitter principal === */
