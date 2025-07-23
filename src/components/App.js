@@ -2043,9 +2043,69 @@ const App = () => {
   const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() => localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark');
   const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() => localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark');
 
+  const [sidebarFilter, setSidebarFilter] = useState('');
+
+  // Función para buscar conexiones en el árbol de nodos
+  const findAllConnections = (nodes) => {
+    let results = [];
+    for (const node of nodes) {
+      if (node.data && node.data.type === 'ssh') {
+        results.push(node);
+      }
+      if (node.children && node.children.length > 0) {
+        results = results.concat(findAllConnections(node.children));
+      }
+    }
+    return results;
+  };
+
+  const onOpenSSHConnection = (node) => {
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+    setSshTabs(prevTabs => {
+      const tabId = `${node.key}_${Date.now()}`;
+      const sshConfig = {
+        host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
+        username: node.data.user,
+        password: node.data.password,
+        port: node.data.port || 22,
+        originalKey: node.key,
+        useBastionWallix: node.data.useBastionWallix || false,
+        bastionHost: node.data.bastionHost || '',
+        bastionUser: node.data.bastionUser || ''
+      };
+      const newTab = {
+        key: tabId,
+        label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+        originalKey: node.key,
+        sshConfig: sshConfig,
+        type: 'terminal'
+      };
+      const newTabs = [newTab, ...prevTabs];
+      setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        'no-group': homeTabs.length
+      }));
+      return newTabs;
+    });
+  };
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
-      <TitleBar />
+      <TitleBar
+        sidebarFilter={sidebarFilter}
+        setSidebarFilter={setSidebarFilter}
+        allNodes={nodes}
+        findAllConnections={findAllConnections}
+        onOpenSSHConnection={onOpenSSHConnection}
+      />
       <Toast ref={toast} />
       {/* Menú contextual del árbol de la sidebar */}
       <ContextMenu

@@ -1,16 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import appIcon from '../assets/app-icon.png';
+import { InputText } from 'primereact/inputtext';
+import { FaSearch } from 'react-icons/fa';
 
-const TitleBar = () => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection }) => {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredConnections, setFilteredConnections] = useState([]);
 
   useEffect(() => {
-    // Consultar el estado inicial
-    if (window.electronAPI?.isMaximized) {
-      window.electronAPI.isMaximized().then(setIsMaximized);
+    if (sidebarFilter.trim()) {
+      const allConnections = findAllConnections(allNodes);
+      const filtered = allConnections.filter(node =>
+        node.label.toLowerCase().includes(sidebarFilter.toLowerCase())
+      );
+      setFilteredConnections(filtered);
+      setShowDropdown(filtered.length > 0);
+    } else {
+      setFilteredConnections([]);
+      setShowDropdown(false);
     }
-    // Escuchar cambios de maximizado si quieres (opcional, requiere emitir eventos desde main.js)
-  }, []);
+  }, [sidebarFilter, allNodes, findAllConnections]);
+
+  const handleSelectConnection = (node) => {
+    setSidebarFilter('');
+    setShowDropdown(false);
+    if (onOpenSSHConnection) {
+      onOpenSSHConnection(node);
+    }
+  };
 
   const handleMinimize = () => {
     window.electronAPI?.minimize && window.electronAPI.minimize();
@@ -32,9 +50,9 @@ const TitleBar = () => {
     <div
       className="titlebar"
       style={{
-        height: 28,
-        minHeight: 28,
-        maxHeight: 28,
+        height: 40,
+        minHeight: 40,
+        maxHeight: 40,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -43,12 +61,81 @@ const TitleBar = () => {
         padding: '0 6px',
         userSelect: 'none',
         WebkitAppRegion: 'drag',
-        zIndex: 1000
+        zIndex: 1000,
+        position: 'relative'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
         <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 15, height: 15, marginRight: 6, marginLeft: 0, display: 'block' }} />
         <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1, lineHeight: '15px', display: 'flex', alignItems: 'center', height: 15 }}>NodeTerm</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
+        <div style={{ position: 'relative', width: 320, WebkitAppRegion: 'no-drag' }}>
+          <span style={{ position: 'absolute', left: 10, top: 7, color: '#888', pointerEvents: 'none', fontSize: 13 }}>
+            <FaSearch />
+          </span>
+          <InputText
+            value={sidebarFilter}
+            onChange={e => setSidebarFilter(e.target.value)}
+            placeholder="Buscar..."
+            style={{
+              width: 320,
+              paddingLeft: 32,
+              height: 32,
+              borderRadius: 6,
+              border: '1px solid #bbb',
+              fontSize: 13,
+              background: 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              outline: 'none',
+              boxShadow: 'none',
+              transition: 'border 0.2s',
+            }}
+            onFocus={() => setShowDropdown(filteredConnections.length > 0)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            autoComplete="off"
+          />
+          {showDropdown && (
+            <div style={{
+              position: 'absolute',
+              top: 32,
+              left: 0,
+              width: 320,
+              background: '#232629',
+              color: '#fff',
+              borderRadius: 6,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+              zIndex: 9999,
+              maxHeight: 260,
+              overflowY: 'auto',
+              border: '1px solid #444',
+              WebkitAppRegion: 'no-drag',
+            }}>
+              {filteredConnections.map(node => (
+                <div
+                  key={node.key}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: 13,
+                    borderBottom: '1px solid #333',
+                  }}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => handleSelectConnection(node)}
+                >
+                  <i className="pi pi-desktop" style={{ color: '#4fc3f7', fontSize: 15 }} />
+                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{node.label}</span>
+                </div>
+              ))}
+              {filteredConnections.length === 0 && (
+                <div style={{ padding: '8px 12px', color: '#aaa', fontSize: 13 }}>Sin resultados</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, WebkitAppRegion: 'no-drag' }}>
         {/* Botón de menú (3 puntos) */}
