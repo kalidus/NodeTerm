@@ -424,8 +424,8 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
         delete terminalRefs.current[tabId];
     };
 
+    // Declarar activeTab solo una vez antes de la lógica de color y renderizado
     const activeTab = tabs.find(tab => tab.active);
-
     // Al inicio del componente:
     const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
     const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
@@ -451,10 +451,14 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
     };
 
     // En el renderizado de la barra de pestañas:
-    const isLocalTabActive = tabs.find(tab => tab.active && tab.type === 'powershell');
     let tabBarBg = '';
-    if (isLocalTabActive) {
-        const localBg = themes[localPowerShellTheme]?.theme?.background || '#222';
+    if (activeTab) {
+        let localBg = '#222';
+        if (activeTab.type === 'powershell') {
+            localBg = themes[localPowerShellTheme]?.theme?.background || '#222';
+        } else if (activeTab.type === 'wsl' || activeTab.type === 'ubuntu' || activeTab.type === 'wsl-distro') {
+            localBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
+        }
         // Determinar si el fondo es claro u oscuro
         const isDark = (() => {
             if (!localBg.startsWith('#') || localBg.length < 7) return true;
@@ -464,7 +468,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
             // Percepción de brillo
             return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
         })();
-        tabBarBg = adjustColorBrightness(localBg, isDark ? 12 : -12); // 12% más claro si fondo oscuro, más oscuro si fondo claro
+        tabBarBg = adjustColorBrightness(localBg, isDark ? 12 : -12);
     } else {
         tabBarBg = '';
     }
