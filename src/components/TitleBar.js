@@ -50,9 +50,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     <div
       className="titlebar"
       style={{
-        height: 40,
-        minHeight: 40,
-        maxHeight: 40,
+        height: 36,
+        minHeight: 36,
+        maxHeight: 36,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -80,16 +80,18 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             placeholder="Buscar..."
             style={{
               width: 320,
-              paddingLeft: 32,
-              height: 32,
+              paddingLeft: 36,
+              height: 25,
               borderRadius: 6,
               border: '1px solid #bbb',
               fontSize: 13,
-              background: 'rgba(255,255,255,0.12)',
-              color: '#fff',
+              background: 'rgba(255,255,255,0.85)',
+              color: '#222',
+              fontWeight: 500,
               outline: 'none',
-              boxShadow: 'none',
+              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.08)',
               transition: 'border 0.2s',
+              zIndex: 1,
             }}
             onFocus={() => setShowDropdown(filteredConnections.length > 0)}
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
