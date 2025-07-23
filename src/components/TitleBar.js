@@ -50,9 +50,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     <div
       className="titlebar"
       style={{
-        height: 36,
-        minHeight: 36,
-        maxHeight: 36,
+        height: 32,
+        minHeight: 32,
+        maxHeight: 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -83,7 +83,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               maxWidth: 520,
               width: '100%',
               paddingLeft: 36,
-              height: 30,
+              height: 24,
               borderRadius: 6,
               border: '1px solid #bbb',
               fontSize: 13,
