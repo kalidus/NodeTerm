@@ -507,9 +507,8 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    background: tab.active ? 
-                                        (tab.type === 'powershell' ? '#012456' : '#300A24') : 
-                                        'transparent',
+                                    background: tab.active ? 'var(--ui-tab-active-bg)' : 'transparent',
+                                    color: tab.active ? 'var(--ui-tab-active-text)' : '#ffffff',
                                     borderTop: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
                                     borderLeft: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
                                     borderRight: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
