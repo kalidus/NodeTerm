@@ -5,6 +5,8 @@ import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import { themes } from '../themes';
+import { uiThemes } from '../themes/ui-themes';
+import { themeManager } from '../utils/themeManager';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -429,6 +431,24 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
     const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
     const getLocalFontFamily = () => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace';
     const getLocalFontSize = () => parseInt(localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY) || '14', 10);
+
+    // Obtener el tema UI actual
+    const currentUITheme = themeManager.getCurrentTheme() || uiThemes['Light'];
+    
+    // Crear objetos de tema diferenciados para cada tipo de terminal
+    const powershellXtermTheme = {
+        background: currentUITheme.colors?.powershellTerminalBackground || '#1e1e1e',
+        foreground: '#FFFFFF',
+        cursor: '#FFFFFF',
+        selection: 'rgba(255,255,255,0.3)'
+    };
+    
+    const linuxXtermTheme = {
+        background: currentUITheme.colors?.linuxTerminalBackground || '#2d112b',
+        foreground: '#FFFFFF', 
+        cursor: '#FFFFFF',
+        selection: 'rgba(255,255,255,0.3)'
+    };
 
     // En el renderizado de la barra de pestañas:
     const isLocalTabActive = tabs.find(tab => tab.active && tab.type === 'powershell');
@@ -875,7 +895,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 tabId={tab.id}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
-                                theme={themes[localTerminalTheme]?.theme || {}}
+                                theme={themes[localTerminalTheme]?.theme || powershellXtermTheme}
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
@@ -884,6 +904,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                theme={linuxXtermTheme}
                             />
                         ) : (tab.type === 'ubuntu' || tab.type === 'wsl-distro') ? (
                             <UbuntuTerminal 
@@ -893,6 +914,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 }}
                                 tabId={tab.id}
                                 ubuntuInfo={tab.distroInfo}
+                                theme={linuxXtermTheme}
                             />
                         ) : (
                             <div style={{
