@@ -66,11 +66,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
-        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 15, height: 15, marginRight: 6, marginLeft: 0, display: 'block' }} />
-        <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1, lineHeight: '15px', display: 'flex', alignItems: 'center', height: 15 }}>NodeTerm</span>
+        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'block' }} />
+        {/* <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1, lineHeight: '15px', display: 'flex', alignItems: 'center', height: 15 }}>NodeTerm</span> */}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
-        <div style={{ position: 'relative', minWidth: 180, maxWidth: 520, width: '22vw', WebkitAppRegion: 'no-drag' }}>
+        <div style={{ position: 'relative', minWidth: 250, maxWidth: 520, width: '22vw', WebkitAppRegion: 'no-drag' }}>
           <span style={{ position: 'absolute', left: 10, top: 7, color: '#888', pointerEvents: 'none', fontSize: 13 }}>
             <FaSearch />
           </span>
@@ -79,7 +79,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             onChange={e => setSidebarFilter(e.target.value)}
             placeholder="Buscar..."
             style={{
-              minWidth: 180,
+              minWidth: 250,
               maxWidth: 520,
               width: '100%',
               paddingLeft: 36,
