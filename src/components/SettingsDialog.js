@@ -9,6 +9,7 @@ import { Slider } from 'primereact/slider';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
+import SyncSettingsDialog from './SyncSettingsDialog';
 import { themes } from '../themes';
 import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
@@ -64,6 +65,7 @@ const SettingsDialog = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
+  const [syncDialogVisible, setSyncDialogVisible] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(() => {
     const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 24;
@@ -123,6 +125,12 @@ const SettingsDialog = ({
   const handleLinuxTerminalThemeChange = (e) => {
     setLocalLinuxTerminalTheme(e.value);
     localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, e.value);
+  };
+
+  const handleSidebarFontSizeChange = (value) => {
+    if (value && value >= 8 && value <= 32) {
+      setSidebarFontSize(value);
+    }
   };
 
   const TerminalPreview = () => {
@@ -715,6 +723,76 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
 
+        <TabPanel header="Sincronización" leftIcon="pi pi-cloud">
+          <div style={{
+            padding: '2rem 0',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '50vh',
+            width: '100%'
+          }}>
+            <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+              <i className="pi pi-cloud" style={{
+                fontSize: '4rem',
+                color: 'var(--primary-color)',
+                marginBottom: '1rem',
+                display: 'block'
+              }}></i>
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                Sincronización en la Nube
+              </h3>
+              <p style={{
+                margin: '0 0 2rem 0',
+                color: 'var(--text-color-secondary)',
+                fontSize: '1rem',
+                maxWidth: '600px'
+              }}>
+                Sincroniza tu configuración personal entre todos tus dispositivos usando Nextcloud.
+                Nunca pierdas tus temas, fuentes y configuraciones personalizadas.
+              </p>
+            </div>
+
+            <Button
+              label="Configurar Sincronización"
+              icon="pi pi-cog"
+              onClick={() => setSyncDialogVisible(true)}
+              className="p-button-lg"
+              style={{
+                padding: '1rem 2rem',
+                fontSize: '1.1rem'
+              }}
+            />
+
+            <div style={{ marginTop: '3rem', maxWidth: '800px', width: '100%' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2rem', textAlign: 'center' }}>
+                <div>
+                  <i className="pi pi-shield" style={{ fontSize: '2rem', color: 'var(--green-500)', marginBottom: '1rem', display: 'block' }}></i>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Seguro</h4>
+                  <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                    Tus datos se cifran y almacenan de forma segura en tu instancia de Nextcloud
+                  </p>
+                </div>
+                <div>
+                  <i className="pi pi-sync" style={{ fontSize: '2rem', color: 'var(--blue-500)', marginBottom: '1rem', display: 'block' }}></i>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Automático</h4>
+                  <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                    Sincronización automática cada 5 minutos o manual cuando lo necesites
+                  </p>
+                </div>
+                <div>
+                  <i className="pi pi-mobile" style={{ fontSize: '2rem', color: 'var(--orange-500)', marginBottom: '1rem', display: 'block' }}></i>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Multiplataforma</h4>
+                  <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                    Funciona en Windows, macOS y Linux con la misma configuración
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabPanel>
+
         <TabPanel header="Información" leftIcon="pi pi-info-circle">
           <div style={{
             padding: '1rem 0',
@@ -846,6 +924,12 @@ const SettingsDialog = ({
           </div>
         </TabPanel>
       </TabView>
+
+      {/* Diálogo de Sincronización */}
+      <SyncSettingsDialog
+        visible={syncDialogVisible}
+        onHide={() => setSyncDialogVisible(false)}
+      />
     </Dialog>
   );
 };
