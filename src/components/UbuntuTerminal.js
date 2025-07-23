@@ -358,14 +358,13 @@ const UbuntuTerminal = forwardRef(({
         <div 
             ref={terminalRef} 
             style={{ 
-                flex: 1, 
                 width: '100%', 
                 height: '100%',
                 minWidth: 0,
                 minHeight: 0,
                 overflow: 'hidden',
                 position: 'relative',
-                background: '#300A24', // Ubuntu terminal background
+                background: theme.background || '#300A24',
                 padding: '0 0 0 8px',
                 margin: 0
             }} 
