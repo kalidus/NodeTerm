@@ -2815,95 +2815,14 @@ const App = () => {
                       position: 'absolute',
                       top: 0, left: 0, right: 0, bottom: 0,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: 'rgba(248, 249, 250, 0.95)',
+                      backgroundColor: 'var(--ui-content-bg, #222)',
                       color: '#888', textAlign: 'center', padding: '2rem 0',
                       zIndex: 1000,
                       backdropFilter: 'blur(2px)'
                     }}>
                       <i className="pi pi-folder-open" style={{ fontSize: 64, marginBottom: 16, opacity: 0.5 }} />
                       <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 8 }}>Este grupo está vacío</div>
-                      <div style={{ fontSize: 15, marginBottom: 18 }}>Crea una nueva pestaña o arrastra aquí una existente.</div>
-                      <Button
-                        label="Crear nueva pestaña"
-                        icon="pi pi-plus"
-                        className="p-button-primary"
-                        onClick={(e) => {
-                          const menuItems = [
-                            {
-                              label: 'Terminal Local',
-                              icon: 'pi pi-desktop',
-                              command: () => {
-                                const newTab = {
-                                  key: `local_terminal_${Date.now()}`,
-                                  label: 'PowerShell',
-                                  type: 'terminal',
-                                  groupId: activeGroupId,
-                                  isLocal: true
-                                };
-                                setSshTabs(prev => [newTab, ...prev]);
-                                setActiveTabIndex(0);
-                              }
-                            },
-                            {
-                              label: 'Nuevo SSH',
-                              icon: 'pi pi-server',
-                              command: () => {
-                                setShowSSHDialog(true);
-                              }
-                            }
-                          ];
-                          
-                          // Crear menú contextual temporal
-                          const menu = document.createElement('div');
-                          menu.style.cssText = `
-                            position: fixed;
-                            left: ${e.clientX}px;
-                            top: ${e.clientY}px;
-                            background: white;
-                            border: 1px solid #ccc;
-                            border-radius: 6px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                            z-index: 10000;
-                            min-width: 160px;
-                            overflow: hidden;
-                          `;
-                          
-                          menuItems.forEach((item, index) => {
-                            const menuItem = document.createElement('div');
-                            menuItem.style.cssText = `
-                              padding: 8px 12px;
-                              cursor: pointer;
-                              display: flex;
-                              align-items: center;
-                              gap: 8px;
-                              border-bottom: ${index < menuItems.length - 1 ? '1px solid #f0f0f0' : 'none'};
-                            `;
-                            menuItem.innerHTML = `<i class="${item.icon}" style="width: 16px;"></i><span>${item.label}</span>`;
-                            menuItem.onmouseenter = () => menuItem.style.backgroundColor = '#f5f5f5';
-                            menuItem.onmouseleave = () => menuItem.style.backgroundColor = 'transparent';
-                            menuItem.onclick = () => {
-                              item.command();
-                              document.body.removeChild(menu);
-                            };
-                            menu.appendChild(menuItem);
-                          });
-                          
-                          // Overlay para cerrar menú al hacer clic fuera
-                          const overlay = document.createElement('div');
-                          overlay.style.cssText = `
-                            position: fixed;
-                            top: 0; left: 0; right: 0; bottom: 0;
-                            z-index: 9999;
-                          `;
-                          overlay.onclick = () => {
-                            document.body.removeChild(overlay);
-                            document.body.removeChild(menu);
-                          };
-                          
-                          document.body.appendChild(overlay);
-                          document.body.appendChild(menu);
-                        }}
-                      />
+                      <div style={{ fontSize: 15, marginBottom: 0 }}>Crea una nueva pestaña o arrastra aquí una existente.</div>
                     </div>
                   )}
                   
