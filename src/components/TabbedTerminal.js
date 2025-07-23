@@ -484,7 +484,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
         }}>
             {/* Barra de pestañas */}
             <div style={{
-                background: tabBarBg || '#1e3a5f',
+                background: 'var(--ui-tab-active-bg)',
                 borderBottom: '1px solid #2a4a6b',
                 display: 'flex',
                 alignItems: 'center',
