@@ -20,7 +20,7 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localTerminalTheme }) => {
+const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme }) => {
     // Determinar la pestaña inicial según el SO
     const getInitialTab = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -454,7 +454,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
     const isLocalTabActive = tabs.find(tab => tab.active && tab.type === 'powershell');
     let tabBarBg = '';
     if (isLocalTabActive) {
-        const localBg = themes[localTerminalTheme]?.theme?.background || '#222';
+        const localBg = themes[localPowerShellTheme]?.theme?.background || '#222';
         // Determinar si el fondo es claro u oscuro
         const isDark = (() => {
             if (!localBg.startsWith('#') || localBg.length < 7) return true;
@@ -475,7 +475,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: activeTab?.type === 'powershell' ? (themes[localTerminalTheme]?.theme?.background || '#222') : (activeTab?.type === 'ubuntu' ? '#300A24' : '#300A24'),
+            background: activeTab?.type === 'powershell' ? (themes[localPowerShellTheme]?.theme?.background || '#222') : (activeTab?.type === 'ubuntu' ? '#300A24' : '#300A24'),
             overflow: 'hidden'
         }}>
             {/* Barra de pestañas */}
@@ -894,7 +894,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 tabId={tab.id}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
-                                theme={themes[localTerminalTheme]?.theme || powershellXtermTheme}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                             />
                         ) : tab.type === 'wsl' ? (
                             <WSLTerminal 
@@ -903,7 +903,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
-                                theme={linuxXtermTheme}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                             />
                         ) : (tab.type === 'ubuntu' || tab.type === 'wsl-distro') ? (
                             <UbuntuTerminal 
@@ -913,7 +913,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 }}
                                 tabId={tab.id}
                                 ubuntuInfo={tab.distroInfo}
-                                theme={linuxXtermTheme}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                             />
                         ) : (
                             <div style={{

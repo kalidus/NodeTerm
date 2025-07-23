@@ -2038,6 +2038,11 @@ const App = () => {
   const localTerminalBg = themes[localTerminalTheme]?.theme?.background || '#222';
   const isHomeTabActive = activeTabIndex === 0 && homeTabs.length > 0;
 
+  const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'basicapp_local_powershell_theme';
+  const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_linux_terminal_theme';
+  const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() => localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark');
+  const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() => localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark');
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
       <TitleBar />
@@ -2911,6 +2916,8 @@ const App = () => {
                               localFontFamily={localFontFamily}
                               localFontSize={localFontSize}
                               localTerminalTheme={localTerminalTheme}
+                              localPowerShellTheme={localPowerShellTheme}
+                              localLinuxTerminalTheme={localLinuxTerminalTheme}
                             />
                           ) : (tab.type === 'explorer' || tab.isExplorerInSSH) ? (
                             <FileExplorer
@@ -3010,6 +3017,10 @@ const App = () => {
         setLocalFontSize={value => { setLocalFontSize(value); localStorage.setItem(LOCAL_FONT_SIZE_STORAGE_KEY, value); }}
         localTerminalTheme={localTerminalTheme}
         setLocalTerminalTheme={value => { setLocalTerminalTheme(value); localStorage.setItem(LOCAL_TERMINAL_THEME_STORAGE_KEY, value); }}
+        localPowerShellTheme={localPowerShellTheme}
+        setLocalPowerShellTheme={value => { setLocalPowerShellTheme(value); localStorage.setItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY, value); }}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
+        setLocalLinuxTerminalTheme={value => { setLocalLinuxTerminalTheme(value); localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, value); }}
       />
 
       {/* Diálogo: Nueva conexión SSH */}

@@ -21,7 +21,8 @@ const HomeTab = ({
   foldersCount = 0,
   localFontFamily,
   localFontSize,
-  localTerminalTheme,
+  localPowerShellTheme,
+  localLinuxTerminalTheme,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
@@ -42,7 +43,7 @@ const HomeTab = ({
   // Obtener el color de fondo del tema actual
   const currentTheme = themeManager.getCurrentTheme() || uiThemes['Light'];
   const dashboardBg = currentTheme.colors?.contentBackground || '#fafafa';
-  const localTerminalBg = themes[localTerminalTheme]?.theme?.background || '#222';
+  const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
 
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
@@ -371,7 +372,8 @@ const HomeTab = ({
         terminalState={terminalState}
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
-        localTerminalTheme={localTerminalTheme}
+        localPowerShellTheme={localPowerShellTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
       />
     </div>
   );

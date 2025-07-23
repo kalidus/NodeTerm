@@ -18,15 +18,17 @@ import { uiThemes } from '../themes/ui-themes';
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
 const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
+const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'basicapp_local_powershell_theme';
+const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_linux_terminal_theme';
 
-const SettingsDialog = ({ 
-  visible, 
-  onHide, 
-  fontFamily, 
-  setFontFamily, 
-  fontSize, 
-  setFontSize, 
-  terminalTheme, 
+const SettingsDialog = ({
+  visible,
+  onHide,
+  fontFamily,
+  setFontFamily,
+  fontSize,
+  setFontSize,
+  terminalTheme,
   setTerminalTheme,
   statusBarTheme,
   setStatusBarTheme,
@@ -54,7 +56,11 @@ const SettingsDialog = ({
   localFontSize,
   setLocalFontSize,
   localTerminalTheme,
-  setLocalTerminalTheme
+  setLocalTerminalTheme,
+  localPowerShellTheme,
+  setLocalPowerShellTheme,
+  localLinuxTerminalTheme,
+  setLocalLinuxTerminalTheme
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -110,21 +116,30 @@ const SettingsDialog = ({
     }
   };
 
+  const handlePowerShellThemeChange = (e) => {
+    setLocalPowerShellTheme(e.value);
+    localStorage.setItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY, e.value);
+  };
+  const handleLinuxTerminalThemeChange = (e) => {
+    setLocalLinuxTerminalTheme(e.value);
+    localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, e.value);
+  };
+
   const TerminalPreview = () => {
     if (!terminalTheme || !terminalTheme.theme) return null;
 
     const colors = terminalTheme.theme;
-    
+
     return (
-      <div style={{ 
-        padding: '12px', 
+      <div style={{
+        padding: '12px',
         border: '1px solid #ccc',
         borderRadius: '6px',
         marginTop: '10px',
         fontFamily: localFontFamily,
         fontSize: `${localFontSize}px`
       }}>
-        <div style={{ 
+        <div style={{
           background: (themes[localTerminalTheme]?.theme?.background) || '#000',
           color: (themes[localTerminalTheme]?.theme?.foreground) || '#fff',
           padding: '12px',
@@ -160,8 +175,8 @@ const SettingsDialog = ({
             <span style={{ color: colors.white || '#ffffff' }}>:</span>
             <span style={{ color: colors.blue || '#0000ff' }}>~/project</span>
             <span style={{ color: colors.white || '#ffffff' }}>$ </span>
-            <span 
-              style={{ 
+            <span
+              style={{
                 background: colors.cursor || colors.foreground || '#ffffff',
                 color: colors.background || '#000000',
                 animation: 'blink 1s infinite'
@@ -193,7 +208,7 @@ const SettingsDialog = ({
       }
       visible={visible}
       className="settings-dialog"
-      style={{ 
+      style={{
         maxWidth: '98vw',
         maxHeight: '98vh',
         minWidth: '600px',
@@ -217,17 +232,17 @@ const SettingsDialog = ({
           color: 'var(--ui-dialog-text)',
           borderTop: '1px solid var(--ui-dialog-border)'
         }}>
-          <Button 
-            label="Cerrar" 
-            icon="pi pi-times" 
-            onClick={onHide} 
-            className="p-button-text" 
+          <Button
+            label="Cerrar"
+            icon="pi pi-times"
+            onClick={onHide}
+            className="p-button-text"
           />
         </div>
       }
     >
-      <TabView 
-        activeIndex={activeIndex} 
+      <TabView
+        activeIndex={activeIndex}
         onTabChange={(e) => setActiveIndex(e.index)}
         className="settings-dialog-tabview"
       >
@@ -248,8 +263,8 @@ const SettingsDialog = ({
                     <i className="pi pi-eye" style={{ marginRight: '0.5rem' }}></i>
                     Tema de la Interfaz
                   </h3>
-                  <p style={{ 
-                    marginBottom: '1rem', 
+                  <p style={{
+                    marginBottom: '1rem',
                     color: 'var(--text-color-secondary)',
                     fontSize: '0.9rem'
                   }}>
@@ -264,17 +279,17 @@ const SettingsDialog = ({
                     <i className="pi pi-desktop" style={{ marginRight: '0.5rem' }}></i>
                     Configuración del Terminal SSH
                   </h3>
-                  
+
                   {/* Fuente */}
                   <div style={{ marginBottom: '2rem' }}>
                     <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                       Fuente
                     </h4>
-                    
+
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="font-family" style={{ 
-                          display: 'block', 
+                        <label htmlFor="font-family" style={{
+                          display: 'block',
                           marginBottom: '0.5rem',
                           fontWeight: 'bold',
                           fontSize: '0.9rem'
@@ -290,10 +305,10 @@ const SettingsDialog = ({
                           style={{ width: '100%' }}
                         />
                       </div>
-                      
+
                       <div>
-                        <label htmlFor="font-size" style={{ 
-                          display: 'block', 
+                        <label htmlFor="font-size" style={{
+                          display: 'block',
                           marginBottom: '0.5rem',
                           fontWeight: 'bold',
                           fontSize: '0.9rem'
@@ -319,10 +334,10 @@ const SettingsDialog = ({
                     <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                       Tema del Terminal
                     </h4>
-                    
+
                     <div style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="terminal-theme" style={{ 
-                        display: 'block', 
+                      <label htmlFor="terminal-theme" style={{
+                        display: 'block',
                         marginBottom: '0.5rem',
                         fontWeight: 'bold',
                         fontSize: '0.9rem'
@@ -339,15 +354,15 @@ const SettingsDialog = ({
                       />
                     </div>
 
-                    <div style={{ 
-                      fontSize: '12px', 
-                      color: '#666', 
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#666',
                       marginBottom: '10px',
                       fontStyle: 'italic'
                     }}>
                       Vista previa del terminal:
                     </div>
-                    
+
                     <TerminalPreview />
                   </div>
 
@@ -384,16 +399,21 @@ const SettingsDialog = ({
                         style={{ width: '100%' }}
                       />
                     </div>
-                    <div>
-                      <label htmlFor="local-terminal-theme" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                        Tema del Terminal Local
-                      </label>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Tema para PowerShell</label>
                       <Dropdown
-                        id="local-terminal-theme"
-                        value={localTerminalTheme}
+                        value={localPowerShellTheme}
                         options={terminalThemeOptions}
-                        onChange={e => setLocalTerminalTheme(e.value)}
-                        placeholder="Selecciona un tema"
+                        onChange={handlePowerShellThemeChange}
+                        placeholder="Tema para PowerShell"
+                        style={{ width: '100%', marginBottom: 12 }}
+                      />
+                      <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Tema para terminales Linux (WSL, Ubuntu, etc.)</label>
+                      <Dropdown
+                        value={localLinuxTerminalTheme}
+                        options={terminalThemeOptions}
+                        onChange={handleLinuxTerminalThemeChange}
+                        placeholder="Tema para terminales Linux"
                         style={{ width: '100%' }}
                       />
                     </div>
@@ -410,14 +430,14 @@ const SettingsDialog = ({
                   minHeight: '50vh',
                   width: '100%'
                 }}>
-                  <StatusBarThemeSelector 
+                  <StatusBarThemeSelector
                     currentTheme={statusBarTheme}
                     onThemeChange={setStatusBarTheme}
                   />
-                  
+
                   <Divider style={{ margin: '2rem 0' }} />
-                  
-                  <StatusBarIconThemeSelector 
+
+                  <StatusBarIconThemeSelector
                     currentTheme={statusBarIconTheme}
                     onThemeChange={setStatusBarIconTheme}
                   />
@@ -510,11 +530,11 @@ const SettingsDialog = ({
                     <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                       Fuente del Explorador de Sesiones
                     </h4>
-                    
+
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="sidebar-font" style={{ 
-                          display: 'block', 
+                        <label htmlFor="sidebar-font" style={{
+                          display: 'block',
                           marginBottom: '0.5rem',
                           fontWeight: 'bold',
                           fontSize: '0.9rem'
@@ -533,10 +553,10 @@ const SettingsDialog = ({
                           )}
                         />
                       </div>
-                      
+
                       <div>
-                        <label htmlFor="sidebar-font-size" style={{ 
-                          display: 'block', 
+                        <label htmlFor="sidebar-font-size" style={{
+                          display: 'block',
                           marginBottom: '0.5rem',
                           fontWeight: 'bold',
                           fontSize: '0.9rem'
@@ -553,7 +573,7 @@ const SettingsDialog = ({
                         />
                       </div>
                     </div>
-                    
+
                     <div style={{ marginTop: 12, fontFamily: sidebarFont, fontSize: `${sidebarFontSize}px`, textAlign: 'center' }}>
                       Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{sidebarFont}</span>
                     </div>
@@ -604,8 +624,8 @@ const SettingsDialog = ({
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
-                        <label htmlFor="explorer-font" style={{ 
-                          display: 'block', 
+                        <label htmlFor="explorer-font" style={{
+                          display: 'block',
                           marginBottom: '0.5rem',
                           fontWeight: 'bold',
                           fontSize: '0.9rem'
@@ -625,8 +645,8 @@ const SettingsDialog = ({
                         />
                       </div>
                       <div>
-                        <label htmlFor="explorer-font-size" style={{ 
-                          display: 'block', 
+                        <label htmlFor="explorer-font-size" style={{
+                          display: 'block',
                           marginBottom: '0.5rem',
                           fontWeight: 'bold',
                           fontSize: '0.9rem'
@@ -659,9 +679,9 @@ const SettingsDialog = ({
                       placeholder="Selecciona un tema de colores"
                       style={{ width: '100%' }}
                       itemTemplate={option => (
-                        <span style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
+                        <span style={{
+                          display: 'flex',
+                          alignItems: 'center',
                           gap: 8,
                           padding: '4px 0'
                         }}>
@@ -676,9 +696,9 @@ const SettingsDialog = ({
                         </span>
                       )}
                     />
-                    <div style={{ 
-                      marginTop: 12, 
-                      padding: '8px 12px', 
+                    <div style={{
+                      marginTop: 12,
+                      padding: '8px 12px',
                       borderRadius: '4px',
                       background: uiThemes[explorerColorTheme]?.colors?.contentBackground || '#fff',
                       border: `1px solid ${uiThemes[explorerColorTheme]?.colors?.contentBorder || '#e0e0e0'}`,
@@ -707,10 +727,10 @@ const SettingsDialog = ({
           }}>
             {/* Logo o Icono de la App */}
             <div style={{ marginBottom: '1rem' }}>
-              <i 
-                className="pi pi-desktop" 
-                style={{ 
-                  fontSize: '4rem', 
+              <i
+                className="pi pi-desktop"
+                style={{
+                  fontSize: '4rem',
                   color: 'var(--primary-color)',
                   background: 'var(--surface-100)',
                   padding: '1rem',
@@ -729,8 +749,8 @@ const SettingsDialog = ({
             <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
               NodeTerm
             </h2>
-            <p style={{ 
-              margin: '0 0 1rem 0', 
+            <p style={{
+              margin: '0 0 1rem 0',
               color: 'var(--text-color-secondary)',
               fontSize: '0.9rem'
             }}>
@@ -738,11 +758,11 @@ const SettingsDialog = ({
             </p>
 
             {/* Versión Principal */}
-            <div style={{ 
-              background: 'var(--primary-color)', 
-              color: 'white', 
-              padding: '0.5rem 1rem', 
-              borderRadius: '20px', 
+            <div style={{
+              background: 'var(--primary-color)',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              borderRadius: '20px',
               display: 'inline-block',
               fontWeight: 'bold',
               fontSize: '1.1rem',
