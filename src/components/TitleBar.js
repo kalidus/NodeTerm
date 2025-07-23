@@ -70,7 +70,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         <span style={{ fontWeight: 600, fontSize: 11, color: '#fff', letterSpacing: 0.1, lineHeight: '15px', display: 'flex', alignItems: 'center', height: 15 }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
-        <div style={{ position: 'relative', width: 320, WebkitAppRegion: 'no-drag' }}>
+        <div style={{ position: 'relative', minWidth: 180, maxWidth: 520, width: '22vw', WebkitAppRegion: 'no-drag' }}>
           <span style={{ position: 'absolute', left: 10, top: 7, color: '#888', pointerEvents: 'none', fontSize: 13 }}>
             <FaSearch />
           </span>
@@ -79,9 +79,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             onChange={e => setSidebarFilter(e.target.value)}
             placeholder="Buscar..."
             style={{
-              width: 320,
+              minWidth: 180,
+              maxWidth: 520,
+              width: '100%',
               paddingLeft: 36,
-              height: 25,
+              height: 30,
               borderRadius: 6,
               border: '1px solid #bbb',
               fontSize: 13,
