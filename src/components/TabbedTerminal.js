@@ -452,6 +452,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
 
     // En el renderizado de la barra de pestañas:
     let tabBarBg = '';
+    let activeTabBg = '';
     if (activeTab) {
         let localBg = '#222';
         if (activeTab.type === 'powershell') {
@@ -468,9 +469,19 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
             // Percepción de brillo
             return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
         })();
-        tabBarBg = adjustColorBrightness(localBg, isDark ? 12 : -12);
+        
+        // Si solo hay una pestaña, usar el mismo color para bar y tab activa
+        if (tabs.length === 1) {
+            activeTabBg = adjustColorBrightness(localBg, isDark ? 12 : -12);
+            tabBarBg = activeTabBg;  // Mismo color para apariencia uniforme
+        } else {
+            // Si hay múltiples pestañas, usar colores diferenciados
+            tabBarBg = adjustColorBrightness(localBg, isDark ? 8 : -8);
+            activeTabBg = adjustColorBrightness(localBg, isDark ? 16 : -16);
+        }
     } else {
-        tabBarBg = '';
+        tabBarBg = '#2a4a6b';
+        activeTabBg = '#3a5a7b';
     }
 
     return (
@@ -484,7 +495,7 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
         }}>
             {/* Barra de pestañas */}
             <div style={{
-                background: 'var(--ui-tab-active-bg)',
+                background: tabBarBg,
                 borderBottom: '1px solid #2a4a6b',
                 display: 'flex',
                 alignItems: 'center',
@@ -511,11 +522,11 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    background: tab.active ? 'var(--ui-tab-active-bg)' : 'transparent',
-                                    color: tab.active ? 'var(--ui-tab-active-text)' : '#ffffff',
-                                    borderTop: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
-                                    borderLeft: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
-                                    borderRight: tab.active ? '1px solid #2a4a6b' : '1px solid transparent',
+                                    background: tab.active ? activeTabBg : 'transparent',
+                                    color: '#ffffff',
+                                    borderTop: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                                    borderLeft: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                                    borderRight: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderBottom: tab.active ? 'none' : '1px solid transparent',
                                     padding: '6px 12px',
                                     cursor: 'pointer',
@@ -524,9 +535,20 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                     maxWidth: '200px',
                                     borderTopLeftRadius: '4px',
                                     borderTopRightRadius: '4px',
-                                    transition: 'all 0.2s ease'
+                                    transition: 'all 0.2s ease',
+                                    opacity: tab.active ? 1 : 0.8
                                 }}
                                 onClick={() => switchTab(tab.id)}
+                                onMouseEnter={(e) => {
+                                    if (!tab.active) {
+                                        e.target.style.background = 'rgba(255,255,255,0.05)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!tab.active) {
+                                        e.target.style.background = 'transparent';
+                                    }
+                                }}
                             >
                                 <i 
                                     className={tab.type === 'powershell' ? 'pi pi-desktop' : 
