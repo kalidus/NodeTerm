@@ -79,7 +79,7 @@ class SyncManager {
    */
   startAutoSync() {
     this.stopAutoSync(); // Detener cualquier intervalo existente
-    
+
     // Sincronizar cada 5 minutos
     this.autoSyncInterval = setInterval(() => {
       if (this.syncEnabled && !this.syncInProgress) {
@@ -87,7 +87,9 @@ class SyncManager {
           console.error('Error en sincronización automática:', error);
         });
       }
-    }, 5 * 60 * 1000);
+      this.lastSyncTime = new Date();
+      this.saveSyncConfig();
+    }, 5 * 60 * 1000); // 5 minutos
   }
 
   /**
