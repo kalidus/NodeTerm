@@ -253,6 +253,8 @@ html, body, #root {
   min-height: 26px;
   margin-bottom: 0;
   padding-bottom: 0;
+  background: var(--ui-content-bg) !important;
+  border-bottom: 1px solid var(--ui-tab-border) !important;
 }
 
 .p-tabview .p-tabview-nav li {
