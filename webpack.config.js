@@ -52,11 +52,13 @@ module.exports = {
       'process.env.REACT_APP_VERSION': JSON.stringify(packageJson.version),
       'process.env.REACT_APP_NAME': JSON.stringify(packageJson.name),
       'process.env.REACT_APP_BUILD_DATE': JSON.stringify(new Date().toLocaleDateString()),
-      'global': 'globalThis'
+      'global': 'window.global',
+      'globalThis': 'window'
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser',
-      Buffer: ['buffer', 'Buffer']
+      Buffer: ['buffer', 'Buffer'],
+      global: 'globalThis'
     })
   ],
   resolve: {
@@ -77,6 +79,7 @@ module.exports = {
       "tls": false
     }
   },
+
   externals: {
     'utf-8-validate': 'commonjs utf-8-validate',
     'bufferutil': 'commonjs bufferutil'

@@ -6,6 +6,10 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { Slider } from 'primereact/slider';
+import { InputText } from 'primereact/inputtext';
+import { Password } from 'primereact/password';
+import { Toast } from 'primereact/toast';
+import { Badge } from 'primereact/badge';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
@@ -15,6 +19,7 @@ import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
+import SecureStorage from '../services/SecureStorage';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
@@ -71,11 +76,98 @@ const SettingsDialog = ({
     return saved ? parseInt(saved, 10) : 24;
   });
 
+  // Estados para la gestión de seguridad
+  const [secureStorage] = useState(() => new SecureStorage());
+  const [masterPassword, setMasterPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [hasMasterKey, setHasMasterKey] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
   useEffect(() => {
     // Obtener la versión real de la app
     const info = getVersionInfo();
     setVersionInfo(info);
   }, []);
+
+  useEffect(() => {
+    // Verificar si hay clave maestra guardada
+    setHasMasterKey(secureStorage.hasSavedMasterKey());
+  }, [secureStorage]);
+
+  // Funciones para gestión de clave maestra
+  const validateMasterPassword = () => {
+    return masterPassword.length >= 6 && masterPassword === confirmPassword;
+  };
+
+  const validatePasswordChange = () => {
+    return currentPassword.length >= 6 && 
+           newPassword.length >= 6 && 
+           newPassword === confirmNewPassword &&
+           newPassword !== currentPassword;
+  };
+
+  const showToast = (severity, summary, detail) => {
+    if (toast) {
+      toast.show({ severity, summary, detail, life: 3000 });
+    }
+  };
+
+  const handleSaveMasterPassword = async () => {
+    if (!validateMasterPassword()) {
+      showToast('error', 'Error', 'Las contraseñas deben tener al menos 6 caracteres y coincidir');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await secureStorage.saveMasterKey(masterPassword);
+      setHasMasterKey(true);
+      setMasterPassword('');
+      setConfirmPassword('');
+      showToast('success', 'Éxito', 'Clave maestra configurada correctamente');
+    } catch (error) {
+      console.error('Error guardando clave maestra:', error);
+      showToast('error', 'Error', 'Error al guardar la clave maestra');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChangeMasterPassword = async () => {
+    if (!validatePasswordChange()) {
+      showToast('error', 'Error', 'Verifica que las contraseñas sean válidas y diferentes');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await secureStorage.changeMasterKey(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      showToast('success', 'Éxito', 'Clave maestra actualizada correctamente');
+    } catch (error) {
+      console.error('Error cambiando clave maestra:', error);
+      showToast('error', 'Error', error.message || 'Error al cambiar la clave maestra');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveMasterKey = async () => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar la clave maestra? Esto eliminará todas las sesiones guardadas de forma segura.')) {
+      secureStorage.clearMasterKey();
+      setHasMasterKey(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      showToast('info', 'Información', 'Clave maestra eliminada');
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem(STATUSBAR_HEIGHT_STORAGE_KEY, statusBarHeight);
@@ -249,11 +341,233 @@ const SettingsDialog = ({
         </div>
       }
     >
+      <Toast ref={setToast} />
       <TabView
         activeIndex={activeIndex}
         onTabChange={(e) => setActiveIndex(e.index)}
         className="settings-dialog-tabview"
       >
+        <TabPanel header="Seguridad" leftIcon="pi pi-shield">
+          <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
+            <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>
+              <TabPanel header={<span><i className="pi pi-key" style={{ marginRight: 8 }}></i>Clave Maestra</span>}>
+                <div style={{
+                  padding: '2rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  minHeight: '50vh',
+                  width: '100%'
+                }}>
+                  <div style={{
+                    maxWidth: '500px',
+                    width: '100%',
+                    textAlign: 'center'
+                  }}>
+                    <h3 style={{ 
+                      margin: '0 0 1rem 0', 
+                      color: 'var(--text-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <i className="pi pi-shield" style={{ color: 'var(--primary-color)' }}></i>
+                      Gestión de Clave Maestra
+                    </h3>
+
+                    <p style={{
+                      marginBottom: '2rem',
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '0.9rem',
+                      lineHeight: '1.5'
+                    }}>
+                      La clave maestra protege tus credenciales de sesión con cifrado AES-256. 
+                      Se requiere para sincronizar sesiones de forma segura.
+                    </p>
+
+                    {/* Estado actual */}
+                    <div style={{
+                      background: 'var(--surface-card)',
+                      border: '1px solid var(--surface-border)',
+                      borderRadius: '8px',
+                      padding: '1.5rem',
+                      marginBottom: '2rem',
+                      textAlign: 'left'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <i className={`pi ${hasMasterKey ? 'pi-check-circle' : 'pi-exclamation-triangle'}`} 
+                           style={{ color: hasMasterKey ? '#22c55e' : '#f59e0b' }}></i>
+                        <strong>Estado:</strong>
+                        <Badge 
+                          value={hasMasterKey ? 'Configurada' : 'No configurada'} 
+                          severity={hasMasterKey ? 'success' : 'warning'}
+                        />
+                      </div>
+                      
+                      {hasMasterKey && (
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
+                          <i className="pi pi-info-circle" style={{ marginRight: '0.5rem' }}></i>
+                          Las sesiones se cifran automáticamente antes del almacenamiento
+                        </div>
+                      )}
+                    </div>
+
+                    {!hasMasterKey ? (
+                      /* Configurar nueva clave maestra */
+                      <div style={{ textAlign: 'left' }}>
+                        <h4 style={{ color: 'var(--text-color)', marginBottom: '1rem' }}>
+                          Configurar Clave Maestra
+                        </h4>
+                        
+                        <div style={{ marginBottom: '1rem' }}>
+                          <label htmlFor="master-password" style={{
+                            display: 'block',
+                            marginBottom: '0.5rem',
+                            color: 'var(--text-color)',
+                            fontWeight: '500'
+                          }}>
+                            Nueva Clave Maestra
+                          </label>
+                          <Password
+                            id="master-password"
+                            value={masterPassword}
+                            onChange={(e) => setMasterPassword(e.target.value)}
+                            placeholder="Mínimo 6 caracteres"
+                            style={{ width: '100%' }}
+                            feedback={false}
+                            toggleMask
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                          <label htmlFor="confirm-password" style={{
+                            display: 'block',
+                            marginBottom: '0.5rem',
+                            color: 'var(--text-color)',
+                            fontWeight: '500'
+                          }}>
+                            Confirmar Clave Maestra
+                          </label>
+                          <Password
+                            id="confirm-password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Repetir la clave"
+                            style={{ width: '100%' }}
+                            feedback={false}
+                            toggleMask
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <Button
+                          label={isLoading ? 'Guardando...' : 'Guardar Clave Maestra'}
+                          icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-save'}
+                          onClick={handleSaveMasterPassword}
+                          disabled={!validateMasterPassword() || isLoading}
+                          style={{ width: '100%' }}
+                          className="p-button-success"
+                        />
+                      </div>
+                    ) : (
+                      /* Cambiar clave maestra existente */
+                      <div style={{ textAlign: 'left' }}>
+                        <h4 style={{ color: 'var(--text-color)', marginBottom: '1rem' }}>
+                          Cambiar Clave Maestra
+                        </h4>
+                        
+                        <div style={{ marginBottom: '1rem' }}>
+                          <label htmlFor="current-password" style={{
+                            display: 'block',
+                            marginBottom: '0.5rem',
+                            color: 'var(--text-color)',
+                            fontWeight: '500'
+                          }}>
+                            Clave Actual
+                          </label>
+                          <Password
+                            id="current-password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Clave maestra actual"
+                            style={{ width: '100%' }}
+                            feedback={false}
+                            toggleMask
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                          <label htmlFor="new-password" style={{
+                            display: 'block',
+                            marginBottom: '0.5rem',
+                            color: 'var(--text-color)',
+                            fontWeight: '500'
+                          }}>
+                            Nueva Clave Maestra
+                          </label>
+                          <Password
+                            id="new-password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Nueva clave (mínimo 6 caracteres)"
+                            style={{ width: '100%' }}
+                            feedback={false}
+                            toggleMask
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                          <label htmlFor="confirm-new-password" style={{
+                            display: 'block',
+                            marginBottom: '0.5rem',
+                            color: 'var(--text-color)',
+                            fontWeight: '500'
+                          }}>
+                            Confirmar Nueva Clave
+                          </label>
+                          <Password
+                            id="confirm-new-password"
+                            value={confirmNewPassword}
+                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            placeholder="Repetir la nueva clave"
+                            style={{ width: '100%' }}
+                            feedback={false}
+                            toggleMask
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                          <Button
+                            label={isLoading ? 'Cambiando...' : 'Cambiar Clave'}
+                            icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-key'}
+                            onClick={handleChangeMasterPassword}
+                            disabled={!validatePasswordChange() || isLoading}
+                            style={{ flex: 1 }}
+                            className="p-button-warning"
+                          />
+                          
+                          <Button
+                            label="Eliminar"
+                            icon="pi pi-trash"
+                            onClick={handleRemoveMasterKey}
+                            disabled={isLoading}
+                            className="p-button-danger p-button-outlined"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabPanel>
+            </TabView>
+          </div>
+        </TabPanel>
+
         <TabPanel header="Apariencia" leftIcon="pi pi-palette">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
             <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>

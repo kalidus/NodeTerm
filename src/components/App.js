@@ -29,6 +29,8 @@ import SettingsDialog from './SettingsDialog';
 import TitleBar from './TitleBar';
 import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
+import SessionManager from '../services/SessionManager';
+import SyncSettingsDialog from './SyncSettingsDialog';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -1199,11 +1201,36 @@ const App = () => {
     }
   };
   
-  // Open dialog to create a new folder
-  const openNewFolderDialog = (parentKey) => {
-    setParentNodeKey(parentKey);
+  // --- Limpieza automática de formularios al abrir/cerrar ---
+  const openNewFolderDialog = (parentKey = null) => {
     setFolderName('');
+    setParentNodeKey(parentKey);
     setShowFolderDialog(true);
+  };
+  const closeFolderDialog = () => {
+    setShowFolderDialog(false);
+    setFolderName('');
+    setParentNodeKey(null);
+  };
+  const openNewSSHDialog = (targetFolder = null) => {
+    setSSHName('');
+    setSSHHost('');
+    setSSHUser('');
+    setSSHPassword('');
+    setSSHRemoteFolder('');
+    setSSHPort(22);
+    setSSHTargetFolder(targetFolder);
+    setShowSSHDialog(true);
+  };
+  const closeSSHDialog = () => {
+    setShowSSHDialog(false);
+    setSSHName('');
+    setSSHHost('');
+    setSSHUser('');
+    setSSHPassword('');
+    setSSHRemoteFolder('');
+    setSSHPort(22);
+    setSSHTargetFolder(null);
   };
   
   // Create a new folder
@@ -1240,7 +1267,7 @@ const App = () => {
         parentNode.children.push(newFolder);
       }
       setNodes(nodesCopy);
-      setShowFolderDialog(false);
+      closeFolderDialog();
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
@@ -1497,8 +1524,7 @@ const App = () => {
       nodesCopy.unshift(newSSHNode);
     }
     setNodes(nodesCopy);
-    setShowSSHDialog(false);
-    setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder(''); setSSHPort(22);
+    closeSSHDialog();
     toast.current.show({
       severity: 'success',
       summary: 'SSH añadida',
@@ -1556,7 +1582,7 @@ const App = () => {
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
     }
     setNodes(nodesCopy);
-    setShowEditSSHDialog(false);
+    closeSSHDialog();
     setEditSSHNode(null);
     setEditSSHName(''); 
     setEditSSHHost(''); 
@@ -1596,7 +1622,7 @@ const App = () => {
       nodeToEdit.label = editFolderName.trim();
     }
     setNodes(nodesCopy);
-    setShowEditFolderDialog(false);
+    closeFolderDialog();
     setEditFolderNode(null);
     setEditFolderName('');
     toast.current.show({
@@ -2095,6 +2121,48 @@ const App = () => {
       }));
       return newTabs;
     });
+  };
+
+  // --- Recarga elegante de sesiones desde almacenamiento seguro ---
+  const reloadSessionsFromStorage = async () => {
+    const sessionManager = new SessionManager();
+    await sessionManager.initialize();
+    // Aquí deberías tener una función para convertir sesiones a nodos del árbol
+    // Por simplicidad, asumimos que cada sesión es un nodo raíz tipo SSH
+    const sessions = sessionManager.getAllSessions();
+    const nodesFromSessions = sessions.map(session => ({
+      key: session.id,
+      label: session.name,
+      data: {
+        ...session,
+        type: 'ssh',
+      },
+      draggable: true,
+      droppable: false,
+      uid: session.id,
+      createdAt: session.createdAt,
+      isUserCreated: true
+    }));
+    setNodes(nodesFromSessions);
+  };
+
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const sessionManager = useRef(new SessionManager()).current;
+
+  // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
+  const exportTreeToJson = () => {
+    return JSON.stringify(nodes, null, 2);
+  };
+  // --- Importar el árbol completo de nodos (carpetas + sesiones) ---
+  const importTreeFromJson = (json) => {
+    try {
+      const importedNodes = JSON.parse(json);
+      setNodes(importedNodes);
+      return true;
+    } catch (e) {
+      console.error('Error importando árbol:', e);
+      return false;
+    }
   };
 
   return (
@@ -3070,6 +3138,14 @@ const App = () => {
         setGroupColor={setSelectedGroupColor}
         colorOptions={GROUP_COLORS}
         onConfirm={createNewGroup}
+      />
+      <SyncSettingsDialog
+        visible={showSyncDialog}
+        onHide={() => setShowSyncDialog(false)}
+        onReloadSessions={reloadSessionsFromStorage}
+        sessionManager={sessionManager}
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJson}
       />
     </div>
   );

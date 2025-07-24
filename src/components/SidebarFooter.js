@@ -409,9 +409,12 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed 
     
     // Cerrar el menú al hacer clic fuera
     const closeMenu = (e) => {
-      const isClickOnButton = event.target.closest('button').contains(e.target);
-      const isClickOnMenu = document.querySelector('.app-context-menu')?.contains(e.target);
-      const isClickOnSubmenu = document.querySelector('.app-submenu')?.contains(e.target);
+      const button = event.target.closest('button');
+      const menu = document.querySelector('.app-context-menu');
+      const submenu = document.querySelector('.app-submenu');
+      const isClickOnButton = button && button.contains(e.target);
+      const isClickOnMenu = menu && menu.contains(e.target);
+      const isClickOnSubmenu = submenu && submenu.contains(e.target);
       
       if (!isClickOnButton && !isClickOnMenu && !isClickOnSubmenu) {
         if (submenuTimer) clearTimeout(submenuTimer);
