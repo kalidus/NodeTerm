@@ -12,8 +12,8 @@ import { Badge } from 'primereact/badge';
 import { Tooltip } from 'primereact/tooltip';
 import SyncManager from '../utils/SyncManager';
 
-const SyncSettingsDialog = ({ visible, onHide }) => {
-  const [syncManager] = useState(() => new SyncManager());
+const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager, exportTreeToJson, importTreeFromJson }) => {
+  const [syncManager] = useState(() => new SyncManager(sessionManager));
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [syncStatus, setSyncStatus] = useState({});
@@ -159,9 +159,23 @@ const SyncSettingsDialog = ({ visible, onHide }) => {
       
       switch (direction) {
         case 'upload':
+          // Subir árbol completo de nodos
+          if (exportTreeToJson) {
+            const treeJson = exportTreeToJson();
+            await syncManager.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
+            console.log('[SYNC] Exportando árbol nodeterm-tree.json:', treeJson);
+          }
           result = await syncManager.syncToCloud();
           break;
         case 'download':
+          // Descargar y restaurar árbol completo de nodos
+          if (importTreeFromJson) {
+            const treeJson = await syncManager.nextcloudService.downloadFile('nodeterm-tree.json');
+            if (treeJson) {
+              const ok = importTreeFromJson(treeJson);
+              console.log('[SYNC] Restaurando árbol nodeterm-tree.json:', ok);
+            }
+          }
           result = await syncManager.syncFromCloud();
           break;
         case 'smart':
@@ -176,8 +190,12 @@ const SyncSettingsDialog = ({ visible, onHide }) => {
         summary: 'Sincronización completa', 
         detail: `${result.message} (${result.itemsCount} elementos)` 
       });
-      
       updateSyncStatus();
+
+      // Quitar el refresco visual forzado del árbol
+      // if (direction === 'download' && onReloadSessions) {
+      //   await onReloadSessions();
+      // }
     } catch (error) {
       setMessage({ severity: 'error', summary: 'Error de sincronización', detail: error.message });
     } finally {

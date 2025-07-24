@@ -1,8 +1,13 @@
 import NextcloudService from '../services/NextcloudService';
+import SecureStorage from '../services/SecureStorage';
+// Importar SessionManager directamente
+import SessionManager from '../services/SessionManager';
 
 class SyncManager {
-  constructor() {
+  constructor(sessionManager) {
     this.nextcloudService = new NextcloudService();
+    this.secureStorage = new SecureStorage();
+    this.sessionManager = sessionManager || null; // Usar la instancia pasada
     this.syncEnabled = false;
     this.lastSyncTime = null;
     this.autoSyncInterval = null;
@@ -10,6 +15,19 @@ class SyncManager {
     
     // Cargar configuración de sincronización
     this.loadSyncConfig();
+  }
+
+  /**
+   * Obtiene la instancia de SessionManager pasada por el constructor
+   */
+  async getSessionManager() {
+    if (this.sessionManager) {
+      return this.sessionManager;
+    }
+    // Si no se pasó, crear una nueva (solo para compatibilidad, pero debe pasarse siempre)
+    this.sessionManager = new SessionManager();
+    await this.sessionManager.initialize();
+    return this.sessionManager;
   }
 
   /**
@@ -165,12 +183,46 @@ class SyncManager {
     try {
       // Obtener datos locales
       const localData = this.getAllLocalData();
+      console.log('[SYNC] Exportando localData:', localData);
       
       // Convertir a JSON
       const jsonData = JSON.stringify(localData, null, 2);
+      // Subir configuración general a Nextcloud
+      const uploadResult = await this.nextcloudService.uploadFile('nodeterm-settings.json', jsonData);
+      console.log('[SYNC] Resultado upload nodeterm-settings.json:', uploadResult);
       
-      // Subir a Nextcloud
-      await this.nextcloudService.uploadFile('nodeterm-settings.json', jsonData);
+      // Sincronizar sesiones cifradas si hay clave maestra
+      let sessionsResult = null;
+      if (this.secureStorage.hasSavedMasterKey()) {
+        try {
+          const sessionManager = await this.getSessionManager();
+          if (sessionManager) {
+            const masterKey = await this.secureStorage.getMasterKey();
+            if (masterKey) {
+              const encryptedSessions = await sessionManager.exportAllDataForSync(masterKey);
+              console.log('[SYNC] Exportando encryptedSessions:', encryptedSessions);
+              const sessionsJson = JSON.stringify(encryptedSessions, null, 2);
+              const uploadSessionsResult = await this.nextcloudService.uploadFile('nodeterm-sessions.enc', sessionsJson);
+              console.log('[SYNC] Resultado upload nodeterm-sessions.enc:', uploadSessionsResult);
+              sessionsResult = {
+                success: true,
+                count: sessionManager.getAllSessions().length
+              };
+            }
+          } else {
+            sessionsResult = {
+              success: false,
+              error: 'No se pudo cargar SessionManager'
+            };
+          }
+        } catch (error) {
+          console.warn('Error sincronizando sesiones cifradas:', error);
+          sessionsResult = {
+            success: false,
+            error: error.message
+          };
+        }
+      }
       
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
@@ -178,9 +230,10 @@ class SyncManager {
       
       return {
         success: true,
-        message: 'Configuración sincronizada a la nube',
+        message: 'Datos sincronizados a la nube',
         timestamp: this.lastSyncTime,
-        itemsCount: Object.keys(localData).length - 2 // Excluir metadatos
+        itemsCount: Object.keys(localData).length - 2, // Excluir metadatos
+        sessions: sessionsResult
       };
     } finally {
       this.syncInProgress = false;
@@ -202,7 +255,7 @@ class SyncManager {
     this.syncInProgress = true;
 
     try {
-      // Descargar datos de Nextcloud
+      // Descargar configuración general
       const jsonData = await this.nextcloudService.downloadFile('nodeterm-settings.json');
       
       if (!jsonData) {
@@ -214,6 +267,51 @@ class SyncManager {
       
       // Aplicar datos localmente
       const appliedItems = this.applyRemoteData(remoteData);
+
+      // Sincronizar sesiones cifradas si hay clave maestra
+      let sessionsResult = null;
+      if (this.secureStorage.hasSavedMasterKey()) {
+        try {
+          const sessionManager = await this.getSessionManager();
+          if (sessionManager) {
+            const masterKey = await this.secureStorage.getMasterKey();
+            if (masterKey) {
+              // Intentar descargar sesiones cifradas
+              const sessionsData = await this.nextcloudService.downloadFile('nodeterm-sessions.enc');
+              if (sessionsData) {
+                const encryptedSessions = JSON.parse(sessionsData);
+                console.log('[SYNC] Restaurando sesiones: encryptedSessions=', encryptedSessions, 'masterKey:', masterKey);
+                try {
+                  const importResult = await sessionManager.importAllDataFromSync(encryptedSessions, masterKey);
+                  console.log('[SYNC] Resultado de importAllDataFromSync:', importResult);
+                  sessionsResult = {
+                    success: true,
+                    sessionsImported: importResult.sessionsImported,
+                    metadata: importResult.metadata
+                  };
+                } catch (error) {
+                  console.error('[SYNC] Error en importAllDataFromSync:', error);
+                  sessionsResult = {
+                    success: false,
+                    error: error.message
+                  };
+                }
+              }
+            }
+          } else {
+            sessionsResult = {
+              success: false,
+              error: 'No se pudo cargar SessionManager'
+            };
+          }
+        } catch (error) {
+          console.warn('Error sincronizando sesiones desde la nube:', error);
+          sessionsResult = {
+            success: false,
+            error: error.message
+          };
+        }
+      }
       
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
@@ -221,10 +319,11 @@ class SyncManager {
       
       return {
         success: true,
-        message: 'Configuración descargada desde la nube',
+        message: 'Datos descargados desde la nube',
         timestamp: this.lastSyncTime,
         itemsCount: appliedItems.length,
-        appliedItems
+        appliedItems,
+        sessions: sessionsResult
       };
     } finally {
       this.syncInProgress = false;
