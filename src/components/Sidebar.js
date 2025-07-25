@@ -7,7 +7,16 @@ import { uiThemes } from '../themes/ui-themes';
 import { SSHDialog, FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 
+// Helper para loggear setNodes
+function logSetNodes(source, nodes) {
+  console.log(`[DEBUG][setNodes][${source}]`, nodes);
+  console.trace(`[TRACE][setNodes][${source}]`);
+  return nodes;
+}
+
 const Sidebar = ({
+  nodes,
+  setNodes,
   sidebarCollapsed,
   setSidebarCollapsed,
   allExpanded,
@@ -27,10 +36,6 @@ const Sidebar = ({
   // --- Estado y lógica movidos aquí ---
   const STORAGE_KEY = 'basicapp2_tree_data';
   const EXPANDED_KEYS_STORAGE_KEY = 'basicapp2_sidebar_expanded_keys';
-  const [nodes, setNodes] = useState(() => {
-    const savedNodes = localStorage.getItem(STORAGE_KEY);
-    return savedNodes ? JSON.parse(savedNodes) : [];
-  });
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [expandedKeys, setExpandedKeys] = useState(() => {
     const saved = localStorage.getItem(EXPANDED_KEYS_STORAGE_KEY);
@@ -98,7 +103,7 @@ const Sidebar = ({
         });
       };
       const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim());
-      setNodes(updatedNodes);
+      setNodes(() => logSetNodes('Sidebar', updatedNodes));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" actualizada`, life: 3000 });
     } else {
       // Modo creación: crear nueva carpeta
@@ -124,7 +129,7 @@ const Sidebar = ({
         parentNode.children = parentNode.children || [];
         parentNode.children.push(newFolder);
       }
-      setNodes(nodesCopy);
+      setNodes(() => logSetNodes('Sidebar', nodesCopy));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" creada`, life: 3000 });
     }
     
@@ -174,7 +179,7 @@ const Sidebar = ({
       };
       
       const updatedNodes = updateSSHInTree(nodesCopy, editingNode.key, updatedData);
-      setNodes(updatedNodes);
+      setNodes(() => logSetNodes('Sidebar', updatedNodes));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Conexión SSH "${sshName}" actualizada`, life: 3000 });
     } else {
       // Modo creación: crear nueva conexión SSH
@@ -208,7 +213,7 @@ const Sidebar = ({
       } else {
         nodesCopy.unshift(newSSHNode);
       }
-      setNodes(nodesCopy);
+      setNodes(() => logSetNodes('Sidebar', nodesCopy));
       showToast && showToast({ severity: 'success', summary: 'SSH añadida', detail: `Conexión SSH "${sshName}" añadida al árbol`, life: 3000 });
     }
     
@@ -246,7 +251,7 @@ const Sidebar = ({
         parent.children = [dragNode, ...parent.children];
         return parent;
       });
-      setNodes(newValue);
+      setNodes(() => logSetNodes('Sidebar', newValue));
     } else if (dropPoint === 0 && isDropNodeSession) {
       // Si se intenta arrastrar algo a una sesión SSH, mostrar mensaje de error
       showToast && showToast({
@@ -256,7 +261,7 @@ const Sidebar = ({
         life: 4000
       });
     } else {
-      setNodes([...value]);
+      setNodes(() => logSetNodes('Sidebar', [...value]));
     }
   };
   // Guardar en localStorage cuando cambian
@@ -342,7 +347,7 @@ const Sidebar = ({
               });
             };
             const newNodes = removeNodeFromTree(deepCopy(nodes), nodeKey);
-            setNodes(newNodes);
+            setNodes(() => logSetNodes('Sidebar', newNodes));
             showToast && showToast({ 
               severity: 'success', 
               summary: 'Eliminado', 
@@ -580,23 +585,29 @@ const Sidebar = ({
             onContextMenu={onTreeAreaContextMenu}
             className="tree-container"
           >
-            <Tree
-              value={nodes}
-              selectionMode="single"
-              selectionKeys={selectedNodeKey}
-              onSelectionChange={e => setSelectedNodeKey(e.value)}
-              dragdropScope="files"
-              onDragDrop={onDragDrop}
-              onDragStart={e => {
-                // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
-              }}
-              onDragEnd={() => {}}
-              className="sidebar-tree"
-              style={{ fontSize: `${explorerFontSize}px` }}
-              nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
-              expandedKeys={expandedKeys}
-              onToggle={e => setExpandedKeys(e.value)}
-            />
+            {nodes.length === 0 ? (
+              <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                No hay elementos en el árbol.<br/>Usa el botón "+" para crear una carpeta o conexión.
+              </div>
+            ) : (
+              <Tree
+                value={nodes}
+                selectionMode="single"
+                selectionKeys={selectedNodeKey}
+                onSelectionChange={e => setSelectedNodeKey(e.value)}
+                dragdropScope="files"
+                onDragDrop={onDragDrop}
+                onDragStart={e => {
+                  // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
+                }}
+                onDragEnd={() => {}}
+                className="sidebar-tree"
+                style={{ fontSize: `${explorerFontSize}px` }}
+                nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+                expandedKeys={expandedKeys}
+                onToggle={e => setExpandedKeys(e.value)}
+              />
+            )}
           </div>
           
           <SidebarFooter 

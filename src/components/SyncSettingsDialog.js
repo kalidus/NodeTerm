@@ -12,6 +12,21 @@ import { Badge } from 'primereact/badge';
 import { Tooltip } from 'primereact/tooltip';
 import SyncManager from '../utils/SyncManager';
 
+// Función robusta para extraer todas las sesiones SSH del árbol de nodos
+function extractAllSshSessions(nodes) {
+  let sessions = [];
+  if (!Array.isArray(nodes)) return sessions;
+  for (const node of nodes) {
+    if (node && node.data && node.data.type === 'ssh') {
+      sessions.push(node.data);
+    }
+    if (node && Array.isArray(node.children) && node.children.length > 0) {
+      sessions = sessions.concat(extractAllSshSessions(node.children));
+    }
+  }
+  return sessions;
+}
+
 const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager, exportTreeToJson, importTreeFromJson }) => {
   const [syncManager] = useState(() => new SyncManager(sessionManager));
   const [loading, setLoading] = useState(false);
@@ -164,6 +179,14 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
             const treeJson = exportTreeToJson();
             await syncManager.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
             console.log('[SYNC] Exportando árbol nodeterm-tree.json:', treeJson);
+            // --- Sincronizar sesiones SSH con SessionManager ---
+            const nodes = JSON.parse(treeJson);
+            const sshSessions = extractAllSshSessions(nodes);
+            console.log('[DEBUG] Todas las sesiones SSH extraídas del árbol:', sshSessions);
+            if (sessionManager && typeof sessionManager.loadSessionsFromArray === 'function') {
+              sessionManager.loadSessionsFromArray(sshSessions);
+              console.log('[SYNC][DEBUG] Sesiones SSH sincronizadas en SessionManager:', sshSessions);
+            }
           }
           result = await syncManager.syncToCloud();
           break;
@@ -174,6 +197,14 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
             if (treeJson) {
               const ok = importTreeFromJson(treeJson);
               console.log('[SYNC] Restaurando árbol nodeterm-tree.json:', ok);
+              // --- Sincronizar sesiones SSH con SessionManager tras restaurar ---
+              const nodes = JSON.parse(treeJson);
+              const sshSessions = extractAllSshSessions(nodes);
+              console.log('[DEBUG] Todas las sesiones SSH extraídas del árbol (restaurar):', sshSessions);
+              if (sessionManager && typeof sessionManager.loadSessionsFromArray === 'function') {
+                sessionManager.loadSessionsFromArray(sshSessions);
+                console.log('[SYNC][DEBUG] Sesiones SSH sincronizadas tras restaurar:', sshSessions);
+              }
             }
           }
           result = await syncManager.syncFromCloud();
