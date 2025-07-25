@@ -2,6 +2,9 @@ import NextcloudService from '../services/NextcloudService';
 import SecureStorage from '../services/SecureStorage';
 // Importar SessionManager directamente
 import SessionManager from '../services/SessionManager';
+// Importar theme managers para recargar temas tras sincronización
+import { themeManager } from './themeManager';
+import { statusBarThemeManager } from './statusBarThemeManager';
 
 class SyncManager {
   constructor(sessionManager) {
@@ -114,18 +117,18 @@ class SyncManager {
       localPowerShellTheme: localStorage.getItem('basicapp_local_powershell_theme'),
       localLinuxTerminalTheme: localStorage.getItem('basicapp_local_linux_terminal_theme'),
       
-      // Configuraciones de UI (buscar todas las keys que empiecen con basicapp_)
-      uiTheme: localStorage.getItem('basicapp_ui_theme'),
+      // Configuraciones de UI - CORREGIR KEYS
+      uiTheme: localStorage.getItem('ui_theme'),  // Cambiar de 'basicapp_ui_theme' a 'ui_theme'
       statusBarTheme: localStorage.getItem('basicapp_statusbar_theme'),
       terminalTheme: localStorage.getItem('basicapp_terminal_theme'),
-      iconTheme: localStorage.getItem('basicapp_icon_theme'),
-      explorerFont: localStorage.getItem('basicapp_explorer_font'),
-      explorerFontSize: localStorage.getItem('basicapp_explorer_font_size'),
-      explorerColorTheme: localStorage.getItem('basicapp_explorer_color_theme'),
-      sidebarFont: localStorage.getItem('basicapp_sidebar_font'),
-      sidebarFontSize: localStorage.getItem('basicapp_sidebar_font_size'),
+      iconTheme: localStorage.getItem('iconTheme'),  // Cambiar de 'basicapp_icon_theme' a 'iconTheme'
+      explorerFont: localStorage.getItem('explorerFont'),  // Cambiar de 'basicapp_explorer_font' a 'explorerFont'
+      explorerFontSize: localStorage.getItem('explorerFontSize'),  // Cambiar de 'basicapp_explorer_font_size' a 'explorerFontSize'
+      explorerColorTheme: localStorage.getItem('explorerColorTheme'),  // Cambiar de 'basicapp_explorer_color_theme' a 'explorerColorTheme'
+      sidebarFont: localStorage.getItem('sidebarFont'),  // Cambiar de 'basicapp_sidebar_font' a 'sidebarFont'
+      sidebarFontSize: localStorage.getItem('sidebarFontSize'),  // Cambiar de 'basicapp_sidebar_font_size' a 'sidebarFontSize'
       statusBarIconTheme: localStorage.getItem('basicapp_statusbar_icon_theme'),
-      statusBarPollingInterval: localStorage.getItem('basicapp_statusbar_polling_interval'),
+      statusBarPollingInterval: localStorage.getItem('statusBarPollingInterval'),  // Cambiar de 'basicapp_statusbar_polling_interval' a 'statusBarPollingInterval'
       
       // Historial de conexiones
       connectionHistory: localStorage.getItem('nodeterm_connection_history'),
@@ -136,13 +139,14 @@ class SyncManager {
       version: '1.0'
     };
 
-    // Filtrar valores null/undefined
+    // Filtrar valores null/undefined y strings "undefined"
     Object.keys(data).forEach(key => {
-      if (data[key] === null || data[key] === undefined) {
+      if (data[key] === null || data[key] === undefined || data[key] === 'undefined') {
         delete data[key];
       }
     });
 
+    console.log('[SYNC] Datos a sincronizar:', Object.keys(data).filter(k => k !== 'syncTimestamp' && k !== 'version').length, 'elementos');
     return data;
   }
 
@@ -155,17 +159,92 @@ class SyncManager {
     }
 
     const applied = [];
-    
+    // --- LOG: Mostrar el valor de uiTheme recibido ---
+    if (data.uiTheme) {
+      console.log('[SYNC][applyRemoteData] Valor de uiTheme recibido del JSON:', data.uiTheme);
+    } else {
+      console.log('[SYNC][applyRemoteData] No se recibió uiTheme en el JSON, se usará "Light" por defecto.');
+    }
+    // --- FIN LOG ---
+
+    // --- Asegurar que ui_theme en localStorage se sobrescriba antes de recargar temas ---
+    if (data.uiTheme) {
+      localStorage.setItem('ui_theme', data.uiTheme);
+      console.log('[SYNC][applyRemoteData] localStorage["ui_theme"] actualizado a:', data.uiTheme);
+    } else {
+      localStorage.setItem('ui_theme', 'Light');
+      console.log('[SYNC][applyRemoteData] localStorage["ui_theme"] actualizado a valor por defecto: Light');
+    }
+    // --- FIN ---
+
     Object.keys(data).forEach(key => {
-      if (key === 'syncTimestamp' || key === 'version') return; // Skip metadata
-      
+      if (key === 'syncTimestamp' || key === 'version' || key === 'uiTheme') return; // Skip metadata y uiTheme (ya lo pusimos)
       if (data[key] !== null && data[key] !== undefined) {
         localStorage.setItem(key, data[key]);
         applied.push(key);
       }
     });
 
+    // Recargar temas después de aplicar los datos
+    this.reloadThemesFromStorage();
+
     return applied;
+  }
+
+  /**
+   * Recarga todos los temas desde localStorage
+   */
+  reloadThemesFromStorage() {
+    try {
+      console.log('[SYNC] Aplicando temas desde configuración descargada...');
+      
+      // Debug completo del estado de localStorage
+      console.log('[SYNC] [DEBUG] localStorage.getItem("ui_theme"):', localStorage.getItem('ui_theme'));
+      console.log('[SYNC] [DEBUG] localStorage.getItem("basicapp_ui_theme"):', localStorage.getItem('basicapp_ui_theme'));
+      
+      // Recargar tema UI
+      const uiTheme = localStorage.getItem('ui_theme');  // Cambiar de 'basicapp_ui_theme' a 'ui_theme'
+      if (uiTheme && themeManager) {
+        console.log('[SYNC] [TEST] Aplicando tema UI:', uiTheme);
+        console.log('[SYNC] [TEST] themeManager antes:', themeManager.getCurrentTheme());
+        
+        // Verificar si el tema existe
+        const availableThemes = themeManager.getAvailableThemes();
+        console.log('[SYNC] [DEBUG] Temas disponibles:', availableThemes);
+        console.log('[SYNC] [DEBUG] ¿Tema "' + uiTheme + '" existe?:', availableThemes.includes(uiTheme));
+        
+        themeManager.applyTheme(uiTheme);
+        
+        console.log('[SYNC] [TEST] themeManager después:', themeManager.getCurrentTheme());
+        
+        // Verificar si se aplicaron las variables CSS
+        const rootStyles = getComputedStyle(document.documentElement);
+        console.log('[SYNC] [DEBUG] CSS --ui-sidebar-bg:', rootStyles.getPropertyValue('--ui-sidebar-bg'));
+        console.log('[SYNC] [DEBUG] CSS --ui-content-bg:', rootStyles.getPropertyValue('--ui-content-bg'));
+        
+        console.log('[SYNC] ✓ Tema UI:', uiTheme);
+      } else {
+        console.log('[SYNC] [DEBUG] No se pudo aplicar tema UI. uiTheme:', uiTheme, 'themeManager:', !!themeManager);
+      }
+
+      // Recargar tema de status bar
+      const statusBarTheme = localStorage.getItem('basicapp_statusbar_theme');
+      if (statusBarTheme && statusBarThemeManager) {
+        statusBarThemeManager.applyTheme(statusBarTheme);
+        console.log('[SYNC] ✓ Tema status bar:', statusBarTheme);
+      }
+
+      // Disparar evento global para notificar cambios de configuración
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('settings-updated', {
+          detail: { source: 'sync', timestamp: new Date().toISOString() }
+        }));
+        console.log('[SYNC] ✓ Evento global de actualización disparado');
+      }
+
+    } catch (error) {
+      console.error('[SYNC] Error recargando temas:', error);
+    }
   }
 
   /**
@@ -202,6 +281,10 @@ class SyncManager {
       console.log('[SYNC] Exportando localData:', localData);
       // Convertir a JSON
       const jsonData = JSON.stringify(localData, null, 2);
+      
+      // Log específico para ver qué tema se está subiendo
+      console.log('[SYNC] [CRITICAL] Tema UI que se está subiendo:', localData.uiTheme);
+      console.log('[SYNC] [CRITICAL] localStorage.getItem("ui_theme") EN ESTE MOMENTO:', localStorage.getItem('ui_theme'));
       // Subir configuración general a Nextcloud
       const uploadResult = await this.nextcloudService.uploadFile('nodeterm-settings.json', jsonData);
       console.log('[SYNC] Resultado upload nodeterm-settings.json:', uploadResult);
@@ -280,7 +363,7 @@ class SyncManager {
       // Parse JSON
       const remoteData = JSON.parse(jsonData);
       
-      // Aplicar datos localmente
+      // Aplicar datos localmente (esto ya incluye la recarga de temas)
       const appliedItems = this.applyRemoteData(remoteData);
 
       // Sincronizar sesiones cifradas si hay clave maestra
