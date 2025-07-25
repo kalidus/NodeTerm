@@ -66,7 +66,10 @@ const SettingsDialog = ({
   localPowerShellTheme,
   setLocalPowerShellTheme,
   localLinuxTerminalTheme,
-  setLocalLinuxTerminalTheme
+  setLocalLinuxTerminalTheme,
+  exportTreeToJson,
+  importTreeFromJson,
+  sessionManager
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
@@ -1243,6 +1246,9 @@ const SettingsDialog = ({
       <SyncSettingsDialog
         visible={syncDialogVisible}
         onHide={() => setSyncDialogVisible(false)}
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJson}
+        sessionManager={sessionManager}
       />
     </Dialog>
   );

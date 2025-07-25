@@ -195,31 +195,40 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
           result = await syncManager.syncToCloud(treeJson);
           break;
         case 'download':
+          alert('INICIO DOWNLOAD');
           // Descargar y restaurar árbol completo de nodos
+          result = await syncManager.syncFromCloud();
+          console.log('[DEBUG][performSync] Después de syncFromCloud');
+          alert('[DEBUG][performSync] Después de syncFromCloud');
+          console.log('[DEBUG][performSync] importTreeFromJson:', importTreeFromJson, typeof importTreeFromJson);
+          alert('[DEBUG][performSync] importTreeFromJson: ' + importTreeFromJson + ' tipo: ' + typeof importTreeFromJson);
           if (importTreeFromJson) {
-            const treeJson = await syncManager.nextcloudService.downloadFile('nodeterm-tree.json');
-            console.log('[SYNC][DEBUG] treeJson descargado:', treeJson);
+            console.log('[DEBUG][performSync] Antes de descargar nodeterm-tree.json');
+            let treeJson = null;
+            try {
+              treeJson = await Promise.race([
+                syncManager.nextcloudService.downloadFile('nodeterm-tree.json'),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout descargando nodeterm-tree.json')), 5000))
+              ]);
+              console.log('[SYNC][DEBUG] treeJson descargado tras syncFromCloud:', treeJson);
+              alert('[DEBUG] treeJson descargado:\n' + treeJson);
+            } catch (err) {
+              console.error('[SYNC][ERROR] Descargando treeJson:', err);
+              alert('[SYNC][ERROR] Descargando treeJson:\n' + (err && err.message ? err.message : err));
+            }
             if (treeJson) {
               const ok = importTreeFromJson(treeJson);
-              console.log('[SYNC][DEBUG] Resultado importTreeFromJson:', ok);
-              // Loggear el estado global de nodes si es posible
+              console.log('[SYNC][DEBUG] Resultado importTreeFromJson (post-syncFromCloud):', ok);
               if (window && window.__DEBUG_NODES__) {
-                console.log('[SYNC][DEBUG] Estado global nodes tras import:', window.__DEBUG_NODES__());
-              }
-              // --- Sincronizar sesiones SSH con SessionManager tras restaurar ---
-              const nodes = JSON.parse(treeJson);
-              const sshSessions = extractAllSshSessions(nodes);
-              console.log('[DEBUG] Todas las sesiones SSH extraídas del árbol (restaurar):', sshSessions);
-              if (sessionManager && typeof sessionManager.loadSessionsFromArray === 'function') {
-                sessionManager.loadSessionsFromArray(sshSessions);
-                console.log('[SYNC][DEBUG] Sesiones SSH sincronizadas tras restaurar:', sshSessions);
+                const nodesDebug = window.__DEBUG_NODES__();
+                console.log('[SYNC][DEBUG] Estado global nodes tras import:', nodesDebug);
+                alert('[DEBUG] Estado global nodes tras import:\n' + JSON.stringify(nodesDebug, null, 2));
               }
             } else {
-              console.warn('[SYNC][DEBUG] treeJson descargado está vacío o no existe');
+              console.warn('[SYNC][DEBUG] treeJson descargado está vacío o no existe (post-syncFromCloud)');
               setMessage({ severity: 'warn', summary: 'Sin datos', detail: 'No se encontró árbol remoto en la nube.' });
             }
           }
-          result = await syncManager.syncFromCloud();
           break;
         case 'smart':
           result = await syncManager.smartSync();
@@ -240,6 +249,8 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       //   await onReloadSessions();
       // }
     } catch (error) {
+      console.error('[SYNC][ERROR][performSync]', error);
+      alert('[SYNC][ERROR][performSync]:\n' + (error && error.message ? error.message : error));
       setMessage({ severity: 'error', summary: 'Error de sincronización', detail: error.message });
     } finally {
       setLoading(false);
