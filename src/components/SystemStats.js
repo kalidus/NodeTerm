@@ -26,7 +26,6 @@ const SystemStats = () => {
       try {
         if (window.electronAPI) {
           const systemStats = await window.electronAPI.getSystemStats();
-          console.log('[SystemStats] Datos recibidos:', systemStats);
           const mergedStats = { ...lastStatsRef.current };
           if (systemStats.cpu && systemStats.cpu.usage > 0) mergedStats.cpu = systemStats.cpu;
           if (systemStats.memory && systemStats.memory.total > 0) mergedStats.memory = systemStats.memory;
