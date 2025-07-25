@@ -2144,23 +2144,14 @@ const App = () => {
     return JSON.stringify(safeNodes, null, 2);
   };
   // --- Importar el árbol completo de nodos (carpetas + sesiones) ---
-  const importTreeFromJson = (json) => {
+  const importTreeFromJsonApp = (json) => {
     try {
       let importedNodes = JSON.parse(json);
       if (!Array.isArray(importedNodes)) {
         importedNodes = [importedNodes];
       }
-      // Fusionar con los nodos existentes si ya hay nodos
-      setNodes(prevNodes => {
-        // Filtrar nodos importados que ya existen por key para evitar duplicados
-        const existingKeys = new Set(prevNodes.map(n => n.key));
-        const merged = [
-          ...prevNodes,
-          ...importedNodes.filter(n => !existingKeys.has(n.key))
-        ];
-        console.log('[DEBUG][importTreeFromJson] nodes después de importar (merge):', merged);
-        return logSetNodes('importTreeFromJson', merged);
-      });
+      setNodes(logSetNodes('importTreeFromJsonApp', importedNodes));
+      console.log('[DEBUG][importTreeFromJsonApp] nodes después de importar (replace):', importedNodes);
       return true;
     } catch (e) {
       console.error('Error importando árbol:', e);
@@ -2177,6 +2168,10 @@ const App = () => {
 
   useEffect(() => {
     console.log('[DEBUG][RENDER][App.js] nodes:', nodes);
+  }, [nodes]);
+
+  useEffect(() => {
+    window.__DEBUG_NODES__ = () => nodes;
   }, [nodes]);
 
   return (
@@ -3047,6 +3042,9 @@ const App = () => {
         setLocalPowerShellTheme={value => { setLocalPowerShellTheme(value); localStorage.setItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY, value); }}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
         setLocalLinuxTerminalTheme={value => { setLocalLinuxTerminalTheme(value); localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, value); }}
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJsonApp}
+        sessionManager={sessionManager}
       />
 
       {/* Diálogo: Nueva conexión SSH */}
@@ -3124,7 +3122,7 @@ const App = () => {
         onReloadSessions={reloadSessionsFromStorage}
         sessionManager={sessionManager}
         exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJson}
+        importTreeFromJson={importTreeFromJsonApp}
       />
     </div>
   );
