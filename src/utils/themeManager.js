@@ -51,7 +51,7 @@ class ThemeManager {
   applyTheme(themeName) {
     const theme = uiThemes[themeName];
     if (!theme) {
-      console.warn(`Theme "${themeName}" not found`);
+      console.warn(`[THEME] Theme "${themeName}" not found. Available themes:`, Object.keys(uiThemes));
       return;
     }
 
@@ -60,6 +60,7 @@ class ThemeManager {
     
     // Guardar el tema seleccionado
     localStorage.setItem('ui_theme', themeName);
+    
     // Emitir evento global para notificar cambio de tema
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('theme-changed'));
@@ -425,7 +426,15 @@ class ThemeManager {
       }
     `;
 
+    console.log('[THEME] CSS generado, aplicando al DOM...');
     this.styleElement.textContent = css;
+    console.log('[THEME] CSS aplicado correctamente');
+    
+    // Verificar que las variables CSS se aplicaron
+    setTimeout(() => {
+      const rootStyles = getComputedStyle(document.documentElement);
+      console.log('[SYNC] Tema aplicado -', 'Sidebar:', rootStyles.getPropertyValue('--ui-sidebar-bg'));
+    }, 100);
   }
 
   getCurrentTheme() {

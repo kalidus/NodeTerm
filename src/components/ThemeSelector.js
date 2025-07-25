@@ -16,8 +16,22 @@ const ThemeSelector = ({ showPreview = false }) => {
   }, []);
 
   const handleThemeChange = (themeName) => {
+    console.log('[THEME SELECTOR] Cambiando tema a:', themeName);
+    console.log('[THEME SELECTOR] localStorage antes del cambio:', localStorage.getItem('ui_theme'));
+    
     setCurrentTheme(themeName);
     themeManager.applyTheme(themeName);
+    
+    // Verificar que se guardó correctamente
+    setTimeout(() => {
+      const savedTheme = localStorage.getItem('ui_theme');
+      console.log('[THEME SELECTOR] localStorage después del cambio:', savedTheme);
+      if (savedTheme !== themeName) {
+        console.error('[THEME SELECTOR] ERROR: No se guardó correctamente en localStorage!');
+      } else {
+        console.log('[THEME SELECTOR] ✓ Tema guardado correctamente en localStorage');
+      }
+    }, 100);
   };
 
   const togglePreviewMode = () => {
