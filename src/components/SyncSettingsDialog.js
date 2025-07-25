@@ -38,7 +38,8 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
   const [nextcloudConfig, setNextcloudConfig] = useState({
     baseUrl: '',
     username: '',
-    password: ''
+    password: '',
+    ignoreSSLErrors: false
   });
   
   const [isConfigured, setIsConfigured] = useState(false);
@@ -57,7 +58,8 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       setNextcloudConfig({
         baseUrl: syncManager.nextcloudService.baseUrl || '',
         username: syncManager.nextcloudService.username || '',
-        password: '••••••••' // Mostrar asteriscos por seguridad
+        password: '••••••••', // Mostrar asteriscos por seguridad
+        ignoreSSLErrors: syncManager.nextcloudService.ignoreSSLErrors || false
       });
       setIsConfigured(true);
     }
@@ -102,7 +104,8 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       syncManager.nextcloudService.configure(
         nextcloudConfig.baseUrl,
         nextcloudConfig.username,
-        tempPassword
+        tempPassword,
+        nextcloudConfig.ignoreSSLErrors
       );
 
       const result = await syncManager.nextcloudService.testConnection();
@@ -134,7 +137,8 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       syncManager.nextcloudService.configure(
         nextcloudConfig.baseUrl,
         nextcloudConfig.username,
-        tempPassword
+        tempPassword,
+        nextcloudConfig.ignoreSSLErrors
       );
 
       setMessage({ severity: 'success', summary: 'Guardado', detail: 'Configuración guardada correctamente' });
@@ -146,7 +150,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
 
   const clearConfiguration = () => {
     syncManager.clearSyncData();
-    setNextcloudConfig({ baseUrl: '', username: '', password: '' });
+    setNextcloudConfig({ baseUrl: '', username: '', password: '', ignoreSSLErrors: false });
     setIsConfigured(false);
     setSyncStatus({});
     setSyncStats(null);
@@ -364,6 +368,25 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                   toggleMask
                 />
               </div>
+            </div>
+
+            {/* Opción para ignorar errores SSL */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--surface-50)', borderRadius: '6px', border: '1px solid var(--surface-200)' }}>
+              <div>
+                <h5 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-color)' }}>Ignorar Errores SSL</h5>
+                <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
+                  Habilita esta opción si tu servidor Nextcloud tiene certificados SSL autofirmados o problemas de certificados
+                </p>
+              </div>
+              <ToggleButton
+                checked={nextcloudConfig.ignoreSSLErrors}
+                onChange={(e) => handleConfigChange('ignoreSSLErrors', e.value)}
+                onLabel="Habilitado"
+                offLabel="Deshabilitado"
+                onIcon="pi pi-shield"
+                offIcon="pi pi-shield"
+                className={nextcloudConfig.ignoreSSLErrors ? "p-button-warning" : "p-button-outlined"}
+              />
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
