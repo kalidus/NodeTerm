@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electron', {
         'register-tab-events',
         'detect-ubuntu-availability',
         'detect-wsl-distributions',
+        'nextcloud:http-request',
         /^ssh:.*$/,
         /^dialog:.*$/,
         /^ubuntu:.*$/,

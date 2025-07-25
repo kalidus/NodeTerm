@@ -5,16 +5,18 @@ class NextcloudService {
     this.password = null;
     this.appFolder = 'NodeTerm';
     this.isConfigured = false;
+    this.ignoreSSLErrors = false; // Nueva opción para ignorar errores SSL
   }
 
   /**
    * Configura la conexión con Nextcloud
    */
-  configure(baseUrl, username, password) {
+  configure(baseUrl, username, password, ignoreSSLErrors = false) {
     // Normalizar URL
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.username = username;
     this.password = password;
+    this.ignoreSSLErrors = ignoreSSLErrors; // Guardar la opción SSL
     this.isConfigured = true;
 
     // Guardar configuración (cifrada)
@@ -22,6 +24,7 @@ class NextcloudService {
       baseUrl: this.baseUrl,
       username: this.username,
       password: btoa(password), // Base64 básico - en producción usar cifrado real
+      ignoreSSLErrors: this.ignoreSSLErrors // Guardar la opción SSL
     };
     localStorage.setItem('nodeterm_nextcloud_config', JSON.stringify(config));
   }
@@ -37,6 +40,7 @@ class NextcloudService {
         this.baseUrl = parsed.baseUrl;
         this.username = parsed.username;
         this.password = atob(parsed.password); // Decodificar Base64
+        this.ignoreSSLErrors = parsed.ignoreSSLErrors || false; // Cargar opción SSL
         this.isConfigured = true;
         return true;
       }
@@ -54,6 +58,7 @@ class NextcloudService {
     this.baseUrl = null;
     this.username = null;
     this.password = null;
+    this.ignoreSSLErrors = false;
     this.isConfigured = false;
   }
 
@@ -70,6 +75,56 @@ class NextcloudService {
   }
 
   /**
+   * Configura opciones de fetch con manejo de SSL
+   */
+  getFetchOptions(method = 'GET', headers = {}, body = null) {
+    const options = {
+      method,
+      headers: {
+        ...this.getAuthHeaders(),
+        ...headers
+      }
+    };
+
+    if (body) {
+      options.body = body;
+    }
+
+    return options;
+  }
+
+  /**
+   * Realiza una petición HTTP con manejo de SSL personalizado
+   */
+  async makeHttpRequest(url, options) {
+    // Si se debe ignorar errores SSL y estamos en Electron, usar el proceso principal
+    if (this.ignoreSSLErrors && typeof window !== 'undefined' && window.electron && window.electron.ipcRenderer) {
+      try {
+        const response = await window.electron.ipcRenderer.invoke('nextcloud:http-request', {
+          url,
+          options,
+          ignoreSSLErrors: true
+        });
+        
+        // Convertir la respuesta al formato de fetch
+        return {
+          ok: response.status >= 200 && response.status < 300,
+          status: response.status,
+          statusText: response.statusText,
+          headers: new Headers(response.headers),
+          text: async () => response.data,
+          json: async () => JSON.parse(response.data)
+        };
+      } catch (error) {
+        throw new Error(`Error en petición HTTP: ${error.message}`);
+      }
+    } else {
+      // Usar fetch normal
+      return fetch(url, options);
+    }
+  }
+
+  /**
    * Verifica la conectividad con Nextcloud
    */
   async testConnection() {
@@ -78,10 +133,8 @@ class NextcloudService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/ocs/v1.php/cloud/user`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
-      });
+      const options = this.getFetchOptions('GET');
+      const response = await this.makeHttpRequest(`${this.baseUrl}/ocs/v1.php/cloud/user`, options);
 
       if (response.ok) {
         return { success: true, message: 'Conexión exitosa' };
@@ -104,22 +157,18 @@ class NextcloudService {
   async ensureAppFolder() {
     try {
       // Verificar si la carpeta existe
-      const response = await fetch(
+      const options = this.getFetchOptions('PROPFIND');
+      const response = await this.makeHttpRequest(
         `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/`,
-        {
-          method: 'PROPFIND',
-          headers: this.getAuthHeaders()
-        }
+        options
       );
 
       if (response.status === 404) {
         // Crear la carpeta
-        const createResponse = await fetch(
+        const createOptions = this.getFetchOptions('MKCOL');
+        const createResponse = await this.makeHttpRequest(
           `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/`,
-          {
-            method: 'MKCOL',
-            headers: this.getAuthHeaders()
-          }
+          createOptions
         );
 
         if (!createResponse.ok) {
@@ -138,16 +187,13 @@ class NextcloudService {
   async uploadFile(filename, content) {
     await this.ensureAppFolder();
 
-    const response = await fetch(
+    const options = this.getFetchOptions('PUT', {
+      'Content-Type': 'application/octet-stream'
+    }, content);
+
+    const response = await this.makeHttpRequest(
       `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/${filename}`,
-      {
-        method: 'PUT',
-        headers: {
-          ...this.getAuthHeaders(),
-          'Content-Type': 'application/octet-stream'
-        },
-        body: content
-      }
+      options
     );
 
     if (!response.ok) {
@@ -161,12 +207,10 @@ class NextcloudService {
    * Descarga un archivo de Nextcloud
    */
   async downloadFile(filename) {
-    const response = await fetch(
+    const options = this.getFetchOptions('GET');
+    const response = await this.makeHttpRequest(
       `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/${filename}`,
-      {
-        method: 'GET',
-        headers: this.getAuthHeaders()
-      }
+      options
     );
 
     if (response.status === 404) {
@@ -184,15 +228,13 @@ class NextcloudService {
    * Lista archivos en la carpeta de la aplicación
    */
   async listFiles() {
-    const response = await fetch(
+    const options = this.getFetchOptions('PROPFIND', {
+      'Depth': '1'
+    });
+
+    const response = await this.makeHttpRequest(
       `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/`,
-      {
-        method: 'PROPFIND',
-        headers: {
-          ...this.getAuthHeaders(),
-          'Depth': '1'
-        }
-      }
+      options
     );
 
     if (response.status === 404) {
@@ -225,15 +267,13 @@ class NextcloudService {
    * Obtiene información de un archivo
    */
   async getFileInfo(filename) {
-    const response = await fetch(
+    const options = this.getFetchOptions('PROPFIND', {
+      'Depth': '0'
+    });
+
+    const response = await this.makeHttpRequest(
       `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/${filename}`,
-      {
-        method: 'PROPFIND',
-        headers: {
-          ...this.getAuthHeaders(),
-          'Depth': '0'
-        }
-      }
+      options
     );
 
     if (response.status === 404) {
@@ -260,12 +300,10 @@ class NextcloudService {
    * Elimina un archivo
    */
   async deleteFile(filename) {
-    const response = await fetch(
+    const options = this.getFetchOptions('DELETE');
+    const response = await this.makeHttpRequest(
       `${this.baseUrl}/remote.php/dav/files/${this.username}/${this.appFolder}/${filename}`,
-      {
-        method: 'DELETE',
-        headers: this.getAuthHeaders()
-      }
+      options
     );
 
     if (response.status === 404) {
