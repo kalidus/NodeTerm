@@ -2038,6 +2038,76 @@ const App = () => {
     localStorage.setItem(STATUSBAR_ICON_THEME_STORAGE_KEY, statusBarIconTheme);
   }, [statusBarIconTheme]);
 
+  // Listener para actualizaciones de configuración desde sincronización
+  useEffect(() => {
+    const handleSettingsUpdate = (event) => {
+      if (event.detail?.source === 'sync') {
+        console.log('[SYNC] Actualizando estados React tras sincronización...');
+        
+        // Actualizar estados que dependen de localStorage
+        const updatedStatusBarTheme = localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
+        const updatedStatusBarIconTheme = localStorage.getItem(STATUSBAR_ICON_THEME_STORAGE_KEY) || 'classic';
+        const updatedLocalFontFamily = localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace';
+        const updatedLocalFontSize = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
+        const updatedLocalTerminalTheme = localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark';
+        const updatedLocalPowerShellTheme = localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark';
+        const updatedLocalLinuxTerminalTheme = localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark';
+        
+        // Debug: verificar el tema UI actual
+        const currentUIThemeInLocalStorage = localStorage.getItem('ui_theme');
+        console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
+        console.log('[SYNC] [APP] Tema UI en React state antes del update:', uiTheme);
+        
+        // Estados adicionales del explorador y sidebar
+        const updatedExplorerFont = localStorage.getItem('explorerFont') || explorerFonts[0];
+        const updatedExplorerFontSize = localStorage.getItem('explorerFontSize');
+        const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
+        const updatedSidebarFont = localStorage.getItem('sidebarFont') || explorerFonts[0];
+        const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize');
+        const updatedIconTheme = localStorage.getItem('iconTheme') || 'material';
+        const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'classic';
+        const updatedStatusBarPollingInterval = localStorage.getItem('statusBarPollingInterval');
+        
+        // Aplicar los estados actualizados
+        setStatusBarTheme(updatedStatusBarTheme);
+        setStatusBarIconTheme(updatedStatusBarIconTheme);
+        setLocalFontFamily(updatedLocalFontFamily);
+        if (updatedLocalFontSize) {
+          setLocalFontSize(parseInt(updatedLocalFontSize, 10));
+        }
+        setLocalTerminalTheme(updatedLocalTerminalTheme);
+        setLocalPowerShellTheme(updatedLocalPowerShellTheme);
+        setLocalLinuxTerminalTheme(updatedLocalLinuxTerminalTheme);
+        
+        // Aplicar estados adicionales
+        setExplorerFont(updatedExplorerFont);
+        if (updatedExplorerFontSize) {
+          setExplorerFontSize(parseInt(updatedExplorerFontSize, 10));
+        }
+        setExplorerColorTheme(updatedExplorerColorTheme);
+        setSidebarFont(updatedSidebarFont);
+        if (updatedSidebarFontSize) {
+          setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
+        }
+        setIconTheme(updatedIconTheme);
+        setIconThemeSidebar(updatedIconThemeSidebar);
+        if (updatedStatusBarPollingInterval) {
+          setStatusBarPollingInterval(parseInt(updatedStatusBarPollingInterval, 10));
+        }
+        // NUEVO: Actualizar el estado del tema UI
+        setUiTheme(currentUIThemeInLocalStorage || 'Light');
+        console.log('[SYNC] [APP] Tema UI en React state después del update:', currentUIThemeInLocalStorage || 'Light');
+        console.log('[SYNC] ✓ Estados React actualizados');
+      }
+    };
+
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('settings-updated', handleSettingsUpdate);
+    };
+  }, []);
+
   const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
   const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
   const [localFontFamily, setLocalFontFamily] = useState(() => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace');
@@ -2173,6 +2243,9 @@ const App = () => {
   useEffect(() => {
     window.__DEBUG_NODES__ = () => nodes;
   }, [nodes]);
+
+  // 1. Al inicio del componente App, junto con los otros useState:
+  const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
