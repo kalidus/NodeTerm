@@ -33,6 +33,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
   const [message, setMessage] = useState(null);
   const [syncStatus, setSyncStatus] = useState({});
   const [syncStats, setSyncStats] = useState(null);
+  const [autoSyncInterval, setAutoSyncInterval] = useState(5); // Intervalo por defecto: 5 minutos
   
   // Configuración de Nextcloud
   const [nextcloudConfig, setNextcloudConfig] = useState({
@@ -68,6 +69,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
   const updateSyncStatus = async () => {
     const status = syncManager.getSyncStatus();
     setSyncStatus(status);
+    setAutoSyncInterval(status.autoSyncIntervalMinutes || 5);
     
     if (status.configured) {
       try {
@@ -164,6 +166,20 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       
       const status = enabled ? 'habilitada' : 'deshabilitada';
       setMessage({ severity: 'success', summary: 'Sincronización', detail: `Sincronización ${status}` });
+    } catch (error) {
+      setMessage({ severity: 'error', summary: 'Error', detail: error.message });
+    }
+  };
+
+  const handleIntervalChange = async (newInterval) => {
+    try {
+      syncManager.setAutoSyncInterval(newInterval);
+      setAutoSyncInterval(newInterval);
+      setMessage({ 
+        severity: 'success', 
+        summary: 'Intervalo actualizado', 
+        detail: `Sincronización automática configurada cada ${newInterval} minutos` 
+      });
     } catch (error) {
       setMessage({ severity: 'error', summary: 'Error', detail: error.message });
     }
@@ -436,7 +452,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                 <div>
                   <h4 style={{ margin: '0 0 0.5rem 0' }}>Sincronización Automática</h4>
                   <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
-                    Sincroniza automáticamente cada 5 minutos
+                    Sincroniza automáticamente cada {autoSyncInterval} minutos
                   </p>
                 </div>
                 <ToggleButton
@@ -448,6 +464,83 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                   offIcon="pi pi-times"
                 />
               </div>
+
+              {/* Configuración del intervalo de sincronización */}
+              {syncStatus.enabled && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: '1rem',
+                  background: 'var(--surface-50)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--surface-200)'
+                }}>
+                  <div>
+                    <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>Intervalo de Sincronización</h5>
+                    <p style={{ margin: 0, color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
+                      Configura cada cuántos minutos se sincronizará automáticamente (1-1440 minutos)
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      border: '1px solid var(--surface-300)',
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      background: 'var(--surface-0)'
+                    }}>
+                      <Button
+                        icon="pi pi-minus"
+                        className="p-button-secondary p-button-sm"
+                        onClick={() => {
+                          const newValue = Math.max(1, autoSyncInterval - 1);
+                          handleIntervalChange(newValue);
+                        }}
+                        style={{ 
+                          borderRadius: 0,
+                          border: 'none',
+                          minWidth: '40px'
+                        }}
+                      />
+                      <InputText
+                        value={autoSyncInterval}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          const clampedValue = Math.max(1, Math.min(1440, value));
+                          handleIntervalChange(clampedValue);
+                        }}
+                        style={{ 
+                          width: '60px',
+                          textAlign: 'center',
+                          border: 'none',
+                          borderRadius: 0,
+                          fontSize: '0.9rem'
+                        }}
+                      />
+                      <Button
+                        icon="pi pi-plus"
+                        className="p-button-secondary p-button-sm"
+                        onClick={() => {
+                          const newValue = Math.min(1440, autoSyncInterval + 1);
+                          handleIntervalChange(newValue);
+                        }}
+                        style={{ 
+                          borderRadius: 0,
+                          border: 'none',
+                          minWidth: '40px'
+                        }}
+                      />
+                    </div>
+                    <span style={{ 
+                      fontSize: '0.9rem', 
+                      color: 'var(--text-color-secondary)',
+                      marginLeft: '0.5rem'
+                    }}>minutos</span>
+                  </div>
+                </div>
+              )}
 
               <Divider />
 
@@ -522,6 +615,15 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                       color: syncStatus.autoSyncActive ? 'var(--green-500)' : 'var(--text-color-secondary)'
                     }}>
                       {syncStatus.autoSyncActive ? 'Activa' : 'Inactiva'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Intervalo configurado:</span>
+                    <span style={{ 
+                      color: 'var(--primary-color)',
+                      fontWeight: 'bold'
+                    }}>
+                      {syncStatus.autoSyncIntervalMinutes || 5} minutos
                     </span>
                   </div>
                   {syncStatus.inProgress && (

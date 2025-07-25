@@ -15,6 +15,7 @@ class SyncManager {
     this.lastSyncTime = null;
     this.autoSyncInterval = null;
     this.syncInProgress = false;
+    this.autoSyncIntervalMinutes = 5; // Intervalo por defecto: 5 minutos
     
     // Cargar configuración de sincronización
     this.loadSyncConfig();
@@ -43,6 +44,7 @@ class SyncManager {
         const parsed = JSON.parse(config);
         this.syncEnabled = parsed.syncEnabled || false;
         this.lastSyncTime = parsed.lastSyncTime ? new Date(parsed.lastSyncTime) : null;
+        this.autoSyncIntervalMinutes = parsed.autoSyncIntervalMinutes || 5; // Cargar intervalo configurado
       }
       
       // Cargar configuración de Nextcloud
@@ -58,7 +60,8 @@ class SyncManager {
   saveSyncConfig() {
     const config = {
       syncEnabled: this.syncEnabled,
-      lastSyncTime: this.lastSyncTime?.toISOString()
+      lastSyncTime: this.lastSyncTime?.toISOString(),
+      autoSyncIntervalMinutes: this.autoSyncIntervalMinutes
     };
     localStorage.setItem('nodeterm_sync_config', JSON.stringify(config));
   }
@@ -83,7 +86,8 @@ class SyncManager {
   startAutoSync() {
     this.stopAutoSync(); // Detener cualquier intervalo existente
 
-    // Sincronizar cada 5 minutos
+    // Sincronizar según el intervalo configurado
+    const intervalMs = this.autoSyncIntervalMinutes * 60 * 1000;
     this.autoSyncInterval = setInterval(() => {
       if (this.syncEnabled && !this.syncInProgress) {
         this.syncToCloud().catch(error => {
@@ -92,7 +96,7 @@ class SyncManager {
       }
       this.lastSyncTime = new Date();
       this.saveSyncConfig();
-    }, 5 * 60 * 1000); // 5 minutos
+    }, intervalMs);
   }
 
   /**
@@ -103,6 +107,30 @@ class SyncManager {
       clearInterval(this.autoSyncInterval);
       this.autoSyncInterval = null;
     }
+  }
+
+  /**
+   * Configura el intervalo de sincronización automática
+   */
+  setAutoSyncInterval(minutes) {
+    if (minutes < 1 || minutes > 1440) { // Entre 1 minuto y 24 horas
+      throw new Error('El intervalo debe estar entre 1 minuto y 24 horas');
+    }
+    
+    this.autoSyncIntervalMinutes = minutes;
+    this.saveSyncConfig();
+    
+    // Si la sincronización automática está habilitada, reiniciar con el nuevo intervalo
+    if (this.syncEnabled) {
+      this.startAutoSync();
+    }
+  }
+
+  /**
+   * Obtiene el intervalo de sincronización actual
+   */
+  getAutoSyncInterval() {
+    return this.autoSyncIntervalMinutes;
   }
 
   /**
@@ -471,7 +499,8 @@ class SyncManager {
       configured: this.nextcloudService.isConfigured,
       lastSync: this.lastSyncTime,
       inProgress: this.syncInProgress,
-      autoSyncActive: this.autoSyncInterval !== null
+      autoSyncActive: this.autoSyncInterval !== null,
+      autoSyncIntervalMinutes: this.autoSyncIntervalMinutes
     };
   }
 
