@@ -171,7 +171,7 @@ class SyncManager {
   /**
    * Sincroniza datos locales a la nube
    */
-  async syncToCloud() {
+  async syncToCloud(treeJson) {
     if (!this.nextcloudService.isConfigured) {
       throw new Error('Nextcloud no está configurado');
     }
@@ -183,10 +183,23 @@ class SyncManager {
     this.syncInProgress = true;
 
     try {
+      // Si no se pasa treeJson, obtenerlo de localStorage
+      if (!treeJson) {
+        const localTree = localStorage.getItem('basicapp2_tree_data');
+        if (localTree) {
+          treeJson = localTree;
+          console.log('[SYNC][AUTO] treeJson obtenido de localStorage:', treeJson);
+        } else {
+          console.warn('[SYNC][AUTO] No se encontró treeJson en localStorage, se subirá árbol vacío.');
+          treeJson = '[]';
+        }
+      }
+      // Subir árbol visual
+      const uploadTreeResult = await this.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
+      console.log('[SYNC] Resultado upload nodeterm-tree.json:', uploadTreeResult);
       // Obtener datos locales
       const localData = this.getAllLocalData();
       console.log('[SYNC] Exportando localData:', localData);
-      
       // Convertir a JSON
       const jsonData = JSON.stringify(localData, null, 2);
       // Subir configuración general a Nextcloud

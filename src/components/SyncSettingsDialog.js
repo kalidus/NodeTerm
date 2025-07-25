@@ -175,10 +175,14 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       switch (direction) {
         case 'upload':
           // Subir árbol completo de nodos
+          let treeJson = null;
           if (exportTreeToJson) {
-            const treeJson = exportTreeToJson();
+            treeJson = exportTreeToJson();
             await syncManager.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
             console.log('[SYNC] Exportando árbol nodeterm-tree.json:', treeJson);
+            // Listar archivos tras la subida
+            const files = await syncManager.nextcloudService.listFiles();
+            console.log('[SYNC][DEBUG] Archivos en NodeTerm tras upload:', files);
             // --- Sincronizar sesiones SSH con SessionManager ---
             const nodes = JSON.parse(treeJson);
             const sshSessions = extractAllSshSessions(nodes);
@@ -188,15 +192,20 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
               console.log('[SYNC][DEBUG] Sesiones SSH sincronizadas en SessionManager:', sshSessions);
             }
           }
-          result = await syncManager.syncToCloud();
+          result = await syncManager.syncToCloud(treeJson);
           break;
         case 'download':
           // Descargar y restaurar árbol completo de nodos
           if (importTreeFromJson) {
             const treeJson = await syncManager.nextcloudService.downloadFile('nodeterm-tree.json');
+            console.log('[SYNC][DEBUG] treeJson descargado:', treeJson);
             if (treeJson) {
               const ok = importTreeFromJson(treeJson);
-              console.log('[SYNC] Restaurando árbol nodeterm-tree.json:', ok);
+              console.log('[SYNC][DEBUG] Resultado importTreeFromJson:', ok);
+              // Loggear el estado global de nodes si es posible
+              if (window && window.__DEBUG_NODES__) {
+                console.log('[SYNC][DEBUG] Estado global nodes tras import:', window.__DEBUG_NODES__());
+              }
               // --- Sincronizar sesiones SSH con SessionManager tras restaurar ---
               const nodes = JSON.parse(treeJson);
               const sshSessions = extractAllSshSessions(nodes);
@@ -205,6 +214,9 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                 sessionManager.loadSessionsFromArray(sshSessions);
                 console.log('[SYNC][DEBUG] Sesiones SSH sincronizadas tras restaurar:', sshSessions);
               }
+            } else {
+              console.warn('[SYNC][DEBUG] treeJson descargado está vacío o no existe');
+              setMessage({ severity: 'warn', summary: 'Sin datos', detail: 'No se encontró árbol remoto en la nube.' });
             }
           }
           result = await syncManager.syncFromCloud();
