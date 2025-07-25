@@ -865,16 +865,16 @@ const App = () => {
   useEffect(() => {
     const savedNodes = localStorage.getItem(STORAGE_KEY);
     if (savedNodes) {
-      const loadedNodes = JSON.parse(savedNodes);
-      // Migrar nodos existentes para asegurar que las sesiones SSH tengan droppable: false
+      let loadedNodes = JSON.parse(savedNodes);
+      if (!Array.isArray(loadedNodes)) {
+        loadedNodes = [loadedNodes];
+      }
       const migrateNodes = (nodes) => {
         return nodes.map(node => {
           const migratedNode = { ...node };
-          // Si es una sesión SSH y no tiene droppable definido o es true, establecerlo como false
           if (node.data && node.data.type === 'ssh') {
             migratedNode.droppable = false;
           }
-          // Migrar recursivamente los hijos
           if (node.children && node.children.length > 0) {
             migratedNode.children = migrateNodes(node.children);
           }
@@ -882,7 +882,7 @@ const App = () => {
         });
       };
       const migratedNodes = migrateNodes(loadedNodes);
-      setNodes(migratedNodes);
+      setNodes(migratedNodes); // <-- Si está vacío, se respeta
     } else {
       setNodes(getDefaultNodes());
     }
@@ -896,9 +896,9 @@ const App = () => {
 
   // Save nodes to localStorage whenever they change
   useEffect(() => {
-    if (nodes && nodes.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
+    console.log('[DEBUG][localStorage] nodes guardados:', nodes);
+    console.trace('[TRACE][localStorage] nodes guardados');
   }, [nodes]);
 
   // Auto-save font family to localStorage
@@ -942,37 +942,23 @@ const App = () => {
   const getDefaultNodes = () => [
     {
       key: generateUniqueKey(),
-      label: 'Proyectos',
+      label: 'Carpeta 1',
       droppable: true,
-      children: [
-        {
-          key: generateUniqueKey(),
-          label: 'Proyecto 1',
-          droppable: true,
-          children: [
-            { key: generateUniqueKey(), label: 'Archivo 1.txt', draggable: true },
-            { key: generateUniqueKey(), label: 'Archivo 2.txt', draggable: true }
-          ]
-        },
-        {
-          key: generateUniqueKey(),
-          label: 'Proyecto 2',
-          droppable: true,
-          children: [
-            { key: generateUniqueKey(), label: 'Archivo 3.txt', draggable: true }
-          ]
-        }
-      ]
+      children: [],
+      uid: generateUniqueKey(),
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
     },
     {
       key: generateUniqueKey(),
-      label: 'Documentos',
+      label: 'Carpeta 2',
       droppable: true,
-      children: [
-        { key: generateUniqueKey(), label: 'Documento 1.pdf', draggable: true },
-        { key: generateUniqueKey(), label: 'Documento 2.docx', draggable: true }
-      ]
+      children: [],
+      uid: generateUniqueKey(),
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
     }
+    // Puedes agregar más nodos raíz de ejemplo si quieres
   ];
 
   // Selected node in the tree
@@ -1266,7 +1252,8 @@ const App = () => {
         parentNode.children = parentNode.children || [];
         parentNode.children.push(newFolder);
       }
-      setNodes(nodesCopy);
+      setNodes(() => logSetNodes('createNewFolder', nodesCopy));
+      console.log('[DEBUG][createNewFolder] nodes después de crear carpeta:', nodesCopy);
       closeFolderDialog();
       toast.current.show({
         severity: 'success',
@@ -1523,7 +1510,8 @@ const App = () => {
     } else {
       nodesCopy.unshift(newSSHNode);
     }
-    setNodes(nodesCopy);
+    setNodes(() => logSetNodes('createNewSSH', nodesCopy));
+    console.log('[DEBUG][createNewSSH] nodes después de crear SSH:', nodesCopy);
     closeSSHDialog();
     toast.current.show({
       severity: 'success',
@@ -2127,8 +2115,6 @@ const App = () => {
   const reloadSessionsFromStorage = async () => {
     const sessionManager = new SessionManager();
     await sessionManager.initialize();
-    // Aquí deberías tener una función para convertir sesiones a nodos del árbol
-    // Por simplicidad, asumimos que cada sesión es un nodo raíz tipo SSH
     const sessions = sessionManager.getAllSessions();
     const nodesFromSessions = sessions.map(session => ({
       key: session.id,
@@ -2143,7 +2129,9 @@ const App = () => {
       createdAt: session.createdAt,
       isUserCreated: true
     }));
-    setNodes(nodesFromSessions);
+    // NO sobrescribir nunca el array vacío automáticamente
+    // El usuario debe restaurar/importar/sincronizar manualmente si lo desea
+    // Por lo tanto, no llamar a setNodes aquí si el árbol está vacío
   };
 
   const [showSyncDialog, setShowSyncDialog] = useState(false);
@@ -2151,19 +2139,45 @@ const App = () => {
 
   // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
   const exportTreeToJson = () => {
-    return JSON.stringify(nodes, null, 2);
+    // Siempre exportar como array
+    let safeNodes = Array.isArray(nodes) ? nodes : (nodes ? [nodes] : []);
+    return JSON.stringify(safeNodes, null, 2);
   };
   // --- Importar el árbol completo de nodos (carpetas + sesiones) ---
   const importTreeFromJson = (json) => {
     try {
-      const importedNodes = JSON.parse(json);
-      setNodes(importedNodes);
+      let importedNodes = JSON.parse(json);
+      if (!Array.isArray(importedNodes)) {
+        importedNodes = [importedNodes];
+      }
+      // Fusionar con los nodos existentes si ya hay nodos
+      setNodes(prevNodes => {
+        // Filtrar nodos importados que ya existen por key para evitar duplicados
+        const existingKeys = new Set(prevNodes.map(n => n.key));
+        const merged = [
+          ...prevNodes,
+          ...importedNodes.filter(n => !existingKeys.has(n.key))
+        ];
+        console.log('[DEBUG][importTreeFromJson] nodes después de importar (merge):', merged);
+        return logSetNodes('importTreeFromJson', merged);
+      });
       return true;
     } catch (e) {
       console.error('Error importando árbol:', e);
       return false;
     }
   };
+
+  // Helper para loggear setNodes
+  function logSetNodes(source, nodes) {
+    console.log(`[DEBUG][setNodes][${source}]`, nodes);
+    console.trace(`[TRACE][setNodes][${source}]`);
+    return nodes;
+  }
+
+  useEffect(() => {
+    console.log('[DEBUG][RENDER][App.js] nodes:', nodes);
+  }, [nodes]);
 
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
@@ -2217,6 +2231,8 @@ const App = () => {
             }
           >
             <Sidebar
+              nodes={nodes}
+              setNodes={setNodes}
               sidebarCollapsed={sidebarCollapsed}
               setSidebarCollapsed={setSidebarCollapsed}
               allExpanded={allExpanded}
@@ -2228,47 +2244,10 @@ const App = () => {
               explorerFontSize={sidebarFontSize}
               uiTheme={terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light'}
               showToast={toast.current && toast.current.show ? toast.current.show : undefined}
-                              onNodeContextMenu={onNodeContextMenu}
-                onTreeAreaContextMenu={onTreeAreaContextMenu}
-                sidebarCallbacksRef={sidebarCallbacksRef}
-              onOpenSSHConnection={(node) => {
-                // Lógica igual que antes en onDoubleClick
-                if (activeGroupId !== null) {
-                  const currentGroupKey = activeGroupId || 'no-group';
-                  setGroupActiveIndices(prev => ({
-                    ...prev,
-                    [currentGroupKey]: activeTabIndex
-                  }));
-                  setActiveGroupId(null);
-                }
-                setSshTabs(prevTabs => {
-                  const tabId = `${node.key}_${Date.now()}`;
-                  const sshConfig = {
-                    host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
-                    username: node.data.user,
-                    password: node.data.password,
-                    port: node.data.port || 22,
-                    originalKey: node.key,
-                    useBastionWallix: node.data.useBastionWallix || false,
-                    bastionHost: node.data.bastionHost || '',
-                    bastionUser: node.data.bastionUser || ''
-                  };
-                  const newTab = {
-                    key: tabId,
-                    label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
-                    originalKey: node.key,
-                    sshConfig: sshConfig,
-                    type: 'terminal'
-                  };
-                  const newTabs = [newTab, ...prevTabs];
-                  setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
-                  setGroupActiveIndices(prev => ({
-                    ...prev,
-                    'no-group': homeTabs.length
-                  }));
-                  return newTabs;
-                });
-              }}
+              onOpenSSHConnection={onOpenSSHConnection}
+              onNodeContextMenu={onNodeContextMenu}
+              onTreeAreaContextMenu={onTreeAreaContextMenu}
+              sidebarCallbacksRef={sidebarCallbacksRef}
             />
           </SplitterPanel>
           <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ 
