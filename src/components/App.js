@@ -2122,8 +2122,8 @@ const App = () => {
   const localTerminalBg = themes[localTerminalTheme]?.theme?.background || '#222';
   const isHomeTabActive = activeTabIndex === 0 && homeTabs.length > 0;
 
-  const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'basicapp_local_powershell_theme';
-  const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_linux_terminal_theme';
+  const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'localPowerShellTheme';
+  const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
   const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() => localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark');
   const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() => localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark');
 
