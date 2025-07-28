@@ -2401,6 +2401,27 @@ const App = () => {
     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
       .then(result => {
         if (result.success) {
+          // Actualizar el estado de la pestaña RDP para que se active el botón "Mostrar Ventana"
+          setRdpTabs(prevTabs => {
+            return prevTabs.map(tab => {
+              if (tab.key === newRdpTab.key) {
+                return {
+                  ...tab,
+                  connectionStatus: 'connected',
+                  connectionInfo: {
+                    server: rdpConfig.server,
+                    username: rdpConfig.username,
+                    port: rdpConfig.port,
+                    resolution: rdpConfig.resolution,
+                    startTime: new Date().toISOString(),
+                    sessionId: result.connectionId || `rdp_${tabId}_${Date.now()}`
+                  }
+                };
+              }
+              return tab;
+            });
+          });
+          
           toast.current?.show({
             severity: 'success',
             summary: 'Conexión RDP',
@@ -3444,6 +3465,8 @@ const App = () => {
                             <RdpSessionTab
                               rdpConfig={tab.rdpConfig}
                               tabId={tab.key}
+                              connectionStatus={tab.connectionStatus}
+                              connectionInfo={tab.connectionInfo}
                             />
                           ) : (
                             <TerminalComponent

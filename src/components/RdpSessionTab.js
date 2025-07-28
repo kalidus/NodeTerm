@@ -5,16 +5,23 @@ import { Tag } from 'primereact/tag';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
 
-const RdpSessionTab = ({ rdpConfig, tabId }) => {
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  const [connectionInfo, setConnectionInfo] = useState(null);
+const RdpSessionTab = ({ rdpConfig, tabId, connectionStatus: tabConnectionStatus, connectionInfo: tabConnectionInfo }) => {
+  const [connectionStatus, setConnectionStatus] = useState(tabConnectionStatus || 'disconnected');
+  const [connectionInfo, setConnectionInfo] = useState(tabConnectionInfo || null);
   const [error, setError] = useState(null);
   const toast = React.useRef(null);
 
+  // Sincronizar con el estado de la pestaña
   useEffect(() => {
-    // El componente ahora usa el RdpManager directamente a través de ipcRenderer.invoke
-    // No necesitamos listeners IPC ya que manejamos las respuestas con promises
-  }, [rdpConfig, tabId]);
+    if (tabConnectionStatus) {
+      setConnectionStatus(tabConnectionStatus);
+    }
+    if (tabConnectionInfo) {
+      setConnectionInfo(tabConnectionInfo);
+    }
+  }, [tabConnectionStatus, tabConnectionInfo]);
+
+
 
   const handleDisconnect = () => {
     setConnectionStatus('disconnected');
@@ -243,8 +250,8 @@ const RdpSessionTab = ({ rdpConfig, tabId }) => {
               severity="info"
               onClick={async () => {
                 try {
-                  if (window.electronAPI && window.electronAPI.rdp) {
-                    const result = await window.electronAPI.rdp.showWindow(rdpConfig.server);
+                  if (window.electron && window.electron.ipcRenderer) {
+                    const result = await window.electron.ipcRenderer.invoke('rdp:show-window', { server: rdpConfig.server });
                     if (result.success) {
                       toast.current?.show({
                         severity: 'success',
@@ -325,8 +332,8 @@ const RdpSessionTab = ({ rdpConfig, tabId }) => {
               onClick={async () => {
                 try {
                   // Intentar desconectar la sesión RDP
-                  if (window.electronAPI && window.electronAPI.rdp) {
-                    const result = await window.electronAPI.rdp.disconnectSession(rdpConfig.server);
+                  if (window.electron && window.electron.ipcRenderer) {
+                    const result = await window.electron.ipcRenderer.invoke('rdp:disconnect-session', { server: rdpConfig.server });
                     if (result.success) {
                       toast.current?.show({
                         severity: 'success',
