@@ -43,7 +43,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh:.*$/,
         /^dialog:.*$/,
         /^ubuntu:.*$/,
-        /^wsl-distro:.*$/
+        /^wsl-distro:.*$/,
+        /^rdp:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -66,7 +67,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^powershell:.*$/,
         /^wsl:.*$/,
         /^ubuntu:.*$/,
-        /^wsl-distro:.*$/
+        /^wsl-distro:.*$/,
+        /^rdp:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -90,7 +92,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^powershell:.*$/,
         /^wsl:.*$/,
         /^ubuntu:.*$/,
-        /^wsl-distro:.*$/
+        /^wsl-distro:.*$/,
+        /^rdp:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);
@@ -121,5 +124,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximize: () => ipcRenderer.invoke('window:maximize'),
   unmaximize: () => ipcRenderer.invoke('window:unmaximize'),
   isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
-  close: () => ipcRenderer.invoke('window:close')
+  close: () => ipcRenderer.invoke('window:close'),
+  // RDP API
+  rdp: {
+    connect: (config) => ipcRenderer.invoke('rdp:connect', config),
+    disconnect: (connectionId) => ipcRenderer.invoke('rdp:disconnect', connectionId),
+    disconnectAll: () => ipcRenderer.invoke('rdp:disconnect-all'),
+    getActiveConnections: () => ipcRenderer.invoke('rdp:get-active-connections'),
+    getPresets: () => ipcRenderer.invoke('rdp:get-presets')
+  }
 }); 

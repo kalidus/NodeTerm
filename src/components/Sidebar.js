@@ -23,6 +23,7 @@ const Sidebar = ({
   toggleExpandAll,
   setShowCreateGroupDialog,
   setShowSettingsDialog,
+  setShowRdpManager, // Nuevo prop para RDP Manager
   iconTheme,
   explorerFont,
   explorerFontSize = 14,
@@ -464,6 +465,24 @@ const Sidebar = ({
               border: 'none'
             }} 
           />
+          <Button 
+            icon="pi pi-desktop" 
+            className="p-button-rounded p-button-text sidebar-action-button" 
+            onClick={() => setShowRdpManager && setShowRdpManager(true)} 
+            tooltip="Gestor de conexiones RDP" 
+            tooltipOptions={{ position: 'right' }} 
+            style={{ 
+              margin: 0, 
+              width: 40, 
+              height: 40, 
+              minWidth: 40, 
+              minHeight: 40, 
+              fontSize: 18,
+              backgroundColor: colors.sidebarBackground,
+              color: colors.sidebarText,
+              border: 'none'
+            }} 
+          />
           {/* Ocultar el botón de crear carpeta cuando la sidebar está colapsada */}
           {!sidebarCollapsed && (
             <Button 
@@ -553,6 +572,13 @@ const Sidebar = ({
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={() => setShowSSHDialog(true)} 
                 tooltip="Nueva conexión SSH" 
+                tooltipOptions={{ position: 'bottom' }} 
+              />
+              <Button 
+                icon="pi pi-desktop" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => setShowRdpManager && setShowRdpManager(true)} 
+                tooltip="Gestor de conexiones RDP" 
                 tooltipOptions={{ position: 'bottom' }} 
               />
               <Button 
