@@ -2523,14 +2523,14 @@ const App = () => {
             port: rdpData.port || 3389,
             resolution: rdpData.resolution || '1920x1080',
             colorDepth: rdpData.colorDepth || 32,
-            redirectFolders: rdpData.redirectFolders !== false,
-            redirectClipboard: rdpData.redirectClipboard !== false,
-            redirectPrinters: rdpData.redirectPrinters || false,
-            redirectAudio: rdpData.redirectAudio !== false,
-            fullscreen: rdpData.fullscreen || false,
-            span: rdpData.span || false,
-            admin: rdpData.admin || false,
-            public: rdpData.public || false
+            redirectFolders: rdpData.redirectFolders === true,
+            redirectClipboard: rdpData.redirectClipboard === true,
+            redirectPrinters: rdpData.redirectPrinters === true,
+            redirectAudio: rdpData.redirectAudio === true,
+            fullscreen: rdpData.fullscreen === true,
+            span: rdpData.span === true,
+            admin: rdpData.admin === true,
+            public: rdpData.public === true
           };
         }
         
@@ -2550,14 +2550,14 @@ const App = () => {
           port: rdpData.port || 3389,
           resolution: rdpData.resolution || '1920x1080',
           colorDepth: rdpData.colorDepth || 32,
-          redirectFolders: rdpData.redirectFolders !== false,
-          redirectClipboard: rdpData.redirectClipboard !== false,
-          redirectPrinters: rdpData.redirectPrinters || false,
-          redirectAudio: rdpData.redirectAudio !== false,
-          fullscreen: rdpData.fullscreen || false,
-          span: rdpData.span || false,
-          admin: rdpData.admin || false,
-          public: rdpData.public || false
+          redirectFolders: rdpData.redirectFolders === true,
+          redirectClipboard: rdpData.redirectClipboard === true,
+          redirectPrinters: rdpData.redirectPrinters === true,
+          redirectAudio: rdpData.redirectAudio === true,
+          fullscreen: rdpData.fullscreen === true,
+          span: rdpData.span === true,
+          admin: rdpData.admin === true,
+          public: rdpData.public === true
         },
         draggable: true,
         droppable: false,
@@ -2571,6 +2571,38 @@ const App = () => {
         const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
         newNodes.push(newNode);
         return newNodes;
+      });
+    }
+
+    // Actualizar pestañas RDP si están abiertas
+    if (isEditing && originalNode) {
+      setRdpTabs(prevTabs => {
+        return prevTabs.map(tab => {
+          if (tab.originalKey === originalNode.key) {
+            return {
+              ...tab,
+              label: rdpData.name || `${rdpData.server}:${rdpData.port}`,
+              rdpConfig: {
+                name: rdpData.name,
+                server: rdpData.server,
+                username: rdpData.username,
+                password: rdpData.password,
+                port: rdpData.port || 3389,
+                resolution: rdpData.resolution || '1920x1080',
+                colorDepth: rdpData.colorDepth || 32,
+                redirectFolders: rdpData.redirectFolders === true,
+                redirectClipboard: rdpData.redirectClipboard === true,
+                redirectPrinters: rdpData.redirectPrinters === true,
+                redirectAudio: rdpData.redirectAudio === true,
+                fullscreen: rdpData.fullscreen === true,
+                span: rdpData.span === true,
+                admin: rdpData.admin === true,
+                public: rdpData.public === true
+              }
+            };
+          }
+          return tab;
+        });
       });
     }
 
@@ -3497,16 +3529,37 @@ const App = () => {
                               connectionStatus={tab.connectionStatus}
                               connectionInfo={tab.connectionInfo}
                               onEditConnection={(rdpConfig, tabId) => {
-                                // Crear un nodo temporal para editar
-                                const tempNode = {
-                                  key: tabId,
-                                  label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
-                                  data: {
-                                    type: 'rdp',
-                                    ...rdpConfig
+                                // Buscar la pestaña RDP para obtener el originalKey
+                                const rdpTab = rdpTabs.find(tab => tab.key === tabId);
+                                if (rdpTab && rdpTab.originalKey) {
+                                  // Buscar el nodo original en la sidebar
+                                  const originalNode = findNodeByKey(nodes, rdpTab.originalKey);
+                                  if (originalNode) {
+                                    openEditRdpDialog(originalNode);
+                                  } else {
+                                    // Fallback: crear nodo temporal si no se encuentra el original
+                                    const tempNode = {
+                                      key: rdpTab.originalKey,
+                                      label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                      data: {
+                                        type: 'rdp',
+                                        ...rdpConfig
+                                      }
+                                    };
+                                    openEditRdpDialog(tempNode);
                                   }
-                                };
-                                openEditRdpDialog(tempNode);
+                                } else {
+                                  // Fallback: crear nodo temporal si no hay originalKey
+                                  const tempNode = {
+                                    key: tabId,
+                                    label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                    data: {
+                                      type: 'rdp',
+                                      ...rdpConfig
+                                    }
+                                  };
+                                  openEditRdpDialog(tempNode);
+                                }
                               }}
                             />
                           ) : (
