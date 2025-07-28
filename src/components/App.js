@@ -88,13 +88,7 @@ const App = () => {
   const [rdpPort, setRdpPort] = useState(3389);
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
   const [showRdpDialog, setShowRdpDialog] = useState(false);
-  const [showEditRdpDialog, setShowEditRdpDialog] = useState(false);
-  const [editRdpNode, setEditRdpNode] = useState(null);
-  const [editRdpName, setEditRdpName] = useState('');
-  const [editRdpServer, setEditRdpServer] = useState('');
-  const [editRdpUsername, setEditRdpUsername] = useState('');
-  const [editRdpPassword, setEditRdpPassword] = useState('');
-  const [editRdpPort, setEditRdpPort] = useState(3389);
+
 
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -1684,48 +1678,14 @@ const App = () => {
   };
 
   const openEditRdpDialog = (node) => {
-    setEditRdpNode(node);
-    setEditRdpName(node.label);
-    setEditRdpServer(node.data?.server || '');
-    setEditRdpUsername(node.data?.username || '');
-    setEditRdpPassword(node.data?.password || '');
-    setEditRdpPort(node.data?.port || 3389);
-    setShowEditRdpDialog(true);
+    console.log('openEditRdpDialog called with node:', node);
+    // Abrir el gestor de conexiones RDP con los datos del nodo para editar
+    setRdpNodeData(node.data);
+    setEditingRdpNode(node);
+    setShowRdpManager(true);
   };
 
-  const saveEditRdp = () => {
-    if (!editRdpName.trim() || !editRdpServer.trim() || !editRdpUsername.trim() || !editRdpPassword.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Todos los campos son obligatorios',
-        life: 3000
-      });
-      return;
-    }
-    
-    const nodesCopy = deepCopy(nodes);
-    const nodeToEdit = findNodeByKey(nodesCopy, editRdpNode.key);
-    if (nodeToEdit) {
-      nodeToEdit.label = editRdpName.trim();
-      nodeToEdit.data = { 
-        ...nodeToEdit.data, 
-        server: editRdpServer.trim(),
-        username: editRdpUsername.trim(),
-        password: editRdpPassword.trim(),
-        port: editRdpPort,
-        type: 'rdp'
-      };
-      setNodes(() => logSetNodes('saveEditRdp', nodesCopy));
-      setShowEditRdpDialog(false);
-      toast.current.show({
-        severity: 'success',
-        summary: 'RDP actualizada',
-        detail: `Conexión RDP "${editRdpName}" actualizada`,
-        life: 3000
-      });
-    }
-  };
+
 
   // Función para abrir el diálogo de edición SSH
   const openEditSSHDialog = (node) => {
@@ -2436,41 +2396,75 @@ const App = () => {
       });
   };
 
-  const handleSaveRdpToSidebar = (rdpData) => {
-    // Crear un nuevo nodo RDP en la sidebar
-    const newNode = {
-      key: `rdp_${Date.now()}`,
-      label: rdpData.name || `${rdpData.server}:${rdpData.port}`,
-      data: {
-        type: 'rdp',
-        server: rdpData.server,
-        username: rdpData.username,
-        password: rdpData.password,
-        port: rdpData.port || 3389,
-        resolution: rdpData.resolution || '1920x1080',
-        colorDepth: rdpData.colorDepth || 32,
-        redirectFolders: rdpData.redirectFolders !== false,
-        redirectClipboard: rdpData.redirectClipboard !== false,
-        redirectPrinters: rdpData.redirectPrinters || false,
-        redirectAudio: rdpData.redirectAudio !== false,
-        fullscreen: rdpData.fullscreen || false,
-        span: rdpData.span || false,
-        admin: rdpData.admin || false,
-        public: rdpData.public || false
-      },
-      draggable: true,
-      droppable: false,
-      uid: `rdp_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      isUserCreated: true
-    };
+  const handleSaveRdpToSidebar = (rdpData, isEditing = false, originalNode = null) => {
+    if (isEditing && originalNode) {
+      // Actualizar nodo existente
+      setNodes(prevNodes => {
+        const nodesCopy = Array.isArray(prevNodes) ? [...prevNodes] : [];
+        const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
+        
+        if (nodeToEdit) {
+          nodeToEdit.label = rdpData.name || `${rdpData.server}:${rdpData.port}`;
+          nodeToEdit.data = {
+            ...nodeToEdit.data,
+            type: 'rdp',
+            name: rdpData.name,
+            server: rdpData.server,
+            username: rdpData.username,
+            password: rdpData.password,
+            port: rdpData.port || 3389,
+            resolution: rdpData.resolution || '1920x1080',
+            colorDepth: rdpData.colorDepth || 32,
+            redirectFolders: rdpData.redirectFolders !== false,
+            redirectClipboard: rdpData.redirectClipboard !== false,
+            redirectPrinters: rdpData.redirectPrinters || false,
+            redirectAudio: rdpData.redirectAudio !== false,
+            fullscreen: rdpData.fullscreen || false,
+            span: rdpData.span || false,
+            admin: rdpData.admin || false,
+            public: rdpData.public || false
+          };
+        }
+        
+        return nodesCopy;
+      });
+    } else {
+      // Crear un nuevo nodo RDP en la sidebar
+      const newNode = {
+        key: `rdp_${Date.now()}`,
+        label: rdpData.name || `${rdpData.server}:${rdpData.port}`,
+        data: {
+          type: 'rdp',
+          name: rdpData.name,
+          server: rdpData.server,
+          username: rdpData.username,
+          password: rdpData.password,
+          port: rdpData.port || 3389,
+          resolution: rdpData.resolution || '1920x1080',
+          colorDepth: rdpData.colorDepth || 32,
+          redirectFolders: rdpData.redirectFolders !== false,
+          redirectClipboard: rdpData.redirectClipboard !== false,
+          redirectPrinters: rdpData.redirectPrinters || false,
+          redirectAudio: rdpData.redirectAudio !== false,
+          fullscreen: rdpData.fullscreen || false,
+          span: rdpData.span || false,
+          admin: rdpData.admin || false,
+          public: rdpData.public || false
+        },
+        draggable: true,
+        droppable: false,
+        uid: `rdp_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true
+      };
 
-    // Agregar el nodo a la raíz del árbol
-    setNodes(prevNodes => {
-      const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
-      newNodes.push(newNode);
-      return newNodes;
-    });
+      // Agregar el nodo a la raíz del árbol
+      setNodes(prevNodes => {
+        const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
+        newNodes.push(newNode);
+        return newNodes;
+      });
+    }
 
     // Cerrar el diálogo del RdpManager
     setShowRdpManager(false);
@@ -2503,6 +2497,7 @@ const App = () => {
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [showRdpManager, setShowRdpManager] = useState(false);
   const [rdpNodeData, setRdpNodeData] = useState(null);
+  const [editingRdpNode, setEditingRdpNode] = useState(null);
   const sessionManager = useRef(new SessionManager()).current;
 
   // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
@@ -2544,15 +2539,19 @@ const App = () => {
 
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
-    if (sidebarCallbacksRef.current) {
-      sidebarCallbacksRef.current.createRDP = (targetFolder = null) => {
-        openNewRdpDialog(targetFolder);
-      };
-      sidebarCallbacksRef.current.editRDP = (node) => {
-        openEditRdpDialog(node);
-      };
+    // Asegurar que el ref esté inicializado
+    if (!sidebarCallbacksRef.current) {
+      sidebarCallbacksRef.current = {};
     }
-  }, [sidebarCallbacksRef]);
+    
+    sidebarCallbacksRef.current.createRDP = (targetFolder = null) => {
+      openNewRdpDialog(targetFolder);
+    };
+    sidebarCallbacksRef.current.editRDP = (node) => {
+      console.log('editRDP callback called with node:', node);
+      openEditRdpDialog(node);
+    };
+  }, []);
 
   // 1. Al inicio del componente App, junto con los otros useState:
   const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
@@ -2572,9 +2571,11 @@ const App = () => {
         onHide={() => {
           setShowRdpManager(false);
           setRdpNodeData(null);
+          setEditingRdpNode(null);
         }} 
         rdpNodeData={rdpNodeData}
         onSaveToSidebar={handleSaveRdpToSidebar}
+        editingNode={editingRdpNode}
       />
       {/* Menú contextual del árbol de la sidebar */}
       <ContextMenu
@@ -3588,71 +3589,7 @@ const App = () => {
         </div>
       </Dialog>
 
-      {/* Diálogo: Editar conexión RDP */}
-      <Dialog
-        visible={showEditRdpDialog}
-        onHide={() => setShowEditRdpDialog(false)}
-        header="Editar Conexión RDP"
-        style={{ width: '500px' }}
-        footer={
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowEditRdpDialog(false)} className="p-button-text" />
-            <Button label="Guardar" icon="pi pi-check" onClick={saveEditRdp} autoFocus />
-          </div>
-        }
-      >
-        <div className="flex flex-column gap-3">
-          <div className="flex flex-column gap-2">
-            <label htmlFor="editRdpName">Nombre de la conexión</label>
-            <InputText
-              id="editRdpName"
-              value={editRdpName}
-              onChange={(e) => setEditRdpName(e.target.value)}
-              placeholder="Mi Servidor RDP"
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="editRdpServer">Servidor</label>
-            <InputText
-              id="editRdpServer"
-              value={editRdpServer}
-              onChange={(e) => setEditRdpServer(e.target.value)}
-              placeholder="192.168.1.100"
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="editRdpUsername">Usuario</label>
-            <InputText
-              id="editRdpUsername"
-              value={editRdpUsername}
-              onChange={(e) => setEditRdpUsername(e.target.value)}
-              placeholder="usuario"
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="editRdpPassword">Contraseña</label>
-            <Password
-              id="editRdpPassword"
-              value={editRdpPassword}
-              onChange={(e) => setEditRdpPassword(e.target.value)}
-              placeholder="contraseña"
-              feedback={false}
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="editRdpPort">Puerto</label>
-            <InputText
-              id="editRdpPort"
-              type="number"
-              value={editRdpPort}
-              onChange={(e) => setEditRdpPort(parseInt(e.target.value) || 3389)}
-              placeholder="3389"
-              min={1}
-              max={65535}
-            />
-          </div>
-        </div>
-      </Dialog>
+
     </div>
   );
 };

@@ -278,7 +278,9 @@ const Sidebar = ({
   // Registrar callbacks para el menú contextual
   useEffect(() => {
     if (sidebarCallbacksRef) {
+      // Preservar callbacks existentes y agregar/actualizar los del sidebar
       sidebarCallbacksRef.current = {
+        ...sidebarCallbacksRef.current,
         createFolder: (parentKey) => {
           setParentNodeKey(parentKey);
           setShowFolderDialog(true);

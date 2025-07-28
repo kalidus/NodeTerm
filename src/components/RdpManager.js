@@ -14,7 +14,7 @@ import { Tag } from 'primereact/tag';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
 
-const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar }) => {
+const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode }) => {
   const toast = useRef(null);
   const [activeTab, setActiveTab] = useState(0);
   const [connections, setConnections] = useState([]);
@@ -204,11 +204,12 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar }) => {
     }
 
     if (onSaveToSidebar) {
-      onSaveToSidebar(formData);
+      const isEditing = editingNode !== null;
+      onSaveToSidebar(formData, isEditing, editingNode);
       toast.current?.show({
         severity: 'success',
-        summary: 'Guardado',
-        detail: 'Conexión RDP guardada en la sidebar',
+        summary: isEditing ? 'Actualizado' : 'Guardado',
+        detail: isEditing ? 'Conexión RDP actualizada en la sidebar' : 'Conexión RDP guardada en la sidebar',
         life: 3000
       });
     }
