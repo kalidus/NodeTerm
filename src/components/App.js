@@ -964,8 +964,8 @@ const App = () => {
   // Save nodes to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
-    console.log('[DEBUG][localStorage] nodes guardados:', nodes);
-    console.trace('[TRACE][localStorage] nodes guardados');
+    // Log de debug removido para limpiar la consola
+          // Log de trace removido para limpiar la consola
   }, [nodes]);
 
   // Auto-save font family to localStorage
@@ -1320,7 +1320,7 @@ const App = () => {
         parentNode.children.push(newFolder);
       }
       setNodes(() => logSetNodes('createNewFolder', nodesCopy));
-      console.log('[DEBUG][createNewFolder] nodes después de crear carpeta:', nodesCopy);
+      // Log de debug removido para limpiar la consola
       closeFolderDialog();
       toast.current.show({
         severity: 'success',
@@ -1586,7 +1586,7 @@ const App = () => {
       nodesCopy.unshift(newSSHNode);
     }
     setNodes(() => logSetNodes('createNewSSH', nodesCopy));
-    console.log('[DEBUG][createNewSSH] nodes después de crear SSH:', nodesCopy);
+    // Log de debug removido para limpiar la consola
     closeSSHDialog();
     toast.current.show({
       severity: 'success',
@@ -1649,7 +1649,7 @@ const App = () => {
     }
     
     setNodes(() => logSetNodes('createNewRdp', nodesCopy));
-    console.log('[DEBUG][createNewRdp] nodes después de crear RDP:', nodesCopy);
+    // Log de debug removido para limpiar la consola
     closeRdpDialog();
     toast.current.show({
       severity: 'success',
@@ -1680,13 +1680,12 @@ const App = () => {
   };
 
   const openEditRdpDialog = (node) => {
-    console.log('openEditRdpDialog called with node:', node);
-    console.log('Setting RDP manager to visible');
+    // Logs de debug removidos para limpiar la consola
     // Abrir el gestor de conexiones RDP con los datos del nodo para editar
     setRdpNodeData(node.data);
     setEditingRdpNode(node);
     setShowRdpManager(true);
-    console.log('RDP manager should now be visible');
+    // Log de debug removido para limpiar la consola
   };
 
 
@@ -2392,12 +2391,9 @@ const App = () => {
       node: node
     };
     
-    console.log('🔧 [RDP] DEBUG - Creando pestaña RDP:', newRdpTab);
-
     // Agregar la pestaña RDP al inicio del array
     setRdpTabs(prevTabs => {
       const newTabs = [newRdpTab, ...prevTabs];
-      console.log('🔧 [RDP] DEBUG - Agregando pestaña RDP al estado');
       return newTabs;
     });
 
@@ -2589,13 +2585,12 @@ const App = () => {
 
   // Helper para loggear setNodes
   function logSetNodes(source, nodes) {
-    console.log(`[DEBUG][setNodes][${source}]`, nodes);
-    console.trace(`[TRACE][setNodes][${source}]`);
+    // Logs de debug removidos para limpiar la consola
     return nodes;
   }
 
   useEffect(() => {
-    console.log('[DEBUG][RENDER][App.js] nodes:', nodes);
+    // Log de debug removido para limpiar la consola
   }, [nodes]);
 
   useEffect(() => {
@@ -2604,7 +2599,6 @@ const App = () => {
 
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
-    console.log('App.js useEffect - setting up RDP callbacks');
     // Asegurar que el ref esté inicializado
     if (!sidebarCallbacksRef.current) {
       sidebarCallbacksRef.current = {};
@@ -2614,12 +2608,8 @@ const App = () => {
       openNewRdpDialog(targetFolder);
     };
     sidebarCallbacksRef.current.editRDP = (node) => {
-      console.log('editRDP callback called with node:', node);
-      console.log('About to call openEditRdpDialog');
       openEditRdpDialog(node);
     };
-    
-    console.log('RDP callbacks set up:', sidebarCallbacksRef.current.editRDP);
   }, [sidebarCallbacksRef.current]);
 
   // useEffect para activar pestañas RDP cuando se agreguen
@@ -2628,11 +2618,8 @@ const App = () => {
       const allTabs = getAllTabs();
       const lastRdpTab = rdpTabs[rdpTabs.length - 1];
       const rdpTabIndex = allTabs.findIndex(tab => tab.key === lastRdpTab.key);
-      console.log('🔧 [RDP] useEffect - rdpTabs cambió, total pestañas:', rdpTabs.length);
-      console.log('🔧 [RDP] useEffect - Última pestaña RDP:', lastRdpTab.key, 'índice:', rdpTabIndex);
       if (rdpTabIndex !== -1) {
         setActiveTabIndex(rdpTabIndex);
-        console.log('🔧 [RDP] useEffect - Pestaña RDP activada automáticamente');
       }
     }
   }, [rdpTabs]);

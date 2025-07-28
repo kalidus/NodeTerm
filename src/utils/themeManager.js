@@ -426,14 +426,14 @@ class ThemeManager {
       }
     `;
 
-    console.log('[THEME] CSS generado, aplicando al DOM...');
+    // Logs de debug removidos para limpiar la consola
     this.styleElement.textContent = css;
-    console.log('[THEME] CSS aplicado correctamente');
+    // Log de debug removido para limpiar la consola
     
-    // Verificar que las variables CSS se aplicaron
+    // Verificar que las variables CSS se aplicaron (sin logging)
     setTimeout(() => {
       const rootStyles = getComputedStyle(document.documentElement);
-      console.log('[SYNC] Tema aplicado -', 'Sidebar:', rootStyles.getPropertyValue('--ui-sidebar-bg'));
+      // Log de debug removido para limpiar la consola
     }, 100);
   }
 
