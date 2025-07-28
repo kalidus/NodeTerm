@@ -1679,10 +1679,12 @@ const App = () => {
 
   const openEditRdpDialog = (node) => {
     console.log('openEditRdpDialog called with node:', node);
+    console.log('Setting RDP manager to visible');
     // Abrir el gestor de conexiones RDP con los datos del nodo para editar
     setRdpNodeData(node.data);
     setEditingRdpNode(node);
     setShowRdpManager(true);
+    console.log('RDP manager should now be visible');
   };
 
 
@@ -2539,6 +2541,7 @@ const App = () => {
 
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
+    console.log('App.js useEffect - setting up RDP callbacks');
     // Asegurar que el ref esté inicializado
     if (!sidebarCallbacksRef.current) {
       sidebarCallbacksRef.current = {};
@@ -2549,9 +2552,12 @@ const App = () => {
     };
     sidebarCallbacksRef.current.editRDP = (node) => {
       console.log('editRDP callback called with node:', node);
+      console.log('About to call openEditRdpDialog');
       openEditRdpDialog(node);
     };
-  }, []);
+    
+    console.log('RDP callbacks set up:', sidebarCallbacksRef.current.editRDP);
+  }, [sidebarCallbacksRef.current]);
 
   // 1. Al inicio del componente App, junto con los otros useState:
   const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
