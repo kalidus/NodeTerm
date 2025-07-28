@@ -2631,6 +2631,9 @@ const App = () => {
     sidebarCallbacksRef.current.editRDP = (node) => {
       openEditRdpDialog(node);
     };
+    sidebarCallbacksRef.current.connectRDP = (node) => {
+      onOpenRdpConnection(node);
+    };
   }, [sidebarCallbacksRef.current]);
 
   // useEffect para activar pestañas RDP cuando se agreguen
