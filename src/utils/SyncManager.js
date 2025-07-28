@@ -227,8 +227,7 @@ class SyncManager {
       console.log('[SYNC] Aplicando temas desde configuración descargada...');
       
       // Debug completo del estado de localStorage
-      console.log('[SYNC] [DEBUG] localStorage.getItem("ui_theme"):', localStorage.getItem('ui_theme'));
-      console.log('[SYNC] [DEBUG] localStorage.getItem("basicapp_ui_theme"):', localStorage.getItem('basicapp_ui_theme'));
+          // Logs de debug removidos para limpiar la consola
       
       // Recargar tema UI
       const uiTheme = localStorage.getItem('ui_theme');  // Cambiar de 'basicapp_ui_theme' a 'ui_theme'
@@ -238,8 +237,7 @@ class SyncManager {
         
         // Verificar si el tema existe
         const availableThemes = themeManager.getAvailableThemes();
-        console.log('[SYNC] [DEBUG] Temas disponibles:', availableThemes);
-        console.log('[SYNC] [DEBUG] ¿Tema "' + uiTheme + '" existe?:', availableThemes.includes(uiTheme));
+            // Logs de debug removidos para limpiar la consola
         
         themeManager.applyTheme(uiTheme);
         
@@ -247,12 +245,11 @@ class SyncManager {
         
         // Verificar si se aplicaron las variables CSS
         const rootStyles = getComputedStyle(document.documentElement);
-        console.log('[SYNC] [DEBUG] CSS --ui-sidebar-bg:', rootStyles.getPropertyValue('--ui-sidebar-bg'));
-        console.log('[SYNC] [DEBUG] CSS --ui-content-bg:', rootStyles.getPropertyValue('--ui-content-bg'));
+            // Logs de debug removidos para limpiar la consola
         
         console.log('[SYNC] ✓ Tema UI:', uiTheme);
       } else {
-        console.log('[SYNC] [DEBUG] No se pudo aplicar tema UI. uiTheme:', uiTheme, 'themeManager:', !!themeManager);
+        // Log de debug removido para limpiar la consola
       }
 
       // Recargar tema de status bar

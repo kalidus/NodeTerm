@@ -9,8 +9,8 @@ import { iconThemes } from '../themes/icon-themes';
 
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
-  console.log(`[DEBUG][setNodes][${source}]`, nodes);
-  console.trace(`[TRACE][setNodes][${source}]`);
+  // Log de debug removido para limpiar la consola
+      // Log de trace removido para limpiar la consola
   return nodes;
 }
 

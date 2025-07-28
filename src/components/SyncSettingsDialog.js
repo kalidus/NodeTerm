@@ -202,14 +202,14 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
             console.log('[SYNC] Exportando árbol nodeterm-tree.json:', treeJson);
             // Listar archivos tras la subida
             const files = await syncManager.nextcloudService.listFiles();
-            console.log('[SYNC][DEBUG] Archivos en NodeTerm tras upload:', files);
+            // Log de debug removido para limpiar la consola
             // --- Sincronizar sesiones SSH con SessionManager ---
             const nodes = JSON.parse(treeJson);
             const sshSessions = extractAllSshSessions(nodes);
-            console.log('[DEBUG] Todas las sesiones SSH extraídas del árbol:', sshSessions);
+            // Logs de debug removidos para limpiar la consola
             if (sessionManager && typeof sessionManager.loadSessionsFromArray === 'function') {
               sessionManager.loadSessionsFromArray(sshSessions);
-              console.log('[SYNC][DEBUG] Sesiones SSH sincronizadas en SessionManager:', sshSessions);
+              // Log de debug removido para limpiar la consola
             }
           }
           result = await syncManager.syncToCloud(treeJson);
