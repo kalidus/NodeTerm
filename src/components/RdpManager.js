@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
@@ -13,6 +13,7 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Tag } from 'primereact/tag';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
+import { useSafeFocus, isElementBlocked, unblockElement } from '../utils/formUtils';
 
 const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode }) => {
   const toast = useRef(null);
@@ -20,6 +21,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [presets, setPresets] = useState({});
+  const { safeFocus, safeBlur } = useSafeFocus();
   
   // Form state
   const [formData, setFormData] = useState({
@@ -40,6 +42,28 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     admin: false,
     public: false
   });
+
+  // Función segura para manejar cambios en inputs
+  const handleInputChange = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Función para manejar cambios en inputs de texto
+  const handleTextChange = useCallback((field) => (e) => {
+    const value = e.target.value;
+    handleInputChange(field, value);
+  }, [handleInputChange]);
+
+  // Función para manejar cambios en inputs numéricos
+  const handleNumberChange = useCallback((field) => (e) => {
+    const value = parseInt(e.target.value) || 0;
+    handleInputChange(field, value);
+  }, [handleInputChange]);
+
+  // Función para manejar cambios en checkboxes
+  const handleCheckboxChange = useCallback((field) => (e) => {
+    handleInputChange(field, e.checked);
+  }, [handleInputChange]);
 
   // Opciones para dropdowns
   const resolutionOptions = [
@@ -92,6 +116,22 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
       }
     }
   }, [visible, rdpNodeData]);
+
+  // Effect to handle form focus and prevent blocking when dialog opens
+  useEffect(() => {
+    if (visible) {
+      // Small delay to ensure dialog is fully rendered
+      const timer = setTimeout(() => {
+        // Focus first input if available
+        const firstInput = document.querySelector('#name');
+        if (firstInput && !isElementBlocked(firstInput)) {
+          safeFocus(firstInput);
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [visible, safeFocus]);
 
   const loadPresets = async () => {
     try {
@@ -270,8 +310,15 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <InputText
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={handleTextChange('name')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                       placeholder="Nombre descriptivo para la conexión"
+                      autoComplete="off"
                     />
                   </div>
                   <div className="field col-12 md:col-6">
@@ -279,8 +326,15 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <InputText
                       id="server"
                       value={formData.server}
-                      onChange={(e) => setFormData(prev => ({ ...prev, server: e.target.value }))}
+                      onChange={handleTextChange('server')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                       placeholder="IP o nombre del servidor"
+                      autoComplete="off"
                     />
                   </div>
                   <div className="field col-12 md:col-6">
@@ -289,7 +343,14 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       id="port"
                       type="number"
                       value={formData.port}
-                      onChange={(e) => setFormData(prev => ({ ...prev, port: parseInt(e.target.value) || 3389 }))}
+                      onChange={handleNumberChange('port')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
+                      autoComplete="off"
                     />
                   </div>
                   <div className="field col-12 md:col-6">
@@ -297,8 +358,15 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <InputText
                       id="username"
                       value={formData.username}
-                      onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                      onChange={handleTextChange('username')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                       placeholder="Nombre de usuario"
+                      autoComplete="off"
                     />
                   </div>
                   <div className="field col-12 md:col-6">
@@ -306,10 +374,17 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Password
                       id="password"
                       value={formData.password}
-                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                      onChange={handleTextChange('password')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                       placeholder="Contraseña (opcional)"
                       feedback={false}
                       toggleMask
+                      autoComplete="off"
                     />
                   </div>
                 </div>
@@ -324,6 +399,12 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       value={formData.preset}
                       options={presetOptions}
                       onChange={(e) => handlePresetChange(e.value)}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                   </div>
                   <div className="field col-12 md:col-4">
@@ -332,7 +413,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       id="resolution"
                       value={formData.resolution}
                       options={resolutionOptions}
-                      onChange={(e) => setFormData(prev => ({ ...prev, resolution: e.value }))}
+                      onChange={(e) => handleInputChange('resolution', e.value)}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                   </div>
                   <div className="field col-12 md:col-4">
@@ -341,7 +428,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       id="colorDepth"
                       value={formData.colorDepth}
                       options={colorDepthOptions}
-                      onChange={(e) => setFormData(prev => ({ ...prev, colorDepth: e.value }))}
+                      onChange={(e) => handleInputChange('colorDepth', e.value)}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                   </div>
                 </div>
@@ -353,7 +446,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="redirectFolders"
                       checked={formData.redirectFolders}
-                      onChange={(e) => setFormData(prev => ({ ...prev, redirectFolders: e.checked }))}
+                      onChange={handleCheckboxChange('redirectFolders')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="redirectFolders" className="ml-2">Redirigir carpetas</label>
                   </div>
@@ -361,7 +460,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="redirectClipboard"
                       checked={formData.redirectClipboard}
-                      onChange={(e) => setFormData(prev => ({ ...prev, redirectClipboard: e.checked }))}
+                      onChange={handleCheckboxChange('redirectClipboard')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="redirectClipboard" className="ml-2">Compartir portapapeles</label>
                   </div>
@@ -369,7 +474,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="redirectPrinters"
                       checked={formData.redirectPrinters}
-                      onChange={(e) => setFormData(prev => ({ ...prev, redirectPrinters: e.checked }))}
+                      onChange={handleCheckboxChange('redirectPrinters')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="redirectPrinters" className="ml-2">Redirigir impresoras</label>
                   </div>
@@ -377,7 +488,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="redirectAudio"
                       checked={formData.redirectAudio}
-                      onChange={(e) => setFormData(prev => ({ ...prev, redirectAudio: e.checked }))}
+                      onChange={handleCheckboxChange('redirectAudio')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="redirectAudio" className="ml-2">Redirigir audio</label>
                   </div>
@@ -385,7 +502,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="fullscreen"
                       checked={formData.fullscreen}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fullscreen: e.checked }))}
+                      onChange={handleCheckboxChange('fullscreen')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
                   </div>
@@ -393,7 +516,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="span"
                       checked={formData.span}
-                      onChange={(e) => setFormData(prev => ({ ...prev, span: e.checked }))}
+                      onChange={handleCheckboxChange('span')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="span" className="ml-2">Múltiples monitores</label>
                   </div>
@@ -401,7 +530,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="admin"
                       checked={formData.admin}
-                      onChange={(e) => setFormData(prev => ({ ...prev, admin: e.checked }))}
+                      onChange={handleCheckboxChange('admin')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="admin" className="ml-2">Sesión administrativa</label>
                   </div>
@@ -409,7 +544,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="public"
                       checked={formData.public}
-                      onChange={(e) => setFormData(prev => ({ ...prev, public: e.checked }))}
+                      onChange={handleCheckboxChange('public')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                     <label htmlFor="public" className="ml-2">Conexión pública</label>
                   </div>
