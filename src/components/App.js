@@ -3470,6 +3470,18 @@ const App = () => {
                               tabId={tab.key}
                               connectionStatus={tab.connectionStatus}
                               connectionInfo={tab.connectionInfo}
+                              onEditConnection={(rdpConfig, tabId) => {
+                                // Crear un nodo temporal para editar
+                                const tempNode = {
+                                  key: tabId,
+                                  label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                  data: {
+                                    type: 'rdp',
+                                    ...rdpConfig
+                                  }
+                                };
+                                openEditRdpDialog(tempNode);
+                              }}
                             />
                           ) : (
                             <TerminalComponent
