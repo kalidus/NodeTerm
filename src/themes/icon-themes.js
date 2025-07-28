@@ -11,6 +11,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1976d2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
+      rdp: <span className="pi pi-desktop" style={{ display: 'inline-block', color: '#007ad9' }}></span>,
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#616161" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       )
@@ -26,6 +27,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#50e6ff"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
+      rdp: <span className="pi pi-desktop" style={{ display: 'inline-block', color: '#007ad9' }}></span>,
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#605e5c"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#fff"/></svg>
       )
@@ -41,6 +43,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l4-4h6l2 2h8v2"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
+      rdp: <span className="pi pi-desktop" style={{ display: 'inline-block', color: '#007ad9' }}></span>,
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#607d8b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12"/></svg>
       )
@@ -56,6 +59,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#5e81ac"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#88c0d0"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
+      rdp: <span className="pi pi-desktop" style={{ display: 'inline-block', color: '#007ad9' }}></span>,
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#d8dee9"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#5e81ac"/></svg>
       )
@@ -71,6 +75,7 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#bd93f9"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#ff79c6"/></svg>
       ),
       ssh: <span className="pi pi-desktop" style={{ display: 'inline-block' }}></span>,
+      rdp: <span className="pi pi-desktop" style={{ display: 'inline-block', color: '#007ad9' }}></span>,
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#f8f8f2"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#bd93f9"/></svg>
       )

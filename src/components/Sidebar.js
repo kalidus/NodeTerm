@@ -286,6 +286,18 @@ const Sidebar = ({
         createSSH: () => {
           setShowSSHDialog(true);
         },
+        createRDP: () => {
+          // Esta función debe ser pasada desde App.js
+          if (window.createRDP) {
+            window.createRDP();
+          }
+        },
+        editRDP: (node) => {
+          // Esta función debe ser pasada desde App.js
+          if (window.editRDP) {
+            window.editRDP(node);
+          }
+        },
         editSSH: (node) => {
           // Cargar datos del nodo SSH en el formulario para editar
           setSSHName(node.label);

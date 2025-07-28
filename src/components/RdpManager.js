@@ -14,7 +14,7 @@ import { Tag } from 'primereact/tag';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
 
-const RdpManager = ({ visible, onHide }) => {
+const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar }) => {
   const toast = useRef(null);
   const [activeTab, setActiveTab] = useState(0);
   const [connections, setConnections] = useState([]);
@@ -23,6 +23,7 @@ const RdpManager = ({ visible, onHide }) => {
   
   // Form state
   const [formData, setFormData] = useState({
+    name: '',
     server: '',
     username: '',
     password: '',
@@ -67,8 +68,30 @@ const RdpManager = ({ visible, onHide }) => {
     if (visible) {
       loadPresets();
       refreshConnections();
+      
+      // Cargar datos del nodo RDP si están disponibles
+      if (rdpNodeData) {
+        setFormData({
+          name: rdpNodeData.name || '',
+          server: rdpNodeData.server || '',
+          username: rdpNodeData.username || '',
+          password: rdpNodeData.password || '',
+          port: rdpNodeData.port || 3389,
+          preset: 'default',
+          resolution: rdpNodeData.resolution || '1920x1080',
+          colorDepth: rdpNodeData.colorDepth || 32,
+          redirectFolders: rdpNodeData.redirectFolders !== false,
+          redirectClipboard: rdpNodeData.redirectClipboard !== false,
+          redirectPrinters: rdpNodeData.redirectPrinters || false,
+          redirectAudio: rdpNodeData.redirectAudio !== false,
+          fullscreen: rdpNodeData.fullscreen || false,
+          span: rdpNodeData.span || false,
+          admin: rdpNodeData.admin || false,
+          public: rdpNodeData.public || false
+        });
+      }
     }
-  }, [visible]);
+  }, [visible, rdpNodeData]);
 
   const loadPresets = async () => {
     try {
@@ -169,6 +192,28 @@ const RdpManager = ({ visible, onHide }) => {
     }
   };
 
+  const handleSaveToSidebar = () => {
+    if (!formData.server || !formData.username) {
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Campos requeridos',
+        detail: 'Servidor y Usuario son campos obligatorios',
+        life: 3000
+      });
+      return;
+    }
+
+    if (onSaveToSidebar) {
+      onSaveToSidebar(formData);
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Guardado',
+        detail: 'Conexión RDP guardada en la sidebar',
+        life: 3000
+      });
+    }
+  };
+
   const statusBodyTemplate = (rowData) => {
     const getSeverity = (status) => {
       switch (status) {
@@ -219,6 +264,15 @@ const RdpManager = ({ visible, onHide }) => {
             <div className="p-fluid">
               <Card title="Configuración de Conexión" className="mb-3">
                 <div className="formgrid grid">
+                  <div className="field col-12">
+                    <label htmlFor="name">Nombre de la Conexión</label>
+                    <InputText
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nombre descriptivo para la conexión"
+                    />
+                  </div>
                   <div className="field col-12 md:col-6">
                     <label htmlFor="server">Servidor *</label>
                     <InputText
@@ -368,6 +422,13 @@ const RdpManager = ({ visible, onHide }) => {
                     icon="pi pi-times"
                     className="p-button-secondary"
                     onClick={onHide}
+                  />
+                  <Button
+                    label="Guardar en Sidebar"
+                    icon="pi pi-save"
+                    className="p-button-success"
+                    onClick={handleSaveToSidebar}
+                    disabled={!formData.server || !formData.username}
                   />
                   <Button
                     label="Conectar"
