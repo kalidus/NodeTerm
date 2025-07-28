@@ -1,0 +1,110 @@
+/* Estilos para prevenir bloqueos de formularios */
+
+/* Asegurar que los inputs siempre sean interactivos */
+input, textarea, select, [contenteditable] {
+  pointer-events: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+}
+
+/* Prevenir que los inputs se deshabiliten accidentalmente */
+input:not([disabled]), 
+textarea:not([disabled]), 
+select:not([disabled]) {
+  pointer-events: auto !important;
+}
+
+/* Mejorar el focus visual */
+input:focus, 
+textarea:focus, 
+select:focus {
+  outline: 2px solid var(--primary-color) !important;
+  outline-offset: 2px !important;
+}
+
+/* Prevenir que los diálogos bloqueen los inputs */
+.p-dialog .p-dialog-content input,
+.p-dialog .p-dialog-content textarea,
+.p-dialog .p-dialog-content select {
+  pointer-events: auto !important;
+  user-select: auto !important;
+}
+
+/* Asegurar que los dropdowns funcionen correctamente */
+.p-dropdown {
+  pointer-events: auto !important;
+}
+
+.p-dropdown .p-dropdown-trigger {
+  pointer-events: auto !important;
+}
+
+/* Prevenir que los checkboxes se bloqueen */
+.p-checkbox {
+  pointer-events: auto !important;
+}
+
+.p-checkbox .p-checkbox-box {
+  pointer-events: auto !important;
+}
+
+/* Mejorar la accesibilidad del teclado */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary-color) !important;
+  outline-offset: 2px !important;
+}
+
+/* Prevenir que los overlays bloqueen los inputs */
+.p-overlay {
+  pointer-events: none !important;
+}
+
+.p-overlay .p-dialog,
+.p-overlay .p-sidebar {
+  pointer-events: auto !important;
+}
+
+/* Asegurar que los formularios sean siempre interactivos */
+form {
+  pointer-events: auto !important;
+}
+
+/* Prevenir que los contenedores bloqueen los inputs */
+.form-container,
+.form-wrapper {
+  pointer-events: auto !important;
+}
+
+/* Mejorar la respuesta táctil en dispositivos móviles */
+@media (max-width: 768px) {
+  input, textarea, select {
+    min-height: 44px !important;
+    font-size: 16px !important; /* Previene zoom en iOS */
+  }
+}
+
+/* Clase de emergencia para desbloquear formularios */
+.form-unblock {
+  pointer-events: auto !important;
+  user-select: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Animación suave para el focus */
+input, textarea, select {
+  transition: outline-color 0.2s ease-in-out;
+}
+
+/* Prevenir que los modales bloqueen completamente */
+.p-dialog-mask {
+  pointer-events: auto !important;
+}
+
+.p-dialog-mask .p-dialog {
+  pointer-events: auto !important;
+} 

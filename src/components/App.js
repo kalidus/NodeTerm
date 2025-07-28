@@ -34,6 +34,8 @@ import SessionManager from '../services/SessionManager';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import RdpManager from './RdpManager';
 import RdpSessionTab from './RdpSessionTab';
+import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
+import '../assets/form-fixes.css';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -607,6 +609,12 @@ const App = () => {
             sidebarCallbacksRef.current.createSSH();
           }
         }
+      },
+      { separator: true },
+      {
+        label: '🔧 Desbloquear Formularios',
+        icon: 'pi pi-wrench',
+        command: handleUnblockForms
       }
     ];
   };
@@ -2396,6 +2404,28 @@ const App = () => {
           life: 3000
         });
       });
+  };
+
+  // Función para desbloquear formularios cuando sea necesario
+  const handleUnblockForms = () => {
+    const blockedInputs = detectBlockedInputs();
+    if (blockedInputs.length > 0) {
+      console.log(`Detectados ${blockedInputs.length} inputs bloqueados:`, blockedInputs);
+      unblockAllInputs();
+      toast.current?.show({
+        severity: 'info',
+        summary: 'Formularios desbloqueados',
+        detail: `Se han desbloqueado ${blockedInputs.length} campos de formulario`,
+        life: 3000
+      });
+    } else {
+      toast.current?.show({
+        severity: 'info',
+        summary: 'Sin problemas',
+        detail: 'No se detectaron formularios bloqueados',
+        life: 2000
+      });
+    }
   };
 
   const handleSaveRdpToSidebar = (rdpData, isEditing = false, originalNode = null) => {
