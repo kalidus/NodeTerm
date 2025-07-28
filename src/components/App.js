@@ -609,12 +609,6 @@ const App = () => {
             sidebarCallbacksRef.current.createSSH();
           }
         }
-      },
-      { separator: true },
-      {
-        label: '🔧 Desbloquear Formularios',
-        icon: 'pi pi-wrench',
-        command: handleUnblockForms
       }
     ];
   };
@@ -2358,7 +2352,7 @@ const App = () => {
   };
 
   const onOpenRdpConnection = (node) => {
-    // Conectar directamente usando el RdpManager
+    // Configuración RDP
     const rdpConfig = {
       server: node.data.server,
       username: node.data.username,
@@ -2376,7 +2370,60 @@ const App = () => {
       public: node.data.public || false
     };
 
-    // Usar el RdpManager para conectar directamente
+    // Crear pestaña RDP
+    const tabId = `rdp_${node.key}_${Date.now()}`;
+    const newRdpTab = {
+      key: tabId,
+      label: `${node.label} (RDP)`,
+      originalKey: node.key,
+      rdpConfig: rdpConfig,
+      type: 'rdp',
+      node: node
+    };
+    
+    console.log('🔧 [RDP] Creando pestaña RDP:', newRdpTab);
+
+    // Agregar la pestaña RDP y activarla
+    setRdpTabs(prevTabs => {
+      // Verificar si ya existe una pestaña para esta conexión
+      const existingTabIndex = prevTabs.findIndex(tab => tab.originalKey === node.key);
+      if (existingTabIndex !== -1) {
+        // Actualizar la pestaña existente
+        const updatedTabs = [...prevTabs];
+        updatedTabs[existingTabIndex] = newRdpTab;
+        
+        // Activar la pestaña existente
+        setTimeout(() => {
+          const allTabs = getAllTabs();
+          const rdpTabIndex = allTabs.findIndex(tab => tab.key === newRdpTab.key);
+          console.log('🔧 [RDP] Activando pestaña existente, índice:', rdpTabIndex);
+          if (rdpTabIndex !== -1) {
+            setActiveTabIndex(rdpTabIndex);
+          }
+        }, 0);
+        
+        console.log('🔧 [RDP] Actualizando pestaña existente, total pestañas:', updatedTabs.length);
+        return updatedTabs;
+      } else {
+        // Agregar nueva pestaña
+        const newTabs = [...prevTabs, newRdpTab];
+        console.log('🔧 [RDP] Agregando nueva pestaña, total pestañas:', newTabs.length);
+        
+        // Activar la nueva pestaña después de que se actualice el estado
+        setTimeout(() => {
+          const allTabs = getAllTabs();
+          const rdpTabIndex = allTabs.findIndex(tab => tab.key === tabId);
+          console.log('🔧 [RDP] Activando nueva pestaña, índice:', rdpTabIndex);
+          if (rdpTabIndex !== -1) {
+            setActiveTabIndex(rdpTabIndex);
+          }
+        }, 0);
+        
+        return newTabs;
+      }
+    });
+
+    // Conectar RDP usando el RdpManager
     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
       .then(result => {
         if (result.success) {
@@ -2427,6 +2474,14 @@ const App = () => {
       });
     }
   };
+
+  // Exponer la función globalmente para el menú de la aplicación
+  useEffect(() => {
+    window.handleUnblockForms = handleUnblockForms;
+    return () => {
+      delete window.handleUnblockForms;
+    };
+  }, []);
 
   const handleSaveRdpToSidebar = (rdpData, isEditing = false, originalNode = null) => {
     if (isEditing && originalNode) {

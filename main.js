@@ -2243,6 +2243,95 @@ ipcMain.handle('rdp:get-presets', async (event) => {
   return rdpManager.getPresets();
 });
 
+// Handler para mostrar ventana RDP si está minimizada
+ipcMain.handle('rdp:show-window', async (event, { server }) => {
+  try {
+    // Buscar procesos mstsc.exe que coincidan con el servidor
+    const { exec } = require('child_process');
+    const util = require('util');
+    const execAsync = util.promisify(exec);
+    
+    // En Windows, buscar ventanas de mstsc.exe
+    if (process.platform === 'win32') {
+      try {
+        // Usar tasklist para encontrar procesos mstsc.exe
+        const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq mstsc.exe" /FO CSV /NH');
+        
+        if (stdout.includes('mstsc.exe')) {
+          // Intentar restaurar la ventana usando PowerShell
+          const restoreScript = `
+            Add-Type -TypeDefinition @"
+              using System;
+              using System.Runtime.InteropServices;
+              public class Win32 {
+                [DllImport("user32.dll")]
+                [return: MarshalAs(UnmanagedType.Bool)]
+                public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+                
+                [DllImport("user32.dll")]
+                public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+                
+                [DllImport("user32.dll")]
+                public static extern bool SetForegroundWindow(IntPtr hWnd);
+              }
+"@
+            
+            $processes = Get-Process mstsc -ErrorAction SilentlyContinue
+            foreach ($process in $processes) {
+              $hwnd = $process.MainWindowHandle
+              if ($hwnd -ne [IntPtr]::Zero) {
+                [Win32]::ShowWindow($hwnd, 9) # SW_RESTORE = 9
+                [Win32]::SetForegroundWindow($hwnd)
+                Write-Host "Ventana RDP restaurada y enfocada"
+                break
+              }
+            }
+          `;
+          
+          await execAsync(`powershell -Command "${restoreScript}"`);
+          return { success: true, message: 'Ventana RDP restaurada' };
+        } else {
+          return { success: false, message: 'No se encontraron ventanas RDP activas' };
+        }
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, message: 'Función solo disponible en Windows' };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para desconectar sesión RDP específica
+ipcMain.handle('rdp:disconnect-session', async (event, { server }) => {
+  try {
+    // Buscar y terminar procesos mstsc.exe que coincidan con el servidor
+    if (process.platform === 'win32') {
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execAsync = util.promisify(exec);
+      
+      try {
+        // Terminar todos los procesos mstsc.exe
+        await execAsync('taskkill /F /IM mstsc.exe');
+        return { success: true, message: 'Sesiones RDP terminadas' };
+      } catch (error) {
+        // Si no hay procesos para terminar, no es un error
+        if (error.message.includes('not found')) {
+          return { success: true, message: 'No hay sesiones RDP activas' };
+        }
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, message: 'Función solo disponible en Windows' };
+    }
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Cleanup RDP connections on app quit
 app.on('before-quit', () => {
   // Disconnect all RDP connections
