@@ -390,23 +390,42 @@ const Sidebar = ({
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
+    const isRDP = node.data && node.data.type === 'rdp';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['material'].icons;
     if (isSSH) {
       icon = themeIcons.ssh;
+    } else if (isRDP) {
+      icon = themeIcons.rdp || '🖥️'; // Icono RDP o fallback
     } else if (isFolder) {
       icon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
     } else {
       icon = themeIcons.file;
     }
+    
+    // Determinar el título según el tipo de nodo
+    let title = "Click derecho para más opciones";
+    if (isSSH) {
+      title += " | Doble click para abrir terminal SSH";
+    } else if (isRDP) {
+      title += " | Doble click para conectar RDP";
+    }
+    
     // Render básico, puedes añadir acciones/contextual aquí
     return (
       <div className="flex align-items-center gap-1"
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
-        onDoubleClick={isSSH && onOpenSSHConnection ? (e) => { e.stopPropagation(); onOpenSSHConnection(node); } : undefined}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (isSSH && onOpenSSHConnection) {
+            onOpenSSHConnection(node);
+          } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
+            sidebarCallbacksRef.current.connectRDP(node);
+          }
+        }}
         style={{ cursor: 'pointer', fontFamily: explorerFont }}
-        title="Click derecho para más opciones | Doble click para abrir terminal SSH"
+        title={title}
       >
         <span style={{ minWidth: 16 }}>{icon}</span>
         <span className="node-label">{node.label}</span>
