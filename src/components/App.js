@@ -216,7 +216,7 @@ const App = () => {
 
   // Obtener pestañas de un grupo específico
   const getTabsInGroup = (groupId) => {
-    const allTabs = [...homeTabs, ...sshTabs, ...fileExplorerTabs];
+    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...fileExplorerTabs];
     return groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
   };
 
@@ -2352,8 +2352,19 @@ const App = () => {
   };
 
   const onOpenRdpConnection = (node) => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
     // Configuración RDP
     const rdpConfig = {
+      name: node.label,
       server: node.data.server,
       username: node.data.username,
       password: node.data.password,
@@ -2370,60 +2381,27 @@ const App = () => {
       public: node.data.public || false
     };
 
-    // Crear pestaña RDP
+    // Crear pestaña RDP (exactamente como SSH)
     const tabId = `rdp_${node.key}_${Date.now()}`;
     const newRdpTab = {
       key: tabId,
-      label: `${node.label} (RDP)`,
+      label: `${node.label} (${rdpTabs.filter(t => t.originalKey === node.key).length + 1})`,
       originalKey: node.key,
       rdpConfig: rdpConfig,
       type: 'rdp',
       node: node
     };
     
-    console.log('🔧 [RDP] Creando pestaña RDP:', newRdpTab);
+    console.log('🔧 [RDP] DEBUG - Creando pestaña RDP:', newRdpTab);
 
-    // Agregar la pestaña RDP y activarla
+    // Agregar la pestaña RDP al inicio del array
     setRdpTabs(prevTabs => {
-      // Verificar si ya existe una pestaña para esta conexión
-      const existingTabIndex = prevTabs.findIndex(tab => tab.originalKey === node.key);
-      if (existingTabIndex !== -1) {
-        // Actualizar la pestaña existente
-        const updatedTabs = [...prevTabs];
-        updatedTabs[existingTabIndex] = newRdpTab;
-        
-        // Activar la pestaña existente
-        setTimeout(() => {
-          const allTabs = getAllTabs();
-          const rdpTabIndex = allTabs.findIndex(tab => tab.key === newRdpTab.key);
-          console.log('🔧 [RDP] Activando pestaña existente, índice:', rdpTabIndex);
-          if (rdpTabIndex !== -1) {
-            setActiveTabIndex(rdpTabIndex);
-          }
-        }, 0);
-        
-        console.log('🔧 [RDP] Actualizando pestaña existente, total pestañas:', updatedTabs.length);
-        return updatedTabs;
-      } else {
-        // Agregar nueva pestaña
-        const newTabs = [...prevTabs, newRdpTab];
-        console.log('🔧 [RDP] Agregando nueva pestaña, total pestañas:', newTabs.length);
-        
-        // Activar la nueva pestaña después de que se actualice el estado
-        setTimeout(() => {
-          const allTabs = getAllTabs();
-          const rdpTabIndex = allTabs.findIndex(tab => tab.key === tabId);
-          console.log('🔧 [RDP] Activando nueva pestaña, índice:', rdpTabIndex);
-          if (rdpTabIndex !== -1) {
-            setActiveTabIndex(rdpTabIndex);
-          }
-        }, 0);
-        
-        return newTabs;
-      }
+      const newTabs = [newRdpTab, ...prevTabs];
+      console.log('🔧 [RDP] DEBUG - Agregando pestaña RDP al estado');
+      return newTabs;
     });
 
-    // Conectar RDP usando el RdpManager
+    // Conectar RDP automáticamente después de crear la pestaña
     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
       .then(result => {
         if (result.success) {
@@ -2643,6 +2621,21 @@ const App = () => {
     
     console.log('RDP callbacks set up:', sidebarCallbacksRef.current.editRDP);
   }, [sidebarCallbacksRef.current]);
+
+  // useEffect para activar pestañas RDP cuando se agreguen
+  useEffect(() => {
+    if (rdpTabs.length > 0) {
+      const allTabs = getAllTabs();
+      const lastRdpTab = rdpTabs[rdpTabs.length - 1];
+      const rdpTabIndex = allTabs.findIndex(tab => tab.key === lastRdpTab.key);
+      console.log('🔧 [RDP] useEffect - rdpTabs cambió, total pestañas:', rdpTabs.length);
+      console.log('🔧 [RDP] useEffect - Última pestaña RDP:', lastRdpTab.key, 'índice:', rdpTabIndex);
+      if (rdpTabIndex !== -1) {
+        setActiveTabIndex(rdpTabIndex);
+        console.log('🔧 [RDP] useEffect - Pestaña RDP activada automáticamente');
+      }
+    }
+  }, [rdpTabs]);
 
   // 1. Al inicio del componente App, junto con los otros useState:
   const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
