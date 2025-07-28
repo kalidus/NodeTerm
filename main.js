@@ -2246,7 +2246,6 @@ ipcMain.handle('rdp:get-presets', async (event) => {
 // Handler para mostrar ventana RDP si está minimizada
 ipcMain.handle('rdp:show-window', async (event, { server }) => {
   try {
-    // Buscar procesos mstsc.exe que coincidan con el servidor
     const { exec } = require('child_process');
     const util = require('util');
     const execAsync = util.promisify(exec);
@@ -2254,46 +2253,80 @@ ipcMain.handle('rdp:show-window', async (event, { server }) => {
     // En Windows, buscar ventanas de mstsc.exe
     if (process.platform === 'win32') {
       try {
-        // Usar tasklist para encontrar procesos mstsc.exe
-        const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq mstsc.exe" /FO CSV /NH');
+        // Probar primero con un comando simple para verificar si hay procesos mstsc
+        const { stdout: tasklistOutput } = await execAsync('tasklist /FI "IMAGENAME eq mstsc.exe" /FO CSV /NH');
         
-        if (stdout.includes('mstsc.exe')) {
-          // Intentar restaurar la ventana usando PowerShell
-          const restoreScript = `
-            Add-Type -TypeDefinition @"
-              using System;
-              using System.Runtime.InteropServices;
-              public class Win32 {
-                [DllImport("user32.dll")]
-                [return: MarshalAs(UnmanagedType.Bool)]
-                public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-                
-                [DllImport("user32.dll")]
-                public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-                
-                [DllImport("user32.dll")]
-                public static extern bool SetForegroundWindow(IntPtr hWnd);
-              }
+        if (!tasklistOutput.includes('mstsc.exe')) {
+          return { success: false, message: 'No se encontraron procesos mstsc.exe activos' };
+        }
+        
+        // Crear un script PowerShell temporal
+        const fs = require('fs');
+        const path = require('path');
+        const tempDir = require('os').tmpdir();
+        const scriptPath = path.join(tempDir, 'restore_rdp.ps1');
+        
+        const scriptContent = `
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public class Win32 {
+  [DllImport("user32.dll")]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+  
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
 "@
-            
-            $processes = Get-Process mstsc -ErrorAction SilentlyContinue
-            foreach ($process in $processes) {
-              $hwnd = $process.MainWindowHandle
-              if ($hwnd -ne [IntPtr]::Zero) {
-                [Win32]::ShowWindow($hwnd, 9) # SW_RESTORE = 9
-                [Win32]::SetForegroundWindow($hwnd)
-                Write-Host "Ventana RDP restaurada y enfocada"
-                break
-              }
-            }
-          `;
-          
-          await execAsync(`powershell -Command "${restoreScript}"`);
+
+try {
+  $processes = Get-Process mstsc -ErrorAction SilentlyContinue
+  Write-Host "Procesos encontrados: $($processes.Count)"
+  
+  if ($processes.Count -eq 0) {
+    Write-Host "ERROR: No se encontraron procesos mstsc.exe"
+    exit 1
+  }
+  
+  foreach ($process in $processes) {
+    Write-Host "Proceso ID: $($process.Id), Ventana: $($process.MainWindowHandle)"
+    
+    if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
+      [Win32]::ShowWindow($process.MainWindowHandle, 9)
+      [Win32]::SetForegroundWindow($process.MainWindowHandle)
+      Write-Host "SUCCESS: Ventana restaurada para proceso $($process.Id)"
+      break
+    } else {
+      Write-Host "ERROR: Proceso $($process.Id) no tiene ventana válida"
+    }
+  }
+} catch {
+  Write-Host "ERROR: $($_.Exception.Message)"
+}
+        `;
+        
+        fs.writeFileSync(scriptPath, scriptContent);
+        
+        const { stdout: psOutput, stderr: psError } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+        
+        // Limpiar el archivo temporal
+        try {
+          fs.unlinkSync(scriptPath);
+        } catch (e) {
+          // Ignorar errores de limpieza
+        }
+        
+
+        
+        if (psOutput.includes('SUCCESS:')) {
           return { success: true, message: 'Ventana RDP restaurada' };
         } else {
-          return { success: false, message: 'No se encontraron ventanas RDP activas' };
+          return { success: false, message: `No se pudo restaurar la ventana RDP. Output: ${psOutput}` };
         }
       } catch (error) {
+        console.log('Error ejecutando PowerShell:', error);
         return { success: false, error: error.message };
       }
     } else {
