@@ -79,6 +79,17 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed 
             icon: 'pi pi-window-maximize',
             shortcut: 'F11',
             command: () => window.electronAPI.toggleFullscreen()
+          },
+          { separator: true },
+          {
+            label: '🔧 Desbloquear Formularios',
+            icon: 'pi pi-wrench',
+            command: () => {
+              // Llamar a la función global para desbloquear formularios
+              if (window.handleUnblockForms) {
+                window.handleUnblockForms();
+              }
+            }
           }
         ]
       },

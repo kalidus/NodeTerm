@@ -159,55 +159,53 @@ const RdpSessionTab = ({ rdpConfig, tabId }) => {
           )}
 
           {/* Acciones */}
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
             <Button
-              label="Abrir Conexión RDP"
+              label="Conectar RDP"
               icon="pi pi-external-link"
               severity="success"
-                             onClick={() => {
-                 try {
-                   // Usar el RdpManager existente para la conexión
-                   if (window.electron && window.electron.ipcRenderer) {
-                     setConnectionStatus('connecting');
-                     // Usar el API del RdpManager
-                     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig).then(result => {
-                       if (result.success) {
-                         setConnectionStatus('connected');
-                         setConnectionInfo({
-                           server: rdpConfig.server,
-                           username: rdpConfig.username,
-                           port: rdpConfig.port,
-                           resolution: rdpConfig.resolution,
-                           startTime: new Date().toISOString(),
-                           sessionId: result.connectionId
-                         });
-                         toast.current?.show({
-                           severity: 'success',
-                           summary: 'Conexión RDP iniciada',
-                           detail: `Conexión RDP establecida con ${rdpConfig.server}`,
-                           life: 3000
-                         });
-                       } else {
-                         setConnectionStatus('error');
-                         setError(result.error);
-                         toast.current?.show({
-                           severity: 'error',
-                           summary: 'Error de conexión RDP',
-                           detail: result.error,
-                           life: 5000
-                         });
-                       }
-                     }).catch(err => {
-                       setConnectionStatus('error');
-                       setError(err.message);
-                       toast.current?.show({
-                         severity: 'error',
-                         summary: 'Error de conexión RDP',
-                         detail: err.message,
-                         life: 5000
-                       });
-                     });
-                   } else {
+              onClick={() => {
+                try {
+                  if (window.electron && window.electron.ipcRenderer) {
+                    setConnectionStatus('connecting');
+                    window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig).then(result => {
+                      if (result.success) {
+                        setConnectionStatus('connected');
+                        setConnectionInfo({
+                          server: rdpConfig.server,
+                          username: rdpConfig.username,
+                          port: rdpConfig.port,
+                          resolution: rdpConfig.resolution,
+                          startTime: new Date().toISOString(),
+                          sessionId: result.connectionId || `rdp_${tabId}_${Date.now()}`
+                        });
+                        toast.current?.show({
+                          severity: 'success',
+                          summary: 'Conexión RDP iniciada',
+                          detail: `Conexión RDP establecida con ${rdpConfig.server}`,
+                          life: 3000
+                        });
+                      } else {
+                        setConnectionStatus('error');
+                        setError(result.error);
+                        toast.current?.show({
+                          severity: 'error',
+                          summary: 'Error de conexión RDP',
+                          detail: result.error,
+                          life: 5000
+                        });
+                      }
+                    }).catch(err => {
+                      setConnectionStatus('error');
+                      setError(err.message);
+                      toast.current?.show({
+                        severity: 'error',
+                        summary: 'Error de conexión RDP',
+                        detail: err.message,
+                        life: 5000
+                      });
+                    });
+                  } else {
                     // Fallback para navegador
                     window.open(`rdp://${rdpConfig.server}:${rdpConfig.port || 3389}`, '_blank');
                     setConnectionStatus('connected');
@@ -238,214 +236,197 @@ const RdpSessionTab = ({ rdpConfig, tabId }) => {
                 }
               }}
             />
-                         <Button
-               label="Conexión Simple"
-               icon="pi pi-play"
-               severity="info"
-               onClick={() => {
-                 try {
-                   // Conexión RDP simple sin parámetros complejos
-                   if (window.electron && window.electron.ipcRenderer) {
-                     setConnectionStatus('connecting');
-                     // Configuración mínima para conexión simple
-                     const simpleConfig = {
-                       server: rdpConfig.server,
-                       port: rdpConfig.port || 3389,
-                       username: rdpConfig.username || '',
-                       resolution: '1920x1080',
-                       colorDepth: 32,
-                       redirectFolders: false,
-                       redirectClipboard: true,
-                       redirectPrinters: false,
-                       redirectAudio: false,
-                       fullscreen: false,
-                       span: false,
-                       admin: false,
-                       public: false
-                     };
-                     // Usar el API del RdpManager
-                     window.electron.ipcRenderer.invoke('rdp:connect', simpleConfig).then(result => {
-                       if (result.success) {
-                         setConnectionStatus('connected');
-                         setConnectionInfo({
-                           server: rdpConfig.server,
-                           username: rdpConfig.username,
-                           port: rdpConfig.port,
-                           resolution: rdpConfig.resolution,
-                           startTime: new Date().toISOString(),
-                           sessionId: result.connectionId
-                         });
-                         toast.current?.show({
-                           severity: 'success',
-                           summary: 'Conexión RDP iniciada',
-                           detail: `Conexión RDP simple establecida con ${rdpConfig.server}`,
-                           life: 3000
-                         });
-                       } else {
-                         setConnectionStatus('error');
-                         setError(result.error);
-                         toast.current?.show({
-                           severity: 'error',
-                           summary: 'Error de conexión RDP',
-                           detail: result.error,
-                           life: 5000
-                         });
-                       }
-                     }).catch(err => {
-                       setConnectionStatus('error');
-                       setError(err.message);
-                       toast.current?.show({
-                         severity: 'error',
-                         summary: 'Error de conexión RDP',
-                         detail: err.message,
-                         life: 5000
-                       });
-                     });
-                   } else {
-                     // Fallback para navegador
-                     window.open(`rdp://${rdpConfig.server}:${rdpConfig.port || 3389}`, '_blank');
-                   }
-                 } catch (err) {
-                   setError(err.message);
-                   toast.current?.show({
-                     severity: 'error',
-                     summary: 'Error al abrir RDP',
-                     detail: err.message,
-                     life: 5000
-                   });
-                 }
-               }}
-             />
-             <Button
-               label="Sin Contraseña"
-               icon="pi pi-user"
-               severity="warning"
-               onClick={() => {
-                 try {
-                   // Conexión RDP sin contraseña para debug
-                   if (window.electron && window.electron.ipcRenderer) {
-                     setConnectionStatus('connecting');
-                     const configWithoutPassword = { ...rdpConfig };
-                     delete configWithoutPassword.password;
-                     // Usar el API del RdpManager
-                     window.electron.ipcRenderer.invoke('rdp:connect', configWithoutPassword).then(result => {
-                       if (result.success) {
-                         setConnectionStatus('connected');
-                         setConnectionInfo({
-                           server: rdpConfig.server,
-                           username: rdpConfig.username,
-                           port: rdpConfig.port,
-                           resolution: rdpConfig.resolution,
-                           startTime: new Date().toISOString(),
-                           sessionId: result.connectionId
-                         });
-                         toast.current?.show({
-                           severity: 'success',
-                           summary: 'Conexión RDP iniciada',
-                           detail: `Conexión RDP establecida con ${rdpConfig.server} (sin contraseña)`,
-                           life: 3000
-                         });
-                       } else {
-                         setConnectionStatus('error');
-                         setError(result.error);
-                         toast.current?.show({
-                           severity: 'error',
-                           summary: 'Error de conexión RDP',
-                           detail: result.error,
-                           life: 5000
-                         });
-                       }
-                     }).catch(err => {
-                       setConnectionStatus('error');
-                       setError(err.message);
-                       toast.current?.show({
-                         severity: 'error',
-                         summary: 'Error de conexión RDP',
-                         detail: err.message,
-                         life: 5000
-                       });
-                     });
-                   } else {
-                     // Fallback para navegador
-                     window.open(`rdp://${rdpConfig.server}:${rdpConfig.port || 3389}`, '_blank');
-                   }
-                 } catch (err) {
-                   setError(err.message);
-                   toast.current?.show({
-                     severity: 'error',
-                     summary: 'Error al abrir RDP',
-                     detail: err.message,
-                     life: 5000
-                   });
-                 }
-               }}
-             />
-             <Button
-               label="Debug Args"
-               icon="pi pi-bug"
-               severity="secondary"
-               onClick={() => {
-                 try {
-                   // Debug de configuración RDP
-                   console.log('=== DEBUG CONFIGURACIÓN RDP ===');
-                   console.log('Configuración completa:', JSON.stringify(rdpConfig, null, 2));
-                   console.log('Servidor:', rdpConfig.server);
-                   console.log('Puerto:', rdpConfig.port || 3389);
-                   console.log('Usuario:', rdpConfig.username);
-                   console.log('Contraseña:', rdpConfig.password ? '***' : 'No configurada');
-                   console.log('Resolución:', rdpConfig.resolution);
-                   console.log('Profundidad de color:', rdpConfig.colorDepth);
-                   console.log('Pantalla completa:', rdpConfig.fullscreen);
-                   console.log('Redirección carpetas:', rdpConfig.redirectFolders);
-                   console.log('Redirección portapapeles:', rdpConfig.redirectClipboard);
-                   console.log('Redirección impresoras:', rdpConfig.redirectPrinters);
-                   console.log('Redirección audio:', rdpConfig.redirectAudio);
-                   console.log('================================');
-                   
-                   toast.current?.show({
-                     severity: 'info',
-                     summary: 'Debug completado',
-                     detail: 'Revisa la consola para ver la configuración RDP',
-                     life: 3000
-                   });
-                 } catch (err) {
-                   setError(err.message);
-                   toast.current?.show({
-                     severity: 'error',
-                     summary: 'Error en debug',
-                     detail: err.message,
-                     life: 5000
-                   });
-                 }
-               }}
-             />
+            
+            <Button
+              label="Mostrar Ventana"
+              icon="pi pi-window-maximize"
+              severity="info"
+              onClick={async () => {
+                try {
+                  if (window.electron && window.electron.rdp) {
+                    const result = await window.electron.rdp.showWindow(rdpConfig.server);
+                    if (result.success) {
+                      toast.current?.show({
+                        severity: 'success',
+                        summary: 'Ventana RDP',
+                        detail: result.message,
+                        life: 2000
+                      });
+                    } else {
+                      toast.current?.show({
+                        severity: 'warn',
+                        summary: 'Ventana RDP',
+                        detail: result.message || result.error,
+                        life: 3000
+                      });
+                    }
+                  }
+                } catch (err) {
+                  toast.current?.show({
+                    severity: 'warn',
+                    summary: 'No disponible',
+                    detail: 'Función no disponible en este entorno',
+                    life: 2000
+                  });
+                }
+              }}
+              disabled={connectionStatus !== 'connected'}
+            />
+            
             <Button
               label="Reconectar"
               icon="pi pi-refresh"
               onClick={() => {
                 setConnectionStatus('connecting');
                 setError(null);
-                // Simular reconexión
-                setTimeout(() => {
-                  setConnectionStatus('connected');
-                  setConnectionInfo({
-                    server: rdpConfig.server,
-                    username: rdpConfig.username,
-                    port: rdpConfig.port,
-                    resolution: rdpConfig.resolution,
-                    startTime: new Date().toISOString(),
-                    sessionId: `rdp_${tabId}_${Date.now()}`
+                // Reconectar usando el RdpManager
+                if (window.electron && window.electron.ipcRenderer) {
+                  window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig).then(result => {
+                    if (result.success) {
+                      setConnectionStatus('connected');
+                      setConnectionInfo({
+                        server: rdpConfig.server,
+                        username: rdpConfig.username,
+                        port: rdpConfig.port,
+                        resolution: rdpConfig.resolution,
+                        startTime: new Date().toISOString(),
+                        sessionId: result.connectionId || `rdp_${tabId}_${Date.now()}`
+                      });
+                      toast.current?.show({
+                        severity: 'success',
+                        summary: 'Reconectado',
+                        detail: 'Conexión RDP restablecida',
+                        life: 3000
+                      });
+                    } else {
+                      setConnectionStatus('error');
+                      setError(result.error);
+                    }
+                  }).catch(err => {
+                    setConnectionStatus('error');
+                    setError(err.message);
                   });
-                }, 2000);
+                }
               }}
               disabled={connectionStatus === 'connecting'}
             />
+            
             <Button
               label="Desconectar"
               icon="pi pi-power-off"
               severity="danger"
-              onClick={handleDisconnect}
+              onClick={async () => {
+                try {
+                  // Intentar desconectar la sesión RDP
+                  if (window.electron && window.electron.rdp) {
+                    const result = await window.electron.rdp.disconnectSession(rdpConfig.server);
+                    if (result.success) {
+                      toast.current?.show({
+                        severity: 'success',
+                        summary: 'Sesión RDP',
+                        detail: result.message,
+                        life: 2000
+                      });
+                    } else {
+                      toast.current?.show({
+                        severity: 'warn',
+                        summary: 'Sesión RDP',
+                        detail: result.message || result.error,
+                        life: 3000
+                      });
+                    }
+                  }
+                  handleDisconnect();
+                } catch (err) {
+                  handleDisconnect();
+                }
+              }}
               disabled={connectionStatus === 'disconnected' || connectionStatus === 'connecting'}
+            />
+            
+            <Button
+              label="Conexión Simple"
+              icon="pi pi-play"
+              severity="secondary"
+              onClick={() => {
+                try {
+                  const simpleConfig = {
+                    server: rdpConfig.server,
+                    port: rdpConfig.port || 3389,
+                    username: rdpConfig.username || '',
+                    resolution: '1920x1080',
+                    colorDepth: 32,
+                    redirectFolders: false,
+                    redirectClipboard: true,
+                    redirectPrinters: false,
+                    redirectAudio: false,
+                    fullscreen: false,
+                    span: false,
+                    admin: false,
+                    public: false
+                  };
+                  
+                  if (window.electron && window.electron.ipcRenderer) {
+                    setConnectionStatus('connecting');
+                    window.electron.ipcRenderer.invoke('rdp:connect', simpleConfig).then(result => {
+                      if (result.success) {
+                        setConnectionStatus('connected');
+                        setConnectionInfo({
+                          server: rdpConfig.server,
+                          username: rdpConfig.username,
+                          port: rdpConfig.port,
+                          resolution: rdpConfig.resolution,
+                          startTime: new Date().toISOString(),
+                          sessionId: result.connectionId || `rdp_${tabId}_${Date.now()}`
+                        });
+                        toast.current?.show({
+                          severity: 'success',
+                          summary: 'Conexión Simple',
+                          detail: `Conexión RDP simple establecida con ${rdpConfig.server}`,
+                          life: 3000
+                        });
+                      } else {
+                        setConnectionStatus('error');
+                        setError(result.error);
+                      }
+                    }).catch(err => {
+                      setConnectionStatus('error');
+                      setError(err.message);
+                    });
+                  }
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+            />
+            
+            <Button
+              label="Debug"
+              icon="pi pi-bug"
+              severity="secondary"
+              onClick={() => {
+                console.log('=== DEBUG CONFIGURACIÓN RDP ===');
+                console.log('Configuración completa:', JSON.stringify(rdpConfig, null, 2));
+                console.log('Servidor:', rdpConfig.server);
+                console.log('Puerto:', rdpConfig.port || 3389);
+                console.log('Usuario:', rdpConfig.username);
+                console.log('Contraseña:', rdpConfig.password ? '***' : 'No configurada');
+                console.log('Resolución:', rdpConfig.resolution);
+                console.log('Profundidad de color:', rdpConfig.colorDepth);
+                console.log('Pantalla completa:', rdpConfig.fullscreen);
+                console.log('Redirección carpetas:', rdpConfig.redirectFolders);
+                console.log('Redirección portapapeles:', rdpConfig.redirectClipboard);
+                console.log('Redirección impresoras:', rdpConfig.redirectPrinters);
+                console.log('Redirección audio:', rdpConfig.redirectAudio);
+                console.log('================================');
+                
+                toast.current?.show({
+                  severity: 'info',
+                  summary: 'Debug completado',
+                  detail: 'Revisa la consola para ver la configuración RDP',
+                  life: 3000
+                });
+              }}
             />
           </div>
 
@@ -453,13 +434,13 @@ const RdpSessionTab = ({ rdpConfig, tabId }) => {
           <Card style={{ marginTop: '1rem', background: 'var(--blue-50)' }}>
             <div style={{ color: 'var(--blue-700)', fontSize: '0.9rem' }}>
               <i className="pi pi-info-circle" style={{ marginRight: '0.5rem' }}></i>
-                             <strong>Opciones de conexión:</strong><br/>
-               • <strong>Abrir Conexión RDP:</strong> Usa el RdpManager para crear un archivo .rdp y abrir mstsc.exe con todos los parámetros<br/>
-               • <strong>Conexión Simple:</strong> Usa el RdpManager con configuración mínima (sin redirecciones complejas)<br/>
-               • <strong>Sin Contraseña:</strong> Usa el RdpManager sin contraseña (para debug)<br/>
-               • <strong>Debug Args:</strong> Muestra en consola la configuración RDP que se enviaría al RdpManager<br/>
-               • <strong>Reconectar:</strong> Simula una nueva conexión<br/>
-               • <strong>Desconectar:</strong> Marca la sesión como desconectada
+              <strong>Gestión de Sesión RDP:</strong><br/>
+              • <strong>Conectar RDP:</strong> Inicia la conexión RDP usando el RdpManager con todos los parámetros configurados<br/>
+              • <strong>Mostrar Ventana:</strong> Intenta mostrar la ventana RDP si está minimizada<br/>
+              • <strong>Reconectar:</strong> Reestablece la conexión RDP si se ha perdido<br/>
+              • <strong>Desconectar:</strong> Cierra la sesión RDP activa<br/>
+              • <strong>Conexión Simple:</strong> Inicia una conexión RDP con configuración mínima (útil para problemas de compatibilidad)<br/>
+              • <strong>Debug:</strong> Muestra en consola la configuración RDP para diagnóstico
             </div>
           </Card>
         </div>
