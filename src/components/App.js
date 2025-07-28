@@ -31,6 +31,7 @@ import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import SessionManager from '../services/SessionManager';
 import SyncSettingsDialog from './SyncSettingsDialog';
+import RdpManager from './RdpManager';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -2205,6 +2206,7 @@ const App = () => {
   };
 
   const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [showRdpManager, setShowRdpManager] = useState(false);
   const sessionManager = useRef(new SessionManager()).current;
 
   // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
@@ -2257,6 +2259,10 @@ const App = () => {
         onOpenSSHConnection={onOpenSSHConnection}
       />
       <Toast ref={toast} />
+      <RdpManager 
+        visible={showRdpManager} 
+        onHide={() => setShowRdpManager(false)} 
+      />
       {/* Menú contextual del árbol de la sidebar */}
       <ContextMenu
         model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
@@ -2307,6 +2313,7 @@ const App = () => {
               toggleExpandAll={toggleExpandAll}
               setShowCreateGroupDialog={setShowCreateGroupDialog}
               setShowSettingsDialog={setShowSettingsDialog}
+              setShowRdpManager={setShowRdpManager}
               iconTheme={iconThemeSidebar}
               explorerFont={sidebarFont}
               explorerFontSize={sidebarFontSize}

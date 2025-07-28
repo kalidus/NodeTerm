@@ -101,6 +101,7 @@ const SSH2Promise = require('ssh2-promise');
 const { NodeSSH } = require('node-ssh');
 const packageJson = require('./package.json');
 const { createBastionShell } = require('./src/components/bastion-ssh');
+const RdpManager = require('./src/utils/RdpManager');
 const SftpClient = require('ssh2-sftp-client');
 const si = require('systeminformation');
 const { fork } = require('child_process');
@@ -356,6 +357,9 @@ const bastionStatsState = {};
 const motdCache = {};
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
+
+// RDP Manager instance
+const rdpManager = new RdpManager();
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -2183,6 +2187,67 @@ ipcMain.handle('window:isMaximized', () => {
 });
 ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+// === RDP Support ===
+// IPC handlers for RDP connections
+ipcMain.handle('rdp:connect', async (event, config) => {
+  try {
+    const result = await rdpManager.connect(config);
+    
+    if (result.success) {
+      // Setup process handlers for events
+      const connection = rdpManager.activeConnections.get(result.connectionId);
+      if (connection) {
+        rdpManager.setupProcessHandlers(
+          connection.process,
+          result.connectionId,
+          (connectionId) => {
+            // On connect
+            sendToRenderer(event.sender, 'rdp:connected', { connectionId });
+          },
+          (connectionId, exitInfo) => {
+            // On disconnect
+            sendToRenderer(event.sender, 'rdp:disconnected', { connectionId, exitInfo });
+          },
+          (connectionId, error) => {
+            // On error
+            sendToRenderer(event.sender, 'rdp:error', { connectionId, error: error.message });
+          }
+        );
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+ipcMain.handle('rdp:disconnect', async (event, connectionId) => {
+  return rdpManager.disconnect(connectionId);
+});
+
+ipcMain.handle('rdp:disconnect-all', async (event) => {
+  return rdpManager.disconnectAll();
+});
+
+ipcMain.handle('rdp:get-active-connections', async (event) => {
+  return rdpManager.getActiveConnections();
+});
+
+ipcMain.handle('rdp:get-presets', async (event) => {
+  return rdpManager.getPresets();
+});
+
+// Cleanup RDP connections on app quit
+app.on('before-quit', () => {
+  // Disconnect all RDP connections
+  rdpManager.disconnectAll();
+  rdpManager.cleanupAllTempFiles();
 });
 
 // === Terminal Support ===
