@@ -170,7 +170,7 @@ class RdpManager {
       `username:s:${config.username}`,
       'enablecredsspsupport:i:1', // NLA habilitado
       'authentication level:i:2',
-      'administrative session:i:0',
+      `administrative session:i:${config.admin === true ? 1 : 0}`,
       'negotiate security layer:i:1',
       'connect to console:i:0',
       'disable wallpaper:i:0',
@@ -199,6 +199,7 @@ class RdpManager {
       const [width, height] = config.resolution.split('x');
       lines.push(`desktopwidth:i:${width}`);
       lines.push(`desktopheight:i:${height}`);
+      lines.push('screen mode id:i:1'); // Ventana
     } else {
       lines.push('screen mode id:i:2'); // Pantalla completa
     }
@@ -207,19 +208,19 @@ class RdpManager {
       lines.push(`session bpp:i:${config.colorDepth}`);
     }
 
-    if (config.redirectFolders) {
+    if (config.redirectFolders === true) {
       lines.push('drivestoredirect:s:*');
     }
 
-    if (config.redirectPrinters) {
+    if (config.redirectPrinters === true) {
       lines.push('redirectprinters:i:1');
     }
 
-    if (config.redirectClipboard !== false) {
+    if (config.redirectClipboard === true) {
       lines.push('redirectclipboard:i:1');
     }
 
-    if (config.redirectAudio) {
+    if (config.redirectAudio === true) {
       lines.push('audiomode:i:0'); // Reproducir en equipo remoto
     } else {
       lines.push('audiomode:i:2'); // No reproducir
@@ -242,7 +243,7 @@ class RdpManager {
     }
 
     // Argumentos adicionales
-    if (config.fullscreen !== false) {
+    if (config.fullscreen === true) {
       args.push('/f'); // Pantalla completa
     }
 

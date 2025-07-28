@@ -2370,41 +2370,67 @@ const App = () => {
       port: node.data.port || 3389,
       resolution: node.data.resolution || '1920x1080',
       colorDepth: node.data.colorDepth || 32,
-      redirectFolders: node.data.redirectFolders !== false,
-      redirectClipboard: node.data.redirectClipboard !== false,
-      redirectPrinters: node.data.redirectPrinters || false,
-      redirectAudio: node.data.redirectAudio !== false,
-      fullscreen: node.data.fullscreen || false,
-      span: node.data.span || false,
-      admin: node.data.admin || false,
-      public: node.data.public || false
+      redirectFolders: node.data.redirectFolders === true,
+      redirectClipboard: node.data.redirectClipboard === true,
+      redirectPrinters: node.data.redirectPrinters === true,
+      redirectAudio: node.data.redirectAudio === true,
+      fullscreen: node.data.fullscreen === true,
+      span: node.data.span === true,
+      admin: node.data.admin === true,
+      public: node.data.public === true
     };
 
-    // Crear pestaña RDP (exactamente como SSH)
-    const tabId = `rdp_${node.key}_${Date.now()}`;
-    const newRdpTab = {
-      key: tabId,
-      label: `${node.label} (${rdpTabs.filter(t => t.originalKey === node.key).length + 1})`,
-      originalKey: node.key,
-      rdpConfig: rdpConfig,
-      type: 'rdp',
-      node: node
-    };
+    // Verificar si ya existe una pestaña RDP para la misma conexión
+    const existingRdpTab = rdpTabs.find(tab => 
+      tab.type === 'rdp' && 
+      tab.rdpConfig && 
+      tab.rdpConfig.server === rdpConfig.server && 
+      tab.rdpConfig.username === rdpConfig.username &&
+      tab.rdpConfig.port === rdpConfig.port
+    );
     
-    // Agregar la pestaña RDP al inicio del array
-    setRdpTabs(prevTabs => {
-      const newTabs = [newRdpTab, ...prevTabs];
-      return newTabs;
-    });
+    if (existingRdpTab) {
+      // Si ya existe una pestaña RDP para esta conexión, solo activarla
+      const allTabs = getTabsInGroup(null);
+      const tabIndex = allTabs.findIndex(tab => tab.key === existingRdpTab.key);
+      if (tabIndex !== -1) {
+        setActiveTabIndex(tabIndex);
+        
+        toast.current?.show({
+          severity: 'info',
+          summary: 'Conexión RDP',
+          detail: 'Ya existe una pestaña RDP para esta conexión',
+          life: 3000
+        });
+      }
+      return; // No crear nueva conexión
+    } else {
+      // Crear nueva pestaña RDP solo si no existe para esta conexión
+      const tabId = `rdp_${node.key}_${Date.now()}`;
+      const newRdpTab = {
+        key: tabId,
+        label: node.label,
+        originalKey: node.key,
+        rdpConfig: rdpConfig,
+        type: 'rdp',
+        node: node
+      };
+      
+      // Agregar la pestaña RDP al inicio del array
+      setRdpTabs(prevTabs => {
+        const newTabs = [newRdpTab, ...prevTabs];
+        return newTabs;
+      });
+    }
 
-    // Conectar RDP automáticamente después de crear la pestaña
+    // Conectar RDP automáticamente después de crear/actualizar la pestaña
     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
       .then(result => {
         if (result.success) {
           // Actualizar el estado de la pestaña RDP para que se active el botón "Mostrar Ventana"
           setRdpTabs(prevTabs => {
             return prevTabs.map(tab => {
-              if (tab.key === newRdpTab.key) {
+              if (tab.type === 'rdp') {
                 return {
                   ...tab,
                   connectionStatus: 'connected',
@@ -2414,7 +2440,7 @@ const App = () => {
                     port: rdpConfig.port,
                     resolution: rdpConfig.resolution,
                     startTime: new Date().toISOString(),
-                    sessionId: result.connectionId || `rdp_${tabId}_${Date.now()}`
+                    sessionId: result.connectionId || `rdp_${tab.key}_${Date.now()}`
                   }
                 };
               }
