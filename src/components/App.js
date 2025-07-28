@@ -2922,6 +2922,10 @@ const App = () => {
                                 {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
                                   <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
                                 )}
+                                {/* Icono específico para pestañas RDP */}
+                                {tab.type === 'rdp' && (
+                                  <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+                                )}
                                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
                                 {tab.type !== 'home' && (
                                   <Button
@@ -2994,6 +2998,15 @@ const App = () => {
                                             });
                                         }
                                         setSshTabs(newSshTabs);
+                                      } else if (closedTab.type === 'rdp') {
+                                        // Manejar cierre de pestañas RDP
+                                        // Opcional: desconectar la sesión RDP si es necesario
+                                        if (window.electron && window.electron.ipcRenderer) {
+                                          // Intentar desconectar la sesión RDP
+                                          window.electron.ipcRenderer.invoke('rdp:disconnect-session', closedTab.rdpConfig);
+                                        }
+                                        const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
+                                        setRdpTabs(newRdpTabs);
                                       } else {
                                         if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
                                           window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
