@@ -31,7 +31,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     password: '',
     port: 3389,
     preset: 'default',
-    resolution: '1920x1080',
+    resolution: '1600x1000',
     colorDepth: 32,
     redirectFolders: true,
     redirectClipboard: true,
@@ -67,8 +67,10 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
 
   // Opciones para dropdowns
   const resolutionOptions = [
+    { label: '1600x1000 (Recomendada)', value: '1600x1000' },
     { label: '1920x1080 (Full HD)', value: '1920x1080' },
     { label: '1366x768 (HD)', value: '1366x768' },
+    { label: '1280x800 (WXGA)', value: '1280x800' },
     { label: '1280x720 (HD Ready)', value: '1280x720' },
     { label: '1024x768 (XGA)', value: '1024x768' },
     { label: '800x600 (SVGA)', value: '800x600' }
@@ -102,7 +104,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           password: rdpNodeData.password || '',
           port: rdpNodeData.port || 3389,
           preset: 'default',
-          resolution: rdpNodeData.resolution || '1920x1080',
+          resolution: rdpNodeData.resolution || '1600x1000',
           colorDepth: rdpNodeData.colorDepth || 32,
           redirectFolders: rdpNodeData.redirectFolders !== false,
           redirectClipboard: rdpNodeData.redirectClipboard !== false,

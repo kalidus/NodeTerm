@@ -20,7 +20,7 @@ class RdpManager {
       // Validar configuración
       this.validateConfig(config);
       
-      // Crear archivo .rdp temporal si es necesario
+      // Crear archivo .rdp temporal
       const rdpFilePath = await this.createRdpFile(config, connectionId);
       
       // Construir argumentos para mstsc.exe
@@ -165,10 +165,9 @@ class RdpManager {
    */
   generateRdpContent(config) {
     const lines = [
-      'screen mode id:i:2',
       `full address:s:${config.server}${config.port ? ':' + config.port : ''}`,
       `username:s:${config.username}`,
-      'enablecredsspsupport:i:1', // NLA habilitado
+      'enablecredsspsupport:i:1',
       'authentication level:i:2',
       `administrative session:i:${config.admin === true ? 1 : 0}`,
       'negotiate security layer:i:1',
@@ -195,13 +194,34 @@ class RdpManager {
     ];
 
     // Configuraciones adicionales según opciones
+    let finalWidth = 1600;
+    let finalHeight = 1000;
+    
     if (config.resolution) {
       const [width, height] = config.resolution.split('x');
+      finalWidth = parseInt(width);
+      finalHeight = parseInt(height);
       lines.push(`desktopwidth:i:${width}`);
       lines.push(`desktopheight:i:${height}`);
-      lines.push('screen mode id:i:1'); // Ventana
     } else {
+      // Usar resolución por defecto apropiada
+      lines.push('desktopwidth:i:1600');
+      lines.push('desktopheight:i:1000');
+    }
+
+    // Configurar posición de ventana
+    lines.push(`winposstr:s:0,1,100,100,${100 + finalWidth + 16},${100 + finalHeight + 39}`);
+    lines.push('use multimon:i:0');
+
+    // Forzar modo ventana si no está configurado como pantalla completa
+    if (config.fullscreen === true) {
       lines.push('screen mode id:i:2'); // Pantalla completa
+    } else {
+      lines.push('screen mode id:i:1'); // Ventana
+      lines.push('smart sizing:i:0');   // Desactivar smart sizing
+      lines.push('enablesuperpan:i:0'); // Desactivar panning
+      lines.push('pinconnectionbar:i:1'); // Mantener barra de conexión visible
+      lines.push('displayconnectionbar:i:1'); // Mostrar barra de conexión
     }
 
     if (config.colorDepth) {
@@ -237,27 +257,39 @@ class RdpManager {
 
     if (rdpFilePath) {
       args.push(rdpFilePath);
+      
+      // Añadir argumentos adicionales para forzar el tamaño incluso con archivo .rdp
+      if (config.resolution && !config.fullscreen) {
+        const [width, height] = config.resolution.split('x');
+        args.push(`/w:${width}`);
+        args.push(`/h:${height}`);
+      } else if (!config.fullscreen) {
+        // Forzar tamaño por defecto
+        args.push('/w:1600');
+        args.push('/h:1000');
+      }
     } else {
       // Conexión directa sin archivo .rdp
       args.push('/v:' + config.server + (config.port ? ':' + config.port : ''));
+      
+      // Para conexiones directas, siempre añadir tamaño
+      if (config.resolution) {
+        const [width, height] = config.resolution.split('x');
+        args.push(`/w:${width}`);
+        args.push(`/h:${height}`);
+      } else {
+        args.push('/w:1600');
+        args.push('/h:1000');
+      }
     }
 
-    // Argumentos adicionales
-    if (config.fullscreen === true) {
-      args.push('/f'); // Pantalla completa
-    }
-
+    // Solo añadir argumentos que no conflicten con el archivo .rdp
     if (config.public) {
       args.push('/public'); // Conexión pública (no guardar credenciales)
     }
 
     if (config.admin) {
       args.push('/admin'); // Conectar a sesión administrativa
-    }
-
-    if (config.width && config.height) {
-      args.push(`/w:${config.width}`);
-      args.push(`/h:${config.height}`);
     }
 
     if (config.span) {
@@ -348,7 +380,7 @@ class RdpManager {
   getPresets() {
     return {
       default: {
-        resolution: '1920x1080',
+        resolution: '1600x1000',
         colorDepth: 32,
         redirectFolders: true,
         redirectClipboard: true,
@@ -357,7 +389,7 @@ class RdpManager {
         fullscreen: false
       },
       performance: {
-        resolution: '1024x768',
+        resolution: '1280x800',
         colorDepth: 16,
         redirectFolders: false,
         redirectClipboard: true,
