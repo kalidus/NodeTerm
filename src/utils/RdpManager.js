@@ -11,73 +11,87 @@ class RdpManager {
   }
 
   /**
-   * Crear una nueva conexión RDP
+   * Conectar a servidor RDP
    */
-  async connect(config) {
-    const connectionId = this.generateConnectionId();
+  async connect(config, onConnect, onDisconnect, onError) {
+    const connectionId = `rdp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    
+    console.log(`Starting RDP connection ${connectionId} to ${config.server}`);
     
     try {
       // Validar configuración
       this.validateConfig(config);
+      console.log(`Configuration validated for connection ${connectionId}`);
       
-      // Crear archivo .rdp temporal
+      // Crear archivo .rdp temporal con configuración simple
       const rdpFilePath = await this.createRdpFile(config, connectionId);
+      console.log(`RDP file created: ${rdpFilePath} for connection ${connectionId}`);
       
       // Construir argumentos para mstsc.exe
       const args = this.buildMstscArgs(config, rdpFilePath);
+      console.log(`Arguments built for connection ${connectionId}:`, args);
       
-      // Lanzar proceso mstsc.exe
+      // Lanzar proceso
       const process = this.launchMstscProcess(args, connectionId);
+      console.log(`Process launched for connection ${connectionId}, PID: ${process.pid}`);
       
-      // Guardar conexión activa
+      // Guardar conexión
       this.activeConnections.set(connectionId, {
-        process,
-        config,
-        rdpFilePath,
-        startTime: new Date(),
-        status: 'connecting'
+        id: connectionId,
+        config: config,
+        process: process,
+        rdpFilePath: rdpFilePath,
+        status: 'connecting',
+        startTime: Date.now()
       });
       
-      return {
-        success: true,
-        connectionId,
-        message: 'Conexión RDP iniciada'
-      };
+      console.log(`Connection ${connectionId} saved to active connections`);
+      
+      // Configurar handlers
+      this.setupProcessHandlers(process, connectionId, onConnect, onDisconnect, onError);
+      
+      return connectionId;
       
     } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error(`Error starting RDP connection ${connectionId}:`, error);
+      throw error;
     }
   }
 
   /**
-   * Desconectar conexión RDP específica
+   * Desconectar conexión RDP
    */
   disconnect(connectionId) {
     const connection = this.activeConnections.get(connectionId);
     
     if (!connection) {
-      return { success: false, error: 'Conexión no encontrada' };
+      console.log(`Connection ${connectionId} not found`);
+      return false;
     }
-
+    
+    console.log(`Disconnecting RDP connection ${connectionId}`);
+    
     try {
-      // Terminar proceso
+      // Terminar proceso si existe
       if (connection.process && !connection.process.killed) {
         connection.process.kill('SIGTERM');
+        console.log(`Process killed for connection ${connectionId}`);
       }
       
-      // Limpiar archivo temporal
-      this.cleanupTempFile(connection.rdpFilePath);
+      // Limpiar archivo temporal si existe
+      if (connection.rdpFilePath) {
+        this.cleanupTempFile(connection.rdpFilePath);
+      }
       
       // Remover de conexiones activas
       this.activeConnections.delete(connectionId);
       
-      return { success: true, message: 'Conexión terminada' };
+      console.log(`Connection ${connectionId} disconnected successfully`);
+      return true;
       
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error(`Error disconnecting ${connectionId}:`, error);
+      return false;
     }
   }
 
@@ -144,17 +158,22 @@ class RdpManager {
    * Crear archivo .rdp temporal
    */
   async createRdpFile(config, connectionId) {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    
     const tempDir = os.tmpdir();
-    const fileName = `nodeterm_${connectionId}.rdp`;
+    const fileName = `nodeterm_rdp_${connectionId}.rdp`;
     const filePath = path.join(tempDir, fileName);
     
-    // Configuración base .rdp
-    const rdpContent = this.generateRdpContent(config);
+    const content = this.generateRdpContent(config);
     
-    // Escribir archivo
-    await fs.promises.writeFile(filePath, rdpContent, 'utf8');
+    console.log(`RDP file content for ${connectionId}:`);
+    console.log(content);
     
-    // Guardar para limpieza posterior
+    fs.writeFileSync(filePath, content, 'utf8');
+    
+    // Guardar referencia para limpieza posterior
     this.tempFiles.add(filePath);
     
     return filePath;
@@ -164,102 +183,54 @@ class RdpManager {
    * Generar contenido del archivo .rdp
    */
   generateRdpContent(config) {
+    // Configuración mínima absoluta - solo lo esencial
     const lines = [
       `full address:s:${config.server}${config.port ? ':' + config.port : ''}`,
       `username:s:${config.username}`,
-      'enablecredsspsupport:i:1',
-      'authentication level:i:2',
-      `administrative session:i:${config.admin === true ? 1 : 0}`,
-      'negotiate security layer:i:1',
-      'connect to console:i:0',
-      'disable wallpaper:i:0',
-      'disable full window drag:i:0',
-      'disable menu anims:i:0',
-      'disable themes:i:0',
-      'disable cursor setting:i:0',
-      'bitmapcachepersistenable:i:1',
+      'screen mode id:i:1',
+      'desktopwidth:i:1600',
+      'desktopheight:i:1000',
+      'session bpp:i:32',
       'compression:i:1',
       'keyboardhook:i:2',
       'audiocapturemode:i:0',
       'videoplaybackmode:i:1',
       'connection type:i:7',
-      'redirectsmartcards:i:1',
-      'redirectcomports:i:0',
-      'redirectposdevices:i:0',
-      'redirectdirectx:i:1',
-      'session bpp:i:32',
+      'networkautodetect:i:1',
+      'bandwidthautodetect:i:1',
+      'displayconnectionbar:i:1',
+      'enableworkspacereconnect:i:0',
+      'disable wallpaper:i:0',
       'allow font smoothing:i:1',
-      'promptcredentialonce:i:1',
-      'authentication level:i:0'
+      'allow desktop composition:i:0',
+      'disable full window drag:i:0',
+      'disable menu anims:i:0',
+      'disable themes:i:0',
+      'disable cursor setting:i:0',
+      'bitmapcachepersistenable:i:1',
+      'audiomode:i:0',
+      'redirectprinters:i:0',
+      'redirectcomports:i:0',
+      'redirectsmartcards:i:1',
+      'redirectclipboard:i:1',
+      'redirectposdevices:i:0',
+      'autoreconnection enabled:i:1',
+      'authentication level:i:2', // Cambiar a 2 para permitir certificados
+      'prompt for credentials:i:1', // Cambiar a 1 para permitir prompt
+      'negotiate security layer:i:1',
+      'remoteapplicationmode:i:0',
+      'alternate shell:s:',
+      'shell working directory:s:',
+      'gatewayhostname:s:',
+      'gatewayusagemethod:i:4',
+      'gatewaycredentialssource:i:4',
+      'gatewayprofileusagemethod:i:0',
+      'promptcredentialonce:i:0', // Cambiar a 0 para permitir múltiples prompts
+      'use redirection server name:i:0',
+      'rdgiskdcproxy:i:0',
+      'kdcproxyname:s:',
+      'drivestoredirect:s:*'
     ];
-
-    // Configuraciones adicionales según opciones
-    let finalWidth = 1600;
-    let finalHeight = 1000;
-    
-    if (config.resolution) {
-      const [width, height] = config.resolution.split('x');
-      finalWidth = parseInt(width);
-      finalHeight = parseInt(height);
-      lines.push(`desktopwidth:i:${width}`);
-      lines.push(`desktopheight:i:${height}`);
-    } else {
-      // Usar resolución por defecto apropiada
-      lines.push('desktopwidth:i:1600');
-      lines.push('desktopheight:i:1000');
-    }
-
-    // Configurar posición de ventana
-    lines.push(`winposstr:s:0,1,100,100,${100 + finalWidth + 16},${100 + finalHeight + 39}`);
-    lines.push('use multimon:i:0');
-
-    // Configurar smart sizing según el setting del usuario
-    const useSmartSizing = config.smartSizing !== false; // Por defecto habilitado
-    
-    if (config.fullscreen === true) {
-      lines.push('screen mode id:i:2'); // Pantalla completa
-      lines.push('smart sizing:i:0');   // En pantalla completa, desactivar smart sizing
-      lines.push('enablesuperpan:i:0');
-    } else {
-      lines.push('screen mode id:i:1'); // Ventana
-      lines.push(`smart sizing:i:${useSmartSizing ? 1 : 0}`);
-      
-      if (useSmartSizing) {
-        // Smart sizing habilitado - no forzar tamaño fijo
-        lines.push('enablesuperpan:i:0');
-        lines.push('dynamic resolution:i:1');
-        lines.push('desktop size id:i:0');
-      } else {
-        // Smart sizing deshabilitado - usar tamaño fijo
-        lines.push('enablesuperpan:i:0');
-        lines.push('dynamic resolution:i:0');
-      }
-      
-      lines.push('pinconnectionbar:i:1'); // Mantener barra de conexión visible
-      lines.push('displayconnectionbar:i:1'); // Mostrar barra de conexión
-    }
-
-    if (config.colorDepth) {
-      lines.push(`session bpp:i:${config.colorDepth}`);
-    }
-
-    if (config.redirectFolders === true) {
-      lines.push('drivestoredirect:s:*');
-    }
-
-    if (config.redirectPrinters === true) {
-      lines.push('redirectprinters:i:1');
-    }
-
-    if (config.redirectClipboard === true) {
-      lines.push('redirectclipboard:i:1');
-    }
-
-    if (config.redirectAudio === true) {
-      lines.push('audiomode:i:0'); // Reproducir en equipo remoto
-    } else {
-      lines.push('audiomode:i:2'); // No reproducir
-    }
 
     return lines.join('\r\n') + '\r\n';
   }
@@ -268,51 +239,12 @@ class RdpManager {
    * Construir argumentos para mstsc.exe
    */
   buildMstscArgs(config, rdpFilePath) {
-    const args = [];
-
-    if (rdpFilePath) {
-      args.push(rdpFilePath);
-      
-      // Solo añadir argumentos de tamaño si smart sizing está deshabilitado
-      const useSmartSizing = config.smartSizing !== false;
-      
-      if (!useSmartSizing && config.resolution && !config.fullscreen) {
-        const [width, height] = config.resolution.split('x');
-        args.push(`/w:${width}`);
-        args.push(`/h:${height}`);
-      } else if (!useSmartSizing && !config.fullscreen) {
-        // Forzar tamaño por defecto solo si smart sizing está deshabilitado
-        args.push('/w:1600');
-        args.push('/h:1000');
-      }
-    } else {
-      // Conexión directa sin archivo .rdp
-      args.push('/v:' + config.server + (config.port ? ':' + config.port : ''));
-      
-      // Para conexiones directas, siempre añadir tamaño
-      if (config.resolution) {
-        const [width, height] = config.resolution.split('x');
-        args.push(`/w:${width}`);
-        args.push(`/h:${height}`);
-      } else {
-        args.push('/w:1600');
-        args.push('/h:1000');
-      }
-    }
-
-    // Solo añadir argumentos que no conflicten con el archivo .rdp
-    if (config.public) {
-      args.push('/public'); // Conexión pública (no guardar credenciales)
-    }
-
-    if (config.admin) {
-      args.push('/admin'); // Conectar a sesión administrativa
-    }
-
-    if (config.span) {
-      args.push('/span'); // Usar múltiples monitores
-    }
-
+    console.log(`Building arguments for connection ${config.server}`);
+    
+    // Solo pasar el archivo .rdp
+    const args = [rdpFilePath];
+    
+    console.log(`Arguments built for connection ${config.server}:`, args);
     return args;
   }
 
@@ -320,11 +252,22 @@ class RdpManager {
    * Lanzar proceso mstsc.exe
    */
   launchMstscProcess(args, connectionId) {
-    return spawn('mstsc.exe', args, {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: false
+    console.log(`Launching RDP process for connection ${connectionId} with args:`, args);
+    
+    const { exec } = require('child_process');
+    
+    // Usar start para ejecutar mstsc.exe de forma independiente
+    const command = `start "" mstsc.exe "${args[0]}"`;
+    console.log(`Executing command: ${command}`);
+    
+    const childProcess = exec(command, {
+      windowsHide: false,
+      shell: true
     });
+    
+    console.log(`RDP process ${connectionId} launched with PID: ${childProcess.pid}`);
+    
+    return childProcess;
   }
 
   /**
@@ -335,29 +278,51 @@ class RdpManager {
     
     if (!connection) return;
 
-    // Proceso iniciado (no significa conexión exitosa)
-    process.on('spawn', () => {
-      connection.status = 'launched';
-      if (onConnect) onConnect(connectionId);
-    });
+    console.log(`Setting up RDP handlers for connection ${connectionId}`);
 
-    // Proceso terminado
-    process.on('exit', (code, signal) => {
-      connection.status = 'disconnected';
+    // Con start, el proceso se ejecuta de forma independiente
+    connection.status = 'launched';
+    console.log(`RDP process launched for connection ${connectionId}, PID: ${process.pid}`);
+    
+    // Considerar conectado después de un delay para dar tiempo a certificados
+    setTimeout(() => {
+      if (connection.status === 'launched') {
+        connection.status = 'connected';
+        if (onConnect) {
+          onConnect(connectionId);
+        }
+        console.log(`RDP connection ${connectionId} considered established`);
+      }
+    }, 35000); // 35 segundos de delay para dar tiempo a certificados
+
+    // Con exec usamos 'close' en lugar de 'exit'
+    process.on('close', (code, signal) => {
+      console.log(`RDP process closed for connection ${connectionId}, code: ${code}, signal: ${signal}`);
       
-      // Limpiar archivo temporal
-      this.cleanupTempFile(connection.rdpFilePath);
-      
-      // Remover de conexiones activas
-      this.activeConnections.delete(connectionId);
-      
-      if (onDisconnect) {
-        onDisconnect(connectionId, { code, signal });
+      // Con start, el proceso se cierra inmediatamente pero mstsc.exe sigue ejecutándose
+      // Solo marcar como desconectado si hay un error real
+      if (code !== 0 && code !== null) {
+        connection.status = 'disconnected';
+        
+        if (onDisconnect) {
+          onDisconnect(connectionId, { code, signal });
+        }
+        
+        // Limpiar archivo temporal si existe
+        if (connection.rdpFilePath) {
+          this.cleanupTempFile(connection.rdpFilePath);
+        }
+        
+        // Remover de conexiones activas
+        this.activeConnections.delete(connectionId);
+      } else {
+        console.log(`RDP process ${connectionId} closed normally (code ${code}), mstsc.exe should be running independently`);
       }
     });
 
     // Error en el proceso
     process.on('error', (error) => {
+      console.error(`RDP process error for connection ${connectionId}:`, error);
       connection.status = 'error';
       
       if (onError) {
@@ -404,7 +369,8 @@ class RdpManager {
         redirectPrinters: false,
         redirectAudio: true,
         fullscreen: false,
-        smartSizing: true
+        smartSizing: true,
+        connectionTimeout: 60000
       },
       performance: {
         resolution: '1280x800',
@@ -414,7 +380,8 @@ class RdpManager {
         redirectPrinters: false,
         redirectAudio: false,
         fullscreen: false,
-        smartSizing: true
+        smartSizing: true,
+        connectionTimeout: 90000
       },
       fullFeature: {
         resolution: '1920x1080',
@@ -425,7 +392,8 @@ class RdpManager {
         redirectAudio: true,
         fullscreen: true,
         span: true,
-        smartSizing: false
+        smartSizing: false,
+        connectionTimeout: 120000
       },
       qhd: {
         resolution: '2560x1440',
@@ -435,7 +403,8 @@ class RdpManager {
         redirectPrinters: false,
         redirectAudio: true,
         fullscreen: false,
-        smartSizing: true
+        smartSizing: true,
+        connectionTimeout: 60000
       },
       ultrawide: {
         resolution: '3440x1440',
@@ -445,7 +414,8 @@ class RdpManager {
         redirectPrinters: false,
         redirectAudio: true,
         fullscreen: false,
-        smartSizing: true
+        smartSizing: true,
+        connectionTimeout: 60000
       },
       uhd: {
         resolution: '3840x2160',
@@ -455,7 +425,8 @@ class RdpManager {
         redirectPrinters: false,
         redirectAudio: true,
         fullscreen: false,
-        smartSizing: true
+        smartSizing: true,
+        connectionTimeout: 60000
       }
     };
   }
