@@ -183,7 +183,13 @@ class RdpManager {
    * Generar contenido del archivo .rdp
    */
   generateRdpContent(config) {
-    // Configuración mínima absoluta - solo lo esencial
+    // Detectar si es un servidor que probablemente requiera certificados
+    const isEnterpriseServer = config.server.includes('.sec.') || 
+                              config.server.includes('bastion') || 
+                              config.server.includes('corporate') ||
+                              config.server.includes('enterprise');
+    
+    // Configuración base
     const lines = [
       `full address:s:${config.server}${config.port ? ':' + config.port : ''}`,
       `username:s:${config.username}`,
@@ -215,8 +221,6 @@ class RdpManager {
       'redirectclipboard:i:1',
       'redirectposdevices:i:0',
       'autoreconnection enabled:i:1',
-      'authentication level:i:2', // Cambiar a 2 para permitir certificados
-      'prompt for credentials:i:1', // Cambiar a 1 para permitir prompt
       'negotiate security layer:i:1',
       'remoteapplicationmode:i:0',
       'alternate shell:s:',
@@ -225,12 +229,26 @@ class RdpManager {
       'gatewayusagemethod:i:4',
       'gatewaycredentialssource:i:4',
       'gatewayprofileusagemethod:i:0',
-      'promptcredentialonce:i:0', // Cambiar a 0 para permitir múltiples prompts
       'use redirection server name:i:0',
       'rdgiskdcproxy:i:0',
       'kdcproxyname:s:',
       'drivestoredirect:s:*'
     ];
+
+    // Configuración de autenticación según el tipo de servidor
+    if (isEnterpriseServer) {
+      // Para servidores empresariales que requieren certificados
+      lines.push('authentication level:i:2');
+      lines.push('prompt for credentials:i:1');
+      lines.push('promptcredentialonce:i:0');
+      console.log(`Using enterprise authentication for ${config.server}`);
+    } else {
+      // Para servidores normales (Microsoft, etc.)
+      lines.push('authentication level:i:0');
+      lines.push('prompt for credentials:i:0');
+      lines.push('promptcredentialonce:i:1');
+      console.log(`Using standard authentication for ${config.server}`);
+    }
 
     return lines.join('\r\n') + '\r\n';
   }
