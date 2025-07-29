@@ -1,7 +1,28 @@
-1.1.0
+1.4.1
 
 CHANGELOG:
-- v1.1.0 (2025-01-27)
+- v1.4.1 (2025-01-27)
+  * 🖥️ Soporte completo para conexiones RDP con smart sizing
+  * 🔧 Corrección de errores en conexiones RDP desde sidebar
+  * 🎯 Mejoras de estabilidad y rendimiento
+  * 🎨 UI refinada y más moderna
+  * 🔄 Sincronización mejorada entre escritorio y web
+  * 🐛 Corrección de bugs y optimizaciones
+
+- v1.4.0 (2025-01-27)
+  * 📤 Exportación/importación de configuraciones
+  * 🎯 Mejoras de estabilidad y rendimiento
+  * 🎨 UI refinada y más moderna
+  * 🔄 Sincronización mejorada entre escritorio y web
+  * 🐛 Corrección de bugs y optimizaciones
+
+- v1.3.0 (2025-01-27)
+  * 🗂️ Agrupación de pestañas por proyectos
+  * 🎨 Menús contextuales para explorador de sesiones
+  * 🖱️ Menú contextual en área vacía del árbol
+  * ✨ Interface más limpia sin botones inline
+
+- v1.2.0 (2025-01-27)
   * 🎉 Sistema de versionado implementado
   * 📋 Diálogo "Acerca de" con información completa de la aplicación
   * 📍 Versión mostrada en barra de estado
@@ -10,7 +31,7 @@ CHANGELOG:
   * ✨ Funcionalidades destacadas listadas en el diálogo
   * 🎨 Interfaz mejorada con iconos y diseño profesional
 
-- v1.0.0 (2025-01-27)
+- v1.1.0 (2025-01-27)
   * 🚀 Major UI/UX Improvements - Tab Management & Distribution Icons
   * 📏 Panel lateral con tamaño mínimo optimizado (133x47px)
   * 🐧 Iconos automáticos por distribución Linux en pestañas SSH
@@ -21,8 +42,13 @@ CHANGELOG:
   * ⚡ Drag & drop para organización de pestañas
   * 🔧 Exploradores de archivos remotos integrados
 
+- v1.0.0 (2025-01-27)
+  * 🚀 Lanzamiento inicial de NodeTerm
+  * 🔒 Cliente SSH moderno y multiplataforma
+  * 🎨 Interfaz personalizable con temas
+  * 📁 Explorador de archivos remoto
+  * 🖥️ Múltiples terminales SSH
+
 PRÓXIMAS VERSIONES:
-- v1.2.0: Configuración de temas personalizados
-- v1.3.0: Exportación/importación de configuraciones SSH
-- v1.4.0: Soporte para llaves SSH
-- v1.5.0: Terminal integrado con múltiples shells 
+- v1.5.0: Soporte para llaves SSH
+- v1.6.0: Terminal integrado con múltiples shells 
