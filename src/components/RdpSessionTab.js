@@ -423,6 +423,12 @@ const RdpSessionTab = ({ rdpConfig, tabId, connectionStatus: tabConnectionStatus
               <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>Pantalla Completa:</span>
               <span style={{ fontWeight: '600', color: 'var(--ui-content-text)' }}>{rdpConfig.fullscreen ? 'Sí' : 'No'}</span>
             </div>
+            <Divider style={{ margin: '0.5rem 0' }} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>Ajuste Automático:</span>
+              <span style={{ fontWeight: '600', color: 'var(--ui-content-text)' }}>{rdpConfig.smartSizing !== false ? 'Sí' : 'No'}</span>
+            </div>
           </div>
         </Card>
 

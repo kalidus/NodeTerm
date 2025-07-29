@@ -38,6 +38,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     redirectPrinters: false,
     redirectAudio: true,
     fullscreen: false,
+    smartSizing: true,
     span: false,
     admin: false,
     public: false
@@ -135,6 +136,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           redirectPrinters: rdpNodeData.redirectPrinters || false,
           redirectAudio: rdpNodeData.redirectAudio !== false,
           fullscreen: rdpNodeData.fullscreen || false,
+          smartSizing: rdpNodeData.smartSizing !== false,
           span: rdpNodeData.span || false,
           admin: rdpNodeData.admin || false,
           public: rdpNodeData.public || false
@@ -183,7 +185,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
       setFormData(prev => ({
         ...prev,
         preset: presetName,
-        ...preset
+        ...preset,
+        smartSizing: preset.smartSizing !== false // Asegurar que smartSizing se aplique del preset
       }));
     }
   };
@@ -537,6 +540,20 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       }}
                     />
                     <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
+                  </div>
+                  <div className="field-checkbox col-12 md:col-6">
+                    <Checkbox
+                      inputId="smartSizing"
+                      checked={formData.smartSizing}
+                      onChange={handleCheckboxChange('smartSizing')}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
+                    />
+                    <label htmlFor="smartSizing" className="ml-2">Ajuste automático de ventana</label>
                   </div>
                   <div className="field-checkbox col-12 md:col-6">
                     <Checkbox
