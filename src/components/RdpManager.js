@@ -67,11 +67,32 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
 
   // Opciones para dropdowns
   const resolutionOptions = [
+    // Resoluciones recomendadas para ventanas
     { label: '1600x1000 (Recomendada)', value: '1600x1000' },
-    { label: '1920x1080 (Full HD)', value: '1920x1080' },
-    { label: '1366x768 (HD)', value: '1366x768' },
     { label: '1280x800 (WXGA)', value: '1280x800' },
+    
+    // Resoluciones Full HD y HD
+    { label: '1920x1080 (Full HD)', value: '1920x1080' },
+    { label: '1920x1200 (WUXGA)', value: '1920x1200' },
+    { label: '1366x768 (HD)', value: '1366x768' },
     { label: '1280x720 (HD Ready)', value: '1280x720' },
+    
+    // Resoluciones 2K (QHD)
+    { label: '2560x1440 (2K QHD)', value: '2560x1440' },
+    { label: '2560x1600 (2K WQXGA)', value: '2560x1600' },
+    { label: '2048x1080 (2K DCI)', value: '2048x1080' },
+    
+    // Resoluciones 4K (UHD)
+    { label: '3840x2160 (4K UHD)', value: '3840x2160' },
+    { label: '4096x2160 (4K DCI)', value: '4096x2160' },
+    { label: '3840x2400 (4K WQUXGA)', value: '3840x2400' },
+    
+    // Resoluciones ultrawide
+    { label: '3440x1440 (Ultrawide QHD)', value: '3440x1440' },
+    { label: '2560x1080 (Ultrawide Full HD)', value: '2560x1080' },
+    { label: '5120x1440 (Super Ultrawide)', value: '5120x1440' },
+    
+    // Resoluciones legacy
     { label: '1024x768 (XGA)', value: '1024x768' },
     { label: '800x600 (SVGA)', value: '800x600' }
   ];
@@ -87,7 +108,10 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
   const presetOptions = [
     { label: 'Predeterminado', value: 'default' },
     { label: 'Alto rendimiento', value: 'performance' },
-    { label: 'Todas las características', value: 'fullFeature' }
+    { label: 'Todas las características', value: 'fullFeature' },
+    { label: '2K QHD (2560x1440)', value: 'qhd' },
+    { label: 'Ultrawide (3440x1440)', value: 'ultrawide' },
+    { label: '4K UHD (3840x2160)', value: 'uhd' }
   ];
 
   useEffect(() => {
