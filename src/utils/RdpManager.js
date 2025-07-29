@@ -213,13 +213,28 @@ class RdpManager {
     lines.push(`winposstr:s:0,1,100,100,${100 + finalWidth + 16},${100 + finalHeight + 39}`);
     lines.push('use multimon:i:0');
 
-    // Forzar modo ventana si no está configurado como pantalla completa
+    // Configurar smart sizing según el setting del usuario
+    const useSmartSizing = config.smartSizing !== false; // Por defecto habilitado
+    
     if (config.fullscreen === true) {
       lines.push('screen mode id:i:2'); // Pantalla completa
+      lines.push('smart sizing:i:0');   // En pantalla completa, desactivar smart sizing
+      lines.push('enablesuperpan:i:0');
     } else {
       lines.push('screen mode id:i:1'); // Ventana
-      lines.push('smart sizing:i:0');   // Desactivar smart sizing
-      lines.push('enablesuperpan:i:0'); // Desactivar panning
+      lines.push(`smart sizing:i:${useSmartSizing ? 1 : 0}`);
+      
+      if (useSmartSizing) {
+        // Smart sizing habilitado - no forzar tamaño fijo
+        lines.push('enablesuperpan:i:0');
+        lines.push('dynamic resolution:i:1');
+        lines.push('desktop size id:i:0');
+      } else {
+        // Smart sizing deshabilitado - usar tamaño fijo
+        lines.push('enablesuperpan:i:0');
+        lines.push('dynamic resolution:i:0');
+      }
+      
       lines.push('pinconnectionbar:i:1'); // Mantener barra de conexión visible
       lines.push('displayconnectionbar:i:1'); // Mostrar barra de conexión
     }
@@ -258,13 +273,15 @@ class RdpManager {
     if (rdpFilePath) {
       args.push(rdpFilePath);
       
-      // Añadir argumentos adicionales para forzar el tamaño incluso con archivo .rdp
-      if (config.resolution && !config.fullscreen) {
+      // Solo añadir argumentos de tamaño si smart sizing está deshabilitado
+      const useSmartSizing = config.smartSizing !== false;
+      
+      if (!useSmartSizing && config.resolution && !config.fullscreen) {
         const [width, height] = config.resolution.split('x');
         args.push(`/w:${width}`);
         args.push(`/h:${height}`);
-      } else if (!config.fullscreen) {
-        // Forzar tamaño por defecto
+      } else if (!useSmartSizing && !config.fullscreen) {
+        // Forzar tamaño por defecto solo si smart sizing está deshabilitado
         args.push('/w:1600');
         args.push('/h:1000');
       }
@@ -386,7 +403,8 @@ class RdpManager {
         redirectClipboard: true,
         redirectPrinters: false,
         redirectAudio: true,
-        fullscreen: false
+        fullscreen: false,
+        smartSizing: true
       },
       performance: {
         resolution: '1280x800',
@@ -395,7 +413,8 @@ class RdpManager {
         redirectClipboard: true,
         redirectPrinters: false,
         redirectAudio: false,
-        fullscreen: false
+        fullscreen: false,
+        smartSizing: true
       },
       fullFeature: {
         resolution: '1920x1080',
@@ -405,7 +424,8 @@ class RdpManager {
         redirectPrinters: true,
         redirectAudio: true,
         fullscreen: true,
-        span: true
+        span: true,
+        smartSizing: false
       },
       qhd: {
         resolution: '2560x1440',
@@ -414,7 +434,8 @@ class RdpManager {
         redirectClipboard: true,
         redirectPrinters: false,
         redirectAudio: true,
-        fullscreen: false
+        fullscreen: false,
+        smartSizing: true
       },
       ultrawide: {
         resolution: '3440x1440',
@@ -423,7 +444,8 @@ class RdpManager {
         redirectClipboard: true,
         redirectPrinters: false,
         redirectAudio: true,
-        fullscreen: false
+        fullscreen: false,
+        smartSizing: true
       },
       uhd: {
         resolution: '3840x2160',
@@ -432,7 +454,8 @@ class RdpManager {
         redirectClipboard: true,
         redirectPrinters: false,
         redirectAudio: true,
-        fullscreen: false
+        fullscreen: false,
+        smartSizing: true
       }
     };
   }
