@@ -2193,32 +2193,33 @@ ipcMain.handle('window:close', () => {
 // IPC handlers for RDP connections
 ipcMain.handle('rdp:connect', async (event, config) => {
   try {
-    const result = await rdpManager.connect(config);
+    const connectionId = await rdpManager.connect(config);
     
-    if (result.success) {
-      // Setup process handlers for events
-      const connection = rdpManager.activeConnections.get(result.connectionId);
-      if (connection) {
-        rdpManager.setupProcessHandlers(
-          connection.process,
-          result.connectionId,
-          (connectionId) => {
-            // On connect
-            sendToRenderer(event.sender, 'rdp:connected', { connectionId });
-          },
-          (connectionId, exitInfo) => {
-            // On disconnect
-            sendToRenderer(event.sender, 'rdp:disconnected', { connectionId, exitInfo });
-          },
-          (connectionId, error) => {
-            // On error
-            sendToRenderer(event.sender, 'rdp:error', { connectionId, error: error.message });
-          }
-        );
-      }
+    // Setup process handlers for events
+    const connection = rdpManager.activeConnections.get(connectionId);
+    if (connection) {
+      rdpManager.setupProcessHandlers(
+        connection.process,
+        connectionId,
+        (connectionId) => {
+          // On connect
+          sendToRenderer(event.sender, 'rdp:connected', { connectionId });
+        },
+        (connectionId, exitInfo) => {
+          // On disconnect
+          sendToRenderer(event.sender, 'rdp:disconnected', { connectionId, exitInfo });
+        },
+        (connectionId, error) => {
+          // On error
+          sendToRenderer(event.sender, 'rdp:error', { connectionId, error: error.message });
+        }
+      );
     }
     
-    return result;
+    return {
+      success: true,
+      connectionId: connectionId
+    };
   } catch (error) {
     return {
       success: false,
