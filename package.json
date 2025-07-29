@@ -69,7 +69,7 @@
     "browserify-zlib": "^0.2.0",
     "https-browserify": "^1.0.0",
     "node-pty": "^1.1.0-beta34",
-    "node-ssh": "^13.2.0",
+    "node-ssh": "^13.2.1",
     "primeflex": "^3.3.1",
     "primeicons": "^6.0.1",
     "primereact": "^10.2.1",
@@ -111,6 +111,6 @@
     "webpack-cli": "^5.1.4"
   },
   "overrides": {
-    "ssh2": "0.8.9"
+    "ssh2": "1.16.0"
   }
 }
