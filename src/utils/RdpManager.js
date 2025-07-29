@@ -406,6 +406,33 @@ class RdpManager {
         redirectAudio: true,
         fullscreen: true,
         span: true
+      },
+      qhd: {
+        resolution: '2560x1440',
+        colorDepth: 32,
+        redirectFolders: true,
+        redirectClipboard: true,
+        redirectPrinters: false,
+        redirectAudio: true,
+        fullscreen: false
+      },
+      ultrawide: {
+        resolution: '3440x1440',
+        colorDepth: 32,
+        redirectFolders: true,
+        redirectClipboard: true,
+        redirectPrinters: false,
+        redirectAudio: true,
+        fullscreen: false
+      },
+      uhd: {
+        resolution: '3840x2160',
+        colorDepth: 32,
+        redirectFolders: true,
+        redirectClipboard: true,
+        redirectPrinters: false,
+        redirectAudio: true,
+        fullscreen: false
       }
     };
   }
