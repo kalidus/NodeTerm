@@ -16,24 +16,18 @@ class RdpManager {
   async connect(config, onConnect, onDisconnect, onError) {
     const connectionId = `rdp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     
-    console.log(`Starting RDP connection ${connectionId} to ${config.server}`);
-    
     try {
       // Validar configuración
       this.validateConfig(config);
-      console.log(`Configuration validated for connection ${connectionId}`);
       
       // Crear archivo .rdp temporal con configuración simple
       const rdpFilePath = await this.createRdpFile(config, connectionId);
-      console.log(`RDP file created: ${rdpFilePath} for connection ${connectionId}`);
       
       // Construir argumentos para mstsc.exe
       const args = this.buildMstscArgs(config, rdpFilePath);
-      console.log(`Arguments built for connection ${connectionId}:`, args);
       
       // Lanzar proceso
       const process = this.launchMstscProcess(args, connectionId);
-      console.log(`Process launched for connection ${connectionId}, PID: ${process.pid}`);
       
       // Guardar conexión
       this.activeConnections.set(connectionId, {
@@ -44,8 +38,6 @@ class RdpManager {
         status: 'connecting',
         startTime: Date.now()
       });
-      
-      console.log(`Connection ${connectionId} saved to active connections`);
       
       // Configurar handlers
       this.setupProcessHandlers(process, connectionId, onConnect, onDisconnect, onError);
@@ -65,17 +57,13 @@ class RdpManager {
     const connection = this.activeConnections.get(connectionId);
     
     if (!connection) {
-      console.log(`Connection ${connectionId} not found`);
       return false;
     }
-    
-    console.log(`Disconnecting RDP connection ${connectionId}`);
     
     try {
       // Terminar proceso si existe
       if (connection.process && !connection.process.killed) {
         connection.process.kill('SIGTERM');
-        console.log(`Process killed for connection ${connectionId}`);
       }
       
       // Limpiar archivo temporal si existe
@@ -86,7 +74,6 @@ class RdpManager {
       // Remover de conexiones activas
       this.activeConnections.delete(connectionId);
       
-      console.log(`Connection ${connectionId} disconnected successfully`);
       return true;
       
     } catch (error) {
@@ -168,9 +155,6 @@ class RdpManager {
     
     const content = this.generateRdpContent(config);
     
-    console.log(`RDP file content for ${connectionId}:`);
-    console.log(content);
-    
     fs.writeFileSync(filePath, content, 'utf8');
     
     // Guardar referencia para limpieza posterior
@@ -193,47 +177,60 @@ class RdpManager {
     const lines = [
       `full address:s:${config.server}${config.port ? ':' + config.port : ''}`,
       `username:s:${config.username}`,
-      'screen mode id:i:1',
-      'desktopwidth:i:1600',
-      'desktopheight:i:1000',
-      'session bpp:i:32',
-      'compression:i:1',
-      'keyboardhook:i:2',
-      'audiocapturemode:i:0',
-      'videoplaybackmode:i:1',
-      'connection type:i:7',
-      'networkautodetect:i:1',
-      'bandwidthautodetect:i:1',
-      'displayconnectionbar:i:1',
-      'enableworkspacereconnect:i:0',
+      'enablecredsspsupport:i:1',
+      'authentication level:i:2',
+      `administrative session:i:${config.admin === true ? 1 : 0}`,
+      'negotiate security layer:i:1',
+      'connect to console:i:0',
       'disable wallpaper:i:0',
-      'allow font smoothing:i:1',
-      'allow desktop composition:i:0',
       'disable full window drag:i:0',
       'disable menu anims:i:0',
       'disable themes:i:0',
       'disable cursor setting:i:0',
       'bitmapcachepersistenable:i:1',
-      'audiomode:i:0',
-      'redirectprinters:i:0',
-      'redirectcomports:i:0',
+      'compression:i:1',
+      'keyboardhook:i:2',
+      'audiocapturemode:i:0',
+      'videoplaybackmode:i:1',
+      'connection type:i:7',
       'redirectsmartcards:i:1',
-      'redirectclipboard:i:1',
+      'redirectcomports:i:0',
       'redirectposdevices:i:0',
-      'autoreconnection enabled:i:1',
-      'negotiate security layer:i:1',
-      'remoteapplicationmode:i:0',
-      'alternate shell:s:',
-      'shell working directory:s:',
-      'gatewayhostname:s:',
-      'gatewayusagemethod:i:4',
-      'gatewaycredentialssource:i:4',
-      'gatewayprofileusagemethod:i:0',
-      'use redirection server name:i:0',
-      'rdgiskdcproxy:i:0',
-      'kdcproxyname:s:',
-      'drivestoredirect:s:*'
+      'redirectdirectx:i:1',
+      'session bpp:i:32',
+      'allow font smoothing:i:1',
+      'promptcredentialonce:i:1'
     ];
+
+    // Configuraciones adicionales según opciones
+    let finalWidth = 1600;
+    let finalHeight = 1000;
+
+    // Parsear resolución si está disponible
+    if (config.resolution) {
+      const [width, height] = config.resolution.split('x');
+      if (width && height) {
+        finalWidth = parseInt(width);
+        finalHeight = parseInt(height);
+      }
+    }
+
+    // Configuración de pantalla
+    if (config.fullscreen) {
+      lines.push('screen mode id:i:2'); // Pantalla completa
+    } else {
+      lines.push('screen mode id:i:1'); // Ventana
+      lines.push(`desktopwidth:i:${finalWidth}`);
+      lines.push(`desktopheight:i:${finalHeight}`);
+      lines.push(`winposstr:s:0,1,100,100,${100 + finalWidth + 16},${100 + finalHeight + 39}`);
+    }
+
+    // Smart sizing
+    if (config.smartSizing) {
+      lines.push('smart sizing:i:1');   // Activar smart sizing
+    } else {
+      lines.push('smart sizing:i:0');   // Desactivar smart sizing
+    }
 
     // Configuración de autenticación según el tipo de servidor
     if (isEnterpriseServer) {
@@ -241,13 +238,11 @@ class RdpManager {
       lines.push('authentication level:i:2');
       lines.push('prompt for credentials:i:1');
       lines.push('promptcredentialonce:i:0');
-      console.log(`Using enterprise authentication for ${config.server}`);
     } else {
       // Para servidores normales (Microsoft, etc.)
       lines.push('authentication level:i:0');
       lines.push('prompt for credentials:i:0');
       lines.push('promptcredentialonce:i:1');
-      console.log(`Using standard authentication for ${config.server}`);
     }
 
     return lines.join('\r\n') + '\r\n';
@@ -257,12 +252,9 @@ class RdpManager {
    * Construir argumentos para mstsc.exe
    */
   buildMstscArgs(config, rdpFilePath) {
-    console.log(`Building arguments for connection ${config.server}`);
-    
     // Solo pasar el archivo .rdp
     const args = [rdpFilePath];
     
-    console.log(`Arguments built for connection ${config.server}:`, args);
     return args;
   }
 
@@ -270,20 +262,15 @@ class RdpManager {
    * Lanzar proceso mstsc.exe
    */
   launchMstscProcess(args, connectionId) {
-    console.log(`Launching RDP process for connection ${connectionId} with args:`, args);
-    
     const { exec } = require('child_process');
     
     // Usar start para ejecutar mstsc.exe de forma independiente
     const command = `start "" mstsc.exe "${args[0]}"`;
-    console.log(`Executing command: ${command}`);
     
     const childProcess = exec(command, {
       windowsHide: false,
       shell: true
     });
-    
-    console.log(`RDP process ${connectionId} launched with PID: ${childProcess.pid}`);
     
     return childProcess;
   }
@@ -296,11 +283,8 @@ class RdpManager {
     
     if (!connection) return;
 
-    console.log(`Setting up RDP handlers for connection ${connectionId}`);
-
     // Con start, el proceso se ejecuta de forma independiente
     connection.status = 'launched';
-    console.log(`RDP process launched for connection ${connectionId}, PID: ${process.pid}`);
     
     // Considerar conectado después de un delay para dar tiempo a certificados
     setTimeout(() => {
@@ -309,14 +293,11 @@ class RdpManager {
         if (onConnect) {
           onConnect(connectionId);
         }
-        console.log(`RDP connection ${connectionId} considered established`);
       }
     }, 35000); // 35 segundos de delay para dar tiempo a certificados
 
     // Con exec usamos 'close' en lugar de 'exit'
     process.on('close', (code, signal) => {
-      console.log(`RDP process closed for connection ${connectionId}, code: ${code}, signal: ${signal}`);
-      
       // Con start, el proceso se cierra inmediatamente pero mstsc.exe sigue ejecutándose
       // Solo marcar como desconectado si hay un error real
       if (code !== 0 && code !== null) {
@@ -333,18 +314,20 @@ class RdpManager {
         
         // Remover de conexiones activas
         this.activeConnections.delete(connectionId);
-      } else {
-        console.log(`RDP process ${connectionId} closed normally (code ${code}), mstsc.exe should be running independently`);
       }
     });
 
     // Error en el proceso
     process.on('error', (error) => {
       console.error(`RDP process error for connection ${connectionId}:`, error);
-      connection.status = 'error';
       
-      if (onError) {
-        onError(connectionId, error);
+      // Solo marcar como error si realmente hay un problema
+      if (connection.status !== 'connected') {
+        connection.status = 'error';
+        
+        if (onError) {
+          onError(connectionId, error);
+        }
       }
     });
   }
