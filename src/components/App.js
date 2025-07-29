@@ -2375,6 +2375,7 @@ const App = () => {
       redirectPrinters: node.data.redirectPrinters === true,
       redirectAudio: node.data.redirectAudio === true,
       fullscreen: node.data.fullscreen === true,
+      smartSizing: node.data.smartSizing === true,
       span: node.data.span === true,
       admin: node.data.admin === true,
       public: node.data.public === true
