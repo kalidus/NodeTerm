@@ -44,6 +44,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     public: false
   });
 
+  // Debug formData changes
+  useEffect(() => {
+    // Logging removido para limpiar la consola
+  }, [formData]);
+
   // Función segura para manejar cambios en inputs
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -122,7 +127,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
       
       // Cargar datos del nodo RDP si están disponibles
       if (rdpNodeData) {
-        setFormData({
+        // console.log('=== LOADING RDP NODE ===');
+        // console.log('rdpNodeData received:', JSON.stringify(rdpNodeData, null, 2));
+        // console.log('smartSizing in rdpNodeData:', rdpNodeData.smartSizing);
+        
+        const newFormData = {
           name: rdpNodeData.name || '',
           server: rdpNodeData.server || '',
           username: rdpNodeData.username || '',
@@ -136,11 +145,18 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           redirectPrinters: rdpNodeData.redirectPrinters || false,
           redirectAudio: rdpNodeData.redirectAudio !== false,
           fullscreen: rdpNodeData.fullscreen || false,
-          smartSizing: rdpNodeData.smartSizing !== false,
+          smartSizing: rdpNodeData.smartSizing !== undefined ? rdpNodeData.smartSizing : true,
           span: rdpNodeData.span || false,
           admin: rdpNodeData.admin || false,
           public: rdpNodeData.public || false
-        });
+        };
+        
+        // console.log('=== FORM DATA SET ===');
+        // console.log('newFormData:', JSON.stringify(newFormData, null, 2));
+        // console.log('smartSizing in newFormData:', newFormData.smartSizing);
+        // console.log('========================');
+        
+        setFormData(newFormData);
       }
     }
   }, [visible, rdpNodeData]);
@@ -545,7 +561,9 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     <Checkbox
                       inputId="smartSizing"
                       checked={formData.smartSizing}
-                      onChange={handleCheckboxChange('smartSizing')}
+                      onChange={(e) => {
+                        handleCheckboxChange('smartSizing')(e);
+                      }}
                       onFocus={(e) => {
                         if (isElementBlocked(e.target)) {
                           unblockElement(e.target);
