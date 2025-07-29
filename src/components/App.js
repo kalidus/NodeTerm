@@ -2528,10 +2528,16 @@ const App = () => {
             redirectPrinters: rdpData.redirectPrinters === true,
             redirectAudio: rdpData.redirectAudio === true,
             fullscreen: rdpData.fullscreen === true,
+            smartSizing: rdpData.smartSizing === true,
             span: rdpData.span === true,
             admin: rdpData.admin === true,
             public: rdpData.public === true
           };
+          
+          // console.log('=== NODE UPDATED ===');
+          // console.log('Updated node data:', JSON.stringify(nodeToEdit.data, null, 2));
+          // console.log('smartSizing in node:', nodeToEdit.data.smartSizing);
+          // console.log('====================');
         }
         
         return nodesCopy;
@@ -2555,6 +2561,7 @@ const App = () => {
           redirectPrinters: rdpData.redirectPrinters === true,
           redirectAudio: rdpData.redirectAudio === true,
           fullscreen: rdpData.fullscreen === true,
+          smartSizing: rdpData.smartSizing === true,
           span: rdpData.span === true,
           admin: rdpData.admin === true,
           public: rdpData.public === true
@@ -2595,6 +2602,7 @@ const App = () => {
                 redirectPrinters: rdpData.redirectPrinters === true,
                 redirectAudio: rdpData.redirectAudio === true,
                 fullscreen: rdpData.fullscreen === true,
+                smartSizing: rdpData.smartSizing === true,
                 span: rdpData.span === true,
                 admin: rdpData.admin === true,
                 public: rdpData.public === true
