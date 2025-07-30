@@ -2362,18 +2362,8 @@ const App = () => {
       setActiveGroupId(null);
     }
 
-    // Obtener el cliente RDP seleccionado
-    let selectedClient = 'mstsc'; // Cliente por defecto
-    try {
-      const clients = await window.electronAPI.rdp.getAvailableClients();
-      // Buscar el cliente ActiveX si está disponible
-      const activeXClient = clients.find(client => client.value === 'activex');
-      if (activeXClient) {
-        selectedClient = 'activex';
-      }
-    } catch (error) {
-      console.log('Error obteniendo clientes RDP:', error);
-    }
+    // Obtener el cliente RDP seleccionado desde los datos del nodo
+    let selectedClient = node.data.rdpClient || 'mstsc'; // Usar el cliente guardado en el nodo
 
     // Configuración RDP
     const rdpConfig = {
@@ -2580,6 +2570,11 @@ const App = () => {
             smartSizing: rdpData.smartSizing === true,
             span: rdpData.span === true,
             admin: rdpData.admin === true,
+            public: rdpData.public === true,
+            rdpClient: rdpData.rdpClient || 'mstsc', // Agregar el cliente RDP seleccionado
+            useActiveX: rdpData.rdpClient === 'activex', // Marcar si es ActiveX
+            span: rdpData.span === true,
+            admin: rdpData.admin === true,
             public: rdpData.public === true
           };
           
@@ -2611,6 +2606,11 @@ const App = () => {
           redirectAudio: rdpData.redirectAudio === true,
           fullscreen: rdpData.fullscreen === true,
           smartSizing: rdpData.smartSizing === true,
+          span: rdpData.span === true,
+          admin: rdpData.admin === true,
+          public: rdpData.public === true,
+          rdpClient: rdpData.rdpClient || 'mstsc', // Guardar el cliente RDP seleccionado
+          useActiveX: rdpData.rdpClient === 'activex', // Marcar si es ActiveX
           span: rdpData.span === true,
           admin: rdpData.admin === true,
           public: rdpData.public === true
@@ -2652,6 +2652,8 @@ const App = () => {
                 redirectAudio: rdpData.redirectAudio === true,
                 fullscreen: rdpData.fullscreen === true,
                 smartSizing: rdpData.smartSizing === true,
+                client: rdpData.rdpClient || 'mstsc', // Agregar el cliente RDP
+                useActiveX: rdpData.rdpClient === 'activex', // Marcar si es ActiveX
                 span: rdpData.span === true,
                 admin: rdpData.admin === true,
                 public: rdpData.public === true
@@ -3580,32 +3582,79 @@ const App = () => {
                               statusBarIconTheme={statusBarIconTheme}
                             />
                           ) : tab.type === 'rdp' ? (
-                            // Usar ActiveX RDP Control si está disponible, sino fallback al componente original
+                            // Usar el cliente seleccionado para determinar qué componente renderizar
                             (() => {
-                              try {
-                                // Intentar cargar el módulo ActiveX
-                                require('../../native/rdp-activex');
-                                return (
-                                  <ActiveXRdpSession
-                                    rdpConfig={tab.rdpConfig}
-                                    tabId={tab.key}
-                                    onClose={() => {
-                                      // Lógica para cerrar la pestaña
-                                      const updatedTabs = rdpTabs.filter(t => t.key !== tab.key);
-                                      setRdpTabs(updatedTabs);
-                                    }}
-                                  />
-                                );
-                              } catch (error) {
-                                // Fallback al componente original si ActiveX no está disponible
-                                console.warn('ActiveX RDP Control no disponible, usando componente original:', error.message);
-                                return (
-                                  <RdpSessionTab
-                                    rdpConfig={tab.rdpConfig}
-                                    tabId={tab.key}
-                                    connectionStatus={tab.connectionStatus}
-                                    connectionInfo={tab.connectionInfo}
-                                    onEditConnection={(rdpConfig, tabId) => {
+                              const useActiveX = tab.rdpConfig?.client === 'activex' || tab.rdpConfig?.useActiveX;
+                              
+                              if (useActiveX) {
+                                // Usar ActiveX RDP Control
+                                try {
+                                  require('../../native/rdp-activex');
+                                  return (
+                                    <ActiveXRdpSession
+                                      rdpConfig={tab.rdpConfig}
+                                      tabId={tab.key}
+                                      onClose={() => {
+                                        // Lógica para cerrar la pestaña
+                                        const updatedTabs = rdpTabs.filter(t => t.key !== tab.key);
+                                        setRdpTabs(updatedTabs);
+                                      }}
+                                    />
+                                  );
+                                                                 } catch (error) {
+                                   // Fallback al componente original si ActiveX no está disponible
+                                   console.warn('ActiveX RDP Control no disponible, usando componente original:', error.message);
+                                   return (
+                                     <RdpSessionTab
+                                       rdpConfig={tab.rdpConfig}
+                                       tabId={tab.key}
+                                       connectionStatus={tab.connectionStatus}
+                                       connectionInfo={tab.connectionInfo}
+                                       onEditConnection={(rdpConfig, tabId) => {
+                                         // Buscar la pestaña RDP para obtener el originalKey
+                                         const rdpTab = rdpTabs.find(tab => tab.key === tabId);
+                                         if (rdpTab && rdpTab.originalKey) {
+                                           // Buscar el nodo original en la sidebar
+                                           const originalNode = findNodeByKey(nodes, rdpTab.originalKey);
+                                           if (originalNode) {
+                                             openEditRdpDialog(originalNode);
+                                           } else {
+                                             // Fallback: crear nodo temporal si no se encuentra el original
+                                             const tempNode = {
+                                               key: rdpTab.originalKey,
+                                               label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                               data: {
+                                                 type: 'rdp',
+                                                 ...rdpConfig
+                                               }
+                                             };
+                                             openEditRdpDialog(tempNode);
+                                           }
+                                         } else {
+                                           // Fallback: crear nodo temporal si no hay originalKey
+                                           const tempNode = {
+                                             key: tabId,
+                                             label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                             data: {
+                                               type: 'rdp',
+                                               ...rdpConfig
+                                             }
+                                           };
+                                           openEditRdpDialog(tempNode);
+                                         }
+                                       }}
+                                     />
+                                   );
+                                 }
+                               } else {
+                                 // Usar componente normal para MSTSC y otros clientes
+                                 return (
+                                   <RdpSessionTab
+                                     rdpConfig={tab.rdpConfig}
+                                     tabId={tab.key}
+                                     connectionStatus={tab.connectionStatus}
+                                     connectionInfo={tab.connectionInfo}
+                                     onEditConnection={(rdpConfig, tabId) => {
                                       // Buscar la pestaña RDP para obtener el originalKey
                                       const rdpTab = rdpTabs.find(tab => tab.key === tabId);
                                       if (rdpTab && rdpTab.originalKey) {
