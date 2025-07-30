@@ -131,6 +131,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     disconnect: (connectionId) => ipcRenderer.invoke('rdp:disconnect', connectionId),
     disconnectAll: () => ipcRenderer.invoke('rdp:disconnect-all'),
     getActiveConnections: () => ipcRenderer.invoke('rdp:get-active-connections'),
+    getAvailableClients: () => ipcRenderer.invoke('rdp:get-available-clients'),
     getPresets: () => ipcRenderer.invoke('rdp:get-presets'),
     showWindow: (server) => ipcRenderer.invoke('rdp:show-window', { server }),
     disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server })

@@ -30,6 +30,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     username: '',
     password: '',
     port: 3389,
+    rdpClient: 'mstsc',
     preset: 'default',
     resolution: '1600x1000',
     colorDepth: 32,
@@ -43,6 +44,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     admin: false,
     public: false
   });
+
+  // Estados adicionales
+  const [availableClients, setAvailableClients] = useState([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [clientFactory, setClientFactory] = useState(null);
 
   // Debug formData changes
   useEffect(() => {
@@ -120,10 +126,37 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     { label: '4K UHD (3840x2160)', value: 'uhd' }
   ];
 
+  // Cargar clientes disponibles
+  const loadAvailableClients = async () => {
+    try {
+      setLoadingClients(true);
+      console.log('Frontend: Cargando clientes RDP...');
+      const clients = await window.electronAPI.rdp.getAvailableClients();
+      console.log('Frontend: Clientes recibidos:', clients);
+      setAvailableClients(clients);
+      
+      // Si no hay cliente seleccionado y hay clientes disponibles, seleccionar el primero
+      if (!formData.rdpClient && clients.length > 0) {
+        console.log('Frontend: Seleccionando cliente por defecto:', clients[0].value);
+        setFormData(prev => ({ ...prev, rdpClient: clients[0].value }));
+      }
+    } catch (error) {
+      console.error('Frontend: Error cargando clientes RDP:', error);
+      toast.current?.show({
+        severity: 'warn',
+        summary: 'Advertencia',
+        detail: 'No se pudieron cargar los clientes RDP disponibles'
+      });
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
   useEffect(() => {
     if (visible) {
       loadPresets();
       refreshConnections();
+      loadAvailableClients();
       
       // Cargar datos del nodo RDP si están disponibles
       if (rdpNodeData) {
@@ -137,6 +170,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           username: rdpNodeData.username || '',
           password: rdpNodeData.password || '',
           port: rdpNodeData.port || 3389,
+          rdpClient: rdpNodeData.rdpClient || 'mstsc',
           preset: 'default',
           resolution: rdpNodeData.resolution || '1600x1000',
           colorDepth: rdpNodeData.colorDepth || 32,
@@ -397,6 +431,50 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       }}
                       autoComplete="off"
                     />
+                  </div>
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="rdpClient">Cliente RDP</label>
+                    <Dropdown
+                      id="rdpClient"
+                      value={formData.rdpClient}
+                      options={availableClients}
+                      onChange={(e) => handleInputChange('rdpClient', e.value)}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
+                      placeholder={loadingClients ? "Cargando clientes..." : "Seleccionar cliente"}
+                      disabled={loadingClients || availableClients.length === 0}
+                      optionLabel="label"
+                      optionValue="value"
+                    />
+                    {/* Mostrar descripción del cliente seleccionado */}
+                    {formData.rdpClient && availableClients.length > 0 && (
+                      <small className="text-color-secondary mt-1 block">
+                        {availableClients.find(c => c.value === formData.rdpClient)?.description || ''}
+                      </small>
+                    )}
+                    {availableClients.length === 0 && !loadingClients && (
+                      <small className="p-error">No se encontraron clientes RDP disponibles</small>
+                    )}
+                  </div>
+                  <div className="field col-12 md:col-6">
+                    <label>&nbsp;</label>
+                    <div className="mt-2">
+                      {loadingClients && (
+                        <div className="flex align-items-center gap-2">
+                          <ProgressSpinner style={{width: '20px', height: '20px'}} strokeWidth="8" />
+                          <small>Verificando clientes disponibles...</small>
+                        </div>
+                      )}
+                      {!loadingClients && availableClients.length > 0 && (
+                        <small className="text-color-secondary">
+                          {availableClients.length} cliente{availableClients.length > 1 ? 's' : ''} disponible{availableClients.length > 1 ? 's' : ''}
+                        </small>
+                      )}
+                    </div>
                   </div>
                   <div className="field col-12 md:col-6">
                     <label htmlFor="username">Usuario *</label>

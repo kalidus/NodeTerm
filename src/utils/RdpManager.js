@@ -2,12 +2,43 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const RdpClientFactory = require('./rdpClients/RdpClientFactory');
 
 class RdpManager {
   constructor() {
     this.activeConnections = new Map();
     this.tempFiles = new Set();
     this.connectionCounter = 0;
+    this.clientFactory = new RdpClientFactory();
+    this.availableClients = new Map();
+    this.initialized = false;
+    
+    // Inicializar clientes disponibles
+    this.initializeClients();
+  }
+
+  /**
+   * Inicializar y verificar clientes disponibles
+   */
+  async initializeClients() {
+    try {
+      console.log('Inicializando clientes RDP...');
+      this.availableClients = await this.clientFactory.checkAllClientsAvailability();
+      const availableCount = Array.from(this.availableClients.values()).filter(c => c.isAvailable).length;
+      console.log(`Clientes RDP disponibles: ${availableCount} de ${this.availableClients.size}`);
+      
+      // Log de clientes disponibles para debug
+      for (const [name, info] of this.availableClients) {
+        console.log(`- ${name}: ${info.isAvailable ? '✓' : '✗'} ${info.displayName}`);
+      }
+      
+      this.initialized = true;
+    } catch (error) {
+      console.error('Error inicializando clientes RDP:', error);
+      // En caso de error, asegurar que al menos tengamos la información básica
+      this.availableClients = new Map();
+      this.initialized = false;
+    }
   }
 
   /**
@@ -20,27 +51,30 @@ class RdpManager {
       // Validar configuración
       this.validateConfig(config);
       
-      // Crear archivo .rdp temporal con configuración simple
-      const rdpFilePath = await this.createRdpFile(config, connectionId);
+      // Obtener cliente RDP a usar
+      const clientName = config.rdpClient || 'mstsc';
+      const client = this.clientFactory.getClient(clientName);
       
-      // Construir argumentos para mstsc.exe
-      const args = this.buildMstscArgs(config, rdpFilePath);
+      if (!client) {
+        throw new Error(`Cliente RDP '${clientName}' no está disponible`);
+      }
       
-      // Lanzar proceso
-      const process = this.launchMstscProcess(args, connectionId);
+      // Conectar usando el cliente seleccionado
+      const connectionResult = await client.connect(config, connectionId, this.tempFiles);
       
       // Guardar conexión
       this.activeConnections.set(connectionId, {
         id: connectionId,
         config: config,
-        process: process,
-        rdpFilePath: rdpFilePath,
+        process: connectionResult.process,
+        rdpFilePath: connectionResult.rdpFilePath,
+        client: connectionResult.client,
         status: 'connecting',
         startTime: Date.now()
       });
       
       // Configurar handlers
-      this.setupProcessHandlers(process, connectionId, onConnect, onDisconnect, onError);
+      this.setupProcessHandlers(connectionResult.process, connectionId, onConnect, onDisconnect, onError);
       
       return connectionId;
       
@@ -83,6 +117,14 @@ class RdpManager {
   }
 
   /**
+   * Refrescar clientes disponibles
+   */
+  async refreshAvailableClients() {
+    await this.initializeClients();
+    return this.getAvailableClients();
+  }
+
+  /**
    * Obtener lista de conexiones activas
    */
   getActiveConnections() {
@@ -94,11 +136,47 @@ class RdpManager {
         server: conn.config.server,
         username: conn.config.username,
         startTime: conn.startTime,
-        status: conn.status
+        status: conn.status,
+        client: conn.client || 'mstsc'
       });
     }
     
     return connections;
+  }
+
+  /**
+   * Obtener clientes RDP disponibles
+   */
+  async getAvailableClients() {
+    // Si no está inicializado, esperar a que se complete
+    if (!this.initialized) {
+      console.log('Esperando inicialización de clientes RDP...');
+      await this.initializeClients();
+    }
+    
+    console.log('getAvailableClients() llamado, clientes en factory:', this.clientFactory.availableClients.size);
+    const clients = this.clientFactory.getClientOptions();
+    console.log('Clientes retornados:', clients);
+    
+    // Fallback: si no hay clientes disponibles pero estamos en Windows, agregar MSTSC
+    if (clients.length === 0 && process.platform === 'win32') {
+      console.log('Fallback: agregando MSTSC manualmente');
+      return [{
+        label: 'Microsoft MSTSC',
+        value: 'mstsc',
+        description: 'Cliente RDP nativo de Windows'
+      }];
+    }
+    
+    return clients;
+  }
+
+  /**
+   * Obtener cliente predeterminado
+   */
+  getDefaultClient() {
+    const defaultClient = this.clientFactory.getDefaultClient();
+    return defaultClient ? defaultClient.name : 'mstsc';
   }
 
   /**

@@ -2244,6 +2244,10 @@ ipcMain.handle('rdp:get-presets', async (event) => {
   return rdpManager.getPresets();
 });
 
+ipcMain.handle('rdp:get-available-clients', async (event) => {
+  return await rdpManager.getAvailableClients();
+});
+
 // Handler para mostrar ventana RDP si está minimizada
 ipcMain.handle('rdp:show-window', async (event, { server }) => {
   try {
