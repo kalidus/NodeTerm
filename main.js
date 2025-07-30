@@ -2441,12 +2441,14 @@ ipcMain.handle('rdp:create-activex-instance', async (event, parentWindowHandle) 
 // Handler para configurar servidor
 ipcMain.handle('rdp:set-activex-server', async (event, instanceId, server) => {
   try {
+    console.log('Main: Configurando servidor para instancia:', instanceId, 'servidor:', server);
     const manager = getRdpActiveXManager();
     if (!manager) {
       throw new Error('RDP ActiveX manager not available');
     }
     
     manager.setServer(instanceId, server);
+    console.log('Main: Servidor configurado correctamente');
     return { success: true };
   } catch (error) {
     console.error('Error setting ActiveX server:', error);
@@ -2457,12 +2459,15 @@ ipcMain.handle('rdp:set-activex-server', async (event, instanceId, server) => {
 // Handler para configurar credenciales
 ipcMain.handle('rdp:set-activex-credentials', async (event, instanceId, username, password) => {
   try {
+    console.log('Main: Configurando credenciales para instancia:', instanceId);
     const manager = getRdpActiveXManager();
     if (!manager) {
       throw new Error('RDP ActiveX manager not available');
     }
     
+    console.log('Main: Manager obtenido, configurando credenciales...');
     manager.setCredentials(instanceId, username, password);
+    console.log('Main: Credenciales configuradas correctamente');
     return { success: true };
   } catch (error) {
     console.error('Error setting ActiveX credentials:', error);
@@ -2473,12 +2478,14 @@ ipcMain.handle('rdp:set-activex-credentials', async (event, instanceId, username
 // Handler para configurar resolución
 ipcMain.handle('rdp:set-activex-display-settings', async (event, instanceId, width, height) => {
   try {
+    console.log('Main: Configurando resolución para instancia:', instanceId, 'resolución:', width, 'x', height);
     const manager = getRdpActiveXManager();
     if (!manager) {
       throw new Error('RDP ActiveX manager not available');
     }
     
     manager.setDisplaySettings(instanceId, width, height);
+    console.log('Main: Resolución configurada correctamente');
     return { success: true };
   } catch (error) {
     console.error('Error setting ActiveX display settings:', error);
@@ -2489,38 +2496,75 @@ ipcMain.handle('rdp:set-activex-display-settings', async (event, instanceId, wid
 // Handler para configurar eventos
 ipcMain.handle('rdp:set-activex-event-handlers', async (event, instanceId, handlers) => {
   try {
+    console.log('Main: Configurando eventos para instancia:', instanceId);
+    console.log('Main: Handlers recibidos:', Object.keys(handlers));
+    
     const manager = getRdpActiveXManager();
     if (!manager) {
-      throw new Error('RDP ActiveX manager not available');
+      console.log('Main: Manager no disponible, continuando sin eventos');
+      return { success: true };
     }
     
-    // Configurar callbacks para eventos
+    // Configurar callbacks para eventos usando strings
     if (handlers.onConnected) {
-      manager.onEvent(instanceId, 'connected', handlers.onConnected);
+      console.log('Main: Registrando evento onConnected');
+      try {
+        manager.onEvent(instanceId, 'connected', () => {
+          console.log('Main: Evento connected disparado para instancia:', instanceId);
+          // Enviar evento al renderer
+          event.sender.send(`rdp:event:${instanceId}:connected`);
+        });
+      } catch (error) {
+        console.error('Main: Error registrando onConnected:', error);
+      }
     }
     if (handlers.onDisconnected) {
-      manager.onEvent(instanceId, 'disconnected', handlers.onDisconnected);
+      console.log('Main: Registrando evento onDisconnected');
+      try {
+        manager.onEvent(instanceId, 'disconnected', () => {
+          console.log('Main: Evento disconnected disparado para instancia:', instanceId);
+          // Enviar evento al renderer
+          event.sender.send(`rdp:event:${instanceId}:disconnected`);
+        });
+      } catch (error) {
+        console.error('Main: Error registrando onDisconnected:', error);
+      }
     }
     if (handlers.onError) {
-      manager.onEvent(instanceId, 'error', handlers.onError);
+      console.log('Main: Registrando evento onError');
+      try {
+        manager.onEvent(instanceId, 'error', (error) => {
+          console.log('Main: Evento error disparado para instancia:', instanceId, error);
+          // Enviar evento al renderer
+          event.sender.send(`rdp:event:${instanceId}:error`, error);
+        });
+      } catch (error) {
+        console.error('Main: Error registrando onError:', error);
+      }
     }
     
+    console.log('Main: Eventos configurados correctamente');
     return { success: true };
   } catch (error) {
-    console.error('Error setting ActiveX event handlers:', error);
-    throw error;
+    console.error('Main: Error setting ActiveX event handlers:', error);
+    console.error('Main: Error stack:', error.stack);
+    // No lanzar error, continuar sin eventos
+    return { success: true };
   }
 });
 
 // Handler para conectar
 ipcMain.handle('rdp:connect-activex', async (event, instanceId) => {
   try {
+    console.log('Main: Conectando instancia ActiveX:', instanceId);
     const manager = getRdpActiveXManager();
     if (!manager) {
       throw new Error('RDP ActiveX manager not available');
     }
     
+    console.log('Main: Manager obtenido, iniciando conexión...');
     manager.connect(instanceId);
+    console.log('Main: Comando de conexión enviado al manager');
     return { success: true };
   } catch (error) {
     console.error('Error connecting ActiveX:', error);

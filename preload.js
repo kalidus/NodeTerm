@@ -138,10 +138,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // ActiveX RDP Control API
     getParentWindowHandle: () => ipcRenderer.invoke('rdp:get-parent-window-handle'),
     createActiveXInstance: (parentWindowHandle) => ipcRenderer.invoke('rdp:create-activex-instance', parentWindowHandle),
-    setActiveXServer: (instanceId, server) => ipcRenderer.invoke('rdp:set-activex-server', instanceId, server),
+    setActiveXServer: (instanceId, server) => {
+      console.log('Preload: Llamando setActiveXServer para instancia:', instanceId, 'servidor:', server);
+      return ipcRenderer.invoke('rdp:set-activex-server', instanceId, server);
+    },
     setActiveXCredentials: (instanceId, username, password) => ipcRenderer.invoke('rdp:set-activex-credentials', instanceId, username, password),
     setActiveXDisplaySettings: (instanceId, width, height) => ipcRenderer.invoke('rdp:set-activex-display-settings', instanceId, width, height),
-    setActiveXEventHandlers: (instanceId, handlers) => ipcRenderer.invoke('rdp:set-activex-event-handlers', instanceId, handlers),
+    setActiveXEventHandlers: (instanceId, handlers) => {
+      console.log('Preload: Llamando setActiveXEventHandlers para instancia:', instanceId);
+      try {
+        const result = ipcRenderer.invoke('rdp:set-activex-event-handlers', instanceId, handlers);
+        console.log('Preload: setActiveXEventHandlers completado');
+        return result;
+      } catch (error) {
+        console.error('Preload: Error en setActiveXEventHandlers:', error);
+        throw error;
+      }
+    },
     connectActiveX: (instanceId) => ipcRenderer.invoke('rdp:connect-activex', instanceId),
     disconnectActiveX: (instanceId) => ipcRenderer.invoke('rdp:disconnect-activex', instanceId),
     resizeActiveX: (instanceId, x, y, width, height) => ipcRenderer.invoke('rdp:resize-activex', instanceId, x, y, width, height)

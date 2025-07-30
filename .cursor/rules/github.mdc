@@ -1,12 +1,12 @@
 ---
-description: 
-globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 Nunca hagas commits ni push a un repositorio remoto sin mi consentimiento
 
 No hagas grandes resumen de los cambios , lo mas preciso posible
 
-Utiliza la extension de Powershell, ya que estamos en winwdows
+Utiliza la extension de Powershell, ya que estamos en winwdows para ejecutar comandos
 
 no ejecutes la APP.
+
+Si haceun commit siempre comprueba todos los ficheros q se han modificado 

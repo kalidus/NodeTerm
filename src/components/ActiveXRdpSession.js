@@ -19,6 +19,7 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
     const [rdpInstanceId, setRdpInstanceId] = useState(null);
     const [error, setError] = useState(null);
     const [isConnecting, setIsConnecting] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
     const [displaySettings, setDisplaySettings] = useState({
         width: rdpConfig.width || 1024,
         height: rdpConfig.height || 768
@@ -38,37 +39,129 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
             }
         };
     }, []);
+    
+    // Configurar listeners de eventos cuando rdpInstanceId cambia
+    useEffect(() => {
+        if (rdpInstanceId) {
+            console.log('ActiveXRdpSession: Configurando listeners para instancia:', rdpInstanceId);
+            
+            window.electron.ipcRenderer.on(`rdp:event:${rdpInstanceId}:connected`, () => {
+                console.log('ActiveXRdpSession: Evento connected recibido');
+                setConnectionStatus('connected');
+                setIsConnecting(false);
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Conexión Exitosa',
+                    detail: `Conectado a ${rdpConfig.server}`,
+                    life: 3000
+                });
+            });
+            
+            window.electron.ipcRenderer.on(`rdp:event:${rdpInstanceId}:disconnected`, () => {
+                console.log('ActiveXRdpSession: Evento disconnected recibido');
+                setConnectionStatus('disconnected');
+                setIsConnecting(false);
+                toast.current?.show({
+                    severity: 'info',
+                    summary: 'Desconectado',
+                    detail: 'Sesión RDP terminada',
+                    life: 3000
+                });
+            });
+            
+            window.electron.ipcRenderer.on(`rdp:event:${rdpInstanceId}:error`, (error) => {
+                console.log('ActiveXRdpSession: Evento error recibido:', error);
+                setConnectionStatus('error');
+                setIsConnecting(false);
+                setError(error);
+                toast.current?.show({
+                    severity: 'error',
+                    summary: 'Error de Conexión',
+                    detail: error,
+                    life: 5000
+                });
+            });
+            
+            // Cleanup para esta instancia
+            return () => {
+                console.log('ActiveXRdpSession: Removiendo listeners para instancia:', rdpInstanceId);
+                window.electron.ipcRenderer.removeAllListeners(`rdp:event:${rdpInstanceId}:connected`);
+                window.electron.ipcRenderer.removeAllListeners(`rdp:event:${rdpInstanceId}:disconnected`);
+                window.electron.ipcRenderer.removeAllListeners(`rdp:event:${rdpInstanceId}:error`);
+            };
+        }
+    }, [rdpInstanceId]);
 
     // Conectar automáticamente cuando el control esté listo
     useEffect(() => {
-        if (rdpInstanceId && connectionStatus === 'disconnected' && !isConnecting) {
+        if (rdpInstanceId && isInitialized && connectionStatus === 'disconnected' && !isConnecting) {
             // Intentar conectar automáticamente si tenemos credenciales
             if (rdpConfig.username && rdpConfig.password) {
                 setCredentials({
                     username: rdpConfig.username,
                     password: rdpConfig.password
                 });
-                // Pequeño delay para asegurar que el control esté listo
+                // Pequeño delay para asegurar que todo esté listo
                 setTimeout(() => {
+                    console.log('ActiveXRdpSession: Iniciando conexión automática...');
                     connectRdp();
-                }, 1000);
+                }, 500);
             }
         }
-    }, [rdpInstanceId, connectionStatus]);
+    }, [rdpInstanceId, isInitialized, connectionStatus]);
 
     const initializeRdpControl = async () => {
         try {
             console.log('ActiveXRdpSession: Inicializando control RDP...');
             
-            // Simular inicialización exitosa para testing
-            const mockInstanceId = `mock_${Date.now()}`;
-            setRdpInstanceId(mockInstanceId);
+            // Obtener el handle de la ventana padre desde Electron
+            const parentWindowHandle = await window.electronAPI.rdp.getParentWindowHandle();
+            console.log('ActiveXRdpSession: Parent window handle:', parentWindowHandle);
             
-            console.log('ActiveXRdpSession: Instancia mock creada con ID:', mockInstanceId);
-            console.log('ActiveXRdpSession: Control RDP inicializado correctamente (MOCK)');
+            // Crear instancia del control RDP ActiveX
+            const instanceId = await window.electronAPI.rdp.createActiveXInstance(parentWindowHandle);
+            console.log('ActiveXRdpSession: Instancia creada con ID:', instanceId);
+            setRdpInstanceId(instanceId);
+
+                        // Configurar eventos (simplificado para evitar problemas de serialización)
+            console.log('ActiveXRdpSession: Configurando eventos...');
+            try {
+                console.log('ActiveXRdpSession: Iniciando setActiveXEventHandlers...');
+                await window.electronAPI.rdp.setActiveXEventHandlers(instanceId, {
+                    // Solo pasar strings para evitar problemas de serialización
+                    onConnected: 'connected',
+                    onDisconnected: 'disconnected',
+                    onError: 'error'
+                });
+                console.log('ActiveXRdpSession: Eventos configurados correctamente');
+            } catch (eventError) {
+                console.error('ActiveXRdpSession: Error configurando eventos:', eventError);
+                console.error('ActiveXRdpSession: Error stack:', eventError.stack);
+                // No lanzar error, continuar sin eventos
+                console.log('ActiveXRdpSession: Continuando sin eventos...');
+            }
+
+            // Configurar servidor
+            console.log('ActiveXRdpSession: Configurando servidor:', rdpConfig.server);
+            await window.electronAPI.rdp.setActiveXServer(instanceId, rdpConfig.server);
+            console.log('ActiveXRdpSession: Servidor configurado:', rdpConfig.server);
+            
+            // Configurar resolución
+            console.log('ActiveXRdpSession: Configurando resolución...');
+            await window.electronAPI.rdp.setActiveXDisplaySettings(
+                instanceId, 
+                displaySettings.width, 
+                displaySettings.height
+            );
+            console.log('ActiveXRdpSession: Resolución configurada:', displaySettings.width, 'x', displaySettings.height);
+
+            console.log('ActiveXRdpSession: Control RDP inicializado correctamente');
+            setIsInitialized(true);
 
         } catch (error) {
             console.error('ActiveXRdpSession: Error initializing RDP control:', error);
+            console.error('ActiveXRdpSession: Error stack:', error.stack);
+            console.error('ActiveXRdpSession: Error message:', error.message);
             setError(error.message);
             toast.current?.show({
                 severity: 'error',
@@ -99,24 +192,27 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
             setIsConnecting(true);
             setConnectionStatus('connecting');
 
-            // Simular conexión para testing
-            console.log('ActiveXRdpSession: Simulando conexión a', rdpConfig.server);
+            console.log('ActiveXRdpSession: Conectando a', rdpConfig.server);
             console.log('ActiveXRdpSession: Usuario:', credentials.username);
-            
-            // Simular delay de conexión
-            setTimeout(() => {
-                setConnectionStatus('connected');
-                setIsConnecting(false);
-                toast.current?.show({
-                    severity: 'success',
-                    summary: 'Conexión Exitosa (MOCK)',
-                    detail: `Conectado a ${rdpConfig.server}`,
-                    life: 3000
-                });
-            }, 2000);
+            console.log('ActiveXRdpSession: Configurando credenciales...');
+
+            // Configurar credenciales
+            await window.electronAPI.rdp.setActiveXCredentials(
+                rdpInstanceId,
+                credentials.username,
+                credentials.password
+            );
+            console.log('ActiveXRdpSession: Credenciales configuradas correctamente');
+
+            console.log('ActiveXRdpSession: Iniciando conexión...');
+            // Conectar
+            await window.electronAPI.rdp.connectActiveX(rdpInstanceId);
+            console.log('ActiveXRdpSession: Comando de conexión enviado');
 
         } catch (error) {
-            console.error('Error connecting RDP:', error);
+            console.error('ActiveXRdpSession: Error connecting RDP:', error);
+            console.error('ActiveXRdpSession: Error stack:', error.stack);
+            console.error('ActiveXRdpSession: Error message:', error.message);
             setError(error.message);
             setConnectionStatus('error');
             setIsConnecting(false);
@@ -133,13 +229,13 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
         if (!rdpInstanceId) return;
 
         try {
-            // Simular desconexión para testing
-            console.log('ActiveXRdpSession: Simulando desconexión');
+            console.log('ActiveXRdpSession: Desconectando RDP');
+            await window.electronAPI.rdp.disconnectActiveX(rdpInstanceId);
             setConnectionStatus('disconnected');
             setError(null);
             toast.current?.show({
                 severity: 'info',
-                summary: 'Desconectado (MOCK)',
+                summary: 'Desconectado',
                 detail: 'Sesión RDP terminada',
                 life: 3000
             });
@@ -307,7 +403,7 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                                 <div className="bg-gray-800 p-3 border-round">
                                     <p className="text-xs opacity-70">Usuario: {credentials.username}</p>
                                     <p className="text-xs opacity-70">Resolución: {displaySettings.width}x{displaySettings.height}</p>
-                                    <p className="text-xs opacity-70">Estado: Activo (MOCK)</p>
+                                    <p className="text-xs opacity-70">Estado: Activo</p>
                                 </div>
                                 <Button
                                     label="Desconectar"
