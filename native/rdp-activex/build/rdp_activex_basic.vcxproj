@@ -48,7 +48,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\node_modules\node-addon-api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\native\rdp-activex\node_modules\node-addon-api;C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -std:c++17 /EHsc %(AdditionalOptions)</AdditionalOptions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -72,7 +72,7 @@
       <AdditionalOptions>/LTCG:INCREMENTAL %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <Link>
-      <AdditionalDependencies>kernel32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\kalid\\AppData\\Local\\node-gyp\\Cache\\18.20.8\\x64\\node.lib&quot;;user32.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\kalid\\AppData\\Local\\node-gyp\\Cache\\18.20.8\\x64\\node.lib&quot;;user32.lib;ole32.lib;oleaut32.lib;uuid.lib</AdditionalDependencies>
       <AdditionalOptions>/LTCG:INCREMENTAL /ignore:4199 %(AdditionalOptions)</AdditionalOptions>
       <DelayLoadDLLs>node.exe;%(DelayLoadDLLs)</DelayLoadDLLs>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -84,13 +84,13 @@
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\node_modules\node-addon-api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\native\rdp-activex\node_modules\node-addon-api;C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NODE_GYP_MODULE_NAME=rdp_activex_basic;USING_UV_SHARED=1;USING_V8_SHARED=1;V8_DEPRECATION_WARNINGS=1;V8_DEPRECATION_WARNINGS;V8_IMMINENT_DEPRECATION_WARNINGS;_GLIBCXX_USE_CXX11_ABI=1;WIN32;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_HAS_EXCEPTIONS=0;OPENSSL_NO_PINSHARED;OPENSSL_THREADS;NAPI_DISABLE_CPP_EXCEPTIONS;BUILDING_NODE_EXTENSION;HOST_BINARY=&quot;node.exe&quot;;DEBUG;_DEBUG;V8_ENABLE_CHECKS;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\node_modules\node-addon-api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\native\rdp-activex\node_modules\node-addon-api;C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -std:c++17 /EHsc %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -117,7 +117,7 @@
       <AdditionalOptions>/LTCG:INCREMENTAL %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <Link>
-      <AdditionalDependencies>kernel32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\kalid\\AppData\\Local\\node-gyp\\Cache\\18.20.8\\x64\\node.lib&quot;;user32.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;odbc32.lib;DelayImp.lib;&quot;C:\\Users\\kalid\\AppData\\Local\\node-gyp\\Cache\\18.20.8\\x64\\node.lib&quot;;user32.lib;ole32.lib;oleaut32.lib;uuid.lib</AdditionalDependencies>
       <AdditionalOptions>/LTCG:INCREMENTAL /ignore:4199 %(AdditionalOptions)</AdditionalOptions>
       <DelayLoadDLLs>node.exe;%(DelayLoadDLLs)</DelayLoadDLLs>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -129,7 +129,7 @@
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\node_modules\node-addon-api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\include\node;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\src;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\config;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\openssl\openssl\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\uv\include;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\zlib;C:\Users\kalid\AppData\Local\node-gyp\Cache\18.20.8\deps\v8\include;C:\Users\kalid\Documents\Cursor\NodeTerm\native\rdp-activex\node_modules\node-addon-api;C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NODE_GYP_MODULE_NAME=rdp_activex_basic;USING_UV_SHARED=1;USING_V8_SHARED=1;V8_DEPRECATION_WARNINGS=1;V8_DEPRECATION_WARNINGS;V8_IMMINENT_DEPRECATION_WARNINGS;_GLIBCXX_USE_CXX11_ABI=1;WIN32;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_HAS_EXCEPTIONS=0;OPENSSL_NO_PINSHARED;OPENSSL_THREADS;NAPI_DISABLE_CPP_EXCEPTIONS;BUILDING_NODE_EXTENSION;HOST_BINARY=&quot;node.exe&quot;;%(PreprocessorDefinitions);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
@@ -140,11 +140,11 @@
     <ClCompile Include="..\src\rdp_activex_basic.cpp">
       <ObjectFileName>$(IntDir)\src\rdp_activex_basic.obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="C:\Users\kalid\Documents\Cursor\NodeTerm\native\rdp-activex\node_modules\node-gyp\src\win_delay_load_hook.cc"/>
+    <ClCompile Include="C:\Users\kalid\AppData\Roaming\npm\node_modules\node-gyp\src\win_delay_load_hook.cc"/>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\node_modules\node-addon-api\nothing.vcxproj">
-      <Project>{6161201F-C1FD-FEC8-E1FE-4E8A209D9A95}</Project>
+    <ProjectReference Include="node_modules\node-addon-api\nothing.vcxproj">
+      <Project>{8540ACB0-57AB-D61B-4A78-00F4C3E5D5BB}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>

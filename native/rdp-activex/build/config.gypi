@@ -409,16 +409,6 @@
     "nodedir": "C:\\Users\\kalid\\AppData\\Local\\node-gyp\\Cache\\18.20.8",
     "python": "C:\\Python313\\python.exe",
     "standalone_static_library": 1,
-    "msbuild_path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
-    "cache": "C:\\Users\\kalid\\AppData\\Local\\npm-cache",
-    "globalconfig": "C:\\nvm4w\\nodejs\\etc\\npmrc",
-    "global_prefix": "C:\\nvm4w\\nodejs",
-    "init_module": "C:\\Users\\kalid\\.npm-init.js",
-    "local_prefix": "C:\\Users\\kalid\\Documents\\Cursor\\NodeTerm\\native\\rdp-activex",
-    "node_gyp": "C:\\Users\\kalid\\AppData\\Local\\nvm\\v18.20.8\\node_modules\\npm\\node_modules\\node-gyp\\bin\\node-gyp.js",
-    "npm_version": "10.8.2",
-    "prefix": "C:\\nvm4w\\nodejs",
-    "userconfig": "C:\\Users\\kalid\\.npmrc",
-    "user_agent": "npm/10.8.2 node/v18.20.8 win32 x64 workspaces/false"
+    "msbuild_path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe"
   }
 }

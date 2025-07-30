@@ -70,6 +70,11 @@ public:
             GetModuleHandle(nullptr),
             nullptr
         );
+        
+        // Make the window visible and bring it to front
+        ShowWindow(m_window, SW_SHOW);
+        SetForegroundWindow(m_window);
+        BringWindowToTop(m_window);
 
         if (!m_window) {
             return false;
@@ -176,7 +181,14 @@ public:
 
     void Resize(int x, int y, int width, int height) {
         if (m_window) {
-            SetWindowPos(m_window, nullptr, x, y, width, height, SWP_NOZORDER);
+            // Position the window at the specified coordinates
+            SetWindowPos(m_window, HWND_TOP, x, y, width, height, SWP_SHOWWINDOW);
+            
+            // Make sure the window is visible and on top
+            ShowWindow(m_window, SW_SHOW);
+            SetForegroundWindow(m_window);
+            BringWindowToTop(m_window);
+            
             m_width = width;
             m_height = height;
         }
