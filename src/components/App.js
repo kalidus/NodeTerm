@@ -3537,7 +3537,7 @@ const App = () => {
                             (() => {
                               try {
                                 // Intentar cargar el módulo ActiveX
-                                require('./native/rdp-activex');
+                                require('../../native/rdp-activex');
                                 return (
                                   <ActiveXRdpSession
                                     rdpConfig={tab.rdpConfig}
