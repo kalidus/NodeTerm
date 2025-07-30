@@ -3591,15 +3591,25 @@ const App = () => {
                                 try {
                                   require('../../native/rdp-activex');
                                   return (
-                                    <ActiveXRdpSession
-                                      rdpConfig={tab.rdpConfig}
-                                      tabId={tab.key}
-                                      onClose={() => {
-                                        // Lógica para cerrar la pestaña
-                                        const updatedTabs = rdpTabs.filter(t => t.key !== tab.key);
-                                        setRdpTabs(updatedTabs);
-                                      }}
-                                    />
+                                    <div className="h-full w-full" style={{ 
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 0,
+                                      backgroundColor: localTerminalBg,
+                                      zIndex: 10
+                                    }}>
+                                      <ActiveXRdpSession
+                                        rdpConfig={tab.rdpConfig}
+                                        tabId={tab.key}
+                                        onClose={() => {
+                                          // Lógica para cerrar la pestaña
+                                          const updatedTabs = rdpTabs.filter(t => t.key !== tab.key);
+                                          setRdpTabs(updatedTabs);
+                                        }}
+                                      />
+                                    </div>
                                   );
                                                                  } catch (error) {
                                    // Fallback al componente original si ActiveX no está disponible

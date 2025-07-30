@@ -39,64 +39,38 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
         };
     }, []);
 
+    // Conectar automáticamente cuando el control esté listo
+    useEffect(() => {
+        if (rdpInstanceId && connectionStatus === 'disconnected' && !isConnecting) {
+            // Intentar conectar automáticamente si tenemos credenciales
+            if (rdpConfig.username && rdpConfig.password) {
+                setCredentials({
+                    username: rdpConfig.username,
+                    password: rdpConfig.password
+                });
+                // Pequeño delay para asegurar que el control esté listo
+                setTimeout(() => {
+                    connectRdp();
+                }, 1000);
+            }
+        }
+    }, [rdpInstanceId, connectionStatus]);
+
     const initializeRdpControl = async () => {
         try {
-            // Obtener el handle de la ventana padre desde Electron
-            const parentWindowHandle = await window.electronAPI.rdp.getParentWindowHandle();
+            console.log('ActiveXRdpSession: Inicializando control RDP...');
             
-            // Crear instancia del control RDP ActiveX
-            const instanceId = await window.electronAPI.rdp.createActiveXInstance(parentWindowHandle);
-            setRdpInstanceId(instanceId);
-
-            // Configurar eventos
-            await window.electronAPI.rdp.setActiveXEventHandlers(instanceId, {
-                onConnected: () => {
-                    setConnectionStatus('connected');
-                    setIsConnecting(false);
-                    toast.current.show({
-                        severity: 'success',
-                        summary: 'Conexión Exitosa',
-                        detail: `Conectado a ${rdpConfig.server}`,
-                        life: 3000
-                    });
-                },
-                onDisconnected: () => {
-                    setConnectionStatus('disconnected');
-                    setIsConnecting(false);
-                    toast.current.show({
-                        severity: 'info',
-                        summary: 'Desconectado',
-                        detail: 'Sesión RDP terminada',
-                        life: 3000
-                    });
-                },
-                onError: (error) => {
-                    setConnectionStatus('error');
-                    setIsConnecting(false);
-                    setError(error);
-                    toast.current.show({
-                        severity: 'error',
-                        summary: 'Error de Conexión',
-                        detail: error,
-                        life: 5000
-                    });
-                }
-            });
-
-            // Configurar servidor
-            await window.electronAPI.rdp.setActiveXServer(instanceId, rdpConfig.server);
+            // Simular inicialización exitosa para testing
+            const mockInstanceId = `mock_${Date.now()}`;
+            setRdpInstanceId(mockInstanceId);
             
-            // Configurar resolución
-            await window.electronAPI.rdp.setActiveXDisplaySettings(
-                instanceId, 
-                displaySettings.width, 
-                displaySettings.height
-            );
+            console.log('ActiveXRdpSession: Instancia mock creada con ID:', mockInstanceId);
+            console.log('ActiveXRdpSession: Control RDP inicializado correctamente (MOCK)');
 
         } catch (error) {
-            console.error('Error initializing RDP control:', error);
+            console.error('ActiveXRdpSession: Error initializing RDP control:', error);
             setError(error.message);
-            toast.current.show({
+            toast.current?.show({
                 severity: 'error',
                 summary: 'Error de Inicialización',
                 detail: error.message,
@@ -107,7 +81,7 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
 
     const connectRdp = async () => {
         if (!rdpInstanceId) {
-            toast.current.show({
+            toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'Control RDP no inicializado',
@@ -125,22 +99,28 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
             setIsConnecting(true);
             setConnectionStatus('connecting');
 
-            // Configurar credenciales
-            await window.electronAPI.rdp.setActiveXCredentials(
-                rdpInstanceId,
-                credentials.username,
-                credentials.password
-            );
-
-            // Conectar
-            await window.electronAPI.rdp.connectActiveX(rdpInstanceId);
+            // Simular conexión para testing
+            console.log('ActiveXRdpSession: Simulando conexión a', rdpConfig.server);
+            console.log('ActiveXRdpSession: Usuario:', credentials.username);
+            
+            // Simular delay de conexión
+            setTimeout(() => {
+                setConnectionStatus('connected');
+                setIsConnecting(false);
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Conexión Exitosa (MOCK)',
+                    detail: `Conectado a ${rdpConfig.server}`,
+                    life: 3000
+                });
+            }, 2000);
 
         } catch (error) {
             console.error('Error connecting RDP:', error);
             setError(error.message);
             setConnectionStatus('error');
             setIsConnecting(false);
-            toast.current.show({
+            toast.current?.show({
                 severity: 'error',
                 summary: 'Error de Conexión',
                 detail: error.message,
@@ -153,12 +133,19 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
         if (!rdpInstanceId) return;
 
         try {
-            await window.electronAPI.rdp.disconnectActiveX(rdpInstanceId);
+            // Simular desconexión para testing
+            console.log('ActiveXRdpSession: Simulando desconexión');
             setConnectionStatus('disconnected');
             setError(null);
+            toast.current?.show({
+                severity: 'info',
+                summary: 'Desconectado (MOCK)',
+                detail: 'Sesión RDP terminada',
+                life: 3000
+            });
         } catch (error) {
             console.error('Error disconnecting RDP:', error);
-            toast.current.show({
+            toast.current?.show({
                 severity: 'error',
                 summary: 'Error',
                 detail: 'Error al desconectar',
@@ -195,16 +182,28 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
     };
 
     return (
-        <div className="h-full flex flex-column">
+        <div className="h-full w-full flex flex-column" style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
+          backgroundColor: 'var(--ui-content-bg, #222)',
+          zIndex: 1
+        }}>
             <Toast ref={toast} />
             
             {/* Header con información de conexión */}
-            <div className="flex align-items-center justify-content-between p-3 bg-white border-bottom-1 surface-border">
+            <div className="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border" style={{
+              backgroundColor: 'var(--ui-content-bg, #222)',
+              filter: 'brightness(1.2)',
+              borderBottom: '1px solid var(--surface-border, #444)'
+            }}>
                 <div className="flex align-items-center gap-3">
                     <i className="pi pi-desktop text-xl text-primary" />
                     <div>
-                        <h3 className="m-0 text-lg font-semibold">{rdpConfig.name || rdpConfig.server}</h3>
-                        <p className="text-sm text-500 m-0">{rdpConfig.server}:{rdpConfig.port || 3389}</p>
+                        <h3 className="m-0 text-lg font-semibold" style={{ color: 'var(--text-color, #fff)' }}>{rdpConfig.name || rdpConfig.server}</h3>
+                        <p className="text-sm m-0" style={{ color: 'var(--text-color-secondary, #ccc)' }}>{rdpConfig.server}:{rdpConfig.port || 3389}</p>
                     </div>
                 </div>
                 <div className="flex align-items-center gap-2">
@@ -221,7 +220,11 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
             {/* Contenedor principal */}
             <div className="flex-1 flex flex-column">
                 {/* Barra de herramientas */}
-                <div className="flex align-items-center justify-content-between p-3 bg-gray-50 border-bottom-1 surface-border">
+                <div className="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border" style={{
+                  backgroundColor: 'var(--ui-content-bg, #222)',
+                  filter: 'brightness(1.1)',
+                  borderBottom: '1px solid var(--surface-border, #444)'
+                }}>
                     <div className="flex align-items-center gap-2">
                         <Button
                             label="Conectar"
@@ -246,14 +249,14 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                     </div>
                     
                     <div className="flex align-items-center gap-2">
-                        <span className="text-sm font-medium">Resolución:</span>
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-color, #fff)' }}>Resolución:</span>
                         <InputText
                             value={displaySettings.width}
                             onChange={(e) => setDisplaySettings(prev => ({ ...prev, width: parseInt(e.target.value) || 1024 }))}
                             className="w-4rem text-center"
                             disabled={connectionStatus === 'connected'}
                         />
-                        <span className="text-sm">x</span>
+                        <span className="text-sm" style={{ color: 'var(--text-color, #fff)' }}>x</span>
                         <InputText
                             value={displaySettings.height}
                             onChange={(e) => setDisplaySettings(prev => ({ ...prev, height: parseInt(e.target.value) || 768 }))}
@@ -290,6 +293,27 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                                     onClick={connectRdp}
                                     className="mt-3"
                                     disabled={isConnecting}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    
+                    {connectionStatus === 'connected' && (
+                        <div className="flex align-items-center justify-content-center h-full">
+                            <div className="text-center text-white">
+                                <i className="pi pi-check-circle text-6xl mb-3 text-green-400" />
+                                <h3 className="text-xl font-semibold mb-2">RDP Session Connected</h3>
+                                <p className="text-sm opacity-80 mb-3">Conectado a {rdpConfig.server}</p>
+                                <div className="bg-gray-800 p-3 border-round">
+                                    <p className="text-xs opacity-70">Usuario: {credentials.username}</p>
+                                    <p className="text-xs opacity-70">Resolución: {displaySettings.width}x{displaySettings.height}</p>
+                                    <p className="text-xs opacity-70">Estado: Activo (MOCK)</p>
+                                </div>
+                                <Button
+                                    label="Desconectar"
+                                    icon="pi pi-stop"
+                                    onClick={disconnectRdp}
+                                    className="mt-3 p-button-outlined"
                                 />
                             </div>
                         </div>
