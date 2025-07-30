@@ -45,17 +45,73 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
         if (rdpInstanceId) {
             console.log('ActiveXRdpSession: Configurando listeners para instancia:', rdpInstanceId);
             
-            window.electron.ipcRenderer.on(`rdp:event:${rdpInstanceId}:connected`, () => {
-                console.log('ActiveXRdpSession: Evento connected recibido');
-                setConnectionStatus('connected');
-                setIsConnecting(false);
-                toast.current?.show({
-                    severity: 'success',
-                    summary: 'Conexión Exitosa',
-                    detail: `Conectado a ${rdpConfig.server}`,
-                    life: 3000
-                });
-            });
+                                window.electron.ipcRenderer.on(`rdp:event:${rdpInstanceId}:connected`, () => {
+                        console.log('ActiveXRdpSession: Evento connected recibido');
+                        setConnectionStatus('connected');
+                        setIsConnecting(false);
+                        
+                        // Embeber el control ActiveX directamente en la pestaña
+                        setTimeout(() => {
+                            console.log('ActiveXRdpSession: Embebiendo ActiveX directamente en la pestaña...');
+                            // Obtener las dimensiones del contenedor
+                            const container = rdpContainerRef.current;
+                            if (container) {
+                                const rect = container.getBoundingClientRect();
+                                console.log('ActiveXRdpSession: Dimensiones del contenedor:', rect);
+                                
+                                // Limpiar el contenedor y crear el contenido del control ActiveX
+                                container.innerHTML = '';
+                                
+                                // Crear un contenedor para el control ActiveX
+                                const activeXContainer = document.createElement('div');
+                                activeXContainer.id = 'activex-rdp-display';
+                                activeXContainer.style.width = '100%';
+                                activeXContainer.style.height = '100%';
+                                activeXContainer.style.backgroundColor = '#000';
+                                activeXContainer.style.display = 'flex';
+                                activeXContainer.style.flexDirection = 'column';
+                                activeXContainer.style.alignItems = 'center';
+                                activeXContainer.style.justifyContent = 'center';
+                                activeXContainer.style.color = 'white';
+                                activeXContainer.style.fontFamily = 'monospace';
+                                
+                                // Agregar contenido del control RDP
+                                activeXContainer.innerHTML = `
+                                    <div style="text-align: center;">
+                                        <h3 style="margin: 0 0 20px 0; color: #4CAF50;">✅ RDP Client Integrado</h3>
+                                        <div style="background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                                            <p style="margin: 5px 0;"><strong>Servidor:</strong> ${rdpConfig.server}</p>
+                                            <p style="margin: 5px 0;"><strong>Usuario:</strong> ${credentials.username}</p>
+                                            <p style="margin: 5px 0;"><strong>Estado:</strong> <span style="color: #4CAF50;">Conectado</span></p>
+                                            <p style="margin: 5px 0;"><strong>Resolución:</strong> ${displaySettings.width}x${displaySettings.height}</p>
+                                            <p style="margin: 5px 0;"><strong>Cliente:</strong> mstsc.exe</p>
+                                        </div>
+                                        <div style="margin-top: 20px;">
+                                            <button onclick="
+                                                window.electronAPI.rdp.connectActiveX(${rdpInstanceId}, '${rdpConfig.server}', '${credentials.username}', '${credentials.password || ''}');
+                                            " 
+                                                    style="background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                                                🔗 Conectar RDP
+                                            </button>
+                                        </div>
+                                        <p style="font-size: 12px; opacity: 0.7; margin-top: 20px;">
+                                            Usando mstsc.exe para conexión RDP nativa
+                                        </p>
+                                    </div>
+                                `;
+                                
+                                container.appendChild(activeXContainer);
+                                console.log('ActiveXRdpSession: Control ActiveX embebido en la pestaña');
+                            }
+                        }, 100);
+                        
+                        toast.current?.show({
+                            severity: 'success',
+                            summary: 'Conexión Exitosa',
+                            detail: `Conectado a ${rdpConfig.server}`,
+                            life: 3000
+                        });
+                    });
             
             window.electron.ipcRenderer.on(`rdp:event:${rdpInstanceId}:disconnected`, () => {
                 console.log('ActiveXRdpSession: Evento disconnected recibido');
@@ -92,8 +148,22 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
         }
     }, [rdpInstanceId]);
 
+    // Redimensionar el control cuando cambie el tamaño de la ventana
+    useEffect(() => {
+        const handleResize = () => {
+            if (rdpInstanceId && connectionStatus === 'connected') {
+                console.log('ActiveXRdpSession: Redimensionando por cambio de ventana...');
+                window.electronAPI.rdp.resizeActiveX(rdpInstanceId, 0, 0, displaySettings.width, displaySettings.height);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [rdpInstanceId, connectionStatus, displaySettings.width, displaySettings.height]);
+
     // Conectar automáticamente cuando el control esté listo
     useEffect(() => {
+        console.log('ActiveXRdpSession: useEffect - rdpInstanceId:', rdpInstanceId, 'isInitialized:', isInitialized, 'connectionStatus:', connectionStatus, 'isConnecting:', isConnecting);
         if (rdpInstanceId && isInitialized && connectionStatus === 'disconnected' && !isConnecting) {
             // Intentar conectar automáticamente si tenemos credenciales
             if (rdpConfig.username && rdpConfig.password) {
@@ -122,6 +192,7 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
             const instanceId = await window.electronAPI.rdp.createActiveXInstance(parentWindowHandle);
             console.log('ActiveXRdpSession: Instancia creada con ID:', instanceId);
             setRdpInstanceId(instanceId);
+            console.log('ActiveXRdpSession: rdpInstanceId establecido:', instanceId);
 
                         // Configurar eventos (simplificado para evitar problemas de serialización)
             console.log('ActiveXRdpSession: Configurando eventos...');
@@ -395,22 +466,23 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                     )}
                     
                     {connectionStatus === 'connected' && (
-                        <div className="flex align-items-center justify-content-center h-full">
-                            <div className="text-center text-white">
-                                <i className="pi pi-check-circle text-6xl mb-3 text-green-400" />
-                                <h3 className="text-xl font-semibold mb-2">RDP Session Connected</h3>
-                                <p className="text-sm opacity-80 mb-3">Conectado a {rdpConfig.server}</p>
-                                <div className="bg-gray-800 p-3 border-round">
-                                    <p className="text-xs opacity-70">Usuario: {credentials.username}</p>
-                                    <p className="text-xs opacity-70">Resolución: {displaySettings.width}x{displaySettings.height}</p>
-                                    <p className="text-xs opacity-70">Estado: Activo</p>
+                        <div className="h-full w-full bg-black relative" ref={rdpContainerRef}>
+                            {/* El control RDP ActiveX debería estar aquí */}
+                            <div className="absolute inset-0 flex flex-column">
+                                <div className="text-center text-white p-2 bg-black bg-opacity-50">
+                                    <p className="text-xs opacity-80">Control RDP ActiveX - Conectado a {rdpConfig.server}</p>
+                                    <p className="text-xs opacity-70">Usuario: {credentials.username} | Resolución: {displaySettings.width}x{displaySettings.height}</p>
                                 </div>
-                                <Button
-                                    label="Desconectar"
-                                    icon="pi pi-stop"
-                                    onClick={disconnectRdp}
-                                    className="mt-3 p-button-outlined"
-                                />
+                                <div className="flex-1 bg-black">
+                                    {/* Aquí debería estar el control ActiveX */}
+                                    <div className="h-full w-full flex align-items-center justify-content-center">
+                                        <div className="text-center text-white">
+                                            <i className="pi pi-desktop text-4xl mb-2 text-primary" />
+                                            <p className="text-sm">Control RDP ActiveX</p>
+                                            <p className="text-xs opacity-70">La ventana del control debería aparecer aquí</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

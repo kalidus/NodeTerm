@@ -15,16 +15,25 @@ class RdpActiveXManager {
      */
     createInstance(parentWindowHandle) {
         try {
+            console.log('RdpActiveXManager: Creando instancia con handle:', parentWindowHandle);
             const instanceId = this.nextInstanceId++;
+            console.log('RdpActiveXManager: Instance ID asignado:', instanceId);
+            
+            console.log('RdpActiveXManager: Creando RdpBasicWrapper...');
             const instance = new bindings.RdpBasicWrapper();
+            console.log('RdpActiveXManager: RdpBasicWrapper creado:', instance);
             
             // Inicializar el control en la ventana padre
+            console.log('RdpActiveXManager: Inicializando control con handle:', parentWindowHandle);
             const success = instance.initialize(parentWindowHandle);
+            console.log('RdpActiveXManager: Resultado de inicialización:', success);
+            
             if (!success) {
                 throw new Error('Failed to initialize RDP Basic control');
             }
 
             this.instances.set(instanceId, instance);
+            console.log('RdpActiveXManager: Instancia guardada en mapa');
             return instanceId;
         } catch (error) {
             console.error('Error creating RDP Basic instance:', error);
@@ -135,8 +144,11 @@ class RdpActiveXManager {
     /**
      * Conecta la sesión RDP
      * @param {number} instanceId - ID de la instancia
+     * @param {string} server - Servidor (opcional, usa config si no se proporciona)
+     * @param {string} username - Usuario (opcional, usa config si no se proporciona)
+     * @param {string} password - Contraseña (opcional, usa config si no se proporciona)
      */
-    connect(instanceId) {
+    connect(instanceId, server = null, username = null, password = null) {
         const instance = this.instances.get(instanceId);
         if (!instance) {
             throw new Error(`RDP instance ${instanceId} not found`);
@@ -144,13 +156,13 @@ class RdpActiveXManager {
 
         // Obtener configuración específica de la instancia
         const config = this.instanceConfigs.get(instanceId) || {};
-        const server = config.server || 'localhost';
-        const username = config.username || 'user';
-        const password = config.password || '';
+        const finalServer = server || config.server || 'localhost';
+        const finalUsername = username || config.username || 'user';
+        const finalPassword = password || config.password || '';
 
         try {
-            console.log(`Manager: Conectando instancia ${instanceId} a ${server}`);
-            const success = instance.connect(server, username, password);
+            console.log(`Manager: Conectando instancia ${instanceId} a ${finalServer}`);
+            const success = instance.connect(finalServer, finalUsername, finalPassword);
             
             if (success) {
                 console.log(`Manager: Conexión exitosa para instancia ${instanceId}`);
@@ -162,9 +174,12 @@ class RdpActiveXManager {
                 console.log(`Manager: Error de conexión para instancia ${instanceId}`);
                 this.emitEvent(instanceId, 'error', 'Failed to connect RDP session');
             }
+            
+            return success;
         } catch (error) {
             console.error(`Manager: Error en conexión para instancia ${instanceId}:`, error);
             this.emitEvent(instanceId, 'error', error.message);
+            return false;
         }
     }
 

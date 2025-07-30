@@ -137,6 +137,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server }),
     // ActiveX RDP Control API
     getParentWindowHandle: () => ipcRenderer.invoke('rdp:get-parent-window-handle'),
+    getContainerWindowHandle: (element) => ipcRenderer.invoke('rdp:get-container-window-handle', element),
     createActiveXInstance: (parentWindowHandle) => ipcRenderer.invoke('rdp:create-activex-instance', parentWindowHandle),
     setActiveXServer: (instanceId, server) => {
       console.log('Preload: Llamando setActiveXServer para instancia:', instanceId, 'servidor:', server);
@@ -155,8 +156,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         throw error;
       }
     },
-    connectActiveX: (instanceId) => ipcRenderer.invoke('rdp:connect-activex', instanceId),
-    disconnectActiveX: (instanceId) => ipcRenderer.invoke('rdp:disconnect-activex', instanceId),
-    resizeActiveX: (instanceId, x, y, width, height) => ipcRenderer.invoke('rdp:resize-activex', instanceId, x, y, width, height)
+                    connectActiveX: (instanceId) => ipcRenderer.invoke('rdp:connect-activex', instanceId),
+                disconnectActiveX: (instanceId) => ipcRenderer.invoke('rdp:disconnect-activex', instanceId),
+                resizeActiveX: (instanceId, x, y, width, height) => ipcRenderer.invoke('rdp:resize-activex', instanceId, x, y, width, height),
+                getActiveXStatus: (instanceId) => ipcRenderer.invoke('rdp:get-activex-status', instanceId),
+                createActiveXChildWindow: (params) => ipcRenderer.invoke('rdp:create-activex-child-window', params)
   }
 }); 

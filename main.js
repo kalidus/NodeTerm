@@ -1,4 +1,4 @@
-// Configuraciones alternativas para node-pty
+﻿// Configuraciones alternativas para node-pty
 const alternativePtyConfig = {
   conservative: {
     name: 'xterm',
@@ -57,7 +57,7 @@ class SafeWindowsTerminal {
 
     this.process.on('exit', (code, signal) => {
       console.log(`SafeWindowsTerminal exit - code:`, code, 'signal:', signal, 'type:', typeof code);
-      // Asegurar que code sea un número válido
+      // Asegurar que code sea un nÃºmero vÃ¡lido
       let exitCode = 0;
       if (typeof code === 'number') {
         exitCode = code;
@@ -92,7 +92,7 @@ const path = require('path');
 const url = require('url');
 
 // ============================================
-// 🚨 VERIFICACIÓN CRÍTICA DE CAMBIOS APLICADOS
+// ðŸš¨ VERIFICACIÃ“N CRÃTICA DE CAMBIOS APLICADOS
 // (logs temporales eliminados)
 // ============================================
 const os = require('os');
@@ -130,7 +130,7 @@ function parseLsOutput(output) {
 ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
   try {
     if (sshConfig.useBastionWallix) {
-      // Buscar la conexión existente para bastion
+      // Buscar la conexiÃ³n existente para bastion
       const existingConn = await findSSHConnection(tabId, sshConfig);
       if (existingConn && existingConn.ssh && existingConn.stream) {
         // Modo antiguo: usar stream interactivo si existe
@@ -144,9 +144,9 @@ ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => 
         stream.write(command);
         await new Promise((resolve) => setTimeout(resolve, 300));
         stream.removeListener('data', onData);
-        // LOGS DE DEPURACIÓN
+        // LOGS DE DEPURACIÃ“N
         // console.log('[ssh:get-home-directory][BASTION] output bruto:', JSON.stringify(output));
-        // Split por líneas ANTES de limpiar
+        // Split por lÃ­neas ANTES de limpiar
         const lines = output.replace(command.trim(), '').replace(/\r/g, '').split('\n');
         const cleanedLines = lines.map(line => line
           .replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, '') // OSC
@@ -192,21 +192,21 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
     // console.log('ssh:list-files: tabId:', tabId);
     // console.log('ssh:list-files: path recibido:', path);
     // console.log('ssh:list-files: sshConfig recibido:', sshConfig);
-    // Validación robusta de path
+    // ValidaciÃ³n robusta de path
     let safePath = '/';
     if (typeof path === 'string') {
       safePath = path;
     } else if (path && typeof path.path === 'string') {
       safePath = path.path;
     } else {
-      // console.warn('ssh:list-files: path inválido recibido:', path);
+      // console.warn('ssh:list-files: path invÃ¡lido recibido:', path);
     }
 
     let ssh;
     let shouldCloseConnection = false;
 
     if (sshConfig.useBastionWallix) {
-      // Buscar la conexión existente para bastion
+      // Buscar la conexiÃ³n existente para bastion
       const existingConn = await findSSHConnection(tabId, sshConfig);
       if (existingConn && existingConn.ssh && existingConn.stream) {
         // Modo antiguo: usar stream interactivo si existe
@@ -229,9 +229,9 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
         stream.removeListener('data', onData);
         // Limpiar la salida: quitar el comando enviado y posibles prompts
         let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-        // Eliminar códigos ANSI
+        // Eliminar cÃ³digos ANSI
         cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
-        // Quitar líneas vacías y posibles prompts
+        // Quitar lÃ­neas vacÃ­as y posibles prompts
         cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
         return { success: true, files: parseLsOutput(cleanOutput) };
       } else {
@@ -261,12 +261,12 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
         return { success: true, files };
       }
     } else {
-      // SSH directo: crear nueva conexión
+      // SSH directo: crear nueva conexiÃ³n
       ssh = new SSH2Promise(sshConfig);
       await ssh.connect();
       shouldCloseConnection = true;
       const lsOutput = await ssh.exec(`ls -la --color=never "${safePath}"`);
-      // Eliminar códigos ANSI por si acaso
+      // Eliminar cÃ³digos ANSI por si acaso
       const cleanOutput = lsOutput.replace(/\x1b\[[0-9;]*m/g, '');
       if (shouldCloseConnection && ssh) {
         await ssh.close();
@@ -282,10 +282,10 @@ ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
 ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
   try {
     if (sshConfig.useBastionWallix) {
-      // Buscar la conexión existente para bastion
+      // Buscar la conexiÃ³n existente para bastion
       const existingConn = await findSSHConnection(tabId, sshConfig);
       if (!existingConn || !existingConn.ssh || !existingConn.stream) {
-        return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
+        return { success: false, error: 'No se encontrÃ³ una conexiÃ³n bastiÃ³n activa para este tabId. Abre primero una terminal.' };
       }
       const stream = existingConn.stream;
       const command = `[ -d "${path}" ] && echo exists || echo notfound\n`;
@@ -299,7 +299,7 @@ ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) 
       stream.removeListener('data', onData);
       // Limpiar la salida: quitar el comando enviado y posibles prompts
       let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-      // Eliminar códigos ANSI
+      // Eliminar cÃ³digos ANSI
       cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
       // Buscar si existe
       if (cleanOutput.includes('exists')) {
@@ -331,7 +331,7 @@ let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
 process.on('uncaughtException', (error) => {
   if (error.message && error.message.includes('AttachConsole failed')) {
     console.warn('Error AttachConsole capturado y suprimido:', error.message);
-    return; // Suprimir el error sin crashear la aplicación
+    return; // Suprimir el error sin crashear la aplicaciÃ³n
   }
   
   // Para otros errores no capturados, mantener el comportamiento por defecto
@@ -351,11 +351,11 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Store active SSH connections and their shells
 const sshConnections = {};
-// Estado persistente para stats de bastión (CPU, red, etc.) por tabId
+// Estado persistente para stats de bastiÃ³n (CPU, red, etc.) por tabId
 const bastionStatsState = {};
 // Cache for Welcome Messages (MOTD) to show them on every new tab.
 const motdCache = {};
-// Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
+// Pool de conexiones SSH compartidas para evitar mÃºltiples conexiones al mismo servidor
 const sshConnectionPool = {};
 
 // RDP Manager instance
@@ -364,28 +364,28 @@ const rdpManager = new RdpManager();
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
   pending: new Map(), // Conexiones en proceso por cacheKey
-  lastAttempt: new Map(), // Último intento por cacheKey
-  minInterval: 2000, // Mínimo 2 segundos entre intentos al mismo servidor
+  lastAttempt: new Map(), // Ãšltimo intento por cacheKey
+  minInterval: 2000, // MÃ­nimo 2 segundos entre intentos al mismo servidor
   
   async throttle(cacheKey, connectionFn) {
-    // Si ya hay una conexión pendiente para este servidor, esperar
+    // Si ya hay una conexiÃ³n pendiente para este servidor, esperar
     if (this.pending.has(cacheKey)) {
-      // console.log(`Esperando conexión pendiente para ${cacheKey}...`);
+      // console.log(`Esperando conexiÃ³n pendiente para ${cacheKey}...`);
       return await this.pending.get(cacheKey);
     }
     
-    // Verificar intervalo mínimo
+    // Verificar intervalo mÃ­nimo
     const lastAttempt = this.lastAttempt.get(cacheKey) || 0;
     const now = Date.now();
     const timeSinceLastAttempt = now - lastAttempt;
     
     if (timeSinceLastAttempt < this.minInterval) {
       const waitTime = this.minInterval - timeSinceLastAttempt;
-      // console.log(`Throttling conexión a ${cacheKey}, esperando ${waitTime}ms...`);
+      // console.log(`Throttling conexiÃ³n a ${cacheKey}, esperando ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
-    // Crear la conexión
+    // Crear la conexiÃ³n
     this.lastAttempt.set(cacheKey, Date.now());
     const connectionPromise = connectionFn();
     this.pending.set(cacheKey, connectionPromise);
@@ -399,16 +399,16 @@ const connectionThrottle = {
   }
 };
 
-// Función para limpiar conexiones SSH huérfanas cada 60 segundos
+// FunciÃ³n para limpiar conexiones SSH huÃ©rfanas cada 60 segundos
 setInterval(() => {
   const activeKeys = new Set(Object.values(sshConnections).map(conn => conn.cacheKey));
   
   for (const [poolKey, poolConnection] of Object.entries(sshConnectionPool)) {
     if (!activeKeys.has(poolKey)) {
-      // Verificar si la conexión es realmente antigua (más de 5 minutos sin uso)
+      // Verificar si la conexiÃ³n es realmente antigua (mÃ¡s de 5 minutos sin uso)
       const connectionAge = Date.now() - (poolConnection._lastUsed || poolConnection._createdAt || 0);
       if (connectionAge > 5 * 60 * 1000) { // 5 minutos
-        // console.log(`Limpiando conexión SSH huérfana: ${poolKey} (sin uso por ${Math.round(connectionAge/1000)}s)`);
+        // console.log(`Limpiando conexiÃ³n SSH huÃ©rfana: ${poolKey} (sin uso por ${Math.round(connectionAge/1000)}s)`);
         try {
           // Limpiar listeners antes de cerrar
           if (poolConnection.ssh) {
@@ -425,7 +425,7 @@ setInterval(() => {
       poolConnection._lastUsed = Date.now();
     }
   }
-}, 60000); // Cambiar a 60 segundos para dar más tiempo
+}, 60000); // Cambiar a 60 segundos para dar mÃ¡s tiempo
 
 // Helper function to parse 'df -P' command output
 function parseDfOutput(dfOutput) {
@@ -477,7 +477,7 @@ function createWindow() {
     minWidth: 1400,
     minHeight: 600,
     title: 'NodeTerm',
-    frame: false, // Oculta la barra de título nativa para usar una personalizada
+    frame: false, // Oculta la barra de tÃ­tulo nativa para usar una personalizada
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -506,7 +506,7 @@ function createWindow() {
 
   mainWindow.removeMenu();
 
-  // Menú de desarrollo para abrir DevTools
+  // MenÃº de desarrollo para abrir DevTools
   const isMac = process.platform === 'darwin';
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
@@ -529,7 +529,7 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 }
 
-// Función para detectar todas las distribuciones WSL disponibles
+// FunciÃ³n para detectar todas las distribuciones WSL disponibles
 async function detectAllWSLDistributions() {
   return new Promise((resolve) => {
     const { exec } = require('child_process');
@@ -574,31 +574,31 @@ async function detectAllWSLDistributions() {
     
     // Obtener lista de distribuciones WSL
     exec('wsl --list --verbose', { timeout: 5000, windowsHide: true }, (error, stdout, stderr) => {
-      // console.log('🔍 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
+      // console.log('ðŸ” Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
       
       if (!error && stdout) {
         // Limpiar caracteres null UTF-16 antes de procesar
         const cleanedOutput = stdout.replace(/\u0000/g, '');
         const lines = cleanedOutput.split('\n');
-        // console.log('🔍 Procesando', lines.length - 1, 'líneas...'); // Eliminado por limpieza de logs
+        // console.log('ðŸ” Procesando', lines.length - 1, 'lÃ­neas...'); // Eliminado por limpieza de logs
         
         lines.forEach((line) => {
           const trimmed = line.trim();
           
-          // Buscar cualquier distribución Linux (excluir docker-desktop y otras herramientas)
+          // Buscar cualquier distribuciÃ³n Linux (excluir docker-desktop y otras herramientas)
           if (trimmed && !trimmed.toLowerCase().includes('docker') && 
               !trimmed.toLowerCase().includes('name') && 
               !trimmed.toLowerCase().includes('state') &&
               trimmed.length > 5) {
                 
-            // Extraer nombre de la distribución (primer token)
+            // Extraer nombre de la distribuciÃ³n (primer token)
             const tokens = trimmed.split(/\s+/);
             
             if (tokens.length > 0) {
               let distroName = tokens[0].replace('*', '').trim();
               
               if (distroName && distroName !== 'NAME') {
-                // console.log('🐧 Distribución encontrada:', distroName); // Eliminado por limpieza de logs
+                // console.log('ðŸ§ DistribuciÃ³n encontrada:', distroName); // Eliminado por limpieza de logs
                 // Buscar en el mapeo exacto o hacer matching parcial
                 let distroInfo = distroMapping[distroName];
                 
@@ -619,7 +619,7 @@ async function detectAllWSLDistributions() {
                   } else if (lowerDistroName.includes('fedora')) {
                     distroInfo = { executable: 'fedora.exe', label: 'Fedora', icon: 'pi pi-bookmark', category: 'fedora' };
                   } else {
-                    // Fallback genérico para distribuciones no reconocidas
+                    // Fallback genÃ©rico para distribuciones no reconocidas
                     distroInfo = { executable: 'wsl.exe', label: distroName, icon: 'pi pi-desktop', category: 'generic' };
                   }
                 }
@@ -633,7 +633,7 @@ async function detectAllWSLDistributions() {
                     category: distroInfo.category,
                     version: distroName.includes('.') || distroName.includes('-') ? distroName.split(/[-_]/)[1] || 'latest' : 'latest'
                   });
-                  // console.log('✅ Agregada:', distroInfo.label); // Eliminado por limpieza de logs
+                  // console.log('âœ… Agregada:', distroInfo.label); // Eliminado por limpieza de logs
                 }
               }
             }
@@ -641,12 +641,12 @@ async function detectAllWSLDistributions() {
         });
       }
       
-      // Si no encontramos distribuciones específicas, probar ubuntu.exe como fallback
+      // Si no encontramos distribuciones especÃ­ficas, probar ubuntu.exe como fallback
       if (availableDistributions.length === 0) {
-        console.log('🔄 No se encontraron distribuciones WSL, probando ubuntu.exe...');
+        console.log('ðŸ”„ No se encontraron distribuciones WSL, probando ubuntu.exe...');
         exec('ubuntu.exe --help', { timeout: 2000, windowsHide: true }, (ubuntuError) => {
           if (!ubuntuError || ubuntuError.code !== 'ENOENT') {
-            console.log('✅ Ubuntu genérico disponible');
+            console.log('âœ… Ubuntu genÃ©rico disponible');
             availableDistributions.push({
               name: 'Ubuntu',
               executable: 'ubuntu.exe',
@@ -656,11 +656,11 @@ async function detectAllWSLDistributions() {
               version: 'latest'
             });
           }
-          // console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
+          // console.log('ðŸŽ¯ Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
           resolve(availableDistributions);
         });
       } else {
-        // console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
+        // console.log('ðŸŽ¯ Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
         resolve(availableDistributions);
       }
     });
@@ -669,29 +669,29 @@ async function detectAllWSLDistributions() {
 
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
-  // console.log('🚀 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
+  // console.log('ðŸš€ Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
   
   try {
     const distributions = await detectAllWSLDistributions();
-    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
+    // console.log('âœ… DetecciÃ³n completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
     // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.executable})`)); // Eliminado por limpieza de logs
     return distributions;
   } catch (error) {
-    console.error('❌ Error en detección de distribuciones WSL:', error);
+    console.error('âŒ Error en detecciÃ³n de distribuciones WSL:', error);
     return [];
   }
 });
 
 // Mantener compatibilidad con el handler anterior para Ubuntu
 ipcMain.handle('detect-ubuntu-availability', async () => {
-  // console.log('🚀 Detectando distribuciones WSL (compatibilidad Ubuntu)...'); // Eliminado por limpieza de logs
+  // console.log('ðŸš€ Detectando distribuciones WSL (compatibilidad Ubuntu)...'); // Eliminado por limpieza de logs
   
   try {
     const distributions = await detectAllWSLDistributions();
-    // console.log('✅ Detección completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
+    // console.log('âœ… DetecciÃ³n completada:', distributions.length, 'distribuciones encontradas'); // Eliminado por limpieza de logs
     return distributions;
   } catch (error) {
-    console.error('❌ Error en detección de distribuciones WSL:', error);
+    console.error('âŒ Error en detecciÃ³n de distribuciones WSL:', error);
     return [];
   }
 });
@@ -710,7 +710,7 @@ app.on('activate', () => {
   }
 });
 
-// IPC handler para obtener información de versión
+// IPC handler para obtener informaciÃ³n de versiÃ³n
 ipcMain.handle('get-version-info', () => {
   return {
     appVersion: packageJson.version,
@@ -771,17 +771,17 @@ ipcMain.handle('app:toggle-fullscreen', () => {
   }
 });
 
-// IPC handlers para clipboard - Ya están definidos más adelante en el archivo
+// IPC handlers para clipboard - Ya estÃ¡n definidos mÃ¡s adelante en el archivo
 
 // IPC handler to establish an SSH connection
 ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
-  // Para bastiones: usar cacheKey único por destino (permite reutilización)
+  // Para bastiones: usar cacheKey Ãºnico por destino (permite reutilizaciÃ³n)
   // Para SSH directo: usar pooling normal para eficiencia
   const cacheKey = config.useBastionWallix 
     ? `bastion-${config.bastionUser}@${config.bastionHost}->${config.username}@${config.host}:${config.port || 22}`
     : `${config.username}@${config.host}:${config.port || 22}`;
   
-  // Aplicar throttling solo para SSH directo (bastiones son únicos)
+  // Aplicar throttling solo para SSH directo (bastiones son Ãºnicos)
   if (!config.useBastionWallix) {
     const lastAttempt = connectionThrottle.lastAttempt.get(cacheKey) || 0;
     const now = Date.now();
@@ -789,23 +789,23 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     if (timeSinceLastAttempt < connectionThrottle.minInterval) {
       const waitTime = connectionThrottle.minInterval - timeSinceLastAttempt;
-      // console.log(`Throttling conexión SSH directa a ${cacheKey}, esperando ${waitTime}ms...`);
+      // console.log(`Throttling conexiÃ³n SSH directa a ${cacheKey}, esperando ${waitTime}ms...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
     connectionThrottle.lastAttempt.set(cacheKey, Date.now());
   } else {
-    // console.log(`Conexión bastión - sin throttling (pooling habilitado)`);
+    // console.log(`ConexiÃ³n bastiÃ³n - sin throttling (pooling habilitado)`);
   }
   
-  // Para bastiones: cada terminal tiene su propia conexión independiente (no pooling)
+  // Para bastiones: cada terminal tiene su propia conexiÃ³n independiente (no pooling)
   // Para SSH directo: usar pooling normal para eficiencia
   let ssh;
   let isReusedConnection = false;
 
   if (config.useBastionWallix) {
-    // BASTIÓN: Usar ssh2 puro para crear una conexión y shell independientes
-    // console.log(`Bastión ${cacheKey} - creando nueva conexión con ssh2 (bastion-ssh.js)`);
+    // BASTIÃ“N: Usar ssh2 puro para crear una conexiÃ³n y shell independientes
+    // console.log(`BastiÃ³n ${cacheKey} - creando nueva conexiÃ³n con ssh2 (bastion-ssh.js)`);
     const bastionConfig = {
       bastionHost: config.bastionHost,
       port: 22,
@@ -827,7 +827,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           originalKey: config.originalKey || tabId,
           tabId: tabId
         });
-        // Limpiar estado persistente de bastión al cerrar la pestaña
+        // Limpiar estado persistente de bastiÃ³n al cerrar la pestaÃ±a
         delete bastionStatsState[tabId];
         delete sshConnections[tabId];
       },
@@ -845,15 +845,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             stream.setWindow(safeRows, safeCols);
             sshConnections[tabId]._pendingResize = null;
           }
-          // Lanzar bucle de stats SOLO cuando el stream está listo
-          // Solo iniciar stats si esta pestaña está activa
+          // Lanzar bucle de stats SOLO cuando el stream estÃ¡ listo
+          // Solo iniciar stats si esta pestaÃ±a estÃ¡ activa
           if (activeStatsTabId === tabId) {
             wallixStatsLoop();
           }
         }
       }
     );
-    // Guardar la conexión para gestión posterior (stream se asigna en onShellReady)
+    // Guardar la conexiÃ³n para gestiÃ³n posterior (stream se asigna en onShellReady)
     sshConnections[tabId] = {
       ssh: conn,
       stream: undefined,
@@ -867,7 +867,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsLoopRunning: false
     };
     
-    // Función de bucle de stats para Wallix/bastión
+    // FunciÃ³n de bucle de stats para Wallix/bastiÃ³n
     function wallixStatsLoop() {
       const connObj = sshConnections[tabId];
       if (activeStatsTabId !== tabId) {
@@ -878,7 +878,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         return;
       }
       if (!connObj || !connObj.ssh || !connObj.stream) {
-        // console.log('[WallixStats] Conexión no disponible, saltando stats');
+        // console.log('[WallixStats] ConexiÃ³n no disponible, saltando stats');
         return;
       }
       if (connObj.statsLoopRunning) {
@@ -890,21 +890,21 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       // console.log(`[STATS] Ejecutando wallixStatsLoop para tabId ${tabId} (activo: ${activeStatsTabId})`);
 
       try {
-        // // console.log('[WallixStats] Lanzando bucle de stats para bastión', tabId);
+        // // console.log('[WallixStats] Lanzando bucle de stats para bastiÃ³n', tabId);
         
         if (connObj.ssh.execCommand) {
           const command = 'grep "cpu " /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
               // console.warn('[WallixStats] Error ejecutando comando:', err);
-              // Enviar stats básicas en caso de error
+              // Enviar stats bÃ¡sicas en caso de error
               const fallbackStats = {
                 cpu: '0.00',
                 mem: { total: 0, used: 0 },
                 disk: [],
                 uptime: 'Error',
                 network: { rx_speed: 0, tx_speed: 0 },
-                hostname: 'Bastión',
+                hostname: 'BastiÃ³n',
                 distro: 'linux',
                 ip: config.host
               };
@@ -929,13 +929,13 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               // // console.log('[WallixStats] Parts found:', parts.length);
               // // console.log('[WallixStats] First 5 parts:', parts.slice(0, 5));
               
-              // CPU - buscar línea que empiece con "cpu "
+              // CPU - buscar lÃ­nea que empiece con "cpu "
               const cpuLineIndex = parts.findIndex(line => line.trim().startsWith('cpu '));
               let cpuLoad = '0.00';
               if (cpuLineIndex >= 0) {
                 const cpuLine = parts[cpuLineIndex];
                 const cpuTimes = cpuLine.trim().split(/\s+/).slice(1).map(t => parseInt(t, 10));
-                // Usar estado persistente para bastión
+                // Usar estado persistente para bastiÃ³n
                 const previousCpu = bastionStatsState[tabId]?.previousCpu;
                 if (cpuTimes.length >= 8) {
                   const currentCpu = { user: cpuTimes[0], nice: cpuTimes[1], system: cpuTimes[2], idle: cpuTimes[3], iowait: cpuTimes[4], irq: cpuTimes[5], softirq: cpuTimes[6], steal: cpuTimes[7] };
@@ -950,7 +950,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                       cpuLoad = ((totalDiff - idleDiff) * 100 / totalDiff).toFixed(2);
                     }
                   }
-                  // Guardar estado persistente para bastión
+                  // Guardar estado persistente para bastiÃ³n
                   if (!bastionStatsState[tabId]) bastionStatsState[tabId] = {};
                   bastionStatsState[tabId].previousCpu = currentCpu;
                 }
@@ -1005,7 +1005,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
                     totalTx += parseInt(p[9], 10) || 0;
                   }
                 });
-                // Usar estado persistente para bastión
+                // Usar estado persistente para bastiÃ³n
                 const previousNet = bastionStatsState[tabId]?.previousNet;
                 const previousTime = bastionStatsState[tabId]?.previousTime;
                 const currentTime = Date.now();
@@ -1022,7 +1022,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               }
               
               // Hostname, IP y distro
-              let hostname = 'Bastión';
+              let hostname = 'BastiÃ³n';
               let finalDistroId = 'linux';
               let ip = '';
               // Buscar hostname real
@@ -1036,12 +1036,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 5) {
                 hostname = parts[hostnameLineIndex].trim();
               }
-              // Buscar IP real (línea después de hostname)
+              // Buscar IP real (lÃ­nea despuÃ©s de hostname)
               let ipLine = '';
               if (hostnameLineIndex >= 0 && hostnameLineIndex < parts.length - 4) {
                 ipLine = parts[hostnameLineIndex + 1]?.trim() || '';
               }
-              // Tomar la última IP válida (no 127.0.0.1, no vacía)
+              // Tomar la Ãºltima IP vÃ¡lida (no 127.0.0.1, no vacÃ­a)
               if (ipLine) {
                 const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
                 if (ipCandidates.length > 0) {
@@ -1098,7 +1098,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               // console.warn('[WallixStats] Error parseando stats:', parseErr);
             }
             
-            // Programar siguiente ejecución
+            // Programar siguiente ejecuciÃ³n
             if (sshConnections[tabId] && sshConnections[tabId].ssh && sshConnections[tabId].stream && !sshConnections[tabId].stream.destroyed && activeStatsTabId === tabId) {
               sshConnections[tabId].statsLoopRunning = false;
               sshConnections[tabId].statsTimeout = setTimeout(wallixStatsLoop, 2000);
@@ -1108,15 +1108,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           });
           
         } else {
-          // console.warn('[WallixStats] execCommand no disponible en conexión bastión');
-          // Fallback con stats básicas
+          // console.warn('[WallixStats] execCommand no disponible en conexiÃ³n bastiÃ³n');
+          // Fallback con stats bÃ¡sicas
           const stats = {
             cpu: '0.00',
             mem: { total: 0, used: 0 },
             disk: [],
             uptime: 'N/A',
             network: { rx_speed: 0, tx_speed: 0 },
-            hostname: 'Bastión',
+            hostname: 'BastiÃ³n',
             distro: 'linux',
             ip: config.host
           };
@@ -1135,7 +1135,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     
-    // Asignar la función wallixStatsLoop al objeto de conexión
+    // Asignar la funciÃ³n wallixStatsLoop al objeto de conexiÃ³n
     sshConnections[tabId].wallixStatsLoop = wallixStatsLoop;
     
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
@@ -1145,16 +1145,16 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     });
     return;
   } else {
-    // SSH DIRECTO: Lógica de pooling normal
+    // SSH DIRECTO: LÃ³gica de pooling normal
     const existingPoolConnection = sshConnectionPool[cacheKey];
     if (existingPoolConnection) {
       try {
         await existingPoolConnection.exec('echo "test"');
         ssh = existingPoolConnection;
         isReusedConnection = true;
-        // console.log(`Reutilizando conexión del pool para terminal SSH directo ${cacheKey}`);
+        // console.log(`Reutilizando conexiÃ³n del pool para terminal SSH directo ${cacheKey}`);
       } catch (testError) {
-        // console.log(`Conexión del pool no válida para terminal ${cacheKey}, creando nueva...`);
+        // console.log(`ConexiÃ³n del pool no vÃ¡lida para terminal ${cacheKey}, creando nueva...`);
         try {
           existingPoolConnection.close();
         } catch (e) {}
@@ -1162,7 +1162,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     if (!ssh) {
-      // console.log(`Creando nueva conexión SSH directa para terminal ${cacheKey}`);
+      // console.log(`Creando nueva conexiÃ³n SSH directa para terminal ${cacheKey}`);
       const directConfig = {
         host: config.host,
         username: config.username,
@@ -1174,9 +1174,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     }
   }
 
-  // Eliminar función statsLoop y llamadas relacionadas
+  // Eliminar funciÃ³n statsLoop y llamadas relacionadas
   // const statsLoop = async (hostname, distro, ip) => {
-  //   // Verificación robusta de la conexión
+  //   // VerificaciÃ³n robusta de la conexiÃ³n
   //   const conn = sshConnections[tabId];
   //   if (!conn || !conn.ssh || !conn.stream || conn.stream.destroyed) {
   //     return; // Stop if connection is closed or invalid
@@ -1265,7 +1265,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   //   } catch (e) {
   //     // console.error(`Error fetching stats for ${tabId}:`, e.message);
   //   } finally {
-  //     // Verificar nuevamente que la conexión siga válida antes de programar siguiente loop
+  //     // Verificar nuevamente que la conexiÃ³n siga vÃ¡lida antes de programar siguiente loop
   //     const finalConn = sshConnections[tabId];
   //     if (finalConn && finalConn.ssh && finalConn.stream && !finalConn.stream.destroyed) {
   //       finalConn.statsTimeout = setTimeout(() => statsLoop(hostname, distro, ip), 2000);
@@ -1281,22 +1281,22 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     // Conectar SSH si es necesario
     if (!isReusedConnection) {
-      // Solo conectar si es una conexión nueva (no reutilizada del pool)
+      // Solo conectar si es una conexiÃ³n nueva (no reutilizada del pool)
       // console.log(`Conectando SSH para terminal ${cacheKey}...`);
       
-      // Configurar límites de listeners ANTES de conectar (aumentado para evitar warnings)
+      // Configurar lÃ­mites de listeners ANTES de conectar (aumentado para evitar warnings)
       ssh.setMaxListeners(300);
       
-      // console.log(`Iniciando conexión SSH para ${cacheKey}...`);
-      // console.log(`Configuración: Host=${config.host}, Usuario=${config.username}, Puerto=${config.port || 22}`);
+      // console.log(`Iniciando conexiÃ³n SSH para ${cacheKey}...`);
+      // console.log(`ConfiguraciÃ³n: Host=${config.host}, Usuario=${config.username}, Puerto=${config.port || 22}`);
       // if (config.useBastionWallix) {
-      //   console.log(`Bastión Wallix: Host=${config.bastionHost}, Usuario=${config.bastionUser}`);
+      //   console.log(`BastiÃ³n Wallix: Host=${config.bastionHost}, Usuario=${config.bastionUser}`);
       // }
       
       await ssh.connect();
       // console.log(`Conectado exitosamente a terminal ${cacheKey}`);
       
-      // SSH2Promise está conectado y listo para usar
+      // SSH2Promise estÃ¡ conectado y listo para usar
       // console.log('SSH2Promise conectado correctamente, procediendo a crear shell...');
       
       // Guardar en el pool solo para SSH directo (bastiones son independientes)
@@ -1304,12 +1304,12 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         ssh._createdAt = Date.now();
         ssh._lastUsed = Date.now();
         sshConnectionPool[cacheKey] = ssh;
-        // console.log(`Conexión SSH directa ${cacheKey} guardada en pool para reutilización`);
+        // console.log(`ConexiÃ³n SSH directa ${cacheKey} guardada en pool para reutilizaciÃ³n`);
       } else {
-        // console.log(`Conexión bastión ${cacheKey} - NO guardada en pool (independiente)`);
+        // console.log(`ConexiÃ³n bastiÃ³n ${cacheKey} - NO guardada en pool (independiente)`);
       }
     } else {
-      // console.log(`Usando conexión SSH directa existente del pool para terminal ${cacheKey}`);
+      // console.log(`Usando conexiÃ³n SSH directa existente del pool para terminal ${cacheKey}`);
     }
     
     // Crear shell con reintentos
@@ -1319,22 +1319,22 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     
     while (shellAttempts < maxShellAttempts) {
       try {
-        // Añadir pequeño delay entre intentos
+        // AÃ±adir pequeÃ±o delay entre intentos
         if (shellAttempts > 0) {
           await new Promise(resolve => setTimeout(resolve, 1000 * shellAttempts));
         }
         
-        // Si es una conexión Wallix, usar configuración específica para bastiones
+        // Si es una conexiÃ³n Wallix, usar configuraciÃ³n especÃ­fica para bastiones
         if (ssh._isWallixConnection && ssh._wallixTarget) {
-          // console.log(`Conexión Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
+          // console.log(`ConexiÃ³n Wallix detectada: ${config.bastionHost} -> ${ssh._wallixTarget.host}:${ssh._wallixTarget.port}`);
           
           // Para bastiones Wallix, esperar un poco antes de crear shell
-          // console.log('Esperando estabilización de conexión Wallix...');
+          // console.log('Esperando estabilizaciÃ³n de conexiÃ³n Wallix...');
           await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // console.log('Creando shell usando SSH2Promise con configuración Wallix...');
+          // console.log('Creando shell usando SSH2Promise con configuraciÃ³n Wallix...');
           
-          // Intentar con configuración específica para Wallix
+          // Intentar con configuraciÃ³n especÃ­fica para Wallix
           try {
             stream = await ssh.shell({
               term: 'xterm-256color',
@@ -1347,15 +1347,15 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
               }
             });
           } catch (shellError) {
-            // console.warn('Error con configuración Wallix, intentando configuración básica:', shellError.message);
-            // Fallback con configuración mínima
+            // console.warn('Error con configuraciÃ³n Wallix, intentando configuraciÃ³n bÃ¡sica:', shellError.message);
+            // Fallback con configuraciÃ³n mÃ­nima
             stream = await ssh.shell('xterm-256color');
           }
           
-          // console.log('Shell de bastión Wallix creado exitosamente');
+          // console.log('Shell de bastiÃ³n Wallix creado exitosamente');
           
-          // Para Wallix, verificar dónde estamos conectados
-          // console.log('Verificando estado de conexión Wallix...');
+          // Para Wallix, verificar dÃ³nde estamos conectados
+          // console.log('Verificando estado de conexiÃ³n Wallix...');
           
           // Enviar comando para verificar hostname
           stream.write('hostname\n');
@@ -1363,10 +1363,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           // Esperar un poco para procesar
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          // console.log('Para conexiones Wallix, el bastión maneja automáticamente la conexión al servidor destino');
+          // console.log('Para conexiones Wallix, el bastiÃ³n maneja automÃ¡ticamente la conexiÃ³n al servidor destino');
           
         } else {
-          // Conexión SSH directa normal
+          // ConexiÃ³n SSH directa normal
           // console.log('Creando shell SSH directo...');
           stream = await ssh.shell({ 
             term: 'xterm-256color',
@@ -1378,19 +1378,19 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         break;
       } catch (shellError) {
         shellAttempts++;
-        // console.warn(`Intento ${shellAttempts} de crear shell falló para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
+        // console.warn(`Intento ${shellAttempts} de crear shell fallÃ³ para ${cacheKey}:`, shellError?.message || shellError || 'Unknown error');
         
         if (shellAttempts >= maxShellAttempts) {
-          throw new Error(`No se pudo crear shell después de ${maxShellAttempts} intentos: ${shellError?.message || shellError || 'Unknown error'}`);
+          throw new Error(`No se pudo crear shell despuÃ©s de ${maxShellAttempts} intentos: ${shellError?.message || shellError || 'Unknown error'}`);
         }
       }
     }
     
-    // Configurar límites de listeners para el stream
-    stream.setMaxListeners(0); // Sin límite para streams individuales
+    // Configurar lÃ­mites de listeners para el stream
+    stream.setMaxListeners(0); // Sin lÃ­mite para streams individuales
 
     const storedOriginalKey = config.originalKey || tabId;
-    // console.log('Guardando conexión SSH con originalKey:', storedOriginalKey, 'para tabId:', tabId);
+    // console.log('Guardando conexiÃ³n SSH con originalKey:', storedOriginalKey, 'para tabId:', tabId);
     sshConnections[tabId] = { 
       ssh, 
       stream, 
@@ -1402,7 +1402,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       previousNet: null, 
       previousTime: null 
     };
-    // Log para depuración: mostrar todos los tabId activos
+    // Log para depuraciÃ³n: mostrar todos los tabId activos
     // console.log('[DEBUG] Conexiones SSH activas:', Object.keys(sshConnections));
 
     // Lanzar statsLoop para conexiones SSH directas (no bastion)
@@ -1440,7 +1440,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           // If it was already cached, we've already sent the cached version.
           // We do nothing here, effectively suppressing the duplicate message.
           
-                    // La configuración original ya funciona correctamente
+                    // La configuraciÃ³n original ya funciona correctamente
           return; 
         }
         
@@ -1458,9 +1458,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           clearTimeout(conn.statsTimeout);
       }
       
-      // Enviar evento de desconexión
+      // Enviar evento de desconexiÃ³n
       const disconnectOriginalKey = conn?.originalKey || tabId;
-      // console.log('🔌 SSH desconectado - enviando evento para originalKey:', disconnectOriginalKey);
+      // console.log('ðŸ”Œ SSH desconectado - enviando evento para originalKey:', disconnectOriginalKey);
       sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
         originalKey: disconnectOriginalKey,
         tabId: tabId 
@@ -1473,9 +1473,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
     sendToRenderer(event.sender, `ssh:ready:${tabId}`);
     
-    // Enviar evento de conexión exitosa
+    // Enviar evento de conexiÃ³n exitosa
     const originalKey = config.originalKey || tabId;
-    // console.log('✅ SSH conectado - enviando evento para originalKey:', originalKey);
+    // console.log('âœ… SSH conectado - enviando evento para originalKey:', originalKey);
     sendToRenderer(event.sender, 'ssh-connection-ready', { 
       originalKey: originalKey,
       tabId: tabId 
@@ -1499,9 +1499,9 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     // statsLoop(tabId, realHostname, finalDistroId, config.host);
 
   } catch (err) {
-    // console.error(`Error en conexión SSH para ${tabId}:`, err);
+    // console.error(`Error en conexiÃ³n SSH para ${tabId}:`, err);
     
-    // Limpiar conexión problemática del pool
+    // Limpiar conexiÃ³n problemÃ¡tica del pool
     if (ssh && cacheKey && sshConnectionPool[cacheKey] === ssh) {
       try {
         ssh.close();
@@ -1511,7 +1511,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       delete sshConnectionPool[cacheKey];
     }
     
-    // Crear mensaje de error más descriptivo
+    // Crear mensaje de error mÃ¡s descriptivo
     let errorMsg = 'Error desconocido al conectar por SSH';
     if (err) {
       if (typeof err === 'string') {
@@ -1519,21 +1519,21 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       } else if (err.message) {
         errorMsg = err.message;
       } else if (err.code) {
-        errorMsg = `Error de conexión: ${err.code}`;
+        errorMsg = `Error de conexiÃ³n: ${err.code}`;
       } else {
         try {
           errorMsg = JSON.stringify(err);
         } catch (jsonError) {
-          errorMsg = 'Error de conexión SSH';
+          errorMsg = 'Error de conexiÃ³n SSH';
         }
       }
     }
     
     sendToRenderer(event.sender, `ssh:error:${tabId}`, errorMsg);
     
-    // Enviar evento de error de conexión
+    // Enviar evento de error de conexiÃ³n
     const errorOriginalKey = config.originalKey || tabId;
-    // console.log('❌ SSH error - enviando evento para originalKey:', errorOriginalKey, 'error:', errorMsg);
+    // console.log('âŒ SSH error - enviando evento para originalKey:', errorOriginalKey, 'error:', errorMsg);
     sendToRenderer(event.sender, 'ssh-connection-error', { 
       originalKey: errorOriginalKey,
       tabId: tabId,
@@ -1554,7 +1554,7 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
 ipcMain.on('ssh:resize', (event, { tabId, rows, cols }) => {
     const conn = sshConnections[tabId];
     if (conn) {
-        // Guardar el último tamaño solicitado
+        // Guardar el Ãºltimo tamaÃ±o solicitado
         conn._pendingResize = { rows, cols };
         if (conn.stream && !conn.stream.destroyed) {
             try {
@@ -1582,10 +1582,10 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       
       // Para conexiones Wallix, solo necesitamos cerrar el stream principal
       if (conn.ssh && conn.ssh._isWallixConnection) {
-        // console.log('Cerrando conexión Wallix');
+        // console.log('Cerrando conexiÃ³n Wallix');
       }
       
-      // Limpiar listeners del stream de forma más agresiva
+      // Limpiar listeners del stream de forma mÃ¡s agresiva
       if (conn.stream) {
         try {
           conn.stream.removeAllListeners();
@@ -1597,32 +1597,32 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
         }
       }
       
-      // Verificar si otras pestañas están usando la misma conexión SSH
+      // Verificar si otras pestaÃ±as estÃ¡n usando la misma conexiÃ³n SSH
       const otherTabsUsingConnection = Object.values(sshConnections)
         .filter(c => c !== conn && c.cacheKey === conn.cacheKey);
       
-      // Solo cerrar la conexión SSH si no hay otras pestañas usándola
-      // (Para bastiones, cada terminal es independiente, así que siempre cerrar)
+      // Solo cerrar la conexiÃ³n SSH si no hay otras pestaÃ±as usÃ¡ndola
+      // (Para bastiones, cada terminal es independiente, asÃ­ que siempre cerrar)
       if (otherTabsUsingConnection.length === 0 && conn.ssh && conn.cacheKey) {
         try {
-                // console.log(`Cerrando conexión SSH compartida para ${conn.cacheKey} (última pestaña)`);
+                // console.log(`Cerrando conexiÃ³n SSH compartida para ${conn.cacheKey} (Ãºltima pestaÃ±a)`);
       
-      // Enviar evento de desconexión
+      // Enviar evento de desconexiÃ³n
       const disconnectOriginalKey = conn.originalKey || conn.cacheKey;
-      // console.log('🔌 SSH cerrado - enviando evento para originalKey:', disconnectOriginalKey);
+      // console.log('ðŸ”Œ SSH cerrado - enviando evento para originalKey:', disconnectOriginalKey);
       sendToRenderer(event.sender, 'ssh-connection-disconnected', { 
         originalKey: disconnectOriginalKey
       });
       
-      // Limpiar listeners específicos de la conexión SSH de forma más selectiva
+      // Limpiar listeners especÃ­ficos de la conexiÃ³n SSH de forma mÃ¡s selectiva
       if (conn.ssh.ssh) {
-        // Solo remover listeners específicos en lugar de todos
+        // Solo remover listeners especÃ­ficos en lugar de todos
         conn.ssh.ssh.removeAllListeners('error');
         conn.ssh.ssh.removeAllListeners('close');
         conn.ssh.ssh.removeAllListeners('end');
       }
       
-      // Limpiar listeners del SSH2Promise también
+      // Limpiar listeners del SSH2Promise tambiÃ©n
       conn.ssh.removeAllListeners('error');
       conn.ssh.removeAllListeners('close');
       conn.ssh.removeAllListeners('end');
@@ -1633,7 +1633,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
           // console.warn(`Error closing SSH connection: ${closeError?.message || closeError || 'Unknown error'}`);
         }
       } else {
-        // console.log(`Manteniendo conexión SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestañas restantes)`);
+        // console.log(`Manteniendo conexiÃ³n SSH para ${conn.cacheKey} (${otherTabsUsingConnection.length} pestaÃ±as restantes)`);
       }
       
     } catch (error) {
@@ -1667,12 +1667,12 @@ ipcMain.on('app-quit', () => {
     if (conn.ssh) {
       try {
         if (conn.ssh.ssh) {
-          // Limpiar listeners específicos en lugar de todos en app-quit
+          // Limpiar listeners especÃ­ficos en lugar de todos en app-quit
           conn.ssh.ssh.removeAllListeners('error');
           conn.ssh.ssh.removeAllListeners('close');
           conn.ssh.ssh.removeAllListeners('end');
         }
-        // Limpiar listeners del SSH2Promise también
+        // Limpiar listeners del SSH2Promise tambiÃ©n
         conn.ssh.removeAllListeners('error');
         conn.ssh.removeAllListeners('close');
         conn.ssh.removeAllListeners('end');
@@ -1683,10 +1683,10 @@ ipcMain.on('app-quit', () => {
     }
   });
   
-  // Limpiar también el pool de conexiones con mejor limpieza
+  // Limpiar tambiÃ©n el pool de conexiones con mejor limpieza
   Object.values(sshConnectionPool).forEach(poolConn => {
     try {
-      // Limpiar listeners del pool también
+      // Limpiar listeners del pool tambiÃ©n
       poolConn.removeAllListeners('error');
       poolConn.removeAllListeners('close');
       poolConn.removeAllListeners('end');
@@ -1704,7 +1704,7 @@ ipcMain.on('app-quit', () => {
   app.quit();
 });
 
-// Limpieza robusta también en before-quit
+// Limpieza robusta tambiÃ©n en before-quit
 app.on('before-quit', () => {
   isAppQuitting = true;
   
@@ -1725,12 +1725,12 @@ app.on('before-quit', () => {
     if (conn.ssh) {
       try {
         if (conn.ssh.ssh) {
-          // Limpiar listeners específicos en lugar de todos en before-quit
+          // Limpiar listeners especÃ­ficos en lugar de todos en before-quit
           conn.ssh.ssh.removeAllListeners('error');
           conn.ssh.ssh.removeAllListeners('close');
           conn.ssh.ssh.removeAllListeners('end');
         }
-        // Limpiar listeners del SSH2Promise también
+        // Limpiar listeners del SSH2Promise tambiÃ©n
         conn.ssh.removeAllListeners('error');
         conn.ssh.removeAllListeners('close');
         conn.ssh.removeAllListeners('end');
@@ -1741,10 +1741,10 @@ app.on('before-quit', () => {
     }
   });
   
-  // Limpiar también el pool de conexiones con mejor limpieza
+  // Limpiar tambiÃ©n el pool de conexiones con mejor limpieza
   Object.values(sshConnectionPool).forEach(poolConn => {
     try {
-      // Limpiar listeners del pool también
+      // Limpiar listeners del pool tambiÃ©n
       poolConn.removeAllListeners('error');
       poolConn.removeAllListeners('close');
       poolConn.removeAllListeners('end');
@@ -1769,7 +1769,7 @@ ipcMain.handle('clipboard:writeText', (event, text) => {
   clipboard.writeText(text);
 });
 
-// Handler para mostrar el diálogo de guardado
+// Handler para mostrar el diÃ¡logo de guardado
 ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
   const win = BrowserWindow.getFocusedWindow();
   return await dialog.showSaveDialog(win, options);
@@ -1780,14 +1780,14 @@ ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
 ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
   try {
     if (sshConfig.useBastionWallix) {
-      // Construir string de conexión Wallix para SFTP
+      // Construir string de conexiÃ³n Wallix para SFTP
       // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
-      // En la mayoría de los casos, bastionUser ya tiene el formato correcto
+      // En la mayorÃ­a de los casos, bastionUser ya tiene el formato correcto
       const sftp = new SftpClient();
       const connectConfig = {
         host: sshConfig.bastionHost,
         port: sshConfig.port || 22,
-        username: sshConfig.bastionUser, // Wallix espera el string especial aquí
+        username: sshConfig.bastionUser, // Wallix espera el string especial aquÃ­
         password: sshConfig.password,
         readyTimeout: 20000,
       };
@@ -1923,26 +1923,26 @@ function sendToRenderer(sender, eventName, ...args) {
     if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
       // Solo logear eventos SSH para debugging
       if (eventName.startsWith('ssh-connection-')) {
-        // console.log('📡 Enviando evento SSH:', eventName, 'con args:', args);
+        // console.log('ðŸ“¡ Enviando evento SSH:', eventName, 'con args:', args);
       }
       sender.send(eventName, ...args);
     } else {
-      // console.error('Sender no válido o destruido para evento:', eventName);
+      // console.error('Sender no vÃ¡lido o destruido para evento:', eventName);
     }
   } catch (error) {
     // console.error('Error sending to renderer:', eventName, error);
   }
 }
 
-// Función para limpiar conexiones huérfanas del pool cada 10 minutos
+// FunciÃ³n para limpiar conexiones huÃ©rfanas del pool cada 10 minutos
 function cleanupOrphanedConnections() {
   Object.keys(sshConnectionPool).forEach(cacheKey => {
     const poolConnection = sshConnectionPool[cacheKey];
-    // Verificar si hay alguna conexión activa usando esta conexión del pool
+    // Verificar si hay alguna conexiÃ³n activa usando esta conexiÃ³n del pool
     const hasActiveConnections = Object.values(sshConnections).some(conn => conn.cacheKey === cacheKey);
     
     if (!hasActiveConnections) {
-      // console.log(`Limpiando conexión SSH huérfana: ${cacheKey}`);
+      // console.log(`Limpiando conexiÃ³n SSH huÃ©rfana: ${cacheKey}`);
       try {
         // Limpiar listeners antes de cerrar
         poolConnection.removeAllListeners('error');
@@ -1972,11 +1972,11 @@ async function findSSHConnection(tabId, sshConfig = null) {
     return sshConnections[tabId];
   }
   
-  // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexión al mismo servidor
+  // Si no existe por tabId y tenemos sshConfig, buscar cualquier conexiÃ³n al mismo servidor
   if (sshConfig && sshConfig.host && sshConfig.username) {
-    // Para bastiones: buscar cualquier conexión activa al mismo destino via bastión
+    // Para bastiones: buscar cualquier conexiÃ³n activa al mismo destino via bastiÃ³n
     if (sshConfig.useBastionWallix) {
-      // Buscar en conexiones activas cualquier conexión que vaya al mismo destino via bastión
+      // Buscar en conexiones activas cualquier conexiÃ³n que vaya al mismo destino via bastiÃ³n
       for (const conn of Object.values(sshConnections)) {
         if (conn.config && 
             conn.config.useBastionWallix &&
@@ -1985,9 +1985,9 @@ async function findSSHConnection(tabId, sshConfig = null) {
             conn.config.host === sshConfig.host &&
             conn.config.username === sshConfig.username &&
             (conn.config.port || 22) === (sshConfig.port || 22)) {
-          // Aquí antes había un console.log(` incompleto que causaba error de sintaxis
-          // Si se desea loggear, usar una línea válida como:
-          // console.log('Conexión encontrada para bastion:', conn);
+          // AquÃ­ antes habÃ­a un console.log(` incompleto que causaba error de sintaxis
+          // Si se desea loggear, usar una lÃ­nea vÃ¡lida como:
+          // console.log('ConexiÃ³n encontrada para bastion:', conn);
           return conn;
         }
       }
@@ -1997,8 +1997,8 @@ async function findSSHConnection(tabId, sshConfig = null) {
   return null;
 }
 
-// --- INICIO BLOQUE RESTAURACIÓN STATS ---
-// Función de statsLoop para conexiones directas (SSH2Promise)
+// --- INICIO BLOQUE RESTAURACIÃ“N STATS ---
+// FunciÃ³n de statsLoop para conexiones directas (SSH2Promise)
 async function statsLoop(tabId, realHostname, finalDistroId, host) {
   const conn = sshConnections[tabId];
   if (activeStatsTabId !== tabId) {
@@ -2070,7 +2070,7 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
     }
     conn.previousNet = currentNet;
     conn.previousTime = currentTime;
-    // Buscar IP real (última línea, tomar la última IP válida)
+    // Buscar IP real (Ãºltima lÃ­nea, tomar la Ãºltima IP vÃ¡lida)
     let ip = '';
     if (parts.length > 0) {
       const ipLine = parts[parts.length - 1].trim();
@@ -2080,7 +2080,7 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
       }
     }
     if (!ip) ip = host;
-    // Normalización de distro (RedHat) y obtención de versionId
+    // NormalizaciÃ³n de distro (RedHat) y obtenciÃ³n de versionId
     let versionId = '';
     try {
       // Buscar ID, ID_LIKE y VERSION_ID en todo el output
@@ -2122,7 +2122,7 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
       versionId,
       ip
     };
-    // Actualizar los valores en la conexión para que siempre estén correctos al reactivar la pestaña
+    // Actualizar los valores en la conexiÃ³n para que siempre estÃ©n correctos al reactivar la pestaÃ±a
     conn.realHostname = realHostname;
     conn.finalDistroId = finalDistroId;
     // LOG DEBUG: Enviar stats a cada tabId
@@ -2137,7 +2137,7 @@ async function statsLoop(tabId, realHostname, finalDistroId, host) {
     }
   }
 }
-// --- FIN BLOQUE RESTAURACIÓN STATS ---
+// --- FIN BLOQUE RESTAURACIÃ“N STATS ---
 
 let activeStatsTabId = null;
 
@@ -2193,9 +2193,9 @@ ipcMain.handle('window:close', () => {
 // IPC handlers for RDP connections
 ipcMain.handle('rdp:connect', async (event, config) => {
   try {
-    // Verificar si se está usando ActiveX
+    // Verificar si se estÃ¡ usando ActiveX
     if (config.useActiveX || config.client === 'activex') {
-      // Para ActiveX, solo retornar éxito - la conexión se maneja en el renderer
+      // Para ActiveX, solo retornar Ã©xito - la conexiÃ³n se maneja en el renderer
       const connectionId = `activex_${Date.now()}`;
       
       return {
@@ -2206,7 +2206,7 @@ ipcMain.handle('rdp:connect', async (event, config) => {
       };
     }
     
-    // Conexión normal con clientes externos
+    // ConexiÃ³n normal con clientes externos
     const connectionId = await rdpManager.connect(config);
     
     // Setup process handlers for events
@@ -2262,7 +2262,7 @@ ipcMain.handle('rdp:get-available-clients', async (event) => {
   return await rdpManager.getAvailableClients();
 });
 
-// Handler para mostrar ventana RDP si está minimizada
+// Handler para mostrar ventana RDP si estÃ¡ minimizada
 ipcMain.handle('rdp:show-window', async (event, { server }) => {
   try {
     const { exec } = require('child_process');
@@ -2318,7 +2318,7 @@ try {
       Write-Host "SUCCESS: Ventana restaurada para proceso $($process.Id)"
       break
     } else {
-      Write-Host "ERROR: Proceso $($process.Id) no tiene ventana válida"
+      Write-Host "ERROR: Proceso $($process.Id) no tiene ventana vÃ¡lida"
     }
   }
 } catch {
@@ -2349,14 +2349,14 @@ try {
         return { success: false, error: error.message };
       }
     } else {
-      return { success: false, message: 'Función solo disponible en Windows' };
+      return { success: false, message: 'FunciÃ³n solo disponible en Windows' };
     }
   } catch (error) {
     return { success: false, error: error.message };
   }
 });
 
-// Handler para desconectar sesión RDP específica
+// Handler para desconectar sesiÃ³n RDP especÃ­fica
 ipcMain.handle('rdp:disconnect-session', async (event, { server }) => {
   try {
     // Buscar y terminar procesos mstsc.exe que coincidan con el servidor
@@ -2377,7 +2377,7 @@ ipcMain.handle('rdp:disconnect-session', async (event, { server }) => {
         return { success: false, error: error.message };
       }
     } else {
-      return { success: false, message: 'Función solo disponible en Windows' };
+      return { success: false, message: 'FunciÃ³n solo disponible en Windows' };
     }
   } catch (error) {
     return { success: false, error: error.message };
@@ -2418,6 +2418,21 @@ ipcMain.handle('rdp:get-parent-window-handle', async (event) => {
     return null;
   } catch (error) {
     console.error('Error getting parent window handle:', error);
+    return null;
+  }
+});
+
+// Handler para obtener el handle del contenedor
+ipcMain.handle('rdp:get-container-window-handle', async (event, element) => {
+  try {
+    // Por ahora, usar la ventana principal como contenedor
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      return win.getNativeWindowHandle().readBigUInt64LE(0);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting container window handle:', error);
     return null;
   }
 });
@@ -2475,20 +2490,38 @@ ipcMain.handle('rdp:set-activex-credentials', async (event, instanceId, username
   }
 });
 
-// Handler para configurar resolución
+// Handler para configurar resoluciÃ³n
 ipcMain.handle('rdp:set-activex-display-settings', async (event, instanceId, width, height) => {
   try {
-    console.log('Main: Configurando resolución para instancia:', instanceId, 'resolución:', width, 'x', height);
+    console.log('Main: Configurando resoluciÃ³n para instancia:', instanceId, 'resoluciÃ³n:', width, 'x', height);
     const manager = getRdpActiveXManager();
     if (!manager) {
       throw new Error('RDP ActiveX manager not available');
     }
     
     manager.setDisplaySettings(instanceId, width, height);
-    console.log('Main: Resolución configurada correctamente');
+    console.log('Main: ResoluciÃ³n configurada correctamente');
     return { success: true };
   } catch (error) {
     console.error('Error setting ActiveX display settings:', error);
+    throw error;
+  }
+});
+
+// Handler para conectar RDP
+ipcMain.handle('rdp:connect-activex', async (event, instanceId, server, username, password) => {
+  try {
+    console.log('Main: Conectando RDP para instancia:', instanceId, 'servidor:', server, 'usuario:', username);
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    const success = manager.connect(instanceId, server, username, password);
+    console.log('Main: ConexiÃ³n RDP iniciada:', success);
+    return { success: success };
+  } catch (error) {
+    console.error('Error connecting RDP:', error);
     throw error;
   }
 });
@@ -2553,24 +2586,9 @@ ipcMain.handle('rdp:set-activex-event-handlers', async (event, instanceId, handl
   }
 });
 
-// Handler para conectar
-ipcMain.handle('rdp:connect-activex', async (event, instanceId) => {
-  try {
-    console.log('Main: Conectando instancia ActiveX:', instanceId);
-    const manager = getRdpActiveXManager();
-    if (!manager) {
-      throw new Error('RDP ActiveX manager not available');
-    }
-    
-    console.log('Main: Manager obtenido, iniciando conexión...');
-    manager.connect(instanceId);
-    console.log('Main: Comando de conexión enviado al manager');
-    return { success: true };
-  } catch (error) {
-    console.error('Error connecting ActiveX:', error);
-    throw error;
-  }
-});
+// Handler para conectar (DUPLICADO - ELIMINADO)
+// Este handler estaba duplicado y causaba el error "Attempted to register a second handler"
+// Se mantiene solo el handler de la línea 2512 que acepta server, username, password
 
 // Handler para desconectar
 ipcMain.handle('rdp:disconnect-activex', async (event, instanceId) => {
@@ -2604,6 +2622,541 @@ ipcMain.handle('rdp:resize-activex', async (event, instanceId, x, y, width, heig
   }
 });
 
+    // Handler para obtener el estado del control ActiveX
+    ipcMain.handle('rdp:get-activex-status', async (event, instanceId) => {
+      try {
+        const manager = getRdpActiveXManager();
+        if (!manager) {
+          throw new Error('RDP ActiveX manager not available');
+        }
+        
+        const status = manager.getStatus(instanceId);
+        return { success: true, status };
+      } catch (error) {
+        console.error('Error getting ActiveX status:', error);
+        throw error;
+      }
+    });
+
+    // Handler para crear una ventana hija para el control ActiveX
+    ipcMain.handle('rdp:create-activex-child-window', async (event, { x, y, width, height, instanceId, server, username }) => {
+      try {
+        console.log('Main: Creando ventana hija para ActiveX:', { x, y, width, height, instanceId, server, username });
+        
+        // Crear una ventana hija de la ventana principal
+        const childWindow = new BrowserWindow({
+          parent: mainWindow,
+          width: width,
+          height: height,
+          x: x,
+          y: y,
+          frame: true, // Cambiar a true para debugging
+          transparent: false, // Cambiar a false para debugging
+          resizable: true, // Cambiar a true para debugging
+          minimizable: true, // Cambiar a true para debugging
+          maximizable: true, // Cambiar a true para debugging
+          skipTaskbar: false, // Cambiar a false para debugging
+          alwaysOnTop: false,
+          show: true, // Mostrar inmediatamente para debugging
+          webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true,
+            webSecurity: false,
+            // Agregar rutas para el mÃ³dulo nativo
+            additionalArguments: [
+              `--native-module-path=${path.join(__dirname, 'native', 'rdp-activex', 'build', 'Release')}`
+            ]
+          }
+        });
+
+        // Abrir DevTools automáticamente para debugging
+        childWindow.webContents.openDevTools({ mode: 'detach' });
+
+        // Cargar una pÃ¡gina HTML simple que contendrÃ¡ el control ActiveX
+        const params = new URLSearchParams({
+            instanceId: instanceId.toString(),
+            server: server || 'localhost',
+            username: username || 'user',
+            width: width.toString(),
+            height: height.toString()
+        });
+        
+        console.log('Main: ParÃ¡metros para ventana hija:', params.toString());
+        
+        
+        const htmlPath = path.join(__dirname, 'native', 'rdp-activex', 'activex-window.html');
+        
+        
+                        try {
+                    
+                    
+                    
+                    
+                    // Usar loadURL en lugar de loadFile para incluir los parÃ¡metros de query
+                    const fileURL = `file:///${htmlPath.replace(/\\/g, '/')}?${params.toString()}`;
+                    console.log('Main: File URL con parÃ¡metros:', fileURL);
+                    
+                    await childWindow.loadURL(fileURL);
+                    
+                    
+                    // Verificar la URL despuÃ©s de cargar
+                    const currentURL = childWindow.webContents.getURL();
+                    
+                } catch (error) {
+                    console.error('Main: Error cargando archivo HTML:', error);
+                    console.error('Main: Error details:', error.message);
+                }
+        
+        // Agregar evento para cuando la ventana se carga completamente
+        childWindow.webContents.on('did-finish-load', () => {
+            console.log('Main: Ventana hija cargada completamente para instancia:', instanceId);
+            console.log('Main: URL de la ventana hija en did-finish-load:', childWindow.webContents.getURL());
+            
+                            // Ejecutar JavaScript en la ventana hija para inicializar el control ActiveX
+                childWindow.webContents.executeJavaScript(`
+                    console.log('Main Process: JavaScript iniciado en ventana hija');
+                    console.log('Main Process: Verificando parámetros de URL...');
+                    
+                    
+                    // FunciÃ³n para inicializar el control ActiveX
+                    async function initializeActiveXControl() {
+                        try {
+                            console.log('Main Process: FunciÃ³n initializeActiveXControl iniciada');
+                            console.log('Main Process: Inicializando control ActiveX...');
+                            
+                            // Obtener parÃ¡metros de la URL
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const instanceId = urlParams.get('instanceId');
+                            const server = urlParams.get('server');
+                            const username = urlParams.get('username');
+                            const width = urlParams.get('width');
+                            const height = urlParams.get('height');
+                            
+                            
+                            
+                            console.log('Main Process: ParÃ¡metros recibidos:', { instanceId, server, username, width, height });
+                            
+                            // Actualizar el contenido del contenedor
+                            const container = document.querySelector('#rdp-container');
+                            console.log('Main Process: Container encontrado:', !!container);
+                            console.log('Main Process: Container ID:', container ? container.id : 'not found');
+                            
+                            if (!container || !instanceId || !server) {
+                                return 'error: missing data - container: ' + !!container + ', instanceId: ' + !!instanceId + ', server: ' + !!server;
+                            }
+                            
+                            // Mostrar mensaje de inicializaciÃ³n
+                            container.innerHTML = \`
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <div style="text-align: center;">
+                                        <h3>RDP ActiveX Control</h3>
+                                        <p>Inicializando control ActiveX...</p>
+                                        <p>Servidor: \${server}</p>
+                                        <p>Usuario: \${username}</p>
+                                        <p>Instance ID: \${instanceId}</p>
+                                        <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                    </div>
+                                </div>
+                            \`;
+                            
+                            // Verificar si estamos en un entorno Electron con Node.js
+                            if (typeof require !== 'undefined') {
+                                console.log('Main Process: Node.js disponible, cargando mÃ³dulo nativo...');
+                                
+                                try {
+                                    // Cargar el mÃ³dulo nativo de ActiveX
+                                    const rdpActiveX = require('./native/rdp-activex/build/Release/rdp_activex_basic.node');
+                                    console.log('Main Process: MÃ³dulo nativo cargado:', rdpActiveX);
+                                    console.log('Main Process: Funciones disponibles:', Object.keys(rdpActiveX));
+                                    console.log('Main Process: RdpBasicWrapper disponible:', !!rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: RdpBasicWrapper constructor:', typeof rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: Funciones disponibles:', Object.keys(rdpActiveX));
+                                    console.log('Main Process: RdpBasicWrapper disponible:', !!rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: RdpBasicWrapper constructor:', typeof rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: Funciones disponibles:', Object.keys(rdpActiveX));
+                                    console.log('Main Process: RdpBasicWrapper disponible:', !!rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: RdpBasicWrapper constructor:', typeof rdpActiveX.RdpBasicWrapper);
+                                    
+                                    // Obtener el handle de la ventana actual
+                                    const containerHandle = BigInt(0); // Por ahora usamos 0 como handle por defecto
+                                    
+                                    // Inicializar el control ActiveX
+                                    // Verificar si las funciones necesarias estÃ¡n disponibles
+                                    if (!rdpActiveX.RdpBasicWrapper) {
+                                        throw new Error('Clase RdpBasicWrapper no disponible. Funciones disponibles: ' + Object.keys(rdpActiveX).join(', '));
+                                    }
+                                    
+                                    // Crear una instancia del wrapper
+                                    const rdpWrapper = new rdpActiveX.RdpBasicWrapper();
+                                    console.log('Main Process: Wrapper creado:', rdpWrapper);
+                                    console.log('Main Process: Wrapper methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(rdpWrapper)));
+                                    console.log('Main Process: Wrapper methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(rdpWrapper)));
+                                    
+                                    // Inicializar el control ActiveX
+                                    const result = rdpWrapper.initialize(containerHandle);
+                                    console.log('Main Process: Control inicializado:', result);
+                                    console.log('Main Process: Result type:', typeof result);
+                                    console.log('Main Process: Result type:', typeof result);
+                                    
+                                    if (result) {
+                                        // Configurar el servidor
+                                        // Conectar directamente con servidor y credenciales
+                                        console.log('Main Process: Servidor configurado:', server);
+                                        
+                                        // Configurar credenciales
+                                        
+                                        console.log('Main Process: Credenciales configuradas');
+                                        
+                                        // Configurar resoluciÃ³n
+                                        
+                                        console.log('Main Process: ResoluciÃ³n configurada:', width + 'x' + height);
+                                        
+                                        // Conectar
+                                        container.innerHTML = \`
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                <div style="text-align: center;">
+                                                    <h3>RDP ActiveX Control</h3>
+                                                    <p>Conectando a \${server}...</p>
+                                                    <p>Usuario: \${username}</p>
+                                                    <p>Instance ID: \${instanceId}</p>
+                                                    <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                </div>
+                                            </div>
+                                        \`;
+                                        
+                                        const connectResult = rdpWrapper.connect(server, username, '');
+                                        console.log('Main Process: Resultado de conexiÃ³n:', connectResult);
+                                        
+                                        if (connectResult) {
+                                            container.innerHTML = \`
+                                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                    <div style="text-align: center;">
+                                                        <h3>RDP ActiveX Control</h3>
+                                                        <p style="color: #00ff00;">âœ“ Conectado a \${server}</p>
+                                                        <p>Usuario: \${username}</p>
+                                                        <p>Instance ID: \${instanceId}</p>
+                                                        <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                        <p style="color: #00ff00;">âœ“ Control ActiveX inicializado</p>
+                                                    </div>
+                                                </div>
+                                            \`;
+                                            return 'success: connected';
+                                        } else {
+                                            container.innerHTML = \`
+                                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                    <div style="text-align: center;">
+                                                        <h3>RDP ActiveX Control</h3>
+                                                        <p style="color: #ff0000;">âœ— Error al conectar con \${server}</p>
+                                                        <p>Usuario: \${username}</p>
+                                                        <p>Instance ID: \${instanceId}</p>
+                                                        <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                    </div>
+                                                </div>
+                                            \`;
+                                            return 'error: connection failed';
+                                        }
+                                    } else {
+                                        container.innerHTML = \`
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                <div style="text-align: center;">
+                                                    <h3>RDP ActiveX Control</h3>
+                                                    <p style="color: #ff0000;">âœ— Error al inicializar el control ActiveX</p>
+                                                    <p>Usuario: \${username}</p>
+                                                    <p>Instance ID: \${instanceId}</p>
+                                                    <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                </div>
+                                            </div>
+                                        \`;
+                                        return 'error: initialization failed';
+                                    }
+                                } catch (moduleError) {
+                                    console.error('Main Process: Error cargando mÃ³dulo nativo:', moduleError);
+                                    container.innerHTML = \`
+                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                            <div style="text-align: center;">
+                                                <h3>RDP ActiveX Control</h3>
+                                                <p style="color: #ff0000;">âœ— Error cargando mÃ³dulo nativo</p>
+                                                <p>Error: \${moduleError.message}</p>
+                                                <p>Usuario: \${username}</p>
+                                                <p>Instance ID: \${instanceId}</p>
+                                                <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                            </div>
+                                        </div>
+                                    \`;
+                                    return 'error: module load failed - ' + moduleError.message;
+                                }
+                            } else {
+                                console.log('Main Process: Node.js no disponible, usando fallback...');
+                                container.innerHTML = \`
+                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                        <div style="text-align: center;">
+                                            <h3>RDP ActiveX Control</h3>
+                                            <p>Conectando a \${server}...</p>
+                                            <p>Usuario: \${username}</p>
+                                            <p>Instance ID: \${instanceId}</p>
+                                            <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                            <p style="color: #ffff00;">âš  Modo fallback - Control ActiveX no disponible</p>
+                                        </div>
+                                    </div>
+                                \`;
+                                return 'fallback: node.js not available';
+                            }
+                        } catch (error) {
+                            console.error('Main Process: Error en initializeActiveXControl:', error);
+                            return 'error: ' + error.message;
+                        }
+                    }
+                    
+                    // Ejecutar la funciÃ³n y devolver el resultado
+                    initializeActiveXControl();
+                `).then((result) => {
+                    console.log('Main: Resultado del JavaScript en ventana hija:', result);
+                }).catch((error) => {
+                    console.error('Main: Error ejecutando JavaScript en ventana hija:', error);
+                });
+        });
+        
+                    // Timeout de respaldo para ejecutar JavaScript si did-finish-load no se dispara
+            setTimeout(() => {
+                console.log('Main: Timeout de respaldo - ejecutando JavaScript en ventana hija');
+                childWindow.webContents.executeJavaScript(`
+                    console.log('Main Process: JavaScript iniciado en ventana hija (timeout)');
+                    console.log('Main Process: Verificando parámetros de URL (timeout)...');
+                    console.log('Main Process: DOM ready (timeout):', document.readyState);
+                    
+                    // FunciÃ³n para inicializar el control ActiveX
+                    async function initializeActiveXControl() {
+                        try {
+                            console.log('Main Process: FunciÃ³n initializeActiveXControl iniciada');
+                            console.log('Main Process: Inicializando control ActiveX...');
+                            
+                            // Obtener parÃ¡metros de la URL
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const instanceId = urlParams.get('instanceId');
+                            const server = urlParams.get('server');
+                            const username = urlParams.get('username');
+                            const width = urlParams.get('width');
+                            const height = urlParams.get('height');
+                            
+                            
+                            
+                            console.log('Main Process: ParÃ¡metros recibidos:', { instanceId, server, username, width, height });
+                            
+                            // Actualizar el contenido del contenedor
+                            const container = document.querySelector('#rdp-container');
+                            console.log('Main Process: Container encontrado:', !!container);
+                            console.log('Main Process: Container ID:', container ? container.id : 'not found');
+                            
+                            if (!container || !instanceId || !server) {
+                                return 'error: missing data - container: ' + !!container + ', instanceId: ' + !!instanceId + ', server: ' + !!server;
+                            }
+                            
+                            // Mostrar mensaje de inicializaciÃ³n
+                            container.innerHTML = \`
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <div style="text-align: center;">
+                                        <h3>RDP ActiveX Control</h3>
+                                        <p>Inicializando control ActiveX...</p>
+                                        <p>Servidor: \${server}</p>
+                                        <p>Usuario: \${username}</p>
+                                        <p>Instance ID: \${instanceId}</p>
+                                        <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                    </div>
+                                </div>
+                            \`;
+                            
+                            // Verificar si estamos en un entorno Electron con Node.js
+                            if (typeof require !== 'undefined') {
+                                console.log('Main Process: Node.js disponible, cargando mÃ³dulo nativo...');
+                                
+                                try {
+                                    // Cargar el mÃ³dulo nativo de ActiveX
+                                    const rdpActiveX = require('./native/rdp-activex/build/Release/rdp_activex_basic.node');
+                                    console.log('Main Process: MÃ³dulo nativo cargado:', rdpActiveX);
+                                    console.log('Main Process: Funciones disponibles:', Object.keys(rdpActiveX));
+                                    console.log('Main Process: RdpBasicWrapper disponible:', !!rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: RdpBasicWrapper constructor:', typeof rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: Funciones disponibles:', Object.keys(rdpActiveX));
+                                    console.log('Main Process: RdpBasicWrapper disponible:', !!rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: RdpBasicWrapper constructor:', typeof rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: Funciones disponibles:', Object.keys(rdpActiveX));
+                                    console.log('Main Process: RdpBasicWrapper disponible:', !!rdpActiveX.RdpBasicWrapper);
+                                    console.log('Main Process: RdpBasicWrapper constructor:', typeof rdpActiveX.RdpBasicWrapper);
+                                    
+                                    // Obtener el handle de la ventana actual
+                                    const containerHandle = BigInt(0); // Por ahora usamos 0 como handle por defecto
+                                    
+                                    // Inicializar el control ActiveX
+                                    // Verificar si las funciones necesarias estÃ¡n disponibles
+                                    if (!rdpActiveX.RdpBasicWrapper) {
+                                        throw new Error('Clase RdpBasicWrapper no disponible. Funciones disponibles: ' + Object.keys(rdpActiveX).join(', '));
+                                    }
+                                    
+                                    // Crear una instancia del wrapper
+                                    const rdpWrapper = new rdpActiveX.RdpBasicWrapper();
+                                    console.log('Main Process: Wrapper creado:', rdpWrapper);
+                                    console.log('Main Process: Wrapper methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(rdpWrapper)));
+                                    console.log('Main Process: Wrapper methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(rdpWrapper)));
+                                    
+                                    // Inicializar el control ActiveX
+                                    const result = rdpWrapper.initialize(containerHandle);
+                                    console.log('Main Process: Control inicializado:', result);
+                                    console.log('Main Process: Result type:', typeof result);
+                                    console.log('Main Process: Result type:', typeof result);
+                                    
+                                    if (result) {
+                                        // Configurar el servidor
+                                        // Conectar directamente con servidor y credenciales
+                                        console.log('Main Process: Servidor configurado:', server);
+                                        
+                                        // Configurar credenciales
+                                        
+                                        console.log('Main Process: Credenciales configuradas');
+                                        
+                                        // Configurar resoluciÃ³n
+                                        
+                                        console.log('Main Process: ResoluciÃ³n configurada:', width + 'x' + height);
+                                        
+                                        // Conectar
+                                        container.innerHTML = \`
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                <div style="text-align: center;">
+                                                    <h3>RDP ActiveX Control</h3>
+                                                    <p>Conectando a \${server}...</p>
+                                                    <p>Usuario: \${username}</p>
+                                                    <p>Instance ID: \${instanceId}</p>
+                                                    <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                </div>
+                                            </div>
+                                        \`;
+                                        
+                                        const connectResult = rdpWrapper.connect(server, username, '');
+                                        console.log('Main Process: Resultado de conexiÃ³n:', connectResult);
+                                        
+                                        if (connectResult) {
+                                            container.innerHTML = \`
+                                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                    <div style="text-align: center;">
+                                                        <h3>RDP ActiveX Control</h3>
+                                                        <p style="color: #00ff00;">âœ“ Conectado a \${server}</p>
+                                                        <p>Usuario: \${username}</p>
+                                                        <p>Instance ID: \${instanceId}</p>
+                                                        <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                        <p style="color: #00ff00;">âœ“ Control ActiveX inicializado</p>
+                                                    </div>
+                                                </div>
+                                            \`;
+                                            return 'success: connected';
+                                        } else {
+                                            container.innerHTML = \`
+                                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                    <div style="text-align: center;">
+                                                        <h3>RDP ActiveX Control</h3>
+                                                        <p style="color: #ff0000;">âœ— Error al conectar con \${server}</p>
+                                                        <p>Usuario: \${username}</p>
+                                                        <p>Instance ID: \${instanceId}</p>
+                                                        <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                    </div>
+                                                </div>
+                                            \`;
+                                            return 'error: connection failed';
+                                        }
+                                    } else {
+                                        container.innerHTML = \`
+                                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                                <div style="text-align: center;">
+                                                    <h3>RDP ActiveX Control</h3>
+                                                    <p style="color: #ff0000;">âœ— Error al inicializar el control ActiveX</p>
+                                                    <p>Usuario: \${username}</p>
+                                                    <p>Instance ID: \${instanceId}</p>
+                                                    <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                                </div>
+                                            </div>
+                                        \`;
+                                        return 'error: initialization failed';
+                                    }
+                                } catch (moduleError) {
+                                    console.error('Main Process: Error cargando mÃ³dulo nativo:', moduleError);
+                                    container.innerHTML = \`
+                                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                            <div style="text-align: center;">
+                                                <h3>RDP ActiveX Control</h3>
+                                                <p style="color: #ff0000;">âœ— Error cargando mÃ³dulo nativo</p>
+                                                <p>Error: \${moduleError.message}</p>
+                                                <p>Usuario: \${username}</p>
+                                                <p>Instance ID: \${instanceId}</p>
+                                                <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                            </div>
+                                        </div>
+                                    \`;
+                                    return 'error: module load failed - ' + moduleError.message;
+                                }
+                            } else {
+                                console.log('Main Process: Node.js no disponible, usando fallback...');
+                                container.innerHTML = \`
+                                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                                        <div style="text-align: center;">
+                                            <h3>RDP ActiveX Control</h3>
+                                            <p>Conectando a \${server}...</p>
+                                            <p>Usuario: \${username}</p>
+                                            <p>Instance ID: \${instanceId}</p>
+                                            <p>ResoluciÃ³n: \${width}x\${height}</p>
+                                            <p style="color: #ffff00;">âš  Modo fallback - Control ActiveX no disponible</p>
+                                        </div>
+                                    </div>
+                                \`;
+                                return 'fallback: node.js not available';
+                            }
+                        } catch (error) {
+                            console.error('Main Process: Error en initializeActiveXControl:', error);
+                            return 'error: ' + error.message;
+                        }
+                    }
+                    
+                    // Ejecutar la funciÃ³n y devolver el resultado
+                    initializeActiveXControl();
+                `).then((result) => {
+                    console.log('Main: Resultado del JavaScript en ventana hija:', result);
+                }).catch((error) => {
+                    console.error('Main: Error ejecutando JavaScript por timeout en ventana hija:', error);
+                });
+            }, 2000); // 2 segundos de timeout
+        
+        // Agregar evento para errores de carga
+        childWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+            console.error('Main: Error cargando ventana hija:', errorCode, errorDescription);
+        });
+        
+        // Agregar evento para cuando la ventana se muestra
+        childWindow.on('show', () => {
+            console.log('Main: Ventana hija mostrada para instancia:', instanceId);
+        });
+        
+        // Agregar evento para cuando la ventana se cierra
+        childWindow.on('closed', () => {
+            console.log('Main: Ventana hija cerrada para instancia:', instanceId);
+        });
+        
+        // Agregar evento para errores de la ventana
+        childWindow.on('unresponsive', () => {
+            console.error('Main: Ventana hija no responde para instancia:', instanceId);
+        });
+        
+        // Guardar la referencia de la ventana hija
+        if (!global.activeXChildWindows) {
+          global.activeXChildWindows = new Map();
+        }
+        global.activeXChildWindows.set(instanceId, childWindow);
+        
+        console.log('Main: Ventana hija creada para instancia:', instanceId);
+        return { success: true, windowId: childWindow.id };
+      } catch (error) {
+        console.error('Error creating ActiveX child window:', error);
+        throw error;
+      }
+    });
+
 // Cleanup ActiveX instances on app quit
 app.on('before-quit', () => {
   if (rdpActiveXManager) {
@@ -2614,8 +3167,8 @@ app.on('before-quit', () => {
 // === Terminal Support ===
 const pty = require('node-pty');
 
-let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
-let wslProcesses = {}; // Cambiar a objeto para múltiples procesos
+let powershellProcesses = {}; // Cambiar a objeto para mÃºltiples procesos
+let wslProcesses = {}; // Cambiar a objeto para mÃºltiples procesos
 
 // Function to detect the best available Linux shell
 function getLinuxShell() {
@@ -2667,9 +3220,9 @@ ipcMain.on('powershell:start', (event, { cols, rows }) => {
 
 // Start terminal session with tab ID (PowerShell on Windows, native shell on Linux/macOS)
 function startPowerShellSession(tabId, { cols, rows }) {
-  // No iniciar nuevos procesos si la app está cerrando
+  // No iniciar nuevos procesos si la app estÃ¡ cerrando
   if (isAppQuitting) {
-    console.log(`Evitando iniciar PowerShell para ${tabId} - aplicación cerrando`);
+    console.log(`Evitando iniciar PowerShell para ${tabId} - aplicaciÃ³n cerrando`);
     return;
   }
   
@@ -2682,7 +3235,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
       
       // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
       if (mainWindow && mainWindow.webContents) {
-        const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
+        const welcomeMsg = `\r\n\x1b[32m=== SesiÃ³n ${shellName} reutilizada ===\x1b[0m\r\n`;
         mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
       }
       
@@ -2718,7 +3271,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
       args = ['-NoExit'];
     }
 
-    // Spawn PowerShell process con configuración ultra-conservative
+    // Spawn PowerShell process con configuraciÃ³n ultra-conservative
     const spawnOptions = {
       name: 'xterm-256color',
       cols: cols || 120,
@@ -2756,25 +3309,25 @@ function startPowerShellSession(tabId, { cols, rows }) {
     
     // Intentar con diferentes configuraciones hasta que una funcione
     const configsToTry = [
-      // Configuración principal
+      // ConfiguraciÃ³n principal
       spawnOptions,
-      // Configuración conservadora
+      // ConfiguraciÃ³n conservadora
       { ...alternativePtyConfig.conservative, cwd: os.homedir() },
-      // Configuración con WinPTY
+      // ConfiguraciÃ³n con WinPTY
       { ...alternativePtyConfig.winpty, cwd: os.homedir() },
-      // Configuración mínima
+      // ConfiguraciÃ³n mÃ­nima
       { ...alternativePtyConfig.minimal, cwd: os.homedir() }
     ];
     
     for (let i = 0; i < configsToTry.length && !spawnSuccess; i++) {
       try {
-        // línea eliminada: console.log(`Intentando configuración ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
+        // lÃ­nea eliminada: console.log(`Intentando configuraciÃ³n ${i + 1}/${configsToTry.length} para PowerShell ${tabId}...`);
         powershellProcesses[tabId] = pty.spawn(shell, args, configsToTry[i]);
         spawnSuccess = true;
-        // línea eliminada: console.log(`Configuración ${i + 1} exitosa para PowerShell ${tabId}`);
+        // lÃ­nea eliminada: console.log(`ConfiguraciÃ³n ${i + 1} exitosa para PowerShell ${tabId}`);
       } catch (spawnError) {
         lastError = spawnError;
-        console.warn(`Configuración ${i + 1} falló para PowerShell ${tabId}:`, spawnError.message);
+        console.warn(`ConfiguraciÃ³n ${i + 1} fallÃ³ para PowerShell ${tabId}:`, spawnError.message);
         
         // Limpiar proceso parcialmente creado
         if (powershellProcesses[tabId]) {
@@ -2789,10 +3342,10 @@ function startPowerShellSession(tabId, { cols, rows }) {
     }
     
     if (!spawnSuccess) {
-      // Último recurso: usar SafeWindowsTerminal para Windows
+      // Ãšltimo recurso: usar SafeWindowsTerminal para Windows
       if (os.platform() === 'win32') {
         try {
-          console.log(`Intentando SafeWindowsTerminal como último recurso para ${tabId}...`);
+          console.log(`Intentando SafeWindowsTerminal como Ãºltimo recurso para ${tabId}...`);
           const safeTerminal = new SafeWindowsTerminal(shell, args, {
             cwd: os.homedir(),
             env: process.env,
@@ -2801,14 +3354,14 @@ function startPowerShellSession(tabId, { cols, rows }) {
           
           powershellProcesses[tabId] = safeTerminal.spawn();
           spawnSuccess = true;
-          // línea eliminada: console.log(`SafeWindowsTerminal exitoso para ${tabId}`);
+          // lÃ­nea eliminada: console.log(`SafeWindowsTerminal exitoso para ${tabId}`);
         } catch (safeError) {
-          console.error(`SafeWindowsTerminal también falló para ${tabId}:`, safeError.message);
+          console.error(`SafeWindowsTerminal tambiÃ©n fallÃ³ para ${tabId}:`, safeError.message);
         }
       }
       
       if (!spawnSuccess) {
-        throw new Error(`No se pudo iniciar PowerShell para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
+        throw new Error(`No se pudo iniciar PowerShell para ${tabId} despuÃ©s de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
       }
     }
 
@@ -2825,7 +3378,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     powershellProcesses[tabId].onExit((exitCode, signal) => {
       //console.log(`PowerShell process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode);
       
-      // Extraer el código de salida real
+      // Extraer el cÃ³digo de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
         // Si es un objeto con propiedad exitCode, usar ese valor
@@ -2849,16 +3402,16 @@ function startPowerShellSession(tabId, { cols, rows }) {
       // Limpiar el proceso actual
       delete powershellProcesses[tabId];
       
-      // Determinar si es una terminación que requiere reinicio automático
-      // Solo reiniciar para códigos específicos de fallo de ConPTY, no para terminaciones normales
+      // Determinar si es una terminaciÃ³n que requiere reinicio automÃ¡tico
+      // Solo reiniciar para cÃ³digos especÃ­ficos de fallo de ConPTY, no para terminaciones normales
       const needsRestart = actualExitCode === -1073741510; // Solo fallo de ConPTY
       
       if (needsRestart) {
-        // Para fallos específicos como ConPTY, reiniciar automáticamente
-        console.log(`PowerShell ${tabId} falló con código ${actualExitCode}, reiniciando en 1 segundo...`);
+        // Para fallos especÃ­ficos como ConPTY, reiniciar automÃ¡ticamente
+        console.log(`PowerShell ${tabId} fallÃ³ con cÃ³digo ${actualExitCode}, reiniciando en 1 segundo...`);
         setTimeout(() => {
           if (!isAppQuitting && mainWindow && mainWindow.webContents) {
-            console.log(`Reiniciando PowerShell ${tabId} después de fallo...`);
+            console.log(`Reiniciando PowerShell ${tabId} despuÃ©s de fallo...`);
             // Usar las dimensiones originales o por defecto
             const originalCols = cols || 120;
             const originalRows = rows || 30;
@@ -2866,11 +3419,11 @@ function startPowerShellSession(tabId, { cols, rows }) {
           }
         }, 1000);
       } else {
-        // Para terminaciones normales (código 0) o errores (código 1), no reiniciar automáticamente
+        // Para terminaciones normales (cÃ³digo 0) o errores (cÃ³digo 1), no reiniciar automÃ¡ticamente
         if (actualExitCode === 0) {
-          console.log(`PowerShell ${tabId} terminó normalmente (código ${actualExitCode})`);
+          console.log(`PowerShell ${tabId} terminÃ³ normalmente (cÃ³digo ${actualExitCode})`);
         } else {
-          console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
+          console.log(`PowerShell ${tabId} terminÃ³ con error (cÃ³digo ${actualExitCode})`);
           if (mainWindow && mainWindow.webContents) {
             const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
             mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
@@ -2897,7 +3450,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
     //   }
     // }, 500);
 
-    // línea eliminada: console.log(`PowerShell ${tabId} iniciado exitosamente`);
+    // lÃ­nea eliminada: console.log(`PowerShell ${tabId} iniciado exitosamente`);
 
   } catch (error) {
     console.error(`Error starting PowerShell for tab ${tabId}:`, error);
@@ -2912,7 +3465,7 @@ ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
   const channel = event.senderFrame ? event.channel : arguments[1];
   const tabId = channel.split(':')[2];
   
-  // Registrar eventos para este tab si no están registrados
+  // Registrar eventos para este tab si no estÃ¡n registrados
   if (!registeredTabEvents.has(tabId)) {
     registerTabEvents(tabId);
   }
@@ -2961,7 +3514,7 @@ function handlePowerShellStop(tabId) {
       // Remover listeners antes de terminar el proceso
       process.removeAllListeners();
       
-      // En Windows, usar destroy() para forzar terminación
+      // En Windows, usar destroy() para forzar terminaciÃ³n
       if (os.platform() === 'win32') {
         try {
           process.kill(); // Intento graceful primero
@@ -2983,7 +3536,7 @@ function handlePowerShellStop(tabId) {
             try {
               powershellProcesses[tabId].kill('SIGKILL');
             } catch (e) {
-              // Ignorar errores de terminación forzada
+              // Ignorar errores de terminaciÃ³n forzada
             }
           }
         }, 1000);
@@ -3028,9 +3581,9 @@ function handleWSLStart(tabId, { cols, rows }) {
 }
 
 function startWSLSession(tabId, { cols, rows }) {
-  // No iniciar nuevos procesos si la app está cerrando
+  // No iniciar nuevos procesos si la app estÃ¡ cerrando
   if (isAppQuitting) {
-    console.log(`Evitando iniciar WSL para ${tabId} - aplicación cerrando`);
+    console.log(`Evitando iniciar WSL para ${tabId} - aplicaciÃ³n cerrando`);
     return;
   }
   
@@ -3058,9 +3611,9 @@ function startWSLSession(tabId, { cols, rows }) {
       args = ['--login'];
     }
 
-    // Múltiples configuraciones para WSL genérico
+    // MÃºltiples configuraciones para WSL genÃ©rico
     const wslConfigurations = [
-      // Configuración 1: ConPTY deshabilitado con WinPTY
+      // ConfiguraciÃ³n 1: ConPTY deshabilitado con WinPTY
       {
         name: 'xterm-256color',
         cols: cols || 120,
@@ -3077,7 +3630,7 @@ function startWSLSession(tabId, { cols, rows }) {
         experimentalUseConpty: false,
         backend: 'winpty'
       },
-      // Configuración 2: Conservativa básica
+      // ConfiguraciÃ³n 2: Conservativa bÃ¡sica
       {
         name: 'xterm',
         cols: cols || 80,
@@ -3087,7 +3640,7 @@ function startWSLSession(tabId, { cols, rows }) {
         windowsHide: false,
         useConpty: false
       },
-      // Configuración 3: Mínima
+      // ConfiguraciÃ³n 3: MÃ­nima
       {
         name: 'xterm',
         cols: cols || 80,
@@ -3099,15 +3652,15 @@ function startWSLSession(tabId, { cols, rows }) {
     let spawnSuccess = false;
     let lastError = null;
 
-    // Intentar cada configuración hasta que una funcione
+    // Intentar cada configuraciÃ³n hasta que una funcione
     for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
       try {
-        // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL genérico ${tabId}...`); // Eliminado por limpieza de logs
+        // console.log(`Intentando configuraciÃ³n ${i + 1}/${wslConfigurations.length} para WSL genÃ©rico ${tabId}...`); // Eliminado por limpieza de logs
         wslProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
-        // console.log(`Configuración ${i + 1} exitosa para WSL genérico ${tabId}`); // Eliminado por limpieza de logs
+        // console.log(`ConfiguraciÃ³n ${i + 1} exitosa para WSL genÃ©rico ${tabId}`); // Eliminado por limpieza de logs
         spawnSuccess = true;
       } catch (spawnError) {
-        console.warn(`Configuración ${i + 1} falló para WSL genérico ${tabId}:`, spawnError.message);
+        console.warn(`ConfiguraciÃ³n ${i + 1} fallÃ³ para WSL genÃ©rico ${tabId}:`, spawnError.message);
         lastError = spawnError;
         
         // Limpiar proceso fallido si existe
@@ -3123,7 +3676,7 @@ function startWSLSession(tabId, { cols, rows }) {
     }
 
     if (!spawnSuccess) {
-      throw new Error(`No se pudo iniciar WSL genérico para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
+      throw new Error(`No se pudo iniciar WSL genÃ©rico para ${tabId} despuÃ©s de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
     }
 
     // Handle WSL output
@@ -3136,7 +3689,7 @@ function startWSLSession(tabId, { cols, rows }) {
     // Handle WSL exit
     wslProcesses[tabId].onExit((exitCode, signal) => {
       // console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode); // Eliminado por limpieza de logs
-      // Extraer el código de salida real
+      // Extraer el cÃ³digo de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
         // Si es un objeto con propiedad exitCode, usar ese valor
@@ -3160,21 +3713,21 @@ function startWSLSession(tabId, { cols, rows }) {
       // Limpiar el proceso actual
       delete wslProcesses[tabId];
       
-      // Determinar si necesita reinicio automático (solo para errores específicos de ConPTY)
-      const needsRestart = actualExitCode === -1073741510; // Error específico de ConPTY
+      // Determinar si necesita reinicio automÃ¡tico (solo para errores especÃ­ficos de ConPTY)
+      const needsRestart = actualExitCode === -1073741510; // Error especÃ­fico de ConPTY
       const isNormalExit = actualExitCode === 0 || actualExitCode === 1;
       
       if (needsRestart) {
-        // console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`); // Eliminado por limpieza de logs
+        // console.log(`Reiniciando WSL ${tabId} despuÃ©s de error de ConPTY...`); // Eliminado por limpieza de logs
         setTimeout(() => {
           if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
-            // console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`); // Eliminado por limpieza de logs
+            // console.log(`Reiniciando WSL ${tabId} despuÃ©s de error de ConPTY...`); // Eliminado por limpieza de logs
             startWSLSession(tabId, { cols: cols || 120, rows: rows || 30 });
           }
         }, 2000);
       } else if (isNormalExit) {
-        // Para terminaciones normales, reiniciar automáticamente después de un delay corto
-        // console.log(`WSL ${tabId} terminó normalmente, reiniciando en 1 segundo...`); // Eliminado por limpieza de logs
+        // Para terminaciones normales, reiniciar automÃ¡ticamente despuÃ©s de un delay corto
+        // console.log(`WSL ${tabId} terminÃ³ normalmente, reiniciando en 1 segundo...`); // Eliminado por limpieza de logs
         setTimeout(() => {
           if (!isAppQuitting && mainWindow && mainWindow.webContents) {
             // console.log(`Reiniciando WSL ${tabId}...`); // Eliminado por limpieza de logs
@@ -3185,7 +3738,7 @@ function startWSLSession(tabId, { cols, rows }) {
           }
         }, 1000);
       } else {
-        // Solo reportar como error si no es una terminación normal
+        // Solo reportar como error si no es una terminaciÃ³n normal
         if (mainWindow && mainWindow.webContents) {
           const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
           mainWindow.webContents.send(`wsl:error:${tabId}`, `WSL process exited with code ${exitCodeStr}`);
@@ -3240,7 +3793,7 @@ function handleWSLStop(tabId) {
       // Remover listeners antes de terminar el proceso
       process.removeAllListeners();
       
-      // En Windows, usar destroy() para forzar terminación
+      // En Windows, usar destroy() para forzar terminaciÃ³n
       if (os.platform() === 'win32') {
         try {
           process.kill(); // Intento graceful primero
@@ -3262,7 +3815,7 @@ function handleWSLStop(tabId) {
             try {
               wslProcesses[tabId].kill('SIGKILL');
             } catch (e) {
-              // Ignorar errores de terminación forzada
+              // Ignorar errores de terminaciÃ³n forzada
             }
           }
         }, 1000);
@@ -3283,37 +3836,37 @@ const wslDistroProcesses = {};
 // Store active Ubuntu processes (for backward compatibility)
 const ubuntuProcesses = {};
 
-// Función para detectar si Ubuntu está disponible
+// FunciÃ³n para detectar si Ubuntu estÃ¡ disponible
 function detectUbuntuAvailability() {
   return new Promise((resolve) => {
     const platform = os.platform();
-    console.log('🔍 Detectando Ubuntu, plataforma:', platform);
+    console.log('ðŸ” Detectando Ubuntu, plataforma:', platform);
     
     if (platform !== 'win32') {
-      // En sistemas no Windows, verificar si bash está disponible
+      // En sistemas no Windows, verificar si bash estÃ¡ disponible
       const { spawn } = require('child_process');
       const bashCheck = spawn('bash', ['--version'], { stdio: 'pipe' });
       
       bashCheck.on('close', (code) => {
-        console.log('🐧 Bash check completed with code:', code);
+        console.log('ðŸ§ Bash check completed with code:', code);
         resolve(code === 0);
       });
       
       bashCheck.on('error', (error) => {
-        console.log('❌ Bash check error:', error.message);
+        console.log('âŒ Bash check error:', error.message);
         resolve(false);
       });
       
       // Timeout de 2 segundos
       setTimeout(() => {
-        console.log('⏰ Bash check timeout');
+        console.log('â° Bash check timeout');
         bashCheck.kill();
         resolve(false);
       }, 2000);
     } else {
-      // En Windows, verificar si ubuntu está disponible
+      // En Windows, verificar si ubuntu estÃ¡ disponible
       const { spawn } = require('child_process');
-      console.log('🔍 Verificando ubuntu en Windows...');
+      console.log('ðŸ” Verificando ubuntu en Windows...');
       
       const ubuntuCheck = spawn('ubuntu', ['--help'], { 
         stdio: 'pipe',
@@ -3325,11 +3878,11 @@ function detectUbuntuAvailability() {
       ubuntuCheck.on('close', (code) => {
         if (!resolved) {
           resolved = true;
-                  console.log('🟢 Ubuntu check completed with code:', code);
-        // Ubuntu devuelve código 0 cuando está disponible
-        // También puede devolver null o undefined en algunos casos válidos
+                  console.log('ðŸŸ¢ Ubuntu check completed with code:', code);
+        // Ubuntu devuelve cÃ³digo 0 cuando estÃ¡ disponible
+        // TambiÃ©n puede devolver null o undefined en algunos casos vÃ¡lidos
         const isAvailable = (code === 0 || code === null || code === undefined);
-        console.log('🔍 Ubuntu detectado como disponible:', isAvailable);
+        console.log('ðŸ” Ubuntu detectado como disponible:', isAvailable);
           resolve(isAvailable);
         }
       });
@@ -3337,8 +3890,8 @@ function detectUbuntuAvailability() {
       ubuntuCheck.on('error', (error) => {
         if (!resolved) {
           resolved = true;
-                  console.log('❌ Ubuntu check error:', error.message);
-        // Si ubuntu no existe, devolverá ENOENT
+                  console.log('âŒ Ubuntu check error:', error.message);
+        // Si ubuntu no existe, devolverÃ¡ ENOENT
           resolve(false);
         }
       });
@@ -3346,9 +3899,9 @@ function detectUbuntuAvailability() {
       ubuntuCheck.on('exit', (code, signal) => {
         if (!resolved) {
           resolved = true;
-          console.log('🚪 Ubuntu exit with code:', code, 'signal:', signal);
+          console.log('ðŸšª Ubuntu exit with code:', code, 'signal:', signal);
           const isAvailable = (code === 0 || code === null || code === undefined);
-          console.log('🔍 Ubuntu detectado como disponible (exit):', isAvailable);
+          console.log('ðŸ” Ubuntu detectado como disponible (exit):', isAvailable);
           resolve(isAvailable);
         }
       });
@@ -3365,13 +3918,13 @@ function detectUbuntuAvailability() {
         errorOutput += data.toString();
       });
       
-      // Timeout de 5 segundos (más tiempo para Windows)
+      // Timeout de 5 segundos (mÃ¡s tiempo para Windows)
       setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          console.log('⏰ Ubuntu check timeout');
-          console.log('📝 Output:', output.substring(0, 200));
-          console.log('📝 Error output:', errorOutput.substring(0, 200));
+          console.log('â° Ubuntu check timeout');
+          console.log('ðŸ“ Output:', output.substring(0, 200));
+          console.log('ðŸ“ Error output:', errorOutput.substring(0, 200));
           ubuntuCheck.kill();
           resolve(false);
         }
@@ -3380,14 +3933,14 @@ function detectUbuntuAvailability() {
   });
 }
 
-// Funciones de manejo para distribuciones WSL (genéricas)
+// Funciones de manejo para distribuciones WSL (genÃ©ricas)
 function handleWSLDistroStart(tabId, { cols, rows, distroInfo }) {
     startWSLDistroSession(tabId, { cols, rows, distroInfo });
 }
 
 // Funciones de manejo para Ubuntu (compatibilidad)
 function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
-    // Convertir ubuntuInfo a distroInfo para usar la función genérica
+    // Convertir ubuntuInfo a distroInfo para usar la funciÃ³n genÃ©rica
     const distroInfo = ubuntuInfo ? {
         ...ubuntuInfo,
         category: 'ubuntu'
@@ -3396,10 +3949,10 @@ function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
     startWSLDistroSession(tabId, { cols, rows, distroInfo });
 }
 
-// Función genérica para iniciar cualquier distribución WSL
+// FunciÃ³n genÃ©rica para iniciar cualquier distribuciÃ³n WSL
 function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
     if (isAppQuitting) {
-        console.log(`Evitando iniciar distribución WSL para ${tabId} - aplicación cerrando`);
+        console.log(`Evitando iniciar distribuciÃ³n WSL para ${tabId} - aplicaciÃ³n cerrando`);
         return;
     }
 
@@ -3416,25 +3969,25 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         // Determine shell and arguments for WSL distribution
         let shell, args;
         
-        // Usar el ejecutable específico de la distribución
+        // Usar el ejecutable especÃ­fico de la distribuciÃ³n
         if (distroInfo && distroInfo.executable) {
             shell = distroInfo.executable;
         } else {
-            // Fallback a wsl.exe genérico
+            // Fallback a wsl.exe genÃ©rico
             shell = 'wsl.exe';
-            console.log('⚠️ Sin info específica, usando wsl.exe genérico');
+            console.log('âš ï¸ Sin info especÃ­fica, usando wsl.exe genÃ©rico');
         }
         
-        args = []; // Las distribuciones WSL funcionan mejor sin argumentos específicos
+        args = []; // Las distribuciones WSL funcionan mejor sin argumentos especÃ­ficos
 
         // Environment variables
         const env = {
             ...process.env,
         };
 
-        // Múltiples configuraciones para mayor compatibilidad con WSL
+        // MÃºltiples configuraciones para mayor compatibilidad con WSL
         const wslConfigurations = [
-            // Configuración 1: Por defecto con ConPTY deshabilitado
+            // ConfiguraciÃ³n 1: Por defecto con ConPTY deshabilitado
             {
                 env,
                 cwd: undefined,
@@ -3445,7 +3998,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 useConpty: false,
                 windowsHide: false
             },
-            // Configuración 2: Conservativa sin ConPTY 
+            // ConfiguraciÃ³n 2: Conservativa sin ConPTY 
             {
                 env,
                 cwd: undefined,
@@ -3458,7 +4011,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 experimentalUseConpty: false,
                 windowsHide: false
             },
-            // Configuración 3: Mínima
+            // ConfiguraciÃ³n 3: MÃ­nima
             {
                 env,
                 cwd: undefined,
@@ -3472,15 +4025,15 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         let spawnSuccess = false;
         let lastError = null;
 
-        // Intentar cada configuración hasta que una funcione
+        // Intentar cada configuraciÃ³n hasta que una funcione
         for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
             try {
-                // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`); // Eliminado por limpieza de logs
+                // console.log(`Intentando configuraciÃ³n ${i + 1}/${wslConfigurations.length} para WSL ${shell} ${tabId}...`); // Eliminado por limpieza de logs
                 wslDistroProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
-                // console.log(`Configuración ${i + 1} exitosa para WSL ${shell} ${tabId}`); // Eliminado por limpieza de logs
+                // console.log(`ConfiguraciÃ³n ${i + 1} exitosa para WSL ${shell} ${tabId}`); // Eliminado por limpieza de logs
                 spawnSuccess = true;
             } catch (spawnError) {
-                console.warn(`Configuración ${i + 1} falló para WSL ${shell} ${tabId}:`, spawnError.message);
+                console.warn(`ConfiguraciÃ³n ${i + 1} fallÃ³ para WSL ${shell} ${tabId}:`, spawnError.message);
                 lastError = spawnError;
                 
                 // Limpiar proceso fallido si existe
@@ -3496,7 +4049,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         }
 
         if (!spawnSuccess) {
-            throw new Error(`No se pudo iniciar WSL ${shell} para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
+            throw new Error(`No se pudo iniciar WSL ${shell} para ${tabId} despuÃ©s de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
         }
 
         // Handle distribution output
@@ -3539,14 +4092,14 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 actualExitCode = `killed by ${signal}`;
             }
 
-            // Determinar si necesita reinicio automático (solo para errores específicos de ConPTY)
-            const needsRestart = exitCode === -1073741510; // Error específico de ConPTY
+            // Determinar si necesita reinicio automÃ¡tico (solo para errores especÃ­ficos de ConPTY)
+            const needsRestart = exitCode === -1073741510; // Error especÃ­fico de ConPTY
             
             if (needsRestart) {
-                console.log(`WSL ${shell} (${tabId}) falló con error de ConPTY, reiniciando en 2 segundos...`);
+                console.log(`WSL ${shell} (${tabId}) fallÃ³ con error de ConPTY, reiniciando en 2 segundos...`);
                 setTimeout(() => {
                     if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
-                        console.log(`Reiniciando WSL ${shell} (${tabId}) después de error de ConPTY...`);
+                        console.log(`Reiniciando WSL ${shell} (${tabId}) despuÃ©s de error de ConPTY...`);
                         startWSLDistroSession(tabId, { cols: cols || 80, rows: rows || 24, distroInfo });
                     }
                 }, 2000);
@@ -3574,11 +4127,11 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
     }
 }
 
-// Función original para Ubuntu (para compatibilidad)
+// FunciÃ³n original para Ubuntu (para compatibilidad)
 function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
-  // No iniciar nuevos procesos si la app está cerrando
+  // No iniciar nuevos procesos si la app estÃ¡ cerrando
   if (isAppQuitting) {
-    console.log(`Evitando iniciar Ubuntu para ${tabId} - aplicación cerrando`);
+    console.log(`Evitando iniciar Ubuntu para ${tabId} - aplicaciÃ³n cerrando`);
     return;
   }
   
@@ -3597,14 +4150,14 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     const platform = os.platform();
     
     if (platform === 'win32') {
-      // Usar el ejecutable específico de la versión de Ubuntu
+      // Usar el ejecutable especÃ­fico de la versiÃ³n de Ubuntu
       if (ubuntuInfo && ubuntuInfo.executable) {
         shell = ubuntuInfo.executable;
-        console.log(`🎯 Usando ejecutable específico: ${shell} para ${ubuntuInfo.label || 'Ubuntu'}`);
+        console.log(`ðŸŽ¯ Usando ejecutable especÃ­fico: ${shell} para ${ubuntuInfo.label || 'Ubuntu'}`);
       } else {
-        // Fallback a ubuntu.exe genérico
+        // Fallback a ubuntu.exe genÃ©rico
         shell = 'ubuntu.exe';
-        console.log('⚠️ Sin info específica, usando ubuntu.exe genérico');
+        console.log('âš ï¸ Sin info especÃ­fica, usando ubuntu.exe genÃ©rico');
       }
       args = []; // Ubuntu funciona mejor sin argumentos
     } else {
@@ -3613,7 +4166,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       args = ['--login'];
     }
 
-    // Spawn Ubuntu process con configuración simplificada
+    // Spawn Ubuntu process con configuraciÃ³n simplificada
     const spawnOptions = {
       name: 'xterm-256color',
       cols: cols || 120,
@@ -3627,8 +4180,8 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       windowsHide: false
     };
     
-    // Para Ubuntu, usar configuración simple sin modificaciones ConPTY
-    // Ubuntu funciona mejor con configuración por defecto
+    // Para Ubuntu, usar configuraciÃ³n simple sin modificaciones ConPTY
+    // Ubuntu funciona mejor con configuraciÃ³n por defecto
     
     ubuntuProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
 
@@ -3643,7 +4196,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     ubuntuProcesses[tabId].onExit((exitCode, signal) => {
       //console.log(`Ubuntu process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal);
       
-      // Extraer el código de salida real
+      // Extraer el cÃ³digo de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
         if (exitCode.exitCode !== undefined) {
@@ -3681,7 +4234,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
   }
 }
 
-// Funciones de manejo para distribuciones WSL genéricas
+// Funciones de manejo para distribuciones WSL genÃ©ricas
 function handleWSLDistroData(tabId, data) {
   // Intentar primero con WSL distro processes
   if (wslDistroProcesses[tabId]) {
@@ -3761,7 +4314,7 @@ function handleWSLDistroStop(tabId) {
       // Remover listeners antes de terminar el proceso
       process.removeAllListeners();
       
-      // En Windows, usar destroy() para forzar terminación
+      // En Windows, usar destroy() para forzar terminaciÃ³n
       if (os.platform() === 'win32') {
         try {
           process.kill(); // Intento graceful primero
@@ -3783,7 +4336,7 @@ function handleWSLDistroStop(tabId) {
             try {
               wslDistroProcesses[tabId].kill('SIGKILL');
             } catch (e) {
-              // Ignorar errores de terminación forzada
+              // Ignorar errores de terminaciÃ³n forzada
             }
           }
         }, 1000);
@@ -3806,7 +4359,7 @@ function handleUbuntuStop(tabId) {
       // Remover listeners antes de terminar el proceso
       process.removeAllListeners();
       
-      // En Windows, usar destroy() para forzar terminación
+      // En Windows, usar destroy() para forzar terminaciÃ³n
       if (os.platform() === 'win32') {
         try {
           process.kill(); // Intento graceful primero
@@ -3828,7 +4381,7 @@ function handleUbuntuStop(tabId) {
             try {
               ubuntuProcesses[tabId].kill('SIGKILL');
             } catch (e) {
-              // Ignorar errores de terminación forzada
+              // Ignorar errores de terminaciÃ³n forzada
             }
           }
         }, 1000);
@@ -3841,31 +4394,31 @@ function handleUbuntuStop(tabId) {
   }
 }
 
-// Función de detección alternativa más simple
+// FunciÃ³n de detecciÃ³n alternativa mÃ¡s simple
 function detectUbuntuSimple() {
   return new Promise((resolve) => {
     const platform = os.platform();
-    console.log('🔧 Función de detección simple iniciada, plataforma:', platform);
+    console.log('ðŸ”§ FunciÃ³n de detecciÃ³n simple iniciada, plataforma:', platform);
     
     if (platform !== 'win32') {
-      // En sistemas no Windows, asumir que bash está disponible
+      // En sistemas no Windows, asumir que bash estÃ¡ disponible
       resolve(true);
     } else {
-          // En Windows, intentar ejecutar ubuntu de forma más directa
+          // En Windows, intentar ejecutar ubuntu de forma mÃ¡s directa
     const { exec } = require('child_process');
     
     exec('ubuntu', { 
         timeout: 3000,
         windowsHide: true 
       }, (error, stdout, stderr) => {
-        console.log('🔧 Exec ubuntu result:');
+        console.log('ðŸ”§ Exec ubuntu result:');
         console.log('   Error:', error?.code || 'none');
         console.log('   Stdout length:', stdout?.length || 0);
         console.log('   Stderr length:', stderr?.length || 0);
         
         // Si no hay error ENOENT, significa que ubuntu existe
         const isAvailable = !error || error.code !== 'ENOENT';
-        console.log('🔧 Ubuntu detectado (simple):', isAvailable);
+        console.log('ðŸ”§ Ubuntu detectado (simple):', isAvailable);
         resolve(isAvailable);
       });
     }
@@ -3875,7 +4428,7 @@ function detectUbuntuSimple() {
 // Set para trackear tabs con eventos registrados
 const registeredTabEvents = new Set();
 
-// Sistema de registro dinámico para eventos de pestañas
+// Sistema de registro dinÃ¡mico para eventos de pestaÃ±as
 function registerTabEvents(tabId) {
   registeredTabEvents.add(tabId);
   // PowerShell events
@@ -3969,7 +4522,7 @@ function registerTabEvents(tabId) {
 
 
 
-// Evento para registrar nuevas pestañas
+// Evento para registrar nuevas pestaÃ±as
 ipcMain.on('register-tab-events', (event, tabId) => {
   // console.log(`Registering events for tab: ${tabId}`); // Eliminado por limpieza de logs
   registerTabEvents(tabId);
@@ -3988,7 +4541,7 @@ app.on('before-quit', (event) => {
       if (process) {
         process.removeAllListeners();
         
-        // En Windows, usar destroy() para forzar terminación
+        // En Windows, usar destroy() para forzar terminaciÃ³n
         if (os.platform() === 'win32') {
           try {
             process.kill(); // Intento graceful primero
@@ -4002,7 +4555,7 @@ app.on('before-quit', (event) => {
           }
         } else {
           process.kill('SIGTERM');
-          // Terminación forzada después de 500ms en sistemas POSIX
+          // TerminaciÃ³n forzada despuÃ©s de 500ms en sistemas POSIX
           setTimeout(() => {
             if (powershellProcesses[tabId]) {
               try {
@@ -4026,7 +4579,7 @@ app.on('before-quit', (event) => {
       if (process) {
         process.removeAllListeners();
         
-        // En Windows, usar destroy() para forzar terminación
+        // En Windows, usar destroy() para forzar terminaciÃ³n
         if (os.platform() === 'win32') {
           try {
             process.kill(); // Intento graceful primero
@@ -4040,7 +4593,7 @@ app.on('before-quit', (event) => {
           }
         } else {
           process.kill('SIGTERM');
-          // Terminación forzada después de 500ms en sistemas POSIX
+          // TerminaciÃ³n forzada despuÃ©s de 500ms en sistemas POSIX
           setTimeout(() => {
             if (wslProcesses[tabId]) {
               try {
@@ -4064,7 +4617,7 @@ app.on('before-quit', (event) => {
       if (process) {
         process.removeAllListeners();
         
-        // En Windows, usar destroy() para forzar terminación
+        // En Windows, usar destroy() para forzar terminaciÃ³n
         if (os.platform() === 'win32') {
           try {
             process.kill(); // Intento graceful primero
@@ -4078,7 +4631,7 @@ app.on('before-quit', (event) => {
           }
         } else {
           process.kill('SIGTERM');
-          // Terminación forzada después de 500ms en sistemas POSIX
+          // TerminaciÃ³n forzada despuÃ©s de 500ms en sistemas POSIX
           setTimeout(() => {
             if (ubuntuProcesses[tabId]) {
               try {
@@ -4096,7 +4649,7 @@ app.on('before-quit', (event) => {
   });
 });
 
-// Sistema de estadísticas del sistema con datos reales
+// Sistema de estadÃ­sticas del sistema con datos reales
 async function getSystemStats() {
   const platform = os.platform();
   const stats = {
@@ -4155,18 +4708,18 @@ async function getSystemStats() {
     }
   } catch (error) {}
 
-  // Red diferencial (solo interfaces activas y físicas, Mbps)
+  // Red diferencial (solo interfaces activas y fÃ­sicas, Mbps)
   try {
     const netIfaces = await si.networkInterfaces();
     const netStats = await si.networkStats();
     const now = Date.now();
-    // Filtrar solo interfaces físicas y activas
+    // Filtrar solo interfaces fÃ­sicas y activas
     const validIfaces = netIfaces.filter(i => i.operstate === 'up' && !i.virtual && !i.internal);
     const validNames = validIfaces.map(i => i.iface);
     const filteredStats = netStats.filter(s => validNames.includes(s.iface));
     let rx = 0, tx = 0;
     if (lastNetStats && lastNetTime) {
-      // Sumar la diferencia de bytes para todas las interfaces válidas
+      // Sumar la diferencia de bytes para todas las interfaces vÃ¡lidas
       for (const stat of filteredStats) {
         const prev = lastNetStats.find(s => s.iface === stat.iface);
         if (prev) {
@@ -4181,7 +4734,7 @@ async function getSystemStats() {
         stats.network.upload = Math.round((tx * 8 / 1e6) / dt * 10) / 10;
       }
     }
-    // Guardar para la próxima llamada
+    // Guardar para la prÃ³xima llamada
     lastNetStats = filteredStats.map(s => ({ iface: s.iface, rx_bytes: s.rx_bytes, tx_bytes: s.tx_bytes }));
     lastNetTime = now;
   } catch (error) {}
@@ -4232,7 +4785,7 @@ function saveConnectionHistory() {
   }
 }
 
-// Agregar conexión al historial
+// Agregar conexiÃ³n al historial
 function addToConnectionHistory(connection) {
   const historyItem = {
     id: Date.now().toString(),
@@ -4242,7 +4795,7 @@ function addToConnectionHistory(connection) {
     port: connection.port || 22,
     lastConnected: new Date(),
     status: 'success',
-    connectionTime: Math.random() * 3 + 0.5 // Simular tiempo de conexión
+    connectionTime: Math.random() * 3 + 0.5 // Simular tiempo de conexiÃ³n
   };
   
   // Remover entrada existente si ya existe
@@ -4253,7 +4806,7 @@ function addToConnectionHistory(connection) {
   // Agregar al inicio
   connectionHistory.recent.unshift(historyItem);
   
-  // Mantener solo las últimas 10 conexiones
+  // Mantener solo las Ãºltimas 10 conexiones
   connectionHistory.recent = connectionHistory.recent.slice(0, 10);
   
   saveConnectionHistory();
@@ -4300,7 +4853,7 @@ ipcMain.handle('toggle-favorite-connection', async (event, connectionId) => {
 // Inicializar historial al inicio
 loadConnectionHistory();
 
-// Variables estáticas para el cálculo diferencial de red
+// Variables estÃ¡ticas para el cÃ¡lculo diferencial de red
 let lastNetStats = null;
 let lastNetTime = null;
 
@@ -4319,7 +4872,7 @@ function startStatsWorker() {
   statsWorkerReady = true;
   statsWorker.on('exit', () => {
     statsWorkerReady = false;
-    // Reiniciar automáticamente si muere
+    // Reiniciar automÃ¡ticamente si muere
     setTimeout(startStatsWorker, 1000);
   });
   statsWorker.on('message', (msg) => {
@@ -4346,7 +4899,7 @@ startStatsWorker();
 ipcMain.handle('get-system-stats', async () => {
   return new Promise((resolve) => {
     if (!statsWorkerReady) {
-      // Si el worker no está listo, devolver fallback
+      // Si el worker no estÃ¡ listo, devolver fallback
       resolve({
         cpu: { usage: 0, cores: 0, model: 'NoWorker' },
         memory: { used: 0, total: 0, percentage: 0 },
@@ -4381,7 +4934,7 @@ ipcMain.handle('get-system-stats', async () => {
   });
 });
 
-// Manejador para peticiones HTTP de Nextcloud con configuración SSL personalizada
+// Manejador para peticiones HTTP de Nextcloud con configuraciÃ³n SSL personalizada
 ipcMain.handle('nextcloud:http-request', async (event, { url, options, ignoreSSLErrors }) => {
   try {
     const https = require('https');
@@ -4391,7 +4944,7 @@ ipcMain.handle('nextcloud:http-request', async (event, { url, options, ignoreSSL
     const urlObj = new URL(url);
     const isHttps = urlObj.protocol === 'https:';
     
-    // Configurar opciones para la petición
+    // Configurar opciones para la peticiÃ³n
     const requestOptions = {
       hostname: urlObj.hostname,
       port: urlObj.port || (isHttps ? 443 : 80),
@@ -4440,3 +4993,10 @@ ipcMain.handle('nextcloud:http-request', async (event, { url, options, ignoreSSL
     throw error;
   }
 });
+
+
+
+
+
+
+

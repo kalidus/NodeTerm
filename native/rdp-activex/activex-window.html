@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>RDP ActiveX Control</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+        }
+        #rdp-container {
+            width: 100%;
+            height: 100vh;
+            background: black;
+        }
+    </style>
+</head>
+<body>
+    <div id="rdp-container">
+        <!-- El control ActiveX se creará aquí -->
+        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+            <div style="text-align: center;">
+                <h3>RDP ActiveX Control</h3>
+                <p>Inicializando control...</p>
+            </div>
+        </div>
+        <!-- Simulación del escritorio RDP -->
+        <div id="rdp-desktop" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, #2c2c2c, #1a1a1a); display: none; border: 2px solid #00ff00;">
+            <div style="position: absolute; top: 10px; left: 10px; color: #00ff00; font-family: 'Courier New', monospace; font-size: 12px;">
+                <div>🖥️ Windows Desktop Simulation</div>
+                <div>Server: <span id="rdp-server">-</span></div>
+                <div>User: <span id="rdp-user">-</span></div>
+                <div>Resolution: <span id="rdp-resolution">-</span></div>
+            </div>
+            <div style="position: absolute; bottom: 10px; right: 10px; color: #00ff00; font-size: 10px;">
+                RDP Session Active
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Script para inicializar el control ActiveX
+        console.log('RDP ActiveX Window: Inicializando...');
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('RDP ActiveX Window: DOM cargado');
+            console.log('RDP ActiveX Window: URL completa:', window.location.href);
+            console.log('RDP ActiveX Window: Search params:', window.location.search);
+            
+            try {
+                // Obtener parámetros de la URL (instanceId, server, etc.)
+                const urlParams = new URLSearchParams(window.location.search);
+                const instanceId = urlParams.get('instanceId');
+                const server = urlParams.get('server');
+                const username = urlParams.get('username');
+                const width = urlParams.get('width');
+                const height = urlParams.get('height');
+                
+                console.log('RDP ActiveX Window: Parámetros recibidos:', { instanceId, server, username, width, height });
+                
+                if (instanceId && server) {
+                    // Inicializar el control ActiveX real
+                    await initializeActiveXControl(instanceId, server, username, width, height);
+                }
+            } catch (error) {
+                console.error('RDP ActiveX Window: Error inicializando:', error);
+                showError('Error inicializando control ActiveX: ' + error.message);
+            }
+        });
+        
+        async function initializeActiveXControl(instanceId, server, username, width, height) {
+            try {
+                console.log('RDP ActiveX Window: Inicializando control ActiveX...');
+                
+                // Mostrar mensaje de inicialización
+                updateStatus('Inicializando control ActiveX...');
+                
+                // Verificar si estamos en un entorno Electron con Node.js
+                if (typeof require !== 'undefined') {
+                    console.log('RDP ActiveX Window: Node.js disponible, cargando módulo nativo...');
+                    
+                    // Cargar el módulo nativo de ActiveX
+                    const rdpActiveX = require('./build/Release/rdp_activex_basic.node');
+                    console.log('RDP ActiveX Window: Módulo nativo cargado:', rdpActiveX);
+                    
+                    // Obtener el handle de la ventana actual
+                    const container = document.querySelector('#rdp-container');
+                    const containerHandle = container.offsetParent || container;
+                    
+                    // Inicializar el control ActiveX
+                    const result = rdpActiveX.Initialize(containerHandle);
+                    console.log('RDP ActiveX Window: Control inicializado:', result);
+                    
+                    if (result) {
+                        // Configurar el servidor
+                        rdpActiveX.SetServer(server);
+                        console.log('RDP ActiveX Window: Servidor configurado:', server);
+                        
+                        // Configurar credenciales
+                        rdpActiveX.SetCredentials(username, '');
+                        console.log('RDP ActiveX Window: Credenciales configuradas');
+                        
+                        // Configurar resolución
+                        rdpActiveX.SetDisplaySettings(parseInt(width), parseInt(height));
+                        console.log('RDP ActiveX Window: Resolución configurada:', width + 'x' + height);
+                        
+                        // Conectar
+                        updateStatus('Conectando a ' + server + '...');
+                        const connectResult = rdpActiveX.Connect();
+                        console.log('RDP ActiveX Window: Resultado de conexión:', connectResult);
+                        
+                        if (connectResult) {
+                            updateStatus('Conectado a ' + server);
+                            showSuccess('Conexión RDP establecida correctamente');
+                            
+                            // Forzar mostrar la simulación del escritorio después de 1 segundo
+                            setTimeout(() => {
+                                console.log('RDP ActiveX Window: Forzando mostrar simulación del escritorio...');
+                                const desktopDiv = document.querySelector('#rdp-desktop');
+                                if (desktopDiv) {
+                                    desktopDiv.style.display = 'block';
+                                    document.getElementById('rdp-server').textContent = server;
+                                    document.getElementById('rdp-user').textContent = username;
+                                    document.getElementById('rdp-resolution').textContent = width + 'x' + height;
+                                    console.log('RDP ActiveX Window: Simulación del escritorio mostrada');
+                                }
+                            }, 1000);
+                        } else {
+                            showError('Error al conectar con el servidor');
+                        }
+                    } else {
+                        showError('Error al inicializar el control ActiveX');
+                    }
+                } else {
+                    console.log('RDP ActiveX Window: Node.js no disponible, usando fallback...');
+                    showFallback(instanceId, server, username, width, height);
+                }
+            } catch (error) {
+                console.error('RDP ActiveX Window: Error en initializeActiveXControl:', error);
+                showError('Error: ' + error.message);
+            }
+        }
+        
+        function updateStatus(message) {
+            const container = document.querySelector('#rdp-container');
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <h3>RDP ActiveX Control</h3>
+                        <p>${message}</p>
+                        <p>Usuario: ${username}</p>
+                        <p>Instance ID: ${instanceId}</p>
+                        <p>Resolución: ${width}x${height}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showSuccess(message) {
+            // Ocultar el mensaje de estado y mostrar la simulación del escritorio
+            const statusDiv = document.querySelector('#rdp-container > div');
+            if (statusDiv) {
+                statusDiv.style.display = 'none';
+            }
+            
+            // Mostrar la simulación del escritorio
+            const desktopDiv = document.querySelector('#rdp-desktop');
+            if (desktopDiv) {
+                desktopDiv.style.display = 'block';
+                
+                // Actualizar la información en la simulación
+                document.getElementById('rdp-server').textContent = server;
+                document.getElementById('rdp-user').textContent = username;
+                document.getElementById('rdp-resolution').textContent = width + 'x' + height;
+            }
+        }
+        
+        function showError(message) {
+            const container = document.querySelector('#rdp-container');
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <h3>RDP ActiveX Control</h3>
+                        <p style="color: #ff0000;">✗ ${message}</p>
+                        <p>Usuario: ${username}</p>
+                        <p>Instance ID: ${instanceId}</p>
+                        <p>Resolución: ${width}x${height}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showFallback(instanceId, server, username, width, height) {
+            const container = document.querySelector('#rdp-container');
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">
+                    <div style="text-align: center;">
+                        <h3>RDP ActiveX Control</h3>
+                        <p>Conectando a ${server}...</p>
+                        <p>Usuario: ${username}</p>
+                        <p>Instance ID: ${instanceId}</p>
+                        <p>Resolución: ${width}x${height}</p>
+                        <p style="color: #ffff00;">⚠ Modo fallback - Control ActiveX no disponible</p>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 
