@@ -199,31 +199,29 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
             <Toast ref={toast} />
             
             {/* Header con información de conexión */}
-            <Card className="mb-2">
-                <div className="flex align-items-center justify-content-between">
-                    <div className="flex align-items-center gap-3">
-                        <i className="pi pi-desktop text-xl" />
-                        <div>
-                            <h3 className="m-0">{rdpConfig.name || rdpConfig.server}</h3>
-                            <p className="text-sm text-gray-600 m-0">{rdpConfig.server}</p>
-                        </div>
-                    </div>
-                    <div className="flex align-items-center gap-2">
-                        {getStatusTag()}
-                        <Button
-                            icon="pi pi-times"
-                            className="p-button-text p-button-rounded"
-                            onClick={onClose}
-                            tooltip="Cerrar pestaña"
-                        />
+            <div className="flex align-items-center justify-content-between p-3 bg-white border-bottom-1 surface-border">
+                <div className="flex align-items-center gap-3">
+                    <i className="pi pi-desktop text-xl text-primary" />
+                    <div>
+                        <h3 className="m-0 text-lg font-semibold">{rdpConfig.name || rdpConfig.server}</h3>
+                        <p className="text-sm text-500 m-0">{rdpConfig.server}:{rdpConfig.port || 3389}</p>
                     </div>
                 </div>
-            </Card>
+                <div className="flex align-items-center gap-2">
+                    {getStatusTag()}
+                    <Button
+                        icon="pi pi-times"
+                        className="p-button-text p-button-rounded"
+                        onClick={onClose}
+                        tooltip="Cerrar pestaña"
+                    />
+                </div>
+            </div>
 
             {/* Contenedor principal */}
             <div className="flex-1 flex flex-column">
                 {/* Barra de herramientas */}
-                <div className="flex align-items-center justify-content-between p-3 bg-gray-50 border-round">
+                <div className="flex align-items-center justify-content-between p-3 bg-gray-50 border-bottom-1 surface-border">
                     <div className="flex align-items-center gap-2">
                         <Button
                             label="Conectar"
@@ -248,14 +246,14 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                     </div>
                     
                     <div className="flex align-items-center gap-2">
-                        <span className="text-sm">Resolución:</span>
+                        <span className="text-sm font-medium">Resolución:</span>
                         <InputText
                             value={displaySettings.width}
                             onChange={(e) => setDisplaySettings(prev => ({ ...prev, width: parseInt(e.target.value) || 1024 }))}
                             className="w-4rem text-center"
                             disabled={connectionStatus === 'connected'}
                         />
-                        <span>x</span>
+                        <span className="text-sm">x</span>
                         <InputText
                             value={displaySettings.height}
                             onChange={(e) => setDisplaySettings(prev => ({ ...prev, height: parseInt(e.target.value) || 768 }))}
@@ -268,8 +266,8 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                 {/* Área de visualización RDP */}
                 <div 
                     ref={rdpContainerRef}
-                    className="flex-1 bg-black border-round"
-                    style={{ minHeight: '400px' }}
+                    className="flex-1 bg-black border-round-bottom"
+                    style={{ minHeight: '500px' }}
                 >
                     {connectionStatus === 'connecting' && (
                         <div className="flex align-items-center justify-content-center h-full">
@@ -283,9 +281,16 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                     {connectionStatus === 'disconnected' && (
                         <div className="flex align-items-center justify-content-center h-full">
                             <div className="text-center text-white">
-                                <i className="pi pi-desktop text-6xl mb-3" />
-                                <h3>RDP Session</h3>
-                                <p>Haz clic en "Conectar" para iniciar la sesión</p>
+                                <i className="pi pi-desktop text-6xl mb-3 text-primary" />
+                                <h3 className="text-xl font-semibold mb-2">RDP Session</h3>
+                                <p className="text-sm opacity-80">Haz clic en "Conectar" para iniciar la sesión</p>
+                                <Button
+                                    label="Conectar Ahora"
+                                    icon="pi pi-play"
+                                    onClick={connectRdp}
+                                    className="mt-3"
+                                    disabled={isConnecting}
+                                />
                             </div>
                         </div>
                     )}
@@ -295,7 +300,7 @@ const ActiveXRdpSession = ({ rdpConfig, tabId, onClose }) => {
                             <div className="text-center text-red-300">
                                 <i className="pi pi-exclamation-triangle text-6xl mb-3" />
                                 <h3>Error de Conexión</h3>
-                                <p>{error}</p>
+                                <p className="mb-3">{error}</p>
                                 <Button
                                     label="Reintentar"
                                     icon="pi pi-refresh"

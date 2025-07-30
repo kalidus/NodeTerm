@@ -1,5 +1,4 @@
 const MstscClient = require('./MstscClient');
-const FreeRdpClient = require('./FreeRdpClient');
 const FreeRdpWebClient = require('./FreeRdpWebClient');
 const XrdpClient = require('./XrdpClient');
 const RemminaClient = require('./RemminaClient');
@@ -15,7 +14,6 @@ class RdpClientFactory {
     
     // Registrar clientes disponibles
     this.registerClient(new MstscClient());
-    this.registerClient(new FreeRdpClient());
     this.registerClient(new FreeRdpWebClient());
     this.registerClient(new XrdpClient());
     this.registerClient(new RemminaClient());
