@@ -3,6 +3,7 @@ const FreeRdpClient = require('./FreeRdpClient');
 const FreeRdpWebClient = require('./FreeRdpWebClient');
 const XrdpClient = require('./XrdpClient');
 const RemminaClient = require('./RemminaClient');
+const ActiveXRdpClient = require('./ActiveXRdpClient');
 
 /**
  * Factory para clientes RDP
@@ -18,6 +19,7 @@ class RdpClientFactory {
     this.registerClient(new FreeRdpWebClient());
     this.registerClient(new XrdpClient());
     this.registerClient(new RemminaClient());
+    this.registerClient(new ActiveXRdpClient());
   }
 
   /**
@@ -88,7 +90,10 @@ class RdpClientFactory {
   getDefaultClient() {
     // Prioridad por plataforma
     if (process.platform === 'win32') {
-      // Windows: MSTSC > FreeRDP > FreeRDP Web
+      // Windows: ActiveX > MSTSC > FreeRDP > FreeRDP Web
+      if (this.availableClients.has('activex')) {
+        return this.availableClients.get('activex');
+      }
       if (this.availableClients.has('mstsc')) {
         return this.availableClients.get('mstsc');
       }

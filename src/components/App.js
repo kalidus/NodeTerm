@@ -2351,7 +2351,7 @@ const App = () => {
     });
   };
 
-  const onOpenRdpConnection = (node) => {
+  const onOpenRdpConnection = async (node) => {
     // Si no estamos en el grupo Home, cambiar a Home primero
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
@@ -2360,6 +2360,19 @@ const App = () => {
         [currentGroupKey]: activeTabIndex
       }));
       setActiveGroupId(null);
+    }
+
+    // Obtener el cliente RDP seleccionado
+    let selectedClient = 'mstsc'; // Cliente por defecto
+    try {
+      const clients = await window.electronAPI.rdp.getAvailableClients();
+      // Buscar el cliente ActiveX si está disponible
+      const activeXClient = clients.find(client => client.value === 'activex');
+      if (activeXClient) {
+        selectedClient = 'activex';
+      }
+    } catch (error) {
+      console.log('Error obteniendo clientes RDP:', error);
     }
 
     // Configuración RDP
@@ -2379,7 +2392,9 @@ const App = () => {
       smartSizing: node.data.smartSizing === true,
       span: node.data.span === true,
       admin: node.data.admin === true,
-      public: node.data.public === true
+      public: node.data.public === true,
+      client: selectedClient, // Agregar el cliente seleccionado
+      useActiveX: selectedClient === 'activex' // Marcar si es ActiveX
     };
 
     // Verificar si ya existe una pestaña RDP para la misma conexión
@@ -2429,33 +2444,65 @@ const App = () => {
     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
       .then(result => {
         if (result.success) {
-          // Actualizar el estado de la pestaña RDP para que se active el botón "Mostrar Ventana"
-          setRdpTabs(prevTabs => {
-            return prevTabs.map(tab => {
-              if (tab.type === 'rdp') {
-                return {
-                  ...tab,
-                  connectionStatus: 'connected',
-                  connectionInfo: {
-                    server: rdpConfig.server,
-                    username: rdpConfig.username,
-                    port: rdpConfig.port,
-                    resolution: rdpConfig.resolution,
-                    startTime: new Date().toISOString(),
-                    sessionId: result.connectionId || `rdp_${tab.key}_${Date.now()}`
-                  }
-                };
-              }
-              return tab;
+          // Verificar si es una conexión ActiveX embebida
+          if (result.type === 'activex' || result.embedded) {
+            // Para ActiveX, la conexión se maneja en el componente embebido
+            setRdpTabs(prevTabs => {
+              return prevTabs.map(tab => {
+                if (tab.type === 'rdp') {
+                  return {
+                    ...tab,
+                    connectionStatus: 'activex_ready',
+                    connectionInfo: {
+                      server: rdpConfig.server,
+                      username: rdpConfig.username,
+                      port: rdpConfig.port,
+                      resolution: rdpConfig.resolution,
+                      startTime: new Date().toISOString(),
+                      sessionId: result.connectionId || `activex_${tab.key}_${Date.now()}`,
+                      type: 'activex'
+                    }
+                  };
+                }
+                return tab;
+              });
             });
-          });
-          
-          toast.current?.show({
-            severity: 'success',
-            summary: 'Conexión RDP',
-            detail: 'Conexión RDP iniciada correctamente',
-            life: 3000
-          });
+            
+            toast.current?.show({
+              severity: 'success',
+              summary: 'ActiveX RDP',
+              detail: 'Conexión RDP embebida lista para usar',
+              life: 3000
+            });
+          } else {
+            // Conexión normal con cliente externo
+            setRdpTabs(prevTabs => {
+              return prevTabs.map(tab => {
+                if (tab.type === 'rdp') {
+                  return {
+                    ...tab,
+                    connectionStatus: 'connected',
+                    connectionInfo: {
+                      server: rdpConfig.server,
+                      username: rdpConfig.username,
+                      port: rdpConfig.port,
+                      resolution: rdpConfig.resolution,
+                      startTime: new Date().toISOString(),
+                      sessionId: result.connectionId || `rdp_${tab.key}_${Date.now()}`
+                    }
+                  };
+                }
+                return tab;
+              });
+            });
+            
+            toast.current?.show({
+              severity: 'success',
+              summary: 'Conexión RDP',
+              detail: 'Conexión RDP iniciada correctamente',
+              life: 3000
+            });
+          }
         } else {
           toast.current?.show({
             severity: 'error',

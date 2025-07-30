@@ -2193,6 +2193,20 @@ ipcMain.handle('window:close', () => {
 // IPC handlers for RDP connections
 ipcMain.handle('rdp:connect', async (event, config) => {
   try {
+    // Verificar si se está usando ActiveX
+    if (config.useActiveX || config.client === 'activex') {
+      // Para ActiveX, solo retornar éxito - la conexión se maneja en el renderer
+      const connectionId = `activex_${Date.now()}`;
+      
+      return {
+        success: true,
+        connectionId: connectionId,
+        type: 'activex',
+        embedded: true
+      };
+    }
+    
+    // Conexión normal con clientes externos
     const connectionId = await rdpManager.connect(config);
     
     // Setup process handlers for events
