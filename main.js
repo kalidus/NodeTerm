@@ -2377,6 +2377,182 @@ app.on('before-quit', () => {
   rdpManager.cleanupAllTempFiles();
 });
 
+// === ActiveX RDP Control Support ===
+let rdpActiveXManager = null;
+
+// Inicializar el manager de ActiveX RDP cuando sea necesario
+function getRdpActiveXManager() {
+  if (!rdpActiveXManager) {
+    try {
+      const RdpActiveXManager = require('./native/rdp-activex');
+      rdpActiveXManager = new RdpActiveXManager();
+    } catch (error) {
+      console.error('Error loading RDP ActiveX manager:', error);
+      return null;
+    }
+  }
+  return rdpActiveXManager;
+}
+
+// Handler para obtener el handle de la ventana padre
+ipcMain.handle('rdp:get-parent-window-handle', async (event) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      return win.getNativeWindowHandle().readBigUInt64LE(0);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting parent window handle:', error);
+    return null;
+  }
+});
+
+// Handler para crear instancia del control ActiveX
+ipcMain.handle('rdp:create-activex-instance', async (event, parentWindowHandle) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    const instanceId = manager.createInstance(parentWindowHandle);
+    return instanceId;
+  } catch (error) {
+    console.error('Error creating ActiveX instance:', error);
+    throw error;
+  }
+});
+
+// Handler para configurar servidor
+ipcMain.handle('rdp:set-activex-server', async (event, instanceId, server) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    manager.setServer(instanceId, server);
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting ActiveX server:', error);
+    throw error;
+  }
+});
+
+// Handler para configurar credenciales
+ipcMain.handle('rdp:set-activex-credentials', async (event, instanceId, username, password) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    manager.setCredentials(instanceId, username, password);
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting ActiveX credentials:', error);
+    throw error;
+  }
+});
+
+// Handler para configurar resolución
+ipcMain.handle('rdp:set-activex-display-settings', async (event, instanceId, width, height) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    manager.setDisplaySettings(instanceId, width, height);
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting ActiveX display settings:', error);
+    throw error;
+  }
+});
+
+// Handler para configurar eventos
+ipcMain.handle('rdp:set-activex-event-handlers', async (event, instanceId, handlers) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    // Configurar callbacks para eventos
+    if (handlers.onConnected) {
+      manager.onEvent(instanceId, 'connected', handlers.onConnected);
+    }
+    if (handlers.onDisconnected) {
+      manager.onEvent(instanceId, 'disconnected', handlers.onDisconnected);
+    }
+    if (handlers.onError) {
+      manager.onEvent(instanceId, 'error', handlers.onError);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting ActiveX event handlers:', error);
+    throw error;
+  }
+});
+
+// Handler para conectar
+ipcMain.handle('rdp:connect-activex', async (event, instanceId) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    manager.connect(instanceId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error connecting ActiveX:', error);
+    throw error;
+  }
+});
+
+// Handler para desconectar
+ipcMain.handle('rdp:disconnect-activex', async (event, instanceId) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    manager.disconnect(instanceId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error disconnecting ActiveX:', error);
+    throw error;
+  }
+});
+
+// Handler para redimensionar
+ipcMain.handle('rdp:resize-activex', async (event, instanceId, x, y, width, height) => {
+  try {
+    const manager = getRdpActiveXManager();
+    if (!manager) {
+      throw new Error('RDP ActiveX manager not available');
+    }
+    
+    manager.resize(instanceId, x, y, width, height);
+    return { success: true };
+  } catch (error) {
+    console.error('Error resizing ActiveX:', error);
+    throw error;
+  }
+});
+
+// Cleanup ActiveX instances on app quit
+app.on('before-quit', () => {
+  if (rdpActiveXManager) {
+    rdpActiveXManager.cleanup();
+  }
+});
+
 // === Terminal Support ===
 const pty = require('node-pty');
 

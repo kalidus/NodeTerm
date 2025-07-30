@@ -1,0 +1,21 @@
+{
+  "name": "rdp-activex-native",
+  "version": "1.0.0",
+  "description": "Native module for RDP ActiveX Control integration",
+  "main": "index.js",
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "build": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "keywords": ["rdp", "activex", "native", "electron"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bindings": "^1.5.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.0.1"
+  },
+  "gypfile": true
+} 

@@ -134,6 +134,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAvailableClients: () => ipcRenderer.invoke('rdp:get-available-clients'),
     getPresets: () => ipcRenderer.invoke('rdp:get-presets'),
     showWindow: (server) => ipcRenderer.invoke('rdp:show-window', { server }),
-    disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server })
+    disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server }),
+    // ActiveX RDP Control API
+    getParentWindowHandle: () => ipcRenderer.invoke('rdp:get-parent-window-handle'),
+    createActiveXInstance: (parentWindowHandle) => ipcRenderer.invoke('rdp:create-activex-instance', parentWindowHandle),
+    setActiveXServer: (instanceId, server) => ipcRenderer.invoke('rdp:set-activex-server', instanceId, server),
+    setActiveXCredentials: (instanceId, username, password) => ipcRenderer.invoke('rdp:set-activex-credentials', instanceId, username, password),
+    setActiveXDisplaySettings: (instanceId, width, height) => ipcRenderer.invoke('rdp:set-activex-display-settings', instanceId, width, height),
+    setActiveXEventHandlers: (instanceId, handlers) => ipcRenderer.invoke('rdp:set-activex-event-handlers', instanceId, handlers),
+    connectActiveX: (instanceId) => ipcRenderer.invoke('rdp:connect-activex', instanceId),
+    disconnectActiveX: (instanceId) => ipcRenderer.invoke('rdp:disconnect-activex', instanceId),
+    resizeActiveX: (instanceId, x, y, width, height) => ipcRenderer.invoke('rdp:resize-activex', instanceId, x, y, width, height)
   }
 }); 

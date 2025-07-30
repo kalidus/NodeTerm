@@ -34,6 +34,7 @@ import SessionManager from '../services/SessionManager';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import RdpManager from './RdpManager';
 import RdpSessionTab from './RdpSessionTab';
+import ActiveXRdpSession from './ActiveXRdpSession';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
 
@@ -3532,45 +3533,68 @@ const App = () => {
                               statusBarIconTheme={statusBarIconTheme}
                             />
                           ) : tab.type === 'rdp' ? (
-                            <RdpSessionTab
-                              rdpConfig={tab.rdpConfig}
-                              tabId={tab.key}
-                              connectionStatus={tab.connectionStatus}
-                              connectionInfo={tab.connectionInfo}
-                              onEditConnection={(rdpConfig, tabId) => {
-                                // Buscar la pestaña RDP para obtener el originalKey
-                                const rdpTab = rdpTabs.find(tab => tab.key === tabId);
-                                if (rdpTab && rdpTab.originalKey) {
-                                  // Buscar el nodo original en la sidebar
-                                  const originalNode = findNodeByKey(nodes, rdpTab.originalKey);
-                                  if (originalNode) {
-                                    openEditRdpDialog(originalNode);
-                                  } else {
-                                    // Fallback: crear nodo temporal si no se encuentra el original
-                                    const tempNode = {
-                                      key: rdpTab.originalKey,
-                                      label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
-                                      data: {
-                                        type: 'rdp',
-                                        ...rdpConfig
+                            // Usar ActiveX RDP Control si está disponible, sino fallback al componente original
+                            (() => {
+                              try {
+                                // Intentar cargar el módulo ActiveX
+                                require('./native/rdp-activex');
+                                return (
+                                  <ActiveXRdpSession
+                                    rdpConfig={tab.rdpConfig}
+                                    tabId={tab.key}
+                                    onClose={() => {
+                                      // Lógica para cerrar la pestaña
+                                      const updatedTabs = rdpTabs.filter(t => t.key !== tab.key);
+                                      setRdpTabs(updatedTabs);
+                                    }}
+                                  />
+                                );
+                              } catch (error) {
+                                // Fallback al componente original si ActiveX no está disponible
+                                console.warn('ActiveX RDP Control no disponible, usando componente original:', error.message);
+                                return (
+                                  <RdpSessionTab
+                                    rdpConfig={tab.rdpConfig}
+                                    tabId={tab.key}
+                                    connectionStatus={tab.connectionStatus}
+                                    connectionInfo={tab.connectionInfo}
+                                    onEditConnection={(rdpConfig, tabId) => {
+                                      // Buscar la pestaña RDP para obtener el originalKey
+                                      const rdpTab = rdpTabs.find(tab => tab.key === tabId);
+                                      if (rdpTab && rdpTab.originalKey) {
+                                        // Buscar el nodo original en la sidebar
+                                        const originalNode = findNodeByKey(nodes, rdpTab.originalKey);
+                                        if (originalNode) {
+                                          openEditRdpDialog(originalNode);
+                                        } else {
+                                          // Fallback: crear nodo temporal si no se encuentra el original
+                                          const tempNode = {
+                                            key: rdpTab.originalKey,
+                                            label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                            data: {
+                                              type: 'rdp',
+                                              ...rdpConfig
+                                            }
+                                          };
+                                          openEditRdpDialog(tempNode);
+                                        }
+                                      } else {
+                                        // Fallback: crear nodo temporal si no hay originalKey
+                                        const tempNode = {
+                                          key: tabId,
+                                          label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
+                                          data: {
+                                            type: 'rdp',
+                                            ...rdpConfig
+                                          }
+                                        };
+                                        openEditRdpDialog(tempNode);
                                       }
-                                    };
-                                    openEditRdpDialog(tempNode);
-                                  }
-                                } else {
-                                  // Fallback: crear nodo temporal si no hay originalKey
-                                  const tempNode = {
-                                    key: tabId,
-                                    label: rdpConfig.name || `${rdpConfig.server}:${rdpConfig.port}`,
-                                    data: {
-                                      type: 'rdp',
-                                      ...rdpConfig
-                                    }
-                                  };
-                                  openEditRdpDialog(tempNode);
-                                }
-                              }}
-                            />
+                                    }}
+                                  />
+                                );
+                              }
+                            })()
                           ) : (
                             <TerminalComponent
                               key={tab.key}
