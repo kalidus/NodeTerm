@@ -30,6 +30,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     username: '',
     password: '',
     port: 3389,
+    connectionType: 'mstsc',
     preset: 'default',
     resolution: '1600x1000',
     colorDepth: 32,
@@ -111,6 +112,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     { label: '8 bits (256 colores)', value: 8 }
   ];
 
+  const connectionTypeOptions = [
+    { label: 'MSTSC (Windows Remote Desktop)', value: 'mstsc' },
+    { label: 'FreeRDP (Open Source)', value: 'freerdp' }
+  ];
+
   const presetOptions = [
     { label: 'Predeterminado', value: 'default' },
     { label: 'Alto rendimiento', value: 'performance' },
@@ -137,6 +143,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           username: rdpNodeData.username || '',
           password: rdpNodeData.password || '',
           port: rdpNodeData.port || 3389,
+          connectionType: rdpNodeData.connectionType || 'mstsc',
           preset: 'default',
           resolution: rdpNodeData.resolution || '1600x1000',
           colorDepth: rdpNodeData.colorDepth || 32,
@@ -430,6 +437,26 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       feedback={false}
                       toggleMask
                       autoComplete="off"
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              <Card title="Configuración de Conexión" className="mb-3">
+                <div className="formgrid grid">
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="connectionType">Tipo de Cliente RDP</label>
+                    <Dropdown
+                      id="connectionType"
+                      value={formData.connectionType}
+                      options={connectionTypeOptions}
+                      onChange={(e) => handleInputChange('connectionType', e.value)}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
                     />
                   </div>
                 </div>

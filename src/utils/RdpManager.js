@@ -23,11 +23,15 @@ class RdpManager {
       // Crear archivo .rdp temporal con configuración simple
       const rdpFilePath = await this.createRdpFile(config, connectionId);
       
-      // Construir argumentos para mstsc.exe
-      const args = this.buildMstscArgs(config, rdpFilePath);
+      // Construir argumentos según el tipo de conexión
+      const args = config.connectionType === 'freerdp' 
+        ? this.buildFreeRdpArgs(config, rdpFilePath)
+        : this.buildMstscArgs(config, rdpFilePath);
       
-      // Lanzar proceso
-      const process = this.launchMstscProcess(args, connectionId);
+      // Lanzar proceso según el tipo
+      const process = config.connectionType === 'freerdp'
+        ? this.launchFreeRdpProcess(args, connectionId)
+        : this.launchMstscProcess(args, connectionId);
       
       // Guardar conexión
       this.activeConnections.set(connectionId, {
@@ -266,6 +270,70 @@ class RdpManager {
     
     // Usar start para ejecutar mstsc.exe de forma independiente
     const command = `start "" mstsc.exe "${args[0]}"`;
+    
+    const childProcess = exec(command, {
+      windowsHide: false,
+      shell: true
+    });
+    
+    return childProcess;
+  }
+
+  /**
+   * Construir argumentos para FreeRDP
+   */
+  buildFreeRdpArgs(config, rdpFilePath) {
+    const args = [
+      '/v:' + config.server + (config.port && config.port !== 3389 ? ':' + config.port : ''),
+      '/u:' + config.username
+    ];
+    
+    if (config.password) {
+      args.push('/p:' + config.password);
+    }
+    
+    // Configuración de pantalla
+    if (config.resolution) {
+      const [width, height] = config.resolution.split('x');
+      args.push('/w:' + width);
+      args.push('/h:' + height);
+    }
+    
+    // Profundidad de color
+    args.push('/bpp:' + (config.colorDepth || 32));
+    
+    // Opciones adicionales
+    if (config.fullscreen) {
+      args.push('/f');
+    }
+    
+    if (config.smartSizing) {
+      args.push('/smart-sizing');
+    }
+    
+    if (config.redirectClipboard) {
+      args.push('+clipboard');
+    }
+    
+    if (config.redirectFolders) {
+      args.push('+drives');
+    }
+    
+    if (config.redirectAudio) {
+      args.push('+audio-mode:1');
+    }
+    
+    return args;
+  }
+
+  /**
+   * Lanzar proceso FreeRDP
+   */
+  launchFreeRdpProcess(args, connectionId) {
+    const { exec } = require('child_process');
+    
+    // Comando para FreeRDP (wfreerdp.exe en Windows)
+    const command = `wfreerdp.exe ${args.join(' ')}`;
     
     const childProcess = exec(command, {
       windowsHide: false,

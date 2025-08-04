@@ -2368,6 +2368,7 @@ const App = () => {
       username: node.data.username,
       password: node.data.password,
       port: node.data.port || 3389,
+      connectionType: node.data.connectionType || 'mstsc',
       resolution: node.data.resolution || '1920x1080',
       colorDepth: node.data.colorDepth || 32,
       redirectFolders: node.data.redirectFolders === true,
@@ -2424,7 +2425,19 @@ const App = () => {
       });
     }
 
-    // Conectar RDP automáticamente después de crear/actualizar la pestaña
+    // Verificar el tipo de conexión: para FreeRDP solo crear pestaña en blanco
+    if (rdpConfig.connectionType === 'freerdp') {
+      // Para FreeRDP, solo crear una pestaña en blanco sin conectar automáticamente
+      toast.current?.show({
+        severity: 'info',
+        summary: 'Pestaña FreeRDP creada',
+        detail: 'Pestaña en blanco creada para FreeRDP. Esta funcionalidad está en desarrollo.',
+        life: 3000
+      });
+      return;
+    }
+
+    // Conectar RDP automáticamente solo para MSTSC
     window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
       .then(result => {
         if (result.success) {
@@ -2522,6 +2535,7 @@ const App = () => {
             username: rdpData.username,
             password: rdpData.password,
             port: rdpData.port || 3389,
+            connectionType: rdpData.connectionType || 'mstsc',
             resolution: rdpData.resolution || '1920x1080',
             colorDepth: rdpData.colorDepth || 32,
             redirectFolders: rdpData.redirectFolders === true,
@@ -2555,6 +2569,7 @@ const App = () => {
           username: rdpData.username,
           password: rdpData.password,
           port: rdpData.port || 3389,
+          connectionType: rdpData.connectionType || 'mstsc',
           resolution: rdpData.resolution || '1920x1080',
           colorDepth: rdpData.colorDepth || 32,
           redirectFolders: rdpData.redirectFolders === true,
@@ -2596,6 +2611,7 @@ const App = () => {
                 username: rdpData.username,
                 password: rdpData.password,
                 port: rdpData.port || 3389,
+                connectionType: rdpData.connectionType || 'mstsc',
                 resolution: rdpData.resolution || '1920x1080',
                 colorDepth: rdpData.colorDepth || 32,
                 redirectFolders: rdpData.redirectFolders === true,
