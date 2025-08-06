@@ -6,6 +6,7 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
+import { Dropdown } from 'primereact/dropdown';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Menu } from 'primereact/menu';
@@ -34,6 +35,7 @@ import SessionManager from '../services/SessionManager';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import RdpManager from './RdpManager';
 import RdpSessionTab from './RdpSessionTab';
+import GuacamoleTab from './GuacamoleTab';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
 
@@ -88,6 +90,7 @@ const App = () => {
   const [rdpUsername, setRdpUsername] = useState('');
   const [rdpPassword, setRdpPassword] = useState('');
   const [rdpPort, setRdpPort] = useState(3389);
+  const [rdpClientType, setRdpClientType] = useState('mstsc');
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
   const [showRdpDialog, setShowRdpDialog] = useState(false);
 
@@ -98,6 +101,7 @@ const App = () => {
   const [editFolderName, setEditFolderName] = useState('');
   const [sshTabs, setSshTabs] = useState([]);
   const [rdpTabs, setRdpTabs] = useState([]);
+  const [guacamoleTabs, setGuacamoleTabs] = useState([]);
   const [fileExplorerTabs, setFileExplorerTabs] = useState([]);
   const [homeTabs, setHomeTabs] = useState(() => [
     {
@@ -640,7 +644,7 @@ const App = () => {
 
   // Funciones auxiliares para el manejo de pestañas
   const getAllTabs = () => {
-    return [...homeTabs, ...sshTabs, ...rdpTabs, ...fileExplorerTabs];
+    return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
   };
 
   const getTabTypeAndIndex = (globalIndex) => {
@@ -1616,6 +1620,7 @@ const App = () => {
         username: rdpUsername.trim(),
         password: rdpPassword.trim(),
         port: rdpPort,
+        clientType: rdpClientType,
         resolution: '1920x1080',
         colorDepth: 32,
         redirectFolders: true,
@@ -1677,6 +1682,7 @@ const App = () => {
     setRdpUsername('');
     setRdpPassword('');
     setRdpPort(3389);
+    setRdpClientType('mstsc');
   };
 
   const openEditRdpDialog = (node) => {
@@ -2368,6 +2374,7 @@ const App = () => {
       username: node.data.username,
       password: node.data.password,
       port: node.data.port || 3389,
+      clientType: node.data.clientType || 'mstsc',
       resolution: node.data.resolution || '1920x1080',
       colorDepth: node.data.colorDepth || 32,
       redirectFolders: node.data.redirectFolders === true,
@@ -2424,30 +2431,40 @@ const App = () => {
       });
     }
 
-    // Conectar RDP automáticamente después de crear/actualizar la pestaña
-    window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
-      .then(result => {
-        if (result.success) {
-          // Actualizar el estado de la pestaña RDP para que se active el botón "Mostrar Ventana"
-          setRdpTabs(prevTabs => {
-            return prevTabs.map(tab => {
-              if (tab.type === 'rdp') {
-                return {
-                  ...tab,
-                  connectionStatus: 'connected',
-                  connectionInfo: {
-                    server: rdpConfig.server,
-                    username: rdpConfig.username,
-                    port: rdpConfig.port,
-                    resolution: rdpConfig.resolution,
-                    startTime: new Date().toISOString(),
-                    sessionId: result.connectionId || `rdp_${tab.key}_${Date.now()}`
-                  }
-                };
-              }
-              return tab;
+    // Manejar diferentes tipos de cliente RDP
+    if (rdpConfig.clientType === 'guacamole') {
+      // Para Guacamole, solo crear la pestaña vacía por ahora
+      toast.current?.show({
+        severity: 'info',
+        summary: 'Guacamole Lite',
+        detail: 'Pestaña de Guacamole creada (funcionalidad en desarrollo)',
+        life: 3000
+      });
+    } else {
+      // Para mstsc, conectar automáticamente
+      window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
+        .then(result => {
+          if (result.success) {
+            // Actualizar el estado de la pestaña RDP para que se active el botón "Mostrar Ventana"
+            setRdpTabs(prevTabs => {
+              return prevTabs.map(tab => {
+                if (tab.type === 'rdp') {
+                  return {
+                    ...tab,
+                    connectionStatus: 'connected',
+                    connectionInfo: {
+                      server: rdpConfig.server,
+                      username: rdpConfig.username,
+                      port: rdpConfig.port,
+                      resolution: rdpConfig.resolution,
+                      startTime: new Date().toISOString(),
+                      sessionId: result.connectionId || `rdp_${tab.key}_${Date.now()}`
+                    }
+                  };
+                }
+                return tab;
+              });
             });
-          });
           
           toast.current?.show({
             severity: 'success',
@@ -2473,6 +2490,7 @@ const App = () => {
           life: 3000
         });
       });
+    }
   };
 
   // Función para desbloquear formularios cuando sea necesario
@@ -2505,6 +2523,42 @@ const App = () => {
     };
   }, []);
 
+  // Handler para crear pestañas de Guacamole
+  useEffect(() => {
+    const handleGuacamoleCreateTab = async (event, data) => {
+      const { tabId, config } = data;
+      
+      const newGuacamoleTab = {
+        key: tabId,
+        label: config.name || `Guacamole - ${config.server}`,
+        type: 'guacamole',
+        config: config,
+        tabId: tabId
+      };
+      
+      setGuacamoleTabs(prevTabs => {
+        const newTabs = [newGuacamoleTab, ...prevTabs];
+        return newTabs;
+      });
+      
+      // Cambiar a la nueva pestaña
+      const allTabs = getAllTabs();
+      const tabIndex = allTabs.findIndex(tab => tab.key === tabId);
+      if (tabIndex !== -1) {
+        setActiveTabIndex(tabIndex);
+      }
+    };
+
+    // Escuchar eventos de creación de pestañas de Guacamole
+    if (window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.on('guacamole:create-tab', handleGuacamoleCreateTab);
+      
+      return () => {
+        window.electron.ipcRenderer.removeListener('guacamole:create-tab', handleGuacamoleCreateTab);
+      };
+    }
+  }, []);
+
   const handleSaveRdpToSidebar = (rdpData, isEditing = false, originalNode = null) => {
     if (isEditing && originalNode) {
       // Actualizar nodo existente
@@ -2522,6 +2576,7 @@ const App = () => {
             username: rdpData.username,
             password: rdpData.password,
             port: rdpData.port || 3389,
+            clientType: rdpData.clientType || 'mstsc',
             resolution: rdpData.resolution || '1920x1080',
             colorDepth: rdpData.colorDepth || 32,
             redirectFolders: rdpData.redirectFolders === true,
@@ -2555,6 +2610,7 @@ const App = () => {
           username: rdpData.username,
           password: rdpData.password,
           port: rdpData.port || 3389,
+          clientType: rdpData.clientType || 'mstsc',
           resolution: rdpData.resolution || '1920x1080',
           colorDepth: rdpData.colorDepth || 32,
           redirectFolders: rdpData.redirectFolders === true,
@@ -2596,6 +2652,7 @@ const App = () => {
                 username: rdpData.username,
                 password: rdpData.password,
                 port: rdpData.port || 3389,
+                clientType: rdpData.clientType || 'mstsc',
                 resolution: rdpData.resolution || '1920x1080',
                 colorDepth: rdpData.colorDepth || 32,
                 redirectFolders: rdpData.redirectFolders === true,
@@ -3438,7 +3495,7 @@ const App = () => {
                   )}
                   
                   {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
-                  {[...homeTabs, ...sshTabs, ...rdpTabs, ...fileExplorerTabs].map((tab) => {
+                  {[...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
                       const filteredTabs = getFilteredTabs();
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
@@ -3570,6 +3627,11 @@ const App = () => {
                                   openEditRdpDialog(tempNode);
                                 }
                               }}
+                            />
+                          ) : tab.type === 'guacamole' ? (
+                            <GuacamoleTab
+                              config={tab.config}
+                              tabId={tab.tabId}
                             />
                           ) : (
                             <TerminalComponent
@@ -3794,6 +3856,19 @@ const App = () => {
               placeholder="3389"
               min={1}
               max={65535}
+            />
+          </div>
+          <div className="flex flex-column gap-2">
+            <label htmlFor="rdpClientType">Tipo de Cliente</label>
+            <Dropdown
+              id="rdpClientType"
+              value={rdpClientType}
+              options={[
+                { label: 'mstsc (Windows)', value: 'mstsc' },
+                { label: 'Guacamole Lite', value: 'guacamole' }
+              ]}
+              onChange={(e) => setRdpClientType(e.value)}
+              placeholder="Seleccionar tipo de cliente"
             />
           </div>
         </div>

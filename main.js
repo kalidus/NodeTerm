@@ -2244,6 +2244,12 @@ ipcMain.handle('rdp:get-presets', async (event) => {
   return rdpManager.getPresets();
 });
 
+// Handler para crear pestañas de Guacamole
+ipcMain.on('guacamole:create-tab', (event, data) => {
+  // Reenviar el evento al renderer para crear la pestaña
+  sendToRenderer(event.sender, 'guacamole:create-tab', data);
+});
+
 // Handler para mostrar ventana RDP si está minimizada
 ipcMain.handle('rdp:show-window', async (event, { server }) => {
   try {

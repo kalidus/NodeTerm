@@ -30,6 +30,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     username: '',
     password: '',
     port: 3389,
+    clientType: 'mstsc',
     preset: 'default',
     resolution: '1600x1000',
     colorDepth: 32,
@@ -120,6 +121,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     { label: '4K UHD (3840x2160)', value: 'uhd' }
   ];
 
+  const clientTypeOptions = [
+    { label: 'mstsc (Windows)', value: 'mstsc' },
+    { label: 'Guacamole Lite', value: 'guacamole' }
+  ];
+
   useEffect(() => {
     if (visible) {
       loadPresets();
@@ -137,6 +143,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           username: rdpNodeData.username || '',
           password: rdpNodeData.password || '',
           port: rdpNodeData.port || 3389,
+          clientType: rdpNodeData.clientType || 'mstsc',
           preset: 'default',
           resolution: rdpNodeData.resolution || '1600x1000',
           colorDepth: rdpNodeData.colorDepth || 32,
@@ -219,22 +226,55 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
 
     setLoading(true);
     try {
-      const result = await window.electronAPI.rdp.connect(formData);
-      
-      if (result.success) {
+      // Manejar diferentes tipos de cliente
+      if (formData.clientType === 'guacamole') {
+        // Para Guacamole, crear una pestaña vacía
         toast.current?.show({
-          severity: 'success',
-          summary: 'Conectando',
-          detail: 'Iniciando conexión RDP...'
+          severity: 'info',
+          summary: 'Guacamole Lite',
+          detail: 'Pestaña de Guacamole creada',
+          life: 3000
         });
-        refreshConnections();
-        setActiveTab(1); // Cambiar a pestaña de conexiones
+        
+        // Crear una pestaña vacía para Guacamole
+        const tabId = `guacamole_${Date.now()}`;
+        const guacamoleConfig = {
+          name: formData.name,
+          server: formData.server,
+          username: formData.username,
+          password: formData.password,
+          port: formData.port || 3389,
+          clientType: 'guacamole',
+          resolution: formData.resolution || '1920x1080',
+          colorDepth: formData.colorDepth || 32
+        };
+        
+        // Enviar evento para crear pestaña de Guacamole
+        if (window.electron && window.electron.ipcRenderer) {
+          window.electron.ipcRenderer.send('guacamole:create-tab', {
+            tabId,
+            config: guacamoleConfig
+          });
+        }
       } else {
-        toast.current?.show({
-          severity: 'error',
-          summary: 'Error de conexión',
-          detail: result.error
-        });
+        // Para mstsc, conectar normalmente
+        const result = await window.electronAPI.rdp.connect(formData);
+        
+        if (result.success) {
+          toast.current?.show({
+            severity: 'success',
+            summary: 'Conectando',
+            detail: 'Iniciando conexión RDP...'
+          });
+          refreshConnections();
+          setActiveTab(1); // Cambiar a pestaña de conexiones
+        } else {
+          toast.current?.show({
+            severity: 'error',
+            summary: 'Error de conexión',
+            detail: result.error
+          });
+        }
       }
     } catch (error) {
       toast.current?.show({
@@ -432,6 +472,22 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       autoComplete="off"
                     />
                   </div>
+                  <div className="field col-12 md:col-6">
+                    <label htmlFor="clientType">Tipo de Cliente</label>
+                    <Dropdown
+                      id="clientType"
+                      value={formData.clientType}
+                      options={clientTypeOptions}
+                      onChange={(e) => handleInputChange('clientType', e.value)}
+                      onFocus={(e) => {
+                        if (isElementBlocked(e.target)) {
+                          unblockElement(e.target);
+                        }
+                        safeFocus(e.target);
+                      }}
+                      placeholder="Seleccionar tipo de cliente"
+                    />
+                  </div>
                 </div>
               </Card>
 
@@ -627,7 +683,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     onClick={onHide}
                   />
                   <Button
-                    label="Guardar en Sidebar"
+                    label="Guardar"
                     icon="pi pi-save"
                     className="p-button-success"
                     onClick={handleSaveToSidebar}
