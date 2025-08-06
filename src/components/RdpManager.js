@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
+import { InputNumber } from 'primereact/inputnumber';
 import { Password } from 'primereact/password';
 import { Dropdown } from 'primereact/dropdown';
 import { Checkbox } from 'primereact/checkbox';
@@ -42,7 +43,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     smartSizing: true,
     span: false,
     admin: false,
-    public: false
+    public: false,
+    // Campos específicos para Guacamole
+    autoResize: false,           // Ajuste automático de ventana
+    guacDpi: 96,                // DPI para Guacamole
+    guacSecurity: 'any',        // Seguridad: any, rdp, tls, nla
+    guacEnableWallpaper: false, // Mostrar fondo de escritorio
+    guacEnableDrive: false      // Redirección de unidades
   });
 
   // Debug formData changes
@@ -245,8 +252,19 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           password: formData.password,
           port: formData.port || 3389,
           clientType: 'guacamole',
-          resolution: formData.resolution || '1920x1080',
-          colorDepth: formData.colorDepth || 32
+          resolution: formData.autoResize ? 'auto' : (formData.resolution || '1920x1080'),
+          colorDepth: formData.colorDepth || 32,
+          // Opciones específicas de Guacamole
+          autoResize: formData.autoResize,
+          dpi: formData.guacDpi || 96,
+          security: formData.guacSecurity || 'any',
+          enableDrive: formData.guacEnableDrive,
+          enableWallpaper: formData.guacEnableWallpaper,
+          redirectClipboard: formData.redirectClipboard,
+          redirectPrinters: formData.redirectPrinters,
+          redirectAudio: formData.redirectAudio,
+          fullscreen: formData.fullscreen,
+          span: formData.span
         };
         
         // Enviar evento para crear pestaña de Guacamole
@@ -543,134 +561,298 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
 
               <Card title="Opciones Avanzadas">
                 <div className="formgrid grid">
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="redirectFolders"
-                      checked={formData.redirectFolders}
-                      onChange={handleCheckboxChange('redirectFolders')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="redirectFolders" className="ml-2">Redirigir carpetas</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="redirectClipboard"
-                      checked={formData.redirectClipboard}
-                      onChange={handleCheckboxChange('redirectClipboard')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="redirectClipboard" className="ml-2">Compartir portapapeles</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="redirectPrinters"
-                      checked={formData.redirectPrinters}
-                      onChange={handleCheckboxChange('redirectPrinters')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="redirectPrinters" className="ml-2">Redirigir impresoras</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="redirectAudio"
-                      checked={formData.redirectAudio}
-                      onChange={handleCheckboxChange('redirectAudio')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="redirectAudio" className="ml-2">Redirigir audio</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="fullscreen"
-                      checked={formData.fullscreen}
-                      onChange={handleCheckboxChange('fullscreen')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="smartSizing"
-                      checked={formData.smartSizing}
-                      onChange={(e) => {
-                        handleCheckboxChange('smartSizing')(e);
-                      }}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="smartSizing" className="ml-2">Ajuste automático de ventana</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="span"
-                      checked={formData.span}
-                      onChange={handleCheckboxChange('span')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="span" className="ml-2">Múltiples monitores</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="admin"
-                      checked={formData.admin}
-                      onChange={handleCheckboxChange('admin')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="admin" className="ml-2">Sesión administrativa</label>
-                  </div>
-                  <div className="field-checkbox col-12 md:col-6">
-                    <Checkbox
-                      inputId="public"
-                      checked={formData.public}
-                      onChange={handleCheckboxChange('public')}
-                      onFocus={(e) => {
-                        if (isElementBlocked(e.target)) {
-                          unblockElement(e.target);
-                        }
-                        safeFocus(e.target);
-                      }}
-                    />
-                    <label htmlFor="public" className="ml-2">Conexión pública</label>
-                  </div>
+                  {/* Opciones para MSTSC (RDP Nativo) */}
+                  {formData.clientType === 'mstsc' && (
+                    <>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectFolders"
+                          checked={formData.redirectFolders}
+                          onChange={handleCheckboxChange('redirectFolders')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectFolders" className="ml-2">Redirigir carpetas</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectClipboard"
+                          checked={formData.redirectClipboard}
+                          onChange={handleCheckboxChange('redirectClipboard')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectClipboard" className="ml-2">Compartir portapapeles</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectPrinters"
+                          checked={formData.redirectPrinters}
+                          onChange={handleCheckboxChange('redirectPrinters')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectPrinters" className="ml-2">Redirigir impresoras</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectAudio"
+                          checked={formData.redirectAudio}
+                          onChange={handleCheckboxChange('redirectAudio')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectAudio" className="ml-2">Redirigir audio</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="fullscreen"
+                          checked={formData.fullscreen}
+                          onChange={handleCheckboxChange('fullscreen')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="smartSizing"
+                          checked={formData.smartSizing}
+                          onChange={(e) => {
+                            handleCheckboxChange('smartSizing')(e);
+                          }}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="smartSizing" className="ml-2">Ajuste automático de ventana</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="span"
+                          checked={formData.span}
+                          onChange={handleCheckboxChange('span')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="span" className="ml-2">Múltiples monitores</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="admin"
+                          checked={formData.admin}
+                          onChange={handleCheckboxChange('admin')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="admin" className="ml-2">Sesión administrativa</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="public"
+                          checked={formData.public}
+                          onChange={handleCheckboxChange('public')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="public" className="ml-2">Conexión pública</label>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Opciones para Guacamole */}
+                  {formData.clientType === 'guacamole' && (
+                    <>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableDrive"
+                          checked={formData.guacEnableDrive}
+                          onChange={handleCheckboxChange('guacEnableDrive')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="guacEnableDrive" className="ml-2">Redirigir carpetas</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectClipboard"
+                          checked={formData.redirectClipboard}
+                          onChange={handleCheckboxChange('redirectClipboard')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectClipboard" className="ml-2">Compartir portapapeles</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectPrinters"
+                          checked={formData.redirectPrinters}
+                          onChange={handleCheckboxChange('redirectPrinters')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectPrinters" className="ml-2">Redirigir impresoras</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="redirectAudio"
+                          checked={formData.redirectAudio}
+                          onChange={handleCheckboxChange('redirectAudio')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="redirectAudio" className="ml-2">Redirigir audio</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="fullscreen"
+                          checked={formData.fullscreen}
+                          onChange={handleCheckboxChange('fullscreen')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="autoResize"
+                          checked={formData.autoResize}
+                          onChange={handleCheckboxChange('autoResize')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="autoResize" className="ml-2">Ajuste automático de ventana</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="span"
+                          checked={formData.span}
+                          onChange={handleCheckboxChange('span')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="span" className="ml-2">Múltiples monitores</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableWallpaper"
+                          checked={formData.guacEnableWallpaper}
+                          onChange={handleCheckboxChange('guacEnableWallpaper')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="guacEnableWallpaper" className="ml-2">Mostrar fondo de escritorio</label>
+                      </div>
+                      
+                      {/* Campos específicos para Guacamole */}
+                      <div className="field col-12 md:col-6">
+                        <label htmlFor="guacDpi">DPI</label>
+                        <InputNumber
+                          id="guacDpi"
+                          value={formData.guacDpi}
+                          onValueChange={(e) => handleInputChange('guacDpi', e.value)}
+                          min={72}
+                          max={300}
+                          suffix=""
+                          placeholder="96"
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="field col-12 md:col-6">
+                        <label htmlFor="guacSecurity">Seguridad</label>
+                        <Dropdown
+                          id="guacSecurity"
+                          value={formData.guacSecurity}
+                          options={[
+                            { label: 'Cualquiera (Recomendado)', value: 'any' },
+                            { label: 'RDP', value: 'rdp' },
+                            { label: 'TLS', value: 'tls' },
+                            { label: 'NLA', value: 'nla' }
+                          ]}
+                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <Divider />

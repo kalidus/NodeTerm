@@ -11,6 +11,7 @@ const GuacamoleTerminal = forwardRef(({
     const [connectionState, setConnectionState] = useState('disconnected'); // disconnected, connecting, connected, error
     const [errorMessage, setErrorMessage] = useState('');
     const [isGuacamoleLoaded, setIsGuacamoleLoaded] = useState(false);
+    const [autoResize, setAutoResize] = useState(false);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -89,6 +90,12 @@ const GuacamoleTerminal = forwardRef(({
                 console.log('🔗 Iniciando conexión con rdpConfig:', rdpConfig);
                 setConnectionState('connecting');
                 setErrorMessage('');
+
+                // Extraer configuración de autoResize
+                if (rdpConfig && rdpConfig.autoResize !== undefined) {
+                    setAutoResize(rdpConfig.autoResize);
+                    console.log('🖥️ Auto-resize configurado:', rdpConfig.autoResize);
+                }
 
                 // Verificar que electron esté disponible
                 if (!window.electron || !window.electron.ipcRenderer) {
@@ -433,6 +440,62 @@ const GuacamoleTerminal = forwardRef(({
             }
         };
     }, [isGuacamoleLoaded, rdpConfig, tabId]);
+
+    // Manejar redimensionamiento automático de ventana
+    useEffect(() => {
+        if (!autoResize || connectionState !== 'connected' || !guacamoleClientRef.current) {
+            return;
+        }
+
+        let resizeTimeout;
+        
+        const handleResize = () => {
+            // Debounce para evitar demasiadas llamadas mientras se redimensiona
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                try {
+                    const client = guacamoleClientRef.current;
+                    const container = containerRef.current;
+                    
+                    if (client && container && client.getDisplay) {
+                        const display = client.getDisplay();
+                        if (display) {
+                            // Calcular nueva resolución basada en el contenedor
+                            const containerRect = container.getBoundingClientRect();
+                            const newWidth = Math.floor(containerRect.width);
+                            const newHeight = Math.floor(containerRect.height);
+                            
+                            console.log(`🔄 Auto-resize: ${newWidth}x${newHeight}`);
+                            
+                            // Enviar comando de resize al servidor Guacamole
+                            if (client.sendSize) {
+                                client.sendSize(newWidth, newHeight);
+                            }
+                            
+                            // Ajustar el display local
+                            if (display.scale) {
+                                display.scale(1.0); // Escala 1:1 para resolución exacta
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error en auto-resize:', error);
+                }
+            }, 150); // Esperar 150ms después de que pare el redimensionamiento
+        };
+
+        console.log('🖥️ Activando listener de auto-resize');
+        window.addEventListener('resize', handleResize);
+        
+        // También ejecutar un resize inicial
+        handleResize();
+
+        return () => {
+            console.log('🖥️ Desactivando listener de auto-resize');
+            clearTimeout(resizeTimeout);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [autoResize, connectionState]);
 
          // Renderizar diferentes estados
      console.log('🎨 Renderizando con connectionState:', connectionState);
