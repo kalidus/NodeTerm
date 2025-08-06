@@ -39,6 +39,7 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
         {
           id: '1',
           name: 'Servidor Web Principal',
+          type: 'ssh',
           host: '192.168.1.100',
           username: 'admin',
           port: 22,
@@ -49,6 +50,7 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
         {
           id: '2',
           name: 'Base de Datos MySQL',
+          type: 'ssh',
           host: 'db.example.com',
           username: 'dbuser',
           port: 22,
@@ -58,7 +60,21 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
         },
         {
           id: '3',
+          name: 'Servidor Windows RDP',
+          type: 'rdp-guacamole',
+          host: '192.168.10.52',
+          hostname: '192.168.10.52', // Para compatibilidad
+          username: 'kalidus@outlook.es',
+          password: 'Ronaldi$1024', // Credenciales reales
+          port: 3389,
+          lastConnected: new Date(Date.now() - 1200000), // 20 minutos atrás
+          status: 'success',
+          connectionTime: 3.1
+        },
+        {
+          id: '4',
           name: 'Servidor de Desarrollo',
+          type: 'ssh',
           host: '10.0.0.50',
           username: 'developer',
           port: 2222,
@@ -70,14 +86,28 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
       
       setFavoriteConnections([
         {
-          id: '4',
+          id: '5',
           name: 'Servidor Producción',
+          type: 'ssh',
           host: 'prod.company.com',
           username: 'sysadmin',
           port: 22,
           lastConnected: new Date(Date.now() - 1800000), // 30 minutos atrás
           status: 'success',
           connectionTime: 1.2,
+          isFavorite: true
+        },
+        {
+          id: '6',
+          name: 'Windows Server Principal',
+          type: 'rdp-guacamole',
+          host: 'win-server.empresa.com',
+          hostname: 'win-server.empresa.com', // Para compatibilidad con RDP
+          username: 'administrador',
+          port: 3389,
+          lastConnected: new Date(Date.now() - 3600000), // 1 hora atrás
+          status: 'success',
+          connectionTime: 2.8,
           isFavorite: true
         }
       ]);
@@ -112,6 +142,28 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
     }
   };
 
+  const getConnectionTypeIcon = (type) => {
+    switch (type) {
+      case 'ssh':
+        return 'pi pi-server';
+      case 'rdp-guacamole':
+        return 'pi pi-desktop';
+      default:
+        return 'pi pi-circle';
+    }
+  };
+
+  const getConnectionTypeColor = (type) => {
+    switch (type) {
+      case 'ssh':
+        return '#4fc3f7';
+      case 'rdp-guacamole':
+        return '#ff6b35';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
   const ConnectionCard = ({ connection, showFavoriteAction = false }) => (
     <Card 
       className="connection-history-card"
@@ -134,13 +186,22 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-          {/* Icono de estado */}
+          {/* Iconos de tipo y estado */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Icono de tipo de conexión */}
+            <i 
+              className={getConnectionTypeIcon(connection.type)}
+              style={{ 
+                color: getConnectionTypeColor(connection.type),
+                fontSize: '1.1rem'
+              }}
+            />
+            {/* Icono de estado */}
             <i 
               className={getStatusIcon(connection.status)}
               style={{ 
                 color: getStatusColor(connection.status),
-                fontSize: '1.2rem'
+                fontSize: '1rem'
               }}
             />
             {connection.isFavorite && (
@@ -158,13 +219,27 @@ const ConnectionHistory = ({ onConnectToHistory }) => {
             }}>
               {connection.name}
             </h4>
-            <p style={{ 
+            <div style={{ 
               margin: '0 0 0.25rem 0', 
-              color: 'var(--text-color-secondary)',
-              fontSize: '0.9rem'
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem'
             }}>
-              {connection.username}@{connection.host}:{connection.port}
-            </p>
+              <span style={{ 
+                color: 'var(--text-color-secondary)',
+                fontSize: '0.9rem'
+              }}>
+                {connection.username}@{connection.host}:{connection.port}
+              </span>
+              <Badge 
+                value={connection.type === 'rdp-guacamole' ? 'RDP' : 'SSH'} 
+                style={{ 
+                  backgroundColor: getConnectionTypeColor(connection.type),
+                  fontSize: '0.7rem',
+                  padding: '2px 6px'
+                }}
+              />
+            </div>
             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
               <span>
                 {getRelativeTime(connection.lastConnected)}
