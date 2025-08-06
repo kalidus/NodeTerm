@@ -44,7 +44,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^dialog:.*$/,
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
-        /^rdp:.*$/
+        /^rdp:.*$/,
+        /^guacamole:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -68,7 +69,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl:.*$/,
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
-        /^rdp:.*$/
+        /^rdp:.*$/,
+        /^guacamole:.*$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`

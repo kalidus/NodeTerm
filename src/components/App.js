@@ -36,6 +36,7 @@ import SyncSettingsDialog from './SyncSettingsDialog';
 import RdpManager from './RdpManager';
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
+import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
 
@@ -2367,7 +2368,52 @@ const App = () => {
       setActiveGroupId(null);
     }
 
-    // Configuración RDP
+    // Detectar si es RDP-Guacamole o RDP nativo
+    // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
+    const nodeData = node.data || node; // Fallback para ConnectionHistory
+    const isGuacamoleRDP = nodeData.clientType === 'guacamole' || nodeData.type === 'rdp-guacamole';
+    
+    if (isGuacamoleRDP) {
+      // === NUEVA LÓGICA: RDP-Guacamole como pestañas independientes ===
+      const rdpConfig = {
+        hostname: nodeData.server || nodeData.host || nodeData.hostname,
+        username: nodeData.username || nodeData.user,
+        password: nodeData.password || 'password', // En producción desde vault
+        port: nodeData.port || 3389,
+        width: parseInt(nodeData.resolution?.split('x')[0]) || 1024,
+        height: parseInt(nodeData.resolution?.split('x')[1]) || 768,
+        dpi: 96,
+        enableDrive: nodeData.redirectFolders === true,
+        enableWallpaper: false,
+        security: 'any'
+      };
+
+      // Crear pestaña RDP-Guacamole igual que SSH
+      setRdpTabs(prevTabs => {
+        const tabId = `${node.key || node.id || 'rdp'}_${Date.now()}`;
+        const connectionName = node.label || node.name || 'RDP Connection';
+        const originalKey = node.key || node.id || tabId;
+        
+        const newTab = {
+          key: tabId,
+          label: `${connectionName} (${prevTabs.filter(t => t.originalKey === originalKey).length + 1})`,
+          originalKey: originalKey,
+          rdpConfig: rdpConfig,
+          type: 'rdp-guacamole'
+        };
+        const newTabs = [newTab, ...prevTabs];
+        setActiveTabIndex(homeTabs.length + sshTabs.length); // Activar la nueva pestaña RDP
+        setGroupActiveIndices(prev => ({
+          ...prev,
+          'no-group': homeTabs.length + sshTabs.length
+        }));
+        return newTabs;
+      });
+      
+      return; // Salir aquí para RDP-Guacamole
+    }
+
+    // === LÓGICA EXISTENTE: RDP Nativo (mstsc) ===
     const rdpConfig = {
       name: node.label,
       server: node.data.server,
@@ -3061,6 +3107,10 @@ const App = () => {
                                 {tab.type === 'rdp' && (
                                   <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
                                 )}
+                                {/* Icono específico para pestañas RDP-Guacamole */}
+                                {tab.type === 'rdp-guacamole' && (
+                                  <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#ff6b35' }}></i>
+                                )}
                                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tab.label}</span>
                                 {tab.type !== 'home' && (
                                   <Button
@@ -3522,6 +3572,7 @@ const App = () => {
                             <HomeTab
                               onCreateSSHConnection={() => setShowSSHDialog(true)}
                               onCreateFolder={() => openNewFolderDialog(null)}
+                              onCreateRdpConnection={onOpenRdpConnection}
                               sshConnectionsCount={(() => {
                                 // Contar sesiones SSH únicas (sin incluir exploradores)
                                 const uniqueSSHSessions = new Set();
@@ -3627,6 +3678,13 @@ const App = () => {
                                   openEditRdpDialog(tempNode);
                                 }
                               }}
+                            />
+                          ) : tab.type === 'rdp-guacamole' ? (
+                            <GuacamoleTerminal
+                              ref={el => terminalRefs.current[tab.key] = el}
+                              tabId={tab.key}
+                              rdpConfig={tab.rdpConfig}
+                              isActive={isActiveTab}
                             />
                           ) : tab.type === 'guacamole' ? (
                             <GuacamoleTab

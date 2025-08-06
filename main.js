@@ -105,6 +105,8 @@ const RdpManager = require('./src/utils/RdpManager');
 const SftpClient = require('ssh2-sftp-client');
 const si = require('systeminformation');
 const { fork } = require('child_process');
+const GuacdService = require('./src/services/GuacdService');
+const GuacamoleLite = require('guacamole-lite');
 
 // Parser simple para 'ls -la'
 function parseLsOutput(output) {
@@ -361,6 +363,10 @@ const sshConnectionPool = {};
 // RDP Manager instance
 const rdpManager = new RdpManager();
 
+// Guacamole services
+const guacdService = new GuacdService();
+let guacamoleServer = null;
+
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
   pending: new Map(), // Conexiones en proceso por cacheKey
@@ -470,6 +476,68 @@ function parseNetDev(netDevOutput) {
     return { totalRx, totalTx };
 }
 
+/**
+ * Inicializa servicios de Guacamole de forma asíncrona
+ */
+async function initializeGuacamoleServices() {
+  try {
+    console.log('🚀 Inicializando servicios Guacamole...');
+    
+    // Inicializar GuacdService
+    const guacdReady = await guacdService.initialize();
+    
+    if (!guacdReady) {
+      console.warn('⚠️ No se pudo inicializar guacd. RDP Guacamole no estará disponible.');
+      return;
+    }
+
+    // Configurar servidor Guacamole-lite
+    const websocketOptions = {
+      port: 8081 // Puerto para WebSocket de Guacamole
+    };
+
+    const guacdOptions = guacdService.getGuacdOptions();
+    
+    // Generar clave de 32 bytes para AES-256-CBC
+    const crypto = require('crypto');
+    const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
+    const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+    
+    const clientOptions = {
+      crypt: {
+        cypher: 'AES-256-CBC',
+        key: SECRET_KEY // Clave de encriptación de 32 bytes
+      },
+      log: {
+        level: process.env.NODE_ENV === 'development' ? 'DEBUG' : 'NORMAL'
+      }
+    };
+
+    // Crear servidor Guacamole-lite
+    guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+    
+    // Configurar eventos del servidor
+    guacamoleServer.on('open', (clientConnection) => {
+      console.log('🔗 Nueva conexión Guacamole abierta:', clientConnection.connectionId);
+    });
+
+    guacamoleServer.on('close', (clientConnection) => {
+      console.log('🔚 Conexión Guacamole cerrada:', clientConnection.connectionId);
+    });
+
+    guacamoleServer.on('error', (clientConnection, error) => {
+      console.error('❌ Error en conexión Guacamole:', error);
+    });
+
+    console.log('✅ Servicios Guacamole inicializados correctamente');
+    console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
+    console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
+    
+  } catch (error) {
+    console.error('❌ Error inicializando servicios Guacamole:', error);
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1600,
@@ -505,6 +573,9 @@ function createWindow() {
   });
 
   mainWindow.removeMenu();
+
+  // Inicializar servicios de Guacamole asíncronamente
+  initializeGuacamoleServices();
 
   // Menú de desarrollo para abrir DevTools
   const isMac = process.platform === 'darwin';
@@ -2377,6 +2448,122 @@ app.on('before-quit', () => {
   // Disconnect all RDP connections
   rdpManager.disconnectAll();
   rdpManager.cleanupAllTempFiles();
+  
+  // Cleanup Guacamole services
+  if (guacdService) {
+    guacdService.stop();
+  }
+});
+
+// === Guacamole Support ===
+// IPC handlers for Guacamole RDP connections
+ipcMain.handle('guacamole:get-status', async (event) => {
+  return {
+    guacd: guacdService.getStatus(),
+    server: guacamoleServer ? {
+      isRunning: true,
+      port: 8081
+    } : {
+      isRunning: false
+    }
+  };
+});
+
+ipcMain.handle('guacamole:create-token', async (event, config) => {
+  try {
+    console.log('🔐 [MAIN] Creando token para configuración RDP:', {
+      hostname: config.hostname,
+      username: config.username,
+      password: config.password ? '***OCULTA***' : 'NO DEFINIDA',
+      port: config.port,
+      width: config.width,
+      height: config.height,
+      dpi: config.dpi,
+      enableDrive: config.enableDrive,
+      enableWallpaper: config.enableWallpaper,
+      security: config.security
+    });
+    
+    if (!guacamoleServer) {
+      throw new Error('Servidor Guacamole no está inicializado');
+    }
+
+    const crypto = require('crypto');
+    const CIPHER = 'AES-256-CBC';
+    // La clave debe ser exactamente 32 bytes para AES-256-CBC
+    const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
+    const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+
+    const tokenObject = {
+      connection: {
+        type: "rdp",
+        settings: {
+          hostname: config.hostname,
+          username: config.username,
+          password: config.password,
+          port: config.port || 3389,
+          security: config.security || "any",
+          "ignore-cert": true,
+          "enable-drive": config.enableDrive || false,
+          "create-drive-path": config.enableDrive || false,
+          "enable-wallpaper": config.enableWallpaper || false,
+          width: config.width || 1024,
+          height: config.height || 768,
+          dpi: config.dpi || 96,
+          // Configuraciones adicionales para autenticación
+          "disable-auth": false,
+          "enable-theming": false,
+          "enable-font-smoothing": true,
+          "enable-full-window-drag": false,
+          "enable-desktop-composition": false,
+          "enable-menu-animations": false,
+          "preconnection-id": "",
+          "preconnection-blob": "",
+          "gateway-hostname": "",
+          "gateway-port": "",
+          "gateway-username": "",
+          "gateway-password": "",
+          "gateway-domain": ""
+        }
+      }
+    };
+    
+    console.log('📄 [MAIN] Token objeto final:', {
+      type: tokenObject.connection.type,
+      settings: {
+        ...tokenObject.connection.settings,
+        password: tokenObject.connection.settings.password ? '***OCULTA***' : 'NO DEFINIDA'
+      }
+    });
+
+    // Encriptar token
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(CIPHER, SECRET_KEY, iv);
+
+    let encrypted = cipher.update(JSON.stringify(tokenObject), 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    const data = {
+      iv: iv.toString('base64'),
+      value: encrypted
+    };
+
+    const token = Buffer.from(JSON.stringify(data)).toString('base64');
+    const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}`;
+    
+    console.log('🌐 [MAIN] URL WebSocket generada:', websocketUrl.substring(0, 50) + '...');
+    
+    return {
+      success: true,
+      token: token,
+      websocketUrl: websocketUrl
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 });
 
 // === Terminal Support ===

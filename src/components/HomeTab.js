@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import SplitLayout from './SplitLayout';
 import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
@@ -23,10 +23,12 @@ const HomeTab = ({
   localFontSize,
   localPowerShellTheme,
   localLinuxTerminalTheme,
+  onCreateRdpConnection, // Nuevo prop para crear conexiones RDP
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
   const versionInfo = getVersionInfo();
+  const tabbedTerminalRef = useRef();
 
   // Estado para forzar re-render al cambiar el tema
   const [themeVersion, setThemeVersion] = useState(0);
@@ -47,8 +49,35 @@ const HomeTab = ({
 
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
-    if (onCreateSSHConnection) {
+    if (connection.type === 'rdp-guacamole') {
+      // Manejar conexiones RDP-Guacamole
+      handleCreateRdpConnection(connection);
+    } else if (onCreateSSHConnection) {
+      // Manejar conexiones SSH tradicionales
       onCreateSSHConnection(connection);
+    }
+  };
+
+  const handleCreateRdpConnection = (connectionData) => {
+    if (tabbedTerminalRef.current) {
+      const rdpConfig = {
+        hostname: connectionData.hostname || connectionData.host,
+        username: connectionData.username,
+        password: connectionData.password || 'password', // En producción esto vendría de vault
+        port: connectionData.port || 3389,
+        width: 1024,
+        height: 768,
+        dpi: 96,
+        enableDrive: false,
+        enableWallpaper: false,
+        security: 'any'
+      };
+      
+      tabbedTerminalRef.current.createRdpTab(connectionData.name, rdpConfig);
+    }
+    
+    if (onCreateRdpConnection) {
+      onCreateRdpConnection(connectionData);
     }
   };
 
@@ -116,7 +145,13 @@ const HomeTab = ({
     }}>
       {/* Contenido principal del dashboard (sin tabs) */}
       <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-        <SystemStats />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', height: '100%' }}>
+          <SystemStats />
+          <div>
+            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Historial de Conexiones</h3>
+            <ConnectionHistory onConnectToHistory={handleConnectToHistory} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -132,6 +167,7 @@ const HomeTab = ({
       background: localTerminalBg
     }}>
       <TabbedTerminal
+        ref={tabbedTerminalRef}
         onMinimize={handleMinimizeTerminal}
         onMaximize={handleMaximizeTerminal}
         terminalState={terminalState}

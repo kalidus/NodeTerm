@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
+import GuacamoleTerminal from './GuacamoleTerminal';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
@@ -20,7 +21,7 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme }) => {
+const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme }, ref) => {
     // Determinar la pestaña inicial según el SO
     const getInitialTab = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -62,6 +63,13 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
     const terminalRefs = useRef({});
+
+    // Exponer métodos para uso externo
+    useImperativeHandle(ref, () => ({
+        createRdpTab: (title, rdpConfig) => {
+            createRdpTab(title, rdpConfig);
+        }
+    }));
 
     // Detectar distribuciones WSL usando el backend
     useEffect(() => {
@@ -240,10 +248,11 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
         const platform = window.electron?.platform || 'unknown';
         
         if (platform === 'win32') {
-            // En Windows: mostrar PowerShell y WSL
+            // En Windows: mostrar PowerShell, WSL y RDP
             return [
                 { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
                 { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
+                { label: 'RDP (Guacamole)', value: 'rdp-guacamole', icon: 'pi pi-desktop', color: '#ff6b35' },
                 // Agregar cada distribución WSL como opción separada
                 ...wslDistributions.map(distro => ({
                     label: distro.label,
@@ -278,6 +287,41 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
     //     distributions: wslDistributions.map(distro => `${distro.label} (${distro.category})`)
     // });
 
+    // Función para crear una pestaña RDP con configuración específica
+    const createRdpTab = (title, rdpConfig) => {
+        const newTabId = `tab-${nextTabId}`;
+        
+        // Registrar eventos para la nueva pestaña
+        if (window.electron) {
+            window.electron.ipcRenderer.send('register-tab-events', newTabId);
+        }
+        
+        // Desactivar todas las pestañas
+        setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, active: false })));
+        
+        // Agregar nueva pestaña RDP
+        setTabs(prevTabs => {
+            const newTabs = [...prevTabs, {
+                id: newTabId,
+                title: title || 'RDP Session',
+                type: 'rdp-guacamole',
+                rdpConfig: rdpConfig, // Configuración RDP específica
+                active: true
+            }];
+            return newTabs;
+        });
+        
+        setNextTabId(prev => prev + 1);
+        
+        // Redimensionar el terminal de la nueva pestaña después de que se renderice
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[newTabId];
+            if (terminalRef && terminalRef.fit) {
+                terminalRef.fit();
+            }
+        }, 200);
+    };
+
     // Función para crear una nueva pestaña
     const createNewTab = (terminalTypeOverride = null) => {
         const terminalTypeToUse = terminalTypeOverride || selectedTerminalType;
@@ -304,6 +348,9 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
         } else if (terminalTypeToUse === 'wsl') {
             title = 'WSL';
             terminalType = 'wsl';
+        } else if (terminalTypeToUse === 'rdp-guacamole') {
+            title = 'RDP Session';
+            terminalType = 'rdp-guacamole';
         } else if (terminalTypeToUse.startsWith('wsl-')) {
             // Extraer información de la distribución WSL seleccionada
             const distroName = terminalTypeToUse.replace('wsl-', '');
@@ -552,10 +599,12 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                             >
                                 <i 
                                     className={tab.type === 'powershell' ? 'pi pi-desktop' : 
-                                              tab.type === 'wsl' ? 'pi pi-server' : 'pi pi-circle'} 
+                                              tab.type === 'wsl' ? 'pi pi-server' : 
+                                              tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
                                     style={{ 
                                         color: tab.type === 'powershell' ? '#4fc3f7' : 
-                                               tab.type === 'wsl' ? '#8ae234' : '#e95420',
+                                               tab.type === 'wsl' ? '#8ae234' : 
+                                               tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
                                         fontSize: '12px',
                                         marginRight: '6px'
                                     }}
@@ -663,7 +712,8 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                         item.innerHTML = `
                                             <i class="${option.icon}" style="color: ${
                                                 option.value === 'powershell' ? '#4fc3f7' : 
-                                                option.value === 'wsl' ? '#8ae234' : '#e95420'
+                                                option.value === 'wsl' ? '#8ae234' : 
+                                                option.value === 'rdp-guacamole' ? '#ff6b35' : '#e95420'
                                             }; font-size: 12px;"></i>
                                             <span>${option.label}</span>
                                         `;
@@ -941,6 +991,15 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
                                 ubuntuInfo={tab.distroInfo}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                             />
+                        ) : tab.type === 'rdp-guacamole' ? (
+                            <GuacamoleTerminal 
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                rdpConfig={tab.rdpConfig}
+                            />
                         ) : (
                             <div style={{
                                 display: 'flex',
@@ -957,6 +1016,8 @@ const TabbedTerminal = ({ onMinimize, onMaximize, terminalState, localFontFamily
             </div>
         </div>
     );
-};
+});
+
+TabbedTerminal.displayName = 'TabbedTerminal';
 
 export default TabbedTerminal;
