@@ -370,6 +370,42 @@ const GuacamoleTerminal = forwardRef(({
                                  console.log('📺 Canvas encontrado en display');
                                  console.log('📺 Dimensiones del canvas:', displayElement.width, 'x', displayElement.height);
                                  
+                                 // Si autoResize está activo, forzar un resize secundario más agresivo
+                                 if (rdpConfig.autoResize) {
+                                     const container = containerRef.current;
+                                     if (container) {
+                                         const containerRect = container.getBoundingClientRect();
+                                         const targetWidth = Math.floor(containerRect.width);
+                                         const targetHeight = Math.floor(containerRect.height);
+                                         
+                                         console.log(`🔄 RESIZE SECUNDARIO FORZADO: ${targetWidth}x${targetHeight}`);
+                                         
+                                         try {
+                                             // 1. Redimensionar display local
+                                             const display = client.getDisplay();
+                                             if (display) {
+                                                 const defaultLayer = display.getDefaultLayer();
+                                                 if (defaultLayer) {
+                                                     display.resize(defaultLayer, targetWidth, targetHeight);
+                                                     console.log(`✅ Display redimensionado a: ${targetWidth}x${targetHeight}`);
+                                                 }
+                                             }
+                                             
+                                             // 2. Enviar comandos de resize múltiples
+                                             if (client.sendInstruction) {
+                                                 client.sendInstruction("size", targetWidth, targetHeight);
+                                                 console.log(`📡 sendInstruction enviado: ${targetWidth}x${targetHeight}`);
+                                             }
+                                             if (client.sendSize) {
+                                                 client.sendSize(targetWidth, targetHeight);
+                                                 console.log(`📡 sendSize enviado: ${targetWidth}x${targetHeight}`);
+                                             }
+                                         } catch (e) {
+                                             console.error('❌ Error en resize secundario:', e);
+                                         }
+                                     }
+                                 }
+                                 
                                  // Verificar si el canvas tiene datos
                                  const ctx = displayElement.getContext('2d');
                                  const imageData = ctx.getImageData(0, 0, displayElement.width, displayElement.height);
