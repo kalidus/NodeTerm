@@ -2471,17 +2471,35 @@ ipcMain.handle('guacamole:get-status', async (event) => {
 
 ipcMain.handle('guacamole:create-token', async (event, config) => {
   try {
+    console.log('📋 [MAIN] CONFIG COMPLETO RECIBIDO:', config);
+    
+    // Calcular resolución final: priorizar width/height, luego parsear resolution
+    let finalWidth = config.width || 1024;
+    let finalHeight = config.height || 768;
+    
+    // Si no hay width/height específicos pero sí resolution, parsearla
+    if (!config.width && !config.height && config.resolution) {
+      const [width, height] = config.resolution.split('x');
+      if (width && height) {
+        finalWidth = parseInt(width);
+        finalHeight = parseInt(height);
+        console.log(`🔄 [MAIN] Parseando resolution "${config.resolution}" → ${finalWidth}x${finalHeight}`);
+      }
+    }
+
     console.log('🔐 [MAIN] Creando token para configuración RDP:', {
       hostname: config.hostname,
       username: config.username,
       password: config.password ? '***OCULTA***' : 'NO DEFINIDA',
       port: config.port,
-      width: config.width,
-      height: config.height,
+      width: finalWidth,     // ← Mostrar resolución final calculada
+      height: finalHeight,   // ← Mostrar resolución final calculada
       dpi: config.dpi,
       enableDrive: config.enableDrive,
       enableWallpaper: config.enableWallpaper,
-      security: config.security
+      security: config.security,
+      resolution: config.resolution, // ← Mostrar resolution original si existe
+      autoResize: config.autoResize  // ← Mostrar autoResize si existe
     });
     
     if (!guacamoleServer) {
@@ -2507,23 +2525,13 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           "enable-drive": config.enableDrive || false,
           "create-drive-path": config.enableDrive || false,
           "enable-wallpaper": config.enableWallpaper || false,
-          width: config.width || 1024,
-          height: config.height || 768,
+          width: finalWidth,
+          height: finalHeight,
           dpi: config.dpi || 96,
-          // Configuraciones adicionales para autenticación
-          "disable-auth": false,
-          "enable-theming": false,
-          "enable-font-smoothing": true,
-          "enable-full-window-drag": false,
-          "enable-desktop-composition": false,
-          "enable-menu-animations": false,
-          "preconnection-id": "",
-          "preconnection-blob": "",
-          "gateway-hostname": "",
-          "gateway-port": "",
-          "gateway-username": "",
-          "gateway-password": "",
-          "gateway-domain": ""
+          // Configuración específica para resize dinámico
+          "resize-method": config.autoResize ? "display-update" : "reconnect",
+          "enable-desktop-composition": config.autoResize ? true : false,
+          "enable-full-window-drag": config.autoResize ? true : false
         }
       }
     };
