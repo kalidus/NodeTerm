@@ -162,7 +162,13 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           smartSizing: rdpNodeData.smartSizing !== undefined ? rdpNodeData.smartSizing : true,
           span: rdpNodeData.span || false,
           admin: rdpNodeData.admin || false,
-          public: rdpNodeData.public || false
+          public: rdpNodeData.public || false,
+          // Campos específicos de Guacamole
+          autoResize: rdpNodeData.autoResize || false,
+          guacDpi: rdpNodeData.guacDpi || 96,
+          guacSecurity: rdpNodeData.guacSecurity || 'any',
+          guacEnableWallpaper: rdpNodeData.guacEnableWallpaper || false,
+          guacEnableDrive: rdpNodeData.guacEnableDrive || false
         };
         
         // console.log('=== FORM DATA SET ===');
@@ -245,6 +251,16 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
         
         // Crear una pestaña vacía para Guacamole
         const tabId = `guacamole_${Date.now()}`;
+        
+        // Calcular resolución dinámica si autoResize está activado
+        let dynamicWidth = 1024, dynamicHeight = 768;
+        if (formData.autoResize) {
+          // Calcular resolución basada en la ventana disponible
+          dynamicWidth = Math.floor(window.innerWidth * 0.8); // 80% del ancho de ventana
+          dynamicHeight = Math.floor(window.innerHeight * 0.7); // 70% del alto de ventana
+          console.log(`🔄 RdpManager: Calculando resolución dinámica: ${dynamicWidth}x${dynamicHeight}`);
+        }
+        
         const guacamoleConfig = {
           name: formData.name,
           server: formData.server,
@@ -252,10 +268,12 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           password: formData.password,
           port: formData.port || 3389,
           clientType: 'guacamole',
-          resolution: formData.autoResize ? 'auto' : (formData.resolution || '1920x1080'),
+          resolution: formData.autoResize ? `${dynamicWidth}x${dynamicHeight}` : (formData.resolution || '1920x1080'),
           colorDepth: formData.colorDepth || 32,
           // Opciones específicas de Guacamole
           autoResize: formData.autoResize,
+          width: dynamicWidth,  // ← NÚMEROS, no string
+          height: dynamicHeight, // ← NÚMEROS, no string
           dpi: formData.guacDpi || 96,
           security: formData.guacSecurity || 'any',
           enableDrive: formData.guacEnableDrive,

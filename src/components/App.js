@@ -2375,17 +2375,35 @@ const App = () => {
     
     if (isGuacamoleRDP) {
       // === NUEVA LÓGICA: RDP-Guacamole como pestañas independientes ===
+      // Calcular resolución dinámica si autoResize está activado
+      let dynamicWidth = parseInt(nodeData.resolution?.split('x')[0]) || 1024;
+      let dynamicHeight = parseInt(nodeData.resolution?.split('x')[1]) || 768;
+      
+      if (nodeData.autoResize) {
+        // Usar dimensiones dinámicas basadas en la ventana
+        dynamicWidth = Math.floor(window.innerWidth * 0.8);
+        dynamicHeight = Math.floor(window.innerHeight * 0.7);
+        console.log(`🔄 App: AutoResize activado, calculando: ${dynamicWidth}x${dynamicHeight}`);
+      }
+      
       const rdpConfig = {
         hostname: nodeData.server || nodeData.host || nodeData.hostname,
         username: nodeData.username || nodeData.user,
         password: nodeData.password || 'password', // En producción desde vault
         port: nodeData.port || 3389,
-        width: parseInt(nodeData.resolution?.split('x')[0]) || 1024,
-        height: parseInt(nodeData.resolution?.split('x')[1]) || 768,
-        dpi: 96,
-        enableDrive: nodeData.redirectFolders === true,
-        enableWallpaper: false,
-        security: 'any'
+        width: dynamicWidth,  // ← NÚMEROS, no string
+        height: dynamicHeight, // ← NÚMEROS, no string
+        dpi: nodeData.guacDpi || 96,
+        enableDrive: nodeData.guacEnableDrive === true,
+        enableWallpaper: nodeData.guacEnableWallpaper === true,
+        security: nodeData.guacSecurity || 'any',
+        // Campos específicos de Guacamole
+        autoResize: nodeData.autoResize === true,
+        redirectClipboard: nodeData.redirectClipboard === true,
+        redirectPrinters: nodeData.redirectPrinters === true,
+        redirectAudio: nodeData.redirectAudio === true,
+        fullscreen: nodeData.fullscreen === true,
+        span: nodeData.span === true
       };
 
       // Crear pestaña RDP-Guacamole igual que SSH
@@ -2633,7 +2651,13 @@ const App = () => {
             smartSizing: rdpData.smartSizing === true,
             span: rdpData.span === true,
             admin: rdpData.admin === true,
-            public: rdpData.public === true
+            public: rdpData.public === true,
+            // Campos específicos de Guacamole
+            autoResize: rdpData.autoResize === true,
+            guacDpi: rdpData.guacDpi || 96,
+            guacSecurity: rdpData.guacSecurity || 'any',
+            guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
+            guacEnableDrive: rdpData.guacEnableDrive === true
           };
           
           // console.log('=== NODE UPDATED ===');
@@ -2667,7 +2691,13 @@ const App = () => {
           smartSizing: rdpData.smartSizing === true,
           span: rdpData.span === true,
           admin: rdpData.admin === true,
-          public: rdpData.public === true
+          public: rdpData.public === true,
+          // Campos específicos de Guacamole
+          autoResize: rdpData.autoResize === true,
+          guacDpi: rdpData.guacDpi || 96,
+          guacSecurity: rdpData.guacSecurity || 'any',
+          guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
+          guacEnableDrive: rdpData.guacEnableDrive === true
         },
         draggable: true,
         droppable: false,
@@ -2709,7 +2739,13 @@ const App = () => {
                 smartSizing: rdpData.smartSizing === true,
                 span: rdpData.span === true,
                 admin: rdpData.admin === true,
-                public: rdpData.public === true
+                public: rdpData.public === true,
+                // Campos específicos de Guacamole
+                autoResize: rdpData.autoResize === true,
+                guacDpi: rdpData.guacDpi || 96,
+                guacSecurity: rdpData.guacSecurity || 'any',
+                guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
+                guacEnableDrive: rdpData.guacEnableDrive === true
               }
             };
           }

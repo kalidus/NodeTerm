@@ -64,24 +64,25 @@ const GuacamoleTerminal = forwardRef(({
             hasIPC: !!(window.electron && window.electron.ipcRenderer)
         });
         
-        // Log detallado de la configuración RDP recibida
+        // Log simplificado de configuración RDP
         if (rdpConfig) {
-            console.log('📋 Configuración RDP detallada:', {
-                hostname: rdpConfig.hostname,
-                username: rdpConfig.username,
-                password: rdpConfig.password ? '***OCULTA***' : 'NO DEFINIDA',
-                port: rdpConfig.port,
+            console.log('📋 RDP Config:', {
+                autoResize: rdpConfig.autoResize,
                 width: rdpConfig.width,
                 height: rdpConfig.height,
-                dpi: rdpConfig.dpi,
-                enableDrive: rdpConfig.enableDrive,
-                enableWallpaper: rdpConfig.enableWallpaper,
-                security: rdpConfig.security
+                enableDynamicResize: rdpConfig.enableDynamicResize
             });
         }
         
         if (!isGuacamoleLoaded || !rdpConfig || connectionState !== 'disconnected') {
-            console.log('⏸️ Condiciones no cumplidas para inicializar conexión');
+            console.log('⏸️ Condiciones no cumplidas para inicializar conexión:', {
+                isGuacamoleLoaded,
+                hasRdpConfig: !!rdpConfig,
+                connectionState,
+                rdpConfigAutoResize: rdpConfig?.autoResize,
+                rdpConfigWidth: rdpConfig?.width,
+                rdpConfigHeight: rdpConfig?.height
+            });
             return;
         }
 
@@ -95,6 +96,20 @@ const GuacamoleTerminal = forwardRef(({
                 if (rdpConfig && rdpConfig.autoResize !== undefined) {
                     setAutoResize(rdpConfig.autoResize);
                     console.log('🖥️ Auto-resize configurado:', rdpConfig.autoResize);
+                    
+                    // Para autoResize, NO CAMBIAR las dimensiones que ya vienen calculadas
+                    if (rdpConfig.autoResize) {
+                        console.log('🔄 Auto-resize: PRESERVANDO dimensiones dinámicas recibidas');
+                        console.log('🔄 Dimensiones recibidas:', {
+                            width: rdpConfig.width,
+                            height: rdpConfig.height
+                        });
+                        
+                        // Solo agregar el flag para el backend, NO cambiar width/height
+                        rdpConfig.enableDynamicResize = true;
+                        
+                        console.log('✅ CONFIGURACIÓN PRESERVADA - CONFIG COMPLETA:', rdpConfig);
+                    }
                 }
 
                 // Verificar que electron esté disponible
@@ -173,17 +188,8 @@ const GuacamoleTerminal = forwardRef(({
                 }
 
                                  // Crear token de conexión
-                 console.log('🔐 Creando token con config:', rdpConfig);
-                 
-                 // Verificar credenciales
-                 if (!rdpConfig.username || !rdpConfig.password) {
-                     console.warn('⚠️ Credenciales incompletas:', {
-                         username: rdpConfig.username ? 'DEFINIDA' : 'NO DEFINIDA',
-                         password: rdpConfig.password ? 'DEFINIDA' : 'NO DEFINIDA'
-                     });
-                 } else {
-                     console.log('✅ Credenciales verificadas');
-                 }
+                 // Log crítico: verificar configuración antes de enviar al backend
+                 console.log('🚀 ENVIANDO AL BACKEND:', rdpConfig);
                  
                  const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
                 console.log('📄 Respuesta del token:', tokenResponse);
@@ -246,7 +252,6 @@ const GuacamoleTerminal = forwardRef(({
 
                                  // Eventos del mouse
                  mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (mouseState) => {
-                     console.log('🖱️ Evento mouse enviado:', mouseState);
                      client.sendMouseState(mouseState);
                  };
                  
@@ -313,6 +318,49 @@ const GuacamoleTerminal = forwardRef(({
                          console.log('🔄 Cambiando estado a CONNECTED...');
                          setConnectionState('connected');
                          console.log('✅ Estado cambiado a CONNECTED');
+                         
+                         // Si autoResize está activado, hacer resize inicial tras conexión
+                         if (rdpConfig.autoResize) {
+                             setTimeout(() => {
+                                 const container = containerRef.current;
+                                 if (container) {
+                                     const containerRect = container.getBoundingClientRect();
+                                     const newWidth = Math.floor(containerRect.width);
+                                     const newHeight = Math.floor(containerRect.height);
+                                     console.log(`🔄 Auto-resize inicial tras conexión: ${newWidth}x${newHeight}`);
+                                     
+                                     try {
+                                         // 1. ✅ REDIMENSIONAR EL DISPLAY LOCAL (CANVAS)
+                                         const display = client.getDisplay();
+                                         if (display) {
+                                             const defaultLayer = display.getDefaultLayer();
+                                             if (defaultLayer) {
+                                                 display.resize(defaultLayer, newWidth, newHeight);
+                                                 console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
+                                             }
+                                             
+                                             // Configurar escala 1:1
+                                             if (display.scale) {
+                                                 display.scale(1.0);
+                                             }
+                                         }
+
+                                         // 2. Enviar instrucción al servidor RDP
+                                         if (client.sendInstruction) {
+                                             console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
+                                             client.sendInstruction("size", newWidth, newHeight);
+                                         } else if (client.sendSize) {
+                                             console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
+                                             client.sendSize(newWidth, newHeight);
+                                         } else {
+                                             console.log(`⚠️ No se encontró método de resize para resize inicial`);
+                                         }
+                                     } catch (e) {
+                                         console.error('❌ Error en resize inicial:', e);
+                                     }
+                                 }
+                             }, 1000); // Esperar 1 segundo para que la conexión se estabilice
+                         }
                          
                          // Timeout para detectar si no llegan datos visuales
                          setTimeout(() => {
@@ -465,16 +513,37 @@ const GuacamoleTerminal = forwardRef(({
                             const newWidth = Math.floor(containerRect.width);
                             const newHeight = Math.floor(containerRect.height);
                             
-                            console.log(`🔄 Auto-resize: ${newWidth}x${newHeight}`);
-                            
-                            // Enviar comando de resize al servidor Guacamole
-                            if (client.sendSize) {
-                                client.sendSize(newWidth, newHeight);
+                            // Enviar comando de resize (solo log la primera vez)
+                            if (!window.resizeLogged) {
+                                console.log(`🔄 Auto-resize activo: ${newWidth}x${newHeight}`);
+                                window.resizeLogged = true;
                             }
                             
-                            // Ajustar el display local
-                            if (display.scale) {
-                                display.scale(1.0); // Escala 1:1 para resolución exacta
+                            try {
+                                // 1. ✅ REDIMENSIONAR EL DISPLAY LOCAL (CANVAS)
+                                const defaultLayer = display.getDefaultLayer();
+                                if (defaultLayer) {
+                                    display.resize(defaultLayer, newWidth, newHeight);
+                                    // Solo log la primera vez
+                                    if (!window.displayResizeLogged) {
+                                        console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
+                                        window.displayResizeLogged = true;
+                                    }
+                                }
+                                
+                                // 2. Enviar instrucción al servidor RDP
+                                if (client.sendInstruction) {
+                                    client.sendInstruction("size", newWidth, newHeight);
+                                } else if (client.sendSize) {
+                                    client.sendSize(newWidth, newHeight);
+                                }
+                                
+                                // 3. Configurar escala 1:1
+                                if (display.scale) {
+                                    display.scale(1.0);
+                                }
+                            } catch (e) {
+                                console.error('❌ Error en auto-resize completo:', e);
                             }
                         }
                     }
