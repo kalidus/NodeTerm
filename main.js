@@ -80,7 +80,7 @@ class SafeWindowsTerminal {
   write(data) { if (this.process?.stdin && !this.process.stdin.destroyed) this.process.stdin.write(data); }
   kill() { if (this.process && !this.process.killed) this.process.kill(); }
   destroy() { this.isDestroyed = true; this.kill(); this.dataCallbacks = []; this.exitCallbacks = []; }
-  resize() { console.log('Resize not supported in fallback mode'); }
+  resize() { /* console.log('Resize not supported in fallback mode'); */ }
 }
 
 try {
