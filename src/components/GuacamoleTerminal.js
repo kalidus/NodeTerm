@@ -14,7 +14,6 @@ const GuacamoleTerminal = forwardRef(({
     const [autoResize, setAutoResize] = useState(false);
     const [lastActivityTime, setLastActivityTime] = useState(Date.now());
     const [freezeDetected, setFreezeDetected] = useState(false);
-    // console.log(`🚨 ESTADO INICIAL - autoResize: ${autoResize}`);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -98,20 +97,11 @@ const GuacamoleTerminal = forwardRef(({
                 // Extraer configuración de autoResize
                 if (rdpConfig && rdpConfig.autoResize !== undefined) {
                     setAutoResize(rdpConfig.autoResize);
-                    console.log('🖥️ Auto-resize configurado:', rdpConfig.autoResize);
                     
                     // Para autoResize, NO CAMBIAR las dimensiones que ya vienen calculadas
                     if (rdpConfig.autoResize) {
-                        console.log('🔄 Auto-resize: PRESERVANDO dimensiones dinámicas recibidas');
-                        console.log('🔄 Dimensiones recibidas:', {
-                            width: rdpConfig.width,
-                            height: rdpConfig.height
-                        });
-                        
                         // Solo agregar el flag para el backend, NO cambiar width/height
                         rdpConfig.enableDynamicResize = true;
-                        
-                        console.log('✅ CONFIGURACIÓN PRESERVADA - CONFIG COMPLETA:', rdpConfig);
                     }
                 }
 
@@ -261,17 +251,17 @@ const GuacamoleTerminal = forwardRef(({
                  
                  // Eventos del display para debug
                  if (display.onresize) {
-                     console.log('📺 Display tiene onresize');
+                     // console.log('📺 Display tiene onresize');
                  }
                  if (display.scale) {
-                     console.log('📺 Display tiene scale');
+                     // console.log('📺 Display tiene scale');
                  }
                  
                  // Agregar eventos para detectar cuando llegan datos
                  if (display.onresize) {
                      const originalOnResize = display.onresize;
                      display.onresize = () => {
-                         console.log('📺 Display onresize llamado - datos recibidos');
+                         // console.log('📺 Display onresize llamado - datos recibidos');
                          originalOnResize();
                      };
                  }
@@ -300,7 +290,7 @@ const GuacamoleTerminal = forwardRef(({
                     };
                     
                                          console.log(`🔄 Estado Guacamole: ${state} (${stateNames[state] || 'UNKNOWN'})`);
-                     console.log(`🔍 Comparando: state=${state}, CONNECTED=${window.Guacamole.Client.CONNECTED}`);
+                     // console.log(`🔍 Comparando: state=${state}, CONNECTED=${window.Guacamole.Client.CONNECTED}`);
                      
                      // Usar constantes directas ya que window.Guacamole.Client.CONNECTED es undefined
                      if (state === 3) { // CONNECTED
@@ -334,7 +324,7 @@ const GuacamoleTerminal = forwardRef(({
                                      const containerRect = container.getBoundingClientRect();
                                      const newWidth = Math.floor(containerRect.width);
                                      const newHeight = Math.floor(containerRect.height);
-                                     console.log(`🔄 Auto-resize inicial tras conexión: ${newWidth}x${newHeight}`);
+                                     // console.log(`🔄 Auto-resize inicial tras conexión: ${newWidth}x${newHeight}`);
                                      
                                      try {
                                          // 1. ✅ REDIMENSIONAR EL DISPLAY LOCAL (CANVAS)
@@ -343,7 +333,7 @@ const GuacamoleTerminal = forwardRef(({
                                              const defaultLayer = display.getDefaultLayer();
                                              if (defaultLayer) {
                                                  display.resize(defaultLayer, newWidth, newHeight);
-                                                 console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
+                                                 // console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
                                              }
                                              
                                              // Configurar escala 1:1
@@ -354,10 +344,10 @@ const GuacamoleTerminal = forwardRef(({
 
                                          // 2. Enviar instrucción al servidor RDP
                                          if (client.sendInstruction) {
-                                             console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
+                                             // console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
                                              client.sendInstruction("size", newWidth, newHeight);
                                          } else if (client.sendSize) {
-                                             console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
+                                             // console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
                                              client.sendSize(newWidth, newHeight);
                                          } else {
                                              console.log(`⚠️ No se encontró método de resize para resize inicial`);
@@ -385,7 +375,7 @@ const GuacamoleTerminal = forwardRef(({
                                          const targetWidth = Math.floor(containerRect.width);
                                          const targetHeight = Math.floor(containerRect.height);
                                          
-                                         console.log(`🔄 RESIZE SECUNDARIO FORZADO: ${targetWidth}x${targetHeight}`);
+                                         // console.log(`🔄 RESIZE SECUNDARIO FORZADO: ${targetWidth}x${targetHeight}`);
                                          
                                          try {
                                              // 1. Redimensionar display local
@@ -394,18 +384,18 @@ const GuacamoleTerminal = forwardRef(({
                                                  const defaultLayer = display.getDefaultLayer();
                                                  if (defaultLayer) {
                                                      display.resize(defaultLayer, targetWidth, targetHeight);
-                                                     console.log(`✅ Display redimensionado a: ${targetWidth}x${targetHeight}`);
+                                                     // console.log(`✅ Display redimensionado a: ${targetWidth}x${targetHeight}`);
                                                  }
                                              }
                                              
                                              // 2. Enviar comandos de resize múltiples
                                              if (client.sendInstruction) {
                                                  client.sendInstruction("size", targetWidth, targetHeight);
-                                                 console.log(`📡 sendInstruction enviado: ${targetWidth}x${targetHeight}`);
+                                                 // console.log(`📡 sendInstruction enviado: ${targetWidth}x${targetHeight}`);
                                              }
                                              if (client.sendSize) {
                                                  client.sendSize(targetWidth, targetHeight);
-                                                 console.log(`📡 sendSize enviado: ${targetWidth}x${targetHeight}`);
+                                                 // console.log(`📡 sendSize enviado: ${targetWidth}x${targetHeight}`);
                                              }
                                          } catch (e) {
                                              console.error('❌ Error en resize secundario:', e);
@@ -536,7 +526,7 @@ const GuacamoleTerminal = forwardRef(({
     useEffect(() => {
         if (!autoResize) return;
         
-        console.log('🔄 Agregando listener de resize ESTABLE');
+        // console.log('🔄 Agregando listener de resize ESTABLE');
         
         let resizeTimeout = null;
         let lastDimensions = { width: 0, height: 0 };
@@ -548,7 +538,7 @@ const GuacamoleTerminal = forwardRef(({
             }
             
             resizeTimeout = setTimeout(() => {
-                console.log('🔥 RESIZE PROCESADO (después de debounce)');
+                // console.log('🔥 RESIZE PROCESADO (después de debounce)');
                 
                 // Verificar cliente
                 const client = guacamoleClientRef.current;
@@ -591,11 +581,11 @@ const GuacamoleTerminal = forwardRef(({
                     const heightDiff = Math.abs(height - lastDimensions.height);
                     
                     if (widthDiff < 20 && heightDiff < 20) {
-                        console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
+                        // console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
                         return;
                     }
                     
-                    console.log(`✅ EJECUTANDO RESIZE ESTABLE: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
+                    // console.log(`✅ EJECUTANDO RESIZE ESTABLE: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
                     
                     // Guardar nuevas dimensiones
                     lastDimensions = { width, height };
@@ -603,14 +593,14 @@ const GuacamoleTerminal = forwardRef(({
                     // 📡 SOLO sendSize al servidor (método más estable)
                     if (client.sendSize) {
                         client.sendSize(width, height);
-                        console.log(`📡 sendSize: ${width}x${height}`);
+                        // console.log(`📡 sendSize: ${width}x${height}`);
                     }
                     
                     // 🎯 Resize local del display
                     const layer = display.getDefaultLayer();
                     if (layer) {
                         display.resize(layer, width, height);
-                        console.log(`🎯 Display resize: ${width}x${height}`);
+                        // console.log(`🎯 Display resize: ${width}x${height}`);
                     }
                     
                     // 📐 Ajustar elemento del display
@@ -619,19 +609,19 @@ const GuacamoleTerminal = forwardRef(({
                         displayElement.style.width = '100%';
                         displayElement.style.height = '100%';
                         displayElement.style.objectFit = 'contain';
-                        console.log(`📐 Display element ajustado`);
+                        // console.log(`📐 Display element ajustado`);
                     }
                     
                     // 🔄 Única llamada a onresize (sin repeticiones agresivas)
                     if (display.onresize) {
                         display.onresize();
-                        console.log('🔄 onresize ejecutado');
+                        // console.log('🔄 onresize ejecutado');
                     }
                     
                     // 🔍 Escala fija
                     if (display.scale) {
                         display.scale(1.0);
-                        console.log('🔍 Scale configurado a 1.0');
+                        // console.log('🔍 Scale configurado a 1.0');
                     }
                     
                 } catch (e) {
@@ -643,7 +633,7 @@ const GuacamoleTerminal = forwardRef(({
         window.addEventListener('resize', handleWindowResize);
         
         return () => {
-            console.log('🗑️ Removiendo listener resize');
+            // console.log('🗑️ Removiendo listener resize');
             if (resizeTimeout) {
                 clearTimeout(resizeTimeout);
             }
@@ -655,7 +645,7 @@ const GuacamoleTerminal = forwardRef(({
     useEffect(() => {
         if (connectionState !== 'connected') return;
         
-        console.log('🛡️ Iniciando vigilante anti-congelación');
+        // console.log('🛡️ Iniciando vigilante anti-congelación');
         
         const FREEZE_TIMEOUT = 15000; // 15 segundos sin actividad = congelación
         const CHECK_INTERVAL = 5000;  // Verificar cada 5 segundos
@@ -694,7 +684,7 @@ const GuacamoleTerminal = forwardRef(({
         watchdog = setInterval(checkForFreeze, CHECK_INTERVAL);
         
         return () => {
-            console.log('🗑️ Deteniendo vigilante anti-congelación');
+            // console.log('🗑️ Deteniendo vigilante anti-congelación');
             if (watchdog) {
                 clearInterval(watchdog);
             }

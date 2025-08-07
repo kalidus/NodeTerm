@@ -2383,7 +2383,7 @@ const App = () => {
         // Usar dimensiones dinámicas basadas en la ventana
         dynamicWidth = Math.floor(window.innerWidth * 0.8);
         dynamicHeight = Math.floor(window.innerHeight * 0.7);
-        console.log(`🔄 App: AutoResize activado, calculando: ${dynamicWidth}x${dynamicHeight}`);
+        // console.log(`🔄 App: AutoResize activado, calculando: ${dynamicWidth}x${dynamicHeight}`);
       }
       
       const rdpConfig = {
