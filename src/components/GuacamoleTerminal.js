@@ -577,6 +577,8 @@ const GuacamoleTerminal = forwardRef(({
         let lastDimensions = { width: 0, height: 0 };
         let isResizing = false; // Protección contra resize simultáneo
         let pendingResize = null; // Para capturar solo el resize final
+        let lastResizeTime = 0; // Para rate limiting
+        let consecutiveResizeCount = 0; // Contador de resizes consecutivos
         
         const handleWindowResize = () => {
             // Capturar las dimensiones actuales inmediatamente
@@ -643,6 +645,19 @@ const GuacamoleTerminal = forwardRef(({
                 try {
                     isResizing = true; // Bloquear resize simultáneo
                     
+                    // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 3 segundos
+                    const now = Date.now();
+                    if (now - lastResizeTime < 3000) {
+                        console.log(`⏭️ Rate limiting: último resize hace ${Math.round((now - lastResizeTime)/1000)}s, saltando`);
+                        return;
+                    }
+                    
+                    // 🚫 PROTECCIÓN ADICIONAL: Si hay más de 1 resize consecutivo, esperar más tiempo
+                    if (consecutiveResizeCount >= 1 && now - lastResizeTime < 5000) {
+                        console.log(`⏭️ Protección anti-spam: ${consecutiveResizeCount} resizes consecutivos, esperando más tiempo`);
+                        return;
+                    }
+                    
                     // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>50px)
                     const widthDiff = Math.abs(width - lastDimensions.width);
                     const heightDiff = Math.abs(height - lastDimensions.height);
@@ -660,6 +675,10 @@ const GuacamoleTerminal = forwardRef(({
                     }
                     
                     console.log(`✅ AutoResize: EJECUTANDO RESIZE FINAL: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
+                    
+                    // ACTUALIZAR TIEMPO Y CONTADOR ANTES de ejecutar el resize
+                    lastResizeTime = now;
+                    consecutiveResizeCount++;
                     
                     // Guardar nuevas dimensiones ANTES de ejecutar el resize
                     lastDimensions = { width, height };
@@ -698,12 +717,20 @@ const GuacamoleTerminal = forwardRef(({
                     
                     console.log(`✅ AutoResize: RESIZE FINAL COMPLETADO`);
                     
+                    // Reset contador después de 10 segundos sin resize
+                    setTimeout(() => {
+                        if (Date.now() - lastResizeTime >= 10000) {
+                            consecutiveResizeCount = 0;
+                            console.log('🔄 Reset contador de resizes consecutivos');
+                        }
+                    }, 10000);
+                    
                 } catch (e) {
                     console.error('❌ Error en resize:', e);
                 } finally {
                     isResizing = false; // Liberar el flag
                 }
-            }, 1000); // 1000ms debounce (más conservador)
+            }, 1000); // 1000ms debounce (equilibrado para evitar spam pero mantener responsividad)
         };
         
         // Guardar referencia al handler
