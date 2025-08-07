@@ -8,6 +8,7 @@ const GuacamoleTerminal = forwardRef(({
 }, ref) => {
     const containerRef = useRef(null);
     const guacamoleClientRef = useRef(null);
+    const resizeListenerRef = useRef(null); // Para evitar múltiples listeners
     const [connectionState, setConnectionState] = useState('disconnected'); // disconnected, connecting, connected, error
     const [errorMessage, setErrorMessage] = useState('');
     const [isGuacamoleLoaded, setIsGuacamoleLoaded] = useState(false);
@@ -547,21 +548,72 @@ const GuacamoleTerminal = forwardRef(({
 
     // 🛡️ ESTABLE: Auto-resize listener con enfoque conservador
     useEffect(() => {
-        if (!autoResize) return;
+        if (!autoResize) {
+            // Si autoResize se desactiva, limpiar listener existente
+            if (resizeListenerRef.current) {
+                window.removeEventListener('resize', resizeListenerRef.current);
+                resizeListenerRef.current = null;
+                console.log('🗑️ AutoResize desactivado, removiendo listener');
+            }
+            return;
+        }
+        
+        // Si ya hay un listener y está conectado, no crear otro
+        if (resizeListenerRef.current && connectionState === 'connected') {
+            console.log('🔄 AutoResize: Listener ya existe y está conectado, saltando...');
+            return;
+        }
+        
+        // Si ya hay un listener pero no está conectado, removerlo para crear uno nuevo
+        if (resizeListenerRef.current) {
+            window.removeEventListener('resize', resizeListenerRef.current);
+            resizeListenerRef.current = null;
+            console.log('🗑️ Removiendo listener anterior para crear uno nuevo');
+        }
         
         console.log('🔄 AutoResize: Agregando listener de resize ESTABLE');
         
         let resizeTimeout = null;
         let lastDimensions = { width: 0, height: 0 };
+        let isResizing = false; // Protección contra resize simultáneo
+        let pendingResize = null; // Para capturar solo el resize final
         
         const handleWindowResize = () => {
-            // Debounce: Solo procesar después de 500ms sin cambios
+            // Capturar las dimensiones actuales inmediatamente
+            const container = containerRef.current;
+            if (!container) return;
+            
+            const rect = container.getBoundingClientRect();
+            const currentWidth = Math.floor(rect.width);
+            const currentHeight = Math.floor(rect.height);
+            
+            // Guardar el resize pendiente (siempre el más reciente)
+            pendingResize = { width: currentWidth, height: currentHeight };
+            
+            // Debounce: Solo procesar después de 1000ms sin cambios
             if (resizeTimeout) {
                 clearTimeout(resizeTimeout);
             }
             
             resizeTimeout = setTimeout(() => {
-                // console.log('🔥 RESIZE PROCESADO (después de debounce)');
+                // Verificar que esté conectado ANTES de procesar - USAR ESTADO ACTUAL
+                const currentConnectionState = connectionState;
+                if (currentConnectionState !== 'connected') {
+                    console.log(`⏭️ No conectado (${currentConnectionState}), saltando resize`);
+                    return;
+                }
+                
+                // Protección contra resize simultáneo
+                if (isResizing) {
+                    console.log('⏭️ Resize en progreso, saltando...');
+                    return;
+                }
+                
+                // Usar las dimensiones finales capturadas
+                if (!pendingResize) return;
+                
+                const { width, height } = pendingResize;
+                pendingResize = null; // Limpiar pendiente
                 
                 // Verificar cliente
                 const client = guacamoleClientRef.current;
@@ -575,55 +627,55 @@ const GuacamoleTerminal = forwardRef(({
                 const display = client.getDisplay ? client.getDisplay() : null;
                 const hasDisplay = display && display.getDefaultLayer && display.getDefaultLayer();
                 
-                console.log(`🔍 Estado React: ${connectionState}`);
-                console.log(`🔍 Tunnel: ${!!tunnel}, Display: ${!!display}, Layer: ${!!hasDisplay}`);
-                
                 // Verificar si está realmente conectado
-                const isReallyConnected = hasDisplay && connectionState === 'connected';
+                const isReallyConnected = hasDisplay && currentConnectionState === 'connected';
                 
                 if (!isReallyConnected) {
-                    // console.log(`❌ No conectado realmente - Display: ${!!hasDisplay}, Estado: ${connectionState}`);
+                    console.log(`❌ No realmente conectado - Display: ${!!hasDisplay}, Estado: ${currentConnectionState}`);
                     return;
                 }
                 
-                const container = containerRef.current;
-                
-                if (!client.getDisplay || !container) {
-                    console.log('❌ No hay display o container');
+                if (!client.getDisplay) {
+                    console.log('❌ No hay display');
                     return;
                 }
                 
                 try {
-                    const display = client.getDisplay();
-                    const rect = container.getBoundingClientRect();
-                    const width = Math.floor(rect.width);
-                    const height = Math.floor(rect.height);
+                    isResizing = true; // Bloquear resize simultáneo
                     
-                    // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>20px)
+                    // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>50px)
                     const widthDiff = Math.abs(width - lastDimensions.width);
                     const heightDiff = Math.abs(height - lastDimensions.height);
                     
-                    if (widthDiff < 20 && heightDiff < 20) {
-                        // console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
+                    // Evitar resize repetitivo: si las dimensiones son exactamente las mismas, no hacer nada
+                    if (width === lastDimensions.width && height === lastDimensions.height) {
+                        console.log('⏭️ Dimensiones idénticas, saltando resize');
                         return;
                     }
                     
-                    console.log(`✅ AutoResize: EJECUTANDO RESIZE ESTABLE: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
+                    // Solo resize si hay un cambio significativo
+                    if (widthDiff < 50 && heightDiff < 50) {
+                        console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
+                        return;
+                    }
                     
-                    // Guardar nuevas dimensiones
+                    console.log(`✅ AutoResize: EJECUTANDO RESIZE FINAL: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
+                    
+                    // Guardar nuevas dimensiones ANTES de ejecutar el resize
                     lastDimensions = { width, height };
                     
-                    // 📡 SOLO sendSize al servidor (método más estable)
+                    // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
                     if (client.sendSize) {
                         client.sendSize(width, height);
-                        // console.log(`📡 sendSize: ${width}x${height}`);
+                        console.log(`📡 sendSize enviado UNA VEZ: ${width}x${height}`);
                     }
                     
                     // 🎯 Resize local del display
+                    const display = client.getDisplay();
                     const layer = display.getDefaultLayer();
                     if (layer) {
                         display.resize(layer, width, height);
-                        // console.log(`🎯 Display resize: ${width}x${height}`);
+                        console.log(`🎯 Display resize local: ${width}x${height}`);
                     }
                     
                     // 📐 Ajustar elemento del display
@@ -632,37 +684,42 @@ const GuacamoleTerminal = forwardRef(({
                         displayElement.style.width = '100%';
                         displayElement.style.height = '100%';
                         displayElement.style.objectFit = 'contain';
-                        // console.log(`📐 Display element ajustado`);
                     }
                     
-                    // 🔄 Única llamada a onresize (sin repeticiones agresivas)
+                    // 🔄 Única llamada a onresize
                     if (display.onresize) {
                         display.onresize();
-                        // console.log('🔄 onresize ejecutado');
                     }
                     
                     // 🔍 Escala fija
                     if (display.scale) {
                         display.scale(1.0);
-                        // console.log('🔍 Scale configurado a 1.0');
                     }
+                    
+                    console.log(`✅ AutoResize: RESIZE FINAL COMPLETADO`);
                     
                 } catch (e) {
                     console.error('❌ Error en resize:', e);
+                } finally {
+                    isResizing = false; // Liberar el flag
                 }
-            }, 500); // 500ms debounce
+            }, 1000); // 1000ms debounce (más conservador)
         };
+        
+        // Guardar referencia al handler
+        resizeListenerRef.current = handleWindowResize;
         
         window.addEventListener('resize', handleWindowResize);
         
         return () => {
-            // console.log('🗑️ Removiendo listener resize');
+            console.log('🗑️ Removiendo listener resize');
             if (resizeTimeout) {
                 clearTimeout(resizeTimeout);
             }
             window.removeEventListener('resize', handleWindowResize);
+            resizeListenerRef.current = null; // Limpiar referencia
         };
-    }, [autoResize, connectionState]); // Depende de autoResize y connectionState
+    }, [autoResize, connectionState]); // Incluir connectionState para actualizar cuando cambie
 
     // 🔍 VIGILANTE: Detectar congelaciones y reconectar automáticamente
     useEffect(() => {
