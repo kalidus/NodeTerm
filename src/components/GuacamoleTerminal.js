@@ -318,45 +318,68 @@ const GuacamoleTerminal = forwardRef(({
                          
                          // Si autoResize está activado, hacer resize inicial tras conexión
                          if (rdpConfig.autoResize) {
-                             setTimeout(() => {
+                             // Función para intentar resize inicial con reintentos
+                             const attemptInitialResize = (attempt = 1) => {
                                  const container = containerRef.current;
-                                 if (container) {
-                                     const containerRect = container.getBoundingClientRect();
-                                     const newWidth = Math.floor(containerRect.width);
-                                     const newHeight = Math.floor(containerRect.height);
-                                     // console.log(`🔄 Auto-resize inicial tras conexión: ${newWidth}x${newHeight}`);
-                                     
-                                     try {
-                                         // 1. ✅ REDIMENSIONAR EL DISPLAY LOCAL (CANVAS)
-                                         const display = client.getDisplay();
-                                         if (display) {
-                                             const defaultLayer = display.getDefaultLayer();
-                                             if (defaultLayer) {
-                                                 display.resize(defaultLayer, newWidth, newHeight);
-                                                 // console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
-                                             }
-                                             
-                                             // Configurar escala 1:1
-                                             if (display.scale) {
-                                                 display.scale(1.0);
-                                             }
+                                 if (!container) {
+                                     if (attempt < 5) {
+                                         setTimeout(() => attemptInitialResize(attempt + 1), 500);
+                                     }
+                                     return;
+                                 }
+                                 
+                                 const containerRect = container.getBoundingClientRect();
+                                 const newWidth = Math.floor(containerRect.width);
+                                 const newHeight = Math.floor(containerRect.height);
+                                 
+                                 // Verificar que las dimensiones sean válidas
+                                 if (newWidth <= 0 || newHeight <= 0) {
+                                     if (attempt < 5) {
+                                         setTimeout(() => attemptInitialResize(attempt + 1), 500);
+                                     }
+                                     return;
+                                 }
+                                 
+                                 console.log(`🔄 Intento ${attempt}: Auto-resize inicial ${newWidth}x${newHeight}`);
+                                 
+                                 try {
+                                     // 1. ✅ REDIMENSIONAR EL DISPLAY LOCAL (CANVAS)
+                                     const display = client.getDisplay();
+                                     if (display) {
+                                         const defaultLayer = display.getDefaultLayer();
+                                         if (defaultLayer) {
+                                             display.resize(defaultLayer, newWidth, newHeight);
+                                             console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
                                          }
+                                         
+                                         // Configurar escala 1:1
+                                         if (display.scale) {
+                                             display.scale(1.0);
+                                         }
+                                     }
 
-                                         // 2. Enviar instrucción al servidor RDP
-                                         if (client.sendInstruction) {
-                                             // console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
-                                             client.sendInstruction("size", newWidth, newHeight);
-                                         } else if (client.sendSize) {
-                                             // console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
-                                             client.sendSize(newWidth, newHeight);
-                                         } else {
-                                             console.log(`⚠️ No se encontró método de resize para resize inicial`);
-                                         }
-                                     } catch (e) {
-                                         console.error('❌ Error en resize inicial:', e);
+                                     // 2. Enviar instrucción al servidor RDP
+                                     if (client.sendInstruction) {
+                                         console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
+                                         client.sendInstruction("size", newWidth, newHeight);
+                                     } else if (client.sendSize) {
+                                         console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
+                                         client.sendSize(newWidth, newHeight);
+                                     } else {
+                                         console.log(`⚠️ No se encontró método de resize para resize inicial`);
+                                     }
+                                     
+                                     console.log(`✅ Auto-resize inicial completado exitosamente`);
+                                 } catch (e) {
+                                     console.error('❌ Error en resize inicial:', e);
+                                     if (attempt < 5) {
+                                         setTimeout(() => attemptInitialResize(attempt + 1), 1000);
                                      }
                                  }
-                             }, 1000); // Esperar 1 segundo para que la conexión se estabilice
+                             };
+                             
+                             // Iniciar con un delay más largo para asegurar que todo esté listo
+                             setTimeout(() => attemptInitialResize(1), 2000);
                          }
                          
                          // Timeout para detectar si no llegan datos visuales
@@ -526,7 +549,7 @@ const GuacamoleTerminal = forwardRef(({
     useEffect(() => {
         if (!autoResize) return;
         
-        // console.log('🔄 Agregando listener de resize ESTABLE');
+        console.log('🔄 AutoResize: Agregando listener de resize ESTABLE');
         
         let resizeTimeout = null;
         let lastDimensions = { width: 0, height: 0 };
@@ -556,10 +579,10 @@ const GuacamoleTerminal = forwardRef(({
                 console.log(`🔍 Tunnel: ${!!tunnel}, Display: ${!!display}, Layer: ${!!hasDisplay}`);
                 
                 // Verificar si está realmente conectado
-                const isReallyConnected = hasDisplay && (connectionState === 'connected' || connectionState === 'connecting');
+                const isReallyConnected = hasDisplay && connectionState === 'connected';
                 
                 if (!isReallyConnected) {
-                    console.log(`❌ No conectado realmente - Display: ${!!hasDisplay}, Estado: ${connectionState}`);
+                    // console.log(`❌ No conectado realmente - Display: ${!!hasDisplay}, Estado: ${connectionState}`);
                     return;
                 }
                 
@@ -585,7 +608,7 @@ const GuacamoleTerminal = forwardRef(({
                         return;
                     }
                     
-                    // console.log(`✅ EJECUTANDO RESIZE ESTABLE: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
+                    console.log(`✅ AutoResize: EJECUTANDO RESIZE ESTABLE: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
                     
                     // Guardar nuevas dimensiones
                     lastDimensions = { width, height };
@@ -643,12 +666,13 @@ const GuacamoleTerminal = forwardRef(({
 
     // 🔍 VIGILANTE: Detectar congelaciones y reconectar automáticamente
     useEffect(() => {
-        if (connectionState !== 'connected') return;
+        // Deshabilitar vigilante si autoResize está activado (conexiones más estables)
+        if (connectionState !== 'connected' || autoResize) return;
         
         // console.log('🛡️ Iniciando vigilante anti-congelación');
         
-        const FREEZE_TIMEOUT = 15000; // 15 segundos sin actividad = congelación
-        const CHECK_INTERVAL = 5000;  // Verificar cada 5 segundos
+        const FREEZE_TIMEOUT = 3600000; // 1 hora sin actividad = congelación
+        const CHECK_INTERVAL = 300000;  // Verificar cada 5 minutos (menos agresivo)
         
         let watchdog = null;
         
@@ -656,9 +680,13 @@ const GuacamoleTerminal = forwardRef(({
             const now = Date.now();
             const timeSinceActivity = now - lastActivityTime;
             
-            console.log(`🔍 Vigilante: última actividad hace ${Math.round(timeSinceActivity/1000)}s`);
+            // Solo loggear si hay mucho tiempo sin actividad (para debug)
+            if (timeSinceActivity > 1800000) { // Solo loggear después de 30 minutos
+                console.log(`🔍 Vigilante: última actividad hace ${Math.round(timeSinceActivity/1000)}s`);
+            }
             
-            if (timeSinceActivity > FREEZE_TIMEOUT && !freezeDetected) {
+            // Solo considerar congelación si han pasado más de 2 minutos Y el cliente está en estado connected
+            if (timeSinceActivity > FREEZE_TIMEOUT && !freezeDetected && connectionState === 'connected') {
                 console.warn('🚨 CONGELACIÓN DETECTADA! Iniciando reconexión automática...');
                 setFreezeDetected(true);
                 
@@ -703,6 +731,7 @@ const GuacamoleTerminal = forwardRef(({
         // Monitorear eventos que indican que la conexión está viva
         const originalOnSync = client.onsync;
         const originalOnSize = client.onsize;
+        const originalOnStateChange = client.onstatechange;
         
         client.onsync = (...args) => {
             updateActivity();
@@ -714,11 +743,18 @@ const GuacamoleTerminal = forwardRef(({
             if (originalOnSize) originalOnSize.apply(client, args);
         };
         
+        // También monitorear cambios de estado
+        client.onstatechange = (...args) => {
+            updateActivity();
+            if (originalOnStateChange) originalOnStateChange.apply(client, args);
+        };
+        
         return () => {
             // Restaurar handlers originales
             if (client) {
                 client.onsync = originalOnSync;
                 client.onsize = originalOnSize;
+                client.onstatechange = originalOnStateChange;
             }
         };
     }, [connectionState]);
