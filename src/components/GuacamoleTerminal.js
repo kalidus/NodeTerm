@@ -15,6 +15,13 @@ const GuacamoleTerminal = forwardRef(({
     const [autoResize, setAutoResize] = useState(false);
     const [lastActivityTime, setLastActivityTime] = useState(Date.now());
     const [freezeDetected, setFreezeDetected] = useState(false);
+    
+    // Variables persistentes para rate limiting (fuera de useEffect)
+    const lastResizeTimeRef = useRef(0);
+    const consecutiveResizeCountRef = useRef(0);
+    const lastDimensionsRef = useRef({ width: 0, height: 0 });
+    const initialResizeCooldownUntilRef = useRef(0);
+    const isInitialResizingRef = useRef(false);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -341,46 +348,66 @@ const GuacamoleTerminal = forwardRef(({
                                      return;
                                  }
                                  
-                                 console.log(`🔄 Intento ${attempt}: Auto-resize inicial ${newWidth}x${newHeight}`);
+                                  console.log(`🔄 Intento ${attempt}: Auto-resize inicial ${newWidth}x${newHeight}`);
                                  
-                                 try {
-                                     // 1. ✅ REDIMENSIONAR EL DISPLAY LOCAL (CANVAS)
+                                  try {
+                                     // 1) Ajuste local solo para el inicial (no dispara window.resize)
                                      const display = client.getDisplay();
                                      if (display) {
                                          const defaultLayer = display.getDefaultLayer();
                                          if (defaultLayer) {
                                              display.resize(defaultLayer, newWidth, newHeight);
-                                             console.log(`✅ Display redimensionado localmente: ${newWidth}x${newHeight}`);
                                          }
-                                         
-                                         // Configurar escala 1:1
-                                         if (display.scale) {
-                                             display.scale(1.0);
-                                         }
+                                         if (display.scale) display.scale(1.0);
                                      }
 
-                                     // 2. Enviar instrucción al servidor RDP
-                                     if (client.sendInstruction) {
-                                         console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
-                                         client.sendInstruction("size", newWidth, newHeight);
-                                     } else if (client.sendSize) {
+                                     // 2) Enviar tamaño al servidor
+                                     if (client.sendSize) {
                                          console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
                                          client.sendSize(newWidth, newHeight);
+                                     } else if (client.sendInstruction) {
+                                         console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
+                                         client.sendInstruction("size", newWidth, newHeight);
                                      } else {
                                          console.log(`⚠️ No se encontró método de resize para resize inicial`);
                                      }
-                                     
+
+                                     // 3) Actualizar refs y cooldown
+                                     lastDimensionsRef.current = { width: newWidth, height: newHeight };
+                                     lastResizeTimeRef.current = Date.now();
+                                     consecutiveResizeCountRef.current = 0;
+                                     initialResizeCooldownUntilRef.current = Date.now() + 1000;
+                                     isInitialResizingRef.current = true;
+
+                                     // 4) Verificar y reintentar hasta 3 veces si el canvas no adopta el tamaño
+                                     const verifyAndNudge = (attempt = 1) => {
+                                         try {
+                                             const canvas = containerRef.current?.querySelector('canvas');
+                                             if (!canvas) return;
+                                             const cw = canvas.width;
+                                             const ch = canvas.height;
+                                             const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
+                                             if (ok) return;
+                                             if (attempt >= 3) return;
+                                             // Reenviar tamaño una vez más
+                                             if (client.sendSize) client.sendSize(newWidth, newHeight);
+                                             else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
+                                             setTimeout(() => verifyAndNudge(attempt + 1), 700);
+                                         } catch { /* noop */ }
+                                     };
+                                     setTimeout(() => verifyAndNudge(1), 700);
+
                                      console.log(`✅ Auto-resize inicial completado exitosamente`);
-                                 } catch (e) {
-                                     console.error('❌ Error en resize inicial:', e);
-                                     if (attempt < 5) {
-                                         setTimeout(() => attemptInitialResize(attempt + 1), 1000);
-                                     }
-                                 }
-                             };
+                                  } catch (e) {
+                                      console.error('❌ Error en resize inicial:', e);
+                                      if (attempt < 5) {
+                                          setTimeout(() => attemptInitialResize(attempt + 1), 1000);
+                                      }
+                                  }
+                              };
                              
                              // Iniciar con un delay más largo para asegurar que todo esté listo
-                             setTimeout(() => attemptInitialResize(1), 2000);
+                              setTimeout(() => attemptInitialResize(1), 1200);
                          }
                          
                          // Timeout para detectar si no llegan datos visuales
@@ -392,7 +419,7 @@ const GuacamoleTerminal = forwardRef(({
                                  console.log('📺 Dimensiones del canvas:', displayElement.width, 'x', displayElement.height);
                                  
                                  // Si autoResize está activo, forzar un resize secundario más agresivo
-                                 if (rdpConfig.autoResize) {
+                                 if (false && rdpConfig.autoResize) {
                                      const container = containerRef.current;
                                      if (container) {
                                          const containerRect = container.getBoundingClientRect();
@@ -402,25 +429,7 @@ const GuacamoleTerminal = forwardRef(({
                                          // console.log(`🔄 RESIZE SECUNDARIO FORZADO: ${targetWidth}x${targetHeight}`);
                                          
                                          try {
-                                             // 1. Redimensionar display local
-                                             const display = client.getDisplay();
-                                             if (display) {
-                                                 const defaultLayer = display.getDefaultLayer();
-                                                 if (defaultLayer) {
-                                                     display.resize(defaultLayer, targetWidth, targetHeight);
-                                                     // console.log(`✅ Display redimensionado a: ${targetWidth}x${targetHeight}`);
-                                                 }
-                                             }
-                                             
-                                             // 2. Enviar comandos de resize múltiples
-                                             if (client.sendInstruction) {
-                                                 client.sendInstruction("size", targetWidth, targetHeight);
-                                                 // console.log(`📡 sendInstruction enviado: ${targetWidth}x${targetHeight}`);
-                                             }
-                                             if (client.sendSize) {
-                                                 client.sendSize(targetWidth, targetHeight);
-                                                 // console.log(`📡 sendSize enviado: ${targetWidth}x${targetHeight}`);
-                                             }
+                                             // desactivado
                                          } catch (e) {
                                              console.error('❌ Error en resize secundario:', e);
                                          }
@@ -574,11 +583,8 @@ const GuacamoleTerminal = forwardRef(({
         console.log('🔄 AutoResize: Agregando listener de resize ESTABLE');
         
         let resizeTimeout = null;
-        let lastDimensions = { width: 0, height: 0 };
         let isResizing = false; // Protección contra resize simultáneo
         let pendingResize = null; // Para capturar solo el resize final
-        let lastResizeTime = 0; // Para rate limiting
-        let consecutiveResizeCount = 0; // Contador de resizes consecutivos
         
         const handleWindowResize = () => {
             // Capturar las dimensiones actuales inmediatamente
@@ -644,32 +650,54 @@ const GuacamoleTerminal = forwardRef(({
                 
                 try {
                     isResizing = true; // Bloquear resize simultáneo
-                    
-                    // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 3 segundos
+ 
+                    // Cooldown tras el resize inicial
+                    if (Date.now() < initialResizeCooldownUntilRef.current) {
+                        // Permitir un único resize si las dimensiones actuales del contenedor
+                        // difieren del último tamaño enviado significativamente (≥80px)
+                        const containerNow = containerRef.current?.getBoundingClientRect();
+                        if (containerNow) {
+                            const cw = Math.floor(containerNow.width);
+                            const ch = Math.floor(containerNow.height);
+                            const dw = Math.abs(cw - lastDimensionsRef.current.width);
+                            const dh = Math.abs(ch - lastDimensionsRef.current.height);
+                            if (dw < 80 && dh < 80) {
+                                console.log('⏭️ En cooldown tras resize inicial, saltando');
+                                return;
+                            }
+                            // Si hay cambio grande, continuamos para no perder el ajuste inicial
+                            console.log('⚠️ Cooldown activo, pero cambio significativo detectado: procesando');
+                        } else {
+                            console.log('⏭️ En cooldown tras resize inicial, saltando');
+                            return;
+                        }
+                    }
+
+                    // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 2.5 segundos
                     const now = Date.now();
-                    if (now - lastResizeTime < 3000) {
-                        console.log(`⏭️ Rate limiting: último resize hace ${Math.round((now - lastResizeTime)/1000)}s, saltando`);
+                    if (now - lastResizeTimeRef.current < 2500) {
+                        console.log(`⏭️ Rate limiting: último resize hace ${Math.round((now - lastResizeTimeRef.current)/1000)}s, saltando`);
                         return;
                     }
                     
-                    // 🚫 PROTECCIÓN ADICIONAL: Si hay más de 1 resize consecutivo, esperar más tiempo
-                    if (consecutiveResizeCount >= 1 && now - lastResizeTime < 5000) {
-                        console.log(`⏭️ Protección anti-spam: ${consecutiveResizeCount} resizes consecutivos, esperando más tiempo`);
+                    // 🚫 PROTECCIÓN ADICIONAL: Si hay más de 2 resizes consecutivos, esperar un poco más
+                    if (consecutiveResizeCountRef.current >= 2 && now - lastResizeTimeRef.current < 3500) {
+                        console.log(`⏭️ Protección anti-spam: ${consecutiveResizeCountRef.current} resizes consecutivos, esperando más tiempo`);
                         return;
                     }
                     
-                    // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>50px)
-                    const widthDiff = Math.abs(width - lastDimensions.width);
-                    const heightDiff = Math.abs(height - lastDimensions.height);
+                    // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>80px)
+                    const widthDiff = Math.abs(width - lastDimensionsRef.current.width);
+                    const heightDiff = Math.abs(height - lastDimensionsRef.current.height);
                     
                     // Evitar resize repetitivo: si las dimensiones son exactamente las mismas, no hacer nada
-                    if (width === lastDimensions.width && height === lastDimensions.height) {
+                    if (width === lastDimensionsRef.current.width && height === lastDimensionsRef.current.height) {
                         console.log('⏭️ Dimensiones idénticas, saltando resize');
                         return;
                     }
                     
                     // Solo resize si hay un cambio significativo
-                    if (widthDiff < 50 && heightDiff < 50) {
+                    if (widthDiff < 80 && heightDiff < 80) {
                         console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
                         return;
                     }
@@ -677,50 +705,29 @@ const GuacamoleTerminal = forwardRef(({
                     console.log(`✅ AutoResize: EJECUTANDO RESIZE FINAL: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
                     
                     // ACTUALIZAR TIEMPO Y CONTADOR ANTES de ejecutar el resize
-                    lastResizeTime = now;
-                    consecutiveResizeCount++;
+                    lastResizeTimeRef.current = now;
+                    consecutiveResizeCountRef.current++;
                     
                     // Guardar nuevas dimensiones ANTES de ejecutar el resize
-                    lastDimensions = { width, height };
+                    lastDimensionsRef.current = { width, height };
                     
                     // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
                     if (client.sendSize) {
                         client.sendSize(width, height);
                         console.log(`📡 sendSize enviado UNA VEZ: ${width}x${height}`);
                     }
-                    
-                    // 🎯 Resize local del display
-                    const display = client.getDisplay();
-                    const layer = display.getDefaultLayer();
-                    if (layer) {
-                        display.resize(layer, width, height);
-                        console.log(`🎯 Display resize local: ${width}x${height}`);
-                    }
-                    
-                    // 📐 Ajustar elemento del display
-                    const displayElement = display.getElement();
-                    if (displayElement) {
-                        displayElement.style.width = '100%';
-                        displayElement.style.height = '100%';
-                        displayElement.style.objectFit = 'contain';
-                    }
-                    
-                    // 🔄 Única llamada a onresize
-                    if (display.onresize) {
-                        display.onresize();
-                    }
-                    
-                    // 🔍 Escala fija
-                    if (display.scale) {
-                        display.scale(1.0);
-                    }
-                    
+ 
                     console.log(`✅ AutoResize: RESIZE FINAL COMPLETADO`);
+                    // Si era parte del inicial, liberar cooldown antes
+                    if (isInitialResizingRef.current) {
+                        initialResizeCooldownUntilRef.current = 0;
+                        isInitialResizingRef.current = false;
+                    }
                     
                     // Reset contador después de 10 segundos sin resize
                     setTimeout(() => {
-                        if (Date.now() - lastResizeTime >= 10000) {
-                            consecutiveResizeCount = 0;
+                        if (Date.now() - lastResizeTimeRef.current >= 10000) {
+                            consecutiveResizeCountRef.current = 0;
                             console.log('🔄 Reset contador de resizes consecutivos');
                         }
                     }, 10000);
@@ -730,7 +737,7 @@ const GuacamoleTerminal = forwardRef(({
                 } finally {
                     isResizing = false; // Liberar el flag
                 }
-            }, 1000); // 1000ms debounce (equilibrado para evitar spam pero mantener responsividad)
+            }, 800); // 800ms debounce (más rápido, manteniendo estabilidad)
         };
         
         // Guardar referencia al handler
