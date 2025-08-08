@@ -22,6 +22,11 @@ const GuacamoleTerminal = forwardRef(({
     const lastDimensionsRef = useRef({ width: 0, height: 0 });
     const initialResizeCooldownUntilRef = useRef(0);
     const isInitialResizingRef = useRef(false);
+    const lastBigChangeAtRef = useRef(0);
+    const lastBigChangeSizeRef = useRef({ width: 0, height: 0 });
+    const burstWindowStartRef = useRef(0);
+    const burstCountRef = useRef(0);
+    const quietUntilRef = useRef(0);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -359,6 +364,7 @@ const GuacamoleTerminal = forwardRef(({
                                              display.resize(defaultLayer, newWidth, newHeight);
                                          }
                                          if (display.scale) display.scale(1.0);
+                                         if (display.onresize) display.onresize();
                                      }
 
                                      // 2) Enviar tamaño al servidor
@@ -392,6 +398,8 @@ const GuacamoleTerminal = forwardRef(({
                                              // Reenviar tamaño una vez más
                                              if (client.sendSize) client.sendSize(newWidth, newHeight);
                                              else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
+                                             const disp = client.getDisplay?.();
+                                             if (disp?.onresize) disp.onresize();
                                              setTimeout(() => verifyAndNudge(attempt + 1), 700);
                                          } catch { /* noop */ }
                                      };
@@ -598,7 +606,16 @@ const GuacamoleTerminal = forwardRef(({
             // Guardar el resize pendiente (siempre el más reciente)
             pendingResize = { width: currentWidth, height: currentHeight };
             
-            // Debounce: Solo procesar después de 1000ms sin cambios
+            // Determinar si es un cambio grande (maximizar/minimizar o similar)
+            const diffNowW = Math.abs(currentWidth - (lastDimensionsRef.current.width || 0));
+            const diffNowH = Math.abs(currentHeight - (lastDimensionsRef.current.height || 0));
+            const combinedNow = diffNowW + diffNowH;
+            const isBigChangeNow = (diffNowW >= 350 || diffNowH >= 250 || combinedNow >= 200);
+
+            // Debounce dinámico: ventana de asentamiento para cambios grandes (coalesce a un único envío)
+            const delayMs = isBigChangeNow ? 1200 : 1000;
+
+            // Debounce: Solo procesar después de delayMs sin cambios
             if (resizeTimeout) {
                 clearTimeout(resizeTimeout);
             }
@@ -617,11 +634,10 @@ const GuacamoleTerminal = forwardRef(({
                     return;
                 }
                 
-                // Usar las dimensiones finales capturadas
+                // Usar SIEMPRE el último tamaño observado (snapshot)
                 if (!pendingResize) return;
-                
-                const { width, height } = pendingResize;
-                pendingResize = null; // Limpiar pendiente
+                const plannedWidth = pendingResize.width;
+                const plannedHeight = pendingResize.height;
                 
                 // Verificar cliente
                 const client = guacamoleClientRef.current;
@@ -673,48 +689,178 @@ const GuacamoleTerminal = forwardRef(({
                         }
                     }
 
-                    // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 2.5 segundos
+                    // Confirmar que el tamaño planificado sigue siendo el actual del contenedor
+                    const currentRect = containerRef.current?.getBoundingClientRect();
+                    if (!currentRect) {
+                        return;
+                    }
+                    const currentCw = Math.floor(currentRect.width);
+                    const currentCh = Math.floor(currentRect.height);
+                    const driftW = Math.abs(currentCw - plannedWidth);
+                    const driftH = Math.abs(currentCh - plannedHeight);
+                    if (driftW > 10 || driftH > 10) {
+                        // El usuario aún está arrastrando o el tamaño cambió antes de enviar: re-coalesce
+                        pendingResize = { width: currentCw, height: currentCh };
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, 200);
+                        return;
+                    }
+
+                    // Calcular deltas finales
+                    const widthDiff = Math.abs(plannedWidth - lastDimensionsRef.current.width);
+                    const heightDiff = Math.abs(plannedHeight - lastDimensionsRef.current.height);
+                    const combinedDiff = widthDiff + heightDiff;
+                    const isBigChange = (widthDiff >= 350 || heightDiff >= 250 || combinedDiff >= 200);
+
+                    // Cooldown de cambios grandes: no aceptar otro big-change en < 2.5s
                     const now = Date.now();
+
+                    // Quiet period post-send: ignorar resizes durante 600ms salvo cambios muy grandes
+                    if (now < quietUntilRef.current && combinedDiff < 350) {
+                        const remainingQuiet = Math.max(quietUntilRef.current - now, 150);
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, remainingQuiet);
+                        console.log(`⏸️ Quiet period activo (${remainingQuiet}ms), reprogramando`);
+                        return;
+                    }
+                    if (isBigChange) {
+                        const nowTs = now;
+                        if (nowTs - lastBigChangeAtRef.current < 2500) {
+                            console.log('⏭️ Cooldown big-change activo (<2.5s), saltando');
+                            return;
+                        }
+                    }
+
+                    // Evitar ping-pong de cambios grandes repetidos iguales en < 1.2s (barra lateral)
+                    if (isBigChange) {
+                        const sameAsLastBig =
+                          Math.abs(plannedWidth - lastBigChangeSizeRef.current.width) < 10 &&
+                          Math.abs(plannedHeight - lastBigChangeSizeRef.current.height) < 10;
+                        const nowTs = now;
+                        if (sameAsLastBig && (nowTs - lastBigChangeAtRef.current < 3000)) {
+                            console.log('⏭️ Ignorando big-change repetido (anti ping-pong)');
+                            return;
+                        }
+                        lastBigChangeAtRef.current = nowTs;
+                        lastBigChangeSizeRef.current = { width: plannedWidth, height: plannedHeight };
+                    }
+
+                    // Guard adicional: si el túnel no está OPEN, no enviar (si la constante existe)
+                    const tunnelOpenConst = window.Guacamole?.Tunnel?.OPEN;
+                    if (tunnel && typeof tunnel.state !== 'undefined' && tunnelOpenConst !== undefined && tunnel.state !== tunnelOpenConst) {
+                        console.log('⏭️ Tunnel no OPEN, reprogramando resize en 300ms');
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, 300);
+                        return;
+                    }
+
+                    // 🚦 BURST LIMIT: Máximo 3 envíos en 10s, luego pausar 3s
+                    if (now - burstWindowStartRef.current > 10000) {
+                        burstWindowStartRef.current = now;
+                        burstCountRef.current = 0;
+                    }
+                    if (burstCountRef.current >= 3) {
+                        console.log('⏳ Burst limit alcanzado (3/10s), posponiendo 3000ms');
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, 3000);
+                        return;
+                    }
+
+                    // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 2.5 segundos (aplica también a cambios grandes)
                     if (now - lastResizeTimeRef.current < 2500) {
-                        console.log(`⏭️ Rate limiting: último resize hace ${Math.round((now - lastResizeTimeRef.current)/1000)}s, saltando`);
+                        const remaining = 2500 - (now - lastResizeTimeRef.current);
+                        console.log(`⏭️ Rate limiting: reprogramando resize en ${remaining}ms`);
+                        // Reintentar automáticamente tras el cooldown
+                        // mantener pendingResize con el último tamaño observado
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, Math.max(remaining + 50, 100));
                         return;
                     }
                     
                     // 🚫 PROTECCIÓN ADICIONAL: Si hay más de 2 resizes consecutivos, esperar un poco más
                     if (consecutiveResizeCountRef.current >= 2 && now - lastResizeTimeRef.current < 3500) {
-                        console.log(`⏭️ Protección anti-spam: ${consecutiveResizeCountRef.current} resizes consecutivos, esperando más tiempo`);
+                        const remainingSpam = 3500 - (now - lastResizeTimeRef.current);
+                        console.log(`⏭️ Protección anti-spam: reprogramando en ${remainingSpam}ms`);
+                        // mantener pendingResize con el último tamaño observado
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, Math.max(remainingSpam + 50, 100));
                         return;
                     }
                     
                     // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>80px)
-                    const widthDiff = Math.abs(width - lastDimensionsRef.current.width);
-                    const heightDiff = Math.abs(height - lastDimensionsRef.current.height);
-                    
                     // Evitar resize repetitivo: si las dimensiones son exactamente las mismas, no hacer nada
-                    if (width === lastDimensionsRef.current.width && height === lastDimensionsRef.current.height) {
+                    if (plannedWidth === lastDimensionsRef.current.width && plannedHeight === lastDimensionsRef.current.height) {
                         console.log('⏭️ Dimensiones idénticas, saltando resize');
                         return;
                     }
                     
                     // Solo resize si hay un cambio significativo
-                    if (widthDiff < 80 && heightDiff < 80) {
+                    if (!isBigChange && (widthDiff < 80 && heightDiff < 80)) {
                         console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
                         return;
                     }
                     
-                    console.log(`✅ AutoResize: EJECUTANDO RESIZE FINAL: ${width}x${height} (cambio: ${widthDiff}x${heightDiff}px)`);
+                    console.log(`✅ AutoResize: EJECUTANDO RESIZE FINAL: ${plannedWidth}x${plannedHeight} (cambio: ${widthDiff}x${heightDiff}px)`);
                     
                     // ACTUALIZAR TIEMPO Y CONTADOR ANTES de ejecutar el resize
                     lastResizeTimeRef.current = now;
                     consecutiveResizeCountRef.current++;
                     
                     // Guardar nuevas dimensiones ANTES de ejecutar el resize
-                    lastDimensionsRef.current = { width, height };
+                    lastDimensionsRef.current = { width: plannedWidth, height: plannedHeight };
                     
                     // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
                     if (client.sendSize) {
-                        client.sendSize(width, height);
-                        console.log(`📡 sendSize enviado UNA VEZ: ${width}x${height}`);
+                        client.sendSize(plannedWidth, plannedHeight);
+                        console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
+                        burstCountRef.current++;
+                        // Activar periodo de silencio breve
+                        quietUntilRef.current = Date.now() + 600;
+                        // Nudge/verify tras resize normal para evitar pantalla negra o tamaños no adoptados
+                        try {
+                            const localDisplay = client.getDisplay?.();
+                            if (localDisplay?.onresize) {
+                                localDisplay.onresize();
+                            }
+                            const verifyAfter = (attempt = 1) => {
+                                try {
+                                    const canvas = containerRef.current?.querySelector('canvas');
+                                    if (!canvas) return;
+                                    const cw = canvas.width;
+                                    const ch = canvas.height;
+                                    const ok = Math.abs(cw - plannedWidth) < 40 && Math.abs(ch - plannedHeight) < 40;
+                                    if (ok) return;
+                                    if (attempt >= 2) return; // máximo 2 reintentos
+                                    if (client.sendSize) client.sendSize(plannedWidth, plannedHeight);
+                                    const disp2 = client.getDisplay?.();
+                                    if (disp2?.onresize) disp2.onresize();
+                                    setTimeout(() => verifyAfter(attempt + 1), 700);
+                                } catch { /* noop */ }
+                            };
+                            setTimeout(() => verifyAfter(1), 700);
+                        } catch { /* noop */ }
+                    }
+                    // Consumir el pendiente solo si no apareció un tamaño más nuevo durante el envío
+                    if (pendingResize && (pendingResize.width !== plannedWidth || pendingResize.height !== plannedHeight)) {
+                        // Hay un tamaño más nuevo; reprogramar pronto para enviar SOLO el último
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => {
+                            handleWindowResize();
+                        }, 150);
+                    } else {
+                        pendingResize = null;
                     }
  
                     console.log(`✅ AutoResize: RESIZE FINAL COMPLETADO`);
@@ -737,7 +883,7 @@ const GuacamoleTerminal = forwardRef(({
                 } finally {
                     isResizing = false; // Liberar el flag
                 }
-            }, 800); // 800ms debounce (más rápido, manteniendo estabilidad)
+            }, delayMs);
         };
         
         // Guardar referencia al handler
