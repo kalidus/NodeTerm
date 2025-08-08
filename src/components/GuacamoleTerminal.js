@@ -10,8 +10,13 @@ const GuacamoleTerminal = forwardRef(({
     const guacamoleClientRef = useRef(null);
     const mouseRef = useRef(null);
     const keyboardRef = useRef(null);
+    const canvasObserverRef = useRef(null);
+    const initialResizeDoneRef = useRef(false);
+    const initialResizeAttemptsRef = useRef(0);
+    const initialResizeTimerRef = useRef(null);
     const resizeListenerRef = useRef(null); // Para evitar múltiples listeners
     const [connectionState, setConnectionState] = useState('disconnected'); // disconnected, connecting, connected, error
+    const connectionStateRef = useRef('disconnected');
     const [errorMessage, setErrorMessage] = useState('');
     const [isGuacamoleLoaded, setIsGuacamoleLoaded] = useState(false);
     const [autoResize, setAutoResize] = useState(false);
@@ -39,22 +44,38 @@ const GuacamoleTerminal = forwardRef(({
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
-            // Redimensionar el display de Guacamole si es necesario
-            if (guacamoleClientRef.current && guacamoleClientRef.current.getDisplay) {
-                try {
-                    const display = guacamoleClientRef.current.getDisplay();
-                    if (display && display.scale) {
-                        // Ajustar escala basada en el contenedor
-                        const container = containerRef.current;
-                        if (container) {
-                            const containerRect = container.getBoundingClientRect();
-                            // El fit se maneja automáticamente por Guacamole, pero podemos forzar un refresco
-                            display.onresize();
+            // Ajuste y envío de tamaño al servidor cuando sea posible
+            const client = guacamoleClientRef.current;
+            const container = containerRef.current;
+            if (!container) return;
+            try {
+                const rect = container.getBoundingClientRect();
+                const newWidth = Math.floor(rect.width);
+                const newHeight = Math.floor(rect.height);
+                if (client && typeof client.getDisplay === 'function') {
+                    const display = client.getDisplay();
+                    if (display) {
+                        const defaultLayer = display.getDefaultLayer?.();
+                        if (defaultLayer && newWidth > 0 && newHeight > 0) {
+                            // Redimensionar localmente
+                            try { display.resize(defaultLayer, newWidth, newHeight); } catch {}
+                            try { if (display.scale) display.scale(1.0); } catch {}
+                            try { if (display.onresize) display.onresize(); } catch {}
                         }
                     }
-                } catch (e) {
-                    console.warn(`Guacamole fit() error for tab ${tabId}:`, e);
                 }
+                // Enviar tamaño al servidor si está conectado
+                if (client && connectionStateRef.current === 'connected' && newWidth > 0 && newHeight > 0) {
+                    if (typeof client.sendSize === 'function') {
+                        client.sendSize(newWidth, newHeight);
+                    } else if (typeof client.sendInstruction === 'function') {
+                        client.sendInstruction('size', newWidth, newHeight);
+                    }
+                    lastDimensionsRef.current = { width: newWidth, height: newHeight };
+                    lastResizeTimeRef.current = Date.now();
+                }
+            } catch (e) {
+                console.warn(`Guacamole fit() error for tab ${tabId}:`, e);
             }
         },
         focus: () => {
@@ -339,10 +360,10 @@ const GuacamoleTerminal = forwardRef(({
                         setLastActivityTime(Date.now()); // Registrar actividad inicial
                         console.log('✅ Estado cambiado a CONNECTED');
                          
-                         // Si autoResize está activado, hacer resize inicial tras conexión
-                         if (rdpConfig.autoResize) {
+                          // Si autoResize está activado, hacer resize inicial tras conexión
+                          if (rdpConfig.autoResize) {
                              // Función para intentar resize inicial con reintentos
-                             const attemptInitialResize = (attempt = 1) => {
+                              const attemptInitialResize = (attempt = 1) => {
                                  const container = containerRef.current;
                                  if (!container) {
                                      if (attempt < 5) {
@@ -350,18 +371,35 @@ const GuacamoleTerminal = forwardRef(({
                                      }
                                      return;
                                  }
+                                  // Asegurar túnel no esté explícitamente CERRADO y que estemos conectados antes de enviar
+                                  try {
+                                      const t = client.getTunnel ? client.getTunnel() : null;
+                                      const openConst = window.Guacamole?.Tunnel?.OPEN;
+                                      if (t && openConst !== undefined && typeof t.state !== 'undefined' && t.state !== openConst) {
+                                          const nextAttempt = Math.min(attempt + 1, 12);
+                                          const delay = Math.min(250 + attempt * 150, 1500);
+                                          setTimeout(() => attemptInitialResize(nextAttempt), delay);
+                                          return;
+                                      }
+                                      if (connectionStateRef.current !== 'connected') {
+                                          const nextAttempt = Math.min(attempt + 1, 12);
+                                          const delay = Math.min(250 + attempt * 150, 1500);
+                                          setTimeout(() => attemptInitialResize(nextAttempt), delay);
+                                          return;
+                                      }
+                                  } catch { /* noop */ }
                                  
                                      const containerRect = container.getBoundingClientRect();
                                      const newWidth = Math.floor(containerRect.width);
                                      const newHeight = Math.floor(containerRect.height);
                                  
                                  // Verificar que las dimensiones sean válidas
-                                 if (newWidth <= 0 || newHeight <= 0) {
-                                     if (attempt < 5) {
-                                         setTimeout(() => attemptInitialResize(attempt + 1), 500);
-                                     }
-                                     return;
-                                 }
+                                  if (newWidth <= 0 || newHeight <= 0) {
+                                      const nextAttempt = Math.min(attempt + 1, 12);
+                                      const delay = Math.min(400 + attempt * 150, 1600);
+                                      if (attempt < 12) setTimeout(() => attemptInitialResize(nextAttempt), delay);
+                                      return;
+                                  }
                                  
                                   console.log(`🔄 Intento ${attempt}: Auto-resize inicial ${newWidth}x${newHeight}`);
                                  
@@ -389,15 +427,16 @@ const GuacamoleTerminal = forwardRef(({
                                          }
 
                                      // 3) Actualizar refs y cooldown
-                                     lastDimensionsRef.current = { width: newWidth, height: newHeight };
+                                      lastDimensionsRef.current = { width: newWidth, height: newHeight };
                                       lastResizeTimeRef.current = Date.now();
-                                     consecutiveResizeCountRef.current = 0;
+                                      consecutiveResizeCountRef.current = 0;
                                       initialResizeCooldownUntilRef.current = Date.now() + 2500;
-                                      // Establecer ventana de asentamiento de arranque (2.5s)
+                                      // Reiniciar ventana de asentamiento de arranque cada nueva conexión
                                       startupSettleUntilRef.current = Date.now() + 2500;
                                       startupStableCountRef.current = 0;
                                       startupLastPlanRef.current = { width: newWidth, height: newHeight };
-                                     isInitialResizingRef.current = true;
+                                      isInitialResizingRef.current = true;
+                                      initialResizeDoneRef.current = true;
 
                                      // 4) Verificar y reintentar hasta 3 veces si el canvas no adopta el tamaño
                                      const verifyAndNudge = (attempt = 1) => {
@@ -406,7 +445,7 @@ const GuacamoleTerminal = forwardRef(({
                                              if (!canvas) return;
                                              const cw = canvas.width;
                                              const ch = canvas.height;
-                                             const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
+                                              const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
                                              if (ok) return;
                                              if (attempt >= 3) return;
                                              // Reenviar tamaño una vez más
@@ -428,8 +467,61 @@ const GuacamoleTerminal = forwardRef(({
                                  }
                               };
                              
-                             // Iniciar con un delay más largo para asegurar que todo esté listo
-                              setTimeout(() => attemptInitialResize(1), 1200);
+                              // Disparadores para hacer el resize inicial en el momento más estable
+                              // 1) Retardo inicial
+                              initialResizeAttemptsRef.current = 0;
+                              initialResizeDoneRef.current = false;
+                              if (initialResizeTimerRef.current) clearTimeout(initialResizeTimerRef.current);
+                              initialResizeTimerRef.current = setTimeout(() => attemptInitialResize(1), 900);
+                              // 2) Cuando el servidor reporta tamaño por primera vez
+                              const originalOnSizeForInitial = client.onsize;
+                              client.onsize = (...args) => {
+                                  if (!initialResizeDoneRef.current) {
+                                      setTimeout(() => attemptInitialResize(1), 150);
+                                  }
+                                  if (originalOnSizeForInitial) originalOnSizeForInitial.apply(client, args);
+                              };
+                              // 3) Cuando aparezca el canvas en el DOM
+                              try {
+                                  if (canvasObserverRef.current) {
+                                      canvasObserverRef.current.disconnect();
+                                  }
+                                  const observer = new MutationObserver(() => {
+                                      if (!initialResizeDoneRef.current) {
+                                          attemptInitialResize(1);
+                                      }
+                                  });
+                                  observer.observe(containerRef.current, { childList: true, subtree: true });
+                                  canvasObserverRef.current = observer;
+                              } catch {}
+                              // 4) Reasegurado post-conexión: si tras unos segundos las dimensiones del canvas
+                              // aún no se aproximan al contenedor, reenviar tamaño un par de veces con backoff
+                              const ensureCanvasMatches = (attempt = 1) => {
+                                  try {
+                                      const container = containerRef.current;
+                                      const canvas = container?.querySelector('canvas');
+                                      if (!container || !canvas) {
+                                          if (attempt < 5) setTimeout(() => ensureCanvasMatches(attempt + 1), 400);
+                                          return;
+                                      }
+                                      const rect = container.getBoundingClientRect();
+                                      const targetW = Math.floor(rect.width);
+                                      const targetH = Math.floor(rect.height);
+                                      const cw = canvas.width;
+                                      const ch = canvas.height;
+                                      const diffW = Math.abs(cw - targetW);
+                                      const diffH = Math.abs(ch - targetH);
+                                      const ok = diffW < 40 && diffH < 40;
+                                      if (ok) return;
+                                      // Reenviar tamaño y refrescar display
+                                      if (client.sendSize) client.sendSize(targetW, targetH);
+                                      else if (client.sendInstruction) client.sendInstruction('size', targetW, targetH);
+                                      const disp = client.getDisplay?.();
+                                      if (disp?.onresize) disp.onresize();
+                                      if (attempt < 5) setTimeout(() => ensureCanvasMatches(attempt + 1), 600 + attempt * 150);
+                                  } catch { /* noop */ }
+                              };
+                              setTimeout(() => ensureCanvasMatches(1), 1200);
                          }
                          
                          // Timeout para detectar si no llegan datos visuales
@@ -437,7 +529,7 @@ const GuacamoleTerminal = forwardRef(({
                              console.log('🔍 Verificando si el display ha recibido datos...');
                              const displayElement = containerRef.current?.querySelector('canvas');
                              if (displayElement) {
-                                 console.log('📺 Canvas encontrado en display');
+                                  console.log('📺 Canvas encontrado en display');
                                  console.log('📺 Dimensiones del canvas:', displayElement.width, 'x', displayElement.height);
                                  
                                  // Si autoResize está activo, forzar un resize secundario más agresivo
@@ -492,9 +584,26 @@ const GuacamoleTerminal = forwardRef(({
                              }
                          }, 5000);
                                           } else if (state === 4) { // DISCONNECTED
-                         setConnectionState('disconnected');
+                          setConnectionState('disconnected');
+                          // Resetear timers/refs críticos al desconectar para que próxima conexión tenga estado limpio
+                          try {
+                              lastDimensionsRef.current = { width: 0, height: 0 };
+                              consecutiveResizeCountRef.current = 0;
+                              lastResizeTimeRef.current = 0;
+                              initialResizeCooldownUntilRef.current = 0;
+                              startupSettleUntilRef.current = 0;
+                              startupStableCountRef.current = 0;
+                              startupLastPlanRef.current = { width: 0, height: 0 };
+                              isInitialResizingRef.current = false;
+                              burstWindowStartRef.current = 0;
+                              burstCountRef.current = 0;
+                              quietUntilRef.current = 0;
+                              visibilitySuppressUntilRef.current = 0;
+                              returningFromBlurRef.current = false;
+                              postBigChangeUntilRef.current = 0;
+                          } catch {}
                          console.log('🔚 Conexión RDP cerrada para tab', tabId);
-                     } else if (state === 2) { // WAITING
+                      } else if (state === 2) { // WAITING
                         console.log('⏳ Esperando respuesta del servidor RDP...');
                         setConnectionState('connecting');
                     } else if (state === 1) { // CONNECTING  
@@ -522,11 +631,13 @@ const GuacamoleTerminal = forwardRef(({
                      };
                  }
                  
-                 // Eventos de estado del tunnel
+                // Eventos de estado del tunnel
                  if (tunnel.onstatechange) {
                      const originalStateChange = tunnel.onstatechange;
                      tunnel.onstatechange = (state) => {
                          console.log('🌐 Estado del tunnel WebSocket:', state);
+                         // Guardar estado en ref si está disponible
+                         try { quietUntilRef.current = quietUntilRef.current; } catch {}
                          if (originalStateChange) {
                              originalStateChange(state);
                          }
@@ -570,6 +681,14 @@ const GuacamoleTerminal = forwardRef(({
             try {
                 if (guacamoleClientRef.current) {
                     try { guacamoleClientRef.current.disconnect(); } catch {}
+                }
+                if (initialResizeTimerRef.current) {
+                    clearTimeout(initialResizeTimerRef.current);
+                    initialResizeTimerRef.current = null;
+                }
+                if (canvasObserverRef.current) {
+                    try { canvasObserverRef.current.disconnect(); } catch {}
+                    canvasObserverRef.current = null;
                 }
                 // Limpiar listeners de teclado/ratón
                 if (keyboardRef.current) {
@@ -616,6 +735,11 @@ const GuacamoleTerminal = forwardRef(({
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, []);
 
+    // Mantener ref sincronizado con el estado de conexión para evitar cierres obsoletos en handlers
+    useEffect(() => {
+        connectionStateRef.current = connectionState;
+    }, [connectionState]);
+
     // 🛡️ ESTABLE: Auto-resize listener con enfoque conservador
     useEffect(() => {
         if (!autoResize) {
@@ -628,13 +752,7 @@ const GuacamoleTerminal = forwardRef(({
             return;
         }
         
-        // Si ya hay un listener y está conectado, no crear otro
-        if (resizeListenerRef.current && connectionState === 'connected') {
-            console.log('🔄 AutoResize: Listener ya existe y está conectado, saltando...');
-            return;
-        }
-        
-        // Si ya hay un listener pero no está conectado, removerlo para crear uno nuevo
+        // Re-crear siempre el listener cuando cambie connectionState/autoResize para garantizar cierre fresco
         if (resizeListenerRef.current) {
             window.removeEventListener('resize', resizeListenerRef.current);
             resizeListenerRef.current = null;
@@ -713,8 +831,8 @@ const GuacamoleTerminal = forwardRef(({
             }
             
             resizeTimeout = setTimeout(() => {
-                // Verificar que esté conectado ANTES de procesar - USAR ESTADO ACTUAL
-                const currentConnectionState = connectionState;
+                // Verificar que esté conectado ANTES de procesar - usar ref sincronizada (no cierre obsoleto)
+                const currentConnectionState = connectionStateRef.current;
                 if (currentConnectionState !== 'connected') {
                     console.log(`⏭️ No conectado (${currentConnectionState}), saltando resize`);
                     return;
@@ -944,7 +1062,7 @@ const GuacamoleTerminal = forwardRef(({
                         return;
                     }
                     
-                    // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>80px)
+                    // 🎯 THRESHOLD: Solo resize si hay un cambio significativo (>40px)
                     // Evitar resize repetitivo: si las dimensiones son exactamente las mismas, no hacer nada
                     if (plannedWidth === lastDimensionsRef.current.width && plannedHeight === lastDimensionsRef.current.height) {
                         console.log('⏭️ Dimensiones idénticas, saltando resize');
@@ -952,7 +1070,7 @@ const GuacamoleTerminal = forwardRef(({
                     }
                     
                     // Solo resize si hay un cambio significativo
-                    if (!isBigChange && (widthDiff < 80 && heightDiff < 80)) {
+                    if (!isBigChange && (widthDiff < 40 && heightDiff < 40)) {
                         console.log(`⏭️ Cambio muy pequeño (${widthDiff}x${heightDiff}px), ignorando resize`);
                         return;
                     }
@@ -961,7 +1079,7 @@ const GuacamoleTerminal = forwardRef(({
                     // Supresión axis-only post big-change (rollback): desactivado
                     if (!isBigChange && isAxisOnlyFinal) {
                         const axisDelta = widthDiff >= 20 && heightDiff < 20 ? widthDiff : heightDiff;
-                        if (axisDelta < 120) {
+                        if (axisDelta < 80) {
                             console.log(`⏭️ Cambio de un solo eje insuficiente (${widthDiff}x${heightDiff}px), umbral 120px`);
                             return;
                         }
@@ -973,13 +1091,25 @@ const GuacamoleTerminal = forwardRef(({
                     lastResizeTimeRef.current = now;
                     consecutiveResizeCountRef.current++;
                     
-                    // Guardar nuevas dimensiones ANTES de ejecutar el resize
-                    lastDimensionsRef.current = { width: plannedWidth, height: plannedHeight };
-                    
-                    // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
-                    if (client.sendSize) {
-                        client.sendSize(plannedWidth, plannedHeight);
-                        console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
+                        // Guardar nuevas dimensiones ANTES de ejecutar el resize
+                        lastDimensionsRef.current = { width: plannedWidth, height: plannedHeight };
+
+                        // Verificar túnel OPEN justo antes de enviar para evitar errores de CLOSED/CLOSING
+                        const t = client.getTunnel ? client.getTunnel() : null;
+                        const openConst2 = window.Guacamole?.Tunnel?.OPEN;
+                        if (t && openConst2 !== undefined && typeof t.state !== 'undefined' && t.state !== openConst2) {
+                            console.log('⏭️ Saltando sendSize: túnel no OPEN');
+                            return;
+                        }
+                        if (connectionStateRef.current !== 'connected') {
+                            console.log('⏭️ Saltando sendSize: estado no conectado');
+                            return;
+                        }
+
+                        // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
+                        if (client.sendSize) {
+                            try { client.sendSize(plannedWidth, plannedHeight); } catch {}
+                            console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
                         burstCountRef.current++;
                         // Activar periodo de silencio: 1500 ms para big-change, 900 ms eje único, 600 ms normal
                         const isAxisOnlyQuiet = (Math.abs(plannedWidth - lastDimensionsRef.current.width) >= 20 && Math.abs(plannedHeight - lastDimensionsRef.current.height) < 20) || (Math.abs(plannedHeight - lastDimensionsRef.current.height) >= 20 && Math.abs(plannedWidth - lastDimensionsRef.current.width) < 20);
@@ -1058,7 +1188,7 @@ const GuacamoleTerminal = forwardRef(({
             window.removeEventListener('resize', handleWindowResize);
             resizeListenerRef.current = null; // Limpiar referencia
         };
-    }, [autoResize, connectionState]); // Incluir connectionState para actualizar cuando cambie
+    }, [autoResize, connectionState]); // Re-crear listener al cambiar estado/flag
 
     // 🔍 VIGILANTE: Detectar congelaciones y reconectar automáticamente
     useEffect(() => {
