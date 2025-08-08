@@ -226,6 +226,19 @@ const GuacamoleTerminal = forwardRef(({
                     throw new Error('Servidor Guacamole no está ejecutándose');
                 }
 
+                // Warm-up si el servidor WebSocket acaba de arrancar
+                try {
+                    const readyAt = Number(status.server.readyAt || 0);
+                    if (readyAt > 0) {
+                        const sinceReady = Date.now() - readyAt;
+                        if (sinceReady < 2000) {
+                            const waitMs = 2000 - sinceReady + 200;
+                            console.log(`⏳ Warm-up guacamole-lite reciente (${sinceReady}ms). Esperando ${waitMs}ms...`);
+                            await new Promise(resolve => setTimeout(resolve, waitMs));
+                        }
+                    }
+                } catch {}
+
                                  // Crear token de conexión
                  // Log crítico: verificar configuración antes de enviar al backend
                  console.log('🚀 ENVIANDO AL BACKEND:', rdpConfig);
@@ -690,14 +703,34 @@ const GuacamoleTerminal = forwardRef(({
 
                 // Conectar
                 console.log('🚀 Iniciando conexión cliente Guacamole...');
+                const connectStartedAt = Date.now();
                 client.connect();
                 
                                  // Limpiar timeout cuando se conecte exitosamente
-                 const originalStateChange = client.onstatechange;
+                const originalStateChange = client.onstatechange;
                  client.onstatechange = (state) => {
                      if (state === 3) { // CONNECTED
                          clearTimeout(connectionTimeout);
                      }
+                    // Si se desconecta muy pronto tras conectar, hacer un reintento único
+                    if (state === 4) { // DISCONNECTED
+                        const elapsed = Date.now() - connectStartedAt;
+                        if (elapsed < 5000 && !initialResizeDoneRef.current) {
+                            console.warn(`⚠️ Desconexión temprana (${elapsed}ms). Reintentando una vez...`);
+                            try {
+                                const container = containerRef.current;
+                                if (container) {
+                                    const r = container.getBoundingClientRect();
+                                    pendingPostConnectResizeRef.current = { width: Math.floor(r.width), height: Math.floor(r.height) };
+                                }
+                            } catch {}
+                            setTimeout(() => {
+                                try { client.disconnect(); } catch {}
+                                setConnectionState('disconnected');
+                            }, 200);
+                            return;
+                        }
+                    }
                      originalStateChange(state);
                  };
 

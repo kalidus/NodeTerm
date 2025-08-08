@@ -366,6 +366,7 @@ const rdpManager = new RdpManager();
 // Guacamole services
 const guacdService = new GuacdService();
 let guacamoleServer = null;
+let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket server became ready
 // Track active guacamole client connections
 const activeGuacamoleConnections = new Set();
 
@@ -541,6 +542,7 @@ async function initializeGuacamoleServices() {
       console.error('❌ Error en conexión Guacamole:', error);
     });
 
+    guacamoleServerReadyAt = Date.now();
     console.log('✅ Servicios Guacamole inicializados correctamente');
     console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
     console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
@@ -2479,7 +2481,8 @@ ipcMain.handle('guacamole:get-status', async (event) => {
     guacd: guacdService.getStatus(),
     server: guacamoleServer ? {
       isRunning: true,
-      port: 8081
+      port: 8081,
+      readyAt: guacamoleServerReadyAt
     } : {
       isRunning: false
     }
