@@ -8,6 +8,8 @@ const GuacamoleTerminal = forwardRef(({
 }, ref) => {
     const containerRef = useRef(null);
     const guacamoleClientRef = useRef(null);
+    const mouseRef = useRef(null);
+    const keyboardRef = useRef(null);
     const resizeListenerRef = useRef(null); // Para evitar múltiples listeners
     const [connectionState, setConnectionState] = useState('disconnected'); // disconnected, connecting, connected, error
     const [errorMessage, setErrorMessage] = useState('');
@@ -224,6 +226,8 @@ const GuacamoleTerminal = forwardRef(({
                  
                  const mouse = new window.Guacamole.Mouse(display.getElement());
                  const keyboard = new window.Guacamole.Keyboard(document);
+                 mouseRef.current = mouse;
+                 keyboardRef.current = keyboard;
 
                                  // Configurar display en el contenedor
                  const container = containerRef.current;
@@ -563,15 +567,54 @@ const GuacamoleTerminal = forwardRef(({
 
         // Cleanup
         return () => {
-            if (guacamoleClientRef.current) {
-                try {
-                    guacamoleClientRef.current.disconnect();
-                } catch (e) {
-                    console.warn('Error desconectando cliente Guacamole:', e);
+            try {
+                if (guacamoleClientRef.current) {
+                    try { guacamoleClientRef.current.disconnect(); } catch {}
                 }
+                // Limpiar listeners de teclado/ratón
+                if (keyboardRef.current) {
+                    try { keyboardRef.current.onkeydown = null; keyboardRef.current.onkeyup = null; } catch {}
+                    keyboardRef.current = null;
+                }
+                if (mouseRef.current) {
+                    try { mouseRef.current.onmousedown = null; mouseRef.current.onmouseup = null; mouseRef.current.onmousemove = null; } catch {}
+                    mouseRef.current = null;
+                }
+                // Vaciar contenedor
+                if (containerRef.current) {
+                    try { containerRef.current.innerHTML = ''; } catch {}
+                }
+            } finally {
+                guacamoleClientRef.current = null;
             }
         };
     }, [isGuacamoleLoaded, rdpConfig, tabId]);
+
+    // Desconexión segura en recargas/cierrres de ventana
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            try {
+                if (guacamoleClientRef.current) {
+                    try { guacamoleClientRef.current.disconnect(); } catch {}
+                }
+                if (keyboardRef.current) {
+                    try { keyboardRef.current.onkeydown = null; keyboardRef.current.onkeyup = null; } catch {}
+                    keyboardRef.current = null;
+                }
+                if (mouseRef.current) {
+                    try { mouseRef.current.onmousedown = null; mouseRef.current.onmouseup = null; mouseRef.current.onmousemove = null; } catch {}
+                    mouseRef.current = null;
+                }
+                if (containerRef.current) {
+                    try { containerRef.current.innerHTML = ''; } catch {}
+                }
+            } finally {
+                guacamoleClientRef.current = null;
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, []);
 
     // 🛡️ ESTABLE: Auto-resize listener con enfoque conservador
     useEffect(() => {

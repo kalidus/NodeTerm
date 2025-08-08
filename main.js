@@ -366,6 +366,8 @@ const rdpManager = new RdpManager();
 // Guacamole services
 const guacdService = new GuacdService();
 let guacamoleServer = null;
+// Track active guacamole client connections
+const activeGuacamoleConnections = new Set();
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -518,11 +520,21 @@ async function initializeGuacamoleServices() {
     
     // Configurar eventos del servidor
     guacamoleServer.on('open', (clientConnection) => {
-      console.log('🔗 Nueva conexión Guacamole abierta:', clientConnection.connectionId);
+      try {
+        console.log('🔗 Nueva conexión Guacamole abierta:', clientConnection.connectionId);
+        activeGuacamoleConnections.add(clientConnection);
+      } catch (e) {
+        console.warn('No se pudo registrar conexión Guacamole:', e?.message || e);
+      }
     });
 
     guacamoleServer.on('close', (clientConnection) => {
-      console.log('🔚 Conexión Guacamole cerrada:', clientConnection.connectionId);
+      try {
+        console.log('🔚 Conexión Guacamole cerrada:', clientConnection.connectionId);
+        activeGuacamoleConnections.delete(clientConnection);
+      } catch (e) {
+        // noop
+      }
     });
 
     guacamoleServer.on('error', (clientConnection, error) => {
@@ -802,6 +814,11 @@ ipcMain.handle('app:reload', () => {
 
 ipcMain.handle('app:force-reload', () => {
   if (mainWindow) {
+    // Intentar cerrar conexiones Guacamole antes de recargar el renderer
+    try {
+      // Not awaited on purpose; quick cleanup then reload
+      disconnectAllGuacamoleConnections();
+    } catch {}
     mainWindow.webContents.reloadIgnoringCache();
   }
 });
@@ -2467,6 +2484,35 @@ ipcMain.handle('guacamole:get-status', async (event) => {
       isRunning: false
     }
   };
+});
+
+// Helper to disconnect all active guacamole connections
+async function disconnectAllGuacamoleConnections() {
+  try {
+    console.log(`🧹 Cerrando ${activeGuacamoleConnections.size} conexiones Guacamole activas...`);
+    for (const conn of Array.from(activeGuacamoleConnections)) {
+      try {
+        // guacamole-lite clientConnection may expose close() or ws property
+        if (typeof conn.close === 'function') {
+          conn.close();
+        } else if (conn.ws && typeof conn.ws.close === 'function') {
+          conn.ws.close();
+        }
+      } catch (e) {
+        // swallow per-connection errors
+      } finally {
+        activeGuacamoleConnections.delete(conn);
+      }
+    }
+    console.log('✅ Conexiones Guacamole cerradas');
+  } catch (e) {
+    console.warn('⚠️ Error cerrando conexiones Guacamole:', e?.message || e);
+  }
+}
+
+ipcMain.handle('guacamole:disconnect-all', async () => {
+  await disconnectAllGuacamoleConnections();
+  return { success: true };
 });
 
 ipcMain.handle('guacamole:create-token', async (event, config) => {
