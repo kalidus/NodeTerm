@@ -3236,12 +3236,7 @@ const App = () => {
                                             ref.disconnect();
                                           }
                                         } catch {}
-                                        // Forzar cierre de posibles conexiones huérfanas
-                                        try {
-                                          if (window.electron?.guacamole?.disconnectAll) {
-                                            window.electron.guacamole.disconnectAll();
-                                          }
-                                        } catch {}
+                                        // No usar disconnectAll aquí para evitar cerrar conexiones nuevas en carrera
                                         // Eliminar pestaña del estado
                                         const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
                                         setRdpTabs(newRdpTabs);
