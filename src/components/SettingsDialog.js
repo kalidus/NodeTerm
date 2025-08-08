@@ -79,6 +79,16 @@ const SettingsDialog = ({
     return saved ? parseInt(saved, 10) : 24;
   });
 
+  // RDP settings (persisted in localStorage)
+  const [rdpIdleSeconds, setRdpIdleSeconds] = useState(() => {
+    const v = parseInt(localStorage.getItem('rdp_idle_threshold_ms') || '60000', 10);
+    return Math.max(5, Math.floor(v / 1000));
+  });
+  const [rdpFreezeSeconds, setRdpFreezeSeconds] = useState(() => {
+    const v = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '3600000', 10);
+    return Math.max(30, Math.floor(v / 1000));
+  });
+
   // Estados para la gestión de seguridad
   const [secureStorage] = useState(() => new SecureStorage());
   const [masterPassword, setMasterPassword] = useState('');
@@ -100,6 +110,16 @@ const SettingsDialog = ({
     // Verificar si hay clave maestra guardada
     setHasMasterKey(secureStorage.hasSavedMasterKey());
   }, [secureStorage]);
+
+  // Persist RDP settings
+  useEffect(() => {
+    const ms = Math.max(5000, (rdpIdleSeconds || 0) * 1000);
+    localStorage.setItem('rdp_idle_threshold_ms', String(ms));
+  }, [rdpIdleSeconds]);
+  useEffect(() => {
+    const ms = Math.max(30000, (rdpFreezeSeconds || 0) * 1000);
+    localStorage.setItem('rdp_freeze_timeout_ms', String(ms));
+  }, [rdpFreezeSeconds]);
 
   // Funciones para gestión de clave maestra
   const validateMasterPassword = () => {
@@ -1037,6 +1057,65 @@ const SettingsDialog = ({
                 </div>
               </TabPanel>
             </TabView>
+          </div>
+        </TabPanel>
+
+        <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
+          <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '40vh', width: '100%' }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+              <i className="pi pi-sliders-h" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+              Umbrales de actividad y reactivación
+            </h3>
+
+            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+              <div>
+                <label htmlFor="rdp-idle-seconds" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Umbral de inactividad (segundos)
+                </label>
+                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
+                  Tras superar este tiempo sin actividad (teclado/ratón/sync), el siguiente resize hará un warm‑up o reconexión.
+                </small>
+                <InputNumber
+                  id="rdp-idle-seconds"
+                  value={rdpIdleSeconds}
+                  onValueChange={e => setRdpIdleSeconds(Math.max(5, Math.min(7200, e.value || 5)))}
+                  min={5}
+                  max={7200}
+                  showButtons
+                  buttonLayout="horizontal"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
+                  {rdpIdleSeconds} s (mín. 5)
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="rdp-freeze-seconds" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Umbral de actividad de la sesión (segundos)
+                </label>
+                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
+                  Si no hay actividad durante este tiempo, puede intentarse una reconexión automática.
+                </small>
+                <InputNumber
+                  id="rdp-freeze-seconds"
+                  value={rdpFreezeSeconds}
+                  onValueChange={e => setRdpFreezeSeconds(Math.max(30, Math.min(86400, e.value || 30)))}
+                  min={30}
+                  max={86400}
+                  showButtons
+                  buttonLayout="horizontal"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
+                  {rdpFreezeSeconds} s (mín. 30)
+                </div>
+              </div>
+            </div>
           </div>
         </TabPanel>
 

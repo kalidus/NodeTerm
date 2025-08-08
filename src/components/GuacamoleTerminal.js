@@ -40,6 +40,10 @@ const GuacamoleTerminal = forwardRef(({
     const startupSettleUntilRef = useRef(0);
     const startupLastPlanRef = useRef({ width: 0, height: 0 });
     const startupStableCountRef = useRef(0);
+    // Idle/warm-up control
+    const wasIdleRef = useRef(false);
+    const lastActivityTimeRef = useRef(Date.now());
+    const pendingPostConnectResizeRef = useRef(null);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -290,7 +294,10 @@ const GuacamoleTerminal = forwardRef(({
                                                                  // Eventos del mouse
                 mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (mouseState) => {
                     client.sendMouseState(mouseState);
-                    setLastActivityTime(Date.now()); // Registrar actividad
+                    const nowTs = Date.now();
+                    setLastActivityTime(nowTs); // Registrar actividad
+                    lastActivityTimeRef.current = nowTs;
+                    wasIdleRef.current = false;
                 };
                  
                  // Eventos del display para debug
@@ -314,12 +321,18 @@ const GuacamoleTerminal = forwardRef(({
                 keyboard.onkeydown = (keysym) => {
                     console.log('⌨️ Tecla presionada:', keysym);
                     client.sendKeyEvent(1, keysym);
-                    setLastActivityTime(Date.now()); // Registrar actividad
+                    const nowTs = Date.now();
+                    setLastActivityTime(nowTs); // Registrar actividad
+                    lastActivityTimeRef.current = nowTs;
+                    wasIdleRef.current = false;
                 };
                 keyboard.onkeyup = (keysym) => {
                     console.log('⌨️ Tecla liberada:', keysym);
                     client.sendKeyEvent(0, keysym);
-                    setLastActivityTime(Date.now()); // Registrar actividad
+                    const nowTs = Date.now();
+                    setLastActivityTime(nowTs); // Registrar actividad
+                    lastActivityTimeRef.current = nowTs;
+                    wasIdleRef.current = false;
                 };
 
                 // Eventos de estado de conexión
@@ -357,7 +370,10 @@ const GuacamoleTerminal = forwardRef(({
                          
                                                  console.log('🔄 Cambiando estado a CONNECTED...');
                         setConnectionState('connected');
-                        setLastActivityTime(Date.now()); // Registrar actividad inicial
+                        const nowTsConn = Date.now();
+                        setLastActivityTime(nowTsConn); // Registrar actividad inicial
+                        lastActivityTimeRef.current = nowTsConn;
+                        wasIdleRef.current = false;
                         console.log('✅ Estado cambiado a CONNECTED');
                          
                           // Si autoResize está activado, hacer resize inicial tras conexión
@@ -369,6 +385,24 @@ const GuacamoleTerminal = forwardRef(({
                                      if (attempt < 5) {
                                          setTimeout(() => attemptInitialResize(attempt + 1), 500);
                                      }
+
+                          // Si hay un resize pendiente post-reconexión (por inactividad), enviarlo una vez
+                          try {
+                              if (pendingPostConnectResizeRef.current) {
+                                  const { width: pendW, height: pendH } = pendingPostConnectResizeRef.current;
+                                  setTimeout(() => {
+                                      try {
+                                          const c2 = guacamoleClientRef.current;
+                                          if (!c2) return;
+                                          if (c2.sendSize) c2.sendSize(pendW, pendH);
+                                          else if (c2.sendInstruction) c2.sendInstruction('size', pendW, pendH);
+                                          lastDimensionsRef.current = { width: pendW, height: pendH };
+                                          lastResizeTimeRef.current = Date.now();
+                                      } catch {}
+                                  }, 400);
+                                  pendingPostConnectResizeRef.current = null;
+                              }
+                          } catch {}
                                      return;
                                  }
                                   // Asegurar túnel no esté explícitamente CERRADO y que estemos conectados antes de enviar
@@ -740,6 +774,11 @@ const GuacamoleTerminal = forwardRef(({
         connectionStateRef.current = connectionState;
     }, [connectionState]);
 
+    // Mantener ref sincronizado con la última actividad
+    useEffect(() => {
+        lastActivityTimeRef.current = lastActivityTime;
+    }, [lastActivityTime]);
+
     // 🛡️ ESTABLE: Auto-resize listener con enfoque conservador
     useEffect(() => {
         if (!autoResize) {
@@ -795,6 +834,50 @@ const GuacamoleTerminal = forwardRef(({
             
             // Guardar el resize pendiente (siempre el más reciente)
             pendingResize = { width: currentWidth, height: currentHeight };
+
+            // Detección de inactividad (>60s) y warm-up en el primer resize tras idle
+            // Leer umbral de inactividad configurable (fallback 60s)
+            const configuredIdleMs = parseInt(localStorage.getItem('rdp_idle_threshold_ms') || '60000', 10);
+            const IDLE_MS = isNaN(configuredIdleMs) ? 60000 : Math.max(5000, configuredIdleMs);
+            const nowIdleCheck = Date.now();
+            const isIdleNow = (nowIdleCheck - (lastActivityTimeRef.current || 0)) > IDLE_MS;
+            if (isIdleNow && !wasIdleRef.current) {
+                wasIdleRef.current = true;
+                try {
+                    const client = guacamoleClientRef.current;
+                    if (!client) return;
+                    let clientStateVal = undefined;
+                    try { clientStateVal = client.currentState; } catch {}
+                    const isDisconnected = clientStateVal === 4 || connectionStateRef.current !== 'connected';
+                    const tunnel = client.getTunnel ? client.getTunnel() : null;
+                    const openConstWU = window.Guacamole?.Tunnel?.OPEN;
+                    const tunnelNotOpen = tunnel && typeof tunnel.state !== 'undefined' && openConstWU !== undefined && tunnel.state !== openConstWU;
+                    if (isDisconnected || tunnelNotOpen) {
+                        // Guardar tamaño y forzar reconexión
+                        pendingPostConnectResizeRef.current = { width: currentWidth, height: currentHeight };
+                        try { client.disconnect(); } catch {}
+                        setConnectionState('disconnected');
+                        return;
+                    }
+                    // Warm-up suave: refresco local y un único sendSize
+                    try {
+                        const disp = client.getDisplay?.();
+                        const defLayer = disp?.getDefaultLayer?.();
+                        if (disp && defLayer && currentWidth > 0 && currentHeight > 0) {
+                            try { disp.resize(defLayer, currentWidth, currentHeight); } catch {}
+                            try { disp.onresize && disp.onresize(); } catch {}
+                        }
+                    } catch {}
+                    try {
+                        if (client.sendSize) client.sendSize(currentWidth, currentHeight);
+                        else if (client.sendInstruction) client.sendInstruction('size', currentWidth, currentHeight);
+                    } catch {}
+                    lastDimensionsRef.current = { width: currentWidth, height: currentHeight };
+                    lastResizeTimeRef.current = Date.now();
+                    quietUntilRef.current = Date.now() + 1200;
+                    return; // No continuar con el flujo normal en este primer resize post-idle
+                } catch { /* noop */ }
+            }
 
             // Supresión por visibilidad/foco reciente
             const now0 = Date.now();
@@ -1192,13 +1275,16 @@ const GuacamoleTerminal = forwardRef(({
 
     // 🔍 VIGILANTE: Detectar congelaciones y reconectar automáticamente
     useEffect(() => {
-        // Deshabilitar vigilante si autoResize está activado (conexiones más estables)
-        if (connectionState !== 'connected' || autoResize) return;
+        // Leer umbral de congelación configurable (fallback 1h)
+        const configuredFreezeMs = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '3600000', 10);
+        const FREEZE_TIMEOUT = isNaN(configuredFreezeMs) ? 3600000 : Math.max(30000, configuredFreezeMs);
+        const CHECK_INTERVAL = Math.max(15000, Math.min(300000, Math.floor(FREEZE_TIMEOUT / 12)));
+
+        if (connectionState !== 'connected') return;
         
         // console.log('🛡️ Iniciando vigilante anti-congelación');
         
-        const FREEZE_TIMEOUT = 3600000; // 1 hora sin actividad = congelación
-        const CHECK_INTERVAL = 300000;  // Verificar cada 5 minutos (menos agresivo)
+        // Intervalo y timeout dinámicos
         
         let watchdog = null;
         
