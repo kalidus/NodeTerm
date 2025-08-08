@@ -40,10 +40,15 @@ const GuacamoleTerminal = forwardRef(({
     const startupSettleUntilRef = useRef(0);
     const startupLastPlanRef = useRef({ width: 0, height: 0 });
     const startupStableCountRef = useRef(0);
+    const startupSentOneResizeRef = useRef(false);
     // Idle/warm-up control
     const wasIdleRef = useRef(false);
     const lastActivityTimeRef = useRef(Date.now());
     const pendingPostConnectResizeRef = useRef(null);
+    // Sync readiness para habilitar resizes no iniciales tras primer onsync
+    const syncReadyRef = useRef(false);
+    // Wake-up de sesión tras conectar
+    const wakeUpSentRef = useRef(false);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -262,8 +267,9 @@ const GuacamoleTerminal = forwardRef(({
                  console.log('📺 Display creado:', display);
                  console.log('📺 Display element:', display.getElement());
                  
-                 const mouse = new window.Guacamole.Mouse(display.getElement());
-                 const keyboard = new window.Guacamole.Keyboard(document);
+                 const targetElement = display.getElement();
+                 const mouse = new window.Guacamole.Mouse(targetElement);
+                 const keyboard = new window.Guacamole.Keyboard(targetElement);
                  mouseRef.current = mouse;
                  keyboardRef.current = keyboard;
 
@@ -348,6 +354,16 @@ const GuacamoleTerminal = forwardRef(({
                     wasIdleRef.current = false;
                 };
 
+                // Proteger contra sobrescritura no-función internas de guacamole-common-js
+                try {
+                    if (typeof keyboard.onkeyup !== 'function') {
+                        keyboard.onkeyup = () => {};
+                    }
+                    if (typeof keyboard.onkeydown !== 'function') {
+                        keyboard.onkeydown = () => {};
+                    }
+                } catch {}
+
                 // Eventos de estado de conexión
                 client.onstatechange = (state) => {
                     const stateNames = {
@@ -387,7 +403,56 @@ const GuacamoleTerminal = forwardRef(({
                         setLastActivityTime(nowTsConn); // Registrar actividad inicial
                         lastActivityTimeRef.current = nowTsConn;
                         wasIdleRef.current = false;
+                        syncReadyRef.current = false; // esperar primer onsync
                         console.log('✅ Estado cambiado a CONNECTED');
+
+                         // Enviar un "wake-up" suave si no hay actividad en ~1.5s tras conectar
+                         wakeUpSentRef.current = false;
+                         setTimeout(() => {
+                             try {
+                                 if (wakeUpSentRef.current) return;
+                                 if (connectionStateRef.current !== 'connected') return;
+                                 const idleFor = Date.now() - (lastActivityTimeRef.current || 0);
+                                 if (idleFor < 1200) return; // ya hubo actividad
+                                 const cli = guacamoleClientRef.current;
+                                 if (!cli) return;
+                                 // Nudge de input
+                                 try {
+                                     const disp = cli.getDisplay?.();
+                                     const el = disp?.getElement?.();
+                                     const rect = el?.getBoundingClientRect?.();
+                                     const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
+                                     const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
+                                     const mouse = { x, y, left: false, middle: false, right: false };
+                                     if (cli.sendMouseState) cli.sendMouseState(mouse);
+                                 } catch {}
+                                 try {
+                                     // Tecla Shift (press + release) para despertar
+                                     const SHIFT = 0xffe1;
+                                     if (cli.sendKeyEvent) {
+                                         cli.sendKeyEvent(1, SHIFT);
+                                         cli.sendKeyEvent(0, SHIFT);
+                                     }
+                                 } catch {}
+                                 // Reenviar tamaño actual del contenedor una vez
+                                 try {
+                                     const cont = containerRef.current;
+                                     if (cont) {
+                                         const r = cont.getBoundingClientRect();
+                                         const w = Math.floor(r.width);
+                                         const h = Math.floor(r.height);
+                                         if (w > 0 && h > 0) {
+                                             if (cli.sendSize) cli.sendSize(w, h);
+                                             else if (cli.sendInstruction) cli.sendInstruction('size', w, h);
+                                             lastDimensionsRef.current = { width: w, height: h };
+                                             lastResizeTimeRef.current = Date.now();
+                                         }
+                                     }
+                                 } catch {}
+                                 wakeUpSentRef.current = true;
+                                 console.log('🟢 Wake-up inicial enviado');
+                             } catch {}
+                         }, 1500);
                          
                           // Si autoResize está activado, hacer resize inicial tras conexión
                           if (rdpConfig.autoResize) {
@@ -478,12 +543,13 @@ const GuacamoleTerminal = forwardRef(({
                                       lastResizeTimeRef.current = Date.now();
                                       consecutiveResizeCountRef.current = 0;
                                       initialResizeCooldownUntilRef.current = Date.now() + 2500;
-                                      // Reiniciar ventana de asentamiento de arranque cada nueva conexión
-                                      startupSettleUntilRef.current = Date.now() + 2500;
+                                       // Reiniciar ventana de asentamiento de arranque cada nueva conexión
+                                       startupSettleUntilRef.current = Date.now() + 4000; // ventana más larga
                                       startupStableCountRef.current = 0;
                                       startupLastPlanRef.current = { width: newWidth, height: newHeight };
                                       isInitialResizingRef.current = true;
                                       initialResizeDoneRef.current = true;
+                                       startupSentOneResizeRef.current = false;
 
                                      // 4) Verificar y reintentar hasta 3 veces si el canvas no adopta el tamaño
                                      const verifyAndNudge = (attempt = 1) => {
@@ -838,7 +904,7 @@ const GuacamoleTerminal = forwardRef(({
         let pendingResize = null; // Para capturar solo el resize final
 
         // Handlers de visibilidad/foco para suprimir ráfagas al volver
-        const onVisibilityChange = () => {
+         const onVisibilityChange = () => {
             if (!document.hidden) {
                 visibilitySuppressUntilRef.current = Date.now() + 1200;
                 returningFromBlurRef.current = true;
@@ -1065,13 +1131,22 @@ const GuacamoleTerminal = forwardRef(({
 
                     // Reglas más estrictas durante arranque (ventana de asentamiento)
                     if (Date.now() < startupSettleUntilRef.current) {
+                        // No enviar resizes de un solo eje durante la ventana de arranque
                         if (isAxisOnly) {
-                            const axisDelta = widthDiff >= 20 && heightDiff < 20 ? widthDiff : heightDiff;
-                            // Ignorar cambios de un solo eje pequeños en arranque
-                            if (axisDelta < 200 && combinedDiff < 350) {
-                                console.log('⏭️ Arranque: ignorando cambio de un eje pequeño');
-                                return;
-                            }
+                            console.log('⏭️ Arranque: ignorando cambio de un eje (axis-only)');
+                            return;
+                        }
+                        // Permitir solo un resize enviado durante la ventana de arranque
+                        if (startupSentOneResizeRef.current) {
+                            console.log('⏭️ Arranque: ya se envió un resize; ignorando hasta que finalice la ventana');
+                            return;
+                        }
+                        // Hasta primer onsync, posponer cualquier resize no inicial
+                        if (!syncReadyRef.current) {
+                            console.log('⏭️ Arranque: esperando primer onsync antes de resizes');
+                            if (resizeTimeout) clearTimeout(resizeTimeout);
+                            resizeTimeout = setTimeout(() => handleWindowResize(), 300);
+                            return;
                         }
                         // Requerir dos comprobaciones de estabilidad (2×200ms) sin deriva
                         const sameAsLastPlan =
@@ -1246,7 +1321,7 @@ const GuacamoleTerminal = forwardRef(({
                                     const ch = canvas.height;
                                     const ok = Math.abs(cw - plannedWidth) < 40 && Math.abs(ch - plannedHeight) < 40;
                                     if (ok) return;
-                                    // Limitar reintentos: 0 para big-change, 1 para normal
+                                    // Limitar reintentos: 0 para big-change inmediato, 1 para normal
                                     if (isBigChange || attempt >= 1) return;
                                     if (client.sendSize) client.sendSize(plannedWidth, plannedHeight);
                                     const disp2 = client.getDisplay?.();
@@ -1255,7 +1330,25 @@ const GuacamoleTerminal = forwardRef(({
                                 } catch { /* noop */ }
                             };
                             setTimeout(() => verifyAfter(1), 700);
+
+                            // Watchdog post-envío: si tras un big-change no hay actividad en ~1.8s, hacer un nudge único
+                            setTimeout(() => {
+                                try {
+                                    if (connectionStateRef.current !== 'connected') return;
+                                    const noActivityFor = Date.now() - (lastActivityTimeRef.current || 0);
+                                    if (isBigChange && noActivityFor > 1800) {
+                                        if (client.sendSize) client.sendSize(plannedWidth, plannedHeight);
+                                        const disp3 = client.getDisplay?.();
+                                        if (disp3?.onresize) disp3.onresize();
+                                        console.log('🛠️ Watchdog post-big-change: reenviado tamaño por inactividad');
+                                    }
+                                } catch { /* noop */ }
+                            }, isBigChange ? 1800 : 0);
                         } catch { /* noop */ }
+                        // Si seguimos en ventana de arranque, marcar que ya enviamos un resize
+                        if (Date.now() < startupSettleUntilRef.current) {
+                            startupSentOneResizeRef.current = true;
+                        }
                     }
                     // Consumir el pendiente solo si no apareció un tamaño más nuevo durante el envío
                     if (pendingResize && (pendingResize.width !== plannedWidth || pendingResize.height !== plannedHeight)) {
@@ -1380,6 +1473,10 @@ const GuacamoleTerminal = forwardRef(({
         
         client.onsync = (...args) => {
             updateActivity();
+            // Marcar que ya recibimos el primer sync tras conexión para permitir resizes no iniciales
+            if (!syncReadyRef.current) {
+                syncReadyRef.current = true;
+            }
             if (originalOnSync) originalOnSync.apply(client, args);
         };
         
