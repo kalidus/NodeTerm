@@ -49,6 +49,18 @@ const GuacamoleTerminal = forwardRef(({
     const syncReadyRef = useRef(false);
     // Wake-up de sesión tras conectar
     const wakeUpSentRef = useRef(false);
+    // Keep-alive periódico
+    const keepAliveTimerRef = useRef(null);
+    // Ack gating de tamaño
+    const awaitingSizeAckRef = useRef(false);
+    const sizeAckDeadlineRef = useRef(0);
+    const lastSentSizeRef = useRef({ width: 0, height: 0, at: 0 });
+    // Anti ping-pong A->B->A
+    const lastTwoPlansRef = useRef([]); // [{ w, h, ts }]
+    // Backoff adaptativo (protección de ráfagas prolongadas)
+    const resizesWindowStartRef = useRef(0);
+    const resizesWindowCountRef = useRef(0);
+    const adaptiveBackoffUntilRef = useRef(0);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -331,8 +343,11 @@ const GuacamoleTerminal = forwardRef(({
                  if (display.onresize) {
                      const originalOnResize = display.onresize;
                      display.onresize = () => {
-                         // console.log('📺 Display onresize llamado - datos recibidos');
                          originalOnResize();
+                         // Liberar ack y quiet si procede
+                         awaitingSizeAckRef.current = false;
+                         sizeAckDeadlineRef.current = 0;
+                         quietUntilRef.current = 0;
                      };
                  }
 
@@ -815,6 +830,10 @@ const GuacamoleTerminal = forwardRef(({
                 if (guacamoleClientRef.current) {
                     try { guacamoleClientRef.current.disconnect(); } catch {}
                 }
+                if (keepAliveTimerRef.current) {
+                    clearInterval(keepAliveTimerRef.current);
+                    keepAliveTimerRef.current = null;
+                }
                 if (initialResizeTimerRef.current) {
                     clearTimeout(initialResizeTimerRef.current);
                     initialResizeTimerRef.current = null;
@@ -871,6 +890,47 @@ const GuacamoleTerminal = forwardRef(({
     // Mantener ref sincronizado con el estado de conexión para evitar cierres obsoletos en handlers
     useEffect(() => {
         connectionStateRef.current = connectionState;
+        // Gestionar keep-alive al entrar/salir de conectado
+        if (connectionState === 'connected') {
+            if (keepAliveTimerRef.current) clearInterval(keepAliveTimerRef.current);
+            keepAliveTimerRef.current = setInterval(() => {
+                try {
+                    const client = guacamoleClientRef.current;
+                    if (!client) return;
+                    // Enviar keep-alive solo si llevamos >20s sin actividad
+                    const idleMs = Date.now() - (lastActivityTimeRef.current || 0);
+                    if (idleMs < 20000) return;
+                    // Pequeño nudge de ratón y SHIFT, sin clics
+                    const disp = client.getDisplay?.();
+                    const el = disp?.getElement?.();
+                    const rect = el?.getBoundingClientRect?.();
+                    const x = Math.max(1, Math.floor((rect?.width || 10) / 2));
+                    const y = Math.max(1, Math.floor((rect?.height || 10) / 2));
+                    try { client.sendMouseState && client.sendMouseState({ x, y, left: false, middle: false, right: false }); } catch {}
+                    try { const SHIFT = 0xffe1; client.sendKeyEvent && client.sendKeyEvent(1, SHIFT); client.sendKeyEvent && client.sendKeyEvent(0, SHIFT); } catch {}
+                    // Si no hay ack pendiente, reenviar el tamaño actual como keep-alive liviano
+                    if (!awaitingSizeAckRef.current) {
+                        const cont = containerRef.current;
+                        if (cont) {
+                            const r = cont.getBoundingClientRect();
+                            const w = Math.floor(r.width);
+                            const h = Math.floor(r.height);
+                            if (w > 0 && h > 0 && client.sendSize) {
+                                client.sendSize(w, h);
+                                awaitingSizeAckRef.current = true;
+                                sizeAckDeadlineRef.current = Date.now() + 1500;
+                                lastSentSizeRef.current = { width: w, height: h, at: Date.now() };
+                            }
+                        }
+                    }
+                } catch {}
+            }, 25000);
+        } else {
+            if (keepAliveTimerRef.current) {
+                clearInterval(keepAliveTimerRef.current);
+                keepAliveTimerRef.current = null;
+            }
+        }
     }, [connectionState]);
 
     // Mantener ref sincronizado con la última actividad
@@ -1030,6 +1090,22 @@ const GuacamoleTerminal = forwardRef(({
                 if (!pendingResize) return;
                 const plannedWidth = pendingResize.width;
                 const plannedHeight = pendingResize.height;
+
+                // Anti ping-pong A->B->A en 15s (tolerancia 10px)
+                const nowTsPlans = Date.now();
+                lastTwoPlansRef.current.push({ w: plannedWidth, h: plannedHeight, ts: nowTsPlans });
+                if (lastTwoPlansRef.current.length > 3) lastTwoPlansRef.current.shift();
+                if (lastTwoPlansRef.current.length >= 3) {
+                    const a = lastTwoPlansRef.current[0];
+                    const b = lastTwoPlansRef.current[1];
+                    const c = lastTwoPlansRef.current[2];
+                    const close = (x, y) => Math.abs(x - y) <= 10;
+                    const isABA = close(a.w, c.w) && close(a.h, c.h) && (!close(a.w, b.w) || !close(a.h, b.h)) && (nowTsPlans - a.ts) <= 15000;
+                    if (isABA) {
+                        console.log('⏭️ Anti ping-pong: colapsando A→B→A; mantener último estable');
+                        return;
+                    }
+                }
                 
                 // Verificar cliente
                 const client = guacamoleClientRef.current;
@@ -1169,7 +1245,18 @@ const GuacamoleTerminal = forwardRef(({
                     // Cooldown de cambios grandes: no aceptar otro big-change en < 2.5s
                     const now = Date.now();
 
-                    // Quiet period post-send: ignorar resizes durante 600ms salvo cambios muy grandes
+                    // Backoff adaptativo: si ≥4 resizes en 30s, subir mínimo a 4s por 20s
+                    if (!resizesWindowStartRef.current || (now - resizesWindowStartRef.current) > 30000) {
+                        resizesWindowStartRef.current = now;
+                        resizesWindowCountRef.current = 0;
+                    }
+                    resizesWindowCountRef.current += 1;
+                    if (resizesWindowCountRef.current >= 4) {
+                        adaptiveBackoffUntilRef.current = now + 20000; // 20s
+                    }
+
+                    // Quiet period post-send: ignorar resizes durante quiet salvo cambios muy grandes
+                    // o si hay ack pendiente sin haber expirado el deadline.
                     if (now < quietUntilRef.current && combinedDiff < 350) {
                         const remainingQuiet = Math.max(quietUntilRef.current - now, 150);
                         if (resizeTimeout) clearTimeout(resizeTimeout);
@@ -1177,6 +1264,13 @@ const GuacamoleTerminal = forwardRef(({
                             handleWindowResize();
                         }, remainingQuiet);
                         console.log(`⏸️ Quiet period activo (${remainingQuiet}ms), reprogramando`);
+                        return;
+                    }
+                    if (awaitingSizeAckRef.current && now < sizeAckDeadlineRef.current) {
+                        const remainingAck = sizeAckDeadlineRef.current - now;
+                        if (resizeTimeout) clearTimeout(resizeTimeout);
+                        resizeTimeout = setTimeout(() => handleWindowResize(), Math.max(remainingAck, 100));
+                        console.log(`⏸️ Esperando ack onsize (${remainingAck}ms)`);
                         return;
                     }
                     if (isBigChange) {
@@ -1228,7 +1322,10 @@ const GuacamoleTerminal = forwardRef(({
                     }
 
                     // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 2.5 segundos (3s para big-change)
-                    const minInterval = isBigChange ? 3000 : 2500;
+                    let minInterval = isBigChange ? 3000 : 2500;
+                    if (now < adaptiveBackoffUntilRef.current) {
+                        minInterval = Math.max(minInterval, 4000);
+                    }
                     if (now - lastResizeTimeRef.current < minInterval) {
                         const remaining = minInterval - (now - lastResizeTimeRef.current);
                         console.log(`⏭️ Rate limiting: reprogramando resize en ${remaining}ms`);
@@ -1297,15 +1394,19 @@ const GuacamoleTerminal = forwardRef(({
                             return;
                         }
 
-                        // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
+                    // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
                         if (client.sendSize) {
                             try { client.sendSize(plannedWidth, plannedHeight); } catch {}
                             console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
                         burstCountRef.current++;
-                        // Activar periodo de silencio: 1500 ms para big-change, 900 ms eje único, 600 ms normal
+                        // Activar periodo de silencio: 2200 ms para big-change, 900 ms eje único, 600 ms normal
                         const isAxisOnlyQuiet = (Math.abs(plannedWidth - lastDimensionsRef.current.width) >= 20 && Math.abs(plannedHeight - lastDimensionsRef.current.height) < 20) || (Math.abs(plannedHeight - lastDimensionsRef.current.height) >= 20 && Math.abs(plannedWidth - lastDimensionsRef.current.width) < 20);
-                        const quietMs = isBigChange ? 1500 : (isAxisOnlyQuiet ? 900 : 600);
+                        const quietMs = isBigChange ? 2200 : (isAxisOnlyQuiet ? 900 : 600);
                         quietUntilRef.current = Date.now() + quietMs;
+                        // Iniciar ack gating: esperar onsize o 1500ms
+                        awaitingSizeAckRef.current = true;
+                        sizeAckDeadlineRef.current = Date.now() + 1500;
+                        lastSentSizeRef.current = { width: plannedWidth, height: plannedHeight, at: Date.now() };
                         // Supresión post-big-change (rollback): desactivado
                         // Nudge/verify tras resize normal para evitar pantalla negra o tamaños no adoptados
                         try {
