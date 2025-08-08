@@ -3228,6 +3228,25 @@ const App = () => {
                                         }
                                         const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
                                         setRdpTabs(newRdpTabs);
+                                      } else if (closedTab.type === 'rdp-guacamole') {
+                                        // Cerrar pestañas RDP-Guacamole
+                                        try {
+                                          const ref = terminalRefs.current[closedTab.key];
+                                          if (ref && typeof ref.disconnect === 'function') {
+                                            ref.disconnect();
+                                          }
+                                        } catch {}
+                                        // Forzar cierre de posibles conexiones huérfanas
+                                        try {
+                                          if (window.electron?.guacamole?.disconnectAll) {
+                                            window.electron.guacamole.disconnectAll();
+                                          }
+                                        } catch {}
+                                        // Eliminar pestaña del estado
+                                        const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
+                                        setRdpTabs(newRdpTabs);
+                                        // Limpiar ref
+                                        delete terminalRefs.current[closedTab.key];
                                       } else {
                                         if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
                                           window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);

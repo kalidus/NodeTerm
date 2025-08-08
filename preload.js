@@ -104,6 +104,10 @@ contextBridge.exposeInMainWorld('electron', {
     removeAllListeners: (channel) => {
       ipcRenderer.removeAllListeners(channel);
     }
+  },
+  // Guacamole helpers
+  guacamole: {
+    disconnectAll: () => ipcRenderer.invoke('guacamole:disconnect-all')
   }
 });
 
