@@ -45,6 +45,8 @@ const GuacamoleTerminal = forwardRef(({
     const wasIdleRef = useRef(false);
     const lastActivityTimeRef = useRef(Date.now());
     const pendingPostConnectResizeRef = useRef(null);
+    const lastEarlyRetryAtRef = useRef(0);
+    const noFrameReconnectAttemptedRef = useRef(false);
     // Sync readiness para habilitar resizes no iniciales tras primer onsync
     const syncReadyRef = useRef(false);
     // Wake-up de sesión tras conectar
@@ -420,6 +422,7 @@ const GuacamoleTerminal = forwardRef(({
                         wasIdleRef.current = false;
                         syncReadyRef.current = false; // esperar primer onsync
                         console.log('✅ Estado cambiado a CONNECTED');
+                        noFrameReconnectAttemptedRef.current = false;
 
                          // Enviar un "wake-up" suave si no hay actividad en ~1.5s tras conectar
                          wakeUpSentRef.current = false;
@@ -609,6 +612,14 @@ const GuacamoleTerminal = forwardRef(({
                                   }
                                   if (originalOnSizeForInitial) originalOnSizeForInitial.apply(client, args);
                               };
+                              // 2b) Al recibir el primer onsync, intentar el resize inicial (gating por sync)
+                              const originalOnSyncForInitial = client.onsync;
+                              client.onsync = (...args) => {
+                                  if (!initialResizeDoneRef.current) {
+                                      setTimeout(() => attemptInitialResize(1), 120);
+                                  }
+                                  if (originalOnSyncForInitial) originalOnSyncForInitial.apply(client, args);
+                              };
                               // 3) Cuando aparezca el canvas en el DOM
                               try {
                                   if (canvasObserverRef.current) {
@@ -703,9 +714,63 @@ const GuacamoleTerminal = forwardRef(({
                                      zIndex: styles.zIndex
                                  });
                                  
-                                 if (!hasData) {
-                                     console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
-                                 }
+                                  if (!hasData) {
+                                      console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
+                                      try {
+                                          const cli = guacamoleClientRef.current;
+                                          if (cli) {
+                                              // Nudge de input (mouse + Shift) y reenviar tamaño actual
+                                              try {
+                                                  const dispN = cli.getDisplay?.();
+                                                  const elN = dispN?.getElement?.();
+                                                  const rectN = elN?.getBoundingClientRect?.();
+                                                  const xN = Math.max(1, Math.floor((rectN?.width || 10) / 2));
+                                                  const yN = Math.max(1, Math.floor((rectN?.height || 10) / 2));
+                                                  cli.sendMouseState && cli.sendMouseState({ x: xN, y: yN, left: false, middle: false, right: false });
+                                                  const SHIFT = 0xffe1;
+                                                  cli.sendKeyEvent && cli.sendKeyEvent(1, SHIFT);
+                                                  cli.sendKeyEvent && cli.sendKeyEvent(0, SHIFT);
+                                              } catch {}
+                                              try {
+                                                  const contN = containerRef.current;
+                                                  if (contN) {
+                                                      const rN = contN.getBoundingClientRect();
+                                                      const wN = Math.floor(rN.width);
+                                                      const hN = Math.floor(rN.height);
+                                                      if (wN > 0 && hN > 0) {
+                                                          if (cli.sendSize) cli.sendSize(wN, hN);
+                                                          else if (cli.sendInstruction) cli.sendInstruction('size', wN, hN);
+                                                      }
+                                                  }
+                                              } catch {}
+                                              try { if (display && display.onresize) display.onresize(); } catch {}
+                                              // Re-chequear en ~1.4s; si sigue vacío, reconexión única
+                                              setTimeout(() => {
+                                                  try {
+                                                      const de = containerRef.current?.querySelector('canvas');
+                                                      if (!de) return;
+                                                      const ctx2 = de.getContext('2d');
+                                                      const imageData2 = ctx2.getImageData(0, 0, de.width, de.height);
+                                                      const stillEmpty = !imageData2.data.some(pixel => pixel !== 0);
+                                                      if (stillEmpty && connectionStateRef.current === 'connected' && !noFrameReconnectAttemptedRef.current) {
+                                                          console.warn('🚨 Sin datos tras nudge; reconexión única para recuperar frames');
+                                                          noFrameReconnectAttemptedRef.current = true;
+                                                          // Guardar tamaño para reenviarlo tras reconectar
+                                                          try {
+                                                              const cont3 = containerRef.current;
+                                                              if (cont3) {
+                                                                  const r3 = cont3.getBoundingClientRect();
+                                                                  pendingPostConnectResizeRef.current = { width: Math.floor(r3.width), height: Math.floor(r3.height) };
+                                                              }
+                                                          } catch {}
+                                                          try { cli.disconnect && cli.disconnect(); } catch {}
+                                                          setConnectionState('disconnected');
+                                                      }
+                                                  } catch {}
+                                              }, 1400);
+                                          }
+                                      } catch {}
+                                  }
                              } else {
                                  console.log('⚠️ No se encontró canvas - posible problema de datos visuales');
                                  console.log('🔍 Elementos en el contenedor:', containerRef.current?.children);
@@ -796,8 +861,11 @@ const GuacamoleTerminal = forwardRef(({
                     // Si se desconecta muy pronto tras conectar, hacer un reintento único
                     if (state === 4) { // DISCONNECTED
                         const elapsed = Date.now() - connectStartedAt;
-                        if (elapsed < 5000 && !initialResizeDoneRef.current) {
+                        const nowRetry = Date.now();
+                        const retryCooldownOk = (nowRetry - lastEarlyRetryAtRef.current) > 10000;
+                        if (elapsed < 5000 && !initialResizeDoneRef.current && retryCooldownOk) {
                             console.warn(`⚠️ Desconexión temprana (${elapsed}ms). Reintentando una vez...`);
+                            lastEarlyRetryAtRef.current = nowRetry;
                             try {
                                 const container = containerRef.current;
                                 if (container) {
