@@ -13,6 +13,7 @@ const GuacamoleTerminal = forwardRef(({
     const canvasObserverRef = useRef(null);
     const initialResizeDoneRef = useRef(false);
     const initialResizeAttemptsRef = useRef(0);
+    const initialResizeScheduledRef = useRef(false);
     const initialResizeTimerRef = useRef(null);
     const resizeListenerRef = useRef(null); // Para evitar múltiples listeners
     const [connectionState, setConnectionState] = useState('disconnected'); // disconnected, connecting, connected, error
@@ -53,6 +54,7 @@ const GuacamoleTerminal = forwardRef(({
     const wakeUpSentRef = useRef(false);
     // Keep-alive periódico
     const keepAliveTimerRef = useRef(null);
+    const devicePixelRatioRef = useRef(typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1);
     // Ack gating de tamaño
     const awaitingSizeAckRef = useRef(false);
     const sizeAckDeadlineRef = useRef(0);
@@ -589,7 +591,8 @@ const GuacamoleTerminal = forwardRef(({
                                      };
                                      setTimeout(() => verifyAndNudge(1), 700);
 
-                                     console.log(`✅ Auto-resize inicial completado exitosamente`);
+                                      console.log(`✅ Auto-resize inicial completado exitosamente`);
+                                      initialResizeScheduledRef.current = true;
                                      } catch (e) {
                                          console.error('❌ Error en resize inicial:', e);
                                       if (attempt < 5) {
@@ -599,15 +602,22 @@ const GuacamoleTerminal = forwardRef(({
                               };
                              
                               // Disparadores para hacer el resize inicial en el momento más estable
-                              // 1) Retardo inicial
+                              // 1) Retardo inicial (solo programar una vez)
                               initialResizeAttemptsRef.current = 0;
                               initialResizeDoneRef.current = false;
+                              initialResizeScheduledRef.current = false;
                               if (initialResizeTimerRef.current) clearTimeout(initialResizeTimerRef.current);
-                              initialResizeTimerRef.current = setTimeout(() => attemptInitialResize(1), 900);
+                              initialResizeTimerRef.current = setTimeout(() => {
+                                  if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
+                                      initialResizeScheduledRef.current = true;
+                                      attemptInitialResize(1);
+                                  }
+                              }, 900);
                               // 2) Cuando el servidor reporta tamaño por primera vez
                               const originalOnSizeForInitial = client.onsize;
                               client.onsize = (...args) => {
-                                  if (!initialResizeDoneRef.current) {
+                                  if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
+                                      initialResizeScheduledRef.current = true;
                                       setTimeout(() => attemptInitialResize(1), 150);
                                   }
                                   if (originalOnSizeForInitial) originalOnSizeForInitial.apply(client, args);
@@ -615,7 +625,8 @@ const GuacamoleTerminal = forwardRef(({
                               // 2b) Al recibir el primer onsync, intentar el resize inicial (gating por sync)
                               const originalOnSyncForInitial = client.onsync;
                               client.onsync = (...args) => {
-                                  if (!initialResizeDoneRef.current) {
+                                  if (!initialResizeDoneRef.current && !initialResizeScheduledRef.current) {
+                                      initialResizeScheduledRef.current = true;
                                       setTimeout(() => attemptInitialResize(1), 120);
                                   }
                                   if (originalOnSyncForInitial) originalOnSyncForInitial.apply(client, args);
@@ -1056,6 +1067,9 @@ const GuacamoleTerminal = forwardRef(({
             if (!container) return;
             
             const rect = container.getBoundingClientRect();
+            const dprNow = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
+            const dprChanged = Math.abs(dprNow - (devicePixelRatioRef.current || 1)) > 0.05;
+            devicePixelRatioRef.current = dprNow;
             const currentWidth = Math.floor(rect.width);
             const currentHeight = Math.floor(rect.height);
             
@@ -1123,6 +1137,12 @@ const GuacamoleTerminal = forwardRef(({
             const combinedNow = diffNowW + diffNowH;
             const isBigChangeNow = (diffNowW >= 350 || diffNowH >= 250 || combinedNow >= 200);
             const isAxisOnlyNow = (diffNowW >= 20 && diffNowH < 20) || (diffNowH >= 20 && diffNowW < 20);
+            // Heurística: cambios de ventana del sistema (maximizar/restaurar)
+            const prevW = Math.max(1, lastDimensionsRef.current.width || 1);
+            const prevH = Math.max(1, lastDimensionsRef.current.height || 1);
+            const ratioW = Math.abs(currentWidth - prevW) / prevW;
+            const ratioH = Math.abs(currentHeight - prevH) / prevH;
+            const isSystemWindowResize = ((ratioW > 0.15 || ratioH > 0.15) && (diffNowW >= 120 || diffNowH >= 120)) || dprChanged;
 
             // Debounce dinámico: ventana de asentamiento para cambios grandes (coalesce a un único envío)
             let delayMs = isBigChangeNow ? 1200 : (isAxisOnlyNow ? 1400 : 1000);
@@ -1314,13 +1334,16 @@ const GuacamoleTerminal = forwardRef(({
                     const now = Date.now();
 
                     // Backoff adaptativo: si ≥4 resizes en 30s, subir mínimo a 4s por 20s
+                    // No contar los resizes de sistema (maximizar/restaurar) para no penalizar UX
                     if (!resizesWindowStartRef.current || (now - resizesWindowStartRef.current) > 30000) {
                         resizesWindowStartRef.current = now;
                         resizesWindowCountRef.current = 0;
                     }
-                    resizesWindowCountRef.current += 1;
-                    if (resizesWindowCountRef.current >= 4) {
-                        adaptiveBackoffUntilRef.current = now + 20000; // 20s
+                    if (!isSystemWindowResize) {
+                        resizesWindowCountRef.current += 1;
+                        if (resizesWindowCountRef.current >= 4) {
+                            adaptiveBackoffUntilRef.current = now + 20000; // 20s
+                        }
                     }
 
                     // Quiet period post-send: ignorar resizes durante quiet salvo cambios muy grandes
@@ -1341,7 +1364,7 @@ const GuacamoleTerminal = forwardRef(({
                         console.log(`⏸️ Esperando ack onsize (${remainingAck}ms)`);
                         return;
                     }
-                    if (isBigChange) {
+                if (isBigChange && !isSystemWindowResize) {
                         const nowTs = now;
                         if (nowTs - lastBigChangeAtRef.current < 2500) {
                             console.log('⏭️ Cooldown big-change activo (<2.5s), saltando');
@@ -1351,12 +1374,12 @@ const GuacamoleTerminal = forwardRef(({
                     }
 
                     // Evitar ping-pong de cambios grandes repetidos iguales en < 1.2s (barra lateral)
-                    if (isBigChange) {
+                if (isBigChange) {
                         const sameAsLastBig =
                           Math.abs(plannedWidth - lastBigChangeSizeRef.current.width) < 10 &&
                           Math.abs(plannedHeight - lastBigChangeSizeRef.current.height) < 10;
                         const nowTs = now;
-                        if (sameAsLastBig && (nowTs - lastBigChangeAtRef.current < 3000)) {
+                    if (!isSystemWindowResize && sameAsLastBig && (nowTs - lastBigChangeAtRef.current < 3000)) {
                             console.log('⏭️ Ignorando big-change repetido (anti ping-pong)');
                             return;
                         }
@@ -1390,8 +1413,12 @@ const GuacamoleTerminal = forwardRef(({
                     }
 
                     // ⏱️ RATE LIMITING: No enviar más de 1 resize cada 2.5 segundos (3s para big-change)
-                    let minInterval = isBigChange ? 3000 : 2500;
-                    if (now < adaptiveBackoffUntilRef.current) {
+                let minInterval = isBigChange ? 3000 : 2500;
+                if (isSystemWindowResize) {
+                    // Permitir reacción más inmediata para maximizar/restaurar
+                    minInterval = 0;
+                }
+                if (!isSystemWindowResize && now < adaptiveBackoffUntilRef.current) {
                         minInterval = Math.max(minInterval, 4000);
                     }
                     if (now - lastResizeTimeRef.current < minInterval) {
@@ -1469,7 +1496,10 @@ const GuacamoleTerminal = forwardRef(({
                         burstCountRef.current++;
                         // Activar periodo de silencio: 2200 ms para big-change, 900 ms eje único, 600 ms normal
                         const isAxisOnlyQuiet = (Math.abs(plannedWidth - lastDimensionsRef.current.width) >= 20 && Math.abs(plannedHeight - lastDimensionsRef.current.height) < 20) || (Math.abs(plannedHeight - lastDimensionsRef.current.height) >= 20 && Math.abs(plannedWidth - lastDimensionsRef.current.width) < 20);
-                        const quietMs = isBigChange ? 2200 : (isAxisOnlyQuiet ? 900 : 600);
+                        let quietMs = isBigChange ? 2200 : (isAxisOnlyQuiet ? 900 : 600);
+                        if (isSystemWindowResize) {
+                            quietMs = Math.min(quietMs, 600);
+                        }
                         quietUntilRef.current = Date.now() + quietMs;
                         // Iniciar ack gating: esperar onsize o 1500ms
                         awaitingSizeAckRef.current = true;
