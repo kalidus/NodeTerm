@@ -1407,6 +1407,13 @@ const GuacamoleTerminal = forwardRef(({
                         awaitingSizeAckRef.current = true;
                         sizeAckDeadlineRef.current = Date.now() + 1500;
                         lastSentSizeRef.current = { width: plannedWidth, height: plannedHeight, at: Date.now() };
+                        // Autoliberar ack si no llega onsize en el deadline
+                        setTimeout(() => {
+                            if (awaitingSizeAckRef.current && Date.now() >= sizeAckDeadlineRef.current) {
+                                awaitingSizeAckRef.current = false;
+                                sizeAckDeadlineRef.current = 0;
+                            }
+                        }, 1600);
                         // Supresión post-big-change (rollback): desactivado
                         // Nudge/verify tras resize normal para evitar pantalla negra o tamaños no adoptados
                         try {
@@ -1423,7 +1430,7 @@ const GuacamoleTerminal = forwardRef(({
                                     const ok = Math.abs(cw - plannedWidth) < 40 && Math.abs(ch - plannedHeight) < 40;
                                     if (ok) return;
                                     // Limitar reintentos: 0 para big-change inmediato, 1 para normal
-                                    if (isBigChange || attempt >= 1) return;
+                                    if (isBigChange || attempt >= 2) return;
                                     if (client.sendSize) client.sendSize(plannedWidth, plannedHeight);
                                     const disp2 = client.getDisplay?.();
                                     if (disp2?.onresize) disp2.onresize();
