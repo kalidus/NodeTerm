@@ -1871,6 +1871,9 @@ const App = () => {
       } else if (activeTab.type === 'terminal' && terminalRefs.current[activeTab.key]) {
         // Para terminales normales
         terminalRefs.current[activeTab.key].fit();
+      } else if (activeTab.type === 'rdp-guacamole' && terminalRefs.current[activeTab.key]) {
+        // Ajustar Guacamole RDP al contenedor cuando cambia el layout (e.g., sidebar)
+        terminalRefs.current[activeTab.key].fit();
       }
     });
   };
