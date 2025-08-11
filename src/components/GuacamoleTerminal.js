@@ -5,7 +5,8 @@ import ResizeController from '../utils/ResizeController';
 
 const GuacamoleTerminal = forwardRef(({ 
     tabId = 'default',
-    rdpConfig = null
+    rdpConfig = null,
+    isActive = true
 }, ref) => {
     const containerRef = useRef(null);
     const guacamoleClientRef = useRef(null);
@@ -27,22 +28,7 @@ const GuacamoleTerminal = forwardRef(({
     
     // Variables persistentes para rate limiting (fuera de useEffect)
     const lastResizeTimeRef = useRef(0);
-    const consecutiveResizeCountRef = useRef(0);
     const lastDimensionsRef = useRef({ width: 0, height: 0 });
-    const initialResizeCooldownUntilRef = useRef(0);
-    const isInitialResizingRef = useRef(false);
-    const lastBigChangeAtRef = useRef(0);
-    const lastBigChangeSizeRef = useRef({ width: 0, height: 0 });
-    const burstWindowStartRef = useRef(0);
-    const burstCountRef = useRef(0);
-    const quietUntilRef = useRef(0);
-    const visibilitySuppressUntilRef = useRef(0);
-    const returningFromBlurRef = useRef(false);
-    const postBigChangeUntilRef = useRef(0); // será ignorado tras rollback
-    const startupSettleUntilRef = useRef(0);
-    const startupLastPlanRef = useRef({ width: 0, height: 0 });
-    const startupStableCountRef = useRef(0);
-    const startupSentOneResizeRef = useRef(false);
     // Idle/warm-up control
     const wasIdleRef = useRef(false);
     const lastActivityTimeRef = useRef(Date.now());
@@ -62,11 +48,7 @@ const GuacamoleTerminal = forwardRef(({
     const sizeAckDeadlineRef = useRef(0);
     const lastSentSizeRef = useRef({ width: 0, height: 0, at: 0 });
     // Anti ping-pong A->B->A
-    const lastTwoPlansRef = useRef([]); // [{ w, h, ts }]
-    // Backoff adaptativo (protección de ráfagas prolongadas)
-    const resizesWindowStartRef = useRef(0);
-    const resizesWindowCountRef = useRef(0);
-    const adaptiveBackoffUntilRef = useRef(0);
+    // Solo se mantiene el último tamaño y tiempos; el coalesce lo gestiona el ResizeController
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -78,7 +60,7 @@ const GuacamoleTerminal = forwardRef(({
                 }
                 // Fallback minimal
                 const client = guacamoleClientRef.current;
-                const container = containerRef.current;
+                        const container = containerRef.current;
                 if (!container) return;
                 const rect = container.getBoundingClientRect();
                 const w = Math.floor(rect.width);
@@ -87,15 +69,16 @@ const GuacamoleTerminal = forwardRef(({
                     client.sendSize(w, h);
                     lastDimensionsRef.current = { width: w, height: h };
                     lastResizeTimeRef.current = Date.now();
-                }
-            } catch (e) {
-                console.warn(`Guacamole fit() error for tab ${tabId}:`, e);
+                    }
+                } catch (e) {
+                    console.warn(`Guacamole fit() error for tab ${tabId}:`, e);
             }
         },
         focus: () => {
-            if (guacamoleClientRef.current && guacamoleClientRef.current.focus) {
-                guacamoleClientRef.current.focus();
-            }
+            try {
+                const el = guacamoleClientRef.current?.getDisplay?.()?.getElement?.();
+                if (el) el.focus({ preventScroll: true });
+            } catch {}
         },
         disconnect: () => {
             if (guacamoleClientRef.current) {
@@ -272,11 +255,18 @@ const GuacamoleTerminal = forwardRef(({
                  console.log('📺 Display creado:', display);
                  console.log('📺 Display element:', display.getElement());
                  
-                 const targetElement = display.getElement();
+                const targetElement = display.getElement();
+                try { targetElement.setAttribute('tabindex', '0'); } catch {}
+                try {
+                    targetElement.addEventListener('mousedown', () => {
+                        try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch {} }
+                    });
+                } catch {}
                  const mouse = new window.Guacamole.Mouse(targetElement);
                  const keyboard = new window.Guacamole.Keyboard(targetElement);
                  mouseRef.current = mouse;
                  keyboardRef.current = keyboard;
+                try { setTimeout(() => { try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch {} } }, 0); } catch {}
 
                                  // Configurar display en el contenedor
                  const container = containerRef.current;
@@ -361,11 +351,14 @@ const GuacamoleTerminal = forwardRef(({
 
                 // Proteger contra sobrescritura no-función internas de guacamole-common-js
                 try {
-                    if (typeof keyboard.onkeyup !== 'function') {
-                        keyboard.onkeyup = () => {};
-                    }
-                    if (typeof keyboard.onkeydown !== 'function') {
-                        keyboard.onkeydown = () => {};
+                    // Si por cualquier motivo se sobrescriben con algo no funcional, reinstalar handlers
+                    if (typeof keyboard.onkeyup !== 'function' || typeof keyboard.onkeydown !== 'function') {
+                        keyboard.onkeydown = (keysym) => {
+                            client.sendKeyEvent(1, keysym);
+                        };
+                        keyboard.onkeyup = (keysym) => {
+                            client.sendKeyEvent(0, keysym);
+                        };
                     }
                 } catch {}
 
@@ -460,10 +453,10 @@ const GuacamoleTerminal = forwardRef(({
                              } catch {}
                          }, 1500);
                          
-                          // Si autoResize está activado, hacer resize inicial tras conexión
-                          if (rdpConfig.autoResize) {
+                         // Si autoResize está activado, hacer resize inicial tras conexión
+                         if (rdpConfig.autoResize) {
                              // Función para intentar resize inicial con reintentos
-                              const attemptInitialResize = (attempt = 1) => {
+                             const attemptInitialResize = (attempt = 1) => {
                                  const container = containerRef.current;
                                  if (!container) {
                                      if (attempt < 5) {
@@ -512,12 +505,12 @@ const GuacamoleTerminal = forwardRef(({
                                      const newHeight = Math.floor(containerRect.height);
                                  
                                  // Verificar que las dimensiones sean válidas
-                                  if (newWidth <= 0 || newHeight <= 0) {
+                                 if (newWidth <= 0 || newHeight <= 0) {
                                       const nextAttempt = Math.min(attempt + 1, 12);
                                       const delay = Math.min(400 + attempt * 150, 1600);
                                       if (attempt < 12) setTimeout(() => attemptInitialResize(nextAttempt), delay);
-                                      return;
-                                  }
+                                     return;
+                                 }
                                  
                                   console.log(`🔄 Intento ${attempt}: Auto-resize inicial ${newWidth}x${newHeight}`);
                                  
@@ -545,15 +538,15 @@ const GuacamoleTerminal = forwardRef(({
                                          }
 
                                      // 3) Actualizar refs y cooldown
-                                      lastDimensionsRef.current = { width: newWidth, height: newHeight };
+                                     lastDimensionsRef.current = { width: newWidth, height: newHeight };
                                       lastResizeTimeRef.current = Date.now();
-                                      consecutiveResizeCountRef.current = 0;
+                                     consecutiveResizeCountRef.current = 0;
                                       initialResizeCooldownUntilRef.current = Date.now() + 2500;
                                        // Reiniciar ventana de asentamiento de arranque cada nueva conexión
                                        startupSettleUntilRef.current = Date.now() + 4000; // ventana más larga
                                       startupStableCountRef.current = 0;
                                       startupLastPlanRef.current = { width: newWidth, height: newHeight };
-                                      isInitialResizingRef.current = true;
+                                     isInitialResizingRef.current = true;
                                       initialResizeDoneRef.current = true;
                                        startupSentOneResizeRef.current = false;
 
@@ -564,7 +557,7 @@ const GuacamoleTerminal = forwardRef(({
                                              if (!canvas) return;
                                              const cw = canvas.width;
                                              const ch = canvas.height;
-                                              const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
+                                             const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
                                              if (ok) return;
                                              if (attempt >= 3) return;
                                              // Reenviar tamaño una vez más
@@ -577,7 +570,7 @@ const GuacamoleTerminal = forwardRef(({
                                      };
                                      setTimeout(() => verifyAndNudge(1), 700);
 
-                                      console.log(`✅ Auto-resize inicial completado exitosamente`);
+                                     console.log(`✅ Auto-resize inicial completado exitosamente`);
                                       initialResizeScheduledRef.current = true;
                                      } catch (e) {
                                          console.error('❌ Error en resize inicial:', e);
@@ -665,7 +658,7 @@ const GuacamoleTerminal = forwardRef(({
                              console.log('🔍 Verificando si el display ha recibido datos...');
                              const displayElement = containerRef.current?.querySelector('canvas');
                              if (displayElement) {
-                                  console.log('📺 Canvas encontrado en display');
+                                 console.log('📺 Canvas encontrado en display');
                                  console.log('📺 Dimensiones del canvas:', displayElement.width, 'x', displayElement.height);
                                  
                                  // Si autoResize está activo, forzar un resize secundario más agresivo
@@ -711,8 +704,8 @@ const GuacamoleTerminal = forwardRef(({
                                      zIndex: styles.zIndex
                                  });
                                  
-                                  if (!hasData) {
-                                      console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
+                                 if (!hasData) {
+                                     console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
                                       try {
                                           const cli = guacamoleClientRef.current;
                                           if (cli) {
@@ -767,33 +760,21 @@ const GuacamoleTerminal = forwardRef(({
                                               }, 1400);
                                           }
                                       } catch {}
-                                  }
+                                 }
                              } else {
                                  console.log('⚠️ No se encontró canvas - posible problema de datos visuales');
                                  console.log('🔍 Elementos en el contenedor:', containerRef.current?.children);
                              }
                          }, 5000);
                                           } else if (state === 4) { // DISCONNECTED
-                          setConnectionState('disconnected');
+                         setConnectionState('disconnected');
                           // Resetear timers/refs críticos al desconectar para que próxima conexión tenga estado limpio
                           try {
                               lastDimensionsRef.current = { width: 0, height: 0 };
-                              consecutiveResizeCountRef.current = 0;
-                              lastResizeTimeRef.current = 0;
-                              initialResizeCooldownUntilRef.current = 0;
-                              startupSettleUntilRef.current = 0;
-                              startupStableCountRef.current = 0;
-                              startupLastPlanRef.current = { width: 0, height: 0 };
-                              isInitialResizingRef.current = false;
-                              burstWindowStartRef.current = 0;
-                              burstCountRef.current = 0;
-                              quietUntilRef.current = 0;
-                              visibilitySuppressUntilRef.current = 0;
-                              returningFromBlurRef.current = false;
-                              postBigChangeUntilRef.current = 0;
+                               lastResizeTimeRef.current = 0;
                           } catch {}
                          console.log('🔚 Conexión RDP cerrada para tab', tabId);
-                      } else if (state === 2) { // WAITING
+                     } else if (state === 2) { // WAITING
                         console.log('⏳ Esperando respuesta del servidor RDP...');
                         setConnectionState('connecting');
                     } else if (state === 1) { // CONNECTING  
@@ -821,7 +802,7 @@ const GuacamoleTerminal = forwardRef(({
                      };
                  }
                  
-                // Eventos de estado del tunnel
+                 // Eventos de estado del tunnel
                  if (tunnel.onstatechange) {
                      const originalStateChange = tunnel.onstatechange;
                      tunnel.onstatechange = (state) => {
@@ -850,7 +831,7 @@ const GuacamoleTerminal = forwardRef(({
                 client.connect();
                 
                                  // Limpiar timeout cuando se conecte exitosamente
-                const originalStateChange = client.onstatechange;
+                 const originalStateChange = client.onstatechange;
                  client.onstatechange = (state) => {
                      if (state === 3) { // CONNECTED
                          clearTimeout(connectionTimeout);
@@ -876,7 +857,7 @@ const GuacamoleTerminal = forwardRef(({
                             }, 200);
                             return;
                         }
-                    }
+                     }
                      originalStateChange(state);
                  };
 
@@ -996,7 +977,7 @@ const GuacamoleTerminal = forwardRef(({
                 keepAliveTimerRef.current = null;
             }
         }
-    }, [connectionState]);
+    }, [connectionState, isActive]);
 
     // Mantener ref sincronizado con la última actividad
     useEffect(() => {
@@ -1121,7 +1102,7 @@ const GuacamoleTerminal = forwardRef(({
         let pendingResize = null; // Para capturar solo el resize final
 
         // Handlers de visibilidad/foco para suprimir ráfagas al volver
-         const onVisibilityChange = () => {
+        const onVisibilityChange = () => {
             if (!document.hidden) {
                 visibilitySuppressUntilRef.current = Date.now() + 1200;
                 returningFromBlurRef.current = true;
@@ -1376,8 +1357,8 @@ const GuacamoleTerminal = forwardRef(({
                         // No enviar resizes de un solo eje durante la ventana de arranque
                         if (isAxisOnly) {
                             console.log('⏭️ Arranque: ignorando cambio de un eje (axis-only)');
-                            return;
-                        }
+                                return;
+                            }
                         // Permitir solo un resize enviado durante la ventana de arranque
                         if (startupSentOneResizeRef.current) {
                             console.log('⏭️ Arranque: ya se envió un resize; ignorando hasta que finalice la ventana');
@@ -1452,7 +1433,7 @@ const GuacamoleTerminal = forwardRef(({
                     }
 
                     // Evitar ping-pong de cambios grandes repetidos iguales en < 1.2s (barra lateral)
-                if (isBigChange) {
+                    if (isBigChange) {
                         const sameAsLastBig =
                           Math.abs(plannedWidth - lastBigChangeSizeRef.current.width) < 10 &&
                           Math.abs(plannedHeight - lastBigChangeSizeRef.current.height) < 10;
@@ -1552,9 +1533,9 @@ const GuacamoleTerminal = forwardRef(({
                     lastResizeTimeRef.current = now;
                     consecutiveResizeCountRef.current++;
                     
-                        // Guardar nuevas dimensiones ANTES de ejecutar el resize
-                        lastDimensionsRef.current = { width: plannedWidth, height: plannedHeight };
-
+                    // Guardar nuevas dimensiones ANTES de ejecutar el resize
+                    lastDimensionsRef.current = { width: plannedWidth, height: plannedHeight };
+                    
                         // Verificar túnel OPEN justo antes de enviar para evitar errores de CLOSED/CLOSING
                         const t = client.getTunnel ? client.getTunnel() : null;
                         const openConst2 = window.Guacamole?.Tunnel?.OPEN;
@@ -1568,9 +1549,9 @@ const GuacamoleTerminal = forwardRef(({
                         }
 
                     // 📡 ENVIAR SOLO UNA VEZ al servidor (método más estable)
-                        if (client.sendSize) {
+                    if (client.sendSize) {
                             try { client.sendSize(plannedWidth, plannedHeight); } catch {}
-                            console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
+                        console.log(`📡 sendSize enviado UNA VEZ: ${plannedWidth}x${plannedHeight}`);
                         burstCountRef.current++;
                         // Activar periodo de silencio: 2200 ms para big-change, 900 ms eje único, 600 ms normal
                         const isAxisOnlyQuiet = (Math.abs(plannedWidth - lastDimensionsRef.current.width) >= 20 && Math.abs(plannedHeight - lastDimensionsRef.current.height) < 20) || (Math.abs(plannedHeight - lastDimensionsRef.current.height) >= 20 && Math.abs(plannedWidth - lastDimensionsRef.current.width) < 20);
@@ -1626,7 +1607,7 @@ const GuacamoleTerminal = forwardRef(({
                                         if (disp3?.onresize) disp3.onresize();
                                         console.log('🛠️ Watchdog post-big-change: reenviado tamaño por inactividad');
                                     }
-                                } catch { /* noop */ }
+                        } catch { /* noop */ }
                             }, isBigChange ? 1800 : 0);
                         } catch { /* noop */ }
                         // Si seguimos en ventana de arranque, marcar que ya enviamos un resize
