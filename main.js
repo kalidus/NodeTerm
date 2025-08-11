@@ -2607,20 +2607,12 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
       }
     });
 
-    // Encriptar token
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(CIPHER, SECRET_KEY, iv);
-
-    let encrypted = cipher.update(JSON.stringify(tokenObject), 'utf8', 'base64');
-    encrypted += cipher.final('base64');
-
-    const data = {
-      iv: iv.toString('base64'),
-      value: encrypted
-    };
-
-    const token = Buffer.from(JSON.stringify(data)).toString('base64');
-    const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}`;
+    // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
+    const Crypt = require('guacamole-lite/lib/Crypt.js');
+    const crypt = new Crypt(CIPHER, SECRET_KEY);
+    const token = crypt.encrypt(tokenObject);
+    // Añadir '&' al final para asegurar separación si el cliente añade más parámetros
+    const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}&`;
     
     console.log('🌐 [MAIN] URL WebSocket generada:', websocketUrl.substring(0, 50) + '...');
     
