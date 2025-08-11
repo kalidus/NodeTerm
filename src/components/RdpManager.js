@@ -285,6 +285,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           colorDepth: formData.colorDepth || 32,
           // Opciones específicas de Guacamole
           autoResize: formData.autoResize,
+          // Forzar congelación de resizes iniciales para camuflar RDProxy
+          freezeInitialResize: true,
           width: dynamicWidth,  // ← NÚMEROS, no string
           height: dynamicHeight, // ← NÚMEROS, no string
           dpi: formData.guacDpi || 96,
