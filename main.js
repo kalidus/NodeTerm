@@ -2580,7 +2580,9 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           // Configuración específica para resize dinámico
           "resize-method": config.autoResize ? "display-update" : "reconnect",
           "enable-desktop-composition": config.autoResize ? true : false,
-          "enable-full-window-drag": config.autoResize ? true : false
+          "enable-full-window-drag": config.autoResize ? true : false,
+          // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
+          "enable-gfx": (config.win11Compat === true) ? false : undefined
         }
       }
     };
