@@ -2403,6 +2403,10 @@ const App = () => {
         // Campos específicos de Guacamole
         autoResize: nodeData.autoResize === true,
         win11Compat: nodeData.guacWin11Compat === true,
+        disableGlyphCaching: nodeData.guacDisableGlyphCaching === true,
+        disableOffscreenCaching: nodeData.guacDisableOffscreenCaching === true,
+        disableBitmapCaching: nodeData.guacDisableBitmapCaching === true,
+        disableCopyRect: nodeData.guacDisableCopyRect === true,
         redirectClipboard: nodeData.redirectClipboard === true,
         redirectPrinters: nodeData.redirectPrinters === true,
         redirectAudio: nodeData.redirectAudio === true,
@@ -2662,7 +2666,11 @@ const App = () => {
             guacSecurity: rdpData.guacSecurity || 'any',
             guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
             guacEnableDrive: rdpData.guacEnableDrive === true,
-            guacWin11Compat: rdpData.guacWin11Compat === true
+            guacWin11Compat: rdpData.guacWin11Compat === true,
+            guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
+            guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
+            guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
+            guacDisableCopyRect: rdpData.guacDisableCopyRect === true
           };
           
           // console.log('=== NODE UPDATED ===');
@@ -2703,7 +2711,11 @@ const App = () => {
           guacSecurity: rdpData.guacSecurity || 'any',
           guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
           guacEnableDrive: rdpData.guacEnableDrive === true,
-          guacWin11Compat: rdpData.guacWin11Compat === true
+          guacWin11Compat: rdpData.guacWin11Compat === true,
+          guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
+          guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
+          guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
+          guacDisableCopyRect: rdpData.guacDisableCopyRect === true
         },
         draggable: true,
         droppable: false,
@@ -2751,8 +2763,12 @@ const App = () => {
                 guacDpi: rdpData.guacDpi || 96,
                 guacSecurity: rdpData.guacSecurity || 'any',
                 guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-                guacEnableDrive: rdpData.guacEnableDrive === true,
-                guacWin11Compat: rdpData.guacWin11Compat === true
+                 guacEnableDrive: rdpData.guacEnableDrive === true,
+                 guacWin11Compat: rdpData.guacWin11Compat === true,
+                 guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
+                 guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
+                 guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
+                 guacDisableCopyRect: rdpData.guacDisableCopyRect === true
               }
             };
           }
