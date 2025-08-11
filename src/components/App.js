@@ -103,6 +103,13 @@ const App = () => {
   const [sshTabs, setSshTabs] = useState([]);
   const [rdpTabs, setRdpTabs] = useState([]);
   const [guacamoleTabs, setGuacamoleTabs] = useState([]);
+  const [lastOpenedTabKey, setLastOpenedTabKey] = useState(null);
+  // Tab a activar inmediatamente tras crearse (reordenación virtual a índice 1)
+  const [onCreateActivateTabKey, setOnCreateActivateTabKey] = useState(null);
+  // Gate para evitar que otros cambios de índice pisen la activación inmediata
+  const activatingNowRef = useRef(false);
+  // Orden real de pestañas abiertas (excluye Inicio). La más reciente va primero
+  const [openTabOrder, setOpenTabOrder] = useState([]);
   const [fileExplorerTabs, setFileExplorerTabs] = useState([]);
   const [homeTabs, setHomeTabs] = useState(() => [
     {
@@ -221,14 +228,57 @@ const App = () => {
 
   // Obtener pestañas de un grupo específico
   const getTabsInGroup = (groupId) => {
-    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...fileExplorerTabs];
-    return groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
+    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
+    const pool = groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
+    const home = pool.filter(t => t.type === 'home');
+    const nonHome = pool.filter(t => t.type !== 'home');
+    const byKey = new Map(nonHome.map(t => [t.key, t]));
+    const ordered = [];
+    // Respeta el orden de apertura más reciente a más antiguo
+    for (const key of openTabOrder) {
+      const t = byKey.get(key);
+      if (t) {
+        ordered.push(t);
+        byKey.delete(key);
+      }
+    }
+    // Si quedan pestañas sin entrada en openTabOrder (anteriores), apéndalas por createdAt desc como fallback
+    const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    return [...home, ...ordered, ...rest];
   };
 
-  // Obtener pestañas filtradas según el grupo activo
+  // Obtener pestañas filtradas según el grupo activo, con reordenación opcional
   const getFilteredTabs = () => {
+    // El orden ya viene de getTabsInGroup (Inicio + resto por createdAt desc)
     return getTabsInGroup(activeGroupId);
   };
+
+  // Tras crear una pestaña marcada para activación, fijar activeTabIndex al índice real y limpiar la marca
+  useEffect(() => {
+    if (!onCreateActivateTabKey) return;
+    // Asegurar estar en Home
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({ ...prev, [currentGroupKey]: activeTabIndex }));
+      setActiveGroupId(null);
+    }
+    const timer = setTimeout(() => {
+      try {
+        const filtered = getTabsInGroup(null);
+        const idx = filtered.findIndex(t => t.key === onCreateActivateTabKey);
+        if (idx !== -1) {
+          activatingNowRef.current = true;
+          setActiveTabIndex(idx);
+          setTimeout(() => { activatingNowRef.current = false; }, 400);
+        }
+      } finally {
+        setOnCreateActivateTabKey(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [onCreateActivateTabKey, homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, activeGroupId, activeTabIndex]);
+
+  // Mantener la preferencia del último abierto hasta que se abra otro
 
   // Manejar menú contextual de pestañas
   const handleTabContextMenu = (e, tabKey) => {
@@ -471,15 +521,15 @@ const App = () => {
               label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
               originalKey: node.key,
               sshConfig: sshConfig,
-              type: 'terminal'
+              type: 'terminal',
+              createdAt: Date.now()
             };
-            const newTabs = [newTab, ...prevTabs];
-            setActiveTabIndex(homeTabs.length);
-            setGroupActiveIndices(prev => ({
-              ...prev,
-              'no-group': homeTabs.length
-            }));
-            return newTabs;
+            // Activación inmediata y orden por createdAt
+            setLastOpenedTabKey(tabId);
+            setOnCreateActivateTabKey(tabId);
+            setActiveTabIndex(1);
+            setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+            return [newTab, ...prevTabs];
           });
         }
       });
@@ -997,9 +1047,9 @@ const App = () => {
   // Efecto para manejar cambios en el explorador de archivos
   useEffect(() => {
     if (pendingExplorerSession) {
-      const explorerIndex = sshTabs.length + fileExplorerTabs.findIndex(tab => tab.originalKey === pendingExplorerSession);
+      const explorerIndex = getTabsInGroup(activeGroupId).findIndex(tab => tab.originalKey === pendingExplorerSession);
       if (explorerIndex >= sshTabs.length) {
-        setActiveTabIndex(explorerIndex);
+        if (!activatingNowRef.current) setActiveTabIndex(explorerIndex);
         setPendingExplorerSession(null);
       }
     }
@@ -2332,7 +2382,8 @@ const App = () => {
       setActiveGroupId(null);
     }
     setSshTabs(prevTabs => {
-      const tabId = `${node.key}_${Date.now()}`;
+      const nowTs = Date.now();
+      const tabId = `${node.key}_${nowTs}`;
       const sshConfig = {
         host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
         username: node.data.user,
@@ -2348,15 +2399,16 @@ const App = () => {
         label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
         originalKey: node.key,
         sshConfig: sshConfig,
-        type: 'terminal'
+        type: 'terminal',
+        createdAt: nowTs
       };
-      const newTabs = [newTab, ...prevTabs];
-      setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        'no-group': homeTabs.length
-      }));
-      return newTabs;
+      // Activar como última abierta (índice 1) y registrar orden de apertura
+      setLastOpenedTabKey(tabId);
+      setOnCreateActivateTabKey(tabId);
+      setActiveTabIndex(1);
+      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+      return [newTab, ...prevTabs];
     });
   };
 
@@ -2429,13 +2481,13 @@ const App = () => {
           rdpConfig: rdpConfig,
           type: 'rdp-guacamole'
         };
-        const newTabs = [newTab, ...prevTabs];
-        setActiveTabIndex(homeTabs.length + sshTabs.length); // Activar la nueva pestaña RDP
-        setGroupActiveIndices(prev => ({
-          ...prev,
-          'no-group': homeTabs.length + sshTabs.length
-        }));
-        return newTabs;
+        // Marcar y activar usando la clave REAL creada y registrar orden de apertura
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        setActiveTabIndex(1);
+        setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+        setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+        return [newTab, ...prevTabs];
       });
       
       return; // Salir aquí para RDP-Guacamole
@@ -2498,11 +2550,13 @@ const App = () => {
         node: node
       };
       
-      // Agregar la pestaña RDP al inicio del array
-      setRdpTabs(prevTabs => {
-        const newTabs = [newRdpTab, ...prevTabs];
-        return newTabs;
-      });
+      // Agregar la pestaña RDP y marcar para activar/mostrar tras Inicio
+      setRdpTabs(prevTabs => [{ ...newRdpTab, createdAt: Date.now() }, ...prevTabs]);
+      setLastOpenedTabKey(tabId);
+      setOnCreateActivateTabKey(tabId);
+      // Activar índice 1 (después de Inicio) – el reorden virtual lo moverá visualmente
+      setActiveTabIndex(1);
+      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
     }
 
     // Manejar diferentes tipos de cliente RDP
@@ -2610,26 +2664,29 @@ const App = () => {
         tabId: tabId
       };
       
-      setGuacamoleTabs(prevTabs => {
-        const newTabs = [newGuacamoleTab, ...prevTabs];
-        return newTabs;
-      });
-      
-      // Cambiar a la nueva pestaña
-      const allTabs = getAllTabs();
-      const tabIndex = allTabs.findIndex(tab => tab.key === tabId);
-      if (tabIndex !== -1) {
-        setActiveTabIndex(tabIndex);
+      // Forzar grupo Home antes de activar
+      if (activeGroupId !== null) {
+        const currentGroupKey = activeGroupId || 'no-group';
+        setGroupActiveIndices(prev => ({
+          ...prev,
+          [currentGroupKey]: activeTabIndex
+        }));
+        setActiveGroupId(null);
       }
+
+      // Insertar pestaña Guacamole, activar y registrar orden
+      setGuacamoleTabs(prevTabs => [{ ...newGuacamoleTab, createdAt: Date.now() }, ...prevTabs]);
+      setLastOpenedTabKey(tabId);
+      setOnCreateActivateTabKey(tabId);
+      setActiveTabIndex(1);
+      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
     };
 
     // Escuchar eventos de creación de pestañas de Guacamole
     if (window.electron && window.electron.ipcRenderer) {
-      window.electron.ipcRenderer.on('guacamole:create-tab', handleGuacamoleCreateTab);
-      
-      return () => {
-        window.electron.ipcRenderer.removeListener('guacamole:create-tab', handleGuacamoleCreateTab);
-      };
+      const unsubscribe = window.electron.ipcRenderer.on('guacamole:create-tab', handleGuacamoleCreateTab);
+      return () => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} };
     }
   }, []);
 
@@ -2868,7 +2925,9 @@ const App = () => {
   }, [sidebarCallbacksRef.current]);
 
   // useEffect para activar pestañas RDP cuando se agreguen
+  // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
+    if (activatingNowRef.current || onCreateActivateTabKey || lastOpenedTabKey) return;
     if (rdpTabs.length > 0) {
       const allTabs = getAllTabs();
       const lastRdpTab = rdpTabs[rdpTabs.length - 1];
@@ -2877,7 +2936,7 @@ const App = () => {
         setActiveTabIndex(rdpTabIndex);
       }
     }
-  }, [rdpTabs]);
+  }, [rdpTabs, onCreateActivateTabKey, lastOpenedTabKey, openTabOrder]);
 
   // 1. Al inicio del componente App, junto con los otros useState:
   const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
@@ -3081,6 +3140,7 @@ const App = () => {
                     <TabView 
                       activeIndex={activeTabIndex} 
                       onTabChange={(e) => {
+                        if (activatingNowRef.current) return; // bloquear cambios durante activación forzada
                         setActiveTabIndex(e.index);
                         // Solo guardar el nuevo índice si el grupo actual tiene pestañas
                         const currentGroupKey = activeGroupId || 'no-group';
@@ -3099,9 +3159,10 @@ const App = () => {
                     >
                     {getFilteredTabs().map((tab, idx) => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
-                      const isHomeTab = idx < homeTabs.length;
-                      const isSSHTab = !isHomeTab && (idx < homeTabs.length + sshTabs.length || tab.isExplorerInSSH);
-                      const originalIdx = isHomeTab ? idx : (isSSHTab ? idx - homeTabs.length : idx - homeTabs.length - sshTabs.length);
+                      // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
+                      const isHomeTab = tab.type === 'home';
+                      const isSSHTab = tab.type === 'terminal' || tab.isExplorerInSSH;
+                      const originalIdx = idx; // No usamos originalIdx para decisiones críticas
                       
                       return (
                         <TabPanel 
