@@ -50,7 +50,12 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     guacSecurity: 'any',        // Seguridad: any, rdp, tls, nla
     guacEnableWallpaper: false, // Mostrar fondo de escritorio
     guacEnableDrive: false,     // Redirección de unidades
-    guacWin11Compat: false      // Compatibilidad Windows 11 (desactiva GFX)
+    guacWin11Compat: false,     // Compatibilidad Windows 11 (desactiva GFX)
+    // Flags de prueba (uno por vez)
+    guacDisableGlyphCaching: false,
+    guacDisableOffscreenCaching: false,
+    guacDisableBitmapCaching: false,
+    guacDisableCopyRect: false
   });
 
   // Debug formData changes
@@ -79,6 +84,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
   const handleCheckboxChange = useCallback((field) => (e) => {
     handleInputChange(field, e.checked);
   }, [handleInputChange]);
+
+  // Manejar flags de prueba de manera independiente (pueden combinarse)
 
   // Opciones para dropdowns
   const resolutionOptions = [
@@ -170,7 +177,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           guacSecurity: rdpNodeData.guacSecurity || 'any',
           guacEnableWallpaper: rdpNodeData.guacEnableWallpaper || false,
           guacEnableDrive: rdpNodeData.guacEnableDrive || false,
-          guacWin11Compat: rdpNodeData.guacWin11Compat || false
+          guacWin11Compat: rdpNodeData.guacWin11Compat || false,
+          guacDisableGlyphCaching: rdpNodeData.guacDisableGlyphCaching || false,
+          guacDisableOffscreenCaching: rdpNodeData.guacDisableOffscreenCaching || false,
+          guacDisableBitmapCaching: rdpNodeData.guacDisableBitmapCaching || false,
+          guacDisableCopyRect: rdpNodeData.guacDisableCopyRect || false
         };
         
         // console.log('=== FORM DATA SET ===');
@@ -281,6 +292,10 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           enableDrive: formData.guacEnableDrive,
           enableWallpaper: formData.guacEnableWallpaper,
           win11Compat: formData.guacWin11Compat,
+          disableGlyphCaching: formData.guacDisableGlyphCaching,
+          disableOffscreenCaching: formData.guacDisableOffscreenCaching,
+          disableBitmapCaching: formData.guacDisableBitmapCaching,
+          disableCopyRect: formData.guacDisableCopyRect,
           redirectClipboard: formData.redirectClipboard,
           redirectPrinters: formData.redirectPrinters,
           redirectAudio: formData.redirectAudio,
@@ -732,6 +747,44 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                           }}
                         />
                         <label htmlFor="guacEnableDrive" className="ml-2">Redirigir carpetas</label>
+                      </div>
+                      
+                      {/* Flags avanzados de compatibilidad (probar de a uno) */}
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableGlyphCaching"
+                          checked={formData.guacDisableGlyphCaching}
+                          onChange={handleCheckboxChange('guacDisableGlyphCaching')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableGlyphCaching" className="ml-2">Desactivar glyph caching</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableOffscreenCaching"
+                          checked={formData.guacDisableOffscreenCaching}
+                          onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableOffscreenCaching" className="ml-2">Desactivar offscreen caching</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableBitmapCaching"
+                          checked={formData.guacDisableBitmapCaching}
+                          onChange={handleCheckboxChange('guacDisableBitmapCaching')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableBitmapCaching" className="ml-2">Desactivar bitmap caching</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableCopyRect"
+                          checked={formData.guacDisableCopyRect}
+                          onChange={handleCheckboxChange('guacDisableCopyRect')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableCopyRect" className="ml-2">Desactivar copy-rect</label>
                       </div>
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox

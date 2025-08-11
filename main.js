@@ -506,6 +506,11 @@ async function initializeGuacamoleServices() {
     const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
     const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
     
+    // Desactivar watchdogs de inactividad para evitar cierres falsos
+    // 1) Watchdog de WebSocket (lado cliente en guacamole-lite): maxInactivityTime=0 → desactivado
+    // 2) Watchdog de guacd (lado backend guacd): variable de entorno
+    process.env.DISABLE_GUACD_WATCHDOG = '1';
+
     const clientOptions = {
       crypt: {
         cypher: 'AES-256-CBC',
@@ -513,11 +518,13 @@ async function initializeGuacamoleServices() {
       },
       log: {
         level: process.env.NODE_ENV === 'development' ? 'DEBUG' : 'NORMAL'
-      }
+      },
+      maxInactivityTime: 0 // Desactivar cierre por inactividad del WS
     };
 
     // Crear servidor Guacamole-lite
     guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
+    console.log('🛡️  Watchdogs de inactividad desactivados (WS y guacd)');
     
     // Configurar eventos del servidor
     guacamoleServer.on('open', (clientConnection) => {
@@ -2582,7 +2589,12 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           "enable-desktop-composition": config.autoResize ? true : false,
           "enable-full-window-drag": config.autoResize ? true : false,
           // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
-          "enable-gfx": (config.win11Compat === true) ? false : undefined
+          "enable-gfx": (config.win11Compat === true) ? false : undefined,
+          // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
+          "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
+          "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
+          "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
+          "disable-copy-rect": config.disableCopyRect === true ? true : undefined
         }
       }
     };
