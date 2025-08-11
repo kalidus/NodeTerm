@@ -2402,6 +2402,7 @@ const App = () => {
         security: nodeData.guacSecurity || 'any',
         // Campos específicos de Guacamole
         autoResize: nodeData.autoResize === true,
+        win11Compat: nodeData.guacWin11Compat === true,
         redirectClipboard: nodeData.redirectClipboard === true,
         redirectPrinters: nodeData.redirectPrinters === true,
         redirectAudio: nodeData.redirectAudio === true,
@@ -2660,7 +2661,8 @@ const App = () => {
             guacDpi: rdpData.guacDpi || 96,
             guacSecurity: rdpData.guacSecurity || 'any',
             guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-            guacEnableDrive: rdpData.guacEnableDrive === true
+            guacEnableDrive: rdpData.guacEnableDrive === true,
+            guacWin11Compat: rdpData.guacWin11Compat === true
           };
           
           // console.log('=== NODE UPDATED ===');
@@ -2700,7 +2702,8 @@ const App = () => {
           guacDpi: rdpData.guacDpi || 96,
           guacSecurity: rdpData.guacSecurity || 'any',
           guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-          guacEnableDrive: rdpData.guacEnableDrive === true
+          guacEnableDrive: rdpData.guacEnableDrive === true,
+          guacWin11Compat: rdpData.guacWin11Compat === true
         },
         draggable: true,
         droppable: false,
@@ -2748,7 +2751,8 @@ const App = () => {
                 guacDpi: rdpData.guacDpi || 96,
                 guacSecurity: rdpData.guacSecurity || 'any',
                 guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-                guacEnableDrive: rdpData.guacEnableDrive === true
+                guacEnableDrive: rdpData.guacEnableDrive === true,
+                guacWin11Compat: rdpData.guacWin11Compat === true
               }
             };
           }

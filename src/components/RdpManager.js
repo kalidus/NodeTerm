@@ -49,7 +49,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     guacDpi: 96,                // DPI para Guacamole
     guacSecurity: 'any',        // Seguridad: any, rdp, tls, nla
     guacEnableWallpaper: false, // Mostrar fondo de escritorio
-    guacEnableDrive: false      // Redirección de unidades
+    guacEnableDrive: false,     // Redirección de unidades
+    guacWin11Compat: false      // Compatibilidad Windows 11 (desactiva GFX)
   });
 
   // Debug formData changes
@@ -168,7 +169,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           guacDpi: rdpNodeData.guacDpi || 96,
           guacSecurity: rdpNodeData.guacSecurity || 'any',
           guacEnableWallpaper: rdpNodeData.guacEnableWallpaper || false,
-          guacEnableDrive: rdpNodeData.guacEnableDrive || false
+          guacEnableDrive: rdpNodeData.guacEnableDrive || false,
+          guacWin11Compat: rdpNodeData.guacWin11Compat || false
         };
         
         // console.log('=== FORM DATA SET ===');
@@ -278,6 +280,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           security: formData.guacSecurity || 'any',
           enableDrive: formData.guacEnableDrive,
           enableWallpaper: formData.guacEnableWallpaper,
+          win11Compat: formData.guacWin11Compat,
           redirectClipboard: formData.redirectClipboard,
           redirectPrinters: formData.redirectPrinters,
           redirectAudio: formData.redirectAudio,
@@ -729,6 +732,20 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                           }}
                         />
                         <label htmlFor="guacEnableDrive" className="ml-2">Redirigir carpetas</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacWin11Compat"
+                          checked={formData.guacWin11Compat}
+                          onChange={handleCheckboxChange('guacWin11Compat')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="guacWin11Compat" className="ml-2">Compatibilidad Windows 11</label>
                       </div>
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
