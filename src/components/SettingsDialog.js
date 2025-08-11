@@ -88,6 +88,14 @@ const SettingsDialog = ({
     const v = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '3600000', 10);
     return Math.max(30, Math.floor(v / 1000));
   });
+  const [rdpResizeDebounceMs, setRdpResizeDebounceMs] = useState(() => {
+    const v = parseInt(localStorage.getItem('rdp_resize_debounce_ms') || '300', 10);
+    return Math.max(100, Math.min(2000, v));
+  });
+  const [rdpResizeAckTimeoutMs, setRdpResizeAckTimeoutMs] = useState(() => {
+    const v = parseInt(localStorage.getItem('rdp_resize_ack_timeout_ms') || '1500', 10);
+    return Math.max(600, Math.min(5000, v));
+  });
 
   // Estados para la gestión de seguridad
   const [secureStorage] = useState(() => new SecureStorage());
@@ -120,6 +128,12 @@ const SettingsDialog = ({
     const ms = Math.max(30000, (rdpFreezeSeconds || 0) * 1000);
     localStorage.setItem('rdp_freeze_timeout_ms', String(ms));
   }, [rdpFreezeSeconds]);
+  useEffect(() => {
+    localStorage.setItem('rdp_resize_debounce_ms', String(Math.max(100, Math.min(2000, rdpResizeDebounceMs || 300))));
+  }, [rdpResizeDebounceMs]);
+  useEffect(() => {
+    localStorage.setItem('rdp_resize_ack_timeout_ms', String(Math.max(600, Math.min(5000, rdpResizeAckTimeoutMs || 1500))));
+  }, [rdpResizeAckTimeoutMs]);
 
   // Funciones para gestión de clave maestra
   const validateMasterPassword = () => {
@@ -1113,6 +1127,54 @@ const SettingsDialog = ({
               <div>
                 <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
                   {rdpFreezeSeconds} s (mín. 30)
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="rdp-resize-debounce" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Debounce del resize (ms)
+                </label>
+                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
+                  Solo se envía el tamaño final tras parar de arrastrar. Ajusta el retardo del envío final.
+                </small>
+                <InputNumber
+                  id="rdp-resize-debounce"
+                  value={rdpResizeDebounceMs}
+                  onValueChange={e => setRdpResizeDebounceMs(Math.max(100, Math.min(2000, e.value || 300)))}
+                  min={100}
+                  max={2000}
+                  showButtons
+                  buttonLayout="horizontal"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
+                  {rdpResizeDebounceMs} ms (100–2000)
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="rdp-resize-ack-timeout" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Timeout de ACK de resize (ms)
+                </label>
+                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
+                  Tiempo máximo esperando respuesta del display tras enviar un tamaño, antes de permitir otro envío.
+                </small>
+                <InputNumber
+                  id="rdp-resize-ack-timeout"
+                  value={rdpResizeAckTimeoutMs}
+                  onValueChange={e => setRdpResizeAckTimeoutMs(Math.max(600, Math.min(5000, e.value || 1500)))}
+                  min={600}
+                  max={5000}
+                  showButtons
+                  buttonLayout="horizontal"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
+                  {rdpResizeAckTimeoutMs} ms (600–5000)
                 </div>
               </div>
             </div>
