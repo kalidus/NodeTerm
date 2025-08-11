@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import Guacamole from 'guacamole-common-js';
+import ResizeController from '../utils/ResizeController';
 
 const GuacamoleTerminal = forwardRef(({ 
     tabId = 'default',
@@ -55,6 +56,7 @@ const GuacamoleTerminal = forwardRef(({
     // Keep-alive periódico
     const keepAliveTimerRef = useRef(null);
     const devicePixelRatioRef = useRef(typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1);
+    const resizeControllerRef = useRef(null);
     // Ack gating de tamaño
     const awaitingSizeAckRef = useRef(false);
     const sizeAckDeadlineRef = useRef(0);
@@ -69,34 +71,21 @@ const GuacamoleTerminal = forwardRef(({
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
         fit: () => {
-            // Ajuste y envío de tamaño al servidor cuando sea posible
-            const client = guacamoleClientRef.current;
-            const container = containerRef.current;
-            if (!container) return;
             try {
-                const rect = container.getBoundingClientRect();
-                const newWidth = Math.floor(rect.width);
-                const newHeight = Math.floor(rect.height);
-                if (client && typeof client.getDisplay === 'function') {
-                    const display = client.getDisplay();
-                    if (display) {
-                        const defaultLayer = display.getDefaultLayer?.();
-                        if (defaultLayer && newWidth > 0 && newHeight > 0) {
-                            // Redimensionar localmente
-                            try { display.resize(defaultLayer, newWidth, newHeight); } catch {}
-                            try { if (display.scale) display.scale(1.0); } catch {}
-                            try { if (display.onresize) display.onresize(); } catch {}
-                        }
-                    }
+                if (resizeControllerRef.current) {
+                    resizeControllerRef.current.flush();
+                    return;
                 }
-                // Enviar tamaño al servidor si está conectado
-                if (client && connectionStateRef.current === 'connected' && newWidth > 0 && newHeight > 0) {
-                    if (typeof client.sendSize === 'function') {
-                        client.sendSize(newWidth, newHeight);
-                    } else if (typeof client.sendInstruction === 'function') {
-                        client.sendInstruction('size', newWidth, newHeight);
-                    }
-                    lastDimensionsRef.current = { width: newWidth, height: newHeight };
+                // Fallback minimal
+                const client = guacamoleClientRef.current;
+                const container = containerRef.current;
+                if (!container) return;
+                const rect = container.getBoundingClientRect();
+                const w = Math.floor(rect.width);
+                const h = Math.floor(rect.height);
+                if (client && connectionStateRef.current === 'connected' && w > 0 && h > 0 && client.sendSize) {
+                    client.sendSize(w, h);
+                    lastDimensionsRef.current = { width: w, height: h };
                     lastResizeTimeRef.current = Date.now();
                 }
             } catch (e) {
@@ -352,6 +341,8 @@ const GuacamoleTerminal = forwardRef(({
                          awaitingSizeAckRef.current = false;
                          sizeAckDeadlineRef.current = 0;
                          quietUntilRef.current = 0;
+                         // Avisar al controlador central para soltar gate y enviar pendiente si lo hay
+                         try { resizeControllerRef.current && resizeControllerRef.current.handleAck(); } catch {}
                      };
                  }
 
@@ -1017,8 +1008,98 @@ const GuacamoleTerminal = forwardRef(({
         lastActivityTimeRef.current = lastActivityTime;
     }, [lastActivityTime]);
 
+    // Controlador centralizado de resize: ResizeObserver + debounce + ACK gating
+    useEffect(() => {
+        if (!autoResize) {
+            if (resizeControllerRef.current) {
+                try { resizeControllerRef.current.stop(); } catch {}
+                resizeControllerRef.current = null;
+            }
+            return;
+        }
+
+        const canSend = () => {
+            if (connectionStateRef.current !== 'connected') return false;
+            const client = guacamoleClientRef.current;
+            if (!client || !client.getDisplay) return false;
+            const display = client.getDisplay();
+            return !!(display && display.getDefaultLayer && display.getDefaultLayer());
+        };
+        const sendSize = (w, h) => {
+            const client = guacamoleClientRef.current;
+            if (!client || !client.sendSize) return;
+            client.sendSize(w, h);
+        };
+        const getContainer = () => containerRef.current;
+        const getAwaitingAck = () => awaitingSizeAckRef.current;
+        const getAckDeadline = () => sizeAckDeadlineRef.current;
+        const setAwaitingAck = (v, deadlineTs) => {
+            awaitingSizeAckRef.current = !!v;
+            sizeAckDeadlineRef.current = v ? Number(deadlineTs || (Date.now() + 1500)) : 0;
+        };
+        const releaseAck = () => {
+            awaitingSizeAckRef.current = false;
+            sizeAckDeadlineRef.current = 0;
+        };
+        const getLastDims = () => ({ ...lastDimensionsRef.current });
+        const setLastDims = ({ width, height }) => {
+            lastDimensionsRef.current = { width, height };
+            lastResizeTimeRef.current = Date.now();
+        };
+        const onLog = (msg) => console.log(msg);
+        const debounceMs = Math.max(100, parseInt(localStorage.getItem('rdp_resize_debounce_ms') || '300', 10));
+        const ackTimeoutMs = Math.max(600, parseInt(localStorage.getItem('rdp_resize_ack_timeout_ms') || '1500', 10));
+
+        // Apagar instancia previa
+        if (resizeControllerRef.current) {
+            try { resizeControllerRef.current.stop(); } catch {}
+            resizeControllerRef.current = null;
+        }
+        // Quitar listener antiguo si quedara activo
+        if (resizeListenerRef.current) {
+            try {
+                window.removeEventListener('resize', resizeListenerRef.current);
+            } catch {}
+            resizeListenerRef.current = null;
+        }
+
+        // Crear y arrancar
+        resizeControllerRef.current = new ResizeController({
+            getContainer,
+            canSend,
+            sendSize,
+            getAwaitingAck,
+            getAckDeadline,
+            setAwaitingAck,
+            releaseAck,
+            getLastDims,
+            setLastDims,
+            debounceMs,
+            ackTimeoutMs,
+            onLog
+        });
+        try { resizeControllerRef.current.start(); } catch {}
+
+        return () => {
+            if (resizeControllerRef.current) {
+                try { resizeControllerRef.current.stop(); } catch {}
+                resizeControllerRef.current = null;
+            }
+        };
+    }, [autoResize, connectionState]);
+
     // 🛡️ ESTABLE: Auto-resize listener con enfoque conservador
     useEffect(() => {
+        // Desactivar lógica antigua si vamos a usar el controlador centralizado
+        try {
+            if (resizeControllerRef.current) {
+                if (resizeListenerRef.current) {
+                    window.removeEventListener('resize', resizeListenerRef.current);
+                    resizeListenerRef.current = null;
+                }
+                return;
+            }
+        } catch {}
         if (!autoResize) {
             // Si autoResize se desactiva, limpiar listener existente
             if (resizeListenerRef.current) {
@@ -1688,6 +1769,10 @@ const GuacamoleTerminal = forwardRef(({
         
         client.onsize = (...args) => {
             updateActivity();
+            // ACK de tamaño: liberar gate y permitir enviar pendiente
+            awaitingSizeAckRef.current = false;
+            sizeAckDeadlineRef.current = 0;
+            try { resizeControllerRef.current && resizeControllerRef.current.handleAck(); } catch {}
             if (originalOnSize) originalOnSize.apply(client, args);
         };
         
