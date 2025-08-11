@@ -33,6 +33,7 @@ export default class ResizeController {
     this._observer = null;
     this._debounceTimer = null;
     this._pendingSize = null; // { width, height }
+    this._quietUntil = 0; // ventana de silencio post-envío
     this._started = false;
     this._onMouseUp = this._onMouseUp.bind(this);
   }
@@ -137,6 +138,15 @@ export default class ResizeController {
     if (!this.canSend || !this.canSend()) return;
 
     const now = Date.now();
+    // Si se abren DevTools u otros cambios de layout rápidos, habrá múltiples notifies;
+    // el quiet y el debounce garantizan coalescing al final.
+    if (now < this._quietUntil) {
+      const remaining = this._quietUntil - now;
+      this.onLog(`⏸️ ResizeController: quiet ${remaining}ms`);
+      if (this._debounceTimer) clearTimeout(this._debounceTimer);
+      this._debounceTimer = setTimeout(() => this._trySend(), Math.max(remaining, 50));
+      return;
+    }
     if (this.getAwaitingAck && this.getAwaitingAck()) {
       const deadline = this.getAckDeadline ? Number(this.getAckDeadline()) : 0;
       if (deadline && now < deadline) {
@@ -161,6 +171,12 @@ export default class ResizeController {
       this.setLastDims && this.setLastDims({ width, height });
       this.setAwaitingAck && this.setAwaitingAck(true, now + this.ackTimeoutMs);
       this.onLog(`📡 ResizeController: sendSize ${width}x${height}`);
+      // Ventana de silencio post-envío para evitar ráfagas (coalesce)
+      const dx = Math.abs((last?.width || 0) - width);
+      const dy = Math.abs((last?.height || 0) - height);
+      const bigChange = (dx + dy) >= 350 || dx >= 350 || dy >= 250;
+      const quietMs = bigChange ? Math.max(800, Math.floor(this.debounceMs * 2.5)) : Math.max(600, Math.floor(this.debounceMs * 2));
+      this._quietUntil = Date.now() + quietMs;
     } catch (e) {
       this.onLog(`❌ ResizeController: error sendSize ${e?.message || e}`);
     } finally {

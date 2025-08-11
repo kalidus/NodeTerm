@@ -337,12 +337,7 @@ const GuacamoleTerminal = forwardRef(({
                      const originalOnResize = display.onresize;
                      display.onresize = () => {
                          originalOnResize();
-                         // Liberar ack y quiet si procede
-                         awaitingSizeAckRef.current = false;
-                         sizeAckDeadlineRef.current = 0;
-                         quietUntilRef.current = 0;
-                         // Avisar al controlador central para soltar gate y enviar pendiente si lo hay
-                         try { resizeControllerRef.current && resizeControllerRef.current.handleAck(); } catch {}
+                         // No tocar ACK aquí; usar client.onsize como confirmación de servidor
                      };
                  }
 
@@ -1079,6 +1074,8 @@ const GuacamoleTerminal = forwardRef(({
             onLog
         });
         try { resizeControllerRef.current.start(); } catch {}
+        // Notificar tamaño actual al arrancar para alinear con el contenedor
+        try { resizeControllerRef.current.notify(); } catch {}
 
         return () => {
             if (resizeControllerRef.current) {
