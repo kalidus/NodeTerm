@@ -2402,6 +2402,8 @@ const App = () => {
         security: nodeData.guacSecurity || 'any',
         // Campos específicos de Guacamole
         autoResize: nodeData.autoResize === true,
+          // Forzar congelación de resizes iniciales para camuflar RDProxy
+          freezeInitialResize: true,
         win11Compat: nodeData.guacWin11Compat === true,
         disableGlyphCaching: nodeData.guacDisableGlyphCaching === true,
         disableOffscreenCaching: nodeData.guacDisableOffscreenCaching === true,

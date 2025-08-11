@@ -13,6 +13,9 @@ const GuacamoleTerminal = forwardRef(({
     const mouseRef = useRef(null);
     const keyboardRef = useRef(null);
     const canvasObserverRef = useRef(null);
+    // Congelación de resize inicial para camuflar comportamiento del RDProxy
+    const freezeResizeUntilRef = useRef(0);
+    const allowResizeNow = () => Date.now() >= (freezeResizeUntilRef.current || 0);
     const initialResizeDoneRef = useRef(false);
     const initialResizeAttemptsRef = useRef(0);
     const initialResizeScheduledRef = useRef(false);
@@ -152,6 +155,17 @@ const GuacamoleTerminal = forwardRef(({
                     }
                 }
 
+                // Aplicar congelación inicial (por defecto 8000ms, configurable vía localStorage)
+                try {
+                    const freezeMs = Math.max(0, parseInt(localStorage.getItem('rdp_initial_freeze_ms') || '8000', 10));
+                    if (rdpConfig && rdpConfig.freezeInitialResize) {
+                        freezeResizeUntilRef.current = Date.now() + freezeMs;
+                        console.log(`🧊 Congelando envíos de resize por ${freezeMs}ms`);
+                    } else {
+                        freezeResizeUntilRef.current = 0;
+                    }
+                } catch { freezeResizeUntilRef.current = 0; }
+
                 // Verificar que electron esté disponible
                 if (!window.electron || !window.electron.ipcRenderer) {
                     throw new Error('Electron IPC no está disponible');
@@ -240,7 +254,92 @@ const GuacamoleTerminal = forwardRef(({
                     }
                 } catch {}
 
-                                 // Crear token de conexión
+                // Antes de crear el token, si está activada la congelación inicial,
+                // esperar a que el contenedor tenga tamaño estable y usarlo como resolución fija inicial
+                try {
+                    if (rdpConfig && rdpConfig.freezeInitialResize) {
+                        const wait = (ms) => new Promise(r => setTimeout(r, ms));
+                        const measureContainer = () => {
+                            const cont = containerRef.current;
+                            if (!cont) return { w: 0, h: 0 };
+                            const rect = cont.getBoundingClientRect();
+                            // Usar también clientWidth/Height como respaldo
+                            const cw = Math.floor(rect.width || cont.clientWidth || 0);
+                            const ch = Math.floor(rect.height || cont.clientHeight || 0);
+                            return { w: cw, h: ch };
+                        };
+                        // Insertar un probe para forzar cálculo de layout de altura completa
+                        let probe = null;
+                        try {
+                            const cont = containerRef.current;
+                            if (cont) {
+                                probe = document.createElement('div');
+                                probe.style.position = 'absolute';
+                                probe.style.inset = '0';
+                                probe.style.width = '100%';
+                                probe.style.height = '100%';
+                                probe.style.minWidth = '1px';
+                                probe.style.minHeight = '1px';
+                                probe.style.visibility = 'hidden';
+                                probe.style.pointerEvents = 'none';
+                                cont.appendChild(probe);
+                            }
+                        } catch {}
+                        // Esperar a que el layout se estabilice
+                        await wait(150);
+                        let last = { w: 0, h: 0 };
+                        let stableCount = 0;
+                        let attempts = 0;
+                        while (attempts < 100) { // hasta ~5s
+                            await wait(50);
+                            const now = measureContainer();
+                            const dw = Math.abs(now.w - last.w);
+                            const dh = Math.abs(now.h - last.h);
+                            if (dw < 2 && dh < 2 && now.w > 0 && now.h > 0) {
+                                stableCount += 1;
+                            } else {
+                                stableCount = 0;
+                            }
+                            last = now;
+                            if (stableCount >= 2) break; // tamaño estable
+                            attempts += 1;
+                        }
+                        // Quitar probe
+                        try { if (probe && probe.parentNode) probe.parentNode.removeChild(probe); } catch {}
+                        let { w, h } = last;
+                        // Si sigue siendo demasiado pequeño, intentar medir ancestros
+                        if (w < 320 || h < 240) {
+                            try {
+                                let el = containerRef.current;
+                                let tries = 0;
+                                while (el && tries < 5) {
+                                    const r = el.getBoundingClientRect();
+                                    if (r.width >= 320 && r.height >= 240) {
+                                        w = Math.floor(r.width);
+                                        h = Math.floor(r.height);
+                                        break;
+                                    }
+                                    el = el.parentElement;
+                                    tries += 1;
+                                }
+                            } catch {}
+                        }
+                        // Último recurso: usar ventana
+                        if (w < 320 || h < 240) {
+                            w = Math.floor(window.innerWidth * 0.8);
+                            h = Math.floor(window.innerHeight * 0.7);
+                            console.log(`⚠️ Medida inicial pequeña, usando fallback de ventana: ${w}x${h}`);
+                        }
+                        if (w > 0 && h > 0) {
+                            rdpConfig.width = w;
+                            rdpConfig.height = h;
+                            rdpConfig.resolution = `${w}x${h}`;
+                            console.log(`📐 Resolución inicial fijada desde contenedor (estable): ${w}x${h}`);
+                        }
+                    }
+                } catch {}
+
+                 // Crear token de conexión
                  // Log crítico: verificar configuración antes de enviar al backend
                  console.log('🚀 ENVIANDO AL BACKEND:', rdpConfig);
                  
@@ -446,7 +545,7 @@ const GuacamoleTerminal = forwardRef(({
                                          cli.sendKeyEvent(0, SHIFT);
                                      }
                                  } catch {}
-                                 // Reenviar tamaño actual del contenedor una vez
+                                  // Reenviar tamaño actual del contenedor una vez
                                  try {
                                      const cont = containerRef.current;
                                      if (cont) {
@@ -458,7 +557,7 @@ const GuacamoleTerminal = forwardRef(({
                                             const disp = cli.getDisplay?.();
                                             const el = disp?.getElement?.();
                                             if (!el || !document.body.contains(el)) return;
-                                            if (cli.sendSize) cli.sendSize(w, h);
+                                             if (allowResizeNow() && cli.sendSize) cli.sendSize(w, h);
                                              else if (cli.sendInstruction) cli.sendInstruction('size', w, h);
                                              lastDimensionsRef.current = { width: w, height: h };
                                              lastResizeTimeRef.current = Date.now();
@@ -470,8 +569,8 @@ const GuacamoleTerminal = forwardRef(({
                              } catch {}
                          }, 1500);
                          
-                         // Si autoResize está activado, hacer resize inicial tras conexión
-                         if (rdpConfig.autoResize) {
+                          // Si autoResize está activado, hacer resize inicial tras conexión
+                         if (rdpConfig.autoResize && !rdpConfig.freezeInitialResize) {
                              // Función para intentar resize inicial con reintentos
                              const attemptInitialResize = (attempt = 1) => {
                                  const container = containerRef.current;
@@ -543,8 +642,8 @@ const GuacamoleTerminal = forwardRef(({
                                          if (display.onresize) display.onresize();
                                      }
 
-                                     // 2) Enviar tamaño al servidor
-                                      if (client.sendSize && isActive) {
+                                      // 2) Enviar tamaño al servidor
+                                       if (client.sendSize && isActive) {
                                              console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
                                              client.sendSize(newWidth, newHeight);
                                      } else if (client.sendInstruction) {
@@ -577,8 +676,8 @@ const GuacamoleTerminal = forwardRef(({
                                              const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
                                              if (ok) return;
                                              if (attempt >= 3) return;
-                                             // Reenviar tamaño una vez más
-                                              if (client.sendSize && isActive) client.sendSize(newWidth, newHeight);
+                                              // Reenviar tamaño una vez más
+                                               if (client.sendSize && isActive && allowResizeNow()) client.sendSize(newWidth, newHeight);
                                              else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
                                              const disp = client.getDisplay?.();
                                              if (disp?.onresize) disp.onresize();
@@ -1021,6 +1120,8 @@ const GuacamoleTerminal = forwardRef(({
 
         const canSend = () => {
             if (connectionStateRef.current !== 'connected') return false;
+            // Restringir envíos durante la congelación inicial
+            if (!allowResizeNow()) return false;
             const client = guacamoleClientRef.current;
             if (!client || !client.getDisplay) return false;
             const display = client.getDisplay();
