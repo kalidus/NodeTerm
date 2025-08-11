@@ -20,6 +20,7 @@ const GuacamoleTerminal = forwardRef(({
     const resizeListenerRef = useRef(null); // Para evitar múltiples listeners
     const [connectionState, setConnectionState] = useState('disconnected'); // disconnected, connecting, connected, error
     const connectionStateRef = useRef('disconnected');
+    const isActiveRef = useRef(isActive);
     const [errorMessage, setErrorMessage] = useState('');
     const [isGuacamoleLoaded, setIsGuacamoleLoaded] = useState(false);
     const [autoResize, setAutoResize] = useState(false);
@@ -28,6 +29,13 @@ const GuacamoleTerminal = forwardRef(({
     
     // Variables persistentes para rate limiting (fuera de useEffect)
     const lastResizeTimeRef = useRef(0);
+    const consecutiveResizeCountRef = useRef(0);
+    const initialResizeCooldownUntilRef = useRef(0);
+    const startupSettleUntilRef = useRef(0);
+    const startupStableCountRef = useRef(0);
+    const startupLastPlanRef = useRef({ width: 0, height: 0 });
+    const isInitialResizingRef = useRef(false);
+    const startupSentOneResizeRef = useRef(false);
     const lastDimensionsRef = useRef({ width: 0, height: 0 });
     // Idle/warm-up control
     const wasIdleRef = useRef(false);
@@ -307,7 +315,10 @@ const GuacamoleTerminal = forwardRef(({
 
                                                                  // Eventos del mouse
                 mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (mouseState) => {
-                    client.sendMouseState(mouseState);
+                    // Enviar eventos solo si el display está montado. Los eventos de ratón no deben depender de isActive
+                    // porque pueden ser el disparador para activar la pestaña.
+                    if (!document.body.contains(targetElement)) return;
+                    try { client.sendMouseState(mouseState); } catch {}
                     const nowTs = Date.now();
                     setLastActivityTime(nowTs); // Registrar actividad
                     lastActivityTimeRef.current = nowTs;
@@ -323,13 +334,14 @@ const GuacamoleTerminal = forwardRef(({
                  }
                  
                  // Agregar eventos para detectar cuando llegan datos
-                 if (display.onresize) {
-                     const originalOnResize = display.onresize;
-                     display.onresize = () => {
-                         originalOnResize();
-                         // No tocar ACK aquí; usar client.onsize como confirmación de servidor
-                     };
-                 }
+                if (display.onresize) {
+                    const originalOnResize = display.onresize;
+                    display.onresize = () => {
+                        // Siempre permitir que Guacamole procese su propio onresize
+                        try { originalOnResize(); } catch {}
+                        // No tocar ACK aquí; usar client.onsize como confirmación de servidor
+                    };
+                }
 
                                                                  // Eventos del teclado
                 keyboard.onkeydown = (keysym) => {
@@ -389,8 +401,9 @@ const GuacamoleTerminal = forwardRef(({
                          
                          // Forzar un refresco del display después de conectar
                          setTimeout(() => {
-                             if (display && display.onresize) {
-                                 display.onresize();
+                            if (display && display.onresize) {
+                                // Siempre refrescar el display localmente; esto no envía tamaño
+                                display.onresize();
                                  console.log('🔄 Display refrescado después de conectar');
                              }
                          }, 500);
@@ -440,8 +453,12 @@ const GuacamoleTerminal = forwardRef(({
                                          const r = cont.getBoundingClientRect();
                                          const w = Math.floor(r.width);
                                          const h = Math.floor(r.height);
-                                         if (w > 0 && h > 0) {
-                                             if (cli.sendSize) cli.sendSize(w, h);
+                                        if (w > 0 && h > 0) {
+                                            if (!isActive) return;
+                                            const disp = cli.getDisplay?.();
+                                            const el = disp?.getElement?.();
+                                            if (!el || !document.body.contains(el)) return;
+                                            if (cli.sendSize) cli.sendSize(w, h);
                                              else if (cli.sendInstruction) cli.sendInstruction('size', w, h);
                                              lastDimensionsRef.current = { width: w, height: h };
                                              lastResizeTimeRef.current = Date.now();
@@ -527,7 +544,7 @@ const GuacamoleTerminal = forwardRef(({
                                      }
 
                                      // 2) Enviar tamaño al servidor
-                                     if (client.sendSize) {
+                                      if (client.sendSize && isActive) {
                                              console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
                                              client.sendSize(newWidth, newHeight);
                                      } else if (client.sendInstruction) {
@@ -561,7 +578,7 @@ const GuacamoleTerminal = forwardRef(({
                                              if (ok) return;
                                              if (attempt >= 3) return;
                                              // Reenviar tamaño una vez más
-                                             if (client.sendSize) client.sendSize(newWidth, newHeight);
+                                              if (client.sendSize && isActive) client.sendSize(newWidth, newHeight);
                                              else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
                                              const disp = client.getDisplay?.();
                                              if (disp?.onresize) disp.onresize();
@@ -984,6 +1001,11 @@ const GuacamoleTerminal = forwardRef(({
         lastActivityTimeRef.current = lastActivityTime;
     }, [lastActivityTime]);
 
+    // Mantener ref sincronizado con el estado de actividad de la pestaña
+    useEffect(() => {
+        isActiveRef.current = isActive;
+    }, [isActive]);
+
     // Controlador centralizado de resize: ResizeObserver + debounce + ACK gating
     useEffect(() => {
         if (!autoResize) {
@@ -994,16 +1016,22 @@ const GuacamoleTerminal = forwardRef(({
             return;
         }
 
+        // Mantener controlador activo incluso si la pestaña no está activa; evita cierres por falta de acks
+        // Solo se controlará el envío mediante canSend/ack gating
+
         const canSend = () => {
             if (connectionStateRef.current !== 'connected') return false;
             const client = guacamoleClientRef.current;
             if (!client || !client.getDisplay) return false;
             const display = client.getDisplay();
+            // Enviar sólo si pestaña está activa y display presente
+            if (!isActiveRef.current) return false;
             return !!(display && display.getDefaultLayer && display.getDefaultLayer());
         };
         const sendSize = (w, h) => {
             const client = guacamoleClientRef.current;
             if (!client || !client.sendSize) return;
+            if (!isActiveRef.current) return; // nunca enviar desde pestaña inactiva
             client.sendSize(w, h);
         };
         const getContainer = () => containerRef.current;
