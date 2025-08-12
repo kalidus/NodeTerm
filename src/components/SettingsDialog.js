@@ -112,9 +112,21 @@ const SettingsDialog = ({
 
   // Guacd preferred method (docker|wsl|mock)
   const GUACD_PREF_KEY = 'nodeterm_guacd_preferred_method';
+  const isWindows = window?.electron?.platform === 'win32';
+  const methodOptions = isWindows
+    ? [
+        { label: 'Docker Desktop', value: 'docker' },
+        { label: 'WSL', value: 'wsl' }
+      ]
+    : [
+        { label: 'Docker', value: 'docker' },
+        { label: 'Nativo (local)', value: 'native' }
+      ];
+
   const [guacdPreferredMethod, setGuacdPreferredMethod] = useState(() => {
     const saved = (localStorage.getItem(GUACD_PREF_KEY) || 'docker').toLowerCase();
-    return ['docker','wsl','mock'].includes(saved) ? saved : 'docker';
+    const allowed = methodOptions.map(o => o.value);
+    return allowed.includes(saved) ? saved : allowed[0];
   });
   const [guacdStatus, setGuacdStatus] = useState({ isRunning: false, method: 'unknown', port: 4822, host: '127.0.0.1' });
 
@@ -453,16 +465,12 @@ const SettingsDialog = ({
               <Dropdown
                 id="guacd-preferred-method"
                 value={guacdPreferredMethod}
-                options={[
-                  { label: 'Docker Desktop', value: 'docker' },
-                  { label: 'WSL', value: 'wsl' },
-                  { label: 'Mock (solo pruebas)', value: 'mock' }
-                ]}
+                options={methodOptions}
                 onChange={(e) => setGuacdPreferredMethod(e.value)}
                 style={{ width: '100%' }}
               />
               <small style={{ display: 'block', marginTop: 8, color: 'var(--text-color-secondary)' }}>
-                El orden será: tu preferencia → alternativa → mock. El modo nativo está deshabilitado.
+                El orden será: tu preferencia → alternativa. En Windows: Docker/WSL. En Linux: Docker/Nativo.
               </small>
             </div>
 
