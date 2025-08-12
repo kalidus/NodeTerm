@@ -742,9 +742,10 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                             <Button
                               type="button"
                               icon="pi pi-folder-open"
-                              label="Examinar"
-                              className="p-button-secondary"
-                              style={{ flex: '0 0 auto' }}
+                              className="p-button-rounded p-button-outlined p-button-sm"
+                              aria-label="Examinar"
+                              tooltip="Examinar carpeta"
+                              style={{ flex: '0 0 auto', minWidth: 0 }}
                               onClick={async () => {
                                 try {
                                   if (window.electron && window.electron.dialog && typeof window.electron.dialog.showOpenDialog === 'function') {
