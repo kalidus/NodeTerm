@@ -276,7 +276,8 @@ class GuacdService {
     this.isRunning = false;
     this.port = 4822;
     this.host = '127.0.0.1'; // Usar IPv4 específicamente
-    // Método preferido configurable: docker | wsl | mock (native deshabilitado)
+    this.platform = process.platform;
+    // Método preferido configurable: docker | wsl | native | mock (según SO)
     this.preferredMethod = (process.env.NODETERM_GUACD_METHOD || process.env.GUACD_METHOD || 'docker').toLowerCase();
     this.detectedMethod = null;
     this.wslDistro = null;
@@ -315,9 +316,10 @@ class GuacdService {
       
       console.log('❌ guacd NO está corriendo, iniciando...');
 
-      // Orden dinámico según preferencia: preferido → otro → mock
-      const all = ['docker', 'wsl', 'mock'];
-      const pref = (this.preferredMethod === 'wsl') ? 'wsl' : 'docker';
+      // Orden dinámico según preferencia y SO
+      const isWindows = this.platform === 'win32';
+      const all = isWindows ? ['docker', 'wsl', 'mock'] : ['docker', 'native', 'mock'];
+      const pref = all.includes(this.preferredMethod) ? this.preferredMethod : 'docker';
       const rest = all.filter(m => m !== pref);
       const orderedMethods = [pref, ...rest];
 
@@ -597,21 +599,27 @@ class GuacdService {
 
         const wslExec = (args, cb) => execFile('wsl.exe', ['-d', selected, '-u', 'root', '--', ...args], { encoding: 'utf8' }, cb);
 
-        // Determinar IP de WSL (preferir IPv4 en eth0)
+        // Determinar IP de WSL (robusto: hostname -I o ip -o -4 ... scope global)
         let wslIp = null;
-        await new Promise((r) => wslExec(['sh', '-lc', "ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -n1"], (e, out) => {
+        await new Promise((r) => wslExec(['sh', '-lc', "(hostname -I 2>/dev/null | awk '{print $1}') || true"], (e, out) => {
           const ip = String(out || '').trim();
-          if (ip && /^(\d+\.){3}\d+$/.test(ip)) {
-            wslIp = ip;
-          }
+          if (ip && /^(\d+\.){3}\d+$/.test(ip)) { wslIp = ip; }
           r();
         }));
+        if (!wslIp) {
+          await new Promise((r) => wslExec(['sh', '-lc', "ip -o -4 addr show up primary scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1"], (e, out) => {
+            const ip = String(out || '').trim();
+            if (ip && /^(\d+\.){3}\d+$/.test(ip)) { wslIp = ip; }
+            r();
+          }));
+        }
 
         // Asegurar instalación de guacd
         await new Promise((r) => wslExec(['sh', '-lc', 'command -v guacd >/dev/null 2>&1 || (export DEBIAN_FRONTEND=noninteractive; apt-get update -y && apt-get install -y guacd)'], () => r()));
 
         // Lanzar guacd en background dentro de WSL (bind a 127.0.0.1 y log a archivo)
-        const bindIp = wslIp || '127.0.0.1';
+        // Escuchar en todas las interfaces dentro de WSL para permitir acceso desde Windows
+        const bindIp = '0.0.0.0';
         const startCmd = `/usr/sbin/guacd -b ${bindIp} -p ${this.port} -f >/var/log/guacd-wsl.log 2>&1 & echo $!`;
         wslExec(['sh', '-lc', startCmd], async (startErr, startOut) => {
           if (startErr) {
@@ -623,15 +631,20 @@ class GuacdService {
           console.log('🚀 guacd lanzado en WSL con PID:', pidStr);
 
           // Esperar a que el puerto esté escuchando dentro de WSL
-          const readyIp = bindIp.replace(/\./g, '\\.');
-          const waitReadyCmd = `for i in $(seq 1 50); do ss -tln 2>/dev/null | grep -E "${readyIp}:${this.port}\\b" && echo READY && break; sleep 0.2; done`;
+          // Comprobar sólo por puerto (independiente de IP)
+          const waitReadyCmd = `for i in $(seq 1 50); do ss -tln 2>/dev/null | grep -E ":${this.port}\\b" && echo READY && break; sleep 0.2; done`;
           await new Promise((r) => wslExec(['sh', '-lc', waitReadyCmd], () => r()));
 
           setTimeout(async () => {
             try {
-              // Usar SIEMPRE la IP de WSL si está disponible
-              this.host = wslIp || '127.0.0.1';
-              const available = await this.isPortAvailable(this.port);
+              // Preferir localhost si Windows expone el puerto de WSL; fallback a IP de WSL
+              let available = true;
+              this.host = '127.0.0.1';
+              available = await this.isPortAvailable(this.port);
+              if (available && wslIp) {
+                this.host = wslIp;
+                available = await this.isPortAvailable(this.port);
+              }
               if (!available) {
                 this.isRunning = true;
                 this.guacdProcess = null;
