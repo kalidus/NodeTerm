@@ -50,6 +50,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     guacSecurity: 'any',        // Seguridad: any, rdp, tls, nla
     guacEnableWallpaper: false, // Mostrar fondo de escritorio
     guacEnableDrive: false,     // Redirección de unidades
+    guacDriveHostDir: '',       // Carpeta local opcional para la unidad
     guacWin11Compat: false,     // Compatibilidad Windows 11 (desactiva GFX)
     // Flags de prueba (uno por vez)
     guacDisableGlyphCaching: false,
@@ -177,6 +178,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           guacSecurity: rdpNodeData.guacSecurity || 'any',
           guacEnableWallpaper: rdpNodeData.guacEnableWallpaper || false,
           guacEnableDrive: rdpNodeData.guacEnableDrive || false,
+          guacDriveHostDir: rdpNodeData.guacDriveHostDir || '',
           guacWin11Compat: rdpNodeData.guacWin11Compat || false,
           guacDisableGlyphCaching: rdpNodeData.guacDisableGlyphCaching || false,
           guacDisableOffscreenCaching: rdpNodeData.guacDisableOffscreenCaching || false,
@@ -292,6 +294,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           dpi: formData.guacDpi || 96,
           security: formData.guacSecurity || 'any',
           enableDrive: formData.guacEnableDrive,
+          // Carpeta local opcional (vacío = por defecto Descargas/NodeTerm Drive)
+          driveHostDir: formData.guacDriveHostDir,
           enableWallpaper: formData.guacEnableWallpaper,
           win11Compat: formData.guacWin11Compat,
           disableGlyphCaching: formData.guacDisableGlyphCaching,
@@ -724,6 +728,60 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         />
                         <label htmlFor="guacEnableDrive" className="ml-2">Redirigir carpetas</label>
                       </div>
+                      {formData.guacEnableDrive && (
+                        <div className="field col-12 md:col-12">
+                          <label htmlFor="guacDriveHostDir">Carpeta local para "NodeTerm Drive" (opcional)</label>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <InputText
+                              id="guacDriveHostDir"
+                              value={formData.guacDriveHostDir}
+                              onChange={handleTextChange('guacDriveHostDir')}
+                              placeholder="Vacío = Descargas/NodeTerm Drive"
+                              style={{ flex: '1 1 auto', minWidth: 0 }}
+                            />
+                            <Button
+                              type="button"
+                              icon="pi pi-folder-open"
+                              label="Examinar"
+                              className="p-button-secondary"
+                              style={{ flex: '0 0 auto' }}
+                              onClick={async () => {
+                                try {
+                                  if (window.electron && window.electron.dialog && typeof window.electron.dialog.showOpenDialog === 'function') {
+                                    const result = await window.electron.dialog.showOpenDialog({
+                                      properties: ['openDirectory', 'createDirectory']
+                                    });
+                                    if (!result.canceled && Array.isArray(result.filePaths) && result.filePaths.length > 0) {
+                                      handleInputChange('guacDriveHostDir', result.filePaths[0]);
+                                      try {
+                                        const status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+                                        if (status && status.guacd && (status.guacd.method === 'docker')) {
+                                          toast.current?.show({
+                                            severity: 'warn',
+                                            summary: 'Docker en uso',
+                                            detail: 'Si usas Docker, cambiar la carpeta puede requerir reiniciar NodeTerm para remapear el volumen.',
+                                            life: 5000
+                                          });
+                                        }
+                                      } catch {}
+                                    }
+                                  }
+                                } catch (err) {
+                                  console.error('Error abriendo selector de carpeta:', err);
+                                }
+                              }}
+                            />
+                          </div>
+                          {formData.guacDriveHostDir && (
+                            <div style={{ marginTop: 6 }}>
+                              <small className="text-color-success">Seleccionado: {formData.guacDriveHostDir}</small>
+                            </div>
+                          )}
+                          {!formData.guacDriveHostDir && (
+                            <small className="text-color-secondary">Por defecto: C:\\Users\\&lt;usuario&gt;\\Downloads\\NodeTerm Drive</small>
+                          )}
+                        </div>
+                      )}
                       
                       {/* Flags avanzados de compatibilidad (probar de a uno) */}
                       <div className="field-checkbox col-12 md:col-6">
