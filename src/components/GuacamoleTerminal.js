@@ -375,6 +375,54 @@ const GuacamoleTerminal = forwardRef(({
                  keyboardRef.current = keyboard;
                 try { setTimeout(() => { try { targetElement.focus({ preventScroll: true }); } catch { try { targetElement.focus(); } catch {} } }, 0); } catch {}
 
+                // Clipboard integration (remote -> local)
+                try {
+                    client.onclipboard = (stream, mimetype) => {
+                        try {
+                            // Respeta explícitamente cuando el usuario desactiva el portapapeles; por defecto permitido
+                            if (rdpConfig && rdpConfig.redirectClipboard === false) return;
+                            if (!mimetype || !/^text\//i.test(mimetype)) return; // text only
+                            const reader = new window.Guacamole.StringReader(stream);
+                            let data = '';
+                            reader.ontext = (text) => { data += text; };
+                            reader.onend = () => {
+                                try {
+                                    if (window.electron && window.electron.clipboard && typeof window.electron.clipboard.writeText === 'function') {
+                                        window.electron.clipboard.writeText(data || '');
+                                    }
+                                } catch {}
+                            };
+                        } catch {}
+                    };
+                } catch {}
+
+                // Clipboard integration (local -> remote) via Ctrl/Cmd+V
+                try {
+                    const handlePasteKeydown = (e) => {
+                        try {
+                            // Respeta explícitamente cuando el usuario desactiva el portapapeles; por defecto permitido
+                            if (rdpConfig && rdpConfig.redirectClipboard === false) return;
+                            const isMac = (window.electron && window.electron.platform === 'darwin');
+                            const modifier = isMac ? e.metaKey : e.ctrlKey;
+                            if (modifier && (e.key || '').toLowerCase() === 'v') {
+                                e.preventDefault();
+                                if (window.electron && window.electron.clipboard && typeof window.electron.clipboard.readText === 'function') {
+                                    window.electron.clipboard.readText().then((text) => {
+                                        try {
+                                            if (typeof text !== 'string' || !client || typeof client.createClipboardStream !== 'function') return;
+                                            const stream = client.createClipboardStream('text/plain');
+                                            const writer = new window.Guacamole.StringWriter(stream);
+                                            writer.sendText(text);
+                                            writer.sendEnd();
+                                        } catch {}
+                                    }).catch(() => {});
+                                }
+                            }
+                        } catch {}
+                    };
+                    targetElement.addEventListener('keydown', handlePasteKeydown);
+                } catch {}
+
                                  // Configurar display en el contenedor
                  const container = containerRef.current;
                  if (container) {
