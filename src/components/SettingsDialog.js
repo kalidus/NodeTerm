@@ -453,39 +453,7 @@ const SettingsDialog = ({
         className="settings-dialog-tabview"
       >
         <TabPanel header="General" leftIcon="pi pi-cog">
-          <div style={{ padding: '1rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
-              <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
-                <i className="pi pi-sitemap" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-                Backend para RDP (Guacamole)
-              </h3>
-              <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                Método preferido
-              </label>
-              <Dropdown
-                id="guacd-preferred-method"
-                value={guacdPreferredMethod}
-                options={methodOptions}
-                onChange={(e) => setGuacdPreferredMethod(e.value)}
-                style={{ width: '100%' }}
-              />
-              <small style={{ display: 'block', marginTop: 8, color: 'var(--text-color-secondary)' }}>
-                El orden será: tu preferencia → alternativa. En Windows: Docker/WSL. En Linux: Docker/Nativo.
-              </small>
-            </div>
-
-            <div style={{ width: '100%', maxWidth: 520, marginTop: '0.5rem', border: '1px solid var(--surface-border)', borderRadius: 8, padding: '0.75rem 1rem', background: 'var(--surface-card)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <i className="pi pi-info-circle" style={{ color: 'var(--primary-color)' }}></i>
-                <strong>Estado actual</strong>
-              </div>
-              <div style={{ fontSize: '0.9rem' }}>
-                <div><strong>Ejecutando:</strong> {guacdStatus.isRunning ? 'Sí' : 'No'}</div>
-                <div><strong>Método:</strong> {guacdStatus.method || 'desconocido'}</div>
-                <div><strong>Host:</strong> {guacdStatus.host} <strong>Puerto:</strong> {guacdStatus.port}</div>
-              </div>
-            </div>
-          </div>
+          <div style={{ padding: '1rem 0' }}></div>
         </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
@@ -1179,6 +1147,61 @@ const SettingsDialog = ({
 
         <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
           <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '40vh', width: '100%' }}>
+            {/* Backend RDP (Guacamole) */}
+            <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
+                <i className="pi pi-sitemap" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+                Backend para RDP (Guacamole)
+              </h3>
+              <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                Método preferido
+              </label>
+              <Dropdown
+                id="guacd-preferred-method"
+                value={guacdPreferredMethod}
+                options={methodOptions}
+                onChange={(e) => setGuacdPreferredMethod(e.value)}
+                style={{ width: '100%' }}
+              />
+              <small style={{ display: 'block', marginTop: 8, color: 'var(--text-color-secondary)' }}>
+                El orden será: tu preferencia → alternativa. En Windows: Docker/WSL. En Linux: Docker/Nativo.
+              </small>
+            </div>
+
+            <div style={{
+              width: '100%',
+              maxWidth: 520,
+              marginTop: '0.5rem',
+              border: '1px solid var(--surface-border)',
+              borderRadius: 8,
+              padding: '0.75rem 1rem',
+              background: 'var(--surface-card)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span
+                  title={guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: guacdStatus.isRunning ? 'var(--green-500)' : 'var(--red-500)',
+                    boxShadow: guacdStatus.isRunning ? '0 0 0 3px rgba(34,197,94,0.15)' : '0 0 0 3px rgba(239,68,68,0.15)'
+                  }}
+                ></span>
+                <strong style={{ color: 'var(--text-color)' }}>Servidor Guacd</strong>
+                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>
+                  {guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+              <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem', textAlign: 'right' }}>
+                <div style={{ textTransform: 'uppercase' }}>{guacdStatus.method || '—'}</div>
+                <div style={{ fontFamily: 'monospace' }}>{guacdStatus.host}:{guacdStatus.port}</div>
+              </div>
+            </div>
             {/* General */}
             <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
               <i className="pi pi-cog" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
