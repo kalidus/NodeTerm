@@ -712,8 +712,9 @@ const App = () => {
 
   // Funciones para drag & drop de pestañas
   const handleTabDragStart = (e, tabIndex) => {
-    const allTabs = getAllTabs();
-    const tab = allTabs[tabIndex];
+    const filtered = getFilteredTabs();
+    const tab = filtered[tabIndex];
+    if (!tab) return;
     // No permitir arrastrar la pestaña de Inicio
     if (tab.type === 'home' || tab.label === 'Inicio') return;
     // Pequeño delay para distinguir entre click y drag
@@ -747,58 +748,50 @@ const App = () => {
       setDragOverTabIndex(null);
       return;
     }
-    const allTabs = getAllTabs();
-    const draggedTab = allTabs[dragIndex];
-    const dropTab = allTabs[dropIndex];
-    // No permitir soltar sobre Inicio ni mover Inicio
-    if (
-      draggedTab.type === 'home' || draggedTab.label === 'Inicio' ||
-      dropIndex === 0 || (dropTab && (dropTab.type === 'home' || dropTab.label === 'Inicio'))
-    ) {
+    const filtered = getFilteredTabs();
+    const draggedTab = filtered[dragIndex];
+    const dropTab = filtered[dropIndex];
+
+    if (!draggedTab || !dropTab) {
       setDraggedTabIndex(null);
       setDragOverTabIndex(null);
       return;
     }
-    // Determinar si es SSH, RDP o Explorer
-    const isSSHTab = sshTabs.some(tab => tab.key === draggedTab.key);
-    const isRdpTab = rdpTabs.some(tab => tab.key === draggedTab.key);
-    
-    if (isSSHTab) {
-      // Eliminar de sshTabs y reinsertar en la nueva posición (ajustada por homeTabs)
-      const newSshTabs = [...sshTabs];
-      const oldIdx = newSshTabs.findIndex(tab => tab.key === draggedTab.key);
-      if (oldIdx !== -1) {
-        newSshTabs.splice(oldIdx, 1);
-        // dropIndex - 1 porque homeTabs siempre es la primera
-        const insertIdx = Math.max(0, Math.min(newSshTabs.length, dropIndex - homeTabs.length));
-        newSshTabs.splice(insertIdx, 0, draggedTab);
-        setSshTabs(newSshTabs);
-        setActiveTabIndex(dropIndex);
-      }
-    } else if (isRdpTab) {
-      // Eliminar de rdpTabs y reinsertar en la nueva posición
-      const newRdpTabs = [...rdpTabs];
-      const oldIdx = newRdpTabs.findIndex(tab => tab.key === draggedTab.key);
-      if (oldIdx !== -1) {
-        newRdpTabs.splice(oldIdx, 1);
-        const insertIdx = Math.max(0, Math.min(newRdpTabs.length, dropIndex - homeTabs.length - sshTabs.length));
-        newRdpTabs.splice(insertIdx, 0, draggedTab);
-        setRdpTabs(newRdpTabs);
-        setActiveTabIndex(dropIndex);
-      }
-    } else {
-      // Eliminar de fileExplorerTabs y reinsertar en la nueva posición
-      const newExplorerTabs = [...fileExplorerTabs];
-      const oldIdx = newExplorerTabs.findIndex(tab => tab.key === draggedTab.key);
-      if (oldIdx !== -1) {
-        newExplorerTabs.splice(oldIdx, 1);
-        // dropIndex - homeTabs.length - sshTabs.length - rdpTabs.length
-        const insertIdx = Math.max(0, Math.min(newExplorerTabs.length, dropIndex - homeTabs.length - sshTabs.length - rdpTabs.length));
-        newExplorerTabs.splice(insertIdx, 0, draggedTab);
-        setFileExplorerTabs(newExplorerTabs);
-        setActiveTabIndex(dropIndex);
-      }
+
+    const isHome = (t) => t && (t.type === 'home' || t.label === 'Inicio');
+    // No permitir mover/soltar la pestaña de Inicio
+    if (isHome(draggedTab) || isHome(dropTab) || (dropIndex === 0 && isHome(filtered[0]))) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
     }
+
+    // Reordenación global entre tipos usando openTabOrder
+    const hasHomeAtZero = filtered.length > 0 && isHome(filtered[0]);
+    // Claves visibles (excluyendo Home)
+    const visibleKeys = filtered.filter(t => !isHome(t)).map(t => t.key);
+
+    const from = visibleKeys.indexOf(draggedTab.key);
+    let to = hasHomeAtZero ? dropIndex - 1 : dropIndex;
+    to = Math.max(0, Math.min(visibleKeys.length - 1, to));
+
+    if (from === -1 || from === to) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
+    }
+
+    const reorderedVisible = [...visibleKeys];
+    const [movedKey] = reorderedVisible.splice(from, 1);
+    reorderedVisible.splice(to, 0, movedKey);
+
+    // Nuevo openTabOrder: primero las visibles reordenadas, luego el resto en su orden actual
+    const restKeys = openTabOrder.filter(k => !reorderedVisible.includes(k));
+    const newOpenOrder = [...reorderedVisible, ...restKeys];
+
+    setOpenTabOrder(newOpenOrder);
+    setActiveTabIndex(dropIndex);
+    
     setDraggedTabIndex(null);
     setDragOverTabIndex(null);
   };
