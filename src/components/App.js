@@ -2038,22 +2038,25 @@ const App = () => {
     };
     
     // NO crear conexión SSH nueva - el FileExplorer usará el pool existente
+    const nowTs = Date.now();
     const newExplorerTab = {
       key: explorerTabId,
       label: sshNode.label,
       originalKey: sshNode.key,
       sshConfig: sshConfig,
       type: 'explorer',
+      createdAt: nowTs,
       needsOwnConnection: false, // Cambio importante: NO necesita su propia conexión
       isExplorerInSSH: true // Flag para identificarla como explorador en el array SSH
     };
     
-    // Insertar como primera pestaña
-    setSshTabs(prevSshTabs => {
-      const newSshTabs = [newExplorerTab, ...prevSshTabs];
-      setActiveTabIndex(homeTabs.length); // Activar la nueva pestaña (después de la de inicio)
-      return newSshTabs;
-    });
+    // Insertar y activar como última abierta
+    setSshTabs(prevSshTabs => [newExplorerTab, ...prevSshTabs]);
+    setLastOpenedTabKey(explorerTabId);
+    setOnCreateActivateTabKey(explorerTabId);
+    setActiveTabIndex(1);
+    setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+    setOpenTabOrder(prev => [explorerTabId, ...prev.filter(k => k !== explorerTabId)]);
   };
 
   // Helper para eliminar un nodo por key en todo el árbol
