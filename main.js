@@ -2700,6 +2700,7 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
       dpi: config.dpi,
       enableDrive: config.enableDrive,
       enableWallpaper: config.enableWallpaper,
+      redirectClipboard: config.redirectClipboard,
       security: config.security,
       resolution: config.resolution, // ← Mostrar resolution original si existe
       autoResize: config.autoResize  // ← Mostrar autoResize si existe
@@ -2735,6 +2736,8 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           "resize-method": config.autoResize ? "display-update" : "reconnect",
           "enable-desktop-composition": config.autoResize ? true : false,
           "enable-full-window-drag": config.autoResize ? true : false,
+          // Portapapeles: desactivar solo si el usuario lo deshabilitó
+          "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
           // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
           "enable-gfx": (config.win11Compat === true) ? false : undefined,
           // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.

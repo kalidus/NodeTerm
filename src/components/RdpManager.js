@@ -658,20 +658,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         />
                         <label htmlFor="redirectAudio" className="ml-2">Redirigir audio</label>
                       </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="fullscreen"
-                          checked={formData.fullscreen}
-                          onChange={handleCheckboxChange('fullscreen')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
-                      </div>
+                      {/* Opción 'Pantalla completa' eliminada para Guacamole */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
                           inputId="smartSizing"
@@ -688,20 +675,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         />
                         <label htmlFor="smartSizing" className="ml-2">Ajuste automático de ventana</label>
                       </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="span"
-                          checked={formData.span}
-                          onChange={handleCheckboxChange('span')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="span" className="ml-2">Múltiples monitores</label>
-                      </div>
+                      {/* Opción 'Múltiples monitores' eliminada para Guacamole */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
                           inputId="admin"
