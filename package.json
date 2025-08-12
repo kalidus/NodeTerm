@@ -19,6 +19,7 @@
     "productName": "NodeTerm",
     "files": [
       "dist/",
+      "binaries/**",
       "src/components/",
       "src/utils/",
       "src/services/",
@@ -27,6 +28,9 @@
       "preload.js",
       "system-stats-worker.js",
       "package.json"
+    ],
+    "asarUnpack": [
+      "binaries/**"
     ],
     "win": {
       "target": "nsis",

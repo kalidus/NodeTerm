@@ -2613,6 +2613,14 @@ ipcMain.handle('guacamole:disconnect-all', async () => {
 ipcMain.handle('guacamole:create-token', async (event, config) => {
   try {
     console.log('📋 [MAIN] CONFIG COMPLETO RECIBIDO:', config);
+    // Si guacd está en modo mock, informar al usuario y rechazar
+    try {
+      if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
+        const message = 'RDP requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar RDP con Guacamole.';
+        console.warn('⚠️  [MAIN] Intento de crear token con guacd en modo mock. ' + message);
+        return { success: false, error: message };
+      }
+    } catch {}
     
     // Calcular resolución final: priorizar width/height, luego parsear resolution
     let finalWidth = config.width || 1024;
