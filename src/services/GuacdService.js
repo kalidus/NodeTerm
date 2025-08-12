@@ -276,7 +276,7 @@ class GuacdService {
     this.isRunning = false;
     this.port = 4822;
     this.host = '127.0.0.1'; // Usar IPv4 específicamente
-    // Orden preferido configurable: docker | native | wsl | mock
+    // Método preferido configurable: docker | wsl | mock (native deshabilitado)
     this.preferredMethod = (process.env.NODETERM_GUACD_METHOD || process.env.GUACD_METHOD || 'docker').toLowerCase();
     this.detectedMethod = null;
     this.wslDistro = null;
@@ -298,29 +298,43 @@ class GuacdService {
         
         // Intentar detectar el método automáticamente
         await this.detectRunningMethod();
-        
-        return true;
+
+        // Si hay una preferencia explícita y lo detectado no coincide, intentar cambiar
+        const desired = (this.preferredMethod === 'wsl') ? 'wsl' : (this.preferredMethod === 'docker' ? 'docker' : null);
+        if (desired && this.detectedMethod && this.detectedMethod !== desired) {
+          console.log(`🔁 Preferencia actual: ${desired}. Método preexistente detectado: ${this.detectedMethod}. Reiniciando según preferencia...`);
+          try {
+            await this.stop();
+          } catch {}
+        } else {
+          const methodLabel = (this.detectedMethod || 'unknown').toUpperCase();
+          console.log(`🔌 Conectado con ${methodLabel} (preexistente)`);
+          return true;
+        }
       }
       
       console.log('❌ guacd NO está corriendo, iniciando...');
 
-      // Orden fijo requerido: docker → wsl → mock (nativo deshabilitado)
-      const orderedMethods = ['docker', 'wsl', 'mock'];
+      // Orden dinámico según preferencia: preferido → otro → mock
+      const all = ['docker', 'wsl', 'mock'];
+      const pref = (this.preferredMethod === 'wsl') ? 'wsl' : 'docker';
+      const rest = all.filter(m => m !== pref);
+      const orderedMethods = [pref, ...rest];
 
       for (const method of orderedMethods) {
         try {
           if (method === 'docker') {
             console.log('🐳 Intentando iniciar guacd con Docker...');
-            if (await this.startWithDocker()) { this.detectedMethod = 'docker'; return true; }
+            if (await this.startWithDocker()) { this.detectedMethod = 'docker'; console.log('🔌 Conectado con DOCKER'); return true; }
           } else if (method === 'wsl') {
             console.log('🐧 Intentando iniciar guacd dentro de WSL...');
-            if (await this.startWithWSL()) { this.detectedMethod = 'wsl'; return true; }
+            if (await this.startWithWSL()) { this.detectedMethod = 'wsl'; console.log('🔌 Conectado con WSL'); return true; }
           } else if (method === 'native') {
             console.log('📦 Intentando iniciar guacd con binarios nativos...');
-            if (await this.startWithNative()) { this.detectedMethod = 'native'; return true; }
+            if (await this.startWithNative()) { this.detectedMethod = 'native'; console.log('🔌 Conectado con NATIVE'); return true; }
           } else if (method === 'mock') {
             console.log('🧪 Usando modo mock para testing...');
-            if (await this.startMockMode()) { this.detectedMethod = 'mock'; return true; }
+            if (await this.startMockMode()) { this.detectedMethod = 'mock'; console.log('🔌 Conectado con MOCK'); return true; }
           }
         } catch (e) {
           console.warn(`⚠️  Error intentando método ${method}:`, e?.message || e);
@@ -331,6 +345,13 @@ class GuacdService {
     } catch (error) {
       console.error('❌ Error inicializando GuacdService:', error);
       return false;
+    }
+  }
+
+  setPreferredMethod(method) {
+    const m = String(method || '').toLowerCase();
+    if (m === 'docker' || m === 'wsl' || m === 'mock') {
+      this.preferredMethod = m;
     }
   }
 
