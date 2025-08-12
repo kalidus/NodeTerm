@@ -20,6 +20,8 @@
     "files": [
       "dist/",
       "src/components/",
+      "src/utils/",
+      "src/services/",
       "node_modules/",
       "main.js",
       "preload.js",
