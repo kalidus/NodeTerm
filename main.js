@@ -487,6 +487,14 @@ function parseNetDev(netDevOutput) {
 async function initializeGuacamoleServices() {
   try {
     console.log('🚀 Inicializando servicios Guacamole...');
+    // Cargar método preferido persistido antes de inicializar
+    try {
+      const pref = await loadPreferredGuacdMethod();
+      if (pref) {
+        guacdService.setPreferredMethod(pref);
+        console.log('🔧 Método preferido cargado:', pref);
+      }
+    } catch {}
     
     // Inicializar GuacdService
     const guacdReady = await guacdService.initialize();
@@ -600,6 +608,40 @@ async function initializeGuacamoleServices() {
   } catch (error) {
     console.error('❌ Error inicializando servicios Guacamole:', error);
   }
+}
+
+// === Preferencias Guacd (persistencia en userData) ===
+function getGuacdPrefPath() {
+  try {
+    return path.join(app.getPath('userData'), 'guacd-preferences.json');
+  } catch {
+    return null;
+  }
+}
+
+async function loadPreferredGuacdMethod() {
+  const fs = require('fs');
+  const prefPath = getGuacdPrefPath();
+  if (!prefPath) return null;
+  try {
+    if (!fs.existsSync(prefPath)) return null;
+    const raw = fs.readFileSync(prefPath, 'utf8');
+    const json = JSON.parse(raw || '{}');
+    const m = String(json.preferredMethod || '').toLowerCase();
+    return (m === 'docker' || m === 'wsl' || m === 'mock') ? m : null;
+  } catch { return null; }
+}
+
+async function savePreferredGuacdMethod(method) {
+  const fs = require('fs');
+  const prefPath = getGuacdPrefPath();
+  if (!prefPath) return false;
+  try {
+    const dir = path.dirname(prefPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(prefPath, JSON.stringify({ preferredMethod: method }, null, 2), 'utf8');
+    return true;
+  } catch { return false; }
 }
 
 // IPC para configurar el watchdog de guacd desde la UI
@@ -2579,6 +2621,18 @@ ipcMain.handle('guacamole:get-status', async (event) => {
       isRunning: false
     }
   };
+});
+
+// Permitir establecer el método preferido desde la UI (docker|wsl|mock)
+ipcMain.handle('guacamole:set-preferred-method', async (event, method) => {
+  try {
+    if (guacdService && typeof guacdService.setPreferredMethod === 'function') {
+      guacdService.setPreferredMethod(method);
+      await savePreferredGuacdMethod(method);
+      return { success: true };
+    }
+  } catch {}
+  return { success: false };
 });
 
 // Helper to disconnect all active guacamole connections

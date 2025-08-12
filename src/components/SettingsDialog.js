@@ -110,6 +110,37 @@ const SettingsDialog = ({
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Guacd preferred method (docker|wsl|mock)
+  const GUACD_PREF_KEY = 'nodeterm_guacd_preferred_method';
+  const [guacdPreferredMethod, setGuacdPreferredMethod] = useState(() => {
+    const saved = (localStorage.getItem(GUACD_PREF_KEY) || 'docker').toLowerCase();
+    return ['docker','wsl','mock'].includes(saved) ? saved : 'docker';
+  });
+  const [guacdStatus, setGuacdStatus] = useState({ isRunning: false, method: 'unknown', port: 4822, host: '127.0.0.1' });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(GUACD_PREF_KEY, guacdPreferredMethod);
+      if (window?.electron?.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('guacamole:set-preferred-method', guacdPreferredMethod).catch(() => {});
+      }
+    } catch {}
+  }, [guacdPreferredMethod]);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        if (window?.electron?.ipcRenderer) {
+          const st = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+          if (st && st.guacd) setGuacdStatus(st.guacd);
+        }
+      } catch {}
+    };
+    fetchStatus();
+    const t = setInterval(fetchStatus, 2000);
+    return () => clearInterval(t);
+  }, []);
+
   useEffect(() => {
     // Obtener la versión real de la app
     const info = getVersionInfo();
@@ -409,6 +440,45 @@ const SettingsDialog = ({
         onTabChange={(e) => setActiveIndex(e.index)}
         className="settings-dialog-tabview"
       >
+        <TabPanel header="General" leftIcon="pi pi-cog">
+          <div style={{ padding: '1rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 520, marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-color)' }}>
+                <i className="pi pi-sitemap" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+                Backend para RDP (Guacamole)
+              </h3>
+              <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                Método preferido
+              </label>
+              <Dropdown
+                id="guacd-preferred-method"
+                value={guacdPreferredMethod}
+                options={[
+                  { label: 'Docker Desktop', value: 'docker' },
+                  { label: 'WSL', value: 'wsl' },
+                  { label: 'Mock (solo pruebas)', value: 'mock' }
+                ]}
+                onChange={(e) => setGuacdPreferredMethod(e.value)}
+                style={{ width: '100%' }}
+              />
+              <small style={{ display: 'block', marginTop: 8, color: 'var(--text-color-secondary)' }}>
+                El orden será: tu preferencia → alternativa → mock. El modo nativo está deshabilitado.
+              </small>
+            </div>
+
+            <div style={{ width: '100%', maxWidth: 520, marginTop: '0.5rem', border: '1px solid var(--surface-border)', borderRadius: 8, padding: '0.75rem 1rem', background: 'var(--surface-card)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <i className="pi pi-info-circle" style={{ color: 'var(--primary-color)' }}></i>
+                <strong>Estado actual</strong>
+              </div>
+              <div style={{ fontSize: '0.9rem' }}>
+                <div><strong>Ejecutando:</strong> {guacdStatus.isRunning ? 'Sí' : 'No'}</div>
+                <div><strong>Método:</strong> {guacdStatus.method || 'desconocido'}</div>
+                <div><strong>Host:</strong> {guacdStatus.host} <strong>Puerto:</strong> {guacdStatus.port}</div>
+              </div>
+            </div>
+          </div>
+        </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>
             <TabView className="settings-dialog-subtabview" style={{ marginTop: 0, width: '100%', overflow: 'visible' }}>
