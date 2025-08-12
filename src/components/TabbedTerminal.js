@@ -62,6 +62,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [selectedTerminalType, setSelectedTerminalType] = useState(getDefaultTerminalType());
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
+    // Estado para drag & drop de pestañas locales del terminal
+    const [draggedTabIndex, setDraggedTabIndex] = useState(null);
+    const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
+    const [dragStartTimer, setDragStartTimer] = useState(null);
     const terminalRefs = useRef({});
 
     // Exponer métodos para uso externo
@@ -177,6 +181,61 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             }
         };
     }, []);
+
+    // Handlers de drag & drop para pestañas locales
+    const handleLocalTabDragStart = (e, index) => {
+        const tab = tabs[index];
+        if (!tab) return;
+        const timer = setTimeout(() => {
+            setDraggedTabIndex(index);
+        }, 50);
+        setDragStartTimer(timer);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', index.toString());
+    };
+
+    const handleLocalTabDragOver = (e, index) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverTabIndex(index);
+    };
+
+    const handleLocalTabDragLeave = (e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            setDragOverTabIndex(null);
+        }
+    };
+
+    const handleLocalTabDrop = (e, dropIndex) => {
+        e.preventDefault();
+        const dragIndex = draggedTabIndex;
+        if (dragIndex === null || dragIndex === dropIndex) {
+            setDraggedTabIndex(null);
+            setDragOverTabIndex(null);
+            return;
+        }
+        setTabs(prevTabs => {
+            const newTabs = [...prevTabs];
+            const [moved] = newTabs.splice(dragIndex, 1);
+            newTabs.splice(dropIndex, 0, moved);
+            return newTabs;
+        });
+        setDraggedTabIndex(null);
+        setDragOverTabIndex(null);
+        if (dragStartTimer) {
+            clearTimeout(dragStartTimer);
+            setDragStartTimer(null);
+        }
+    };
+
+    const handleLocalTabDragEnd = () => {
+        if (dragStartTimer) {
+            clearTimeout(dragStartTimer);
+            setDragStartTimer(null);
+        }
+        setDraggedTabIndex(null);
+        setDragOverTabIndex(null);
+    };
     
     // Efecto para redimensionar terminales cuando cambian las pestañas
     useEffect(() => {
@@ -576,26 +635,42 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     borderRight: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderBottom: tab.active ? 'none' : '1px solid transparent',
                                     padding: '6px 12px',
-                                    cursor: 'pointer',
+                                    cursor: draggedTabIndex === index ? 'grabbing' : 'grab',
                                     position: 'relative',
                                     minWidth: '120px',
                                     maxWidth: '200px',
                                     borderTopLeftRadius: '4px',
                                     borderTopRightRadius: '4px',
                                     transition: 'all 0.2s ease',
-                                    opacity: tab.active ? 1 : 0.8
+                                    opacity: draggedTabIndex === index ? 0.5 : (tab.active ? 1 : 0.8),
+                                    borderLeftColor: dragOverTabIndex === index ? 'var(--primary-color)' : undefined,
+                                    borderLeftWidth: dragOverTabIndex === index ? '3px' : undefined,
+                                    borderLeftStyle: dragOverTabIndex === index ? 'solid' : undefined
                                 }}
-                                onClick={() => switchTab(tab.id)}
+                                onClick={(e) => {
+                                    if (draggedTabIndex !== null || dragStartTimer !== null) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        return;
+                                    }
+                                    switchTab(tab.id);
+                                }}
                                 onMouseEnter={(e) => {
-                                    if (!tab.active) {
+                                    if (!tab.active && draggedTabIndex === null) {
                                         e.target.style.background = 'rgba(255,255,255,0.05)';
                                     }
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (!tab.active) {
+                                    if (!tab.active && draggedTabIndex === null) {
                                         e.target.style.background = 'transparent';
                                     }
                                 }}
+                                draggable={true}
+                                onDragStart={(e) => handleLocalTabDragStart(e, index)}
+                                onDragOver={(e) => handleLocalTabDragOver(e, index)}
+                                onDragLeave={handleLocalTabDragLeave}
+                                onDrop={(e) => handleLocalTabDrop(e, index)}
+                                onDragEnd={handleLocalTabDragEnd}
                             >
                                 <i 
                                     className={tab.type === 'powershell' ? 'pi pi-desktop' : 
