@@ -1999,6 +1999,17 @@ ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
   return await dialog.showSaveDialog(win, options);
 });
 
+// Handler para mostrar el diálogo de selección (abrir carpeta/archivo)
+ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
+  const win = BrowserWindow.getFocusedWindow();
+  // Asegurar propiedades por defecto si no vienen
+  const safeOptions = {
+    properties: ['openDirectory'],
+    ...options
+  };
+  return await dialog.showOpenDialog(win, safeOptions);
+});
+
 // Handler para descargar archivos por SSH
 
 ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
@@ -2716,6 +2727,39 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
     const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
     const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
 
+    // Preparar campos de drive si el usuario lo activó
+    let driveSettings = {};
+    try {
+      if (config.enableDrive) {
+        // Si llega una carpeta de host desde UI, resolverla según método actual
+        let resolvedDrivePath = null;
+        if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
+          resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
+        } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
+          resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
+        }
+        const drivePath = resolvedDrivePath;
+        const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
+        if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
+          driveSettings = {
+            'enable-drive': true,
+            'drive-path': drivePath,
+            'drive-name': driveName,
+            'create-drive-path': true
+          };
+        } else {
+          // fallback: solo activar drive sin ruta explícita
+          driveSettings = {
+            'enable-drive': true,
+            'create-drive-path': true
+          };
+        }
+      }
+    } catch (e) {
+      // Si algo falla, no bloquear la conexión, sólo loguear
+      console.warn('⚠️  [MAIN] No se pudo calcular drive-path para Guacamole:', e?.message || e);
+    }
+
     const tokenObject = {
       connection: {
         type: "rdp",
@@ -2726,8 +2770,8 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           port: config.port || 3389,
           security: config.security || "any",
           "ignore-cert": true,
-          "enable-drive": config.enableDrive || false,
-          "create-drive-path": config.enableDrive || false,
+          // Drive redirection
+          ...driveSettings,
           "enable-wallpaper": config.enableWallpaper || false,
           width: finalWidth,
           height: finalHeight,

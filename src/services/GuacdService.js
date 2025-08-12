@@ -32,6 +32,73 @@ function getUserDataDir() {
   return path.join(os.homedir(), '.nodeterm');
 }
 
+/**
+ * Devuelve la carpeta local del host donde se almacenarán los archivos
+ * redirigidos como unidad compartida para RDP (Guacamole).
+ * Asegura su existencia.
+ */
+function ensureDriveHostDir() {
+  // 1) Permitir override por variable de entorno
+  const envDir = process.env.NODETERM_GUAC_DRIVE_DIR || process.env.GUAC_DRIVE_DIR;
+  if (typeof envDir === 'string' && envDir.trim().length > 0) {
+    const target = envDir.trim();
+    try { if (!fs.existsSync(target)) fs.mkdirSync(target, { recursive: true }); } catch {}
+    if (fs.existsSync(target)) return target;
+  }
+
+  // 2) Intentar en Descargas del usuario: <Downloads>/NodeTerm Drive
+  try {
+    let downloadsBase = null;
+    if (electronApp && typeof electronApp.getPath === 'function') {
+      downloadsBase = electronApp.getPath('downloads');
+    }
+    if (!downloadsBase) {
+      downloadsBase = path.join(os.homedir(), 'Downloads');
+    }
+    const downloadsDir = path.join(downloadsBase, 'NodeTerm Drive');
+    if (!fs.existsSync(downloadsDir)) fs.mkdirSync(downloadsDir, { recursive: true });
+    if (fs.existsSync(downloadsDir)) return downloadsDir;
+  } catch (_) {}
+
+  // 3) Fallback: userData/GuacamoleDrive
+  const base = getUserDataDir();
+  const dir = path.join(base, 'GuacamoleDrive');
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (_) {
+    // 4) Último recurso: carpeta temporal
+    try {
+      const fallback = path.join(os.tmpdir(), 'NodeTerm-GuacamoleDrive');
+      if (!fs.existsSync(fallback)) fs.mkdirSync(fallback, { recursive: true });
+      return fallback;
+    } catch {}
+  }
+  return dir;
+}
+
+/**
+ * Convierte una ruta de Windows (C:\\Users\\...) a su ruta equivalente en WSL (/mnt/c/Users/...).
+ * Si no parece una ruta de Windows, devuelve el input tal cual.
+ */
+function toWslPath(winPath) {
+  try {
+    if (process.platform !== 'win32') return winPath;
+    if (typeof winPath !== 'string' || winPath.length < 2) return winPath;
+    // Normalizar y resolver
+    let normalized = path.resolve(winPath);
+    // Extraer letra de unidad
+    const driveLetterMatch = normalized.match(/^[A-Za-z]:/);
+    if (!driveLetterMatch) return normalized.replace(/\\/g, '/');
+    const driveLetter = driveLetterMatch[0][0].toLowerCase();
+    const withoutDrive = normalized.substring(2).replace(/\\/g, '/');
+    return `/mnt/${driveLetter}${withoutDrive}`;
+  } catch (_) {
+    return winPath;
+  }
+}
+
 function resolveGuacdZipCandidates() {
   const unique = new Set();
   const pushIfExists = (p) => { if (fileExistsSync(p)) unique.add(p); };
@@ -281,6 +348,7 @@ class GuacdService {
     this.preferredMethod = (process.env.NODETERM_GUACD_METHOD || process.env.GUACD_METHOD || 'docker').toLowerCase();
     this.detectedMethod = null;
     this.wslDistro = null;
+    this.driveHostDir = ensureDriveHostDir();
   }
 
   /**
@@ -391,6 +459,9 @@ class GuacdService {
             '--rm', // Eliminar contenedor al salir
             '-d', // Modo detached
             '-p', `${this.port}:4822`,
+            // Montar carpeta de staging del host dentro del contenedor
+            // Importante: pasar como un único argumento host:container
+            '-v', `${this.driveHostDir}:/guacdrive`,
             'guacamole/guacd'
           ];
 
@@ -863,6 +934,67 @@ class GuacdService {
     };
     console.log('🔧 [GuacdService] Opciones para guacamole-lite:', options);
     return options;
+  }
+
+  /**
+   * Devuelve la ruta del host donde se almacenan los archivos compartidos.
+   */
+  getDriveHostDir() {
+    return this.driveHostDir;
+  }
+
+  /**
+   * Devuelve el nombre de la unidad que verá el usuario dentro de Windows remoto.
+   */
+  getDriveName() {
+    return 'NodeTerm Drive';
+  }
+
+  /**
+   * Devuelve la ruta que debe enviarse en el token RDP como "drive-path",
+   * dependiendo del método con el que corre guacd.
+   * - docker: la ruta montada dentro del contenedor (/guacdrive)
+   * - wsl: la ruta equivalente en WSL (e.g., /mnt/c/Users/...)
+   * - native: ruta Windows del host
+   * - mock/unknown: intenta usar /guacdrive por compatibilidad
+   */
+  getDrivePathForCurrentMethod() {
+    const method = this.detectedMethod || this.preferredMethod || '';
+    if (method === 'docker') {
+      return '/guacdrive';
+    }
+    if (method === 'wsl') {
+      return toWslPath(this.driveHostDir);
+    }
+    if (method === 'native') {
+      return this.driveHostDir;
+    }
+    // Fallback: asumir contenedor
+    return '/guacdrive';
+  }
+
+  /**
+   * Resuelve el drive-path a partir de un directorio del host especificado.
+   * Para docker, siempre devuelve '/guacdrive' (requiere que el contenedor monte hostDir previamente).
+   * Para wsl, convierte hostDir a /mnt/...
+   * Para nativo, devuelve hostDir.
+   */
+  resolveDrivePath(hostDir) {
+    const method = this.detectedMethod || this.preferredMethod || '';
+    const dir = typeof hostDir === 'string' && hostDir.trim().length > 0 ? hostDir.trim() : this.driveHostDir;
+    if (method === 'docker') {
+      if (dir && this.driveHostDir && path.resolve(dir) !== path.resolve(this.driveHostDir)) {
+        console.warn('[GuacdService] Advertencia: método docker activo; el volumen está montado en', this.driveHostDir, 'y no puede cambiarse sin reiniciar guacd.');
+      }
+      return '/guacdrive';
+    }
+    if (method === 'wsl') {
+      return toWslPath(dir);
+    }
+    if (method === 'native') {
+      return dir;
+    }
+    return '/guacdrive';
   }
 }
 
