@@ -369,6 +369,8 @@ let guacamoleServer = null;
 let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket server became ready
 // Track active guacamole client connections
 const activeGuacamoleConnections = new Set();
+// Watchdog configurable para inactividad de guacd (ms). 0 = desactivado. Por defecto 1h
+let guacdInactivityTimeoutMs = 3600000;
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -522,6 +524,18 @@ async function initializeGuacamoleServices() {
       maxInactivityTime: 0 // Desactivar cierre por inactividad del WS
     };
 
+    // Configurar watchdog de inactividad para guacd (lado backend) de forma configurable
+    // GUACD_INACTIVITY_TIMEOUT_MS: 0 para desactivar, valor en ms para activar (por defecto 1h)
+    const envTimeoutRaw = process.env.GUACD_INACTIVITY_TIMEOUT_MS;
+    // 1 hora por defecto si no se ha cambiado por IPC
+    if (typeof envTimeoutRaw === 'string' && envTimeoutRaw.trim() !== '') {
+      const parsed = parseInt(envTimeoutRaw, 10);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        guacdInactivityTimeoutMs = parsed;
+      }
+    }
+    console.log('⏱️  Timeout de inactividad guacd (ms):', guacdInactivityTimeoutMs);
+
     // Crear servidor Guacamole-lite
     guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
     console.log('🛡️  Watchdogs de inactividad desactivados (WS y guacd)');
@@ -531,6 +545,35 @@ async function initializeGuacamoleServices() {
       try {
         console.log('🔗 Nueva conexión Guacamole abierta:', clientConnection.connectionId);
         activeGuacamoleConnections.add(clientConnection);
+
+        // Parche en runtime del watchdog de guacd (reemplaza el de 10s por uno configurable o lo desactiva)
+        try {
+          const guacdClient = clientConnection && clientConnection.guacdClient ? clientConnection.guacdClient : null;
+          if (guacdClient) {
+            if (guacdClient.activityCheckInterval) {
+              clearInterval(guacdClient.activityCheckInterval);
+            }
+
+            if (guacdInactivityTimeoutMs > 0) {
+              guacdClient.activityCheckInterval = setInterval(() => {
+                try {
+                  if (Date.now() > (guacdClient.lastActivity + guacdInactivityTimeoutMs)) {
+                    guacdClient.close(new Error('guacd was inactive for too long'));
+                  }
+                } catch (e) {
+                  // Si ocurre un error al cerrar, evitar que detenga el loop
+                }
+              }, 1000);
+              console.log(`⏱️  Watchdog guacd aplicado para conexión ${clientConnection.connectionId}: ${guacdInactivityTimeoutMs}ms`);
+            } else {
+              console.log(`⏱️  Watchdog guacd desactivado para conexión ${clientConnection.connectionId}`);
+            }
+          } else {
+            console.warn('⚠️  No se encontró guacdClient para aplicar watchdog');
+          }
+        } catch (e) {
+          console.warn('⚠️  Error aplicando watchdog de guacd:', e?.message || e);
+        }
       } catch (e) {
         console.warn('No se pudo registrar conexión Guacamole:', e?.message || e);
       }
@@ -558,6 +601,48 @@ async function initializeGuacamoleServices() {
     console.error('❌ Error inicializando servicios Guacamole:', error);
   }
 }
+
+// IPC para configurar el watchdog de guacd desde la UI
+ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
+  try {
+    const parsed = parseInt(timeoutMs, 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      throw new Error('Valor inválido para timeoutMs');
+    }
+    guacdInactivityTimeoutMs = parsed;
+    console.log('🛠️ Actualizado GUACD_INACTIVITY_TIMEOUT_MS a', guacdInactivityTimeoutMs);
+
+    // Aplicar en caliente a conexiones activas
+    try {
+      for (const clientConnection of Array.from(activeGuacamoleConnections)) {
+        const guacdClient = clientConnection && clientConnection.guacdClient ? clientConnection.guacdClient : null;
+        if (!guacdClient) continue;
+        if (guacdClient.activityCheckInterval) {
+          clearInterval(guacdClient.activityCheckInterval);
+          guacdClient.activityCheckInterval = null;
+        }
+        if (guacdInactivityTimeoutMs > 0) {
+          guacdClient.activityCheckInterval = setInterval(() => {
+            try {
+              if (Date.now() > (guacdClient.lastActivity + guacdInactivityTimeoutMs)) {
+                guacdClient.close(new Error('guacd was inactive for too long'));
+              }
+            } catch {}
+          }, 1000);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ No se pudo aplicar el nuevo watchdog a todas las conexiones activas:', e?.message || e);
+    }
+    return { success: true, value: guacdInactivityTimeoutMs };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('guacamole:get-guacd-timeout-ms', async () => {
+  return { success: true, value: guacdInactivityTimeoutMs };
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({

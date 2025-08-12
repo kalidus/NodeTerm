@@ -107,7 +107,9 @@ contextBridge.exposeInMainWorld('electron', {
   },
   // Guacamole helpers
   guacamole: {
-    disconnectAll: () => ipcRenderer.invoke('guacamole:disconnect-all')
+    disconnectAll: () => ipcRenderer.invoke('guacamole:disconnect-all'),
+    setGuacdTimeoutMs: (ms) => ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms),
+    getGuacdTimeoutMs: () => ipcRenderer.invoke('guacamole:get-guacd-timeout-ms')
   }
 });
 
