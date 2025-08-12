@@ -80,13 +80,14 @@ const SettingsDialog = ({
   });
 
   // RDP settings (persisted in localStorage)
-  const [rdpIdleSeconds, setRdpIdleSeconds] = useState(() => {
+  // Ahora en MINUTOS para los umbrales de inactividad/actividad
+  const [rdpIdleMinutes, setRdpIdleMinutes] = useState(() => {
     const v = parseInt(localStorage.getItem('rdp_idle_threshold_ms') || '60000', 10);
-    return Math.max(5, Math.floor(v / 1000));
+    return Math.max(1, Math.floor(v / 60000));
   });
-  const [rdpFreezeSeconds, setRdpFreezeSeconds] = useState(() => {
+  const [rdpSessionActivityMinutes, setRdpSessionActivityMinutes] = useState(() => {
     const v = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '3600000', 10);
-    return Math.max(30, Math.floor(v / 1000));
+    return Math.max(1, Math.floor(v / 60000));
   });
   const [rdpResizeDebounceMs, setRdpResizeDebounceMs] = useState(() => {
     const v = parseInt(localStorage.getItem('rdp_resize_debounce_ms') || '300', 10);
@@ -96,6 +97,7 @@ const SettingsDialog = ({
     const v = parseInt(localStorage.getItem('rdp_resize_ack_timeout_ms') || '1500', 10);
     return Math.max(600, Math.min(5000, v));
   });
+  const [rdpGuacdInactivityMs, setRdpGuacdInactivityMs] = useState(3600000);
 
   // Estados para la gestión de seguridad
   const [secureStorage] = useState(() => new SecureStorage());
@@ -119,21 +121,44 @@ const SettingsDialog = ({
     setHasMasterKey(secureStorage.hasSavedMasterKey());
   }, [secureStorage]);
 
-  // Persist RDP settings
+  // Persist RDP settings (guardar en milisegundos)
   useEffect(() => {
-    const ms = Math.max(5000, (rdpIdleSeconds || 0) * 1000);
+    const ms = Math.max(60000, (rdpIdleMinutes || 0) * 60000);
     localStorage.setItem('rdp_idle_threshold_ms', String(ms));
-  }, [rdpIdleSeconds]);
+  }, [rdpIdleMinutes]);
   useEffect(() => {
-    const ms = Math.max(30000, (rdpFreezeSeconds || 0) * 1000);
+    const ms = Math.max(60000, (rdpSessionActivityMinutes || 0) * 60000);
     localStorage.setItem('rdp_freeze_timeout_ms', String(ms));
-  }, [rdpFreezeSeconds]);
+  }, [rdpSessionActivityMinutes]);
   useEffect(() => {
     localStorage.setItem('rdp_resize_debounce_ms', String(Math.max(100, Math.min(2000, rdpResizeDebounceMs || 300))));
   }, [rdpResizeDebounceMs]);
   useEffect(() => {
     localStorage.setItem('rdp_resize_ack_timeout_ms', String(Math.max(600, Math.min(5000, rdpResizeAckTimeoutMs || 1500))));
   }, [rdpResizeAckTimeoutMs]);
+
+  // Sincronizar watchdog de guacd con el proceso principal vía IPC
+  useEffect(() => {
+    try {
+      if (window?.electron?.ipcRenderer) {
+        window.electron.ipcRenderer.invoke('guacamole:get-guacd-timeout-ms').then((res) => {
+          if (res && res.success && typeof res.value === 'number') {
+            setRdpGuacdInactivityMs(res.value);
+          }
+        }).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  const handleGuacdInactivityChange = async (value) => {
+    const normalized = Math.max(0, Number(value || 0));
+    setRdpGuacdInactivityMs(normalized);
+    try {
+      if (window?.electron?.ipcRenderer) {
+        await window.electron.ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', normalized);
+      }
+    } catch {}
+  };
 
   // Funciones para gestión de clave maestra
   const validateMasterPassword = () => {
@@ -1076,49 +1101,25 @@ const SettingsDialog = ({
 
         <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>}>
           <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '40vh', width: '100%' }}>
-            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
-              <i className="pi pi-sliders-h" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
-              Umbrales de actividad y reactivación
+            {/* General */}
+            <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
+              <i className="pi pi-cog" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+              General
             </h3>
-
-            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
               <div>
-                <label htmlFor="rdp-idle-seconds" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Umbral de inactividad (segundos)
-                </label>
-                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
-                  Tras superar este tiempo sin actividad (teclado/ratón/sync), el siguiente resize hará un warm‑up o reconexión.
-                </small>
-                <InputNumber
-                  id="rdp-idle-seconds"
-                  value={rdpIdleSeconds}
-                  onValueChange={e => setRdpIdleSeconds(Math.max(5, Math.min(7200, e.value || 5)))}
-                  min={5}
-                  max={7200}
-                  showButtons
-                  buttonLayout="horizontal"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {rdpIdleSeconds} s (mín. 5)
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="rdp-freeze-seconds" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                  Umbral de actividad de la sesión (segundos)
+                <label htmlFor="rdp-session-activity-min" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Umbral de actividad de la sesión (minutos)
                 </label>
                 <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
                   Si no hay actividad durante este tiempo, puede intentarse una reconexión automática.
                 </small>
                 <InputNumber
-                  id="rdp-freeze-seconds"
-                  value={rdpFreezeSeconds}
-                  onValueChange={e => setRdpFreezeSeconds(Math.max(30, Math.min(86400, e.value || 30)))}
-                  min={30}
-                  max={86400}
+                  id="rdp-session-activity-min"
+                  value={rdpSessionActivityMinutes}
+                  onValueChange={e => setRdpSessionActivityMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
+                  min={1}
+                  max={1440}
                   showButtons
                   buttonLayout="horizontal"
                   style={{ width: '100%' }}
@@ -1126,10 +1127,17 @@ const SettingsDialog = ({
               </div>
               <div>
                 <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
-                  {rdpFreezeSeconds} s (mín. 30)
+                  {rdpSessionActivityMinutes} min (mín. 1)
                 </div>
               </div>
+            </div>
 
+            {/* Configuración Resize */}
+            <h3 style={{ margin: '0.5rem 0 0.5rem 0', color: 'var(--text-color)' }}>
+              <i className="pi pi-sliders-h" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+              Configuración Resize
+            </h3>
+            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
               <div>
                 <label htmlFor="rdp-resize-debounce" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
                   Debounce del resize (ms)
@@ -1155,6 +1163,30 @@ const SettingsDialog = ({
               </div>
 
               <div>
+                <label htmlFor="rdp-idle-min" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Umbral de inactividad (minutos)
+                </label>
+                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
+                  Tras superar este tiempo sin actividad (teclado/ratón/sync), el siguiente resize hará un warm‑up o reconexión.
+                </small>
+                <InputNumber
+                  id="rdp-idle-min"
+                  value={rdpIdleMinutes}
+                  onValueChange={e => setRdpIdleMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
+                  min={1}
+                  max={1440}
+                  showButtons
+                  buttonLayout="horizontal"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
+                  {rdpIdleMinutes} min (mín. 1)
+                </div>
+              </div>
+
+              <div>
                 <label htmlFor="rdp-resize-ack-timeout" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
                   Timeout de ACK de resize (ms)
                 </label>
@@ -1175,6 +1207,37 @@ const SettingsDialog = ({
               <div>
                 <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
                   {rdpResizeAckTimeoutMs} ms (600–5000)
+                </div>
+              </div>
+            </div>
+
+            {/* Configuración Guacamole */}
+            <h3 style={{ margin: '0.5rem 0 0.5rem 0', color: 'var(--text-color)' }}>
+              <i className="pi pi-sitemap" style={{ marginRight: '0.5rem', color: '#4fc3f7' }}></i>
+              Configuración Guacamole
+            </h3>
+            <div style={{ width: '100%', maxWidth: 520, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+              <div>
+                <label htmlFor="rdp-guacd-inactivity-min" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                  Watchdog de inactividad del servidor guacd (minutos)
+                </label>
+                <small style={{ display: 'block', marginBottom: 8, color: 'var(--text-color-secondary)' }}>
+                  0 para desactivarlo. Controla el cierre por inactividad entre guacamole‑lite y guacd (backend).
+                </small>
+                <InputNumber
+                  id="rdp-guacd-inactivity-min"
+                  value={Math.floor((rdpGuacdInactivityMs || 0) / 60000)}
+                  onValueChange={e => handleGuacdInactivityChange(Math.max(0, Math.min(1440, Number(e.value || 0))) * 60000)}
+                  min={0}
+                  max={1440}
+                  showButtons
+                  buttonLayout="horizontal"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 28 }}>
+                  {Math.floor((rdpGuacdInactivityMs || 0) / 60000)} min {rdpGuacdInactivityMs === 0 ? '(desactivado)' : ''}
                 </div>
               </div>
             </div>
