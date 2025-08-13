@@ -53,7 +53,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     guacEnableWallpaper: false, // Mostrar fondo de escritorio
     guacEnableDrive: false,     // Redirección de unidades
     guacDriveHostDir: '',       // Carpeta local opcional para la unidad
-    guacWin11Compat: false,     // Compatibilidad Windows 11 (desactiva GFX)
+    guacEnableGfx: false,       // Habilitar GFX
     // Opciones avanzadas (habilitar características visuales)
     guacEnableDesktopComposition: false,
     guacEnableFontSmoothing: false,
@@ -187,7 +187,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           guacEnableWallpaper: rdpNodeData.guacEnableWallpaper || false,
           guacEnableDrive: rdpNodeData.guacEnableDrive || false,
           guacDriveHostDir: rdpNodeData.guacDriveHostDir || '',
-          guacWin11Compat: rdpNodeData.guacWin11Compat || false,
+          guacEnableGfx: (rdpNodeData.guacEnableGfx || rdpNodeData.guacWin11Compat) || false,
            guacEnableDesktopComposition: rdpNodeData.guacEnableDesktopComposition || false,
            guacEnableFontSmoothing: rdpNodeData.guacEnableFontSmoothing || false,
            guacEnableTheming: rdpNodeData.guacEnableTheming || false,
@@ -310,7 +310,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           // Carpeta local opcional (vacío = por defecto Descargas/NodeTerm Drive)
           driveHostDir: formData.guacDriveHostDir,
           enableWallpaper: formData.guacEnableWallpaper,
-          win11Compat: formData.guacWin11Compat,
+           enableGfx: formData.guacEnableGfx,
           // Características visuales
           enableDesktopComposition: formData.guacEnableDesktopComposition,
           enableFontSmoothing: formData.guacEnableFontSmoothing,
@@ -571,7 +571,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
 
               <Card title="Configuración de Pantalla" className="mb-3">
                 <div className="formgrid grid">
-                  <div className="field col-12 md:col-4">
+                  <div className="field col-12 md:col-3">
                     <label htmlFor="preset">Preset</label>
                     <Dropdown
                       id="preset"
@@ -586,7 +586,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       }}
                     />
                   </div>
-                  <div className="field col-12 md:col-4">
+                  <div className="field col-12 md:col-3">
                     <label htmlFor="resolution">Resolución</label>
                     <Dropdown
                       id="resolution"
@@ -601,7 +601,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       }}
                     />
                   </div>
-                  <div className="field col-12 md:col-4">
+                  <div className="field col-12 md:col-3">
                     <label htmlFor="colorDepth">Profundidad de Color</label>
                     <Dropdown
                       id="colorDepth"
@@ -614,6 +614,18 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         }
                         safeFocus(e.target);
                       }}
+                    />
+                  </div>
+                  <div className="field col-12 md:col-3">
+                    <label htmlFor="guacDpi">DPI</label>
+                    <InputNumber
+                      id="guacDpi"
+                      value={formData.guacDpi}
+                      onValueChange={(e) => handleInputChange('guacDpi', e.value)}
+                      min={72}
+                      max={300}
+                      placeholder="96"
+                      onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
                     />
                   </div>
                 </div>
@@ -862,7 +874,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         <label htmlFor="guacEnableWallpaper" className="ml-2">Mostrar fondo de escritorio</label>
                       </div>
                       
-                      {/* DPI y Seguridad se moverán al desplegable de rendimiento para más compacidad */}
+                      {/* Seguridad permanece en avanzadas; DPI se movió a Configuración de Pantalla */}
                     </>
                   )}
                 </div>
@@ -872,6 +884,21 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                   <div className="mt-3">
                     <Fieldset legend="Opciones avanzadas" toggleable collapsed className="performance-fieldset">
                     <div className="formgrid grid">
+                      {/* Primera opción: Habilitar GFX */}
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableGfx"
+                          checked={formData.guacEnableGfx}
+                          onChange={handleCheckboxChange('guacEnableGfx')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="guacEnableGfx" className="ml-2">Habilitar GFX</label>
+                      </div>
                       {/* Fila 0: Características visuales */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
@@ -956,22 +983,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         />
                         <label htmlFor="guacDisableCopyRect" className="ml-2">Desactivar copy-rect</label>
                       </div>
-                      {/* Fila 3: Compatibilidad Windows 11 (forzar salto de fila completo) */}
-                      <div className="field-checkbox col-12">
-                        <Checkbox
-                          inputId="guacWin11Compat"
-                          checked={formData.guacWin11Compat}
-                          onChange={handleCheckboxChange('guacWin11Compat')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="guacWin11Compat" className="ml-2">Compatibilidad Windows 11</label>
-                      </div>
-                      {/* Fila 4: Seguridad y DPI en la misma fila */}
+                      
+                      {/* Seguridad (abajo del todo, tamaño de una columna) */}
                       <div className="field col-12 md:col-6">
                         <label htmlFor="guacSecurity">Seguridad</label>
                         <Dropdown
@@ -979,19 +992,6 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                           value={formData.guacSecurity}
                           options={[{ label: 'Cualquiera (Recomendado)', value: 'any' }, { label: 'RDP', value: 'rdp' }, { label: 'TLS', value: 'tls' }, { label: 'NLA', value: 'nla' }]}
                           onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
-                        />
-                      </div>
-                      <div className="field col-12 md:col-6">
-                        <label htmlFor="guacDpi">DPI</label>
-                        <InputNumber
-                          id="guacDpi"
-                          value={formData.guacDpi}
-                          onValueChange={(e) => handleInputChange('guacDpi', e.value)}
-                          min={72}
-                          max={300}
-                          suffix=""
-                          placeholder="96"
                           onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
                         />
                       </div>
