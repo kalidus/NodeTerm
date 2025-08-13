@@ -1,6 +1,7 @@
 // system-stats-worker.js
 const os = require('os');
 const si = require('systeminformation');
+const { execSync } = require('child_process');
 
 let lastNetStats = null;
 let lastNetTime = null;
@@ -54,13 +55,69 @@ async function getSystemStats() {
       si.fsSize(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 5000))
     ]);
-    if (diskData && diskData.length > 0) {
-      stats.disks = diskData.map(disk => ({
-        name: disk.fs,
-        used: Math.round(disk.used / (1024 * 1024 * 1024) * 10) / 10,
-        total: Math.round(disk.size / (1024 * 1024 * 1024) * 10) / 10,
-        percentage: Math.round((disk.used / disk.size) * 100)
-      }));
+    if (Array.isArray(diskData) && diskData.length > 0) {
+      // Detectar unidades de red en Windows por letra (DriveType=4)
+      const isWindows = process.platform === 'win32';
+      const networkLetters = new Set();
+      if (isWindows) {
+        // 1) PowerShell (preferido)
+        try {
+          const ps = 'powershell -NoProfile -Command "Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 4 } | Select-Object -ExpandProperty DeviceID"';
+          const outPS = execSync(ps, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+          outPS.split(/\r?\n/).forEach(line => {
+            const m = line && line.match(/^[A-Z]:/i);
+            if (m) networkLetters.add(m[0].toUpperCase());
+          });
+        } catch {}
+        // 2) WMIC (fallback)
+        if (networkLetters.size === 0) {
+          try {
+            const out = execSync('wmic logicaldisk where drivetype=4 get DeviceID', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+            out.split(/\r?\n/).forEach(line => {
+              const m = line && line.match(/^[A-Z]:/i);
+              if (m) networkLetters.add(m[0].toUpperCase());
+            });
+          } catch {}
+        }
+        // 3) NET USE (fallback final)
+        if (networkLetters.size === 0) {
+          try {
+            const out2 = execSync('net use', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+            out2.split(/\r?\n/).forEach(line => {
+              const m = line && line.match(/\b([A-Z]):\b/);
+              if (m) networkLetters.add(`${m[1].toUpperCase()}:`);
+            });
+          } catch {}
+        }
+      }
+
+      stats.disks = diskData.map(disk => {
+        const size = Number(disk.size || 0);
+        const used = Number(disk.used || 0);
+        const percentage = size > 0 ? Math.round((used / size) * 100) : 0;
+        const fs = String(disk.fs || '');
+        const mount = String(disk.mount || '');
+        const type = String(disk.type || '');
+        // Heurística robusta para red
+        const isUNC = fs.startsWith('\\\\') || fs.startsWith('//') || mount.startsWith('\\\\') || mount.startsWith('//');
+        const isNetworkType = /\b(cifs|smb|smbfs|nfs|afs|gluster|glusterfs|ceph|iscsi|webdav|davfs|sshfs|fuse.sshfs)\b/i.test(type);
+        let isNetwork = isUNC || isNetworkType;
+        if (!isNetwork && isWindows) {
+          // Detectar por letra de unidad mapeada (Z:, Y:, etc.)
+          const letter = (mount || fs).match(/^[A-Z]:/i);
+          if (letter && networkLetters.has(letter[0].toUpperCase())) {
+            isNetwork = true;
+          }
+        }
+        return {
+          name: fs,
+          mount,
+          used: Math.round(used / (1024 * 1024 * 1024) * 10) / 10,
+          total: Math.round(size / (1024 * 1024 * 1024) * 10) / 10,
+          percentage,
+          isNetwork
+        };
+      });
     }
   } catch (error) {}
 

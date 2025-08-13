@@ -29,6 +29,7 @@ const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'basicapp_local_powershell_theme';
 const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_linux_terminal_theme';
   const LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY = 'localPowerShellStatusBarTheme';
   const LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY = 'localLinuxStatusBarTheme';
+  const LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY = 'localShowNetworkDisks';
 
 const SettingsDialog = ({
   visible,
@@ -337,6 +338,14 @@ const SettingsDialog = ({
     try {
       localStorage.setItem(LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY, e.value);
       window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY, newValue: e.value }));
+    } catch {}
+  };
+  const handleLocalShowNetworkDisksChange = (value) => {
+    try {
+      const normalized = !!value;
+      localStorage.setItem(LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY, String(normalized));
+      window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY, newValue: String(normalized) }));
+      // No state React necesario: los terminales leen desde localStorage al renderizar
     } catch {}
   };
 
@@ -881,6 +890,18 @@ const SettingsDialog = ({
                           placeholder="Tema de status bar (Linux)"
                           style={{ width: '100%' }}
                         />
+                      </div>
+                      <div style={{ marginTop: 16 }}>
+                        <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Mostrar unidades de red en Status Bar</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Dropdown
+                            value={(typeof window !== 'undefined' && window.localStorage) ? ((localStorage.getItem(LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY) || 'true') === 'true' ? 'show' : 'hide') : 'show'}
+                            options={[{ label: 'Mostrar', value: 'show' }, { label: 'Ocultar', value: 'hide' }]}
+                            onChange={(e) => handleLocalShowNetworkDisksChange(e.value === 'show')}
+                            style={{ width: 180 }}
+                          />
+                          <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem' }}>CIFS/SMB/NFS, UNC y mapeos (Z:, Y:, ...)</span>
+                        </div>
                       </div>
                     </div>
                   </div>

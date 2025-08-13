@@ -23,6 +23,9 @@ const PowerShellTerminal = forwardRef(({
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
+    const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
+        try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
+    });
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localPowerShellStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
@@ -62,14 +65,20 @@ const PowerShellTerminal = forwardRef(({
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage }))
+                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage, isNetwork: d.isNetwork }))
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s → B/s
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s → B/s
+                const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
+                const displayDisk = showNet ? disk : disk.filter(d => {
+                    const id = String((d && (d.fs || d.name || d.mount)) || '');
+                    const isUNC = id.startsWith('\\\\') || id.startsWith('//');
+                    return !(d && (d.isNetwork || isUNC));
+                });
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes },
-                    disk,
+                    disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     hostname: systemStats.hostname || undefined,
                     ip: systemStats.ip || undefined,
@@ -107,6 +116,8 @@ const PowerShellTerminal = forwardRef(({
                 setStatusBarIconTheme(e.newValue || 'classic');
             } else if (e.key === 'localPowerShellStatusBarTheme') {
                 setLocalStatusBarThemeName(e.newValue || 'Default Dark');
+            } else if (e.key === 'localShowNetworkDisks') {
+                setShowNetworkDisks((e.newValue || 'true') === 'true');
             }
         };
         window.addEventListener('storage', onStorage);
@@ -439,7 +450,7 @@ const PowerShellTerminal = forwardRef(({
                 }} 
             />
             <div style={{ ...getScopedStatusBarCssVars() }}>
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} />
+                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} />
             </div>
         </div>
     );
