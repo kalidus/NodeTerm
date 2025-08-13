@@ -27,6 +27,9 @@ const WSLTerminal = forwardRef(({
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
     const [distroId, setDistroId] = useState('ubuntu');
+    const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
+        try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
+    });
 
     const getScopedStatusBarCssVars = () => {
         const themeObj = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
@@ -86,14 +89,20 @@ const WSLTerminal = forwardRef(({
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage }))
+                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage, isNetwork: d.isNetwork }))
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
+                const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
+                const displayDisk = showNet ? disk : disk.filter(d => {
+                    const id = String((d && (d.fs || d.name || d.mount)) || '');
+                    const isUNC = id.startsWith('\\\\') || id.startsWith('//');
+                    return !(d && (d.isNetwork || isUNC));
+                });
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes },
-                    disk,
+                    disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     hostname: systemStats.hostname || undefined,
                     ip: systemStats.ip || undefined,
@@ -122,6 +131,7 @@ const WSLTerminal = forwardRef(({
             if (!e) return;
             if (e.key === 'basicapp_statusbar_icon_theme') setStatusBarIconTheme(e.newValue || 'classic');
             if (e.key === 'localLinuxStatusBarTheme') setLocalStatusBarThemeName(e.newValue || 'Default Dark');
+            if (e.key === 'localShowNetworkDisks') setShowNetworkDisks((e.newValue || 'true') === 'true');
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
@@ -400,7 +410,7 @@ const WSLTerminal = forwardRef(({
                 }} 
             />
             <div style={{ ...getScopedStatusBarCssVars() }}>
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} />
+                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} />
             </div>
         </div>
     );

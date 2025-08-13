@@ -90,7 +90,7 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats, active, statusBarIconTheme = 'classic' }) => {
+const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true }) => {
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
@@ -175,9 +175,11 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic' }) => {
                         <span>{formatSpeed(network.tx_speed)}</span>
                     </div>
                 )}
-                {disk && disk.length > 0 && (
+                {Array.isArray(disk) && disk.length > 0 && (
                     <div className="status-bar-section disk-section">
-                        {disk.map((d, index) => (
+                        {disk
+                            .filter(d => (showNetworkDisks ? true : !Boolean(d && (d.isNetwork))))
+                            .map((d, index) => (
                             <div key={index} className="disk-info-item">
                                 <span 
                                     className="status-bar-icon disk" 
@@ -185,7 +187,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic' }) => {
                                 >
                                     {currentIconTheme.icons.disk}
                                 </span>
-                                <span className="disk-info-text">{d.fs}: {d.use}%</span>
+                                <span className="disk-info-text">{(d && (d.fs || d.name || d.mount)) || ''}: {((d && (d.use || d.percentage)) ?? '')}%</span>
                             </div>
                         ))}
                     </div>
