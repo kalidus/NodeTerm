@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
-import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
@@ -21,19 +21,70 @@ const CpuSparkline = ({ history }) => (
 );
 
 const DistroIcon = ({ distro }) => {
-    switch (distro) {
+    const id = String(distro || '').toLowerCase();
+    switch (id) {
+        // Windows host
+        case 'windows':
+        case 'win':
+        case 'win32':
+            return <FaWindows />;
+
+        // Debian family
         case 'ubuntu':
+        case 'ubuntu-core':
+        case 'ubuntu_server':
             return <FaUbuntu />;
         case 'debian':
             return <SiDebian />;
+
+        // RedHat family
         case 'rhel':
         case 'redhat':
+        case 'red hat enterprise linux':
             return <FaRedhat />;
         case 'centos':
             return <FaCentos />;
         case 'fedora':
             return <FaFedora />;
+        case 'rocky':
+        case 'rockylinux':
+        case 'alma':
+        case 'almalinux':
+        case 'oracle':
+        case 'ol':
+            return <FaLinux />;
+
+        // SUSE family
+        case 'opensuse':
+        case 'opensuse-leap':
+        case 'opensuse-tumbleweed':
+        case 'suse':
+        case 'sles':
+            return <FaLinux />;
+
+        // Arch family
         case 'arch':
+        case 'archlinux':
+        case 'manjaro':
+            return <FaLinux />;
+
+        // Other popular distros
+        case 'alpine':
+        case 'alpinelinux':
+        case 'kali':
+        case 'kalilinux':
+        case 'gentoo':
+        case 'linuxmint':
+        case 'amazon':
+        case 'amzn':
+        case 'pop':
+        case 'pop_os':
+        case 'pop-os':
+        case 'elementary':
+        case 'elementaryos':
+        case 'zorin':
+            return <FaLinux />;
+
         default:
             return <FaLinux />;
     }

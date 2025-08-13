@@ -19,6 +19,7 @@ const UbuntuTerminal = forwardRef(({
     const term = useRef(null);
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [distroId, setDistroId] = useState(() => (ubuntuInfo?.category || 'ubuntu').toLowerCase());
     const [statusStats, setStatusStats] = useState(null);
     const [cpuHistory, setCpuHistory] = useState([]);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
@@ -45,6 +46,28 @@ const UbuntuTerminal = forwardRef(({
         };
     };
 
+    // Deducir distro por metadatos y verificación desde dentro de la distro
+    useEffect(() => {
+        // Si tenemos ubuntuInfo con category, úsala; si no, intentar leer /etc/os-release
+        if (!ubuntuInfo?.category) {
+            const channelPrefix = getChannelPrefix();
+            const handler = (data) => {
+                try {
+                    const text = String(data || '');
+                    if (text.includes('ID=')) {
+                        const match = text.match(/\bID=("?)([^"\n]+)\1/);
+                        if (match && match[2]) setDistroId(match[2].toLowerCase());
+                    }
+                } catch {}
+            };
+            const unsubscribe = window.electron?.ipcRenderer.on(`${channelPrefix}:data:${tabId}`, handler);
+            window.electron?.ipcRenderer.send(`${channelPrefix}:data:${tabId}`, 'cat /etc/os-release\n');
+            setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} }, 1200);
+        } else {
+            setDistroId((ubuntuInfo.category || 'ubuntu').toLowerCase());
+        }
+    }, [tabId, ubuntuInfo]);
+
     // Poll local Windows host stats for WSL distro status bar
     useEffect(() => {
         let stopped = false;
@@ -69,6 +92,9 @@ const UbuntuTerminal = forwardRef(({
                     mem: { total: memTotalBytes, used: memUsedBytes },
                     disk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
+                    hostname: systemStats.hostname || undefined,
+                    ip: systemStats.ip || undefined,
+                    distro: distroId || 'ubuntu',
                     cpuHistory
                 };
                 setStatusStats(payload);
@@ -82,7 +108,7 @@ const UbuntuTerminal = forwardRef(({
         };
         loop();
         return () => { stopped = true; if (timer) clearTimeout(timer); };
-    }, []);
+    }, [distroId]);
 
     useEffect(() => {
         const onStorage = (e) => {
