@@ -28,6 +28,7 @@ const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
 const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'basicapp_local_powershell_theme';
 const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_linux_terminal_theme';
   const LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY = 'localPowerShellStatusBarTheme';
+  const LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY = 'localLinuxStatusBarTheme';
 
 const SettingsDialog = ({
   visible,
@@ -330,6 +331,12 @@ const SettingsDialog = ({
       localStorage.setItem(LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY, e.value);
       // Disparar evento de storage local (para misma pestaña)
       window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY, newValue: e.value }));
+    } catch {}
+  };
+  const handleLinuxStatusBarThemeChange = (e) => {
+    try {
+      localStorage.setItem(LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY, e.value);
+      window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY, newValue: e.value }));
     } catch {}
   };
 
@@ -862,6 +869,16 @@ const SettingsDialog = ({
                           options={Object.keys(statusBarThemes).map(name => ({ label: name, value: name }))}
                           onChange={handlePowerShellStatusBarThemeChange}
                           placeholder="Tema de status bar"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Status Bar para terminales Linux (WSL/Ubuntu) (tema)</label>
+                        <Dropdown
+                          value={(typeof window !== 'undefined' && window.localStorage) ? (localStorage.getItem(LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY) || (localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark')) : 'Default Dark'}
+                          options={Object.keys(statusBarThemes).map(name => ({ label: name, value: name }))}
+                          onChange={handleLinuxStatusBarThemeChange}
+                          placeholder="Tema de status bar (Linux)"
                           style={{ width: '100%' }}
                         />
                       </div>
