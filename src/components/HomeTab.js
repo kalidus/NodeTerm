@@ -5,7 +5,6 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
-import SystemStats from './SystemStats';
 import ConnectionHistory from './ConnectionHistory';
 import QuickActions from './QuickActions';
 import { uiThemes } from '../themes/ui-themes';
@@ -131,7 +130,7 @@ const HomeTab = ({
     return size;
   };
 
-  // Panel superior: Dashboard moderno sin pestañas
+  // Panel superior: Hub de conexiones (Favoritos + Recientes) en 2 columnas
   const topPanel = (
     <div style={{
       height: '100%',
@@ -139,19 +138,21 @@ const HomeTab = ({
       background: dashboardBg,
       display: 'flex',
       flexDirection: 'column',
-      opacity: terminalState === 'maximized' ? 0 : 1, // Ocultar completamente cuando maximizado
-      visibility: terminalState === 'maximized' ? 'hidden' : 'visible', // Evitar interacciones
-      transition: 'opacity 0.1s ease, visibility 0.1s ease' // Transición más rápida como minimizar
+      opacity: terminalState === 'maximized' ? 0 : 1,
+      visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
+      transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
-      {/* Contenido principal del dashboard (sin tabs) */}
       <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', height: '100%' }}>
-          <SystemStats />
-          <div>
-            <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Historial de Conexiones</h3>
-            <ConnectionHistory onConnectToHistory={handleConnectToHistory} />
-          </div>
-        </div>
+        <ConnectionHistory 
+          onConnectToHistory={handleConnectToHistory}
+          layout="two-columns"
+          recentsLimit={10}
+          activeIds={new Set()}
+          // Layout: 3/2 para que favoritos tenga más ancho que recientes
+          templateColumns="3fr 2fr"
+          favoritesColumns={2}
+          recentsColumns={1}
+        />
       </div>
     </div>
   );
