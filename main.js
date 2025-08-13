@@ -754,6 +754,49 @@ async function detectAllWSLDistributions() {
     const { exec } = require('child_process');
     const availableDistributions = [];
     
+    // Helper para mapear nombre de distro a metadata
+    const mapDistro = (rawName) => {
+      const name = rawName.replace('*', '').trim();
+      const lower = name.toLowerCase();
+      
+      // Ubuntu con versión (incluye subversiones como 24.04.1)
+      const ubuntuMatch = name.match(/^Ubuntu-([0-9]{2})\.([0-9]{2})(?:\.[0-9]+)?$/i);
+      if (ubuntuMatch) {
+        const major = ubuntuMatch[1];
+        const minor = ubuntuMatch[2];
+        const exe = `ubuntu${major}${minor}.exe`;
+        return { executable: exe, label: name.replace('-', ' '), icon: 'pi pi-circle', category: 'ubuntu' };
+      }
+      // Ubuntu genérico
+      if (lower === 'ubuntu') {
+        return { executable: 'ubuntu.exe', label: 'Ubuntu', icon: 'pi pi-circle', category: 'ubuntu' };
+      }
+      // Otras familias
+      if (lower.includes('debian')) {
+        return { executable: 'debian.exe', label: name.includes('-') ? name.replace('-', ' ') : 'Debian', icon: 'pi pi-server', category: 'debian' };
+      }
+      if (lower.includes('kali')) {
+        return { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' };
+      }
+      if (lower.includes('alpine')) {
+        return { executable: 'alpine.exe', label: 'Alpine Linux', icon: 'pi pi-cloud', category: 'alpine' };
+      }
+      if (lower.includes('opensuse')) {
+        return { executable: 'opensuse-15.exe', label: name.replace('-', ' '), icon: 'pi pi-cog', category: 'opensuse' };
+      }
+      if (lower.includes('fedora')) {
+        return { executable: 'fedora.exe', label: 'Fedora', icon: 'pi pi-bookmark', category: 'fedora' };
+      }
+      if (lower.includes('oraclelinux') || lower.includes('oracle')) {
+        return { executable: 'oraclelinux.exe', label: name.replace('_', ' '), icon: 'pi pi-database', category: 'oracle' };
+      }
+      if (lower.includes('centos')) {
+        return { executable: 'centos7.exe', label: name, icon: 'pi pi-server', category: 'centos' };
+      }
+      // Genérico
+      return { executable: 'wsl.exe', label: name, icon: 'pi pi-desktop', category: 'generic' };
+    };
+    
     // Mapeo de distribuciones WSL a sus ejecutables y metadata
     const distroMapping = {
       // Ubuntu
@@ -791,95 +834,74 @@ async function detectAllWSLDistributions() {
       'CentOS8': { executable: 'centos8.exe', label: 'CentOS 8', icon: 'pi pi-server', category: 'centos' }
     };
     
-    // Obtener lista de distribuciones WSL
-    exec('wsl --list --verbose', { timeout: 5000, windowsHide: true }, (error, stdout, stderr) => {
-      // console.log('🔍 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs
-      
-      if (!error && stdout) {
-        // Limpiar caracteres null UTF-16 antes de procesar
-        const cleanedOutput = stdout.replace(/\u0000/g, '');
-        const lines = cleanedOutput.split('\n');
-        // console.log('🔍 Procesando', lines.length - 1, 'líneas...'); // Eliminado por limpieza de logs
-        
-        lines.forEach((line) => {
-          const trimmed = line.trim();
-          
-          // Buscar cualquier distribución Linux (excluir docker-desktop y otras herramientas)
-          if (trimmed && !trimmed.toLowerCase().includes('docker') && 
-              !trimmed.toLowerCase().includes('name') && 
-              !trimmed.toLowerCase().includes('state') &&
-              trimmed.length > 5) {
-                
-            // Extraer nombre de la distribución (primer token)
-            const tokens = trimmed.split(/\s+/);
-            
-            if (tokens.length > 0) {
-              let distroName = tokens[0].replace('*', '').trim();
-              
-              if (distroName && distroName !== 'NAME') {
-                // console.log('🐧 Distribución encontrada:', distroName); // Eliminado por limpieza de logs
-                // Buscar en el mapeo exacto o hacer matching parcial
-                let distroInfo = distroMapping[distroName];
-                
-                // Si no hay match exacto, intentar matching parcial
-                if (!distroInfo) {
-                  const lowerDistroName = distroName.toLowerCase();
-                  
-                  if (lowerDistroName.includes('ubuntu')) {
-                    distroInfo = { executable: 'ubuntu.exe', label: distroName, icon: 'pi pi-circle', category: 'ubuntu' };
-                  } else if (lowerDistroName.includes('debian')) {
-                    distroInfo = { executable: 'debian.exe', label: 'Debian', icon: 'pi pi-server', category: 'debian' };
-                  } else if (lowerDistroName.includes('kali')) {
-                    distroInfo = { executable: 'kali.exe', label: 'Kali Linux', icon: 'pi pi-shield', category: 'kali' };
-                  } else if (lowerDistroName.includes('alpine')) {
-                    distroInfo = { executable: 'alpine.exe', label: 'Alpine Linux', icon: 'pi pi-cloud', category: 'alpine' };
-                  } else if (lowerDistroName.includes('opensuse')) {
-                    distroInfo = { executable: 'opensuse-15.exe', label: distroName, icon: 'pi pi-cog', category: 'opensuse' };
-                  } else if (lowerDistroName.includes('fedora')) {
-                    distroInfo = { executable: 'fedora.exe', label: 'Fedora', icon: 'pi pi-bookmark', category: 'fedora' };
-                  } else {
-                    // Fallback genérico para distribuciones no reconocidas
-                    distroInfo = { executable: 'wsl.exe', label: distroName, icon: 'pi pi-desktop', category: 'generic' };
-                  }
-                }
-                
-                if (distroInfo) {
-                  availableDistributions.push({
-                    name: distroName,
-                    executable: distroInfo.executable,
-                    label: distroInfo.label,
-                    icon: distroInfo.icon,
-                    category: distroInfo.category,
-                    version: distroName.includes('.') || distroName.includes('-') ? distroName.split(/[-_]/)[1] || 'latest' : 'latest'
-                  });
-                  // console.log('✅ Agregada:', distroInfo.label); // Eliminado por limpieza de logs
-                }
-              }
-            }
-          }
+    // 1) Enumeración primaria: nombres puros sin cabeceras
+    exec('wsl.exe -l -q', { timeout: 5000, windowsHide: true }, (listError, listStdout) => {
+      if (!listError && listStdout) {
+        const cleaned = listStdout.replace(/\u0000/g, '');
+        cleaned.split('\n').forEach((line) => {
+          const name = line.trim();
+          const lower = name.toLowerCase();
+          if (!name) return;
+          if (lower.includes('docker')) return; // excluir docker-desktop & data
+          const info = mapDistro(name);
+          availableDistributions.push({
+            name,
+            executable: info.executable,
+            label: info.label,
+            icon: info.icon,
+            category: info.category,
+            version: name.includes('-') ? name.split('-')[1] : 'latest'
+          });
         });
       }
-      
-      // Si no encontramos distribuciones específicas, probar ubuntu.exe como fallback
+
+      // 2) Fallback: salida verbosa para entornos antiguos/localizados si no se detectó nada
       if (availableDistributions.length === 0) {
-        console.log('🔄 No se encontraron distribuciones WSL, probando ubuntu.exe...');
-        exec('ubuntu.exe --help', { timeout: 2000, windowsHide: true }, (ubuntuError) => {
-          if (!ubuntuError || ubuntuError.code !== 'ENOENT') {
-            console.log('✅ Ubuntu genérico disponible');
-            availableDistributions.push({
-              name: 'Ubuntu',
-              executable: 'ubuntu.exe',
-              label: 'Ubuntu',
-              icon: 'pi pi-circle',
-              category: 'ubuntu',
-              version: 'latest'
+        exec('wsl --list --verbose', { timeout: 5000, windowsHide: true }, (error, stdout) => {
+          if (!error && stdout) {
+            const cleanedOutput = stdout.replace(/\u0000/g, '');
+            const lines = cleanedOutput.split('\n');
+            lines.forEach((line) => {
+              const trimmed = line.trim();
+              const lower = trimmed.toLowerCase();
+              const isHeader = lower.includes('name') || lower.includes('state') || lower.includes('nombre') || lower.includes('estado');
+              if (!trimmed || isHeader || lower.includes('docker')) return;
+              const tokens = trimmed.split(/\s+/);
+              if (tokens.length === 0) return;
+              const distroName = tokens[0].replace('*', '').trim();
+              if (!distroName || distroName === 'NAME') return;
+              const info = mapDistro(distroName);
+              availableDistributions.push({
+                name: distroName,
+                executable: info.executable,
+                label: info.label,
+                icon: info.icon,
+                category: info.category,
+                version: distroName.includes('-') ? distroName.split('-')[1] : 'latest'
+              });
             });
           }
-          // console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
-          resolve(availableDistributions);
+
+          // 3) Último fallback: ubuntu.exe si nada se detectó
+          if (availableDistributions.length === 0) {
+            exec('ubuntu.exe --help', { timeout: 2000, windowsHide: true }, (ubuntuError) => {
+              if (!ubuntuError || ubuntuError.code !== 'ENOENT') {
+                availableDistributions.push({
+                  name: 'Ubuntu',
+                  executable: 'ubuntu.exe',
+                  label: 'Ubuntu',
+                  icon: 'pi pi-circle',
+                  category: 'ubuntu',
+                  version: 'latest'
+                });
+              }
+              resolve(availableDistributions);
+            });
+          } else {
+            resolve(availableDistributions);
+          }
         });
       } else {
-        // console.log('🎯 Distribuciones WSL detectadas:', availableDistributions.length); // Eliminado por limpieza de logs
         resolve(availableDistributions);
       }
     });
