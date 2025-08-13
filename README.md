@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.4.1-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.5.0-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -111,14 +111,13 @@ npm run build:win
 
 ---
 
-## 🆕 Novedades en v1.4.1
+## 🆕 Novedades en v1.5.0
 
-- Soporte completo para conexiones RDP con smart sizing
-- Corrección de errores en conexiones RDP desde sidebar
-- Mejoras de estabilidad y rendimiento
-- UI refinada y más moderna
-- Sincronización mejorada entre escritorio y web
-- Corrección de bugs y optimizaciones
+- RDP embebido con Guacamole dentro de pestañas: ya no abre MSTSC aparte
+- Backend guacd con autodetección: Docker Desktop → WSL → nativo → mock
+- Menu de terminal local limpio: se ocultó RDP del selector de terminales locales
+- Detección robusta de distros WSL (incluye Ubuntu 24.04.1 y variantes)
+- Mejoras de estabilidad, UI y rendimiento
 
 ---
 
@@ -166,13 +165,20 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.4.1** | 🖥️ Soporte completo para conexiones RDP | ✅ Actual |
-| **v1.5.0** | 🔑 Soporte para llaves SSH | 📋 Planificado |
-| **v1.6.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
+| **v1.5.0** | 🖥️ RDP embebido con Guacamole + mejoras WSL | ✅ Actual |
+| **v1.6.0** | 🔑 Soporte para llaves SSH | 📋 Planificado |
+| **v1.7.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
 
 ---
 
 ## 📝 Changelog
+
+### v1.5.0
+- Integración de RDP embebido con Guacamole (pestañas dedicadas)
+- Inicio de guacd con prioridad: Docker Desktop → WSL → nativo → mock
+- Limpieza del selector de terminales locales (sin RDP)
+- Detección mejorada de WSL: soporte para Ubuntu-YY.MM(.x) como 24.04.1
+- Varios fixes y optimizaciones de UI/rendimiento
 
 ### v1.4.1
 - Soporte completo para conexiones RDP con smart sizing
