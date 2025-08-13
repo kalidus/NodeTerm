@@ -1,6 +1,6 @@
-# NodeTerm v1.5.0
+# NodeTerm v1.5.1
 
-Fecha: 2025-08-13
+Fecha: 2025-01-27
 
 ## Novedades principales
 
