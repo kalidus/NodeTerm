@@ -39,6 +39,7 @@ import GuacamoleTab from './GuacamoleTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
+import connectionStore, { recordRecent, toggleFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -539,6 +540,21 @@ const App = () => {
         icon: 'pi pi-folder-open',
         command: () => openFileExplorer(node)
       });
+      items.push({
+        label: 'Agregar/Quitar de Favoritos',
+        icon: 'pi pi-star',
+        command: () => {
+          try {
+            connectionStore.toggleFavorite({
+              type: 'ssh',
+              name: node.label,
+              host: node.data?.useBastionWallix ? node.data?.targetServer : node.data?.host,
+              username: node.data?.user,
+              port: node.data?.port || 22
+            });
+          } catch (e) { /* noop */ }
+        }
+      });
       // Submenu para abrir en split solo si hay pestañas SSH abiertas
       const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
       if (sshTabsFiltered.length > 0) {
@@ -580,6 +596,22 @@ const App = () => {
         label: 'Conectar RDP',
         icon: 'pi pi-desktop',
         command: () => onOpenRdpConnection(node)
+      });
+      items.push({
+        label: 'Agregar/Quitar de Favoritos',
+        icon: 'pi pi-star',
+        command: () => {
+          try {
+            const nodeData = node.data || {};
+            connectionStore.toggleFavorite({
+              type: 'rdp-guacamole',
+              name: node.label,
+              host: nodeData.server || nodeData.host || nodeData.hostname,
+              username: nodeData.username || nodeData.user,
+              port: nodeData.port || 3389
+            });
+          } catch (e) { /* noop */ }
+        }
       });
       items.push({ separator: true });
       items.push({
@@ -708,6 +740,30 @@ const App = () => {
     } else {
       return { type: 'explorer', index: globalIndex - homeTabs.length - sshTabs.length - rdpTabs.length };
     }
+  };
+
+  // === Active connections set for Home hub ===
+  const getActiveConnectionIds = () => {
+    const result = new Set();
+    try {
+      sshTabs.forEach(tab => {
+        const id = connectionHelpers.buildId({ type: 'ssh', host: tab.sshConfig?.host, username: tab.sshConfig?.username, port: tab.sshConfig?.port });
+        result.add(id);
+      });
+      rdpTabs.forEach(tab => {
+        const id = connectionHelpers.buildId({ type: 'rdp-guacamole', host: tab.rdpConfig?.hostname, username: tab.rdpConfig?.username, port: tab.rdpConfig?.port });
+        result.add(id);
+      });
+      guacamoleTabs.forEach(tab => {
+        const id = connectionHelpers.buildId({ type: 'rdp-guacamole', host: tab.rdpConfig?.hostname, username: tab.rdpConfig?.username, port: tab.rdpConfig?.port });
+        result.add(id);
+      });
+      fileExplorerTabs.forEach(tab => {
+        const id = connectionHelpers.buildId({ type: 'explorer', host: tab.sshConfig?.host, username: tab.sshConfig?.username, port: tab.sshConfig?.port });
+        result.add(id);
+      });
+    } catch (_) {}
+    return result;
   };
 
   // Funciones para drag & drop de pestañas
@@ -2003,6 +2059,17 @@ const App = () => {
   };
 
   const openFileExplorer = (sshNode) => {
+    // Registrar reciente (Explorer)
+    try {
+      connectionStore.recordRecent({
+        type: 'explorer',
+        name: sshNode.label,
+        host: sshNode.data?.host,
+        username: sshNode.data?.user,
+        port: sshNode.data?.port || 22
+      }, 10);
+    } catch (e) { /* noop */ }
+
     // Buscar si ya existe un explorador para este host+usuario
     const existingExplorerIndex = sshTabs.findIndex(tab => 
       tab.isExplorerInSSH && 
@@ -2368,7 +2435,48 @@ const App = () => {
     return results;
   };
 
-  const onOpenSSHConnection = (node) => {
+  const onOpenSSHConnection = (nodeOrConn) => {
+    // Permitir recibir un nodo de sidebar (con .data) o un objeto de conexión directo (desde Home/Favoritos)
+    const isSidebarNode = !!(nodeOrConn && nodeOrConn.data);
+    const conn = isSidebarNode ? {
+      type: nodeOrConn.data?.type || 'ssh',
+      name: nodeOrConn.label,
+      host: nodeOrConn.data?.useBastionWallix ? nodeOrConn.data?.targetServer : nodeOrConn.data?.host,
+      username: nodeOrConn.data?.user,
+      port: nodeOrConn.data?.port || 22,
+      originalKey: nodeOrConn.key
+    } : {
+      type: nodeOrConn?.type || 'ssh',
+      name: nodeOrConn?.name,
+      host: nodeOrConn?.host,
+      username: nodeOrConn?.username,
+      port: nodeOrConn?.port || 22,
+      originalKey: nodeOrConn?.id || `manual_${Date.now()}`
+    };
+
+    // Si es un favorito de tipo Explorer, abrir explorador en lugar de terminal
+    if (conn.type === 'explorer') {
+      const pseudoNode = {
+        label: conn.name,
+        data: { host: conn.host, user: conn.username, port: conn.port, type: 'ssh' },
+        key: conn.originalKey
+      };
+      openFileExplorer(pseudoNode);
+      return;
+    }
+
+    // Registrar como reciente (SSH)
+    // Registrar como reciente (SSH)
+    try {
+      connectionStore.recordRecent({
+        type: 'ssh',
+        name: conn.name,
+        host: conn.host,
+        username: conn.username,
+        port: conn.port
+      }, 10);
+    } catch (e) { /* noop */ }
+
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
       setGroupActiveIndices(prev => ({
@@ -2379,21 +2487,21 @@ const App = () => {
     }
     setSshTabs(prevTabs => {
       const nowTs = Date.now();
-      const tabId = `${node.key}_${nowTs}`;
+      const tabId = `${conn.originalKey}_${nowTs}`;
       const sshConfig = {
-        host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
-        username: node.data.user,
-        password: node.data.password,
-        port: node.data.port || 22,
-        originalKey: node.key,
-        useBastionWallix: node.data.useBastionWallix || false,
-        bastionHost: node.data.bastionHost || '',
-        bastionUser: node.data.bastionUser || ''
+        host: conn.host,
+        username: conn.username,
+        password: isSidebarNode ? nodeOrConn.data.password : '',
+        port: conn.port,
+        originalKey: conn.originalKey,
+        useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : false,
+        bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : '',
+        bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : ''
       };
       const newTab = {
         key: tabId,
-        label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
-        originalKey: node.key,
+        label: `${conn.name} (${prevTabs.filter(t => t.originalKey === conn.originalKey).length + 1})`,
+        originalKey: conn.originalKey,
         sshConfig: sshConfig,
         type: 'terminal',
         createdAt: nowTs
@@ -2423,6 +2531,16 @@ const App = () => {
     // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
     const nodeData = node.data || node; // Fallback para ConnectionHistory
     const isGuacamoleRDP = nodeData.clientType === 'guacamole' || nodeData.type === 'rdp-guacamole';
+    // Registrar como reciente (RDP)
+    try {
+      connectionStore.recordRecent({
+        type: 'rdp-guacamole',
+        name: node.label || node.name,
+        host: nodeData.server || nodeData.host || nodeData.hostname,
+        username: nodeData.username || nodeData.user,
+        port: nodeData.port || 3389
+      }, 10);
+    } catch (e) { /* noop */ }
     
     if (isGuacamoleRDP) {
       // === NUEVA LÓGICA: RDP-Guacamole como pestañas independientes ===
@@ -3725,9 +3843,11 @@ const App = () => {
                         >
                           {tab.type === 'home' ? (
                             <HomeTab
-                              onCreateSSHConnection={() => setShowSSHDialog(true)}
+                              onCreateSSHConnection={onOpenSSHConnection}
                               onCreateFolder={() => openNewFolderDialog(null)}
                               onCreateRdpConnection={onOpenRdpConnection}
+                              // Pasar ids activos al hub para mostrar estado en los listados
+                              // (ConnectionHistory acepta activeIds desde HomeTab; aquí lo calculamos y lo inyectamos a través del DOM global)
                               sshConnectionsCount={(() => {
                                 // Contar sesiones SSH únicas (sin incluir exploradores)
                                 const uniqueSSHSessions = new Set();
