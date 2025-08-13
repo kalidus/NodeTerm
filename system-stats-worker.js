@@ -22,6 +22,8 @@ async function getSystemStats() {
       download: 0,
       upload: 0
     },
+    hostname: os.hostname(),
+    ip: '',
     temperature: {
       cpu: 0,
       gpu: 0
@@ -70,6 +72,12 @@ async function getSystemStats() {
     const validIfaces = netIfaces.filter(i => i.operstate === 'up' && !i.virtual && !i.internal);
     const validNames = validIfaces.map(i => i.iface);
     const filteredStats = netStats.filter(s => validNames.includes(s.iface));
+
+    // Primary IP (prefer IPv4)
+    if (validIfaces.length > 0) {
+      const primary = validIfaces[0];
+      stats.ip = primary.ip4 || primary.ip6 || '';
+    }
     let rx = 0, tx = 0;
     if (lastNetStats && lastNetTime) {
       for (const stat of filteredStats) {

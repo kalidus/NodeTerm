@@ -26,6 +26,7 @@ const WSLTerminal = forwardRef(({
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
+    const [distroId, setDistroId] = useState('ubuntu');
 
     const getScopedStatusBarCssVars = () => {
         const themeObj = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
@@ -43,6 +44,32 @@ const WSLTerminal = forwardRef(({
             '--statusbar-sparkline-color': colors.sparklineColor
         };
     };
+
+    // Derivar icono de distro desde la sesión (mejor esfuerzo por nombre)
+    useEffect(() => {
+        // Intentar detectar la distro ejecutando 'cat /etc/os-release' vía IPC de WSL
+        const detectDistro = async () => {
+            try {
+                // Enviar una pequeña orden para que el backend devuelva la info en el canal de datos
+                // y parsear una única vez el NAME/ID. Si no llega, conservamos 'ubuntu'.
+                const handler = (data) => {
+                    try {
+                        const text = String(data || '');
+                        if (text.includes('ID=')) {
+                            const match = text.match(/\bID=("?)([^"\n]+)\1/);
+                            if (match && match[2]) {
+                                setDistroId(match[2].toLowerCase());
+                            }
+                        }
+                    } catch {}
+                };
+                const unsubscribe = window.electron?.ipcRenderer.on(`wsl:data:${tabId}`, handler);
+                window.electron?.ipcRenderer.send(`wsl:data:${tabId}`, 'cat /etc/os-release\n');
+                setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} }, 1200);
+            } catch {}
+        };
+        detectDistro();
+    }, [tabId]);
 
     // Poll Windows host stats (local) for WSL status bar
     useEffect(() => {
@@ -68,6 +95,9 @@ const WSLTerminal = forwardRef(({
                     mem: { total: memTotalBytes, used: memUsedBytes },
                     disk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
+                    hostname: systemStats.hostname || undefined,
+                    ip: systemStats.ip || undefined,
+                    distro: distroId || 'ubuntu',
                     cpuHistory
                 };
                 setStatusStats(payload);
@@ -85,7 +115,7 @@ const WSLTerminal = forwardRef(({
         };
         loop();
         return () => { stopped = true; if (timer) clearTimeout(timer); };
-    }, []);
+    }, [distroId]);
 
     useEffect(() => {
         const onStorage = (e) => {
