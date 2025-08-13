@@ -1,3 +1,32 @@
+/* Ajuste de estilos para fieldset de rendimiento en tema oscuro */
+/* Igualar el fondo al del resto del diálogo (usar ground del tema) */
+.rdp-manager-dialog .performance-fieldset,
+.rdp-manager-dialog .performance-fieldset .p-fieldset-content,
+.rdp-manager-dialog .performance-fieldset .p-fieldset-legend {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border, rgba(255,255,255,0.08)) !important;
+  border-radius: var(--border-radius, 6px) !important;
+  box-shadow: none !important;
+}
+
+/* Color del texto de la leyenda exactamente igual al resto del diálogo */
+.rdp-manager-dialog .performance-fieldset .p-fieldset-legend-text {
+  color: var(--ui-dialog-text) !important;
+}
+
+/* Forzar Prime a no aplicar fondo blanco en el wrapper si el tema lo hace */
+.performance-fieldset .p-fieldset-content, .performance-fieldset {
+  box-shadow: none !important;
+}
+
+/* Orden y alineación de opciones avanzadas */
+.performance-fieldset .formgrid.grid {
+  row-gap: 0.75rem;
+}
+.performance-fieldset .field-checkbox label {
+  margin-left: 0.5rem;
+}
 /* Estilos para los componentes del Dashboard */
 
 /* Tarjetas de estadísticas del sistema */
