@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
-import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows } from 'react-icons/fa';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows, FaNetworkWired } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
@@ -178,18 +178,23 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                 {Array.isArray(disk) && disk.length > 0 && (
                     <div className="status-bar-section disk-section">
                         {disk
-                            .filter(d => (showNetworkDisks ? true : !Boolean(d && (d.isNetwork))))
-                            .map((d, index) => (
-                            <div key={index} className="disk-info-item">
-                                <span 
-                                    className="status-bar-icon disk" 
-                                    style={{ color: currentIconTheme.colors.disk }}
-                                >
-                                    {currentIconTheme.icons.disk}
-                                </span>
-                                <span className="disk-info-text">{(d && (d.fs || d.name || d.mount)) || ''}: {((d && (d.use || d.percentage)) ?? '')}%</span>
-                            </div>
-                        ))}
+                            .filter(d => (showNetworkDisks ? true : !Boolean(d && d.isNetwork)))
+                            .map((d, index) => {
+                                const isNet = Boolean(d && d.isNetwork);
+                                const idLabel = ((d && (d.fs || d.name || d.mount)) || '').trim();
+                                const pct = (d && (d.use || d.percentage)) ?? '';
+                                return (
+                                    <div key={index} className="disk-info-item">
+                                        <span 
+                                            className="status-bar-icon disk" 
+                                            style={{ color: isNet ? currentIconTheme.colors.networkDown : currentIconTheme.colors.disk }}
+                                        >
+                                            {isNet ? <FaNetworkWired /> : currentIconTheme.icons.disk}
+                                        </span>
+                                        <span className="disk-info-text">{idLabel} {pct}%</span>
+                                    </div>
+                                );
+                            })}
                     </div>
                 )}
                 {uptime && (
