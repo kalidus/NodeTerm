@@ -307,11 +307,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         const platform = window.electron?.platform || 'unknown';
         
         if (platform === 'win32') {
-            // En Windows: mostrar PowerShell, WSL y RDP
+            // En Windows: mostrar PowerShell, WSL y cada distribución WSL detectada (sin RDP aquí)
             return [
                 { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
                 { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
-                { label: 'RDP (Guacamole)', value: 'rdp-guacamole', icon: 'pi pi-desktop', color: '#ff6b35' },
                 // Agregar cada distribución WSL como opción separada
                 ...wslDistributions.map(distro => ({
                     label: distro.label,
