@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog } from 'primereact/dialog';
+import { Fieldset } from 'primereact/fieldset';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
@@ -15,6 +16,7 @@ import { Tag } from 'primereact/tag';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
 import { useSafeFocus, isElementBlocked, unblockElement } from '../utils/formUtils';
+import '../assets/Dashboard.css';
 
 const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode }) => {
   const toast = useRef(null);
@@ -305,8 +307,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           redirectClipboard: formData.redirectClipboard,
           redirectPrinters: formData.redirectPrinters,
           redirectAudio: formData.redirectAudio,
-          fullscreen: formData.fullscreen,
-          span: formData.span
+          
         };
         
         // Enviar evento para crear pestaña de Guacamole
@@ -601,7 +602,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                 </div>
               </Card>
 
-              <Card title="Opciones Avanzadas">
+              <Card title="Opciones">
                 <div className="formgrid grid">
                   {/* Opciones para MSTSC (RDP Nativo) */}
                   {formData.clientType === 'mstsc' && (
@@ -784,57 +785,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         </div>
                       )}
                       
-                      {/* Flags avanzados de compatibilidad (probar de a uno) */}
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="guacDisableGlyphCaching"
-                          checked={formData.guacDisableGlyphCaching}
-                          onChange={handleCheckboxChange('guacDisableGlyphCaching')}
-                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
-                        />
-                        <label htmlFor="guacDisableGlyphCaching" className="ml-2">Desactivar glyph caching</label>
-                      </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="guacDisableOffscreenCaching"
-                          checked={formData.guacDisableOffscreenCaching}
-                          onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
-                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
-                        />
-                        <label htmlFor="guacDisableOffscreenCaching" className="ml-2">Desactivar offscreen caching</label>
-                      </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="guacDisableBitmapCaching"
-                          checked={formData.guacDisableBitmapCaching}
-                          onChange={handleCheckboxChange('guacDisableBitmapCaching')}
-                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
-                        />
-                        <label htmlFor="guacDisableBitmapCaching" className="ml-2">Desactivar bitmap caching</label>
-                      </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="guacDisableCopyRect"
-                          checked={formData.guacDisableCopyRect}
-                          onChange={handleCheckboxChange('guacDisableCopyRect')}
-                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
-                        />
-                        <label htmlFor="guacDisableCopyRect" className="ml-2">Desactivar copy-rect</label>
-                      </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="guacWin11Compat"
-                          checked={formData.guacWin11Compat}
-                          onChange={handleCheckboxChange('guacWin11Compat')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="guacWin11Compat" className="ml-2">Compatibilidad Windows 11</label>
-                      </div>
+                      {/* El bloque de Opciones avanzadas (rendimiento) se reubica debajo del Card */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
                           inputId="redirectClipboard"
@@ -877,20 +828,8 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         />
                         <label htmlFor="redirectAudio" className="ml-2">Redirigir audio</label>
                       </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="fullscreen"
-                          checked={formData.fullscreen}
-                          onChange={handleCheckboxChange('fullscreen')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
-                      </div>
+                      {/* Opción de pantalla completa eliminada para Guacamole */}
+                      {/* Opción de múltiples monitores eliminada para Guacamole */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
                           inputId="autoResize"
@@ -907,20 +846,6 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       </div>
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
-                          inputId="span"
-                          checked={formData.span}
-                          onChange={handleCheckboxChange('span')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="span" className="ml-2">Múltiples monitores</label>
-                      </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
                           inputId="guacEnableWallpaper"
                           checked={formData.guacEnableWallpaper}
                           onChange={handleCheckboxChange('guacEnableWallpaper')}
@@ -934,7 +859,79 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                         <label htmlFor="guacEnableWallpaper" className="ml-2">Mostrar fondo de escritorio</label>
                       </div>
                       
-                      {/* Campos específicos para Guacamole */}
+                      {/* DPI y Seguridad se moverán al desplegable de rendimiento para más compacidad */}
+                    </>
+                  )}
+                </div>
+
+                {/* Opciones avanzadas (rendimiento) - debajo de las opciones normales */}
+                <div className="mt-3">
+                  <Fieldset legend="Opciones avanzadas" toggleable collapsed className="performance-fieldset">
+                    <div className="formgrid grid">
+                      {/* Fila 1: Flags de caché (izq) y offscreen/copy-rect (der) */}
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableGlyphCaching"
+                          checked={formData.guacDisableGlyphCaching}
+                          onChange={handleCheckboxChange('guacDisableGlyphCaching')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableGlyphCaching" className="ml-2">Desactivar glyph caching</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableOffscreenCaching"
+                          checked={formData.guacDisableOffscreenCaching}
+                          onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableOffscreenCaching" className="ml-2">Desactivar offscreen caching</label>
+                      </div>
+                      {/* Fila 2: bitmap caching y copy-rect */}
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableBitmapCaching"
+                          checked={formData.guacDisableBitmapCaching}
+                          onChange={handleCheckboxChange('guacDisableBitmapCaching')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableBitmapCaching" className="ml-2">Desactivar bitmap caching</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacDisableCopyRect"
+                          checked={formData.guacDisableCopyRect}
+                          onChange={handleCheckboxChange('guacDisableCopyRect')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacDisableCopyRect" className="ml-2">Desactivar copy-rect</label>
+                      </div>
+                      {/* Fila 3: Compatibilidad Windows 11 (forzar salto de fila completo) */}
+                      <div className="field-checkbox col-12">
+                        <Checkbox
+                          inputId="guacWin11Compat"
+                          checked={formData.guacWin11Compat}
+                          onChange={handleCheckboxChange('guacWin11Compat')}
+                          onFocus={(e) => {
+                            if (isElementBlocked(e.target)) {
+                              unblockElement(e.target);
+                            }
+                            safeFocus(e.target);
+                          }}
+                        />
+                        <label htmlFor="guacWin11Compat" className="ml-2">Compatibilidad Windows 11</label>
+                      </div>
+                      {/* Fila 4: Seguridad y DPI en la misma fila */}
+                      <div className="field col-12 md:col-6">
+                        <label htmlFor="guacSecurity">Seguridad</label>
+                        <Dropdown
+                          id="guacSecurity"
+                          value={formData.guacSecurity}
+                          options={[{ label: 'Cualquiera (Recomendado)', value: 'any' }, { label: 'RDP', value: 'rdp' }, { label: 'TLS', value: 'tls' }, { label: 'NLA', value: 'nla' }]}
+                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                      </div>
                       <div className="field col-12 md:col-6">
                         <label htmlFor="guacDpi">DPI</label>
                         <InputNumber
@@ -945,37 +942,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                           max={300}
                           suffix=""
                           placeholder="96"
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
                         />
                       </div>
-                      
-                      <div className="field col-12 md:col-6">
-                        <label htmlFor="guacSecurity">Seguridad</label>
-                        <Dropdown
-                          id="guacSecurity"
-                          value={formData.guacSecurity}
-                          options={[
-                            { label: 'Cualquiera (Recomendado)', value: 'any' },
-                            { label: 'RDP', value: 'rdp' },
-                            { label: 'TLS', value: 'tls' },
-                            { label: 'NLA', value: 'nla' }
-                          ]}
-                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                      </div>
-                    </>
-                  )}
+                    </div>
+                  </Fieldset>
                 </div>
 
                 <Divider />
