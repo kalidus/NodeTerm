@@ -2454,7 +2454,7 @@ const App = () => {
         autoResize: nodeData.autoResize === true,
           // Forzar congelación de resizes iniciales para camuflar RDProxy
           freezeInitialResize: true,
-        win11Compat: nodeData.guacWin11Compat === true,
+        enableGfx: (nodeData.guacEnableGfx === true) || (nodeData.guacWin11Compat === true),
         // Características visuales
         enableDesktopComposition: nodeData.guacEnableDesktopComposition === true,
         enableFontSmoothing: nodeData.guacEnableFontSmoothing === true,
@@ -2730,7 +2730,7 @@ const App = () => {
             guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
             guacEnableDrive: rdpData.guacEnableDrive === true,
             guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
-            guacWin11Compat: rdpData.guacWin11Compat === true,
+            guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
             // Nuevos flags avanzados
             guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
             guacEnableFontSmoothing: rdpData.guacEnableFontSmoothing === true,
@@ -2782,7 +2782,7 @@ const App = () => {
           guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
            guacEnableDrive: rdpData.guacEnableDrive === true,
            guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
-          guacWin11Compat: rdpData.guacWin11Compat === true,
+          guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
           // Nuevos flags avanzados
           guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
           guacEnableFontSmoothing: rdpData.guacEnableFontSmoothing === true,
@@ -2842,7 +2842,7 @@ const App = () => {
                  guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
                  guacEnableDrive: rdpData.guacEnableDrive === true,
                  guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
-                 guacWin11Compat: rdpData.guacWin11Compat === true,
+                 guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
                  guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
                  guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
                  guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,

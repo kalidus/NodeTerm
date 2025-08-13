@@ -2801,7 +2801,7 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           // Portapapeles: desactivar solo si el usuario lo deshabilitó
           "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
           // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
-          "enable-gfx": (config.win11Compat === true) ? false : undefined,
+          "enable-gfx": (config.enableGfx === true) ? true : undefined,
           // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
           "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
           "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
