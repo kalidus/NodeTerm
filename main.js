@@ -2788,6 +2788,12 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           height: finalHeight,
           dpi: config.dpi || 96,
           "color-depth": normalizedColorDepth,
+          // Características visuales opcionales (solo si están activadas)
+          "enable-desktop-composition": config.enableDesktopComposition === true ? true : undefined,
+          "enable-font-smoothing": config.enableFontSmoothing === true ? true : undefined,
+          "enable-theming": config.enableTheming === true ? true : undefined,
+          "enable-full-window-drag": config.enableFullWindowDrag === true ? true : undefined,
+          "enable-menu-animations": config.enableMenuAnimations === true ? true : undefined,
           // Configuración específica para resize dinámico
           "resize-method": config.autoResize ? "display-update" : "reconnect",
           "enable-desktop-composition": config.autoResize ? true : false,
