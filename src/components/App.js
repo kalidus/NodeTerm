@@ -2455,6 +2455,12 @@ const App = () => {
           // Forzar congelación de resizes iniciales para camuflar RDProxy
           freezeInitialResize: true,
         win11Compat: nodeData.guacWin11Compat === true,
+        // Características visuales
+        enableDesktopComposition: nodeData.guacEnableDesktopComposition === true,
+        enableFontSmoothing: nodeData.guacEnableFontSmoothing === true,
+        enableTheming: nodeData.guacEnableTheming === true,
+        enableFullWindowDrag: nodeData.guacEnableFullWindowDrag === true,
+        enableMenuAnimations: nodeData.guacEnableMenuAnimations === true,
         disableGlyphCaching: nodeData.guacDisableGlyphCaching === true,
         disableOffscreenCaching: nodeData.guacDisableOffscreenCaching === true,
         disableBitmapCaching: nodeData.guacDisableBitmapCaching === true,
@@ -2725,6 +2731,12 @@ const App = () => {
             guacEnableDrive: rdpData.guacEnableDrive === true,
             guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
             guacWin11Compat: rdpData.guacWin11Compat === true,
+            // Nuevos flags avanzados
+            guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
+            guacEnableFontSmoothing: rdpData.guacEnableFontSmoothing === true,
+            guacEnableTheming: rdpData.guacEnableTheming === true,
+            guacEnableFullWindowDrag: rdpData.guacEnableFullWindowDrag === true,
+            guacEnableMenuAnimations: rdpData.guacEnableMenuAnimations === true,
             guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
             guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
             guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
@@ -2771,6 +2783,12 @@ const App = () => {
            guacEnableDrive: rdpData.guacEnableDrive === true,
            guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
           guacWin11Compat: rdpData.guacWin11Compat === true,
+          // Nuevos flags avanzados
+          guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
+          guacEnableFontSmoothing: rdpData.guacEnableFontSmoothing === true,
+          guacEnableTheming: rdpData.guacEnableTheming === true,
+          guacEnableFullWindowDrag: rdpData.guacEnableFullWindowDrag === true,
+          guacEnableMenuAnimations: rdpData.guacEnableMenuAnimations === true,
           guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
           guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
           guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,

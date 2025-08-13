@@ -54,6 +54,12 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
     guacEnableDrive: false,     // Redirección de unidades
     guacDriveHostDir: '',       // Carpeta local opcional para la unidad
     guacWin11Compat: false,     // Compatibilidad Windows 11 (desactiva GFX)
+    // Opciones avanzadas (habilitar características visuales)
+    guacEnableDesktopComposition: false,
+    guacEnableFontSmoothing: false,
+    guacEnableTheming: false,
+    guacEnableFullWindowDrag: false,
+    guacEnableMenuAnimations: false,
     // Flags de prueba (uno por vez)
     guacDisableGlyphCaching: false,
     guacDisableOffscreenCaching: false,
@@ -182,6 +188,11 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           guacEnableDrive: rdpNodeData.guacEnableDrive || false,
           guacDriveHostDir: rdpNodeData.guacDriveHostDir || '',
           guacWin11Compat: rdpNodeData.guacWin11Compat || false,
+           guacEnableDesktopComposition: rdpNodeData.guacEnableDesktopComposition || false,
+           guacEnableFontSmoothing: rdpNodeData.guacEnableFontSmoothing || false,
+           guacEnableTheming: rdpNodeData.guacEnableTheming || false,
+           guacEnableFullWindowDrag: rdpNodeData.guacEnableFullWindowDrag || false,
+           guacEnableMenuAnimations: rdpNodeData.guacEnableMenuAnimations || false,
           guacDisableGlyphCaching: rdpNodeData.guacDisableGlyphCaching || false,
           guacDisableOffscreenCaching: rdpNodeData.guacDisableOffscreenCaching || false,
           guacDisableBitmapCaching: rdpNodeData.guacDisableBitmapCaching || false,
@@ -300,6 +311,12 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
           driveHostDir: formData.guacDriveHostDir,
           enableWallpaper: formData.guacEnableWallpaper,
           win11Compat: formData.guacWin11Compat,
+          // Características visuales
+          enableDesktopComposition: formData.guacEnableDesktopComposition,
+          enableFontSmoothing: formData.guacEnableFontSmoothing,
+          enableTheming: formData.guacEnableTheming,
+          enableFullWindowDrag: formData.guacEnableFullWindowDrag,
+          enableMenuAnimations: formData.guacEnableMenuAnimations,
           disableGlyphCaching: formData.guacDisableGlyphCaching,
           disableOffscreenCaching: formData.guacDisableOffscreenCaching,
           disableBitmapCaching: formData.guacDisableBitmapCaching,
@@ -683,9 +700,9 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                       {/* Opción 'Múltiples monitores' eliminada para Guacamole */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
-                          inputId="admin"
-                          checked={formData.admin}
-                          onChange={handleCheckboxChange('admin')}
+                          inputId="fullscreen"
+                          checked={formData.fullscreen}
+                          onChange={handleCheckboxChange('fullscreen')}
                           onFocus={(e) => {
                             if (isElementBlocked(e.target)) {
                               unblockElement(e.target);
@@ -693,21 +710,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                             safeFocus(e.target);
                           }}
                         />
-                        <label htmlFor="admin" className="ml-2">Sesión administrativa</label>
-                      </div>
-                      <div className="field-checkbox col-12 md:col-6">
-                        <Checkbox
-                          inputId="public"
-                          checked={formData.public}
-                          onChange={handleCheckboxChange('public')}
-                          onFocus={(e) => {
-                            if (isElementBlocked(e.target)) {
-                              unblockElement(e.target);
-                            }
-                            safeFocus(e.target);
-                          }}
-                        />
-                        <label htmlFor="public" className="ml-2">Conexión pública</label>
+                        <label htmlFor="fullscreen" className="ml-2">Pantalla completa</label>
                       </div>
                     </>
                   )}
@@ -864,10 +867,57 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                   )}
                 </div>
 
-                {/* Opciones avanzadas (rendimiento) - debajo de las opciones normales */}
-                <div className="mt-3">
-                  <Fieldset legend="Opciones avanzadas" toggleable collapsed className="performance-fieldset">
+                {/* Opciones avanzadas (solo Guacamole) */}
+                {formData.clientType === 'guacamole' && (
+                  <div className="mt-3">
+                    <Fieldset legend="Opciones avanzadas" toggleable collapsed className="performance-fieldset">
                     <div className="formgrid grid">
+                      {/* Fila 0: Características visuales */}
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableDesktopComposition"
+                          checked={formData.guacEnableDesktopComposition}
+                          onChange={handleCheckboxChange('guacEnableDesktopComposition')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacEnableDesktopComposition" className="ml-2">Habilitar Desktop Composition</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableFontSmoothing"
+                          checked={formData.guacEnableFontSmoothing}
+                          onChange={handleCheckboxChange('guacEnableFontSmoothing')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacEnableFontSmoothing" className="ml-2">Habilitar Font Smoothing</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableTheming"
+                          checked={formData.guacEnableTheming}
+                          onChange={handleCheckboxChange('guacEnableTheming')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacEnableTheming" className="ml-2">Habilitar Theming</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableFullWindowDrag"
+                          checked={formData.guacEnableFullWindowDrag}
+                          onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacEnableFullWindowDrag" className="ml-2">Habilitar Full Window Drag</label>
+                      </div>
+                      <div className="field-checkbox col-12 md:col-6">
+                        <Checkbox
+                          inputId="guacEnableMenuAnimations"
+                          checked={formData.guacEnableMenuAnimations}
+                          onChange={handleCheckboxChange('guacEnableMenuAnimations')}
+                          onFocus={(e) => { if (isElementBlocked(e.target)) { unblockElement(e.target); } safeFocus(e.target); }}
+                        />
+                        <label htmlFor="guacEnableMenuAnimations" className="ml-2">Habilitar animaciones de menú</label>
+                      </div>
                       {/* Fila 1: Flags de caché (izq) y offscreen/copy-rect (der) */}
                       <div className="field-checkbox col-12 md:col-6">
                         <Checkbox
@@ -948,6 +998,7 @@ const RdpManager = ({ visible, onHide, rdpNodeData, onSaveToSidebar, editingNode
                     </div>
                   </Fieldset>
                 </div>
+                )}
 
                 <Divider />
                 

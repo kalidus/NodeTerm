@@ -216,7 +216,7 @@ class RdpManager {
     }
 
     // Configuración de pantalla
-    if (config.fullscreen) {
+    if (config.fullscreen === true) {
       lines.push('screen mode id:i:2'); // Pantalla completa
     } else {
       lines.push('screen mode id:i:1'); // Ventana
