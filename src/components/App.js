@@ -2445,6 +2445,7 @@ const App = () => {
         width: dynamicWidth,  // ← NÚMEROS, no string
         height: dynamicHeight, // ← NÚMEROS, no string
         dpi: nodeData.guacDpi || 96,
+        colorDepth: nodeData.colorDepth || 32,
         enableDrive: nodeData.guacEnableDrive === true,
         driveHostDir: nodeData.guacDriveHostDir || undefined,
         enableWallpaper: nodeData.guacEnableWallpaper === true,

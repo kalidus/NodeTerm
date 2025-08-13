@@ -2701,6 +2701,16 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
       }
     }
 
+    // Normalizar profundidad de color
+    let normalizedColorDepth = 32;
+    try {
+      const candidateDepth = parseInt(config.colorDepth, 10);
+      const allowedDepths = [8, 16, 24, 32];
+      if (allowedDepths.includes(candidateDepth)) {
+        normalizedColorDepth = candidateDepth;
+      }
+    } catch {}
+
     console.log('🔐 [MAIN] Creando token para configuración RDP:', {
       hostname: config.hostname,
       username: config.username,
@@ -2709,6 +2719,7 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
       width: finalWidth,     // ← Mostrar resolución final calculada
       height: finalHeight,   // ← Mostrar resolución final calculada
       dpi: config.dpi,
+      colorDepth: normalizedColorDepth,
       enableDrive: config.enableDrive,
       enableWallpaper: config.enableWallpaper,
       redirectClipboard: config.redirectClipboard,
@@ -2776,6 +2787,7 @@ ipcMain.handle('guacamole:create-token', async (event, config) => {
           width: finalWidth,
           height: finalHeight,
           dpi: config.dpi || 96,
+          "color-depth": normalizedColorDepth,
           // Configuración específica para resize dinámico
           "resize-method": config.autoResize ? "display-update" : "reconnect",
           "enable-desktop-composition": config.autoResize ? true : false,

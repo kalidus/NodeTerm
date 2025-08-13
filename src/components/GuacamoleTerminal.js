@@ -339,6 +339,14 @@ const GuacamoleTerminal = forwardRef(({
                     }
                 } catch {}
 
+                 // Asegurar que colorDepth viaje al backend
+                 try {
+                     if (typeof rdpConfig.colorDepth !== 'number') {
+                         const parsed = parseInt(rdpConfig.colorDepth, 10);
+                         if (!isNaN(parsed)) rdpConfig.colorDepth = parsed;
+                     }
+                 } catch {}
+
                  // Crear token de conexión
                  // Log crítico: verificar configuración antes de enviar al backend
                  console.log('🚀 ENVIANDO AL BACKEND:', rdpConfig);
