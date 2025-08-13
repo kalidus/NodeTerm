@@ -20,12 +20,14 @@ import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
+import { statusBarThemes } from '../themes/status-bar-themes';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
 const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
 const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'basicapp_local_powershell_theme';
 const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_linux_terminal_theme';
+  const LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY = 'localPowerShellStatusBarTheme';
 
 const SettingsDialog = ({
   visible,
@@ -322,6 +324,13 @@ const SettingsDialog = ({
   const handleLinuxTerminalThemeChange = (e) => {
     setLocalLinuxTerminalTheme(e.value);
     localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, e.value);
+  };
+  const handlePowerShellStatusBarThemeChange = (e) => {
+    try {
+      localStorage.setItem(LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY, e.value);
+      // Disparar evento de storage local (para misma pestaña)
+      window.dispatchEvent(new StorageEvent('storage', { key: LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY, newValue: e.value }));
+    } catch {}
   };
 
   const handleSidebarFontSizeChange = (value) => {
@@ -846,6 +855,16 @@ const SettingsDialog = ({
                         placeholder="Tema para terminales Linux"
                         style={{ width: '100%' }}
                       />
+                      <div style={{ marginTop: 16 }}>
+                        <label style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: 4, display: 'block' }}>Status Bar de PowerShell (tema)</label>
+                        <Dropdown
+                          value={(typeof window !== 'undefined' && window.localStorage) ? (localStorage.getItem(LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY) || (localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark')) : 'Default Dark'}
+                          options={Object.keys(statusBarThemes).map(name => ({ label: name, value: name }))}
+                          onChange={handlePowerShellStatusBarThemeChange}
+                          placeholder="Tema de status bar"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

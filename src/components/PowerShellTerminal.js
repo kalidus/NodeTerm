@@ -5,6 +5,8 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
+import StatusBar from './StatusBar';
+import { statusBarThemes } from '../themes/status-bar-themes';
 
 const PowerShellTerminal = forwardRef(({ 
     fontFamily = 'Consolas, "Courier New", monospace', 
@@ -16,6 +18,97 @@ const PowerShellTerminal = forwardRef(({
     const term = useRef(null);
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [statusStats, setStatusStats] = useState(null);
+    const [cpuHistory, setCpuHistory] = useState([]);
+    const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
+        try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
+    });
+    const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
+        try { return localStorage.getItem('localPowerShellStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
+    });
+
+    // Build CSS variable overrides for StatusBar (scoped to this terminal only)
+    const getScopedStatusBarCssVars = () => {
+        const theme = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
+        const colors = theme.colors || {};
+        return {
+            '--statusbar-bg': colors.background,
+            '--statusbar-text': colors.text,
+            '--statusbar-border': colors.border,
+            '--statusbar-icon-color': colors.iconColor,
+            '--statusbar-cpu': colors.cpuBarColor,
+            '--statusbar-mem': colors.memoryBarColor,
+            '--statusbar-disk': colors.diskBarColor,
+            '--statusbar-red-up': colors.networkUpColor,
+            '--statusbar-red-down': colors.networkDownColor,
+            '--statusbar-sparkline-color': colors.sparklineColor
+        };
+    };
+
+    // Poll local system stats to feed the StatusBar
+    useEffect(() => {
+        let stopped = false;
+        let timer = null;
+        const POLL_KEY = 'statusBarPollingInterval';
+        const getIntervalMs = () => {
+            try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '5', 10)) * 1000; } catch { return 5000; }
+        };
+
+        const fetchStats = async () => {
+            try {
+                const systemStats = await window.electronAPI?.getSystemStats();
+                if (!systemStats) return;
+                // Map worker stats → StatusBar expected shape
+                const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
+                const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
+                const disk = Array.isArray(systemStats.disks)
+                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage }))
+                    : [];
+                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s → B/s
+                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s → B/s
+                const statsPayload = {
+                    cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
+                    mem: { total: memTotalBytes, used: memUsedBytes },
+                    disk,
+                    network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
+                    // Optional fields omitted for local PS (hostname/distro/uptime/ip)
+                    cpuHistory
+                };
+                setStatusStats(statsPayload);
+                const cpuValue = typeof statsPayload.cpu === 'number' ? statsPayload.cpu : null;
+                if (cpuValue !== null && !isNaN(cpuValue)) {
+                    setCpuHistory(prev => {
+                        const arr = [...prev, cpuValue];
+                        return arr.slice(-30);
+                    });
+                }
+            } catch {}
+        };
+
+        const loop = () => {
+            if (stopped) return;
+            fetchStats().finally(() => {
+                const ms = getIntervalMs();
+                timer = setTimeout(loop, ms);
+            });
+        };
+        loop();
+        return () => { stopped = true; if (timer) clearTimeout(timer); };
+    }, []);
+
+    // Listen for changes to icon theme and local PS status bar theme via storage updates
+    useEffect(() => {
+        const onStorage = (e) => {
+            if (!e) return;
+            if (e.key === 'basicapp_statusbar_icon_theme') {
+                setStatusBarIconTheme(e.newValue || 'classic');
+            } else if (e.key === 'localPowerShellStatusBarTheme') {
+                setLocalStatusBarThemeName(e.newValue || 'Default Dark');
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -328,21 +421,24 @@ const PowerShellTerminal = forwardRef(({
     }, [tabId]);
 
     return (
-        <div 
-            ref={terminalRef} 
-            style={{ 
-                flex: 1, 
-                width: '100%', 
-                height: '100%',
-                minWidth: 0,
-                minHeight: 0,
-                overflow: 'hidden',
-                position: 'relative',
-                background: theme?.background || '#012456',
-                padding: '0 0 0 8px',
-                margin: 0
-            }} 
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme?.background || '#012456' }}>
+            <div 
+                ref={terminalRef} 
+                style={{ 
+                    flex: 1, 
+                    width: '100%', 
+                    minWidth: 0,
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    padding: '0 0 0 8px',
+                    margin: 0
+                }} 
+            />
+            <div style={{ ...getScopedStatusBarCssVars() }}>
+                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} />
+            </div>
+        </div>
     );
 });
 
