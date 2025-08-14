@@ -59,23 +59,6 @@ const HomeTab = ({
   };
 
   const handleCreateRdpConnection = (connectionData) => {
-    if (tabbedTerminalRef.current) {
-      const rdpConfig = {
-        hostname: connectionData.hostname || connectionData.host,
-        username: connectionData.username,
-        password: connectionData.password || 'password', // En producción esto vendría de vault
-        port: connectionData.port || 3389,
-        width: 1024,
-        height: 768,
-        dpi: 96,
-        enableDrive: false,
-        enableWallpaper: false,
-        security: 'any'
-      };
-      
-      tabbedTerminalRef.current.createRdpTab(connectionData.name, rdpConfig);
-    }
-    
     if (onCreateRdpConnection) {
       onCreateRdpConnection(connectionData);
     }
