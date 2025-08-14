@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
 import { getFavorites, getRecents, toggleFavorite, isFavorite, onUpdate } from '../utils/connectionStore';
+import SyncManager from '../utils/SyncManager';
+import SecureStorage from '../services/SecureStorage';
 
 const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1 }) => {
 	const [recentConnections, setRecentConnections] = useState([]);
@@ -10,12 +12,85 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const [recType, setRecType] = useState('all');
 	const [favQuery, setFavQuery] = useState('');
 	const [recQuery, setRecQuery] = useState('');
+	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
+	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
+	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
+	const syncManagerRef = useRef(null);
+	const secureStorageRef = useRef(null);
 
 	useEffect(() => {
 		loadConnectionHistory();
 		const off = onUpdate(() => loadConnectionHistory());
 		return () => off && off();
 	}, [recentsLimit]);
+
+	useEffect(() => {
+		// Inicializar managers
+		if (!syncManagerRef.current) syncManagerRef.current = new SyncManager();
+		if (!secureStorageRef.current) secureStorageRef.current = new SecureStorage();
+
+		// Estado Nextcloud
+		try {
+			const st = syncManagerRef.current.getSyncStatus();
+			setSyncState(prev => ({ ...prev, configured: st.configured, enabled: st.enabled, lastSync: st.lastSync, connectivity: st.configured ? 'checking' : 'unknown' }));
+			if (st.configured) {
+				// Probar conexión de forma asíncrona (no bloqueante)
+				setTimeout(async () => {
+					try {
+						const res = await syncManagerRef.current.nextcloudService.testConnection();
+						setSyncState(prev => ({ ...prev, connectivity: res?.success ? 'ok' : 'error' }));
+					} catch (_) {
+						setSyncState(prev => ({ ...prev, connectivity: 'error' }));
+					}
+				}, 0);
+			}
+		} catch {}
+
+		// Estado Vault
+		try {
+			const hasKey = secureStorageRef.current.hasSavedMasterKey();
+			setVaultState({ configured: hasKey, unlocked: false });
+			if (hasKey) {
+				// Intentar cargar clave (si está desbloqueada en sesión)
+				secureStorageRef.current.getMasterKey().then(key => {
+					setVaultState({ configured: true, unlocked: !!key });
+				}).catch(() => {
+					setVaultState({ configured: true, unlocked: false });
+				});
+			}
+		} catch {}
+
+		// Estado Guacd (IPC)
+		let intervalId = null;
+		const fetchGuacd = async () => {
+			try {
+				if (window?.electron?.ipcRenderer) {
+					const st = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+					if (st && st.guacd) setGuacdState(st.guacd);
+				}
+			} catch {}
+		};
+		fetchGuacd();
+		intervalId = setInterval(fetchGuacd, 5000);
+		return () => { if (intervalId) clearInterval(intervalId); };
+	}, []);
+
+	const getRelativeTime = (date) => {
+		try {
+			if (!date) return null;
+			const d = (date instanceof Date) ? date : new Date(date);
+			const now = new Date();
+			const diffInMinutes = Math.floor((now - d) / (1000 * 60));
+			if (diffInMinutes < 1) return 'hace un momento';
+			if (diffInMinutes < 60) return `hace ${diffInMinutes} min`;
+			const diffInHours = Math.floor(diffInMinutes / 60);
+			if (diffInHours < 24) return `hace ${diffInHours} h`;
+			const diffInDays = Math.floor(diffInHours / 24);
+			if (diffInDays < 7) return `hace ${diffInDays} días`;
+			const diffInWeeks = Math.floor(diffInDays / 7);
+			return `hace ${diffInWeeks} sem`;
+		} catch { return null; }
+	};
 
 	const loadConnectionHistory = () => {
 		try {
@@ -251,9 +326,40 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	const twoColumns = layout === 'two-columns';
 
+	const StatusPill = ({ color, icon, label, sublabel }) => (
+		<div style={{
+			display: 'flex',
+			alignItems: 'center',
+			gap: 12,
+			padding: '12px 14px',
+			borderRadius: 14,
+			border: '1px solid rgba(255,255,255,0.12)',
+			background: `linear-gradient(135deg, ${color}22, ${color}11)`,
+			boxShadow: '0 6px 20px rgba(0,0,0,0.22)'
+		}}>
+			<span style={{
+				width: 36,
+				height: 36,
+				borderRadius: 10,
+				background: `${color}33`,
+				border: '1px solid rgba(255,255,255,0.14)',
+				display: 'inline-flex',
+				alignItems: 'center',
+				justifyContent: 'center'
+			}}>
+				<i className={icon} style={{ color, fontSize: 16 }} />
+			</span>
+			<div style={{ minWidth: 0 }}>
+				<div style={{ color: 'var(--text-color)', fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+				{sublabel && <div style={{ color: 'var(--text-color-secondary)', fontSize: 12 }}>{sublabel}</div>}
+			</div>
+		</div>
+	);
+
 	return (
 		<div style={{ padding: '1rem' }}>
-			<div style={{ display: 'grid', gridTemplateColumns: templateColumns ? templateColumns : (twoColumns ? '1fr 1fr' : '1fr'), gap: '1rem' }}>
+			<div style={{ display: 'grid', gridTemplateColumns: templateColumns ? templateColumns : (twoColumns ? '1fr 360px' : '1fr'), gap: '1rem' }}>
+				{/* Columna izquierda: Favoritos y debajo Recientes */}
 				<div>
 					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
 						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
@@ -290,10 +396,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Marca conexiones desde la sidebar o desde estas tarjetas</p>
 						</Card>
 					)}
-				</div>
 
-				<div>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+					{/* Recientes debajo de Favoritos */}
+					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem', marginBottom: '0.75rem' }}>
 						<i className="pi pi-clock" style={{ color: 'var(--primary-color)' }} />
 						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Conexiones Recientes</h3>
 						<Badge value={filteredRecents.length} />
@@ -328,6 +433,48 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Las conexiones aparecerán aquí después de usarlas</p>
 						</Card>
 					)}
+				</div>
+
+				{/* Columna derecha: Panel de estado */}
+				<div>
+					<Card style={{ padding: '1rem', background: 'rgba(16, 20, 28, 0.45)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 30px rgba(0,0,0,0.35)' }}>
+						<h3 style={{ marginTop: 0, color: 'var(--text-color)' }}>Estado del sistema</h3>
+						<div style={{ display: 'grid', gap: 10 }}>
+							{/* Nextcloud */}
+							{(() => {
+								const ncConfigured = !!syncState.configured;
+								const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
+								const ncLabel = ncConfigured ? (syncState.connectivity === 'ok' ? 'Nextcloud conectado' : (syncState.connectivity === 'checking' ? 'Comprobando Nextcloud…' : 'Error conectando a Nextcloud')) : 'Nextcloud no configurado';
+								const last = getRelativeTime(syncState.lastSync);
+								return (
+									<StatusPill color={ncColor} icon="pi pi-cloud" label={ncLabel} sublabel={last ? `Última sync: ${last}` : (ncConfigured ? 'Sync habilitada' : 'Configura Nextcloud en ajustes')} />
+								);
+							})()}
+
+							{/* Guacd */}
+							{(() => {
+								const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
+								const method = (guacdState.method || 'unknown').toUpperCase();
+								const label = guacdState.isRunning ? `Guacd activo (${method})` : 'Guacd detenido';
+								const sub = guacdState.isRunning ? `${guacdState.host}:${guacdState.port}` : 'Preferido: Docker/WSL';
+								return (
+									<StatusPill color={gColor} icon="pi pi-desktop" label={label} sublabel={sub} />
+								);
+							})()}
+
+							{/* Vault */}
+							{(() => {
+								const configured = vaultState.configured;
+								const unlocked = vaultState.unlocked;
+								const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
+								const vLabel = !configured ? 'Vault no configurado' : (unlocked ? 'Vault desbloqueado' : 'Vault bloqueado');
+								const vSub = !configured ? 'Configura la clave maestra' : (unlocked ? 'Sesión activa' : 'Se requerirá clave maestra');
+								return (
+									<StatusPill color={vColor} icon="pi pi-lock" label={vLabel} sublabel={vSub} />
+								);
+							})()}
+						</div>
+					</Card>
 				</div>
 			</div>
 		</div>
