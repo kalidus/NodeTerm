@@ -23,6 +23,7 @@ const HomeTab = ({
   localPowerShellTheme,
   localLinuxTerminalTheme,
   onCreateRdpConnection, // Nuevo prop para crear conexiones RDP
+  onEditConnection, // Nuevo prop: editar conexión desde Home (se pasa directo a ConnectionHistory)
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
@@ -152,6 +153,7 @@ const HomeTab = ({
           templateColumns="3fr 2fr"
           favoritesColumns={2}
           recentsColumns={1}
+          onEdit={onEditConnection}
         />
       </div>
     </div>

@@ -3846,6 +3846,43 @@ const App = () => {
                               onCreateSSHConnection={onOpenSSHConnection}
                               onCreateFolder={() => openNewFolderDialog(null)}
                               onCreateRdpConnection={onOpenRdpConnection}
+                              onEditConnection={(connection) => {
+                                // Intentar construir un nodo temporal según el tipo para reutilizar los editores existentes
+                                if (!connection) return;
+                                if (connection.type === 'rdp-guacamole' || connection.type === 'rdp') {
+                                  const tempNode = {
+                                    key: `temp_rdp_${Date.now()}`,
+                                    label: connection.name || `${connection.host}:${connection.port || 3389}`,
+                                    data: {
+                                      type: 'rdp',
+                                      server: connection.host,
+                                      hostname: connection.host,
+                                      username: connection.username,
+                                      password: connection.password,
+                                      port: connection.port || 3389,
+                                      clientType: 'mstsc'
+                                    }
+                                  };
+                                  openEditRdpDialog(tempNode);
+                                  return;
+                                }
+                                if (connection.type === 'ssh' || connection.type === 'explorer') {
+                                  // Reutilizar diálogo de edición SSH
+                                  const tempNode = {
+                                    key: `temp_ssh_${Date.now()}`,
+                                    label: connection.name || `${connection.username}@${connection.host}`,
+                                    data: {
+                                      type: 'ssh',
+                                      host: connection.host,
+                                      user: connection.username,
+                                      password: connection.password,
+                                      port: connection.port || 22,
+                                      remoteFolder: ''
+                                    }
+                                  };
+                                  openEditSSHDialog(tempNode);
+                                }
+                              }}
                               // Pasar ids activos al hub para mostrar estado en los listados
                               // (ConnectionHistory acepta activeIds desde HomeTab; aquí lo calculamos y lo inyectamos a través del DOM global)
                               sshConnectionsCount={(() => {
