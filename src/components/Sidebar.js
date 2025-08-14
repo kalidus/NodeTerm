@@ -430,19 +430,7 @@ const Sidebar = ({
       >
         <span style={{ minWidth: 16 }}>{icon}</span>
         <span className="node-label" style={{ flex: 1 }}>{node.label}</span>
-        { (isSSH || isRDP) && (
-          <span
-            title={isFavoriteConn(connHelpers.fromSidebarNode(node)?.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-            onClick={(e) => {
-              e.stopPropagation();
-              const serial = connHelpers.fromSidebarNode(node, isRDP ? 'rdp-guacamole' : null);
-              toggleFavoriteConn(serial);
-            }}
-            style={{ display: 'inline-flex', alignItems: 'center', color: isFavoriteConn(connHelpers.fromSidebarNode(node)?.id) ? '#FFD700' : '#999', cursor: 'pointer' }}
-          >
-            <i className={isFavoriteConn(connHelpers.fromSidebarNode(node)?.id) ? 'pi pi-star-fill' : 'pi pi-star'}></i>
-          </span>
-        )}
+        {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
       </div>
     );
   };
