@@ -201,6 +201,12 @@ const App = () => {
     setSshTabs(prev => prev.map(tab => 
       tab.groupId === groupId ? { ...tab, groupId: null } : tab
     ));
+    setRdpTabs(prev => prev.map(tab => 
+      tab.groupId === groupId ? { ...tab, groupId: null } : tab
+    ));
+    setGuacamoleTabs(prev => prev.map(tab => 
+      tab.groupId === groupId ? { ...tab, groupId: null } : tab
+    ));
     setFileExplorerTabs(prev => prev.map(tab => 
       tab.groupId === groupId ? { ...tab, groupId: null } : tab
     ));
@@ -220,6 +226,12 @@ const App = () => {
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
     setSshTabs(prev => prev.map(tab => 
+      tab.key === tabKey ? { ...tab, groupId } : tab
+    ));
+    setRdpTabs(prev => prev.map(tab => 
+      tab.key === tabKey ? { ...tab, groupId } : tab
+    ));
+    setGuacamoleTabs(prev => prev.map(tab => 
       tab.key === tabKey ? { ...tab, groupId } : tab
     ));
     setFileExplorerTabs(prev => prev.map(tab => 
@@ -523,7 +535,8 @@ const App = () => {
               originalKey: node.key,
               sshConfig: sshConfig,
               type: 'terminal',
-              createdAt: Date.now()
+              createdAt: Date.now(),
+              groupId: null
             };
             // Activación inmediata y orden por createdAt
             setLastOpenedTabKey(tabId);
@@ -1596,7 +1609,8 @@ const App = () => {
                 label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
                 originalKey: node.key,
                 sshConfig: sshConfig,
-                type: 'terminal'
+                type: 'terminal',
+                groupId: null
               };
               const newTabs = [newTab, ...prevTabs];
               setActiveTabIndex(homeTabs.length);
@@ -2107,7 +2121,8 @@ const App = () => {
       type: 'explorer',
       createdAt: nowTs,
       needsOwnConnection: false, // Cambio importante: NO necesita su propia conexión
-      isExplorerInSSH: true // Flag para identificarla como explorador en el array SSH
+      isExplorerInSSH: true, // Flag para identificarla como explorador en el array SSH
+      groupId: null
     };
     
     // Insertar y activar como última abierta
@@ -2525,7 +2540,8 @@ const App = () => {
         originalKey: conn.originalKey,
         sshConfig: sshConfig,
         type: 'terminal',
-        createdAt: nowTs
+        createdAt: nowTs,
+        groupId: null
       };
       // Activar como última abierta (índice 1) y registrar orden de apertura
       setLastOpenedTabKey(tabId);
@@ -2649,7 +2665,8 @@ const App = () => {
           label: `${connectionName} (${prevTabs.filter(t => t.originalKey === originalKey).length + 1})`,
           originalKey: originalKey,
           rdpConfig: rdpConfig,
-          type: 'rdp-guacamole'
+          type: 'rdp-guacamole',
+          groupId: null
         };
         // Marcar y activar usando la clave REAL creada y registrar orden de apertura
         setLastOpenedTabKey(tabId);
@@ -2717,7 +2734,8 @@ const App = () => {
         originalKey: node.key,
         rdpConfig: rdpConfig,
         type: 'rdp',
-        node: node
+        node: node,
+        groupId: null
       };
       
       // Agregar la pestaña RDP y marcar para activar/mostrar tras Inicio
@@ -2831,7 +2849,8 @@ const App = () => {
         label: config.name || `Guacamole - ${config.server}`,
         type: 'guacamole',
         config: config,
-        tabId: tabId
+        tabId: tabId,
+        groupId: null
       };
       
       // Forzar grupo Home antes de activar
