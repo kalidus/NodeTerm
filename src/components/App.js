@@ -176,10 +176,24 @@ const App = () => {
       });
       return;
     }
+    
+    // Verificar si ya existe un grupo con el mismo nombre
+    const trimmedName = newGroupName.trim();
+    const existingGroup = tabGroups.find(group => group.name.toLowerCase() === trimmedName.toLowerCase());
+    if (existingGroup) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: `Ya existe un grupo con el nombre "${trimmedName}"`,
+        life: 3000
+      });
+      return;
+    }
+    
     const colorToUse = selectedGroupColor || getNextGroupColor();
     const newGroup = {
       id: `group_${Date.now()}`,
-      name: newGroupName.trim(),
+      name: trimmedName,
       color: colorToUse,
       createdAt: new Date().toISOString()
     };
