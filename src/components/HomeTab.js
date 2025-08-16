@@ -24,6 +24,7 @@ const HomeTab = ({
   localLinuxTerminalTheme,
   onCreateRdpConnection, // Nuevo prop para crear conexiones RDP
   onEditConnection, // Nuevo prop: editar conexión desde Home (se pasa directo a ConnectionHistory)
+  onLoadGroup, // Nuevo prop para cargar grupos desde favoritos
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
@@ -49,12 +50,21 @@ const HomeTab = ({
 
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
-    if (connection.type === 'rdp-guacamole') {
+    if (connection.type === 'group') {
+      // Manejar grupos - cargar todas las sesiones del grupo
+      handleLoadGroup(connection);
+    } else if (connection.type === 'rdp-guacamole') {
       // Manejar conexiones RDP-Guacamole
       handleCreateRdpConnection(connection);
     } else if (onCreateSSHConnection) {
       // Manejar conexiones SSH tradicionales
       onCreateSSHConnection(connection);
+    }
+  };
+
+  const handleLoadGroup = (groupConnection) => {
+    if (onLoadGroup) {
+      onLoadGroup(groupConnection);
     }
   };
 

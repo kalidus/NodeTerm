@@ -39,7 +39,7 @@ import GuacamoleTab from './GuacamoleTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
-import connectionStore, { recordRecent, toggleFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
+import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -161,6 +161,107 @@ const App = () => {
   // Obtener siguiente color disponible
   const getNextGroupColor = () => {
     return GROUP_COLORS[tabGroups.length % GROUP_COLORS.length];
+  };
+
+  // Cargar grupo desde favoritos
+  const handleLoadGroupFromFavorites = (groupConnection) => {
+    if (!groupConnection || !groupConnection.sessions) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo cargar el grupo: datos inválidos',
+        life: 3000
+      });
+      return;
+    }
+
+    // Verificar si ya existe un grupo con el mismo nombre
+    const existingGroup = tabGroups.find(group => group.name === groupConnection.name);
+    
+    if (existingGroup) {
+      // Si ya existe, activar ese grupo
+      setActiveGroupId(existingGroup.id);
+      setActiveTabIndex(0);
+      
+      toast.current.show({
+        severity: 'info',
+        summary: 'Grupo ya existe',
+        detail: `El grupo "${groupConnection.name}" ya está abierto`,
+        life: 3000
+      });
+      return;
+    }
+
+    // Crear un nuevo grupo con las sesiones guardadas
+    const newGroup = {
+      id: `group_${Date.now()}`,
+      name: groupConnection.name,
+      color: groupConnection.color || getNextGroupColor(),
+      createdAt: new Date().toISOString()
+    };
+
+    // Añadir el grupo
+    setTabGroups(prev => [...prev, newGroup]);
+
+    // Cargar cada sesión del grupo
+    groupConnection.sessions.forEach(session => {
+      // Recrear las pestañas según el tipo de sesión
+      if (session.type === 'terminal' || session.type === 'ssh') {
+        // Crear pestaña SSH
+        const sshTab = {
+          key: session.key,
+          label: session.label,
+          type: 'terminal',
+          groupId: newGroup.id,
+          originalKey: session.key,
+          sshConfig: {
+            host: session.host,
+            username: session.username,
+            port: session.port
+          }
+        };
+        setSshTabs(prev => [...prev, sshTab]);
+      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole') {
+        // Crear pestaña RDP
+        const rdpTab = {
+          key: session.key,
+          label: session.label,
+          type: 'rdp',
+          groupId: newGroup.id,
+          rdpConfig: {
+            server: session.host,
+            username: session.username,
+            port: session.port
+          }
+        };
+        setRdpTabs(prev => [...prev, rdpTab]);
+      } else if (session.type === 'explorer') {
+        // Crear pestaña explorador
+        const explorerTab = {
+          key: session.key,
+          label: session.label,
+          type: 'explorer',
+          groupId: newGroup.id,
+          sshConfig: {
+            host: session.host,
+            username: session.username,
+            port: session.port
+          }
+        };
+        setFileExplorerTabs(prev => [...prev, explorerTab]);
+      }
+    });
+
+    // Activar el grupo
+    setActiveGroupId(newGroup.id);
+    setActiveTabIndex(0);
+
+    toast.current.show({
+      severity: 'success',
+      summary: 'Grupo cargado',
+      detail: `Grupo "${groupConnection.name}" cargado con ${groupConnection.sessions.length} sesiones`,
+      life: 3000
+    });
   };
 
   // Crear nuevo grupo
@@ -3324,7 +3425,20 @@ const App = () => {
                           '--tab-border-color': group.color + '66'
                         }}
                         header={
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
+                          <span 
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setTabContextMenu({
+                                tabKey: group.id,
+                                x: e.clientX,
+                                y: e.clientY,
+                                isGroup: true,
+                                group: group
+                              });
+                            }}
+                          >
                             <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
                             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
                             <Button
@@ -3610,11 +3724,156 @@ const App = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      {tabGroups.length > 0 && (
+                      {tabContextMenu.isGroup ? (
+                        // Menú contextual para grupos
                         <>
                           <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
-                            Mover a grupo:
+                            Opciones del grupo "{tabContextMenu.group.name}":
                           </div>
+                                                    <div
+                            style={{
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                            onClick={() => {
+                              const isAlreadyFavorite = isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name);
+                              
+                                                             if (isAlreadyFavorite) {
+                                 // Quitar de favoritos
+                                 removeGroupFromFavorites(tabContextMenu.group.id, tabContextMenu.group.name);
+                                setTabContextMenu(null);
+                                toast.current.show({
+                                  severity: 'info',
+                                  summary: 'Grupo quitado de favoritos',
+                                  detail: `El grupo "${tabContextMenu.group.name}" ha sido quitado de favoritos`,
+                                  life: 3000
+                                });
+                              } else {
+                                // Añadir grupo a favoritos
+                                const groupWithSessions = {
+                                  ...tabContextMenu.group,
+                                  sessions: getTabsInGroup(tabContextMenu.group.id).map(tab => ({
+                                    key: tab.key,
+                                    label: tab.label,
+                                    type: tab.type,
+                                    groupId: tab.groupId,
+                                    // Información adicional según el tipo
+                                    ...(tab.sshConfig && {
+                                      host: tab.sshConfig.host,
+                                      username: tab.sshConfig.username,
+                                      port: tab.sshConfig.port
+                                    }),
+                                    ...(tab.rdpConfig && {
+                                      host: tab.rdpConfig.server,
+                                      username: tab.rdpConfig.username,
+                                      port: tab.rdpConfig.port
+                                    }),
+                                    ...(tab.isExplorerInSSH && {
+                                      isExplorerInSSH: true,
+                                      needsOwnConnection: tab.needsOwnConnection
+                                    })
+                                  }))
+                                };
+                                addGroupToFavorites(groupWithSessions);
+                                setTabContextMenu(null);
+                                toast.current.show({
+                                  severity: 'success',
+                                  summary: 'Grupo añadido a favoritos',
+                                  detail: `El grupo "${tabContextMenu.group.name}" ha sido añadido a favoritos`,
+                                  life: 3000
+                                });
+                              }
+                            }}
+                          >
+                            <i className={isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name) ? 'pi pi-star-fill' : 'pi pi-star'} style={{ width: '16px' }}></i>
+                            {isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                          </div>
+                          <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                          <div
+                            style={{
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              color: '#d32f2f'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#ffebee'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                            onClick={() => {
+                              // Eliminar grupo
+                              const tabsInGroup = getTabsInGroup(tabContextMenu.group.id);
+                              tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
+                              deleteGroup(tabContextMenu.group.id);
+                              setTabContextMenu(null);
+                            }}
+                          >
+                            <i className="pi pi-trash" style={{ width: '16px' }}></i>
+                            Eliminar grupo
+                          </div>
+                        </>
+                      ) : (
+                        // Menú contextual para pestañas individuales
+                        <>
+                          {tabGroups.length > 0 && (
+                            <>
+                              <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
+                                Mover a grupo:
+                              </div>
+                              <div
+                                style={{
+                                  padding: '8px 12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                onClick={() => {
+                                  moveTabToGroup(tabContextMenu.tabKey, null);
+                                  setTabContextMenu(null);
+                                }}
+                              >
+                                <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
+                                Home
+                              </div>
+                              {tabGroups.map(group => (
+                                <div
+                                  key={group.id}
+                                  style={{
+                                    padding: '8px 12px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                  onClick={() => {
+                                    moveTabToGroup(tabContextMenu.tabKey, group.id);
+                                    setTabContextMenu(null);
+                                  }}
+                                >
+                                  <div 
+                                    style={{ 
+                                      width: '12px', 
+                                      height: '12px', 
+                                      backgroundColor: group.color, 
+                                      borderRadius: '2px' 
+                                    }}
+                                  ></div>
+                                  {group.name}
+                                </div>
+                              ))}
+                              <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+                            </>
+                          )}
                           <div
                             style={{
                               padding: '8px 12px',
@@ -3626,62 +3885,15 @@ const App = () => {
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                             onClick={() => {
-                              moveTabToGroup(tabContextMenu.tabKey, null);
                               setTabContextMenu(null);
+                              setShowCreateGroupDialog(true);
                             }}
                           >
-                            <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
-                            Home
+                            <i className="pi pi-plus" style={{ width: '16px' }}></i>
+                            Crear nuevo grupo
                           </div>
-                          {tabGroups.map(group => (
-                            <div
-                              key={group.id}
-                              style={{
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px'
-                              }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                              onClick={() => {
-                                moveTabToGroup(tabContextMenu.tabKey, group.id);
-                                setTabContextMenu(null);
-                              }}
-                            >
-                              <div 
-                                style={{ 
-                                  width: '12px', 
-                                  height: '12px', 
-                                  backgroundColor: group.color, 
-                                  borderRadius: '2px' 
-                                }}
-                              ></div>
-                              {group.name}
-                            </div>
-                          ))}
-                          <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
                         </>
                       )}
-                      <div
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        onClick={() => {
-                          setTabContextMenu(null);
-                          setShowCreateGroupDialog(true);
-                        }}
-                      >
-                        <i className="pi pi-plus" style={{ width: '16px' }}></i>
-                        Crear nuevo grupo
-                      </div>
                     </div>
                   )}
 
@@ -3925,6 +4137,7 @@ const App = () => {
                               onCreateSSHConnection={onOpenSSHConnection}
                               onCreateFolder={() => openNewFolderDialog(null)}
                               onCreateRdpConnection={onOpenRdpConnection}
+                              onLoadGroup={handleLoadGroupFromFavorites}
                               onEditConnection={(connection) => {
                                 // Intentar construir un nodo temporal según el tipo para reutilizar los editores existentes
                                 if (!connection) return;

@@ -111,6 +111,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				return 'pi pi-desktop';
 			case 'explorer':
 				return 'pi pi-folder-open';
+			case 'group':
+				return 'pi pi-layer-group';
 			default:
 				return 'pi pi-circle';
 		}
@@ -124,6 +126,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				return '#ff6b35';
 			case 'explorer':
 				return '#FFB300';
+			case 'group':
+				return '#9c27b0';
 			default:
 				return '#9E9E9E';
 		}
@@ -135,7 +139,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				{ key: 'all', label: 'Todos' },
 				{ key: 'ssh', label: 'SSH' },
 				{ key: 'rdp-guacamole', label: 'RDP' },
-				{ key: 'explorer', label: 'SFTP' }
+				{ key: 'explorer', label: 'SFTP' },
+				{ key: 'group', label: 'Grupos' }
 			].map(opt => (
 				<button
 					key={opt.key}
@@ -220,6 +225,22 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				<div style={{ minWidth: 0 }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
 						<span style={{ color: 'var(--text-color)', fontWeight: 700, fontSize: micro ? 12 : (compact ? 13 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
+						{connection.type === 'group' && connection.sessions && (
+							<span style={{
+								display: 'inline-flex',
+								alignItems: 'center',
+								gap: 4,
+								padding: micro ? '1px 4px' : (compact ? '2px 6px' : '3px 8px'),
+								borderRadius: 999,
+								background: 'rgba(255,255,255,0.08)',
+								border: '1px solid rgba(255,255,255,0.12)',
+								color: 'var(--text-color)',
+								fontSize: micro ? 8 : (compact ? 9 : 10),
+								fontWeight: 600
+							}}>
+								{connection.sessions.length} sesión{connection.sessions.length !== 1 ? 'es' : ''}
+							</span>
+						)}
 						<span style={{
 							display: 'inline-flex',
 							alignItems: 'center',
@@ -232,7 +253,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							fontSize: micro ? 9 : (compact ? 10 : 11),
 							fontWeight: 700
 						}}>
-							{connection.type === 'rdp-guacamole' ? 'RDP' : (connection.type === 'explorer' ? 'SFTP' : 'SSH')}
+							{connection.type === 'rdp-guacamole' ? 'RDP' : 
+							 (connection.type === 'explorer' ? 'SFTP' : 
+							  connection.type === 'group' ? 'Grupo' : 'SSH')}
 						</span>
 					</div>
 				</div>
