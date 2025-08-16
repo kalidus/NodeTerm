@@ -135,13 +135,11 @@ const App = () => {
 
   // === ESTADO PARA GRUPOS DE PESTAÑAS ===
   const [tabGroups, setTabGroups] = useState(() => {
-    try {
-      const stored = localStorage.getItem('tabGroups');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+    // Los grupos no se guardan al reiniciar la aplicación
+    return [];
   });
+
+
   const [activeGroupId, setActiveGroupId] = useState(null);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -2205,12 +2203,12 @@ const App = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Guardar en localStorage cada vez que cambian los grupos
-  useEffect(() => {
-    try {
-      localStorage.setItem('tabGroups', JSON.stringify(tabGroups));
-    } catch {}
-  }, [tabGroups]);
+  // Los grupos no se guardan al reiniciar la aplicación
+  // useEffect(() => {
+  //   try {
+  //     localStorage.setItem('tabGroups', JSON.stringify(tabGroups));
+  //   } catch {}
+  // }, [tabGroups]);
 
   const [iconTheme, setIconTheme] = useState(() => {
     try {
