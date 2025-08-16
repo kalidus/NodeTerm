@@ -1,5 +1,5 @@
 // Simple connection store backed by localStorage for favorites and recents
-// Supports SSH, RDP (rdp-guacamole) and Explorer (SSH-based file explorer)
+// Supports SSH, RDP (rdp-guacamole), Explorer (SSH-based file explorer) and Groups
 
 const FAVORITES_KEY = 'nodeterm_favorite_connections';
 const RECENTS_KEY = 'nodeterm_connection_history';
@@ -50,6 +50,20 @@ function toSerializable(connection) {
   const username = connection.username || connection.user || '';
   const port = normalizePort(type, connection.port);
   const id = connection.id || buildId({ type, host, username, port });
+  
+  // Si es un grupo, usar estructura especial
+  if (type === 'group') {
+    return {
+      id: connection.id || `group_${Date.now()}`,
+      type: 'group',
+      name: connection.name || connection.label || 'Grupo sin nombre',
+      color: connection.color || '#1976d2',
+      sessions: connection.sessions || [],
+      createdAt: connection.createdAt || new Date().toISOString(),
+      lastConnected: connection.lastConnected ? new Date(connection.lastConnected).toISOString() : new Date().toISOString()
+    };
+  }
+  
   return {
     id,
     type,
@@ -124,6 +138,46 @@ export function toggleFavorite(connOrId) {
   return list;
 }
 
+// Función específica para grupos
+export function addGroupToFavorites(group) {
+  const groupSerial = toSerializable({
+    ...group,
+    type: 'group'
+  });
+  const list = getFavorites();
+  
+  // Buscar por ID del grupo original o por nombre si no hay ID
+  const idx = list.findIndex(f => 
+    (f.type === 'group' && f.id === groupSerial.id) || 
+    (f.type === 'group' && f.name === groupSerial.name)
+  );
+  
+  if (idx >= 0) {
+    // Actualizar el grupo existente
+    list[idx] = groupSerial;
+  } else {
+    // Añadir nuevo grupo
+    list.unshift(groupSerial);
+  }
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
+export function removeGroupFromFavorites(groupId, groupName = null) {
+  const list = getFavorites().filter(f => 
+    !(f.type === 'group' && (f.id === groupId || (groupName && f.name === groupName)))
+  );
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
+export function isGroupFavorite(groupId, groupName = null) {
+  return getFavorites().some(f => 
+    f.type === 'group' && 
+    (f.id === groupId || (groupName && f.name === groupName))
+  );
+}
+
 // RECENTS
 export function getRecents(limit = DEFAULT_RECENTS_LIMIT) {
   const list = loadList(RECENTS_KEY);
@@ -189,6 +243,9 @@ export default {
   toggleFavorite,
   addFavorite,
   removeFavorite,
+  addGroupToFavorites,
+  removeGroupFromFavorites,
+  isGroupFavorite,
   getRecents,
   recordRecent,
   clearRecents,
