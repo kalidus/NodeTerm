@@ -207,22 +207,74 @@ const App = () => {
     groupConnection.sessions.forEach(session => {
       // Recrear las pestañas según el tipo de sesión
       if (session.type === 'terminal' || session.type === 'ssh') {
-        // Crear pestaña SSH
-        const sshTab = {
-          key: session.key,
-          label: session.label,
-          type: 'terminal',
-          groupId: newGroup.id,
+        // Buscar el nodo original en el sidebar para obtener la configuración completa
+        let matchedSidebarNode = null;
+        if (session.host && session.username) {
+          const matchesConn = (node) => {
+            if (!node || !node.data || node.data.type !== 'ssh') return false;
+            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
+            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
+            const portMatches = (node.data.port || 22) === (session.port || 22);
+            return hostMatches && userMatches && portMatches;
+          };
+          const dfs = (list) => {
+            if (!Array.isArray(list)) return;
+            for (const n of list) {
+              if (matchesConn(n)) { matchedSidebarNode = n; return; }
+              if (n.children && n.children.length > 0) dfs(n.children);
+              if (matchedSidebarNode) return;
+            }
+          };
+          dfs(nodes);
+        }
+
+        // Crear pestaña SSH con configuración completa
+        const nowTs = Date.now();
+        const tabId = `${session.key}_${nowTs}`;
+        const sshConfig = {
+          host: session.host,
+          username: session.username,
+          password: matchedSidebarNode?.data?.password || '',
+          port: session.port,
           originalKey: session.key,
-          sshConfig: {
-            host: session.host,
-            username: session.username,
-            port: session.port
-          }
+          useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
+          bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
+          bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
+        };
+        
+        const sshTab = {
+          key: tabId,
+          label: session.label,
+          originalKey: session.key,
+          sshConfig: sshConfig,
+          type: 'terminal',
+          createdAt: nowTs,
+          groupId: newGroup.id
         };
         setSshTabs(prev => [...prev, sshTab]);
       } else if (session.type === 'rdp' || session.type === 'rdp-guacamole') {
-        // Crear pestaña RDP
+        // Buscar el nodo original en el sidebar para obtener la configuración completa
+        let matchedSidebarNode = null;
+        if (session.host && session.username) {
+          const matchesConn = (node) => {
+            if (!node || !node.data || node.data.type !== 'rdp') return false;
+            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
+            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
+            const portMatches = (node.data.port || 3389) === (session.port || 3389);
+            return hostMatches && userMatches && portMatches;
+          };
+          const dfs = (list) => {
+            if (!Array.isArray(list)) return;
+            for (const n of list) {
+              if (matchesConn(n)) { matchedSidebarNode = n; return; }
+              if (n.children && n.children.length > 0) dfs(n.children);
+              if (matchedSidebarNode) return;
+            }
+          };
+          dfs(nodes);
+        }
+
+        // Crear pestaña RDP con configuración completa
         const rdpTab = {
           key: session.key,
           label: session.label,
@@ -231,12 +283,35 @@ const App = () => {
           rdpConfig: {
             server: session.host,
             username: session.username,
-            port: session.port
+            password: matchedSidebarNode?.data?.password || '',
+            port: session.port,
+            clientType: session.clientType || matchedSidebarNode?.data?.clientType || 'mstsc'
           }
         };
         setRdpTabs(prev => [...prev, rdpTab]);
       } else if (session.type === 'explorer') {
-        // Crear pestaña explorador
+        // Buscar el nodo original en el sidebar para obtener la configuración completa
+        let matchedSidebarNode = null;
+        if (session.host && session.username) {
+          const matchesConn = (node) => {
+            if (!node || !node.data || node.data.type !== 'ssh') return false;
+            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
+            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
+            const portMatches = (node.data.port || 22) === (session.port || 22);
+            return hostMatches && userMatches && portMatches;
+          };
+          const dfs = (list) => {
+            if (!Array.isArray(list)) return;
+            for (const n of list) {
+              if (matchesConn(n)) { matchedSidebarNode = n; return; }
+              if (n.children && n.children.length > 0) dfs(n.children);
+              if (matchedSidebarNode) return;
+            }
+          };
+          dfs(nodes);
+        }
+
+        // Crear pestaña explorador con configuración completa
         const explorerTab = {
           key: session.key,
           label: session.label,
@@ -245,8 +320,15 @@ const App = () => {
           sshConfig: {
             host: session.host,
             username: session.username,
-            port: session.port
-          }
+            password: matchedSidebarNode?.data?.password || '',
+            port: session.port,
+            originalKey: session.key,
+            useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
+            bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
+            bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
+          },
+          isExplorerInSSH: session.isExplorerInSSH || false,
+          needsOwnConnection: session.needsOwnConnection || false
         };
         setFileExplorerTabs(prev => [...prev, explorerTab]);
       }
@@ -3754,31 +3836,35 @@ const App = () => {
                                   life: 3000
                                 });
                               } else {
-                                // Añadir grupo a favoritos
-                                const groupWithSessions = {
-                                  ...tabContextMenu.group,
-                                  sessions: getTabsInGroup(tabContextMenu.group.id).map(tab => ({
-                                    key: tab.key,
-                                    label: tab.label,
-                                    type: tab.type,
-                                    groupId: tab.groupId,
-                                    // Información adicional según el tipo
-                                    ...(tab.sshConfig && {
-                                      host: tab.sshConfig.host,
-                                      username: tab.sshConfig.username,
-                                      port: tab.sshConfig.port
-                                    }),
-                                    ...(tab.rdpConfig && {
-                                      host: tab.rdpConfig.server,
-                                      username: tab.rdpConfig.username,
-                                      port: tab.rdpConfig.port
-                                    }),
-                                    ...(tab.isExplorerInSSH && {
-                                      isExplorerInSSH: true,
-                                      needsOwnConnection: tab.needsOwnConnection
-                                    })
-                                  }))
-                                };
+                                                               // Añadir grupo a favoritos
+                               const groupWithSessions = {
+                                 ...tabContextMenu.group,
+                                 sessions: getTabsInGroup(tabContextMenu.group.id).map(tab => ({
+                                   key: tab.key,
+                                   label: tab.label,
+                                   type: tab.type,
+                                   groupId: tab.groupId,
+                                   // Información adicional según el tipo
+                                   ...(tab.sshConfig && {
+                                     host: tab.sshConfig.host,
+                                     username: tab.sshConfig.username,
+                                     port: tab.sshConfig.port,
+                                     useBastionWallix: tab.sshConfig.useBastionWallix,
+                                     bastionHost: tab.sshConfig.bastionHost,
+                                     bastionUser: tab.sshConfig.bastionUser
+                                   }),
+                                   ...(tab.rdpConfig && {
+                                     host: tab.rdpConfig.server,
+                                     username: tab.rdpConfig.username,
+                                     port: tab.rdpConfig.port,
+                                     clientType: tab.rdpConfig.clientType
+                                   }),
+                                   ...(tab.isExplorerInSSH && {
+                                     isExplorerInSSH: true,
+                                     needsOwnConnection: tab.needsOwnConnection
+                                   })
+                                 }))
+                               };
                                 addGroupToFavorites(groupWithSessions);
                                 setTabContextMenu(null);
                                 toast.current.show({
