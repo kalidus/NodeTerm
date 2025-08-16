@@ -147,6 +147,10 @@ export function clearRecents() {
   saveList(RECENTS_KEY, []);
 }
 
+
+
+
+
 export function addFavorite(conn) {
   return toggleFavorite(conn);
 }
