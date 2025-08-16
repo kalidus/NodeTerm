@@ -112,7 +112,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			case 'explorer':
 				return 'pi pi-folder-open';
 			case 'group':
-				return 'pi pi-layer-group';
+				return 'pi pi-th-large';
 			default:
 				return 'pi pi-circle';
 		}
@@ -160,9 +160,44 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		</div>
 	);
 
+	// TypeChips específico para recientes (sin grupos)
+	const RecentsTypeChips = ({ value, onChange }) => (
+		<div style={{ display: 'flex', gap: 6 }}>
+			{[
+				{ key: 'all', label: 'Todos' },
+				{ key: 'ssh', label: 'SSH' },
+				{ key: 'rdp-guacamole', label: 'RDP' },
+				{ key: 'explorer', label: 'SFTP' }
+			].map(opt => (
+				<button
+					key={opt.key}
+					onClick={() => { onChange(opt.key); }}
+					style={{
+						padding: '2px 8px',
+						borderRadius: 999,
+						border: '1px solid rgba(255,255,255,0.14)',
+						background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+						color: 'var(--text-color)',
+						fontSize: 11,
+						cursor: 'pointer',
+						backdropFilter: 'blur(8px) saturate(130%)'
+					}}
+				>{opt.label}</button>
+			))}
+		</div>
+	);
+
 	const applyTypeFilter = (items, type) => {
 		if (type === 'all') return items;
 		return items.filter(c => c.type === type);
+	};
+
+	// Filtro específico para recientes que excluye grupos
+	const applyRecentsTypeFilter = (items, type) => {
+		// Primero excluir grupos de recientes
+		const nonGroupItems = items.filter(c => c.type !== 'group');
+		if (type === 'all') return nonGroupItems;
+		return nonGroupItems.filter(c => c.type === type);
 	};
 
 	const applyQueryFilter = (items, query) => {
@@ -176,7 +211,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	const filteredFavorites = applyQueryFilter(applyTypeFilter(favoriteConnections, favType), favQuery);
-	const filteredRecents = applyQueryFilter(applyTypeFilter(recentConnections, recType), recQuery);
+	const filteredRecents = applyQueryFilter(applyRecentsTypeFilter(recentConnections, recType), recQuery);
 
 	const ConnectionCard = ({ connection, showFavoriteAction = false, compact = false, micro = false, onEdit }) => {
 		const isActive = activeIds.has(`${connection.type}:${connection.host}:${connection.username}:${connection.port}`);
@@ -225,22 +260,6 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				<div style={{ minWidth: 0 }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
 						<span style={{ color: 'var(--text-color)', fontWeight: 700, fontSize: micro ? 12 : (compact ? 13 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
-						{connection.type === 'group' && connection.sessions && (
-							<span style={{
-								display: 'inline-flex',
-								alignItems: 'center',
-								gap: 4,
-								padding: micro ? '1px 4px' : (compact ? '2px 6px' : '3px 8px'),
-								borderRadius: 999,
-								background: 'rgba(255,255,255,0.08)',
-								border: '1px solid rgba(255,255,255,0.12)',
-								color: 'var(--text-color)',
-								fontSize: micro ? 8 : (compact ? 9 : 10),
-								fontWeight: 600
-							}}>
-								{connection.sessions.length} sesión{connection.sessions.length !== 1 ? 'es' : ''}
-							</span>
-						)}
 						<span style={{
 							display: 'inline-flex',
 							alignItems: 'center',
@@ -257,6 +276,22 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							 (connection.type === 'explorer' ? 'SFTP' : 
 							  connection.type === 'group' ? 'Grupo' : 'SSH')}
 						</span>
+						{connection.type === 'group' && connection.sessions && (
+							<span style={{
+								display: 'inline-flex',
+								alignItems: 'center',
+								gap: 4,
+								padding: micro ? '1px 4px' : (compact ? '2px 6px' : '3px 8px'),
+								borderRadius: 999,
+								background: 'rgba(255,255,255,0.08)',
+								border: '1px solid rgba(255,255,255,0.12)',
+								color: 'var(--text-color)',
+								fontSize: micro ? 8 : (compact ? 9 : 10),
+								fontWeight: 600
+							}}>
+								{connection.sessions.length}
+							</span>
+						)}
 					</div>
 				</div>
 
@@ -463,7 +498,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Conexiones Recientes</h3>
 						<Badge value={filteredRecents.length} style={{ fontSize: 11, minWidth: '1.1rem', height: '1.1rem', lineHeight: '1.1rem' }} />
 						<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-							<TypeChips value={recType} onChange={setRecType} />
+							<RecentsTypeChips value={recType} onChange={setRecType} />
 						</div>
 						</div>
 					{filteredRecents.length > 0 ? (
