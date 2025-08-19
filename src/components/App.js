@@ -40,6 +40,7 @@ import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
+import { useTabManagement } from '../hooks/useTabManagement';
 
 // Componente para mostrar icono según distribución
 const DistroIcon = ({ distro, size = 14 }) => {
@@ -65,6 +66,48 @@ const DistroIcon = ({ distro, size = 14 }) => {
 
 const App = () => {
   const toast = useRef(null);
+  
+  // Usar el hook de gestión de pestañas
+  const {
+    // Estado
+    sshTabs, setSshTabs,
+    rdpTabs, setRdpTabs,
+    guacamoleTabs, setGuacamoleTabs,
+    fileExplorerTabs, setFileExplorerTabs,
+    homeTabs, setHomeTabs,
+    lastOpenedTabKey, setLastOpenedTabKey,
+    onCreateActivateTabKey, setOnCreateActivateTabKey,
+    activatingNowRef,
+    openTabOrder, setOpenTabOrder,
+    activeTabIndex, setActiveTabIndex,
+    pendingExplorerSession, setPendingExplorerSession,
+    tabGroups, setTabGroups,
+    activeGroupId, setActiveGroupId,
+    groupActiveIndices, setGroupActiveIndices,
+    showCreateGroupDialog, setShowCreateGroupDialog,
+    newGroupName, setNewGroupName,
+    selectedGroupColor, setSelectedGroupColor,
+    tabContextMenu, setTabContextMenu,
+    tabDistros, setTabDistros,
+    activeListenersRef,
+    terminalRefs,
+    
+    // Constantes
+    GROUP_COLORS,
+    
+    // Funciones
+    getNextGroupColor,
+    getAllTabs,
+    getTabsInGroup,
+    getFilteredTabs,
+    handleLoadGroupFromFavorites,
+    createNewGroup,
+    deleteGroup,
+    moveTabToGroup,
+    cleanupTabDistro
+  } = useTabManagement(toast);
+
+  // Estados que no están en el hook (se mantienen en App.js)
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
   // Storage key for persistence
@@ -96,370 +139,17 @@ const App = () => {
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
   const [showRdpDialog, setShowRdpDialog] = useState(false);
 
-
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [editFolderNode, setEditFolderNode] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
-  const [sshTabs, setSshTabs] = useState([]);
-  const [rdpTabs, setRdpTabs] = useState([]);
-  const [guacamoleTabs, setGuacamoleTabs] = useState([]);
-  const [lastOpenedTabKey, setLastOpenedTabKey] = useState(null);
-  // Tab a activar inmediatamente tras crearse (reordenación virtual a índice 1)
-  const [onCreateActivateTabKey, setOnCreateActivateTabKey] = useState(null);
-  // Gate para evitar que otros cambios de índice pisen la activación inmediata
-  const activatingNowRef = useRef(false);
-  // Orden real de pestañas abiertas (excluye Inicio). La más reciente va primero
-  const [openTabOrder, setOpenTabOrder] = useState([]);
-  const [fileExplorerTabs, setFileExplorerTabs] = useState([]);
-  const [homeTabs, setHomeTabs] = useState(() => [
-    {
-      key: 'home_tab_default',
-      label: 'Inicio',
-      type: 'home'
-    }
-  ]);
-  const [activeTabIndex, setActiveTabIndex] = useState(0);
-  const [pendingExplorerSession, setPendingExplorerSession] = useState(null);
   const [sshPassword, setSSHPassword] = useState('');
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
   const [sshPort, setSSHPort] = useState(22);
-  const terminalRefs = useRef({});
   const [nodes, setNodes] = useState([]);
 
-  // Estado para tracking del distro por pestaña
-  const [tabDistros, setTabDistros] = useState({});
-
-  // Ref para mantener track de los listeners activos
-  const activeListenersRef = useRef(new Set());
-
-  // === ESTADO PARA GRUPOS DE PESTAÑAS ===
-  const [tabGroups, setTabGroups] = useState(() => {
-    // Los grupos no se guardan al reiniciar la aplicación
-    return [];
-  });
-
-
-  const [activeGroupId, setActiveGroupId] = useState(null);
-  const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [tabContextMenu, setTabContextMenu] = useState(null);
-  
-  // Estado para mantener el índice activo de cada grupo
-  const [groupActiveIndices, setGroupActiveIndices] = useState({});
-
-  // Paleta de colores para grupos (moderna, 12 colores)
-  const GROUP_COLORS = [
-    '#1976d2', '#43a047', '#fbc02d', '#d32f2f', '#7b1fa2', '#0097a7', '#ff9800', '#607d8b', '#cfd8dc', '#ff5722', '#8d6e63', '#00bcd4'
-  ];
-
-  // Estado para color personalizado
-  const [selectedGroupColor, setSelectedGroupColor] = useState('');
-
   // === FUNCIONES DE GRUPOS ===
-  
-  // Obtener siguiente color disponible
-  const getNextGroupColor = () => {
-    return GROUP_COLORS[tabGroups.length % GROUP_COLORS.length];
-  };
-
-  // Cargar grupo desde favoritos
-  const handleLoadGroupFromFavorites = (groupConnection) => {
-    if (!groupConnection || !groupConnection.sessions) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo cargar el grupo: datos inválidos',
-        life: 3000
-      });
-      return;
-    }
-
-    // Verificar si ya existe un grupo con el mismo nombre
-    const existingGroup = tabGroups.find(group => group.name === groupConnection.name);
-    
-    if (existingGroup) {
-      // Si ya existe, activar ese grupo
-      setActiveGroupId(existingGroup.id);
-      setActiveTabIndex(0);
-      
-      toast.current.show({
-        severity: 'info',
-        summary: 'Grupo ya existe',
-        detail: `El grupo "${groupConnection.name}" ya está abierto`,
-        life: 3000
-      });
-      return;
-    }
-
-    // Crear un nuevo grupo con las sesiones guardadas
-    const newGroup = {
-      id: `group_${Date.now()}`,
-      name: groupConnection.name,
-      color: groupConnection.color || getNextGroupColor(),
-      createdAt: new Date().toISOString()
-    };
-
-    // Añadir el grupo
-    setTabGroups(prev => [...prev, newGroup]);
-
-    // Cargar cada sesión del grupo
-    groupConnection.sessions.forEach(session => {
-      // Recrear las pestañas según el tipo de sesión
-      if (session.type === 'terminal' || session.type === 'ssh') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const matchesConn = (node) => {
-            if (!node || !node.data || node.data.type !== 'ssh') return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const portMatches = (node.data.port || 22) === (session.port || 22);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
-
-        // Crear pestaña SSH con configuración completa
-        const nowTs = Date.now();
-        const tabId = `${session.key}_${nowTs}`;
-        const sshConfig = {
-          host: session.host,
-          username: session.username,
-          password: matchedSidebarNode?.data?.password || '',
-          port: session.port,
-          originalKey: session.key,
-          useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
-          bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
-          bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
-        };
-        
-        const sshTab = {
-          key: tabId,
-          label: session.label,
-          originalKey: session.key,
-          sshConfig: sshConfig,
-          type: 'terminal',
-          createdAt: nowTs,
-          groupId: newGroup.id
-        };
-        setSshTabs(prev => [...prev, sshTab]);
-      } else if (session.type === 'rdp' || session.type === 'rdp-guacamole') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const matchesConn = (node) => {
-            if (!node || !node.data || node.data.type !== 'rdp') return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const portMatches = (node.data.port || 3389) === (session.port || 3389);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
-
-        // Crear pestaña RDP con configuración completa
-        const rdpTab = {
-          key: session.key,
-          label: session.label,
-          type: 'rdp',
-          groupId: newGroup.id,
-          rdpConfig: {
-            server: session.host,
-            username: session.username,
-            password: matchedSidebarNode?.data?.password || '',
-            port: session.port,
-            clientType: session.clientType || matchedSidebarNode?.data?.clientType || 'mstsc'
-          }
-        };
-        setRdpTabs(prev => [...prev, rdpTab]);
-      } else if (session.type === 'explorer') {
-        // Buscar el nodo original en el sidebar para obtener la configuración completa
-        let matchedSidebarNode = null;
-        if (session.host && session.username) {
-          const matchesConn = (node) => {
-            if (!node || !node.data || node.data.type !== 'ssh') return false;
-            const hostMatches = (node.data.host === session.host) || (node.data.targetServer === session.host) || (node.data.hostname === session.host);
-            const userMatches = (node.data.user === session.username) || (node.data.username === session.username);
-            const portMatches = (node.data.port || 22) === (session.port || 22);
-            return hostMatches && userMatches && portMatches;
-          };
-          const dfs = (list) => {
-            if (!Array.isArray(list)) return;
-            for (const n of list) {
-              if (matchesConn(n)) { matchedSidebarNode = n; return; }
-              if (n.children && n.children.length > 0) dfs(n.children);
-              if (matchedSidebarNode) return;
-            }
-          };
-          dfs(nodes);
-        }
-
-        // Crear pestaña explorador con configuración completa
-        const explorerTab = {
-          key: session.key,
-          label: session.label,
-          type: 'explorer',
-          groupId: newGroup.id,
-          sshConfig: {
-            host: session.host,
-            username: session.username,
-            password: matchedSidebarNode?.data?.password || '',
-            port: session.port,
-            originalKey: session.key,
-            useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
-            bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
-            bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
-          },
-          isExplorerInSSH: session.isExplorerInSSH || false,
-          needsOwnConnection: session.needsOwnConnection || false
-        };
-        setFileExplorerTabs(prev => [...prev, explorerTab]);
-      }
-    });
-
-    // Activar el grupo
-    setActiveGroupId(newGroup.id);
-    setActiveTabIndex(0);
-
-    toast.current.show({
-      severity: 'success',
-      summary: 'Grupo cargado',
-      detail: `Grupo "${groupConnection.name}" cargado con ${groupConnection.sessions.length} sesiones`,
-      life: 3000
-    });
-  };
-
-  // Crear nuevo grupo
-  const createNewGroup = () => {
-    if (!newGroupName.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El nombre del grupo no puede estar vacío',
-        life: 3000
-      });
-      return;
-    }
-    
-    // Verificar si ya existe un grupo con el mismo nombre
-    const trimmedName = newGroupName.trim();
-    const existingGroup = tabGroups.find(group => group.name.toLowerCase() === trimmedName.toLowerCase());
-    if (existingGroup) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Ya existe un grupo con el nombre "${trimmedName}"`,
-        life: 3000
-      });
-      return;
-    }
-    
-    const colorToUse = selectedGroupColor || getNextGroupColor();
-    const newGroup = {
-      id: `group_${Date.now()}`,
-      name: trimmedName,
-      color: colorToUse,
-      createdAt: new Date().toISOString()
-    };
-    setTabGroups(prev => [...prev, newGroup]);
-    setNewGroupName('');
-    setSelectedGroupColor('');
-    setShowCreateGroupDialog(false);
-    toast.current.show({
-      severity: 'success',
-      summary: 'Grupo creado',
-      detail: `Grupo "${newGroup.name}" creado exitosamente`,
-      life: 3000
-    });
-  };
-
-  // Eliminar grupo
-  const deleteGroup = (groupId) => {
-    // Remover groupId de todas las pestañas
-    setSshTabs(prev => prev.map(tab => 
-      tab.groupId === groupId ? { ...tab, groupId: null } : tab
-    ));
-    setRdpTabs(prev => prev.map(tab => 
-      tab.groupId === groupId ? { ...tab, groupId: null } : tab
-    ));
-    setGuacamoleTabs(prev => prev.map(tab => 
-      tab.groupId === groupId ? { ...tab, groupId: null } : tab
-    ));
-    setFileExplorerTabs(prev => prev.map(tab => 
-      tab.groupId === groupId ? { ...tab, groupId: null } : tab
-    ));
-    
-    // Eliminar el grupo
-    setTabGroups(prev => prev.filter(group => group.id !== groupId));
-    
-    // Si era el grupo activo, desactivar
-    if (activeGroupId === groupId) {
-      setActiveGroupId(null);
-    }
-  };
-
-  // Mover pestaña a grupo
-  const moveTabToGroup = (tabKey, groupId) => {
-    setHomeTabs(prev => prev.map(tab => 
-      tab.key === tabKey ? { ...tab, groupId } : tab
-    ));
-    setSshTabs(prev => prev.map(tab => 
-      tab.key === tabKey ? { ...tab, groupId } : tab
-    ));
-    setRdpTabs(prev => prev.map(tab => 
-      tab.key === tabKey ? { ...tab, groupId } : tab
-    ));
-    setGuacamoleTabs(prev => prev.map(tab => 
-      tab.key === tabKey ? { ...tab, groupId } : tab
-    ));
-    setFileExplorerTabs(prev => prev.map(tab => 
-      tab.key === tabKey ? { ...tab, groupId } : tab
-    ));
-  };
-
-  // Obtener pestañas de un grupo específico
-  const getTabsInGroup = (groupId) => {
-    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
-    const pool = groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
-    const home = pool.filter(t => t.type === 'home');
-    const nonHome = pool.filter(t => t.type !== 'home');
-    const byKey = new Map(nonHome.map(t => [t.key, t]));
-    const ordered = [];
-    // Respeta el orden de apertura más reciente a más antiguo
-    for (const key of openTabOrder) {
-      const t = byKey.get(key);
-      if (t) {
-        ordered.push(t);
-        byKey.delete(key);
-      }
-    }
-    // Si quedan pestañas sin entrada en openTabOrder (anteriores), apéndalas por createdAt desc como fallback
-    const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
-    return [...home, ...ordered, ...rest];
-  };
-
-  // Obtener pestañas filtradas según el grupo activo, con reordenación opcional
-  const getFilteredTabs = () => {
-    // El orden ya viene de getTabsInGroup (Inicio + resto por createdAt desc)
-    return getTabsInGroup(activeGroupId);
-  };
+  // (Movidas al hook useTabManagement)
 
   // Tras crear una pestaña marcada para activación, fijar activeTabIndex al índice real y limpiar la marca
   useEffect(() => {
@@ -934,9 +624,7 @@ const App = () => {
   };
 
   // Funciones auxiliares para el manejo de pestañas
-  const getAllTabs = () => {
-    return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
-  };
+  // getAllTabs movido al hook useTabManagement
 
   const getTabTypeAndIndex = (globalIndex) => {
     if (globalIndex < homeTabs.length) {
@@ -1112,13 +800,7 @@ const App = () => {
   };
 
   // Función para limpiar distro cuando se cierra una pestaña
-  const cleanupTabDistro = (tabKey) => {
-    setTabDistros(prev => {
-      const newDistros = { ...prev };
-      delete newDistros[tabKey];
-      return newDistros;
-    });
-  };
+  // cleanupTabDistro movido al hook useTabManagement
 
   const handleCopyFromTerminal = (tabKey) => {
     if (window.electron && terminalRefs.current[tabKey]) {
