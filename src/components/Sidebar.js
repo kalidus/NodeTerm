@@ -420,7 +420,7 @@ const Sidebar = ({
         onDoubleClick={(e) => {
           e.stopPropagation();
           if (isSSH && onOpenSSHConnection) {
-            onOpenSSHConnection(node);
+            onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(node);
           }

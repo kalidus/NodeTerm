@@ -60,7 +60,9 @@ const PowerShellTerminal = forwardRef(({
         const fetchStats = async () => {
             try {
                 const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats) return;
+                if (!systemStats) {
+                    return;
+                }
                 // Map worker stats → StatusBar expected shape
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
@@ -94,7 +96,9 @@ const PowerShellTerminal = forwardRef(({
                         return arr.slice(-30);
                     });
                 }
-            } catch {}
+            } catch (error) {
+                console.error('Error obteniendo estadísticas:', error);
+            }
         };
 
         const loop = () => {

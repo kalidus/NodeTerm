@@ -25,9 +25,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
-    if (onOpenSSHConnection) {
-      onOpenSSHConnection(node);
-    }
+          if (onOpenSSHConnection) {
+        onOpenSSHConnection(node, allNodes);
+      }
   };
 
   const handleMinimize = () => {
