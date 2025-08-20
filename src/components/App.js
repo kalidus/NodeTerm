@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
@@ -95,6 +95,75 @@ const App = () => {
     setOpenTabOrder, sshTabs, setSshTabs, rdpTabs, setRdpTabs, toast
   });
 
+  // Función para abrir una sesión en split con otra pestaña existente
+  const openInSplit = useCallback((sshNode, existingTab, orientation = 'vertical') => {
+    // Si no estamos en el grupo Home, cambiar a Home primero
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+
+    // Crear nueva sesión SSH para el split
+    const newTabId = `${sshNode.key}_${Date.now()}`;
+    const sshConfig = {
+      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
+      username: sshNode.data.user,
+      password: sshNode.data.password,
+      port: sshNode.data.port || 22,
+      originalKey: sshNode.key,
+      useBastionWallix: sshNode.data.useBastionWallix || false,
+      bastionHost: sshNode.data.bastionHost || '',
+      bastionUser: sshNode.data.bastionUser || ''
+    };
+
+    const newTerminal = {
+      key: newTabId,
+      label: `${sshNode.label} (${sshTabs.filter(t => t.originalKey === sshNode.key).length + 1})`,
+      originalKey: sshNode.key,
+      sshConfig: sshConfig,
+      type: 'terminal'
+    };
+
+    setSshTabs(prevTabs => {
+      const updatedTabs = prevTabs.map(tab => {
+        if (tab.key === existingTab.key) {
+          return {
+            ...tab,
+            type: 'split',
+            orientation: orientation, // Guardar la orientación
+            leftTerminal: { ...tab, type: 'terminal' }, // Terminal izquierdo (existente)
+            rightTerminal: newTerminal, // Terminal derecho (nuevo)
+            label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label.split(' (')[0]} | ${sshNode.label}`
+          };
+        }
+        return tab;
+      });
+      // Buscar el índice real de la pestaña split (por si la posición cambia)
+      const splitTabKey = existingTab.key;
+      const allTabs = [...homeTabs, ...updatedTabs, ...fileExplorerTabs];
+      const splitTabIndex = allTabs.findIndex(tab => tab.key === splitTabKey);
+      if (splitTabIndex !== -1) {
+        setActiveTabIndex(splitTabIndex);
+        setGroupActiveIndices(prev => ({
+          ...prev,
+          'no-group': splitTabIndex
+        }));
+      }
+      return updatedTabs;
+    });
+
+    toast.current.show({
+      severity: 'success',
+      summary: 'Split creado',
+      detail: `Nueva sesión de ${sshNode.label} abierta en split ${orientation}`,
+      life: 3000
+    });
+  }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast]);
+
   // Usar el hook de gestión del sidebar
   const {
     nodes, setNodes,
@@ -108,7 +177,8 @@ const App = () => {
   } = useSidebarManagement(toast, {
     activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
     setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
-    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection
+    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection,
+    homeTabs, fileExplorerTabs, sshTabs
   });
 
   // Estados que no están en el hook (se mantienen en App.js)
@@ -1629,74 +1699,6 @@ const App = () => {
   };
 
   // Función para abrir explorador de archivos SSH
-  // Función para abrir una sesión en split con otra pestaña existente
-  const openInSplit = (sshNode, existingTab, orientation = 'vertical') => {
-    // Si no estamos en el grupo Home, cambiar a Home primero
-    if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: activeTabIndex
-      }));
-      setActiveGroupId(null);
-    }
-
-    // Crear nueva sesión SSH para el split
-    const newTabId = `${sshNode.key}_${Date.now()}`;
-    const sshConfig = {
-      host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
-      username: sshNode.data.user,
-      password: sshNode.data.password,
-      port: sshNode.data.port || 22,
-      originalKey: sshNode.key,
-      useBastionWallix: sshNode.data.useBastionWallix || false,
-      bastionHost: sshNode.data.bastionHost || '',
-      bastionUser: sshNode.data.bastionUser || ''
-    };
-
-    const newTerminal = {
-      key: newTabId,
-      label: `${sshNode.label} (${sshTabs.filter(t => t.originalKey === sshNode.key).length + 1})`,
-      originalKey: sshNode.key,
-      sshConfig: sshConfig,
-      type: 'terminal'
-    };
-
-    setSshTabs(prevTabs => {
-      const updatedTabs = prevTabs.map(tab => {
-        if (tab.key === existingTab.key) {
-          return {
-            ...tab,
-            type: 'split',
-            orientation: orientation, // Guardar la orientación
-            leftTerminal: { ...tab, type: 'terminal' }, // Terminal izquierdo (existente)
-            rightTerminal: newTerminal, // Terminal derecho (nuevo)
-            label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label.split(' (')[0]} | ${sshNode.label}`
-          };
-        }
-        return tab;
-      });
-      // Buscar el índice real de la pestaña split (por si la posición cambia)
-      const splitTabKey = existingTab.key;
-      const allTabs = [...homeTabs, ...updatedTabs, ...fileExplorerTabs];
-      const splitTabIndex = allTabs.findIndex(tab => tab.key === splitTabKey);
-      if (splitTabIndex !== -1) {
-        setActiveTabIndex(splitTabIndex);
-        setGroupActiveIndices(prev => ({
-          ...prev,
-          'no-group': splitTabIndex
-        }));
-      }
-      return updatedTabs;
-    });
-
-    toast.current.show({
-      severity: 'success',
-      summary: 'Split creado',
-      detail: `Nueva sesión de ${sshNode.label} abierta en split ${orientation}`,
-      life: 3000
-    });
-  };
 
 
 
