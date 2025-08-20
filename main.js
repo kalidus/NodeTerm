@@ -4616,7 +4616,7 @@ ipcMain.handle('get-system-stats', async () => {
         network: { download: 0, upload: 0 },
         temperature: { cpu: 0, gpu: 0 }
       });
-    }, 7000);
+    }, 15000); // Aumentar de 7 a 15 segundos
     statsWorkerQueue.push({ resolve, timeout });
     try {
       statsWorker.send('get-stats');
