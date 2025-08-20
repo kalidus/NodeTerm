@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
+import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -94,6 +95,22 @@ const App = () => {
     setOpenTabOrder, sshTabs, setSshTabs, rdpTabs, setRdpTabs, toast
   });
 
+  // Usar el hook de gestión del sidebar
+  const {
+    nodes, setNodes,
+    selectedNode, setSelectedNode,
+    isGeneralTreeMenu, setIsGeneralTreeMenu,
+    sidebarCallbacksRef,
+    parseWallixUser,
+    getActiveConnectionIds,
+    getTreeContextMenuItems,
+    getGeneralTreeContextMenuItems
+  } = useSidebarManagement(toast, {
+    activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
+    setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
+    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection
+  });
+
   // Estados que no están en el hook (se mantienen en App.js)
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
@@ -133,7 +150,12 @@ const App = () => {
   const [sshPassword, setSSHPassword] = useState('');
   const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
   const [sshPort, setSSHPort] = useState(22);
-  const [nodes, setNodes] = useState([]);
+  
+  // Estados para sincronización y RDP manager
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const [showRdpManager, setShowRdpManager] = useState(false);
+  const [rdpNodeData, setRdpNodeData] = useState(null);
+  const [editingRdpNode, setEditingRdpNode] = useState(null);
 
   // === FUNCIONES DE GRUPOS ===
   // (Movidas al hook useTabManagement)
@@ -331,11 +353,6 @@ const App = () => {
   
   // Referencias y estado para menú contextual del árbol
   const treeContextMenuRef = useRef(null);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
-  
-  // Referencias a funciones del Sidebar para menú contextual
-  const sidebarCallbacksRef = useRef({});
   
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
@@ -369,249 +386,15 @@ const App = () => {
     }
   };
 
-  // Función para generar items del menú contextual del árbol
-  const getTreeContextMenuItems = (node) => {
-    if (!node) return [];
-    const isFolder = node.droppable;
-    const isSSH = node.data && node.data.type === 'ssh';
-    const isRDP = node.data && node.data.type === 'rdp';
-    const items = [];
-    if (isSSH) {
-      items.push({
-        label: 'Abrir Terminal',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (activeGroupId !== null) {
-            const currentGroupKey = activeGroupId || 'no-group';
-            setGroupActiveIndices(prev => ({
-              ...prev,
-              [currentGroupKey]: activeTabIndex
-            }));
-            setActiveGroupId(null);
-          }
-          setSshTabs(prevTabs => {
-            const tabId = `${node.key}_${Date.now()}`;
-            const sshConfig = {
-              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
-              username: node.data.user,
-              password: node.data.password,
-              port: node.data.port || 22,
-              originalKey: node.key,
-              useBastionWallix: node.data.useBastionWallix || false,
-              bastionHost: node.data.bastionHost || '',
-              bastionUser: node.data.bastionUser || ''
-            };
-            const newTab = {
-              key: tabId,
-              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
-              originalKey: node.key,
-              sshConfig: sshConfig,
-              type: 'terminal',
-              createdAt: Date.now(),
-              groupId: null
-            };
-            // Activación inmediata y orden por createdAt
-            setLastOpenedTabKey(tabId);
-            setOnCreateActivateTabKey(tabId);
-            setActiveTabIndex(1);
-            setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-            return [newTab, ...prevTabs];
-          });
-        }
-      });
-      // <-- AÑADIR AQUÍ LA OPCIÓN DE EXPLORADOR DE ARCHIVOS -->
-      items.push({
-        label: 'Abrir Explorador de Archivos',
-        icon: 'pi pi-folder-open',
-        command: () => openFileExplorer(node)
-      });
-      items.push({
-        label: 'Agregar/Quitar de Favoritos',
-        icon: 'pi pi-star',
-        command: () => {
-          try {
-            connectionStore.toggleFavorite({
-              type: 'ssh',
-              name: node.label,
-              host: node.data?.useBastionWallix ? node.data?.targetServer : node.data?.host,
-              username: node.data?.user,
-              port: node.data?.port || 22
-            });
-          } catch (e) { /* noop */ }
-        }
-      });
-      // Submenu para abrir en split solo si hay pestañas SSH abiertas
-      const sshTabsFiltered = getFilteredTabs().filter(tab => tab.type === 'terminal');
-      if (sshTabsFiltered.length > 0) {
-        items.push({
-          label: 'Abrir en Split',
-          icon: 'pi pi-window-maximize',
-          command: () => openInSplit(node, sshTabsFiltered[0], 'vertical'), // Clic directo: vertical con primera pestaña
-          items: sshTabsFiltered.map(tab => ({
-            label: tab.label,
-            icon: 'pi pi-desktop',
-            items: [
-              {
-                label: 'Split vertical',
-                icon: 'pi pi-arrows-v',
-                command: () => openInSplit(node, tab, 'vertical')
-              },
-              {
-                label: 'Split horizontal',
-                icon: 'pi pi-arrows-h',
-                command: () => openInSplit(node, tab, 'horizontal')
-              }
-            ]
-          }))
-        });
-      }
-      items.push({ separator: true });
-      items.push({
-        label: 'Editar Sesión',
-        icon: 'pi pi-pencil',
-        command: () => {
-          if (sidebarCallbacksRef.current.editSSH) {
-            sidebarCallbacksRef.current.editSSH(node);
-          }
-        }
-      });
-    }
-    if (isRDP) {
-      items.push({
-        label: 'Conectar RDP',
-        icon: 'pi pi-desktop',
-        command: () => onOpenRdpConnection(node)
-      });
-      items.push({
-        label: 'Agregar/Quitar de Favoritos',
-        icon: 'pi pi-star',
-        command: () => {
-          try {
-            const nodeData = node.data || {};
-            connectionStore.toggleFavorite({
-              type: 'rdp-guacamole',
-              name: node.label,
-              host: nodeData.server || nodeData.host || nodeData.hostname,
-              username: nodeData.username || nodeData.user,
-              port: nodeData.port || 3389
-            });
-          } catch (e) { /* noop */ }
-        }
-      });
-      items.push({ separator: true });
-      items.push({
-        label: 'Editar',
-        icon: 'pi pi-pencil',
-        command: () => {
-          if (sidebarCallbacksRef.current.editRDP) {
-            sidebarCallbacksRef.current.editRDP(node);
-          }
-        }
-      });
-    }
-    if (isFolder) {
-      items.push({
-        label: 'Nueva Carpeta',
-        icon: 'pi pi-plus',
-        command: () => {
-          if (sidebarCallbacksRef.current.createFolder) {
-            sidebarCallbacksRef.current.createFolder(node.key);
-          }
-        }
-      });
-      items.push({
-        label: 'Nueva Conexión SSH',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (sidebarCallbacksRef.current.createSSH) {
-            sidebarCallbacksRef.current.createSSH(node.key);
-          }
-        }
-      });
-      items.push({
-        label: 'Nueva Conexión RDP',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (sidebarCallbacksRef.current.createRDP) {
-            sidebarCallbacksRef.current.createRDP(node.key);
-          }
-        }
-      });
-      items.push({ separator: true });
-      items.push({
-        label: 'Editar Carpeta',
-        icon: 'pi pi-pencil',
-        command: () => {
-          if (sidebarCallbacksRef.current.editFolder) {
-            sidebarCallbacksRef.current.editFolder(node);
-          }
-        }
-      });
-    }
-    items.push({ separator: true });
-    items.push({
-      label: 'Eliminar',
-      icon: 'pi pi-trash',
-      command: () => {
-        if (sidebarCallbacksRef.current.deleteNode) {
-          sidebarCallbacksRef.current.deleteNode(node.key, node.label);
-        }
-      }
-    });
-    return items;
-  };
+  // Funciones para drag & drop de pestañas
 
-  // Función para generar items del menú contextual general del árbol
-  const getGeneralTreeContextMenuItems = () => {
-    return [
-      {
-        label: 'Nueva Carpeta',
-        icon: 'pi pi-folder',
-        command: () => {
-          if (sidebarCallbacksRef.current.createFolder) {
-            sidebarCallbacksRef.current.createFolder(null); // null = crear en raíz
-          }
-        }
-      },
-      {
-        label: 'Nueva Conexión SSH',
-        icon: 'pi pi-desktop',
-        command: () => {
-          if (sidebarCallbacksRef.current.createSSH) {
-            sidebarCallbacksRef.current.createSSH();
-          }
-        }
-      }
-    ];
-  };
 
-  // Función para detectar y parsear formato Wallix
-  const parseWallixUser = (userString) => {
-    // Formato Wallix: usuario@dominio@servidor:protocolo:usuario_destino
-    // Ejemplo: rt01119@default@ESJC-SGCT-NX02P:SSH:rt01119
-    const wallixPattern = /^(.+)@(.+)@(.+):(.+):(.+)$/;
-    const match = userString.match(wallixPattern);
-    
-    if (match) {
-      const [, bastionUser, domain, targetServer, protocol, targetUser] = match;
-      return {
-        isWallix: true,
-        bastionUser: userString, // El usuario completo para el bastión
-        targetUser: targetUser,
-        targetServer: targetServer,
-        protocol: protocol,
-        domain: domain
-      };
-    }
-    
-    return {
-      isWallix: false,
-      targetUser: userString
-    };
-  };
+
+
+
 
   // Funciones auxiliares para el manejo de pestañas
-  // getAllTabs movido al hook useTabManagement
+  // getAllTabs, getTreeContextMenuItems, getGeneralTreeContextMenuItems, parseWallixUser, getActiveConnectionIds movidas al hook
 
   const getTabTypeAndIndex = (globalIndex) => {
     if (globalIndex < homeTabs.length) {
@@ -626,28 +409,7 @@ const App = () => {
   };
 
   // === Active connections set for Home hub ===
-  const getActiveConnectionIds = () => {
-    const result = new Set();
-    try {
-      sshTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ type: 'ssh', host: tab.sshConfig?.host, username: tab.sshConfig?.username, port: tab.sshConfig?.port });
-        result.add(id);
-      });
-      rdpTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ type: 'rdp-guacamole', host: tab.rdpConfig?.hostname, username: tab.rdpConfig?.username, port: tab.rdpConfig?.port });
-        result.add(id);
-      });
-      guacamoleTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ type: 'rdp-guacamole', host: tab.rdpConfig?.hostname, username: tab.rdpConfig?.username, port: tab.rdpConfig?.port });
-        result.add(id);
-      });
-      fileExplorerTabs.forEach(tab => {
-        const id = connectionHelpers.buildId({ type: 'explorer', host: tab.sshConfig?.host, username: tab.sshConfig?.username, port: tab.sshConfig?.port });
-        result.add(id);
-      });
-    } catch (_) {}
-    return result;
-  };
+
 
   // Funciones para drag & drop de pestañas
   const handleTabDragStart = (e, tabIndex) => {
@@ -2237,6 +1999,7 @@ const App = () => {
   const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
   const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() => localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark');
   const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() => localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark');
+  const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 
   const [sidebarFilter, setSidebarFilter] = useState('');
 
@@ -2496,9 +2259,10 @@ const App = () => {
     setRdpNodeData(null);
   };
 
+  const sessionManager = useRef(new SessionManager()).current;
+
   // --- Recarga elegante de sesiones desde almacenamiento seguro ---
   const reloadSessionsFromStorage = async () => {
-    const sessionManager = new SessionManager();
     await sessionManager.initialize();
     const sessions = sessionManager.getAllSessions();
     const nodesFromSessions = sessions.map(session => ({
@@ -2518,12 +2282,6 @@ const App = () => {
     // El usuario debe restaurar/importar/sincronizar manualmente si lo desea
     // Por lo tanto, no llamar a setNodes aquí si el árbol está vacío
   };
-
-  const [showSyncDialog, setShowSyncDialog] = useState(false);
-  const [showRdpManager, setShowRdpManager] = useState(false);
-  const [rdpNodeData, setRdpNodeData] = useState(null);
-  const [editingRdpNode, setEditingRdpNode] = useState(null);
-  const sessionManager = useRef(new SessionManager()).current;
 
   // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
   const exportTreeToJson = () => {
@@ -2548,10 +2306,10 @@ const App = () => {
   };
 
   // Helper para loggear setNodes
-  function logSetNodes(source, nodes) {
+  const logSetNodes = (source, nodes) => {
     // Logs de debug removidos para limpiar la consola
     return nodes;
-  }
+  };
 
   useEffect(() => {
     // Log de debug removido para limpiar la consola
@@ -2592,9 +2350,6 @@ const App = () => {
       }
     }
   }, [rdpTabs, onCreateActivateTabKey, lastOpenedTabKey, openTabOrder]);
-
-  // 1. Al inicio del componente App, junto con los otros useState:
-  const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
