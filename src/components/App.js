@@ -164,6 +164,38 @@ const App = () => {
     });
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, sshTabs, setSshTabs, homeTabs, fileExplorerTabs, setActiveTabIndex, toast]);
 
+  // Función para cerrar un panel del split
+  const handleCloseSplitPanel = useCallback((splitTabKey, panelToClose) => {
+    setSshTabs(prevTabs => {
+      return prevTabs.map(tab => {
+        if (tab.key === splitTabKey && tab.type === 'split') {
+          // Si cerramos el panel izquierdo, el derecho se convierte en una pestaña normal
+          if (panelToClose === 'left') {
+            return {
+              ...tab.rightTerminal,
+              type: 'terminal'
+            };
+          }
+          // Si cerramos el panel derecho, el izquierdo se convierte en una pestaña normal
+          else if (panelToClose === 'right') {
+            return {
+              ...tab.leftTerminal,
+              type: 'terminal'
+            };
+          }
+        }
+        return tab;
+      });
+    });
+
+    toast.current.show({
+      severity: 'info',
+      summary: 'Panel cerrado',
+      detail: `Panel ${panelToClose === 'left' ? 'izquierdo' : 'derecho'} cerrado`,
+      life: 2000
+    });
+  }, [setSshTabs, toast]);
+
   // Usar el hook de gestión del sidebar
   const {
     nodes, setNodes,
@@ -2586,7 +2618,7 @@ const App = () => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
                       // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
                       const isHomeTab = tab.type === 'home';
-                      const isSSHTab = tab.type === 'terminal' || tab.isExplorerInSSH;
+                      const isSSHTab = tab.type === 'terminal' || tab.type === 'split' || tab.isExplorerInSSH;
                       const originalIdx = idx; // No usamos originalIdx para decisiones críticas
                       
                       return (
@@ -3341,6 +3373,9 @@ const App = () => {
                               terminalRefs={terminalRefs}
                               orientation={tab.orientation || 'vertical'}
                               statusBarIconTheme={statusBarIconTheme}
+                              splitterColor={terminalTheme.theme?.background || '#2d2d2d'}
+                              onCloseLeft={() => handleCloseSplitPanel(tab.key, 'left')}
+                              onCloseRight={() => handleCloseSplitPanel(tab.key, 'right')}
                             />
                           ) : tab.type === 'rdp' ? (
                             <RdpSessionTab
