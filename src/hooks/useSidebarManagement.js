@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import connectionStore, { helpers as connectionHelpers } from '../utils/connectionStore';
 
-export const useSidebarManagement = (toast) => {
+export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
   const [nodes, setNodes] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -84,11 +84,12 @@ export const useSidebarManagement = (toast) => {
   // === FUNCIONES DE MENÚ CONTEXTUAL ===
   
   // Función para generar items del menú contextual del árbol
-  const getTreeContextMenuItems = useCallback((node, {
-    activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
-    setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
-    getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection
-  }) => {
+  const getTreeContextMenuItems = useCallback((node) => {
+    const {
+      activeGroupId, setActiveGroupId, activeTabIndex, setActiveTabIndex,
+      setGroupActiveIndices, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey,
+      getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection
+    } = tabManagementProps;
     if (!node) return [];
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
@@ -296,7 +297,7 @@ export const useSidebarManagement = (toast) => {
       });
     }
     return items;
-  }, [nodes]);
+  }, [tabManagementProps]);
 
   // Función para generar items del menú contextual general del árbol
   const getGeneralTreeContextMenuItems = useCallback(() => {
