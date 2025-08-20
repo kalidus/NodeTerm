@@ -28,7 +28,9 @@ const SplitLayout = ({
   statusBarIconTheme = 'classic',
   externalPaneSize = null, // Nuevo prop para controlar el tamaño externamente
   onManualResize = null, // Callback para notificar redimensionamiento manual
-  splitterColor // <-- nuevo prop
+  splitterColor, // <-- nuevo prop
+  onCloseLeft = null, // Callback para cerrar panel izquierdo
+  onCloseRight = null // Callback para cerrar panel derecho
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
@@ -169,52 +171,136 @@ const SplitLayout = ({
         maxConstraints={isVertical ? [maxPrimaryPaneSize, 0] : [0, maxPrimaryPaneSize]}
       >
         <div style={primaryPaneStyle}>
-          {leftTerminal.content ? (
-            leftTerminal.content
+          {/* Header del panel izquierdo */}
+          {onCloseLeft && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '4px 8px',
+              background: theme?.background || '#1e1e1e',
+              borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
+              fontSize: '12px',
+              color: theme?.foreground || '#fff',
+              minHeight: '24px'
+            }}>
+              <span style={{ 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap',
+                flex: 1
+              }}>
+                {leftTerminal.label || leftTerminal.key}
+              </span>
+              <button
+                onClick={() => onCloseLeft(leftTerminal.key)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme?.foreground || '#fff',
+                  cursor: 'pointer',
+                  padding: '2px 4px',
+                  fontSize: '14px',
+                  marginLeft: '8px',
+                  opacity: 0.7
+                }}
+                onMouseEnter={e => e.target.style.opacity = '1'}
+                onMouseLeave={e => e.target.style.opacity = '0.7'}
+              >
+                ×
+              </button>
+            </div>
+          )}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            {leftTerminal.content ? (
+              leftTerminal.content
+            ) : (
+              <TerminalComponent
+                ref={el => {
+                  leftTerminalRef.current = el;
+                  if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+                }}
+                key={leftTerminal.key}
+                tabId={leftTerminal.key}
+                sshConfig={leftTerminal.sshConfig}
+                fontFamily={fontFamily}
+                fontSize={fontSize}
+                theme={theme}
+                onContextMenu={onContextMenu}
+                active={true}
+                stats={sshStatsByTabId[leftTerminal.key]}
+                hideStatusBar={true}
+                statusBarIconTheme={statusBarIconTheme}
+              />
+            )}
+          </div>
+        </div>
+      </Resizable>
+      
+      <div style={secondaryPaneStyle}>
+        {/* Header del panel derecho */}
+        {onCloseRight && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 8px',
+            background: theme?.background || '#1e1e1e',
+            borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
+            fontSize: '12px',
+            color: theme?.foreground || '#fff',
+            minHeight: '24px'
+          }}>
+            <span style={{ 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              flex: 1
+            }}>
+              {rightTerminal.label || rightTerminal.key}
+            </span>
+            <button
+              onClick={() => onCloseRight(rightTerminal.key)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: theme?.foreground || '#fff',
+                cursor: 'pointer',
+                padding: '2px 4px',
+                fontSize: '14px',
+                marginLeft: '8px',
+                opacity: 0.7
+              }}
+              onMouseEnter={e => e.target.style.opacity = '1'}
+              onMouseLeave={e => e.target.style.opacity = '0.7'}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          {rightTerminal.content ? (
+            rightTerminal.content
           ) : (
             <TerminalComponent
               ref={el => {
-                leftTerminalRef.current = el;
-                if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+                rightTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
               }}
-              key={leftTerminal.key}
-              tabId={leftTerminal.key}
-              sshConfig={leftTerminal.sshConfig}
+              key={rightTerminal.key}
+              tabId={rightTerminal.key}
+              sshConfig={rightTerminal.sshConfig}
               fontFamily={fontFamily}
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId[leftTerminal.key]}
+              stats={sshStatsByTabId[rightTerminal.key]}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
             />
           )}
         </div>
-      </Resizable>
-      
-      <div style={secondaryPaneStyle}>
-        {rightTerminal.content ? (
-          rightTerminal.content
-        ) : (
-          <TerminalComponent
-            ref={el => {
-              rightTerminalRef.current = el;
-              if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
-            }}
-            key={rightTerminal.key}
-            tabId={rightTerminal.key}
-            sshConfig={rightTerminal.sshConfig}
-            fontFamily={fontFamily}
-            fontSize={fontSize}
-            theme={theme}
-            onContextMenu={onContextMenu}
-            active={true}
-            stats={sshStatsByTabId[rightTerminal.key]}
-            hideStatusBar={true}
-            statusBarIconTheme={statusBarIconTheme}
-          />
-        )}
       </div>
     </div>
   );
