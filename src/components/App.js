@@ -4,6 +4,7 @@ import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import { useLocalStorageString, useLocalStorageNumber } from '../hooks/useLocalStorage';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -438,11 +439,8 @@ const App = () => {
 
 
 
-  // Status bar icon theme (no incluido en useThemeManagement aún)
-  const STATUSBAR_ICON_THEME_STORAGE_KEY = 'basicapp_statusbar_icon_theme';
-  const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
-      return localStorage.getItem(STATUSBAR_ICON_THEME_STORAGE_KEY) || 'classic';
-  });
+  // Status bar icon theme usando useLocalStorage
+  const [statusBarIconTheme, setStatusBarIconTheme] = useLocalStorageString('basicapp_statusbar_icon_theme', 'classic');
 
   // Los estados de drag & drop ahora están en useDragAndDrop
 
@@ -1714,24 +1712,17 @@ const App = () => {
     }
   }, [activeTabIndex, sshTabs]);
 
-  // Estado global para el intervalo de pooling de la status bar
-  const [statusBarPollingInterval, setStatusBarPollingInterval] = useState(() => {
-    const saved = localStorage.getItem('statusBarPollingInterval');
-    return saved ? parseInt(saved, 10) : 5;
-  });
+  // Estado global para el intervalo de pooling de la status bar usando useLocalStorage
+  const [statusBarPollingInterval, setStatusBarPollingInterval] = useLocalStorageNumber('statusBarPollingInterval', 5);
 
-  // Sincronizar con localStorage y enviar al backend
+  // Enviar al backend cuando cambie (localStorage ya se maneja automáticamente)
   useEffect(() => {
-    localStorage.setItem('statusBarPollingInterval', statusBarPollingInterval);
     if (window?.electron?.ipcRenderer) {
       window.electron.ipcRenderer.send('statusbar:set-polling-interval', statusBarPollingInterval);
     }
   }, [statusBarPollingInterval]);
 
-  // Auto-save status bar icon theme to localStorage
-  useEffect(() => {
-    localStorage.setItem(STATUSBAR_ICON_THEME_STORAGE_KEY, statusBarIconTheme);
-  }, [statusBarIconTheme]);
+  // statusBarIconTheme se guarda automáticamente en localStorage por useLocalStorage
 
   // Listener para actualizaciones de configuración desde sincronización
   useEffect(() => {
@@ -1743,7 +1734,7 @@ const App = () => {
         updateThemesFromSync();
         
         // Actualizar estados restantes que no están en el hook de temas
-        const updatedStatusBarIconTheme = localStorage.getItem(STATUSBAR_ICON_THEME_STORAGE_KEY) || 'classic';
+        const updatedStatusBarIconTheme = localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic';
         const updatedStatusBarPollingInterval = localStorage.getItem('statusBarPollingInterval');
         
         setStatusBarIconTheme(updatedStatusBarIconTheme);
