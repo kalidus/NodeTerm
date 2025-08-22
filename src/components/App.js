@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
+import { useThemeManagement } from '../hooks/useThemeManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -94,6 +95,19 @@ const App = () => {
     setGroupActiveIndices, setLastOpenedTabKey, setOnCreateActivateTabKey,
     setOpenTabOrder, sshTabs, setSshTabs, rdpTabs, setRdpTabs, toast
   });
+
+  // Usar el hook de gestión de temas
+  const {
+    fontFamily, setFontFamily, fontSize, setFontSize,
+    localFontFamily, setLocalFontFamily, localFontSize, setLocalFontSize,
+    availableFonts, terminalTheme, setTerminalTheme, statusBarTheme, setStatusBarTheme,
+    localPowerShellTheme, setLocalPowerShellTheme, localLinuxTerminalTheme, setLocalLinuxTerminalTheme,
+    uiTheme, setUiTheme, availableThemes, iconTheme, setIconTheme,
+    iconThemeSidebar, setIconThemeSidebar, explorerFont, setExplorerFont,
+    explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
+    sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
+    updateThemesFromSync
+  } = useThemeManagement();
 
   // Función para abrir una sesión en split con otra pestaña existente
   const openInSplit = useCallback((sshNode, existingTab, orientation = 'vertical') => {
@@ -409,38 +423,10 @@ const App = () => {
     };
   }, []);
 
-  // Font configuration
-  const FONT_FAMILY_STORAGE_KEY = 'basicapp_terminal_font_family';
-  const FONT_SIZE_STORAGE_KEY = 'basicapp_terminal_font_size';
-  const availableFonts = [
-    { label: 'FiraCode Nerd Font', value: '"FiraCode Nerd Font", monospace' },
-    { label: 'Cascadia Code', value: '"Cascadia Code", monospace' },
-    { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
-    { label: 'Hack', value: 'Hack, monospace' },
-    { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
-    { label: 'Consolas', value: 'Consolas, monospace' },
-    { label: 'Courier New', value: '"Courier New", monospace' },
-    { label: 'Lucida Console', value: '"Lucida Console", monospace' },
-    { label: 'Menlo', value: 'Menlo, monospace' }
-  ];
-  const [fontFamily, setFontFamily] = useState(() => localStorage.getItem(FONT_FAMILY_STORAGE_KEY) || availableFonts[0].value);
-  const [fontSize, setFontSize] = useState(() => {
-    const savedSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
-    return savedSize ? parseInt(savedSize, 10) : 14; // Default font size is 14
-  });
 
-  // Theme configuration
-  const THEME_STORAGE_KEY = 'basicapp_terminal_theme';
-  const STATUSBAR_THEME_STORAGE_KEY = 'basicapp_statusbar_theme';
+
+  // Status bar icon theme (no incluido en useThemeManagement aún)
   const STATUSBAR_ICON_THEME_STORAGE_KEY = 'basicapp_statusbar_icon_theme';
-  const availableThemes = themes ? Object.keys(themes) : [];
-  const [terminalTheme, setTerminalTheme] = useState(() => {
-      const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY) || 'Default Dark';
-      return themes && themes[savedThemeName] ? themes[savedThemeName] : {};
-  });
-  const [statusBarTheme, setStatusBarTheme] = useState(() => {
-      return localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
-  });
   const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
       return localStorage.getItem(STATUSBAR_ICON_THEME_STORAGE_KEY) || 'classic';
   });
@@ -799,11 +785,7 @@ const App = () => {
       setNodes(getDefaultNodes());
     }
     
-    // Cargar tema UI guardado
-    themeManager.loadSavedTheme();
-    
-    // Cargar tema de status bar guardado
-    statusBarThemeManager.loadSavedTheme();
+    // Los temas ahora se cargan en useThemeManagement
   }, []);
 
   // Save nodes to localStorage whenever they change
@@ -813,26 +795,7 @@ const App = () => {
           // Log de trace removido para limpiar la consola
   }, [nodes]);
 
-  // Auto-save font family to localStorage
-  useEffect(() => {
-    localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
-  }, [fontFamily]);
-
-  // Auto-save font size to localStorage
-  useEffect(() => {
-    localStorage.setItem(FONT_SIZE_STORAGE_KEY, fontSize);
-  }, [fontSize]);
-
-  // Auto-save theme to localStorage
-  useEffect(() => {
-    localStorage.setItem(THEME_STORAGE_KEY, terminalTheme.name);
-  }, [terminalTheme]);
-
-  // Auto-save status bar theme to localStorage and apply it
-  useEffect(() => {
-    localStorage.setItem(STATUSBAR_THEME_STORAGE_KEY, statusBarTheme);
-    statusBarThemeManager.applyTheme(statusBarTheme);
-  }, [statusBarTheme]);
+  // Los auto-guardados de temas y fuentes ahora están en useThemeManagement
 
   // Efecto para manejar cambios en el explorador de archivos
   useEffect(() => {
@@ -1798,98 +1761,7 @@ const App = () => {
   //   } catch {}
   // }, [tabGroups]);
 
-  const [iconTheme, setIconTheme] = useState(() => {
-    try {
-      return localStorage.getItem('iconTheme') || 'material';
-    } catch {
-      return 'material';
-    }
-  });
-  const [explorerFont, setExplorerFont] = useState(() => {
-    try {
-      return localStorage.getItem('explorerFont') || explorerFonts[0];
-    } catch {
-      return explorerFonts[0];
-    }
-  });
-  const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
-    try {
-      return localStorage.getItem('explorerColorTheme') || 'Light';
-    } catch {
-      return 'Light';
-    }
-  });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('iconTheme', iconTheme);
-    } catch {}
-  }, [iconTheme]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('explorerFont', explorerFont);
-    } catch {}
-  }, [explorerFont]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('explorerColorTheme', explorerColorTheme);
-    } catch {}
-  }, [explorerColorTheme]);
-
-  const [iconThemeSidebar, setIconThemeSidebar] = useState(() => {
-    try {
-      return localStorage.getItem('iconThemeSidebar') || 'material';
-    } catch {
-      return 'material';
-    }
-  });
-  const [sidebarFont, setSidebarFont] = useState(() => {
-    try {
-      return localStorage.getItem('sidebarFont') || explorerFonts[0];
-    } catch {
-      return explorerFonts[0];
-    }
-  });
-  const [sidebarFontSize, setSidebarFontSize] = useState(() => {
-    try {
-      const savedSize = localStorage.getItem('sidebarFontSize');
-      return savedSize ? parseInt(savedSize, 10) : 14; // Default sidebar font size is 14
-    } catch {
-      return 14;
-    }
-  });
-  useEffect(() => {
-    try {
-      localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
-    } catch {}
-  }, [iconThemeSidebar]);
-  useEffect(() => {
-    try {
-      localStorage.setItem('sidebarFont', sidebarFont);
-    } catch {}
-  }, [sidebarFont]);
-  useEffect(() => {
-    try {
-      localStorage.setItem('sidebarFontSize', sidebarFontSize.toString());
-    } catch {}
-  }, [sidebarFontSize]);
-
-  const [explorerFontSize, setExplorerFontSize] = useState(() => {
-    try {
-      const saved = localStorage.getItem('explorerFontSize');
-      return saved ? parseInt(saved, 10) : 15;
-    } catch {
-      return 15;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('explorerFontSize', explorerFontSize.toString());
-    } catch {}
-  }, [explorerFontSize]);
 
   // 1. Estado global para stats por tabId
   const [sshStatsByTabId, setSshStatsByTabId] = useState({});
@@ -1951,59 +1823,21 @@ const App = () => {
       if (event.detail?.source === 'sync') {
         console.log('[SYNC] Actualizando estados React tras sincronización...');
         
-        // Actualizar estados que dependen de localStorage
-        const updatedStatusBarTheme = localStorage.getItem(STATUSBAR_THEME_STORAGE_KEY) || 'Default Dark';
+        // Actualizar temas desde sincronización usando el hook
+        updateThemesFromSync();
+        
+        // Actualizar estados restantes que no están en el hook de temas
         const updatedStatusBarIconTheme = localStorage.getItem(STATUSBAR_ICON_THEME_STORAGE_KEY) || 'classic';
-        const updatedLocalFontFamily = localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace';
-        const updatedLocalFontSize = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
-        const updatedLocalTerminalTheme = localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark';
-        const updatedLocalPowerShellTheme = localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark';
-        const updatedLocalLinuxTerminalTheme = localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark';
-        
-        // Debug: verificar el tema UI actual
-        const currentUIThemeInLocalStorage = localStorage.getItem('ui_theme');
-        console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
-        console.log('[SYNC] [APP] Tema UI en React state antes del update:', uiTheme);
-        
-        // Estados adicionales del explorador y sidebar
-        const updatedExplorerFont = localStorage.getItem('explorerFont') || explorerFonts[0];
-        const updatedExplorerFontSize = localStorage.getItem('explorerFontSize');
-        const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
-        const updatedSidebarFont = localStorage.getItem('sidebarFont') || explorerFonts[0];
-        const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize');
-        const updatedIconTheme = localStorage.getItem('iconTheme') || 'material';
-        const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'classic';
         const updatedStatusBarPollingInterval = localStorage.getItem('statusBarPollingInterval');
         
-        // Aplicar los estados actualizados
-        setStatusBarTheme(updatedStatusBarTheme);
         setStatusBarIconTheme(updatedStatusBarIconTheme);
-        setLocalFontFamily(updatedLocalFontFamily);
-        if (updatedLocalFontSize) {
-          setLocalFontSize(parseInt(updatedLocalFontSize, 10));
-        }
-        setLocalTerminalTheme(updatedLocalTerminalTheme);
-        setLocalPowerShellTheme(updatedLocalPowerShellTheme);
-        setLocalLinuxTerminalTheme(updatedLocalLinuxTerminalTheme);
-        
-        // Aplicar estados adicionales
-        setExplorerFont(updatedExplorerFont);
-        if (updatedExplorerFontSize) {
-          setExplorerFontSize(parseInt(updatedExplorerFontSize, 10));
-        }
-        setExplorerColorTheme(updatedExplorerColorTheme);
-        setSidebarFont(updatedSidebarFont);
-        if (updatedSidebarFontSize) {
-          setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
-        }
-        setIconTheme(updatedIconTheme);
-        setIconThemeSidebar(updatedIconThemeSidebar);
         if (updatedStatusBarPollingInterval) {
           setStatusBarPollingInterval(parseInt(updatedStatusBarPollingInterval, 10));
         }
-        // NUEVO: Actualizar el estado del tema UI
-        setUiTheme(currentUIThemeInLocalStorage || 'Light');
-        console.log('[SYNC] [APP] Tema UI en React state después del update:', currentUIThemeInLocalStorage || 'Light');
+        
+        // Debug
+        const currentUIThemeInLocalStorage = localStorage.getItem('ui_theme');
+        console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
         console.log('[SYNC] ✓ Estados React actualizados');
       }
     };
@@ -2015,25 +1849,8 @@ const App = () => {
     };
   }, []);
 
-  const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
-  const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
-  const [localFontFamily, setLocalFontFamily] = useState(() => localStorage.getItem(LOCAL_FONT_FAMILY_STORAGE_KEY) || '"FiraCode Nerd Font", monospace');
-  const [localFontSize, setLocalFontSize] = useState(() => {
-    const saved = localStorage.getItem(LOCAL_FONT_SIZE_STORAGE_KEY);
-    return saved ? parseInt(saved, 10) : 14;
-  });
-
-  const LOCAL_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_terminal_theme';
-  const [localTerminalTheme, setLocalTerminalTheme] = useState(() => localStorage.getItem(LOCAL_TERMINAL_THEME_STORAGE_KEY) || 'Default Dark');
-
-  const localTerminalBg = themes[localTerminalTheme]?.theme?.background || '#222';
+  const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
   const isHomeTabActive = activeTabIndex === 0 && homeTabs.length > 0;
-
-  const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'localPowerShellTheme';
-  const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
-  const [localPowerShellTheme, setLocalPowerShellTheme] = useState(() => localStorage.getItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY) || 'Dark');
-  const [localLinuxTerminalTheme, setLocalLinuxTerminalTheme] = useState(() => localStorage.getItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY) || 'Dark');
-  const [uiTheme, setUiTheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 
   const [sidebarFilter, setSidebarFilter] = useState('');
 
@@ -3348,7 +3165,7 @@ const App = () => {
                               })()}
                               localFontFamily={localFontFamily}
                               localFontSize={localFontSize}
-                              localTerminalTheme={localTerminalTheme}
+                              localTerminalTheme={localLinuxTerminalTheme}
                               localPowerShellTheme={localPowerShellTheme}
                               localLinuxTerminalTheme={localLinuxTerminalTheme}
                             />
@@ -3500,15 +3317,15 @@ const App = () => {
         statusBarIconTheme={statusBarIconTheme}
         setStatusBarIconTheme={setStatusBarIconTheme}
         localFontFamily={localFontFamily}
-        setLocalFontFamily={value => { setLocalFontFamily(value); localStorage.setItem(LOCAL_FONT_FAMILY_STORAGE_KEY, value); }}
+        setLocalFontFamily={setLocalFontFamily}
         localFontSize={localFontSize}
-        setLocalFontSize={value => { setLocalFontSize(value); localStorage.setItem(LOCAL_FONT_SIZE_STORAGE_KEY, value); }}
-        localTerminalTheme={localTerminalTheme}
-        setLocalTerminalTheme={value => { setLocalTerminalTheme(value); localStorage.setItem(LOCAL_TERMINAL_THEME_STORAGE_KEY, value); }}
+        setLocalFontSize={setLocalFontSize}
+        localTerminalTheme={localLinuxTerminalTheme}
+        setLocalTerminalTheme={setLocalLinuxTerminalTheme}
         localPowerShellTheme={localPowerShellTheme}
-        setLocalPowerShellTheme={value => { setLocalPowerShellTheme(value); localStorage.setItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY, value); }}
+        setLocalPowerShellTheme={setLocalPowerShellTheme}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
-        setLocalLinuxTerminalTheme={value => { setLocalLinuxTerminalTheme(value); localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, value); }}
+        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
         exportTreeToJson={exportTreeToJson}
         importTreeFromJson={importTreeFromJsonApp}
         sessionManager={sessionManager}
