@@ -7,6 +7,7 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { useLocalStorageString, useLocalStorageNumber } from '../hooks/useLocalStorage';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useDialogManagement } from '../hooks/useDialogManagement';
+import { useContextMenuManagement } from '../hooks/useContextMenuManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -253,8 +254,6 @@ const App = () => {
   });
 
   // Estados que no están en el hook (se mantienen en App.js)
-  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
-  const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
   // Storage key for persistence
   const STORAGE_KEY = 'basicapp2_tree_data';
 
@@ -463,44 +462,36 @@ const App = () => {
     closeEditSSHDialogWithReset, closeEditFolderDialogWithReset
   } = useDialogManagement();
 
-  // Los estados de drag & drop ahora están en useDragAndDrop
+  // Context menu management hook
+  const {
+    // Estados de menús contextuales
+    terminalContextMenu, setTerminalContextMenu,
+    showOverflowMenu, setShowOverflowMenu,
+    overflowMenuPosition, setOverflowMenuPosition,
+    // Referencias
+    treeContextMenuRef,
+    // Funciones de terminal context menu
+    showTerminalContextMenu, hideTerminalContextMenu,
+    // Funciones de overflow menu
+    showOverflowMenuAt, hideOverflowMenu,
+    // Funciones de tree context menu
+    onNodeContextMenu: onNodeContextMenuHook,
+    onTreeAreaContextMenu: onTreeAreaContextMenuHook
+  } = useContextMenuManagement();
 
-  // Estado para menú contextual de terminal
-  const [terminalContextMenu, setTerminalContextMenu] = useState(null);
-  
-  // Referencias y estado para menú contextual del árbol
-  const treeContextMenuRef = useRef(null);
+  // Los estados de drag & drop ahora están en useDragAndDrop
   
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
-  // Context menu for nodes
+  // Context menu for nodes (usando el hook)
   const onNodeContextMenu = (event, node) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setSelectedNode(node);
-    setIsGeneralTreeMenu(false);
-    if (treeContextMenuRef.current) {
-      treeContextMenuRef.current.show(event);
-    }
+    onNodeContextMenuHook(event, node, setSelectedNode, setIsGeneralTreeMenu);
   };
 
-  // Context menu for tree area (general)
+  // Context menu for tree area (general) (usando el hook)
   const onTreeAreaContextMenu = (event) => {
-    const targetElement = event.target;
-    const isNodeClick = targetElement.closest('.p-treenode-content') || 
-                       targetElement.closest('.p-treenode') ||
-                       targetElement.closest('.node-label') ||
-                       targetElement.closest('.align-items-center');
-    if (!isNodeClick) {
-      event.preventDefault();
-      event.stopPropagation();
-      setSelectedNode(null);
-      setIsGeneralTreeMenu(true);
-      if (treeContextMenuRef.current) {
-        treeContextMenuRef.current.show(event);
-      }
-    }
+    onTreeAreaContextMenuHook(event, setSelectedNode, setIsGeneralTreeMenu);
   };
 
   // Funciones para drag & drop de pestañas
@@ -530,117 +521,42 @@ const App = () => {
 
   // Las funciones de drag & drop ahora están en useDragAndDrop
 
-  // Funciones para menú contextual de terminal
+  // Funciones para menú contextual de terminal (usando el hook)
   const handleTerminalContextMenu = (e, tabKey) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Capturar coordenadas exactas del mouse
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    
-    // Calcular posición ajustada para que no se salga de la pantalla
-    const menuWidth = 180;
-    const menuHeight = 200;
-    const viewport = {
-      width: window.innerWidth,
-      height: window.innerHeight
-    };
-    
-    let adjustedX = mouseX;
-    let adjustedY = mouseY;
-    
-    // Ajustar X si se sale por la derecha
-    if (mouseX + menuWidth > viewport.width) {
-      adjustedX = viewport.width - menuWidth - 10;
-    }
-    
-    // Ajustar Y si se sale por abajo
-    if (mouseY + menuHeight > viewport.height) {
-      adjustedY = viewport.height - menuHeight - 10;
-    }
-    
-    // Asegurar que no se salga por la izquierda o arriba
-    adjustedX = Math.max(10, adjustedX);
-    adjustedY = Math.max(10, adjustedY);
-    
-    setTerminalContextMenu({ tabKey, mouseX: adjustedX, mouseY: adjustedY });
+    showTerminalContextMenu(tabKey, e);
   };
 
   const hideContextMenu = () => {
-    setTerminalContextMenu(null);
+    hideTerminalContextMenu();
+  };
+
+  // Wrapper functions para las acciones de terminal (usan el hook + cierran menú)
+  const handleCopyFromTerminal = (tabKey) => {
+    copyFromTerminal(tabKey);
+    hideContextMenu();
+  };
+
+  const handlePasteToTerminal = (tabKey) => {
+    pasteToTerminal(tabKey);
+    hideContextMenu();
+  };
+
+  const handleSelectAllTerminal = (tabKey) => {
+    selectAllTerminal(tabKey);
+    hideContextMenu();
+  };
+
+  const handleClearTerminal = (tabKey) => {
+    clearTerminal(tabKey);
+    hideContextMenu();
   };
 
   // Función para limpiar distro cuando se cierra una pestaña
   // cleanupTabDistro movido al hook useTabManagement
 
-  // handleCopyFromTerminal ahora está en useSessionManagement
-
-  const handlePasteToTerminal = async (tabKey) => {
-    if (window.electron && terminalRefs.current[tabKey]) {
-      try {
-        const text = await window.electron.clipboard.readText();
-        if (text) {
-          // Enviar el texto al terminal a través del IPC para que vaya al servidor SSH
-          window.electron.ipcRenderer.send('ssh:data', { tabId: tabKey, data: text });
-          toast.current.show({
-            severity: 'success',
-            summary: 'Pegado',
-            detail: 'Texto enviado al terminal',
-            life: 2000
-          });
-        } else {
-          toast.current.show({
-            severity: 'warn',
-            summary: 'Portapapeles vacío',
-            detail: 'No hay texto en el portapapeles',
-            life: 3000
-          });
-        }
-      } catch (error) {
-        toast.current.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'No se pudo acceder al portapapeles',
-          life: 3000
-        });
-      }
-    }
-    hideContextMenu();
-  };
-
-  const handleSelectAllTerminal = (tabKey) => {
-    if (terminalRefs.current[tabKey]) {
-      const terminal = terminalRefs.current[tabKey];
-      terminal.selectAll();
-      toast.current.show({
-        severity: 'info',
-        summary: 'Seleccionado',
-        detail: 'Todo el contenido del terminal seleccionado',
-        life: 2000
-      });
-    }
-    hideContextMenu();
-  };
-
-  const handleClearTerminal = (tabKey) => {
-    if (terminalRefs.current[tabKey]) {
-      const terminal = terminalRefs.current[tabKey];
-      // Limpiar el buffer visual del terminal
-      terminal.clear();
-      // También enviar comando clear al servidor SSH para limpiar la sesión
-      if (window.electron) {
-        window.electron.ipcRenderer.send('ssh:data', { tabId: tabKey, data: 'clear\n' });
-      }
-      toast.current.show({
-        severity: 'info',
-        summary: 'Terminal limpiado',
-        detail: 'Terminal y sesión SSH limpiados',
-        life: 2000
-      });
-    }
-    hideContextMenu();
-  };
+  // Las funciones de terminal han sido movidas a useSessionManagement y se usan a través de wrappers arriba
 
   const moveTabToFirst = (globalIndex) => {
     const allTabs = getAllTabs();
