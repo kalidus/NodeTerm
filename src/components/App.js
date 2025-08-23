@@ -5,6 +5,8 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { useLocalStorageString, useLocalStorageNumber } from '../hooks/useLocalStorage';
+import { useSessionManagement } from '../hooks/useSessionManagement';
+import { useDialogManagement } from '../hooks/useDialogManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -82,7 +84,7 @@ const App = () => {
     activeGroupId, setActiveGroupId, groupActiveIndices, setGroupActiveIndices,
     showCreateGroupDialog, setShowCreateGroupDialog, newGroupName, setNewGroupName,
     selectedGroupColor, setSelectedGroupColor, tabContextMenu, setTabContextMenu,
-    tabDistros, setTabDistros, activeListenersRef, terminalRefs,
+    tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
     handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro
   } = useTabManagement(toast);
@@ -122,6 +124,15 @@ const App = () => {
     setOpenTabOrder,
     setActiveTabIndex
   });
+
+  // Usar el hook de gestión de sesiones
+  const {
+    terminalRefs, activeListenersRef, sessionManager,
+    sshStatsByTabId, setSshStatsByTabId,
+    handleCopyFromTerminal: copyFromTerminal, handlePasteToTerminal: pasteToTerminal, handleSelectAllTerminal: selectAllTerminal, handleClearTerminal: clearTerminal,
+    cleanupTerminalRef, disconnectSSHSession, disconnectSplitSession, disconnectRDPSession,
+    resizeTerminals, reloadSessionsFromStorage
+  } = useSessionManagement(toast);
 
   // Función para abrir una sesión en split con otra pestaña existente
   const openInSplit = useCallback((sshNode, existingTab, orientation = 'vertical') => {
@@ -246,46 +257,6 @@ const App = () => {
   const [overflowMenuPosition, setOverflowMenuPosition] = useState({ x: 0, y: 0 });
   // Storage key for persistence
   const STORAGE_KEY = 'basicapp2_tree_data';
-  const [folderName, setFolderName] = useState('');
-  const [showFolderDialog, setShowFolderDialog] = useState(false);
-  const [parentNodeKey, setParentNodeKey] = useState(null);
-  const [showSSHDialog, setShowSSHDialog] = useState(false);
-  const [sshName, setSSHName] = useState('');
-  const [sshHost, setSSHHost] = useState('');
-  const [sshUser, setSSHUser] = useState('');
-  const [sshTargetFolder, setSSHTargetFolder] = useState(null);
-  const [showEditSSHDialog, setShowEditSSHDialog] = useState(false);
-  const [editSSHNode, setEditSSHNode] = useState(null);
-  const [editSSHName, setEditSSHName] = useState('');
-  const [editSSHHost, setEditSSHHost] = useState('');
-  const [editSSHUser, setEditSSHUser] = useState('');
-  const [editSSHPassword, setEditSSHPassword] = useState('');
-  const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
-  const [editSSHPort, setEditSSHPort] = useState(22);
-  
-  // Estado para RDP
-  const [rdpName, setRdpName] = useState('');
-  const [rdpServer, setRdpServer] = useState('');
-  const [rdpUsername, setRdpUsername] = useState('');
-  const [rdpPassword, setRdpPassword] = useState('');
-  const [rdpPort, setRdpPort] = useState(3389);
-  const [rdpClientType, setRdpClientType] = useState('mstsc');
-  const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
-  const [showRdpDialog, setShowRdpDialog] = useState(false);
-
-  const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [editFolderNode, setEditFolderNode] = useState(null);
-  const [editFolderName, setEditFolderName] = useState('');
-  const [sshPassword, setSSHPassword] = useState('');
-  const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
-  const [sshPort, setSSHPort] = useState(22);
-  
-  // Estados para sincronización y RDP manager
-  const [showSyncDialog, setShowSyncDialog] = useState(false);
-  const [showRdpManager, setShowRdpManager] = useState(false);
-  const [rdpNodeData, setRdpNodeData] = useState(null);
-  const [editingRdpNode, setEditingRdpNode] = useState(null);
 
   // === FUNCIONES DE GRUPOS ===
   // (Movidas al hook useTabManagement)
@@ -442,6 +413,56 @@ const App = () => {
   // Status bar icon theme usando useLocalStorage
   const [statusBarIconTheme, setStatusBarIconTheme] = useLocalStorageString('basicapp_statusbar_icon_theme', 'classic');
 
+  // Dialog management hook
+  const {
+    // Estados de diálogos
+    showSSHDialog, setShowSSHDialog,
+    showRdpDialog, setShowRdpDialog,
+    showFolderDialog, setShowFolderDialog,
+    showEditSSHDialog, setShowEditSSHDialog,
+    showEditFolderDialog, setShowEditFolderDialog,
+    showSettingsDialog, setShowSettingsDialog,
+    showSyncDialog, setShowSyncDialog,
+    showRdpManager, setShowRdpManager,
+    // Estados de formularios SSH
+    sshName, setSSHName,
+    sshHost, setSSHHost,
+    sshUser, setSSHUser,
+    sshPassword, setSSHPassword,
+    sshRemoteFolder, setSSHRemoteFolder,
+    sshPort, setSSHPort,
+    sshTargetFolder, setSSHTargetFolder,
+    // Estados de formularios Edit SSH
+    editSSHNode, setEditSSHNode,
+    editSSHName, setEditSSHName,
+    editSSHHost, setEditSSHHost,
+    editSSHUser, setEditSSHUser,
+    editSSHPassword, setEditSSHPassword,
+    editSSHRemoteFolder, setEditSSHRemoteFolder,
+    editSSHPort, setEditSSHPort,
+    // Estados de formularios RDP
+    rdpName, setRdpName,
+    rdpServer, setRdpServer,
+    rdpUsername, setRdpUsername,
+    rdpPassword, setRdpPassword,
+    rdpPort, setRdpPort,
+    rdpClientType, setRdpClientType,
+    rdpTargetFolder, setRdpTargetFolder,
+    rdpNodeData, setRdpNodeData,
+    editingRdpNode, setEditingRdpNode,
+    // Estados de formularios Folder
+    folderName, setFolderName,
+    parentNodeKey, setParentNodeKey,
+    editFolderNode, setEditFolderNode,
+    editFolderName, setEditFolderName,
+    // Funciones de utilidad
+    resetSSHForm, resetRDPForm, resetFolderForm,
+    resetEditSSHForm, resetEditFolderForm,
+    openSSHDialog, openRDPDialog, openFolderDialog,
+    closeSSHDialogWithReset, closeRDPDialogWithReset, closeFolderDialogWithReset,
+    closeEditSSHDialogWithReset, closeEditFolderDialogWithReset
+  } = useDialogManagement();
+
   // Los estados de drag & drop ahora están en useDragAndDrop
 
   // Estado para menú contextual de terminal
@@ -553,24 +574,7 @@ const App = () => {
   // Función para limpiar distro cuando se cierra una pestaña
   // cleanupTabDistro movido al hook useTabManagement
 
-  const handleCopyFromTerminal = (tabKey) => {
-    if (window.electron && terminalRefs.current[tabKey]) {
-      const terminal = terminalRefs.current[tabKey];
-      const selection = terminal.getSelection();
-      if (selection) {
-        window.electron.clipboard.writeText(selection);
-        // No mostrar toast aquí para evitar duplicación
-      } else {
-        toast.current.show({
-          severity: 'warn',
-          summary: 'Sin selección',
-          detail: 'No hay texto seleccionado para copiar',
-          life: 3000
-        });
-      }
-    }
-    hideContextMenu();
-  };
+  // handleCopyFromTerminal ahora está en useSessionManagement
 
   const handlePasteToTerminal = async (tabKey) => {
     if (window.electron && terminalRefs.current[tabKey]) {
@@ -1677,8 +1681,7 @@ const App = () => {
 
 
 
-  // 1. Estado global para stats por tabId
-  const [sshStatsByTabId, setSshStatsByTabId] = useState({});
+  // sshStatsByTabId ahora está en useSessionManagement
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
@@ -2017,29 +2020,7 @@ const App = () => {
     setRdpNodeData(null);
   };
 
-  const sessionManager = useRef(new SessionManager()).current;
-
-  // --- Recarga elegante de sesiones desde almacenamiento seguro ---
-  const reloadSessionsFromStorage = async () => {
-    await sessionManager.initialize();
-    const sessions = sessionManager.getAllSessions();
-    const nodesFromSessions = sessions.map(session => ({
-      key: session.id,
-      label: session.name,
-      data: {
-        ...session,
-        type: 'ssh',
-      },
-      draggable: true,
-      droppable: false,
-      uid: session.id,
-      createdAt: session.createdAt,
-      isUserCreated: true
-    }));
-    // NO sobrescribir nunca el array vacío automáticamente
-    // El usuario debe restaurar/importar/sincronizar manualmente si lo desea
-    // Por lo tanto, no llamar a setNodes aquí si el árbol está vacío
-  };
+  // sessionManager y reloadSessionsFromStorage ahora están en useSessionManagement
 
   // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
   const exportTreeToJson = () => {
