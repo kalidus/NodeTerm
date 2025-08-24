@@ -22,6 +22,8 @@ const Sidebar = ({
   setSidebarCollapsed,
   allExpanded,
   toggleExpandAll,
+  expandedKeys,
+  setExpandedKeys,
   setShowCreateGroupDialog,
   setShowSettingsDialog,
   setShowRdpManager, // Nuevo prop para RDP Manager
@@ -37,12 +39,7 @@ const Sidebar = ({
 }) => {
   // --- Estado y lógica movidos aquí ---
   const STORAGE_KEY = 'basicapp2_tree_data';
-  const EXPANDED_KEYS_STORAGE_KEY = 'basicapp2_sidebar_expanded_keys';
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
-  const [expandedKeys, setExpandedKeys] = useState(() => {
-    const saved = localStorage.getItem(EXPANDED_KEYS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
-  });
   // Estado para diálogos
   const [showSSHDialog, setShowSSHDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -272,9 +269,7 @@ const Sidebar = ({
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
     }
   }, [nodes]);
-  useEffect(() => {
-    localStorage.setItem(EXPANDED_KEYS_STORAGE_KEY, JSON.stringify(expandedKeys));
-  }, [expandedKeys]);
+
 
   // Registrar callbacks para el menú contextual
   useEffect(() => {
@@ -656,6 +651,8 @@ const Sidebar = ({
                 selectionMode="single"
                 selectionKeys={selectedNodeKey}
                 onSelectionChange={e => setSelectedNodeKey(e.value)}
+                expandedKeys={expandedKeys}
+                onToggle={e => setExpandedKeys(e.value)}
                 dragdropScope="files"
                 onDragDrop={onDragDrop}
                 onDragStart={e => {
@@ -665,8 +662,6 @@ const Sidebar = ({
                 className="sidebar-tree"
                 style={{ fontSize: `${explorerFontSize}px` }}
                 nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
-                expandedKeys={expandedKeys}
-                onToggle={e => setExpandedKeys(e.value)}
               />
             )}
           </div>
