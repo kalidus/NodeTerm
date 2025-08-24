@@ -9,6 +9,7 @@ import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useDialogManagement } from '../hooks/useDialogManagement';
 import { useContextMenuManagement } from '../hooks/useContextMenuManagement';
 import { useWindowManagement } from '../hooks/useWindowManagement';
+import { useTreeManagement } from '../hooks/useTreeManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -500,6 +501,16 @@ const App = () => {
     nodes
   });
 
+  // Tree management hook
+  const {
+    // Utilidades básicas
+    deepCopy, generateNextKey,
+    // Funciones de búsqueda
+    findNodeByKey, findParentNodeAndIndex, findParentNodeAndIndexByUID, findNodeByProperties,
+    // Funciones de manipulación
+    removeNodeByKey, cloneTreeWithUpdatedNode, deleteNode: deleteNodeFromTree, onDragDrop: onDragDropTree
+  } = useTreeManagement({ toast });
+
   // Los estados de drag & drop ahora están en useDragAndDrop
   
   // Estado para trackear conexiones SSH
@@ -697,10 +708,7 @@ const App = () => {
   // Track the currently dragged node
   const [draggedNodeKey, setDraggedNodeKey] = useState(null);
 
-  // Function to create a deep copy of nodes
-  const deepCopy = (obj) => {
-    return JSON.parse(JSON.stringify(obj));
-  };
+
 
   // Function to regenerate keys for the entire tree
   const regenerateKeys = (nodes, parentKey = null) => {
@@ -726,21 +734,7 @@ const App = () => {
     return nodesWithUpdatedKeys;
   };
 
-  // Function to find a node by key (recursive search)
-  const findNodeByKey = (nodes, key) => {
-    if (key === null) return null;
-    
-    for (let node of nodes) {
-      if (node.key === key) {
-        return node;
-      }
-      if (node.children && node.children.length > 0) {
-        const found = findNodeByKey(node.children, key);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
+
 
   // Function to find a node by UID (most robust)
   const findNodeByUID = (nodes, uid) => {
@@ -756,62 +750,11 @@ const App = () => {
     return null;
   };
 
-  // Function to find parent and index by UID
-  const findParentNodeAndIndexByUID = (nodes, uid) => {
-    const searchInLevel = (currentNodes, parentNode = null) => {
-      for (let i = 0; i < currentNodes.length; i++) {
-        const node = currentNodes[i];
-        if (node.uid === uid) {
-          return { parent: parentNode, index: i, parentList: currentNodes, node: node };
-        }
-        if (node.children && node.children.length > 0) {
-          const result = searchInLevel(node.children, node);
-          if (result) return result;
-        }
-      }
-      return null;
-    };
-    
-    const result = searchInLevel(nodes);
-    return result || { parent: null, index: -1, parentList: [], node: null };
-  };
 
-  // Function to find a node by unique properties (more robust than key-only search)
-  const findNodeByProperties = (nodes, targetNode) => {
-    for (let node of nodes) {
-      if (node.label === targetNode.label && 
-          node.icon === targetNode.icon && 
-          node.droppable === targetNode.droppable) {
-        return node;
-      }
-      if (node.children && node.children.length > 0) {
-        const found = findNodeByProperties(node.children, targetNode);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
 
-  // Function to find parent node and index (recursive search)
-  const findParentNodeAndIndex = (nodes, key) => {
-    // Search recursively through all levels
-    const searchInLevel = (currentNodes, parentNode = null) => {
-      for (let i = 0; i < currentNodes.length; i++) {
-        const node = currentNodes[i];
-        if (node.key === key) {
-          return { parent: parentNode, index: i, parentList: currentNodes };
-        }
-        if (node.children && node.children.length > 0) {
-          const result = searchInLevel(node.children, node);
-          if (result) return result;
-        }
-      }
-      return null;
-    };
-    
-    const result = searchInLevel(nodes);
-    return result || { parent: null, index: -1, parentList: [] };
-  };
+
+
+
 
   // Handle drop to root area
   const handleDropToRoot = (e) => {
@@ -858,64 +801,14 @@ const App = () => {
     }
   };
 
-  // Clona el árbol y actualiza solo el subárbol con la key indicada
-  function cloneTreeWithUpdatedNode(tree, targetKey, updateFn) {
-    return tree.map(node => {
-      if (node.key === targetKey) {
-        return updateFn({ ...node });
-      }
-      if (node.children) {
-        return { ...node, children: cloneTreeWithUpdatedNode(node.children, targetKey, updateFn) };
-      }
-      return node;
-    });
-  }
 
-  // Handle drag and drop with UID preservation
+
+  // Handle drag and drop using the hook
   const onDragDrop = (event) => {
-    const { dragNode, dropNode, dropPoint, value } = event;
-    
-    // Solo permitir drag and drop si el nodo de destino es una carpeta (droppable = true)
-    // Esto evita que se pueda arrastrar cualquier cosa a una sesión SSH
-    const isDropNodeFolder = dropNode && dropNode.droppable === true;
-    const isDropNodeSession = dropNode && dropNode.data && dropNode.data.type === 'ssh';
-    
-    if (dropPoint === 0 && isDropNodeFolder) {
-      // Permitir arrastrar cualquier cosa (carpetas o sesiones) a una carpeta
-      const newValue = cloneTreeWithUpdatedNode(value, dropNode.key, (parent) => {
-        // Eliminar cualquier instancia del nodo movido
-        parent.children = parent.children.filter(n => n.key !== dragNode.key);
-        // Insertar al principio
-        parent.children = [dragNode, ...parent.children];
-        return parent;
-      });
-      setNodes(newValue);
-    } else if (dropPoint === 0 && isDropNodeSession) {
-      // Si se intenta arrastrar algo a una sesión SSH, mostrar mensaje de error
-      toast.current.show({
-        severity: 'warn',
-        summary: 'Operación no permitida',
-        detail: 'No se puede arrastrar elementos dentro de una sesión SSH. Solo las carpetas pueden contener otros elementos.',
-        life: 4000
-      });
-    } else {
-      setNodes([...value]);
-    }
+    onDragDropTree(event, setNodes);
   };
   
-  // Generate next key based on parent key (simplified - will be regenerated anyway)
-  const generateNextKey = (parentKey) => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    
-    if (parentKey === null) {
-      // Root level - use timestamp for uniqueness
-      return `temp_root_${timestamp}_${random}`;
-    } else {
-      // Child level - use parent key + timestamp for uniqueness
-      return `temp_child_${parentKey}_${timestamp}_${random}`;
-    }
-  };
+
   
   // --- Limpieza automática de formularios al abrir/cerrar ---
   const openNewFolderDialog = (parentKey = null) => {
@@ -1002,77 +895,7 @@ const App = () => {
     }
   };
   
-  // Delete node (folder or file) with multiple search strategies
-  const deleteNode = (nodeKey) => {
-    try {
-      const nodesCopy = deepCopy(nodes);
-      
-      // Strategy 1: Try finding by key first
-      let nodeInfo = findParentNodeAndIndex(nodesCopy, nodeKey);
-      
-      // Strategy 2: If key search fails, try finding by UID or properties
-      if (nodeInfo.index === -1) {
-        // First get the original node from current state to extract UID
-        const originalNodeInfo = findParentNodeAndIndex(nodes, nodeKey);
-        if (originalNodeInfo.index !== -1) {
-          const originalNode = originalNodeInfo.parentList[originalNodeInfo.index];
-          
-          if (originalNode.uid) {
-            nodeInfo = findParentNodeAndIndexByUID(nodesCopy, originalNode.uid);
-          }
-          
-          // Strategy 3: If UID also fails, try by properties
-          if (nodeInfo.index === -1) {
-            const foundNode = findNodeByProperties(nodesCopy, originalNode);
-            if (foundNode) {
-              nodeInfo = findParentNodeAndIndex(nodesCopy, foundNode.key);
-            }
-          }
-        }
-      }
-      
-      if (nodeInfo.index === -1) {
-        console.error("❌ Node not found with any strategy:", nodeKey);
-        toast.current.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: `No se encontró el elemento para eliminar. Key: ${nodeKey}`,
-          life: 5000
-        });
-        return;
-      }
-      
-      // Get node before deletion
-      const nodeToDelete = nodeInfo.parentList[nodeInfo.index];
-      const nodeName = nodeToDelete.label;
-      
-      // Remove the node from its parent
-      nodeInfo.parentList.splice(nodeInfo.index, 1);
-      
-      // Update the state with automatic key regeneration
-      setNodes(nodesCopy);
-      
-      // If the deleted node was selected, clear selection
-      if (selectedNodeKey && Object.keys(selectedNodeKey)[0] === nodeKey) {
-        setSelectedNodeKey(null);
-      }
-      
-      toast.current.show({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: `"${nodeName}" eliminado correctamente`,
-        life: 3000
-      });
-    } catch (error) {
-      console.error("❌ Error deleting node:", error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: `Error al eliminar: ${error.message}`,
-        life: 5000
-      });
-    }
-  };
+
   
   // Confirm node deletion
   const confirmDeleteNode = (nodeKey, nodeName, hasChildren) => {
@@ -1085,7 +908,7 @@ const App = () => {
       header: 'Confirmar eliminación',
       icon: 'pi pi-exclamation-triangle',
       acceptClassName: 'p-button-danger',
-      accept: () => deleteNode(nodeKey),
+      accept: () => deleteNodeFromTree(nodes, setNodes, nodeKey),
       reject: () => {}
     });
   };
@@ -1468,19 +1291,7 @@ const App = () => {
 
 
 
-  // Helper para eliminar un nodo por key en todo el árbol
-  function removeNodeByKey(tree, key) {
-    for (let i = 0; i < tree.length; i++) {
-      if (tree[i].key === key) {
-        tree.splice(i, 1);
-        return true;
-      }
-      if (tree[i].children) {
-        if (removeNodeByKey(tree[i].children, key)) return true;
-      }
-    }
-    return false;
-  }
+
 
   // Los estados de ventana y expansión ahora están en useWindowManagement
 
