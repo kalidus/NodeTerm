@@ -8,6 +8,7 @@ import { useLocalStorageString, useLocalStorageNumber } from '../hooks/useLocalS
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useDialogManagement } from '../hooks/useDialogManagement';
 import { useContextMenuManagement } from '../hooks/useContextMenuManagement';
+import { useWindowManagement } from '../hooks/useWindowManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -149,7 +150,7 @@ const App = () => {
 
     // Crear nueva sesión SSH para el split
     const newTabId = `${sshNode.key}_${Date.now()}`;
-    const sshConfig = {
+        const sshConfig = {
       host: sshNode.data.useBastionWallix ? sshNode.data.targetServer : sshNode.data.host,
       username: sshNode.data.user,
       password: sshNode.data.password,
@@ -164,7 +165,7 @@ const App = () => {
       key: newTabId,
       label: `${sshNode.label} (${sshTabs.filter(t => t.originalKey === sshNode.key).length + 1})`,
       originalKey: sshNode.key,
-      sshConfig: sshConfig,
+          sshConfig: sshConfig,
       type: 'terminal'
     };
 
@@ -228,7 +229,7 @@ const App = () => {
       });
     });
 
-    toast.current.show({
+      toast.current.show({
       severity: 'info',
       summary: 'Panel cerrado',
       detail: `Panel ${panelToClose === 'left' ? 'izquierdo' : 'derecho'} cerrado`,
@@ -478,6 +479,26 @@ const App = () => {
     onNodeContextMenu: onNodeContextMenuHook,
     onTreeAreaContextMenu: onTreeAreaContextMenuHook
   } = useContextMenuManagement();
+
+  // Window management hook
+  const {
+    // Estados de ventana y sidebar
+    sidebarVisible, setSidebarVisible,
+    sidebarCollapsed, setSidebarCollapsed,
+    allExpanded, setAllExpanded,
+    expandedKeys, setExpandedKeys,
+    // Referencias
+    resizeTimeoutRef,
+    // Funciones de resize
+    handleResize, handleResizeThrottled,
+    // Funciones de expansión
+    toggleExpandAll
+  } = useWindowManagement({ 
+    getFilteredTabs, 
+    activeTabIndex, 
+    resizeTerminals,
+    nodes
+  });
 
   // Los estados de drag & drop ahora están en useDragAndDrop
   
@@ -1435,97 +1456,13 @@ const App = () => {
     });
   };
 
-  useEffect(() => {
-    // Cuando cambiamos de pestaña, la terminal necesita recalcular su tamaño
-    // para ajustarse al contenedor que ahora es visible.
-    // Llamar inmediatamente para que el servidor SSH reciba las dimensiones correctas
-    handleResize();
-  }, [activeTabIndex, sshTabs]); // Se ejecuta cuando cambia la pestaña activa o la lista de pestañas
+  // useEffect para redimensionar cuando cambia la pestaña activa ahora está en useWindowManagement
 
-  // useEffect para redimensionar terminal cuando se colapsa/expande el sidebar
-  useEffect(() => {
-    // Necesitamos un pequeño delay para que el CSS termine la transición
-    const timeoutId = setTimeout(() => {
-      handleResize();
-    }, 250); // Coincide con la duración de la transición CSS (0.2s + buffer)
-    
-    return () => clearTimeout(timeoutId);
-  }, [sidebarCollapsed]); // Se ejecuta cuando cambia el estado del sidebar
+  // useEffect para redimensionar cuando se colapsa/expande el sidebar ahora está en useWindowManagement
 
-  // Optimización para redimensionamiento fluido
-  useEffect(() => {
-    const splitterElement = document.querySelector('.p-splitter');
-    if (!splitterElement) return;
+  // Optimización para redimensionamiento fluido del splitter ahora está en useWindowManagement
 
-    const handleResizeStart = (e) => {
-      // Solo aplicar optimizaciones si el click es en el gutter
-      if (e.target.classList.contains('p-splitter-gutter')) {
-        splitterElement.classList.add('p-splitter-resizing');
-        // Desactivar transiciones en sidebar durante redimensionamiento
-        document.documentElement.style.setProperty('--sidebar-transition', 'none');
-      }
-    };
-
-    const handleResizeEnd = () => {
-      splitterElement.classList.remove('p-splitter-resizing');
-      // Reactivar transiciones después del redimensionamiento
-      document.documentElement.style.removeProperty('--sidebar-transition');
-    };
-
-    // Eventos para detectar inicio y fin del redimensionamiento
-    splitterElement.addEventListener('mousedown', handleResizeStart);
-    document.addEventListener('mouseup', handleResizeEnd);
-    
-    return () => {
-      splitterElement.removeEventListener('mousedown', handleResizeStart);
-      document.removeEventListener('mouseup', handleResizeEnd);
-    };
-  }, []);
-
-  // Ref para throttling del resize
-  const resizeTimeoutRef = useRef(null);
-  
-  const handleResize = () => {
-    const filteredTabs = getFilteredTabs();
-    const activeTab = filteredTabs[activeTabIndex];
-    
-    if (!activeTab) return;
-
-    // Cancelar resize anterior si existe
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
-    
-    // Usar requestAnimationFrame para optimizar el redimensionamiento
-    requestAnimationFrame(() => {
-      if (activeTab.type === 'split') {
-        // Para splits, redimensionar ambos terminales
-        if (activeTab.leftTerminal && terminalRefs.current[activeTab.leftTerminal.key]) {
-          terminalRefs.current[activeTab.leftTerminal.key].fit();
-        }
-        if (activeTab.rightTerminal && terminalRefs.current[activeTab.rightTerminal.key]) {
-          terminalRefs.current[activeTab.rightTerminal.key].fit();
-        }
-      } else if (activeTab.type === 'terminal' && terminalRefs.current[activeTab.key]) {
-        // Para terminales normales
-        terminalRefs.current[activeTab.key].fit();
-      } else if (activeTab.type === 'rdp-guacamole' && terminalRefs.current[activeTab.key]) {
-        // Ajustar Guacamole RDP al contenedor cuando cambia el layout (e.g., sidebar)
-        terminalRefs.current[activeTab.key].fit();
-      }
-    });
-  };
-  
-  // Versión con throttling para onResize
-  const handleResizeThrottled = () => {
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
-    
-    resizeTimeoutRef.current = setTimeout(() => {
-      handleResize();
-    }, 16); // ~60fps
-  };
+  // Las funciones de resize ahora están en useWindowManagement
 
   // Función para abrir explorador de archivos SSH
 
@@ -1545,48 +1482,7 @@ const App = () => {
     return false;
   }
 
-  // Clave para guardar el estado expandido de la sidebar
-  const EXPANDED_KEYS_STORAGE_KEY = 'basicapp2_sidebar_expanded_keys';
-
-  // Estado para expandedKeys, inicializado desde localStorage si existe
-  const [expandedKeys, setExpandedKeys] = useState(() => {
-    const saved = localStorage.getItem(EXPANDED_KEYS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  // Guardar expandedKeys en localStorage cada vez que cambie
-  useEffect(() => {
-    localStorage.setItem(EXPANDED_KEYS_STORAGE_KEY, JSON.stringify(expandedKeys));
-  }, [expandedKeys]);
-
-  const [allExpanded, setAllExpanded] = useState(false);
-
-  // Función para expandir o plegar todas las carpetas
-  const toggleExpandAll = () => {
-    if (allExpanded) {
-      setExpandedKeys({});
-      setAllExpanded(false);
-    } else {
-      // Recorrer todos los nodos y marcar los folders como expandidos
-      const expandAllFolders = (nodes) => {
-        let keys = {};
-        for (const node of nodes) {
-          if (node.droppable || node.children) {
-            keys[node.key] = true;
-          }
-          if (node.children && node.children.length > 0) {
-            keys = { ...keys, ...expandAllFolders(node.children) };
-          }
-        }
-        return keys;
-      };
-      setExpandedKeys(expandAllFolders(nodes));
-      setAllExpanded(true);
-    }
-  };
-
-  const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Los estados de ventana y expansión ahora están en useWindowManagement
 
   // Los grupos no se guardan al reiniciar la aplicación
   // useEffect(() => {
@@ -2075,6 +1971,8 @@ const App = () => {
               setSidebarCollapsed={setSidebarCollapsed}
               allExpanded={allExpanded}
               toggleExpandAll={toggleExpandAll}
+              expandedKeys={expandedKeys}
+              setExpandedKeys={setExpandedKeys}
               setShowCreateGroupDialog={setShowCreateGroupDialog}
               setShowSettingsDialog={setShowSettingsDialog}
               setShowRdpManager={setShowRdpManager}

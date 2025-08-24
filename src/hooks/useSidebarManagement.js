@@ -3,7 +3,17 @@ import connectionStore, { helpers as connectionHelpers } from '../utils/connecti
 
 export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
-  const [nodes, setNodes] = useState([]);
+  const [nodes, setNodes] = useState(() => {
+    const STORAGE_KEY = 'basicapp2_tree_data';
+    const saved = localStorage.getItem(STORAGE_KEY);
+    
+    try {
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error parsing tree data:', error);
+      return [];
+    }
+  });
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
   
