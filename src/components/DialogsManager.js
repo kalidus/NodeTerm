@@ -293,9 +293,9 @@ const DialogsManager = ({
         onHide={() => setShowCreateGroupDialog(false)}
         groupName={newGroupName}
         setGroupName={setNewGroupName}
-        selectedColor={selectedGroupColor}
-        setSelectedColor={setSelectedGroupColor}
-        availableColors={GROUP_COLORS}
+        groupColor={selectedGroupColor}
+        setGroupColor={setSelectedGroupColor}
+        colorOptions={GROUP_COLORS}
         onConfirm={createNewGroup}
       />
 
