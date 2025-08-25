@@ -11,6 +11,7 @@ import { useDialogManagement } from '../hooks/useDialogManagement';
 import { useContextMenuManagement } from '../hooks/useContextMenuManagement';
 import { useWindowManagement } from '../hooks/useWindowManagement';
 import { useTreeManagement } from '../hooks/useTreeManagement';
+import { useFormHandlers } from '../hooks/useFormHandlers';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -338,45 +339,38 @@ const App = () => {
 
     // Función para manejar estado de conexión
     const handleConnectionStatus = (originalKey, status) => {
-      // console.log('🔄 SSH estado:', originalKey, '->', status); // ELIMINADO
       setSshConnectionStatus(prevStatus => {
         const newStatus = { ...prevStatus, [originalKey]: status };
-        // console.log('Nuevo estado sshConnectionStatus:', newStatus); // ELIMINADO
         return newStatus;
       });
     };
 
     // Listeners estables con referencias fijas
     const handleSSHReady = (data) => {
-      // console.log('✅ SSH conectado para originalKey:', data?.originalKey); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'connected');
       }
     };
 
     const handleSSHError = (data) => {
-      // console.log('❌ SSH error para originalKey:', data?.originalKey, 'error:', data?.error); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'error');
       }
     };
 
     const handleSSHDisconnected = (data) => {
-      // console.log('🔌 SSH desconectado para originalKey:', data?.originalKey); // ELIMINADO
       if (data?.originalKey) {
         handleConnectionStatus(data.originalKey, 'disconnected');
       }
     };
 
     // Registrar listeners
-    // console.log('Registrando listeners SSH IPC'); // ELIMINADO
     window.electron.ipcRenderer.on('ssh-connection-ready', handleSSHReady);
     window.electron.ipcRenderer.on('ssh-connection-error', handleSSHError);
     window.electron.ipcRenderer.on('ssh-connection-disconnected', handleSSHDisconnected);
 
     // Cleanup usando removeAllListeners para asegurar limpieza completa
     return () => {
-      // console.log('🧹 Limpiando listeners SSH IPC'); // ELIMINADO
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-ready');
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-error');
       window.electron.ipcRenderer.removeAllListeners('ssh-connection-disconnected');
@@ -491,6 +485,52 @@ const App = () => {
     removeNodeByKey, cloneTreeWithUpdatedNode, deleteNode: deleteNodeFromTree, onDragDrop: onDragDropTree
   } = useTreeManagement({ toast });
 
+  // Form handlers hook
+  const {
+    createNewFolder,
+    createNewSSH,
+    createNewRdp,
+    saveEditSSH,
+    saveEditFolder,
+    openEditSSHDialog,
+    openNewRdpDialog,
+    closeRdpDialog,
+    openEditRdpDialog,
+    handleSaveRdpToSidebar
+  } = useFormHandlers({
+    toast,
+    setShowRdpDialog,
+    setShowEditSSHDialog,
+    setShowEditFolderDialog,
+    setShowRdpManager,
+    sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder,
+    closeSSHDialogWithReset,
+    editSSHNode, setEditSSHNode,
+    editSSHName, setEditSSHName,
+    editSSHHost, setEditSSHHost, 
+    editSSHUser, setEditSSHUser,
+    editSSHPassword, setEditSSHPassword,
+    editSSHRemoteFolder, setEditSSHRemoteFolder,
+    editSSHPort, setEditSSHPort,
+    closeEditSSHDialogWithReset,
+    rdpName, setRdpName,
+    rdpServer, setRdpServer,
+    rdpUsername, setRdpUsername, 
+    rdpPassword, setRdpPassword,
+    rdpPort, setRdpPort,
+    rdpClientType, setRdpClientType,
+    rdpTargetFolder, setRdpTargetFolder,
+    rdpNodeData, setRdpNodeData,
+    editingRdpNode, setEditingRdpNode,
+    folderName, parentNodeKey,
+    editFolderNode, setEditFolderNode,
+    editFolderName, setEditFolderName,
+    closeFolderDialogWithReset,
+    nodes, setNodes,
+    findNodeByKey, deepCopy, generateNextKey, parseWallixUser,
+    rdpTabs, setRdpTabs
+  });
+
   // Los estados de drag & drop ahora están en useDragAndDrop
   
   // Estado para trackear conexiones SSH
@@ -566,7 +606,7 @@ const App = () => {
   };
 
   // Función para limpiar distro cuando se cierra una pestaña
-  // cleanupTabDistro movido al hook useTabManagement
+
 
   // Las funciones de terminal han sido movidas a useSessionManagement y se usan a través de wrappers arriba
 
@@ -637,8 +677,6 @@ const App = () => {
   // Save nodes to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
-    // Log de debug removido para limpiar la consola
-          // Log de trace removido para limpiar la consola
   }, [nodes]);
 
   // Los auto-guardados de temas y fuentes ahora están en useThemeManagement
@@ -792,58 +830,7 @@ const App = () => {
   
   // --- Las funciones de diálogos ahora están en useDialogManagement hook ---
   
-  // Create a new folder
-  const createNewFolder = () => {
-    if (!folderName.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El nombre de carpeta no puede estar vacío',
-        life: 3000
-      });
-      return;
-    }
-    try {
-      const newKey = generateUniqueKey();
-      const newFolder = {
-        key: newKey,
-        label: folderName.trim(),
-        droppable: true,
-        children: [],
-        uid: newKey,
-        createdAt: new Date().toISOString(),
-        isUserCreated: true
-      };
-      const nodesCopy = deepCopy(nodes);
-      if (parentNodeKey === null) {
-        nodesCopy.push(newFolder);
-      } else {
-        const parentNode = findNodeByKey(nodesCopy, parentNodeKey);
-        if (!parentNode) {
-          throw new Error(`Parent node with key ${parentNodeKey} not found`);
-        }
-        parentNode.children = parentNode.children || [];
-        parentNode.children.push(newFolder);
-      }
-      setNodes(() => logSetNodes('createNewFolder', nodesCopy));
-      // Log de debug removido para limpiar la consola
-      closeFolderDialogWithReset();
-      toast.current.show({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: `Carpeta "${folderName}" creada`,
-        life: 3000
-      });
-    } catch (error) {
-      console.error("Error creating folder:", error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo crear la carpeta',
-        life: 3000
-      });
-    }
-  };
+
   
 
   
@@ -972,227 +959,13 @@ const App = () => {
     return folders;
   };
 
-  // Función para crear una nueva conexión SSH
-  const createNewSSH = () => {
-    if (!sshName.trim() || !sshHost.trim() || !sshUser.trim() || !sshPassword.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Todos los campos son obligatorios',
-        life: 3000
-      });
-      return;
-    }
-    
-    // Detectar automáticamente si es formato Wallix
-    const userInfo = parseWallixUser(sshUser.trim());
-    
-    const newKey = generateUniqueKey();
-    const newSSHNode = {
-      key: newKey,
-      label: sshName.trim(),
-      data: {
-        host: sshHost.trim(),
-        user: userInfo.isWallix ? userInfo.targetUser : sshUser.trim(),
-        password: sshPassword.trim(),
-        remoteFolder: sshRemoteFolder.trim(),
-        port: sshPort,
-        type: 'ssh',
-        // Datos del bastión Wallix (si aplica)
-        useBastionWallix: userInfo.isWallix,
-        bastionHost: userInfo.isWallix ? sshHost.trim() : '', // En Wallix, el host es el bastión
-        bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
-        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
-      },
-      draggable: true,
-      droppable: false, // Las sesiones SSH NO pueden contener otros elementos
-      uid: newKey,
-      createdAt: new Date().toISOString(),
-      isUserCreated: true
-    };
-    const nodesCopy = deepCopy(nodes);
-    if (sshTargetFolder) {
-      const parentNode = findNodeByKey(nodesCopy, sshTargetFolder);
-      if (parentNode) {
-        parentNode.children = parentNode.children || [];
-        parentNode.children.unshift(newSSHNode);
-      } else {
-        nodesCopy.push(newSSHNode);
-      }
-    } else {
-      nodesCopy.unshift(newSSHNode);
-    }
-    setNodes(() => logSetNodes('createNewSSH', nodesCopy));
-    // Log de debug removido para limpiar la consola
-    closeSSHDialogWithReset();
-    toast.current.show({
-      severity: 'success',
-      summary: 'SSH añadida',
-      detail: `Conexión SSH "${sshName}" añadida al árbol`,
-      life: 3000
-    });
-  };
-
-  const createNewRdp = () => {
-    if (!rdpName.trim() || !rdpServer.trim() || !rdpUsername.trim() || !rdpPassword.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Todos los campos son obligatorios',
-        life: 3000
-      });
-      return;
-    }
-    
-    const newKey = generateUniqueKey();
-    const newRdpNode = {
-      key: newKey,
-      label: rdpName.trim(),
-      data: {
-        server: rdpServer.trim(),
-        username: rdpUsername.trim(),
-        password: rdpPassword.trim(),
-        port: rdpPort,
-        clientType: rdpClientType,
-        resolution: '1920x1080',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: true,
-        fullscreen: false,
-        span: false,
-        admin: false,
-        public: false,
-        type: 'rdp'
-      },
-      draggable: true,
-      droppable: false,
-      uid: newKey,
-      createdAt: new Date().toISOString(),
-      isUserCreated: true
-    };
-    
-    const nodesCopy = deepCopy(nodes);
-    if (rdpTargetFolder) {
-      const parentNode = findNodeByKey(nodesCopy, rdpTargetFolder);
-      if (parentNode) {
-        parentNode.children = parentNode.children || [];
-        parentNode.children.unshift(newRdpNode);
-      } else {
-        nodesCopy.push(newRdpNode);
-      }
-    } else {
-      nodesCopy.unshift(newRdpNode);
-    }
-    
-    setNodes(() => logSetNodes('createNewRdp', nodesCopy));
-    // Log de debug removido para limpiar la consola
-    closeRdpDialog();
-    toast.current.show({
-      severity: 'success',
-      summary: 'RDP añadida',
-      detail: `Conexión RDP "${rdpName}" añadida al árbol`,
-      life: 3000
-    });
-  };
-
-  const openNewRdpDialog = (targetFolder = null) => {
-    setRdpTargetFolder(targetFolder);
-    setRdpName('');
-    setRdpServer('');
-    setRdpUsername('');
-    setRdpPassword('');
-    setRdpPort(3389);
-    setShowRdpDialog(true);
-  };
-
-  const closeRdpDialog = () => {
-    setShowRdpDialog(false);
-    setRdpTargetFolder(null);
-    setRdpName('');
-    setRdpServer('');
-    setRdpUsername('');
-    setRdpPassword('');
-    setRdpPort(3389);
-    setRdpClientType('mstsc');
-  };
-
-  const openEditRdpDialog = (node) => {
-    // Logs de debug removidos para limpiar la consola
-    // Abrir el gestor de conexiones RDP con los datos del nodo para editar
-    setRdpNodeData(node.data);
-    setEditingRdpNode(node);
-    setShowRdpManager(true);
-    // Log de debug removido para limpiar la consola
-  };
 
 
 
-  // Función para abrir el diálogo de edición SSH
-  const openEditSSHDialog = (node) => {
-    setEditSSHNode(node);
-    setEditSSHName(node.label);
-    setEditSSHHost(node.data?.bastionHost || node.data?.host || '');
-    // Mostrar el usuario original completo si es Wallix, o el usuario simple si es directo
-    setEditSSHUser(node.data?.useBastionWallix ? node.data?.bastionUser || '' : node.data?.user || '');
-    setEditSSHPassword(node.data?.password || '');
-    setEditSSHRemoteFolder(node.data?.remoteFolder || '');
-    setEditSSHPort(node.data?.port || 22);
-    setShowEditSSHDialog(true);
-  };
 
-  // Función para guardar la edición SSH
-  const saveEditSSH = () => {
-    if (!editSSHName.trim() || !editSSHHost.trim() || !editSSHUser.trim() || !editSSHPassword.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Todos los campos son obligatorios excepto la carpeta remota',
-        life: 3000
-      });
-      return;
-    }
-    
-    // Detectar automáticamente si es formato Wallix
-    const userInfo = parseWallixUser(editSSHUser.trim());
-    
-    const nodesCopy = deepCopy(nodes);
-    const nodeToEdit = findNodeByKey(nodesCopy, editSSHNode.key);
-    if (nodeToEdit) {
-      nodeToEdit.label = editSSHName.trim();
-      nodeToEdit.data = { 
-        ...nodeToEdit.data, 
-        host: userInfo.isWallix ? userInfo.targetServer : editSSHHost.trim(), // Si es Wallix, el host real es el targetServer
-        user: userInfo.isWallix ? userInfo.targetUser : editSSHUser.trim(),
-        password: editSSHPassword.trim(),
-        remoteFolder: editSSHRemoteFolder.trim(),
-        port: editSSHPort,
-        type: 'ssh',
-        // Datos del bastión Wallix (si aplica)
-        useBastionWallix: userInfo.isWallix,
-        bastionHost: userInfo.isWallix ? editSSHHost.trim() : '', // En Wallix, el host ingresado es el bastión
-        bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
-        targetServer: userInfo.isWallix ? userInfo.targetServer : ''
-      };
-      nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
-    }
-    setNodes(nodesCopy);
-    closeSSHDialogWithReset();
-    setEditSSHNode(null);
-    setEditSSHName(''); 
-    setEditSSHHost(''); 
-    setEditSSHUser('');
-    setEditSSHPassword('');
-    setEditSSHRemoteFolder('');
-    setEditSSHPort(22);
-    toast.current.show({
-      severity: 'success',
-      summary: 'SSH editada',
-      detail: `Sesión SSH actualizada`,
-      life: 3000
-    });
-  };
+
+
+
 
   // Función para abrir el diálogo de edición de carpeta
   const openEditFolderDialog = (node) => {
@@ -1201,60 +974,13 @@ const App = () => {
     setShowEditFolderDialog(true);
   };
 
-  // Función para guardar la edición de la carpeta
-  const saveEditFolder = () => {
-    if (!editFolderName.trim()) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'El nombre de la carpeta no puede estar vacío',
-        life: 3000
-      });
-      return;
-    }
-    const nodesCopy = deepCopy(nodes);
-    const nodeToEdit = findNodeByKey(nodesCopy, editFolderNode.key);
-    if (nodeToEdit) {
-      nodeToEdit.label = editFolderName.trim();
-    }
-    setNodes(nodesCopy);
-    closeFolderDialogWithReset();
-    setEditFolderNode(null);
-    setEditFolderName('');
-    toast.current.show({
-      severity: 'success',
-      summary: 'Carpeta editada',
-      detail: `Nombre actualizado`,
-      life: 3000
-    });
-  };
-
-  // useEffect para redimensionar cuando cambia la pestaña activa ahora está en useWindowManagement
-
-  // useEffect para redimensionar cuando se colapsa/expande el sidebar ahora está en useWindowManagement
-
-  // Optimización para redimensionamiento fluido del splitter ahora está en useWindowManagement
-
-  // Las funciones de resize ahora están en useWindowManagement
-
-  // Función para abrir explorador de archivos SSH
 
 
 
 
 
-  // Los estados de ventana y expansión ahora están en useWindowManagement
-
-  // Los grupos no se guardan al reiniciar la aplicación
-  // useEffect(() => {
-  //   try {
-  //     localStorage.setItem('tabGroups', JSON.stringify(tabGroups));
-  //   } catch {}
-  // }, [tabGroups]);
 
 
-
-  // sshStatsByTabId ahora está en useSessionManagement
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
@@ -1411,204 +1137,14 @@ const App = () => {
     }
   }, []);
 
-  const handleSaveRdpToSidebar = (rdpData, isEditing = false, originalNode = null) => {
-    if (isEditing && originalNode) {
-      // Actualizar nodo existente
-      setNodes(prevNodes => {
-        const nodesCopy = Array.isArray(prevNodes) ? [...prevNodes] : [];
-        const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
-        
-        if (nodeToEdit) {
-          nodeToEdit.label = rdpData.name || `${rdpData.server}:${rdpData.port}`;
-          nodeToEdit.data = {
-            ...nodeToEdit.data,
-            type: 'rdp',
-            name: rdpData.name,
-            server: rdpData.server,
-            username: rdpData.username,
-            password: rdpData.password,
-            port: rdpData.port || 3389,
-            clientType: rdpData.clientType || 'mstsc',
-            resolution: rdpData.resolution || '1920x1080',
-            colorDepth: rdpData.colorDepth || 32,
-            redirectFolders: rdpData.redirectFolders === true,
-            redirectClipboard: rdpData.redirectClipboard === true,
-            redirectPrinters: rdpData.redirectPrinters === true,
-            redirectAudio: rdpData.redirectAudio === true,
-            fullscreen: rdpData.fullscreen === true,
-            smartSizing: rdpData.smartSizing === true,
-            span: rdpData.span === true,
-            admin: rdpData.admin === true,
-            public: rdpData.public === true,
-            // Campos específicos de Guacamole
-            autoResize: rdpData.autoResize === true,
-            guacDpi: rdpData.guacDpi || 96,
-            guacSecurity: rdpData.guacSecurity || 'any',
-            guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-            guacEnableDrive: rdpData.guacEnableDrive === true,
-            guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
-            guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
-            // Nuevos flags avanzados
-            guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
-            guacEnableFontSmoothing: rdpData.guacEnableFontSmoothing === true,
-            guacEnableTheming: rdpData.guacEnableTheming === true,
-            guacEnableFullWindowDrag: rdpData.guacEnableFullWindowDrag === true,
-            guacEnableMenuAnimations: rdpData.guacEnableMenuAnimations === true,
-            guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
-            guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
-            guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
-            guacDisableCopyRect: rdpData.guacDisableCopyRect === true
-          };
-          
-          // console.log('=== NODE UPDATED ===');
-          // console.log('Updated node data:', JSON.stringify(nodeToEdit.data, null, 2));
-          // console.log('smartSizing in node:', nodeToEdit.data.smartSizing);
-          // console.log('====================');
-        }
-        
-        return nodesCopy;
-      });
-    } else {
-      // Crear un nuevo nodo RDP en la sidebar
-      const newNode = {
-        key: `rdp_${Date.now()}`,
-        label: rdpData.name || `${rdpData.server}:${rdpData.port}`,
-        data: {
-          type: 'rdp',
-          name: rdpData.name,
-          server: rdpData.server,
-          username: rdpData.username,
-          password: rdpData.password,
-          port: rdpData.port || 3389,
-          clientType: rdpData.clientType || 'mstsc',
-          resolution: rdpData.resolution || '1920x1080',
-          colorDepth: rdpData.colorDepth || 32,
-          redirectFolders: rdpData.redirectFolders === true,
-          redirectClipboard: rdpData.redirectClipboard === true,
-          redirectPrinters: rdpData.redirectPrinters === true,
-          redirectAudio: rdpData.redirectAudio === true,
-          fullscreen: rdpData.fullscreen === true,
-          smartSizing: rdpData.smartSizing === true,
-          span: rdpData.span === true,
-          admin: rdpData.admin === true,
-          public: rdpData.public === true,
-          // Campos específicos de Guacamole
-          autoResize: rdpData.autoResize === true,
-          guacDpi: rdpData.guacDpi || 96,
-          guacSecurity: rdpData.guacSecurity || 'any',
-          guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-           guacEnableDrive: rdpData.guacEnableDrive === true,
-           guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
-          guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
-          // Nuevos flags avanzados
-          guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
-          guacEnableFontSmoothing: rdpData.guacEnableFontSmoothing === true,
-          guacEnableTheming: rdpData.guacEnableTheming === true,
-          guacEnableFullWindowDrag: rdpData.guacEnableFullWindowDrag === true,
-          guacEnableMenuAnimations: rdpData.guacEnableMenuAnimations === true,
-          guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
-          guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
-          guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
-          guacDisableCopyRect: rdpData.guacDisableCopyRect === true
-        },
-        draggable: true,
-        droppable: false,
-        uid: `rdp_${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        isUserCreated: true
-      };
 
-      // Agregar el nodo a la raíz del árbol
-      setNodes(prevNodes => {
-        const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
-        newNodes.push(newNode);
-        return newNodes;
-      });
-    }
-
-    // Actualizar pestañas RDP si están abiertas
-    if (isEditing && originalNode) {
-      setRdpTabs(prevTabs => {
-        return prevTabs.map(tab => {
-          if (tab.originalKey === originalNode.key) {
-            return {
-              ...tab,
-              label: rdpData.name || `${rdpData.server}:${rdpData.port}`,
-              rdpConfig: {
-                name: rdpData.name,
-                server: rdpData.server,
-                username: rdpData.username,
-                password: rdpData.password,
-                port: rdpData.port || 3389,
-                clientType: rdpData.clientType || 'mstsc',
-                resolution: rdpData.resolution || '1920x1080',
-                colorDepth: rdpData.colorDepth || 32,
-                redirectFolders: rdpData.redirectFolders === true,
-                redirectClipboard: rdpData.redirectClipboard === true,
-                redirectPrinters: rdpData.redirectPrinters === true,
-                redirectAudio: rdpData.redirectAudio === true,
-                fullscreen: rdpData.fullscreen === true,
-                smartSizing: rdpData.smartSizing === true,
-                span: rdpData.span === true,
-                admin: rdpData.admin === true,
-                public: rdpData.public === true,
-                // Campos específicos de Guacamole
-                autoResize: rdpData.autoResize === true,
-                guacDpi: rdpData.guacDpi || 96,
-                guacSecurity: rdpData.guacSecurity || 'any',
-                 guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
-                 guacEnableDrive: rdpData.guacEnableDrive === true,
-                 guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
-                 guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
-                 guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
-                 guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
-                 guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
-                 guacDisableCopyRect: rdpData.guacDisableCopyRect === true
-              }
-            };
-          }
-          return tab;
-        });
-      });
-    }
-
-    // Cerrar el diálogo del RdpManager
-    setShowRdpManager(false);
-    setRdpNodeData(null);
-  };
-
-  // sessionManager y reloadSessionsFromStorage ahora están en useSessionManagement
-
-  // --- Exportar el árbol completo de nodos (carpetas + sesiones) ---
-  const exportTreeToJson = () => {
-    // Siempre exportar como array
-    let safeNodes = Array.isArray(nodes) ? nodes : (nodes ? [nodes] : []);
-    return JSON.stringify(safeNodes, null, 2);
-  };
-  // --- Importar el árbol completo de nodos (carpetas + sesiones) ---
-  const importTreeFromJsonApp = (json) => {
-    try {
-      let importedNodes = JSON.parse(json);
-      if (!Array.isArray(importedNodes)) {
-        importedNodes = [importedNodes];
-      }
-      setNodes(logSetNodes('importTreeFromJsonApp', importedNodes));
-      console.log('[DEBUG][importTreeFromJsonApp] nodes después de importar (replace):', importedNodes);
-      return true;
-    } catch (e) {
-      console.error('Error importando árbol:', e);
-      return false;
-    }
-  };
 
   // Helper para loggear setNodes
   const logSetNodes = (source, nodes) => {
-    // Logs de debug removidos para limpiar la consola
     return nodes;
   };
 
   useEffect(() => {
-    // Log de debug removido para limpiar la consola
   }, [nodes]);
 
   useEffect(() => {
