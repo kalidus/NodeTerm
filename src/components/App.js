@@ -30,20 +30,13 @@ import SplitLayout from './SplitLayout';
 import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
-import { explorerFonts } from '../themes';
-import { uiThemes } from '../themes/ui-themes';
-// Importar iconos para distribuciones
-import { FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
-import { SiDebian } from 'react-icons/si';
-import { getVersionInfo } from '../version-info';
-import { themeManager } from '../utils/themeManager';
-import { statusBarThemeManager } from '../utils/statusBarThemeManager';
-import ThemeSelector from './ThemeSelector';
+
+
 import SettingsDialog from './SettingsDialog';
 import TitleBar from './TitleBar';
 import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
-import SessionManager from '../services/SessionManager';
+
 import SyncSettingsDialog from './SyncSettingsDialog';
 import RdpManager from './RdpManager';
 import RdpSessionTab from './RdpSessionTab';
@@ -53,8 +46,7 @@ import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
 import DistroIcon from './DistroIcon';
-
-
+import DialogsManager from './DialogsManager';
 
 const App = () => {
   const toast = useRef(null);
@@ -1664,25 +1656,149 @@ const App = () => {
         findAllConnections={findAllConnections}
         onOpenSSHConnection={onOpenSSHConnection}
       />
-      <Toast ref={toast} />
-      <RdpManager 
-        visible={showRdpManager} 
-        onHide={() => {
-          setShowRdpManager(false);
-          setRdpNodeData(null);
-          setEditingRdpNode(null);
-        }} 
+      <DialogsManager
+        // Referencias
+        toast={toast}
+        
+        // Estados de diálogos
+        showSSHDialog={showSSHDialog}
+        setShowSSHDialog={setShowSSHDialog}
+        showRdpDialog={showRdpDialog}
+        setShowRdpDialog={setShowRdpDialog}
+        showFolderDialog={showFolderDialog}
+        setShowFolderDialog={setShowFolderDialog}
+        showEditSSHDialog={showEditSSHDialog}
+        setShowEditSSHDialog={setShowEditSSHDialog}
+        showEditFolderDialog={showEditFolderDialog}
+        setShowEditFolderDialog={setShowEditFolderDialog}
+        showSettingsDialog={showSettingsDialog}
+        setShowSettingsDialog={setShowSettingsDialog}
+        showSyncDialog={showSyncDialog}
+        setShowSyncDialog={setShowSyncDialog}
+        showRdpManager={showRdpManager}
+        setShowRdpManager={setShowRdpManager}
+        showCreateGroupDialog={showCreateGroupDialog}
+        setShowCreateGroupDialog={setShowCreateGroupDialog}
+        
+        // Estados de formularios SSH
+        sshName={sshName}
+        setSSHName={setSSHName}
+        sshHost={sshHost}
+        setSSHHost={setSSHHost}
+        sshUser={sshUser}
+        setSSHUser={setSSHUser}
+        sshPassword={sshPassword}
+        setSSHPassword={setSSHPassword}
+        sshRemoteFolder={sshRemoteFolder}
+        setSSHRemoteFolder={setSSHRemoteFolder}
+        sshPort={sshPort}
+        setSSHPort={setSSHPort}
+        sshTargetFolder={sshTargetFolder}
+        
+        // Estados de formularios Edit SSH
+        editSSHName={editSSHName}
+        setEditSSHName={setEditSSHName}
+        editSSHHost={editSSHHost}
+        setEditSSHHost={setEditSSHHost}
+        editSSHUser={editSSHUser}
+        setEditSSHUser={setEditSSHUser}
+        editSSHPassword={editSSHPassword}
+        setEditSSHPassword={setEditSSHPassword}
+        editSSHRemoteFolder={editSSHRemoteFolder}
+        setEditSSHRemoteFolder={setEditSSHRemoteFolder}
+        editSSHPort={editSSHPort}
+        setEditSSHPort={setEditSSHPort}
+        
+        // Estados de formularios RDP
+        rdpName={rdpName}
+        setRdpName={setRdpName}
+        rdpServer={rdpServer}
+        setRdpServer={setRdpServer}
+        rdpUsername={rdpUsername}
+        setRdpUsername={setRdpUsername}
+        rdpPassword={rdpPassword}
+        setRdpPassword={setRdpPassword}
+        rdpPort={rdpPort}
+        setRdpPort={setRdpPort}
+        rdpClientType={rdpClientType}
+        setRdpClientType={setRdpClientType}
+        rdpTargetFolder={rdpTargetFolder}
         rdpNodeData={rdpNodeData}
-        onSaveToSidebar={handleSaveRdpToSidebar}
-        editingNode={editingRdpNode}
+        setRdpNodeData={setRdpNodeData}
+        editingRdpNode={editingRdpNode}
+        setEditingRdpNode={setEditingRdpNode}
+        
+        // Estados de formularios Folder
+        folderName={folderName}
+        setFolderName={setFolderName}
+        parentNodeKey={parentNodeKey}
+        editFolderNode={editFolderNode}
+        editFolderName={editFolderName}
+        setEditFolderName={setEditFolderName}
+        
+        // Estados de formularios Group
+        newGroupName={newGroupName}
+        setNewGroupName={setNewGroupName}
+        selectedGroupColor={selectedGroupColor}
+        setSelectedGroupColor={setSelectedGroupColor}
+        GROUP_COLORS={GROUP_COLORS}
+        
+        // Funciones
+        createNewSSH={createNewSSH}
+        createNewFolder={createNewFolder}
+        createNewRdp={createNewRdp}
+        saveEditSSH={saveEditSSH}
+        saveEditFolder={saveEditFolder}
+        createNewGroup={createNewGroup}
+        handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+        closeRdpDialog={closeRdpDialog}
+        getAllFolders={getAllFolders}
+        nodes={nodes}
+        
+        // Theme management props
+        availableThemes={availableThemes}
+        fontFamily={fontFamily}
+        setFontFamily={setFontFamily}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        localFontFamily={localFontFamily}
+        setLocalFontFamily={setLocalFontFamily}
+        localFontSize={localFontSize}
+        setLocalFontSize={setLocalFontSize}
+        terminalTheme={terminalTheme}
+        setTerminalTheme={setTerminalTheme}
+        statusBarTheme={statusBarTheme}
+        setStatusBarTheme={setStatusBarTheme}
+        localPowerShellTheme={localPowerShellTheme}
+        setLocalPowerShellTheme={setLocalPowerShellTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
+        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+        uiTheme={uiTheme}
+        setUiTheme={setUiTheme}
+        iconTheme={iconTheme}
+        setIconTheme={setIconTheme}
+        iconThemeSidebar={iconThemeSidebar}
+        setIconThemeSidebar={setIconThemeSidebar}
+        explorerFont={explorerFont}
+        setExplorerFont={setExplorerFont}
+        explorerFontSize={explorerFontSize}
+        setExplorerFontSize={setExplorerFontSize}
+        explorerColorTheme={explorerColorTheme}
+        setExplorerColorTheme={setExplorerColorTheme}
+        sidebarFont={sidebarFont}
+        setSidebarFont={setSidebarFont}
+        sidebarFontSize={sidebarFontSize}
+        setSidebarFontSize={setSidebarFontSize}
+        statusBarIconTheme={statusBarIconTheme}
+        setStatusBarIconTheme={setStatusBarIconTheme}
+        statusBarPollingInterval={statusBarPollingInterval}
+        setStatusBarPollingInterval={setStatusBarPollingInterval}
+        
+        // Sync settings props
+        updateThemesFromSync={updateThemesFromSync}
+        updateStatusBarFromSync={updateStatusBarFromSync}
       />
-      {/* Menú contextual del árbol de la sidebar */}
-      <ContextMenu
-        model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
-        ref={treeContextMenuRef}
-        breakpoint="600px"
-        style={{ zIndex: 99999 }}
-      />
+
       {/* Menú contextual del árbol de la sidebar */}
       <ContextMenu
         model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
@@ -2741,210 +2857,10 @@ const App = () => {
           </SplitterPanel>
         </Splitter>
       </div>
-      <SettingsDialog
-        visible={showSettingsDialog}
-        onHide={() => setShowSettingsDialog(false)}
-        fontFamily={fontFamily}
-        setFontFamily={setFontFamily}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
-        terminalTheme={terminalTheme}
-        setTerminalTheme={setTerminalTheme}
-        statusBarTheme={statusBarTheme}
-        setStatusBarTheme={setStatusBarTheme}
-        availableFonts={availableFonts}
-        iconTheme={iconTheme}
-        setIconTheme={setIconTheme}
-        explorerFont={explorerFont}
-        setExplorerFont={setExplorerFont}
-        explorerColorTheme={explorerColorTheme}
-        setExplorerColorTheme={setExplorerColorTheme}
-        iconThemeSidebar={iconThemeSidebar}
-        setIconThemeSidebar={setIconThemeSidebar}
-        sidebarFont={sidebarFont}
-        setSidebarFont={setSidebarFont}
-        sidebarFontSize={sidebarFontSize}
-        setSidebarFontSize={setSidebarFontSize}
-        explorerFontSize={explorerFontSize}
-        setExplorerFontSize={setExplorerFontSize}
-        statusBarPollingInterval={statusBarPollingInterval}
-        setStatusBarPollingInterval={setStatusBarPollingInterval}
-        statusBarIconTheme={statusBarIconTheme}
-        setStatusBarIconTheme={setStatusBarIconTheme}
-        localFontFamily={localFontFamily}
-        setLocalFontFamily={setLocalFontFamily}
-        localFontSize={localFontSize}
-        setLocalFontSize={setLocalFontSize}
-        localTerminalTheme={localLinuxTerminalTheme}
-        setLocalTerminalTheme={setLocalLinuxTerminalTheme}
-        localPowerShellTheme={localPowerShellTheme}
-        setLocalPowerShellTheme={setLocalPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
-        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
-        exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJsonApp}
-        sessionManager={sessionManager}
-      />
-
-      {/* Diálogo: Nueva conexión SSH */}
-      <SSHDialog
-        visible={showSSHDialog}
-        onHide={() => setShowSSHDialog(false)}
-        mode="new"
-        name={sshName}
-        setName={setSSHName}
-        host={sshHost}
-        setHost={setSSHHost}
-        user={sshUser}
-        setUser={setSSHUser}
-        password={sshPassword}
-        setPassword={setSSHPassword}
-        port={sshPort}
-        setPort={setSSHPort}
-        remoteFolder={sshRemoteFolder}
-        setRemoteFolder={setSSHRemoteFolder}
-        targetFolder={sshTargetFolder}
-        setTargetFolder={setSSHTargetFolder}
-        foldersOptions={getAllFolders(nodes)}
-        onConfirm={createNewSSH}
-      />
-      <FolderDialog
-        visible={showFolderDialog}
-        onHide={() => setShowFolderDialog(false)}
-        mode="new"
-        folderName={folderName}
-        setFolderName={setFolderName}
-        onConfirm={createNewFolder}
-      />
-      <FolderDialog
-        visible={showEditFolderDialog}
-        onHide={() => setShowEditFolderDialog(false)}
-        mode="edit"
-        folderName={editFolderName}
-        setFolderName={setEditFolderName}
-        onConfirm={saveEditFolder}
-      />
-      <SSHDialog
-        visible={showEditSSHDialog}
-        onHide={() => setShowEditSSHDialog(false)}
-        mode="edit"
-        name={editSSHName}
-        setName={setEditSSHName}
-        host={editSSHHost}
-        setHost={setEditSSHHost}
-        user={editSSHUser}
-        setUser={setEditSSHUser}
-        password={editSSHPassword}
-        setPassword={setEditSSHPassword}
-        port={editSSHPort}
-        setPort={setEditSSHPort}
-        remoteFolder={editSSHRemoteFolder}
-        setRemoteFolder={setEditSSHRemoteFolder}
-        targetFolder={null}
-        setTargetFolder={() => {}}
-        foldersOptions={[]}
-        onConfirm={saveEditSSH}
-      />
-      <GroupDialog
-        visible={showCreateGroupDialog}
-        onHide={() => setShowCreateGroupDialog(false)}
-        groupName={newGroupName}
-        setGroupName={setNewGroupName}
-        groupColor={selectedGroupColor}
-        setGroupColor={setSelectedGroupColor}
-        colorOptions={GROUP_COLORS}
-        onConfirm={createNewGroup}
-      />
-      <SyncSettingsDialog
-        visible={showSyncDialog}
-        onHide={() => setShowSyncDialog(false)}
-        onReloadSessions={reloadSessionsFromStorage}
-        sessionManager={sessionManager}
-        exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJsonApp}
-      />
-
-      {/* Diálogo: Nueva conexión RDP */}
-      <Dialog
-        visible={showRdpDialog}
-        onHide={closeRdpDialog}
-        header="Nueva Conexión RDP"
-        style={{ width: '500px' }}
-        footer={
-          <div>
-            <Button label="Cancelar" icon="pi pi-times" onClick={closeRdpDialog} className="p-button-text" />
-            <Button label="Crear" icon="pi pi-check" onClick={createNewRdp} autoFocus />
-          </div>
-        }
-      >
-        <div className="flex flex-column gap-3">
-          <div className="flex flex-column gap-2">
-            <label htmlFor="rdpName">Nombre de la conexión</label>
-            <InputText
-              id="rdpName"
-              value={rdpName}
-              onChange={(e) => setRdpName(e.target.value)}
-              placeholder="Mi Servidor RDP"
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="rdpServer">Servidor</label>
-            <InputText
-              id="rdpServer"
-              value={rdpServer}
-              onChange={(e) => setRdpServer(e.target.value)}
-              placeholder="192.168.1.100"
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="rdpUsername">Usuario</label>
-            <InputText
-              id="rdpUsername"
-              value={rdpUsername}
-              onChange={(e) => setRdpUsername(e.target.value)}
-              placeholder="usuario"
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="rdpPassword">Contraseña</label>
-            <Password
-              id="rdpPassword"
-              value={rdpPassword}
-              onChange={(e) => setRdpPassword(e.target.value)}
-              placeholder="contraseña"
-              feedback={false}
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="rdpPort">Puerto</label>
-            <InputNumber
-              id="rdpPort"
-              value={rdpPort}
-              onValueChange={(e) => setRdpPort(e.value)}
-              placeholder="3389"
-              min={1}
-              max={65535}
-            />
-          </div>
-          <div className="flex flex-column gap-2">
-            <label htmlFor="rdpClientType">Tipo de Cliente</label>
-            <Dropdown
-              id="rdpClientType"
-              value={rdpClientType}
-              options={[
-                { label: 'mstsc (Windows)', value: 'mstsc' },
-                { label: 'Guacamole Lite', value: 'guacamole' }
-              ]}
-              onChange={(e) => setRdpClientType(e.value)}
-              placeholder="Seleccionar tipo de cliente"
-            />
-          </div>
-        </div>
-      </Dialog>
 
 
     </div>
   );
 };
 
-export default App; 
+export default App;
