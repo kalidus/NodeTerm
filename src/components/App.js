@@ -798,37 +798,7 @@ const App = () => {
   
 
   
-  // --- Limpieza automática de formularios al abrir/cerrar ---
-  const openNewFolderDialog = (parentKey = null) => {
-    setFolderName('');
-    setParentNodeKey(parentKey);
-    setShowFolderDialog(true);
-  };
-  const closeFolderDialog = () => {
-    setShowFolderDialog(false);
-    setFolderName('');
-    setParentNodeKey(null);
-  };
-  const openNewSSHDialog = (targetFolder = null) => {
-    setSSHName('');
-    setSSHHost('');
-    setSSHUser('');
-    setSSHPassword('');
-    setSSHRemoteFolder('');
-    setSSHPort(22);
-    setSSHTargetFolder(targetFolder);
-    setShowSSHDialog(true);
-  };
-  const closeSSHDialog = () => {
-    setShowSSHDialog(false);
-    setSSHName('');
-    setSSHHost('');
-    setSSHUser('');
-    setSSHPassword('');
-    setSSHRemoteFolder('');
-    setSSHPort(22);
-    setSSHTargetFolder(null);
-  };
+  // --- Las funciones de diálogos ahora están en useDialogManagement hook ---
   
   // Create a new folder
   const createNewFolder = () => {
@@ -865,7 +835,7 @@ const App = () => {
       }
       setNodes(() => logSetNodes('createNewFolder', nodesCopy));
       // Log de debug removido para limpiar la consola
-      closeFolderDialog();
+      closeFolderDialogWithReset();
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
@@ -1062,7 +1032,7 @@ const App = () => {
     }
     setNodes(() => logSetNodes('createNewSSH', nodesCopy));
     // Log de debug removido para limpiar la consola
-    closeSSHDialog();
+    closeSSHDialogWithReset();
     toast.current.show({
       severity: 'success',
       summary: 'SSH añadida',
@@ -1216,7 +1186,7 @@ const App = () => {
       nodeToEdit.droppable = false; // Asegurar que las sesiones SSH no sean droppable
     }
     setNodes(nodesCopy);
-    closeSSHDialog();
+    closeSSHDialogWithReset();
     setEditSSHNode(null);
     setEditSSHName(''); 
     setEditSSHHost(''); 
@@ -1256,7 +1226,7 @@ const App = () => {
       nodeToEdit.label = editFolderName.trim();
     }
     setNodes(nodesCopy);
-    closeFolderDialog();
+    closeFolderDialogWithReset();
     setEditFolderNode(null);
     setEditFolderName('');
     toast.current.show({
@@ -2568,7 +2538,7 @@ const App = () => {
                           {tab.type === 'home' ? (
                             <HomeTab
                               onCreateSSHConnection={onOpenSSHConnection}
-                              onCreateFolder={() => openNewFolderDialog(null)}
+                              onCreateFolder={() => openFolderDialog(null)}
                               onCreateRdpConnection={onOpenRdpConnection}
                               onLoadGroup={handleLoadGroupFromFavorites}
                               onEditConnection={(connection) => {
