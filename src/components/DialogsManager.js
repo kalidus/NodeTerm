@@ -116,6 +116,7 @@ const DialogsManager = ({
   
   // Theme management props
   availableThemes,
+  availableFonts,
   fontFamily,
   setFontFamily,
   fontSize,
@@ -180,6 +181,7 @@ const DialogsManager = ({
         visible={showSettingsDialog}
         onHide={() => setShowSettingsDialog(false)}
         availableThemes={availableThemes}
+        availableFonts={availableFonts}
         fontFamily={fontFamily}
         setFontFamily={setFontFamily}
         fontSize={fontSize}
