@@ -5,6 +5,7 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { useLocalStorageString, useLocalStorageNumber } from '../hooks/useLocalStorage';
+import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useDialogManagement } from '../hooks/useDialogManagement';
 import { useContextMenuManagement } from '../hooks/useContextMenuManagement';
@@ -51,28 +52,9 @@ import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import '../assets/form-fixes.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
+import DistroIcon from './DistroIcon';
 
-// Componente para mostrar icono según distribución
-const DistroIcon = ({ distro, size = 14 }) => {
-  const iconStyle = { fontSize: `${size}px`, marginRight: '6px' };
-  
-  switch (distro) {
-    case 'ubuntu':
-      return <FaUbuntu style={iconStyle} />;
-    case 'debian':
-      return <SiDebian style={iconStyle} />;
-    case 'rhel':
-    case 'redhat':
-      return <FaRedhat style={iconStyle} />;
-    case 'centos':
-      return <FaCentos style={iconStyle} />;
-    case 'fedora':
-      return <FaFedora style={iconStyle} />;
-    case 'arch':
-    default:
-      return <FaLinux style={iconStyle} />;
-  }
-};
+
 
 const App = () => {
   const toast = useRef(null);
@@ -411,8 +393,14 @@ const App = () => {
 
 
 
-  // Status bar icon theme usando useLocalStorage
-  const [statusBarIconTheme, setStatusBarIconTheme] = useLocalStorageString('basicapp_statusbar_icon_theme', 'classic');
+  // StatusBar settings hook
+  const {
+    statusBarIconTheme,
+    setStatusBarIconTheme,
+    statusBarPollingInterval,
+    setStatusBarPollingInterval,
+    updateStatusBarFromSync
+  } = useStatusBarSettings();
 
   // Dialog management hook
   const {
@@ -1338,17 +1326,7 @@ const App = () => {
     }
   }, [activeTabIndex, sshTabs]);
 
-  // Estado global para el intervalo de pooling de la status bar usando useLocalStorage
-  const [statusBarPollingInterval, setStatusBarPollingInterval] = useLocalStorageNumber('statusBarPollingInterval', 5);
 
-  // Enviar al backend cuando cambie (localStorage ya se maneja automáticamente)
-  useEffect(() => {
-    if (window?.electron?.ipcRenderer) {
-      window.electron.ipcRenderer.send('statusbar:set-polling-interval', statusBarPollingInterval);
-    }
-  }, [statusBarPollingInterval]);
-
-  // statusBarIconTheme se guarda automáticamente en localStorage por useLocalStorage
 
   // Listener para actualizaciones de configuración desde sincronización
   useEffect(() => {
@@ -1359,14 +1337,8 @@ const App = () => {
         // Actualizar temas desde sincronización usando el hook
         updateThemesFromSync();
         
-        // Actualizar estados restantes que no están en el hook de temas
-        const updatedStatusBarIconTheme = localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic';
-        const updatedStatusBarPollingInterval = localStorage.getItem('statusBarPollingInterval');
-        
-        setStatusBarIconTheme(updatedStatusBarIconTheme);
-        if (updatedStatusBarPollingInterval) {
-          setStatusBarPollingInterval(parseInt(updatedStatusBarPollingInterval, 10));
-        }
+        // Actualizar configuración de StatusBar desde sincronización
+        updateStatusBarFromSync();
         
         // Debug
         const currentUIThemeInLocalStorage = localStorage.getItem('ui_theme');
