@@ -5,8 +5,8 @@ export const useStatusBarSettings = () => {
   // StatusBar icon theme usando useLocalStorage
   const [statusBarIconTheme, setStatusBarIconTheme] = useLocalStorageString('basicapp_statusbar_icon_theme', 'classic');
   
-  // Estado global para el intervalo de polling de la status bar usando useLocalStorage
-  const [statusBarPollingInterval, setStatusBarPollingInterval] = useLocalStorageNumber('statusBarPollingInterval', 5);
+  // Estado global para el intervalo de polling de la status bar usando useLocalStorage  
+  const [statusBarPollingInterval, setStatusBarPollingInterval] = useLocalStorageNumber('statusBarPollingInterval', 3); // Reducido de 5s a 3s por defecto
 
   // Enviar al backend cuando cambie el intervalo (localStorage ya se maneja automáticamente)
   useEffect(() => {
