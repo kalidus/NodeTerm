@@ -630,9 +630,12 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     background: tab.active ? activeTabBg : 'transparent',
                                     color: '#ffffff',
                                     borderTop: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                                    borderLeft: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderRight: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderBottom: tab.active ? 'none' : '1px solid transparent',
+                                    // Use individual border properties instead of shorthand
+                                    borderLeftColor: dragOverTabIndex === index ? 'var(--primary-color)' : (tab.active ? 'rgba(255,255,255,0.1)' : 'transparent'),
+                                    borderLeftWidth: dragOverTabIndex === index ? '3px' : '1px',
+                                    borderLeftStyle: 'solid',
                                     padding: '6px 12px',
                                     cursor: draggedTabIndex === index ? 'grabbing' : 'grab',
                                     position: 'relative',
@@ -641,10 +644,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     borderTopLeftRadius: '4px',
                                     borderTopRightRadius: '4px',
                                     transition: 'all 0.2s ease',
-                                    opacity: draggedTabIndex === index ? 0.5 : (tab.active ? 1 : 0.8),
-                                    borderLeftColor: dragOverTabIndex === index ? 'var(--primary-color)' : undefined,
-                                    borderLeftWidth: dragOverTabIndex === index ? '3px' : undefined,
-                                    borderLeftStyle: dragOverTabIndex === index ? 'solid' : undefined
+                                    opacity: draggedTabIndex === index ? 0.5 : (tab.active ? 1 : 0.8)
                                 }}
                                 onClick={(e) => {
                                     if (draggedTabIndex !== null || dragStartTimer !== null) {

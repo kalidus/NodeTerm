@@ -228,8 +228,22 @@ const PowerShellTerminal = forwardRef(({
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);
-        fitAddon.current.fit();
-        term.current.focus();
+        
+        // Try fit with error handling for React 18
+        try {
+            fitAddon.current.fit();
+            term.current.focus();
+        } catch (e) {
+            // If fit fails, try again after a short delay
+            setTimeout(() => {
+                try {
+                    fitAddon.current?.fit();
+                    term.current?.focus();
+                } catch (err) {
+                    console.warn('Terminal fit failed:', err);
+                }
+            }, 100);
+        }
 
         // ResizeObserver for dynamic resizing
         const resizeObserver = new ResizeObserver((entries) => {
