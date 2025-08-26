@@ -2423,10 +2423,21 @@ ipcMain.on('ssh:set-active-stats-tab', (event, tabId) => {
   }
 });
 
-let statusBarPollingIntervalMs = 5000;
+let statusBarPollingIntervalMs = 3000; // Reducido de 5000ms a 3000ms por defecto
 ipcMain.on('statusbar:set-polling-interval', (event, intervalSec) => {
-  const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 5));
+  const sec = Math.max(1, Math.min(20, parseInt(intervalSec, 10) || 3)); // Cambio de 5 a 3
   statusBarPollingIntervalMs = sec * 1000;
+});
+
+// Optimización: pausar estadísticas cuando la ventana pierda el foco
+ipcMain.on('window:focus-changed', (event, isFocused) => {
+  if (statsWorkerReady && statsWorker) {
+    if (isFocused) {
+      statsWorker.send('resume-stats');
+    } else {
+      statsWorker.send('pause-stats');
+    }
+  }
 });
 
 ipcMain.handle('window:minimize', () => {
@@ -4348,38 +4359,41 @@ app.on('before-quit', (event) => {
   });
 });
 
+// Sticky stats para main.js también
+let mainLastValidStats = {
+  cpu: { usage: 0, cores: 0, model: 'Iniciando...' },
+  memory: { used: 0, total: 0, percentage: 0 },
+  disks: [],
+  network: { download: 0, upload: 0 },
+  temperature: { cpu: 0, gpu: 0 }
+};
+
 // Sistema de estadísticas del sistema con datos reales
 async function getSystemStats() {
   const platform = os.platform();
+  // Comenzar con los últimos valores válidos conocidos
   const stats = {
-    cpu: {
-      usage: 0,
-      cores: os.cpus().length,
-      model: os.cpus()[0]?.model || 'Desconocido'
-    },
-    memory: {
-      used: 0,
-      total: 0,
-      percentage: 0
-    },
-    disks: [],
-    network: {
-      download: 0,
-      upload: 0
-    },
-    temperature: {
-      cpu: 0,
-      gpu: 0
-    }
+    cpu: { ...mainLastValidStats.cpu },
+    memory: { ...mainLastValidStats.memory },
+    disks: [...mainLastValidStats.disks],
+    network: { ...mainLastValidStats.network },
+    temperature: { ...mainLastValidStats.temperature }
   };
 
   // Memoria (siempre funciona con os nativo)
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
-  stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
-  stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
+  try {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    
+    if (totalMem > 0) {
+      stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
+      stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
+      stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
+    }
+  } catch (error) {
+    // Mantener valores anteriores si falla
+  }
 
   // CPU con timeout individual
   try {
@@ -4387,25 +4401,37 @@ async function getSystemStats() {
       si.currentLoad(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
     ]);
-    stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
-    stats.cpu.cores = cpuData.cpus.length;
-  } catch (error) {}
+    
+    if (cpuData && typeof cpuData.currentLoad === 'number') {
+      stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
+      stats.cpu.cores = cpuData.cpus ? cpuData.cpus.length : os.cpus().length;
+      stats.cpu.model = os.cpus()[0]?.model || 'CPU';
+    }
+  } catch (error) {
+    // Mantener valores anteriores de CPU si falla
+  }
 
-  // Discos con timeout individual
+  // Discos con timeout reducido
   try {
     const diskData = await Promise.race([
       si.fsSize(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 5000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 2500)) // Reducido de 5000ms a 2500ms
     ]);
+    
+    // Solo actualizar discos si obtenemos datos válidos y completos
     if (diskData && diskData.length > 0) {
       stats.disks = diskData.map(disk => ({
         name: disk.fs,
         used: Math.round(disk.used / (1024 * 1024 * 1024) * 10) / 10,
         total: Math.round(disk.size / (1024 * 1024 * 1024) * 10) / 10,
-        percentage: Math.round((disk.used / disk.size) * 100)
+        percentage: Math.round((disk.used / disk.size) * 100),
+        isNetwork: false // Simplificado para main.js
       }));
     }
-  } catch (error) {}
+    // Si falla o no hay datos, mantener la lista anterior de discos
+  } catch (error) {
+    // Mantener discos anteriores si falla
+  }
 
   // Red diferencial (solo interfaces activas y físicas, Mbps)
   try {
@@ -4438,14 +4464,27 @@ async function getSystemStats() {
     lastNetTime = now;
   } catch (error) {}
 
-  // Temperatura con timeout individual
+  // Temperatura con timeout individual  
   try {
     const tempData = await Promise.race([
       si.cpuTemperature(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
     ]);
-    stats.temperature.cpu = tempData.main || 0;
+    
+    if (tempData && typeof tempData.main === 'number' && tempData.main > 0) {
+      stats.temperature.cpu = tempData.main;
+    }
+    // Si falla o no hay datos, mantener temperatura anterior
   } catch (error) {}
+
+  // Guardar los stats actuales como últimos válidos
+  mainLastValidStats = {
+    cpu: { ...stats.cpu },
+    memory: { ...stats.memory },
+    disks: [...stats.disks],
+    network: { ...stats.network },
+    temperature: { ...stats.temperature }
+  };
 
   return stats;
 }

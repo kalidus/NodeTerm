@@ -54,8 +54,23 @@ const PowerShellTerminal = forwardRef(({
         let timer = null;
         const POLL_KEY = 'statusBarPollingInterval';
         const getIntervalMs = () => {
-            try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '5', 10)) * 1000; } catch { return 5000; }
+            try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
         };
+        
+        // Optimización: pausar polling cuando la ventana pierda foco
+        const handleFocus = () => {
+            if (window.electronAPI?.send) {
+                window.electronAPI.send('window:focus-changed', true);
+            }
+        };
+        const handleBlur = () => {
+            if (window.electronAPI?.send) {
+                window.electronAPI.send('window:focus-changed', false);
+            }
+        };
+        
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('blur', handleBlur);
 
         const fetchStats = async () => {
             try {
@@ -109,7 +124,12 @@ const PowerShellTerminal = forwardRef(({
             });
         };
         loop();
-        return () => { stopped = true; if (timer) clearTimeout(timer); };
+        return () => { 
+            stopped = true; 
+            if (timer) clearTimeout(timer);
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('blur', handleBlur);
+        };
     }, []);
 
     // Listen for changes to icon theme and local PS status bar theme via storage updates
