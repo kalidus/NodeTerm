@@ -4,7 +4,7 @@ import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
-import { useLocalStorageString, useLocalStorageNumber } from '../hooks/useLocalStorage';
+
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useDialogManagement } from '../hooks/useDialogManagement';
@@ -19,19 +19,14 @@ import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
-import { Password } from 'primereact/password';
-import { Dropdown } from 'primereact/dropdown';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { TabView, TabPanel } from 'primereact/tabview';
-import { Menu } from 'primereact/menu';
+
 import { ContextMenu } from 'primereact/contextmenu';
 import TerminalComponent from './TerminalComponent';
 import FileExplorer from './FileExplorer';
 import Sidebar from './Sidebar';
 import SplitLayout from './SplitLayout';
-import { InputNumber } from 'primereact/inputnumber';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
 
@@ -149,12 +144,7 @@ const App = () => {
     homeTabs, fileExplorerTabs, sshTabs
   });
 
-  // Estados que no están en el hook (se mantienen en App.js)
-  // Storage key for persistence
   const STORAGE_KEY = 'basicapp2_tree_data';
-
-  // === FUNCIONES DE GRUPOS ===
-  // (Movidas al hook useTabManagement)
 
   // Tras crear una pestaña marcada para activación, fijar activeTabIndex al índice real y limpiar la marca
   useEffect(() => {
@@ -180,8 +170,6 @@ const App = () => {
     }, 0);
     return () => clearTimeout(timer);
   }, [onCreateActivateTabKey, homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, activeGroupId, activeTabIndex]);
-
-  // Mantener la preferencia del último abierto hasta que se abra otro
 
   // Manejar menú contextual de pestañas
   const handleTabContextMenu = (e, tabKey) => {
@@ -493,8 +481,6 @@ const App = () => {
     onTreeAreaContextMenu
   });
 
-  // Los estados de drag & drop ahora están en useDragAndDrop
-  
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
@@ -508,15 +494,7 @@ const App = () => {
     onTreeAreaContextMenuHook(event, setSelectedNode, setIsGeneralTreeMenu);
   };
 
-  // Funciones para drag & drop de pestañas
-
-
-
-
-
-
   // Funciones auxiliares para el manejo de pestañas
-  // getAllTabs, getTreeContextMenuItems, getGeneralTreeContextMenuItems, parseWallixUser, getActiveConnectionIds movidas al hook
 
   const getTabTypeAndIndex = (globalIndex) => {
     if (globalIndex < homeTabs.length) {
@@ -530,10 +508,7 @@ const App = () => {
     }
   };
 
-  // === Active connections set for Home hub ===
 
-
-  // Las funciones de drag & drop ahora están en useDragAndDrop
 
   // Funciones para menú contextual de terminal (usando el hook)
   const handleTerminalContextMenu = (e, tabKey) => {
@@ -566,9 +541,6 @@ const App = () => {
     clearTerminal(tabKey);
     hideContextMenu();
   };
-
-  // Función para limpiar distro cuando se cierra una pestaña
-
 
   // Las funciones de terminal han sido movidas a useSessionManagement y se usan a través de wrappers arriba
 
@@ -633,15 +605,12 @@ const App = () => {
       setNodes(getDefaultNodes());
     }
     
-    // Los temas ahora se cargan en useThemeManagement
-  }, []);
+    }, []);
 
   // Save nodes to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
   }, [nodes]);
-
-  // Los auto-guardados de temas y fuentes ahora están en useThemeManagement
 
   // Efecto para manejar cambios en el explorador de archivos
   useEffect(() => {
@@ -664,12 +633,7 @@ const App = () => {
   const onDragDrop = (event) => {
     onDragDropTree(event, setNodes);
   };
-  
 
-  
-  // --- Las funciones de diálogos ahora están en useDialogManagement hook ---
-  
-  
   // Confirm node deletion
   const confirmDeleteNode = (nodeKey, nodeName, hasChildren) => {
     const message = hasChildren
@@ -686,15 +650,7 @@ const App = () => {
     });
   };
   
-  // Node template movido al hook useNodeTemplate
 
-
-
-
-
-  // getAllFolders movido al hook useNodeTemplate
-
-  // openEditFolderDialog movido al hook useNodeTemplate
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
@@ -845,13 +801,7 @@ const App = () => {
     }
   }, []);
 
-  // Helper para loggear setNodes
-  const logSetNodes = (source, nodes) => {
-    return nodes;
-  };
 
-  useEffect(() => {
-  }, [nodes]);
 
   useEffect(() => {
     window.__DEBUG_NODES__ = () => nodes;
@@ -875,7 +825,6 @@ const App = () => {
     };
   }, [sidebarCallbacksRef.current]);
 
-  // useEffect para activar pestañas RDP cuando se agreguen
   // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
   useEffect(() => {
     if (activatingNowRef.current || onCreateActivateTabKey || lastOpenedTabKey) return;
