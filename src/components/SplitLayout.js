@@ -1,6 +1,4 @@
-import React, { useRef, useState } from 'react';
-import { Resizable } from 'react-resizable';
-import 'react-resizable/css/styles.css';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import TerminalComponent from './TerminalComponent';
 
 // Utilidad para ajustar brillo de un color hex
@@ -40,22 +38,74 @@ const SplitLayout = ({
   const [internalPaneSize, setInternalPaneSize] = useState(
     orientation === 'vertical' ? 400 : 300
   );
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
   
   // Usar tamaño externo si se proporciona, sino usar el interno
   const primaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
 
-  const handleResize = (event, { size }) => {
-    const newSize = orientation === 'vertical' ? size.width : size.height;
+  // Custom drag handlers para mejor precisión
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY,
+      size: primaryPaneSize
+    });
+    
+    // Notificar inicio de resize
+    window.isMovingSplit = true;
+    window.dispatchEvent(new Event('split-move-start'));
     
     // Si había un tamaño externo activo y el usuario redimensiona manualmente,
     // notificar que quiere volver al modo manual
     if (externalPaneSize !== null && onManualResize) {
       onManualResize();
     }
+  }, [primaryPaneSize, externalPaneSize, onManualResize]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging) return;
     
-    // Actualizar el tamaño interno
-    setInternalPaneSize(newSize);
-  };
+    const isVertical = orientation === 'vertical';
+    const delta = isVertical ? (e.clientX - dragStart.x) : (e.clientY - dragStart.y);
+    const newSize = Math.round(dragStart.size + delta);
+    
+    // Aplicar límites
+    const minSize = 10;
+    const maxSize = isVertical 
+      ? Math.max(containerSize - 10, 10)
+      : Math.max(containerSize - 40, 10);
+    
+    const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
+    setInternalPaneSize(clampedSize);
+  }, [isDragging, dragStart, orientation, containerSize]);
+
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+      window.isMovingSplit = false;
+      window.dispatchEvent(new Event('split-move-stop'));
+    }
+  }, [isDragging]);
+
+  // Agregar event listeners globales
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = orientation === 'vertical' ? 'col-resize' : 'row-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp, orientation]);
 
   const isVertical = orientation === 'vertical';
   const containerStyle = {
@@ -108,18 +158,20 @@ const SplitLayout = ({
     backgroundColor: isHover ? handleColor : visibleBaseColor,
     zIndex: 1000,
     transition: 'background-color 0.2s ease',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    MozUserSelect: 'none',
+    cursor: isVertical ? 'col-resize' : 'row-resize',
     ...(isVertical ? {
       width: '4px',
       height: '100%',
       right: '-2px',
-      top: 0,
-      cursor: 'col-resize'
+      top: 0
     } : {
       height: '6px',
       width: '100%',
       bottom: '-3px',
-      left: 0,
-      cursor: 'row-resize'
+      left: 0
     })
   };
 
@@ -147,95 +199,80 @@ const SplitLayout = ({
 
   return (
     <div ref={containerRef} style={containerStyle}>
-      <Resizable
-        width={isVertical ? primaryPaneSize : 0}
-        height={isVertical ? 0 : primaryPaneSize}
-        onResize={handleResize}
-        onResizeStart={() => { 
-          window.isMovingSplit = true; 
-          window.dispatchEvent(new Event('split-move-start'));
-        }}
-        onResizeStop={() => { 
-          window.isMovingSplit = false; 
-          window.dispatchEvent(new Event('split-move-stop'));
-        }}
-        resizeHandles={[isVertical ? 'e' : 's']}
-        handle={
-          <div 
-            style={resizeHandleStyle}
-            onMouseEnter={() => setIsHover(true)}
-            onMouseLeave={() => setIsHover(false)}
-          />
-        }
-        minConstraints={isVertical ? [minPanelSize, 0] : [0, minPanelSize]}
-        maxConstraints={isVertical ? [maxPrimaryPaneSize, 0] : [0, maxPrimaryPaneSize]}
-      >
-        <div style={primaryPaneStyle}>
-          {/* Header del panel izquierdo */}
-          {onCloseLeft && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '4px 8px',
-              background: theme?.background || '#1e1e1e',
-              borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
-              fontSize: '12px',
-              color: theme?.foreground || '#fff',
-              minHeight: '24px'
+      {/* Panel principal con handle custom */}
+      <div style={{ ...primaryPaneStyle, position: 'relative' }}>
+        {/* Header del panel izquierdo */}
+        {onCloseLeft && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 8px',
+            background: theme?.background || '#1e1e1e',
+            borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
+            fontSize: '12px',
+            color: theme?.foreground || '#fff',
+            minHeight: '24px'
+          }}>
+            <span style={{ 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              flex: 1
             }}>
-              <span style={{ 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap',
-                flex: 1
-              }}>
-                {leftTerminal.label || leftTerminal.key}
-              </span>
-              <button
-                onClick={() => onCloseLeft(leftTerminal.key)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme?.foreground || '#fff',
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  fontSize: '14px',
-                  marginLeft: '8px',
-                  opacity: 0.7
-                }}
-                onMouseEnter={e => e.target.style.opacity = '1'}
-                onMouseLeave={e => e.target.style.opacity = '0.7'}
-              >
-                ×
-              </button>
-            </div>
-          )}
-          <div style={{ flex: 1, minHeight: 0 }}>
-            {leftTerminal.content ? (
-              leftTerminal.content
-            ) : (
-              <TerminalComponent
-                ref={el => {
-                  leftTerminalRef.current = el;
-                  if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
-                }}
-                key={leftTerminal.key}
-                tabId={leftTerminal.key}
-                sshConfig={leftTerminal.sshConfig}
-                fontFamily={fontFamily}
-                fontSize={fontSize}
-                theme={theme}
-                onContextMenu={onContextMenu}
-                active={true}
-                stats={sshStatsByTabId[leftTerminal.key]}
-                hideStatusBar={true}
-                statusBarIconTheme={statusBarIconTheme}
-              />
-            )}
+              {leftTerminal.label || leftTerminal.key}
+            </span>
+            <button
+              onClick={() => onCloseLeft(leftTerminal.key)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: theme?.foreground || '#fff',
+                cursor: 'pointer',
+                padding: '2px 4px',
+                fontSize: '14px',
+                marginLeft: '8px',
+                opacity: 0.7
+              }}
+              onMouseEnter={e => e.target.style.opacity = '1'}
+              onMouseLeave={e => e.target.style.opacity = '0.7'}
+            >
+              ×
+            </button>
           </div>
+        )}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          {leftTerminal.content ? (
+            leftTerminal.content
+          ) : (
+            <TerminalComponent
+              ref={el => {
+                leftTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+              }}
+              key={leftTerminal.key}
+              tabId={leftTerminal.key}
+              sshConfig={leftTerminal.sshConfig}
+              fontFamily={fontFamily}
+              fontSize={fontSize}
+              theme={theme}
+              onContextMenu={onContextMenu}
+              active={true}
+              stats={sshStatsByTabId[leftTerminal.key]}
+              hideStatusBar={true}
+              statusBarIconTheme={statusBarIconTheme}
+            />
+          )}
         </div>
-      </Resizable>
+        
+        {/* Custom resize handle */}
+        <div 
+          style={resizeHandleStyle}
+          onMouseDown={handleMouseDown}
+          onMouseEnter={() => setIsHover(true)}
+          onMouseLeave={() => setIsHover(false)}
+        />
+      </div>
       
       <div style={secondaryPaneStyle}>
         {/* Header del panel derecho */}
