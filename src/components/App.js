@@ -156,9 +156,12 @@ const App = () => {
     nodes, setNodes,
     selectedNode, setSelectedNode,
     isGeneralTreeMenu, setIsGeneralTreeMenu,
+    selectedNodeKey, setSelectedNodeKey,
+    sidebarFilter, setSidebarFilter,
     sidebarCallbacksRef,
     parseWallixUser,
     getActiveConnectionIds,
+    findAllConnections,
     getTreeContextMenuItems,
     getGeneralTreeContextMenuItems
   } = useSidebarManagement(toast, {
@@ -587,9 +590,6 @@ const App = () => {
     }
   }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
 
-  // Selected node in the tree
-  const [selectedNodeKey, setSelectedNodeKey] = useState(null);
-
   // Track the currently dragged node
   const [draggedNodeKey, setDraggedNodeKey] = useState(null);
 
@@ -678,25 +678,9 @@ const App = () => {
 
       const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
       const isHomeTabActive = activeTabIndex === TAB_INDEXES.HOME && homeTabs.length > 0;
-
-  const [sidebarFilter, setSidebarFilter] = useState('');
   
   // TODO: Implementar lógica para overflow menu items
   const overflowMenuItems = [];
-
-  // Función para buscar conexiones en el árbol de nodos
-  const findAllConnections = (nodes) => {
-    let results = [];
-    for (const node of nodes) {
-      if (node.data && node.data.type === 'ssh') {
-        results.push(node);
-      }
-      if (node.children && node.children.length > 0) {
-        results = results.concat(findAllConnections(node.children));
-      }
-    }
-    return results;
-  };
 
   // Función para manejar el cierre de pestañas
   const handleTabClose = (closedTab, idx, isHomeTab) => {
@@ -1109,6 +1093,8 @@ const App = () => {
               onNodeContextMenu={onNodeContextMenu}
               onTreeAreaContextMenu={onTreeAreaContextMenu}
               sidebarCallbacksRef={sidebarCallbacksRef}
+              selectedNodeKey={selectedNodeKey}
+              setSelectedNodeKey={setSelectedNodeKey}
             />
           </SplitterPanel>
           <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ 

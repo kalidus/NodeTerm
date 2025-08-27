@@ -17,6 +17,10 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [isGeneralTreeMenu, setIsGeneralTreeMenu] = useState(false);
   
+  // === ESTADO DE SELECCIÓN Y FILTRO ===
+  const [selectedNodeKey, setSelectedNodeKey] = useState(null);
+  const [sidebarFilter, setSidebarFilter] = useState('');
+  
   // === REFERENCIAS ===
   const sidebarCallbacksRef = useRef({});
 
@@ -89,6 +93,20 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       });
     } catch (_) {}
     return result;
+  }, []);
+
+  // === Función para buscar conexiones en el árbol de nodos ===
+  const findAllConnections = useCallback((nodes) => {
+    let results = [];
+    for (const node of nodes) {
+      if (node.data && node.data.type === 'ssh') {
+        results.push(node);
+      }
+      if (node.children && node.children.length > 0) {
+        results = results.concat(findAllConnections(node.children));
+      }
+    }
+    return results;
   }, []);
 
   // === FUNCIONES DE MENÚ CONTEXTUAL ===
@@ -339,12 +357,17 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     selectedNode, setSelectedNode,
     isGeneralTreeMenu, setIsGeneralTreeMenu,
     
+    // Estado de selección y filtro
+    selectedNodeKey, setSelectedNodeKey,
+    sidebarFilter, setSidebarFilter,
+    
     // Referencias
     sidebarCallbacksRef,
     
     // Funciones auxiliares
     parseWallixUser,
     getActiveConnectionIds,
+    findAllConnections,
     
     // Funciones de menú contextual
     getTreeContextMenuItems,
