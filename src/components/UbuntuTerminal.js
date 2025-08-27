@@ -341,7 +341,13 @@ const UbuntuTerminal = forwardRef(({
                     domEvent.preventDefault();
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                            window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
+                            // Asegurar que el terminal tenga el foco antes de enviar datos
+                            term.current.focus();
+                            setTimeout(() => {
+                                window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
+                                // Restaurar el foco después de pegar
+                                term.current.focus();
+                            }, 10);
                         }
                     });
                     return;
