@@ -36,10 +36,10 @@ const Sidebar = ({
   onOpenSSHConnection, // nuevo prop para doble click en SSH
   onNodeContextMenu, // handler del menú contextual de nodos
   onTreeAreaContextMenu, // handler del menú contextual del área del árbol
-  sidebarCallbacksRef // ref para registrar callbacks del menú contextual
+  sidebarCallbacksRef, // ref para registrar callbacks del menú contextual
+  selectedNodeKey, // estado de selección del hook
+  setSelectedNodeKey // setter de selección del hook
 }) => {
-  // --- Estado y lógica movidos aquí ---
-  const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   // Estado para diálogos
   const [showSSHDialog, setShowSSHDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
