@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
 import connectionStore, { helpers as connectionHelpers } from '../utils/connectionStore';
+import { STORAGE_KEYS } from '../utils/constants';
 
 export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
   const [nodes, setNodes] = useState(() => {
-    const STORAGE_KEY = 'basicapp2_tree_data';
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
     
     try {
       return saved ? JSON.parse(saved) : [];

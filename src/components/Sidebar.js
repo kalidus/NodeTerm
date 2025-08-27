@@ -7,6 +7,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { SSHDialog, FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
+import { STORAGE_KEYS } from '../utils/constants';
 
 // Helper para loggear setNodes
 function logSetNodes(source, nodes) {
@@ -38,7 +39,6 @@ const Sidebar = ({
   sidebarCallbacksRef // ref para registrar callbacks del menú contextual
 }) => {
   // --- Estado y lógica movidos aquí ---
-  const STORAGE_KEY = 'basicapp2_tree_data';
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   // Estado para diálogos
   const [showSSHDialog, setShowSSHDialog] = useState(false);
@@ -266,7 +266,7 @@ const Sidebar = ({
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     if (nodes && nodes.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
+      localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(nodes));
     }
   }, [nodes]);
 

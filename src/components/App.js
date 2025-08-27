@@ -61,6 +61,15 @@ import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
+import { 
+  STORAGE_KEYS, 
+  GROUP_KEYS, 
+  THEME_DEFAULTS, 
+  TAB_INDEXES, 
+  EVENT_NAMES,
+  TAB_TYPES,
+  CONNECTION_STATUS 
+} from '../utils/constants';
 
 const App = () => {
   const toast = useRef(null);
@@ -159,14 +168,14 @@ const App = () => {
     homeTabs, fileExplorerTabs, sshTabs
   });
 
-  const STORAGE_KEY = 'basicapp2_tree_data';
+  // Storage key moved to constants
 
   // Tras crear una pestaña marcada para activación, fijar activeTabIndex al índice real y limpiar la marca
   useEffect(() => {
     if (!onCreateActivateTabKey) return;
     // Asegurar estar en Home
     if (activeGroupId !== null) {
-      const currentGroupKey = activeGroupId || 'no-group';
+      const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
       setGroupActiveIndices(prev => ({ ...prev, [currentGroupKey]: activeTabIndex }));
       setActiveGroupId(null);
     }
@@ -217,7 +226,7 @@ const App = () => {
     // Remover listeners de pestañas que ya no existen
     activeListenersRef.current.forEach(tabId => {
       if (!currentTerminalTabs.includes(tabId)) {
-        const eventName = `ssh-stats:update:${tabId}`;
+        const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
         window.electron.ipcRenderer.removeAllListeners(eventName);
         activeListenersRef.current.delete(tabId);
       }
@@ -226,7 +235,7 @@ const App = () => {
     // Agregar listeners para nuevas pestañas
     currentTerminalTabs.forEach(tabId => {
       if (!activeListenersRef.current.has(tabId)) {
-        const eventName = `ssh-stats:update:${tabId}`;
+        const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
         const listener = (stats) => {
           setSshStatsByTabId(prev => ({ ...prev, [tabId]: stats }));
           // Mantener compatibilidad con distro tracking
@@ -243,7 +252,7 @@ const App = () => {
     // Cleanup function al desmontar el componente
     return () => {
       activeListenersRef.current.forEach(tabId => {
-        const eventName = `ssh-stats:update:${tabId}`;
+        const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
         window.electron.ipcRenderer.removeAllListeners(eventName);
       });
       activeListenersRef.current.clear();
@@ -270,19 +279,19 @@ const App = () => {
     // Listeners estables con referencias fijas
     const handleSSHReady = (data) => {
       if (data?.originalKey) {
-        handleConnectionStatus(data.originalKey, 'connected');
+        handleConnectionStatus(data.originalKey, CONNECTION_STATUS.CONNECTED);
       }
     };
 
     const handleSSHError = (data) => {
       if (data?.originalKey) {
-        handleConnectionStatus(data.originalKey, 'error');
+        handleConnectionStatus(data.originalKey, CONNECTION_STATUS.ERROR);
       }
     };
 
     const handleSSHDisconnected = (data) => {
       if (data?.originalKey) {
-        handleConnectionStatus(data.originalKey, 'disconnected');
+        handleConnectionStatus(data.originalKey, CONNECTION_STATUS.DISCONNECTED);
       }
     };
 
@@ -536,7 +545,7 @@ const App = () => {
 
   // Load initial nodes from localStorage or use default
   useEffect(() => {
-    const savedNodes = localStorage.getItem(STORAGE_KEY);
+    const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
     if (savedNodes) {
       let loadedNodes = JSON.parse(savedNodes);
       if (!Array.isArray(loadedNodes)) {
@@ -564,7 +573,7 @@ const App = () => {
 
   // Save nodes to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nodes));
+            localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(nodes));
   }, [nodes]);
 
   // Efecto para manejar cambios en el explorador de archivos
@@ -654,7 +663,7 @@ const App = () => {
         updateStatusBarFromSync();
         
         // Debug
-        const currentUIThemeInLocalStorage = localStorage.getItem('ui_theme');
+        const currentUIThemeInLocalStorage = localStorage.getItem(STORAGE_KEYS.UI_THEME);
         console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
         console.log('[SYNC] ✓ Estados React actualizados');
       }
@@ -667,8 +676,8 @@ const App = () => {
     };
   }, []);
 
-  const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
-  const isHomeTabActive = activeTabIndex === 0 && homeTabs.length > 0;
+      const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
+      const isHomeTabActive = activeTabIndex === TAB_INDEXES.HOME && homeTabs.length > 0;
 
   const [sidebarFilter, setSidebarFilter] = useState('');
   
@@ -728,7 +737,7 @@ const App = () => {
           delete terminalRefs.current[closedTab.rightTerminal.key];
           cleanupTabDistro(closedTab.rightTerminal.key);
         }
-      } else {
+    } else {
         // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
         if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
           // Terminal SSH - siempre desconectar
@@ -794,7 +803,7 @@ const App = () => {
       const newIndex = Math.max(0, idx - 1);
       setActiveTabIndex(newIndex);
       // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
-      const currentGroupKey = activeGroupId || 'no-group';
+      const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
       const remainingTabs = getTabsInGroup(activeGroupId);
       
       if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
@@ -807,7 +816,7 @@ const App = () => {
       const newIndex = activeTabIndex - 1;
       setActiveTabIndex(newIndex);
       // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
-      const currentGroupKey = activeGroupId || 'no-group';
+      const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
       const remainingTabs = getTabsInGroup(activeGroupId);
       
       if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
@@ -1134,7 +1143,7 @@ const App = () => {
                         if (activatingNowRef.current) return; // bloquear cambios durante activación forzada
                         setActiveTabIndex(e.index);
                         // Solo guardar el nuevo índice si el grupo actual tiene pestañas
-                        const currentGroupKey = activeGroupId || 'no-group';
+                        const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
                         const currentTabs = getTabsInGroup(activeGroupId);
                         
                         if (currentTabs.length > 0) {
@@ -1151,8 +1160,8 @@ const App = () => {
                     {getFilteredTabs().map((tab, idx) => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
                       // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
-                      const isHomeTab = tab.type === 'home';
-                      const isSSHTab = tab.type === 'terminal' || tab.type === 'split' || tab.isExplorerInSSH;
+                            const isHomeTab = tab.type === TAB_TYPES.HOME;
+      const isSSHTab = tab.type === TAB_TYPES.TERMINAL || tab.type === TAB_TYPES.SPLIT || tab.isExplorerInSSH;
                       const originalIdx = idx; // No usamos originalIdx para decisiones críticas
                       
                       return (
@@ -1275,38 +1284,38 @@ const App = () => {
                             visibility: isActiveTab ? 'visible' : 'hidden',
                             zIndex: isActiveTab ? 1 : 0,
                             pointerEvents: isActiveTab ? 'auto' : 'none',
-                            background: (tab.type === 'home' && isActiveTab) ? localTerminalBg : undefined
+                            background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? localTerminalBg : undefined
                           }}
                         >
                           <TabContentRenderer
                             tab={tab}
                             isActiveTab={isActiveTab}
                             // HomeTab props
-                            onCreateSSHConnection={onOpenSSHConnection}
+                              onCreateSSHConnection={onOpenSSHConnection}
                             openFolderDialog={openFolderDialog}
                             onOpenRdpConnection={onOpenRdpConnection}
                             handleLoadGroupFromFavorites={handleLoadGroupFromFavorites}
                             openEditRdpDialog={openEditRdpDialog}
                             openEditSSHDialog={openEditSSHDialog}
                             nodes={nodes}
-                            localFontFamily={localFontFamily}
-                            localFontSize={localFontSize}
-                            localLinuxTerminalTheme={localLinuxTerminalTheme}
+                              localFontFamily={localFontFamily}
+                              localFontSize={localFontSize}
+                              localLinuxTerminalTheme={localLinuxTerminalTheme}
                             localPowerShellTheme={localPowerShellTheme}
                             // FileExplorer props
-                            iconTheme={iconTheme}
-                            explorerFont={explorerFont}
-                            explorerColorTheme={explorerColorTheme}
-                            explorerFontSize={explorerFontSize}
+                              iconTheme={iconTheme}
+                              explorerFont={explorerFont}
+                              explorerColorTheme={explorerColorTheme}
+                              explorerFontSize={explorerFontSize}
                             // SplitLayout props
-                            fontFamily={fontFamily}
-                            fontSize={fontSize}
+                              fontFamily={fontFamily}
+                              fontSize={fontSize}
                             terminalTheme={terminalTheme}
                             handleTerminalContextMenu={handleTerminalContextMenu}
                             showTerminalContextMenu={showTerminalContextMenu}
-                            sshStatsByTabId={sshStatsByTabId}
-                            terminalRefs={terminalRefs}
-                            statusBarIconTheme={statusBarIconTheme}
+                              sshStatsByTabId={sshStatsByTabId}
+                              terminalRefs={terminalRefs}
+                              statusBarIconTheme={statusBarIconTheme}
                             handleCloseSplitPanel={handleCloseSplitPanel}
                             // RDP props
                             rdpTabs={rdpTabs}
