@@ -47,6 +47,9 @@ import '../assets/form-fixes.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
 import DistroIcon from './DistroIcon';
 import DialogsManager from './DialogsManager';
+import TabContextMenu from './contextmenus/TabContextMenu';
+import TerminalContextMenu from './contextmenus/TerminalContextMenu';
+import OverflowMenu from './contextmenus/OverflowMenu';
 
 const App = () => {
   const toast = useRef(null);
@@ -736,6 +739,9 @@ const App = () => {
   const isHomeTabActive = activeTabIndex === 0 && homeTabs.length > 0;
 
   const [sidebarFilter, setSidebarFilter] = useState('');
+  
+  // TODO: Implementar lógica para overflow menu items
+  const overflowMenuItems = [];
 
   // Función para buscar conexiones en el árbol de nodos
   const findAllConnections = (nodes) => {
@@ -1335,386 +1341,38 @@ const App = () => {
                     })}
                     </TabView>
                   )}
-                  {/* Menú contextual para grupos de pestañas */}
-                  {tabContextMenu && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        left: tabContextMenu.x,
-                        top: tabContextMenu.y,
-                        backgroundColor: 'white',
-                        border: '1px solid #ccc',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                        zIndex: 10000,
-                        minWidth: '180px',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      {tabContextMenu.isGroup ? (
-                        // Menú contextual para grupos
-                        <>
-                          <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
-                            Opciones del grupo "{tabContextMenu.group.name}":
-                          </div>
-                                                    <div
-                            style={{
-                              padding: '8px 12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                            onClick={() => {
-                              const isAlreadyFavorite = isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name);
-                              
-                                                             if (isAlreadyFavorite) {
-                                 // Quitar de favoritos
-                                 removeGroupFromFavorites(tabContextMenu.group.id, tabContextMenu.group.name);
-                                setTabContextMenu(null);
-                                toast.current.show({
-                                  severity: 'info',
-                                  summary: 'Grupo quitado de favoritos',
-                                  detail: `El grupo "${tabContextMenu.group.name}" ha sido quitado de favoritos`,
-                                  life: 3000
-                                });
-                              } else {
-                                                               // Añadir grupo a favoritos
-                               const groupWithSessions = {
-                                 ...tabContextMenu.group,
-                                 sessions: getTabsInGroup(tabContextMenu.group.id).map(tab => ({
-                                   key: tab.key,
-                                   label: tab.label,
-                                   type: tab.type,
-                                   groupId: tab.groupId,
-                                   // Información adicional según el tipo
-                                   ...(tab.sshConfig && {
-                                     host: tab.sshConfig.host,
-                                     username: tab.sshConfig.username,
-                                     port: tab.sshConfig.port,
-                                     useBastionWallix: tab.sshConfig.useBastionWallix,
-                                     bastionHost: tab.sshConfig.bastionHost,
-                                     bastionUser: tab.sshConfig.bastionUser
-                                   }),
-                                   ...(tab.rdpConfig && {
-                                     host: tab.rdpConfig.server,
-                                     username: tab.rdpConfig.username,
-                                     port: tab.rdpConfig.port,
-                                     clientType: tab.rdpConfig.clientType
-                                   }),
-                                   ...(tab.isExplorerInSSH && {
-                                     isExplorerInSSH: true,
-                                     needsOwnConnection: tab.needsOwnConnection
-                                   })
-                                 }))
-                               };
-                                addGroupToFavorites(groupWithSessions);
-                                setTabContextMenu(null);
-                                toast.current.show({
-                                  severity: 'success',
-                                  summary: 'Grupo añadido a favoritos',
-                                  detail: `El grupo "${tabContextMenu.group.name}" ha sido añadido a favoritos`,
-                                  life: 3000
-                                });
-                              }
-                            }}
-                          >
-                            <i className={isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name) ? 'pi pi-star-fill' : 'pi pi-star'} style={{ width: '16px' }}></i>
-                            {isGroupFavorite(tabContextMenu.group.id, tabContextMenu.group.name) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
-                          </div>
-                          <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                          <div
-                            style={{
-                              padding: '8px 12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              color: '#d32f2f'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#ffebee'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                            onClick={() => {
-                              // Eliminar grupo
-                              const tabsInGroup = getTabsInGroup(tabContextMenu.group.id);
-                              tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
-                              deleteGroup(tabContextMenu.group.id);
-                              setTabContextMenu(null);
-                            }}
-                          >
-                            <i className="pi pi-trash" style={{ width: '16px' }}></i>
-                            Eliminar grupo
-                          </div>
-                        </>
-                      ) : (
-                        // Menú contextual para pestañas individuales
-                        <>
-                          {tabGroups.length > 0 && (
-                            <>
-                              <div style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid #e0e0e0', fontSize: '12px', color: '#666' }}>
-                                Mover a grupo:
-                              </div>
-                              <div
-                                style={{
-                                  padding: '8px 12px',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px'
-                                }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                onClick={() => {
-                                  moveTabToGroup(tabContextMenu.tabKey, null);
-                                  setTabContextMenu(null);
-                                }}
-                              >
-                                <i className="pi pi-circle" style={{ width: '16px', color: '#999' }}></i>
-                                Home
-                              </div>
-                              {tabGroups.map(group => (
-                                <div
-                                  key={group.id}
-                                  style={{
-                                    padding: '8px 12px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                  }}
-                                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                  onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                  onClick={() => {
-                                    moveTabToGroup(tabContextMenu.tabKey, group.id);
-                                    setTabContextMenu(null);
-                                  }}
-                                >
-                                  <div 
-                                    style={{ 
-                                      width: '12px', 
-                                      height: '12px', 
-                                      backgroundColor: group.color, 
-                                      borderRadius: '2px' 
-                                    }}
-                                  ></div>
-                                  {group.name}
-                                </div>
-                              ))}
-                              <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                            </>
-                          )}
-                          <div
-                            style={{
-                              padding: '8px 12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px'
-                            }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                            onClick={() => {
-                              setTabContextMenu(null);
-                              setShowCreateGroupDialog(true);
-                            }}
-                          >
-                            <i className="pi pi-plus" style={{ width: '16px' }}></i>
-                            Crear nuevo grupo
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  {/* Menús contextuales refactorizados */}
+                  <TabContextMenu
+                    tabContextMenu={tabContextMenu}
+                    setTabContextMenu={setTabContextMenu}
+                    tabGroups={tabGroups}
+                    moveTabToGroup={moveTabToGroup}
+                    setShowCreateGroupDialog={setShowCreateGroupDialog}
+                    isGroupFavorite={isGroupFavorite}
+                    addGroupToFavorites={addGroupToFavorites}
+                    removeGroupFromFavorites={removeGroupFromFavorites}
+                    getTabsInGroup={getTabsInGroup}
+                    deleteGroup={deleteGroup}
+                    toast={toast}
+                  />
 
-                  {/* Overlay para cerrar menú contextual de grupos */}
-                  {tabContextMenu && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 9999
-                      }}
-                      onClick={() => setTabContextMenu(null)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setTabContextMenu(null);
-                      }}
-                    />
-                  )}
                   
-                  {/* Menú contextual personalizado */}
-                  {terminalContextMenu && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        left: terminalContextMenu.mouseX,
-                        top: terminalContextMenu.mouseY,
-                        backgroundColor: 'white',
-                        border: '1px solid #ccc',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                        zIndex: 9999,
-                        minWidth: '180px',
-                        overflow: 'hidden'
-                      }}
-                      onMouseLeave={() => setTerminalContextMenu(null)}
-                    >
-                      <div
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        onClick={() => handleCopyFromTerminal(terminalContextMenu.tabKey)}
-                      >
-                        <i className="pi pi-copy" style={{ width: '16px' }}></i>
-                        Copiar selección
-                      </div>
-                      <div
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        onClick={() => handlePasteToTerminal(terminalContextMenu.tabKey)}
-                      >
-                        <i className="pi pi-clone" style={{ width: '16px' }}></i>
-                        Pegar
-                      </div>
-                      <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                      <div
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        onClick={() => handleSelectAllTerminal(terminalContextMenu.tabKey)}
-                      >
-                        <i className="pi pi-list" style={{ width: '16px' }}></i>
-                        Seleccionar todo
-                      </div>
-                      <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
-                      <div
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                        onClick={() => handleClearTerminal(terminalContextMenu.tabKey)}
-                      >
-                        <i className="pi pi-trash" style={{ width: '16px' }}></i>
-                        Limpiar terminal
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Overlay para cerrar menú al hacer clic fuera */}
-                  {terminalContextMenu && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 9998
-                      }}
-                      onClick={() => setTerminalContextMenu(null)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setTerminalContextMenu(null);
-                      }}
-                    />
-                  )}
+                  <TerminalContextMenu
+                    terminalContextMenu={terminalContextMenu}
+                    setTerminalContextMenu={setTerminalContextMenu}
+                    onCopy={handleCopyFromTerminal}
+                    onPaste={handlePasteToTerminal}
+                    onSelectAll={handleSelectAllTerminal}
+                    onClear={handleClearTerminal}
+                  />
 
-                  {/* Menú de overflow personalizado */}
-                  {showOverflowMenu && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        left: overflowMenuPosition.x,
-                        top: overflowMenuPosition.y,
-                        backgroundColor: 'white',
-                        border: '1px solid #ccc',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                        zIndex: 9999,
-                        minWidth: '200px',
-                        maxHeight: '300px',
-                        overflow: 'auto',
-                        animation: 'contextMenuFadeIn 0.15s ease-out'
-                      }}
-                      onMouseLeave={() => setShowOverflowMenu(false)}
-                    >
-                      {overflowMenuItems.map((item, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            borderBottom: index < overflowMenuItems.length - 1 ? '1px solid #f0f0f0' : 'none'
-                          }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                          onClick={() => {
-                            item.command();
-                            setShowOverflowMenu(false);
-                          }}
-                        >
-                          <i className={item.icon} style={{ width: '16px', fontSize: '14px' }}></i>
-                          <span style={{ flex: 1, fontSize: '14px' }}>{item.label}</span>
-                        </div>
-                      ))}
-                      {overflowMenuItems.length === 0 && (
-                        <div style={{ padding: '12px', color: '#666', fontStyle: 'italic', fontSize: '14px' }}>
-                          No hay pestañas ocultas
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <OverflowMenu
+                    showOverflowMenu={showOverflowMenu}
+                    setShowOverflowMenu={setShowOverflowMenu}
+                    overflowMenuPosition={overflowMenuPosition}
+                    overflowMenuItems={overflowMenuItems}
+                  />
 
-                  {/* Overlay para cerrar menú de overflow al hacer clic fuera */}
-                  {showOverflowMenu && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 9998
-                      }}
-                      onClick={() => setShowOverflowMenu(false)}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setShowOverflowMenu(false);
-                      }}
-                    />
-                  )}
                 </div>
                                 <div style={{ 
                   flexGrow: 1, 

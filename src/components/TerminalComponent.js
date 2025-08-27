@@ -57,7 +57,24 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
         },
         paste: (text) => {
             if (term.current && text) {
-                term.current.write(text);
+                // Asegurar que el terminal tenga el foco antes de pegar
+                term.current.focus();
+                // Usar un pequeño delay para asegurar que el terminal esté listo
+                setTimeout(() => {
+                    // Para terminales SSH, enviar datos al servidor SSH
+                    if (sshConfig && sshConfig.host) {
+                        window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
+                    } else {
+                        // Para terminales locales, usar write directamente
+                        term.current.write(text);
+                    }
+                    // Restaurar el foco después de pegar y asegurar que los eventos funcionen
+                    setTimeout(() => {
+                        term.current.focus();
+                        // Forzar un evento de foco para asegurar que el terminal esté completamente activo
+                        term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
+                    }, 5);
+                }, 10);
             }
         }
     }));
@@ -150,7 +167,23 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     domEvent.preventDefault(); // Prevenir el comportamiento por defecto primero
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                           term.current.write(text); // Usar 'write' en lugar de 'paste'
+                           // Asegurar que el terminal tenga el foco y esté listo
+                           term.current.focus();
+                           setTimeout(() => {
+                               // Para terminales SSH, enviar datos al servidor SSH
+                               if (sshConfig && sshConfig.host) {
+                                   window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
+                               } else {
+                                   // Para terminales locales, usar write directamente
+                                   term.current.write(text);
+                               }
+                               // Restaurar el foco después de pegar y asegurar que los eventos funcionen
+                               setTimeout(() => {
+                                   term.current.focus();
+                                   // Forzar un evento de foco para asegurar que el terminal esté completamente activo
+                                   term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
+                               }, 5);
+                           }, 10);
                         }
                     });
                 }
@@ -165,7 +198,13 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     e.preventDefault();
                     window.electron.clipboard.readText().then(text => {
                         if (text) {
-                            window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
+                            // Para terminales SSH, enviar datos al servidor SSH
+                            if (sshConfig && sshConfig.host) {
+                                window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
+                            } else {
+                                // Para terminales locales, usar write directamente
+                                term.current.write(text);
+                            }
                         }
                     });
                 }

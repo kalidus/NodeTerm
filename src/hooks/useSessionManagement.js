@@ -58,7 +58,17 @@ export const useSessionManagement = (toast) => {
         const text = await window.electron.clipboard.readText();
         if (text) {
           const terminal = terminalRefs.current[tabKey];
-          terminal.paste(text);
+          
+          // Asegurar que el terminal tenga el foco antes de pegar
+          terminal.focus();
+          
+          // Usar un pequeño delay para asegurar que el terminal esté listo
+          setTimeout(() => {
+            terminal.paste(text);
+            // Restaurar el foco después de pegar
+            terminal.focus();
+          }, 10);
+          
           if (toast?.current?.show) {
             toast.current.show({
               severity: 'info',
