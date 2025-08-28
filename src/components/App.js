@@ -136,7 +136,11 @@ const App = () => {
     handleUnblockFormsWrapper,
     cleanupTerminalRef, disconnectSSHSession, disconnectSplitSession, disconnectRDPSession,
     resizeTerminals, reloadSessionsFromStorage
-  } = useSessionManagement(toast);
+  } = useSessionManagement(toast, {
+    sshTabs,
+    setTabDistros,
+    resizeTimeoutRef
+  });
 
   // Split management hook
   const {
@@ -204,106 +208,7 @@ const App = () => {
 
 
 
-  // Effect para escuchar actualizaciones de estadísticas y capturar el distro
-  useEffect(() => {
-    if (!window.electron) return;
 
-    // Obtener todos los tabIds actuales de terminales SSH (incluyendo splits)
-    const currentTerminalTabs = [];
-    sshTabs.forEach(tab => {
-      if (tab.type === 'terminal') {
-        currentTerminalTabs.push(tab.key);
-      } else if (tab.type === 'split') {
-        // Agregar ambos terminales del split
-        if (tab.leftTerminal) currentTerminalTabs.push(tab.leftTerminal.key);
-        if (tab.rightTerminal) currentTerminalTabs.push(tab.rightTerminal.key);
-      }
-    });
-    
-    // Remover listeners de pestañas que ya no existen
-    activeListenersRef.current.forEach(tabId => {
-      if (!currentTerminalTabs.includes(tabId)) {
-        const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
-        window.electron.ipcRenderer.removeAllListeners(eventName);
-        activeListenersRef.current.delete(tabId);
-      }
-    });
-
-    // Agregar listeners para nuevas pestañas
-    currentTerminalTabs.forEach(tabId => {
-      if (!activeListenersRef.current.has(tabId)) {
-        const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
-        const listener = (stats) => {
-          setSshStatsByTabId(prev => ({ ...prev, [tabId]: stats }));
-          // Mantener compatibilidad con distro tracking
-          if (stats && stats.distro) {
-            setTabDistros(prev => ({ ...prev, [tabId]: stats.distro }));
-          }
-        };
-        
-        window.electron.ipcRenderer.on(eventName, listener);
-        activeListenersRef.current.add(tabId);
-      }
-    });
-
-    // Cleanup function al desmontar el componente
-    return () => {
-      activeListenersRef.current.forEach(tabId => {
-        const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
-        window.electron.ipcRenderer.removeAllListeners(eventName);
-      });
-      activeListenersRef.current.clear();
-      
-      // Limpiar timeout de resize si existe
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-    };
-  }, [sshTabs]);
-
-  // Listeners para estado de conexión SSH
-  useEffect(() => {
-    if (!window.electron || !window.electron.ipcRenderer) return;
-
-    // Función para manejar estado de conexión
-    const handleConnectionStatus = (originalKey, status) => {
-      setSshConnectionStatus(prevStatus => {
-        const newStatus = { ...prevStatus, [originalKey]: status };
-        return newStatus;
-      });
-    };
-
-    // Listeners estables con referencias fijas
-    const handleSSHReady = (data) => {
-      if (data?.originalKey) {
-        handleConnectionStatus(data.originalKey, CONNECTION_STATUS.CONNECTED);
-      }
-    };
-
-    const handleSSHError = (data) => {
-      if (data?.originalKey) {
-        handleConnectionStatus(data.originalKey, CONNECTION_STATUS.ERROR);
-      }
-    };
-
-    const handleSSHDisconnected = (data) => {
-      if (data?.originalKey) {
-        handleConnectionStatus(data.originalKey, CONNECTION_STATUS.DISCONNECTED);
-      }
-    };
-
-    // Registrar listeners
-    window.electron.ipcRenderer.on('ssh-connection-ready', handleSSHReady);
-    window.electron.ipcRenderer.on('ssh-connection-error', handleSSHError);
-    window.electron.ipcRenderer.on('ssh-connection-disconnected', handleSSHDisconnected);
-
-    // Cleanup usando removeAllListeners para asegurar limpieza completa
-    return () => {
-      window.electron.ipcRenderer.removeAllListeners('ssh-connection-ready');
-      window.electron.ipcRenderer.removeAllListeners('ssh-connection-error');
-      window.electron.ipcRenderer.removeAllListeners('ssh-connection-disconnected');
-    };
-  }, []);
 
 
 
@@ -637,31 +542,7 @@ const App = () => {
 
 
 
-  // Listener para actualizaciones de configuración desde sincronización
-  useEffect(() => {
-    const handleSettingsUpdate = (event) => {
-      if (event.detail?.source === 'sync') {
-        console.log('[SYNC] Actualizando estados React tras sincronización...');
-        
-        // Actualizar temas desde sincronización usando el hook
-        updateThemesFromSync();
-        
-        // Actualizar configuración de StatusBar desde sincronización
-        updateStatusBarFromSync();
-        
-        // Debug
-        const currentUIThemeInLocalStorage = localStorage.getItem(STORAGE_KEYS.UI_THEME);
-        console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
-        console.log('[SYNC] ✓ Estados React actualizados');
-      }
-    };
 
-    window.addEventListener('settings-updated', handleSettingsUpdate);
-    
-    return () => {
-      window.removeEventListener('settings-updated', handleSettingsUpdate);
-    };
-  }, []);
 
       const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
       const isHomeTabActive = activeTabIndex === TAB_INDEXES.HOME && homeTabs.length > 0;

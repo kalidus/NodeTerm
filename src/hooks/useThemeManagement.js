@@ -240,6 +240,29 @@ export const useThemeManagement = () => {
     setTerminalTheme(updatedTerminalThemeObj);
   };
 
+  // Listener para actualizaciones de configuración desde sincronización
+  useEffect(() => {
+    const handleSettingsUpdate = (event) => {
+      if (event.detail?.source === 'sync') {
+        console.log('[SYNC] Actualizando estados React tras sincronización...');
+        
+        // Actualizar temas desde sincronización usando el hook
+        updateThemesFromSync();
+        
+        // Debug
+        const currentUIThemeInLocalStorage = localStorage.getItem(STORAGE_KEYS.UI_THEME);
+        console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
+        console.log('[SYNC] ✓ Estados React actualizados');
+      }
+    };
+
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    
+    return () => {
+      window.removeEventListener('settings-updated', handleSettingsUpdate);
+    };
+  }, []);
+
   return {
     // Font states and setters
     fontFamily,
