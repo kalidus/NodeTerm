@@ -86,7 +86,8 @@ const App = () => {
     selectedGroupColor, setSelectedGroupColor, tabContextMenu, setTabContextMenu,
     tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
-    handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro
+    handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro,
+    handleTabContextMenu
   } = useTabManagement(toast);
 
   // Usar el hook de gestión de conexiones
@@ -199,17 +200,7 @@ const App = () => {
     return () => clearTimeout(timer);
   }, [onCreateActivateTabKey, homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, activeGroupId, activeTabIndex]);
 
-  // Manejar menú contextual de pestañas
-  const handleTabContextMenu = (e, tabKey) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setTabContextMenu({
-      tabKey,
-      x: e.clientX,
-      y: e.clientY
-    });
-  };
+
 
   // Effect para escuchar actualizaciones de estadísticas y capturar el distro
   useEffect(() => {
@@ -468,6 +459,8 @@ const App = () => {
 
   // Tree operations hook
   const {
+    draggedNodeKey,
+    setDraggedNodeKey,
     generateUniqueKey,
     getDefaultNodes,
     regenerateKeys,
@@ -477,8 +470,6 @@ const App = () => {
   } = useTreeOperations({
     nodes,
     setNodes,
-    draggedNodeKey,
-    setDraggedNodeKey,
     toast,
     deepCopy,
     findParentNodeAndIndex
@@ -590,8 +581,7 @@ const App = () => {
     }
   }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
 
-  // Track the currently dragged node
-  const [draggedNodeKey, setDraggedNodeKey] = useState(null);
+
 
   // Handle drag and drop using the hook
   const onDragDrop = (event) => {

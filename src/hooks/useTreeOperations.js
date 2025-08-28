@@ -1,14 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 export const useTreeOperations = ({
   nodes,
   setNodes,
-  draggedNodeKey,
-  setDraggedNodeKey,
   toast,
   deepCopy,
   findParentNodeAndIndex
 }) => {
+  // Estado para trackear el nodo que se está arrastrando
+  const [draggedNodeKey, setDraggedNodeKey] = useState(null);
   // Helper para generar un key único e inmutable
   const generateUniqueKey = useCallback(() => {
     return `node_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
@@ -120,6 +120,11 @@ export const useTreeOperations = ({
   }, [draggedNodeKey, nodes, deepCopy, findParentNodeAndIndex, setNodes, setDraggedNodeKey, toast]);
 
   return {
+    // Estados
+    draggedNodeKey,
+    setDraggedNodeKey,
+    
+    // Funciones
     generateUniqueKey,
     getDefaultNodes,
     regenerateKeys,
