@@ -87,8 +87,13 @@ const App = () => {
     tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
     handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro,
-    handleTabContextMenu
-  } = useTabManagement(toast);
+    handleTabContextMenu, handleTabClose
+  } = useTabManagement(toast, {
+    cleanupTabDistro,
+    setSshConnectionStatus,
+    terminalRefs,
+    GROUP_KEYS
+  });
 
   // Usar el hook de gestión de conexiones
   const {
@@ -315,8 +320,10 @@ const App = () => {
     // Funciones de búsqueda
     findNodeByKey, findParentNodeAndIndex, findParentNodeAndIndexByUID, findNodeByProperties,
     // Funciones de manipulación
-    removeNodeByKey, cloneTreeWithUpdatedNode, deleteNode: deleteNodeFromTree, onDragDrop: onDragDropTree
-  } = useTreeManagement({ toast });
+    removeNodeByKey, cloneTreeWithUpdatedNode, deleteNode: deleteNodeFromTree, onDragDrop: onDragDropTree,
+    // Funciones de confirmación
+    confirmDeleteNode
+  } = useTreeManagement({ toast, confirmDialog });
 
   // Form handlers hook
   const {
@@ -490,21 +497,7 @@ const App = () => {
 
 
 
-  // Confirm node deletion
-  const confirmDeleteNode = (nodeKey, nodeName, hasChildren) => {
-    const message = hasChildren
-      ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeName}" y todo su contenido?`
-      : `¿Estás seguro de que deseas eliminar "${nodeName}"?`;
-    
-    confirmDialog({
-      message: message,
-      header: 'Confirmar eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      acceptClassName: 'p-button-danger',
-      accept: () => deleteNodeFromTree(nodes, setNodes, nodeKey),
-      reject: () => {}
-    });
-  };
+
   
 
 
@@ -550,135 +543,7 @@ const App = () => {
   // TODO: Implementar lógica para overflow menu items
   const overflowMenuItems = [];
 
-  // Función para manejar el cierre de pestañas
-  const handleTabClose = (closedTab, idx, isHomeTab) => {
-    // Limpiar distro de la pestaña cerrada
-    cleanupTabDistro(closedTab.key);
-    
-    const isSSHTab = closedTab.type === 'terminal' || closedTab.type === 'split' || closedTab.isExplorerInSSH;
-    
-    if (isHomeTab) {
-      // Manejar cierre de pestañas de inicio según su tipo
-      if (closedTab.type === 'powershell' && window.electron && window.electron.ipcRenderer) {
-        // PowerShell - usar su handler específico existente
-        window.electron.ipcRenderer.send(`powershell:stop:${closedTab.key}`);
-      } else if (closedTab.type === 'wsl' && window.electron && window.electron.ipcRenderer) {
-        // WSL genérico - usar handler existente
-        window.electron.ipcRenderer.send(`wsl:stop:${closedTab.key}`);
-      } else if (closedTab.type === 'ubuntu' && window.electron && window.electron.ipcRenderer) {
-        // Ubuntu - usar handler específico existente
-        window.electron.ipcRenderer.send(`ubuntu:stop:${closedTab.key}`);
-      } else if (closedTab.type === 'wsl-distro' && window.electron && window.electron.ipcRenderer) {
-        // Otras distribuciones WSL - usar handler específico existente
-        window.electron.ipcRenderer.send(`wsl-distro:stop:${closedTab.key}`);
-      }
-      
-      const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
-      setHomeTabs(newHomeTabs);
-    } else if (isSSHTab) {
-      // Manejar cierre de pestañas split
-      if (closedTab.type === 'split') {
-        // Desconectar ambos terminales del split
-        if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
-          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
-          delete terminalRefs.current[closedTab.leftTerminal.key];
-          cleanupTabDistro(closedTab.leftTerminal.key);
-        }
-        if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
-          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
-          delete terminalRefs.current[closedTab.rightTerminal.key];
-          cleanupTabDistro(closedTab.rightTerminal.key);
-        }
-    } else {
-        // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
-        if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
-          // Terminal SSH - siempre desconectar
-          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-        } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-          // Explorador con conexión propia - desconectar
-          window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-        }
-        // Los exploradores que usan el pool NO necesitan desconectarse
-        if (!closedTab.isExplorerInSSH) {
-          delete terminalRefs.current[closedTab.key];
-        }
-      }
-      
-      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
-      // --- NUEVO: Si ya no quedan pestañas activas con este originalKey, marcar como disconnected ---
-      const remainingTabs = newSshTabs.filter(t => t.originalKey === closedTab.originalKey);
-      if (remainingTabs.length === 0) {
-          setSshConnectionStatus(prev => {
-              const updated = { ...prev, [closedTab.originalKey]: 'disconnected' };
-              console.log(' Todas las pestañas cerradas para', closedTab.originalKey, '-> Estado:', updated);
-              return updated;
-          });
-      }
-      setSshTabs(newSshTabs);
-    } else if (closedTab.type === 'rdp') {
-      // Manejar cierre de pestañas RDP
-      // Opcional: desconectar la sesión RDP si es necesario
-      if (window.electron && window.electron.ipcRenderer) {
-        // Intentar desconectar la sesión RDP
-        window.electron.ipcRenderer.invoke('rdp:disconnect-session', closedTab.rdpConfig);
-      }
-      const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
-      setRdpTabs(newRdpTabs);
-    } else if (closedTab.type === 'rdp-guacamole') {
-      // Cerrar pestañas RDP-Guacamole
-      try {
-        const ref = terminalRefs.current[closedTab.key];
-        if (ref && typeof ref.disconnect === 'function') {
-          ref.disconnect();
-        }
-      } catch {}
-      // No usar disconnectAll aquí para evitar cerrar conexiones nuevas en carrera
-      // Eliminar pestaña del estado
-      const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
-      setRdpTabs(newRdpTabs);
-      // Limpiar ref
-      delete terminalRefs.current[closedTab.key];
-    } else if (closedTab.type === 'guacamole') {
-      // Cerrar pestañas Guacamole
-      const newGuacamoleTabs = guacamoleTabs.filter(t => t.key !== closedTab.key);
-      setGuacamoleTabs(newGuacamoleTabs);
-    } else {
-      if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
-        window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
-      }
-      const newExplorerTabs = fileExplorerTabs.filter(t => t.key !== closedTab.key);
-      setFileExplorerTabs(newExplorerTabs);
-    }
-    
-    // Ajustar índice activo
-    if (activeTabIndex === idx) {
-      const newIndex = Math.max(0, idx - 1);
-      setActiveTabIndex(newIndex);
-      // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
-      const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
-      const remainingTabs = getTabsInGroup(activeGroupId);
-      
-      if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
-        setGroupActiveIndices(prev => ({
-          ...prev,
-          [currentGroupKey]: newIndex
-        }));
-      }
-    } else if (activeTabIndex > idx) {
-      const newIndex = activeTabIndex - 1;
-      setActiveTabIndex(newIndex);
-      // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
-      const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
-      const remainingTabs = getTabsInGroup(activeGroupId);
-      
-      if (remainingTabs.length > 1) { // > 1 porque la pestaña aún no se ha eliminado completamente
-        setGroupActiveIndices(prev => ({
-          ...prev,
-          [currentGroupKey]: newIndex
-        }));
-      }
-    }
-  };
+
 
 
 
