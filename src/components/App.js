@@ -129,6 +129,7 @@ const App = () => {
   const {
     terminalRefs, activeListenersRef, sessionManager,
     sshStatsByTabId, setSshStatsByTabId,
+    sshConnectionStatus, setSshConnectionStatus,
     handleCopyFromTerminal: copyFromTerminal, handlePasteToTerminal: pasteToTerminal, handleSelectAllTerminal: selectAllTerminal, handleClearTerminal: clearTerminal,
     cleanupTerminalRef, disconnectSSHSession, disconnectSplitSession, disconnectRDPSession,
     resizeTerminals, reloadSessionsFromStorage
@@ -527,8 +528,7 @@ const App = () => {
     toast
   });
 
-  // Estado para trackear conexiones SSH
-  const [sshConnectionStatus, setSshConnectionStatus] = useState({});
+
 
   // Context menu for nodes (usando el hook)
   const onNodeContextMenu = (event, node) => {

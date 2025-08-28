@@ -11,6 +11,9 @@ export const useSessionManagement = (toast) => {
   
   // Estado global para stats por tabId
   const [sshStatsByTabId, setSshStatsByTabId] = useState({});
+  
+  // Estado para trackear conexiones SSH
+  const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
   // Efectos de inicialización
   useEffect(() => {
@@ -224,6 +227,8 @@ export const useSessionManagement = (toast) => {
     // Estados
     sshStatsByTabId,
     setSshStatsByTabId,
+    sshConnectionStatus,
+    setSshConnectionStatus,
     
     // Funciones de terminal
     handleCopyFromTerminal,
