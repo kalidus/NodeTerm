@@ -28,7 +28,7 @@ export const useTabManagement = (toast) => {
   const [groupActiveIndices, setGroupActiveIndices] = useState({});
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
-  const [selectedGroupColor, setSelectedGroupColor] = useState('');
+  const [selectedGroupColor, setSelectedGroupColor] = useState('#1976d2'); // Color por defecto
   const [tabContextMenu, setTabContextMenu] = useState(null);
 
   // === ESTADO DE TRACKING ===
@@ -288,7 +288,7 @@ export const useTabManagement = (toast) => {
     };
     setTabGroups(prev => [...prev, newGroup]);
     setNewGroupName('');
-    setSelectedGroupColor('');
+    setSelectedGroupColor('#1976d2'); // Reset al color por defecto
     setShowCreateGroupDialog(false);
     toast.current.show({
       severity: 'success',
@@ -349,6 +349,18 @@ export const useTabManagement = (toast) => {
     });
   }, []);
 
+  // === FUNCIONES DE MENÚ CONTEXTUAL ===
+  const handleTabContextMenu = useCallback((e, tabKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setTabContextMenu({
+      tabKey,
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, []);
+
   // === RETORNO DEL HOOK ===
   return {
     // Estado
@@ -386,6 +398,7 @@ export const useTabManagement = (toast) => {
     createNewGroup,
     deleteGroup,
     moveTabToGroup,
-    cleanupTabDistro
+    cleanupTabDistro,
+    handleTabContextMenu
   };
 };
