@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-export const useTreeManagement = ({ toast }) => {
+export const useTreeManagement = ({ toast, confirmDialog }) => {
   
   // ============ UTILIDADES BÁSICAS ============
   
@@ -239,6 +239,22 @@ export const useTreeManagement = ({ toast }) => {
     }
   }, [cloneTreeWithUpdatedNode, toast]);
 
+  // Confirm node deletion
+  const confirmDeleteNode = useCallback((nodeKey, nodeName, hasChildren, nodes, setNodes) => {
+    const message = hasChildren
+      ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeName}" y todo su contenido?`
+      : `¿Estás seguro de que deseas eliminar "${nodeName}"?`;
+    
+    confirmDialog({
+      message: message,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      acceptClassName: 'p-button-danger',
+      accept: () => deleteNode(nodes, setNodes, nodeKey),
+      reject: () => {}
+    });
+  }, [confirmDialog, deleteNode]);
+
   return {
     // Utilidades básicas
     deepCopy,
@@ -254,6 +270,9 @@ export const useTreeManagement = ({ toast }) => {
     removeNodeByKey,
     cloneTreeWithUpdatedNode,
     deleteNode,
-    onDragDrop
+    onDragDrop,
+    
+    // Funciones de confirmación
+    confirmDeleteNode
   };
 };
