@@ -132,6 +132,8 @@ const App = () => {
     sshStatsByTabId, setSshStatsByTabId,
     sshConnectionStatus, setSshConnectionStatus,
     handleCopyFromTerminal: copyFromTerminal, handlePasteToTerminal: pasteToTerminal, handleSelectAllTerminal: selectAllTerminal, handleClearTerminal: clearTerminal,
+    handleCopyFromTerminalWrapper, handlePasteToTerminalWrapper, handleSelectAllTerminalWrapper, handleClearTerminalWrapper,
+    handleUnblockFormsWrapper,
     cleanupTerminalRef, disconnectSSHSession, disconnectSplitSession, disconnectRDPSession,
     resizeTerminals, reloadSessionsFromStorage
   } = useSessionManagement(toast);
@@ -466,13 +468,15 @@ const App = () => {
     regenerateKeys,
     updateNodesWithKeys,
     findNodeByUID,
-    handleDropToRoot
+    handleDropToRoot,
+    onDragDrop
   } = useTreeOperations({
     nodes,
     setNodes,
     toast,
     deepCopy,
-    findParentNodeAndIndex
+    findParentNodeAndIndex,
+    onDragDropTree
   });
 
   // Node template hook
@@ -531,11 +535,7 @@ const App = () => {
     onTreeAreaContextMenuHook(event, setSelectedNode, setIsGeneralTreeMenu);
   };
 
-  // Wrapper functions para las acciones de terminal (usan el hook + cierran menú)
-  const handleCopyFromTerminal = createTerminalActionWrapper(copyFromTerminal, () => hideContextMenu(hideTerminalContextMenu));
-  const handlePasteToTerminal = createTerminalActionWrapper(pasteToTerminal, () => hideContextMenu(hideTerminalContextMenu));
-  const handleSelectAllTerminal = createTerminalActionWrapper(selectAllTerminal, () => hideContextMenu(hideTerminalContextMenu));
-  const handleClearTerminal = createTerminalActionWrapper(clearTerminal, () => hideContextMenu(hideTerminalContextMenu));
+
 
   // Load initial nodes from localStorage or use default
   useEffect(() => {
@@ -583,10 +583,7 @@ const App = () => {
 
 
 
-  // Handle drag and drop using the hook
-  const onDragDrop = (event) => {
-    onDragDropTree(event, setNodes);
-  };
+
 
   // Confirm node deletion
   const confirmDeleteNode = (nodeKey, nodeName, hasChildren) => {
@@ -802,8 +799,7 @@ const App = () => {
     }
   };
 
-  // Función wrapper para desbloquear formularios
-  const handleUnblockFormsWrapper = () => handleUnblockForms(toast);
+
 
   // Exponer la función globalmente para el menú de la aplicación
   useEffect(() => {
@@ -1202,10 +1198,10 @@ const App = () => {
                   <TerminalContextMenu
                     terminalContextMenu={terminalContextMenu}
                     setTerminalContextMenu={setTerminalContextMenu}
-                    onCopy={handleCopyFromTerminal}
-                    onPaste={handlePasteToTerminal}
-                    onSelectAll={handleSelectAllTerminal}
-                    onClear={handleClearTerminal}
+                    onCopy={handleCopyFromTerminalWrapper}
+                                          onPaste={handlePasteToTerminalWrapper}
+                      onSelectAll={handleSelectAllTerminalWrapper}
+                      onClear={handleClearTerminalWrapper}
                   />
 
                   <OverflowMenu
