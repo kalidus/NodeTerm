@@ -5,7 +5,8 @@ export const useTreeOperations = ({
   setNodes,
   toast,
   deepCopy,
-  findParentNodeAndIndex
+  findParentNodeAndIndex,
+  onDragDropTree
 }) => {
   // Estado para trackear el nodo que se está arrastrando
   const [draggedNodeKey, setDraggedNodeKey] = useState(null);
@@ -119,6 +120,14 @@ export const useTreeOperations = ({
     }
   }, [draggedNodeKey, nodes, deepCopy, findParentNodeAndIndex, setNodes, setDraggedNodeKey, toast]);
 
+  // Handle drag and drop using the hook
+  const onDragDrop = useCallback((event) => {
+    // Usar la función del hook de tree management
+    if (typeof onDragDropTree === 'function') {
+      onDragDropTree(event, setNodes);
+    }
+  }, [setNodes]);
+
   return {
     // Estados
     draggedNodeKey,
@@ -130,6 +139,7 @@ export const useTreeOperations = ({
     regenerateKeys,
     updateNodesWithKeys,
     findNodeByUID,
-    handleDropToRoot
+    handleDropToRoot,
+    onDragDrop
   };
 };

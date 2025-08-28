@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import SessionManager from '../services/SessionManager';
+import { createTerminalActionWrapper, hideContextMenu, handleUnblockForms } from '../utils/tabEventHandlers';
 
 export const useSessionManagement = (toast) => {
   // Referencias para terminales
@@ -218,6 +219,15 @@ export const useSessionManagement = (toast) => {
     return nodesFromSessions;
   }, [sessionManager]);
 
+  // === FUNCIONES WRAPPER DE TERMINAL ===
+  const handleCopyFromTerminalWrapper = createTerminalActionWrapper(handleCopyFromTerminal, () => hideContextMenu());
+  const handlePasteToTerminalWrapper = createTerminalActionWrapper(handlePasteToTerminal, () => hideContextMenu());
+  const handleSelectAllTerminalWrapper = createTerminalActionWrapper(handleSelectAllTerminal, () => hideContextMenu());
+  const handleClearTerminalWrapper = createTerminalActionWrapper(handleClearTerminal, () => hideContextMenu());
+
+  // === FUNCIÓN WRAPPER PARA DESBLOQUEAR FORMULARIOS ===
+  const handleUnblockFormsWrapper = useCallback(() => handleUnblockForms(toast), [toast]);
+
   return {
     // Referencias
     terminalRefs,
@@ -235,6 +245,15 @@ export const useSessionManagement = (toast) => {
     handlePasteToTerminal,
     handleSelectAllTerminal,
     handleClearTerminal,
+    
+    // Funciones wrapper de terminal
+    handleCopyFromTerminalWrapper,
+    handlePasteToTerminalWrapper,
+    handleSelectAllTerminalWrapper,
+    handleClearTerminalWrapper,
+    
+    // Funciones wrapper adicionales
+    handleUnblockFormsWrapper,
     
     // Funciones de gestión de sesiones
     cleanupTerminalRef,
