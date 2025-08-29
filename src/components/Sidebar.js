@@ -16,7 +16,7 @@ function logSetNodes(source, nodes) {
   return nodes;
 }
 
-const Sidebar = ({
+const Sidebar = React.memo(({
   nodes,
   setNodes,
   sidebarCollapsed,
@@ -711,6 +711,6 @@ const Sidebar = ({
       />
     </div>
   );
-};
+});
 
 export default Sidebar; 
