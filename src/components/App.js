@@ -503,7 +503,6 @@ const App = () => {
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
-    const filteredTabs = getFilteredTabs();
     const activeTab = filteredTabs[activeTabIndex];
     
     // Solo proceder si hay pestañas en el grupo actual
@@ -526,7 +525,6 @@ const App = () => {
   // Reactivar stats para bastión al volver a la pestaña
   useEffect(() => {
     if (!window.electron || !window.electron.ipcRenderer) return;
-    const filteredTabs = getFilteredTabs();
     const activeTab = filteredTabs[activeTabIndex];
     if (activeTab && activeTab.sshConfig && activeTab.sshConfig.useBastionWallix) {
       window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
@@ -537,8 +535,7 @@ const App = () => {
 
 
 
-      const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
-      const isHomeTabActive = activeTabIndex === TAB_INDEXES.HOME && homeTabs.length > 0;
+
   
   // TODO: Implementar lógica para overflow menu items
   const overflowMenuItems = [];
@@ -630,6 +627,53 @@ const App = () => {
   }), [handleTabDragStart, handleTabDragOver, handleTabDragLeave, handleTabDrop, handleTabDragEnd, handleTabContextMenu, handleTabClose]);
 
   const tabHandlers = memoizedTabHandlers();
+
+  // === CÁLCULOS MEMOIZADOS ===
+  // Memoizar cálculos costosos que se hacen en cada render
+  const isHomeTabActive = useMemo(() => {
+    return activeTabIndex === TAB_INDEXES.HOME && homeTabs.length > 0;
+  }, [activeTabIndex, homeTabs.length]);
+
+  const localTerminalBg = useMemo(() => {
+    return themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
+  }, [localLinuxTerminalTheme]);
+
+  const filteredTabs = useMemo(() => {
+    return getFilteredTabs();
+  }, [getFilteredTabs]);
+
+  // === PROPS MEMOIZADAS PARA SIDEBAR ===
+  // Memoizar props que no cambian frecuentemente
+  const memoizedSidebarProps = useMemo(() => ({
+    nodes,
+    setNodes,
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    allExpanded,
+    toggleExpandAll,
+    expandedKeys,
+    setExpandedKeys,
+    setShowCreateGroupDialog,
+    setShowSettingsDialog,
+    setShowRdpManager,
+    iconTheme: iconThemeSidebar,
+    explorerFont: sidebarFont,
+    explorerFontSize: sidebarFontSize,
+    uiTheme: terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light',
+    showToast: toast.current && toast.current.show ? toast.current.show : undefined,
+    onOpenSSHConnection,
+    onNodeContextMenu,
+    onTreeAreaContextMenu,
+    sidebarCallbacksRef,
+    selectedNodeKey,
+    setSelectedNodeKey
+  }), [
+    nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
+    expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
+    setShowRdpManager, iconThemeSidebar, sidebarFont, sidebarFontSize, terminalTheme,
+    toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu,
+    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey
+  ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
   // Memoizar props que no cambian frecuentemente
@@ -869,28 +913,7 @@ const App = () => {
             }
           >
             <Sidebar
-              nodes={nodes}
-              setNodes={setNodes}
-              sidebarCollapsed={sidebarCollapsed}
-              setSidebarCollapsed={setSidebarCollapsed}
-              allExpanded={allExpanded}
-              toggleExpandAll={toggleExpandAll}
-              expandedKeys={expandedKeys}
-              setExpandedKeys={setExpandedKeys}
-              setShowCreateGroupDialog={setShowCreateGroupDialog}
-              setShowSettingsDialog={setShowSettingsDialog}
-              setShowRdpManager={setShowRdpManager}
-              iconTheme={iconThemeSidebar}
-              explorerFont={sidebarFont}
-              explorerFontSize={sidebarFontSize}
-              uiTheme={terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light'}
-              showToast={toast.current && toast.current.show ? toast.current.show : undefined}
-              onOpenSSHConnection={onOpenSSHConnection}
-              onNodeContextMenu={onNodeContextMenu}
-              onTreeAreaContextMenu={onTreeAreaContextMenu}
-              sidebarCallbacksRef={sidebarCallbacksRef}
-              selectedNodeKey={selectedNodeKey}
-              setSelectedNodeKey={setSelectedNodeKey}
+              {...memoizedSidebarProps}
             />
           </SplitterPanel>
           <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ 
@@ -939,7 +962,7 @@ const App = () => {
                       scrollable={false}
                       className=""
                     >
-                    {getFilteredTabs().map((tab, idx) => {
+                    {filteredTabs.map((tab, idx) => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
                       // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
                             const isHomeTab = tab.type === TAB_TYPES.HOME;
@@ -1047,7 +1070,6 @@ const App = () => {
                   
                   {/* SIEMPRE renderizar TODAS las pestañas para preservar conexiones SSH */}
                   {[...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs].map((tab) => {
-                      const filteredTabs = getFilteredTabs();
                       const isInActiveGroup = filteredTabs.some(filteredTab => filteredTab.key === tab.key);
                       const tabIndexInActiveGroup = filteredTabs.findIndex(filteredTab => filteredTab.key === tab.key);
                       const isActiveTab = isInActiveGroup && tabIndexInActiveGroup === activeTabIndex;
