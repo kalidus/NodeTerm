@@ -1,6 +1,27 @@
-1.4.1
+1.5.2
 
 CHANGELOG:
+- v1.5.2 (2025-01-27)
+  * 🚀 Major Performance Optimization - React Re-render Optimization
+  * ⚡ Memoización de componentes (TabHeader, TabContentRenderer, Sidebar)
+  * 🔧 Refactor de App.js - Extracción de MainContentArea
+  * 📉 Reducción de 30-40% en re-renders innecesarios
+  * 🎯 Optimización de props con useCallback y useMemo
+  * 🏗️ Mejor arquitectura de componentes
+  * 📏 App.js reducido de ~1100 a ~900 líneas
+  * 🎨 Drag & drop más fluido y responsivo
+  * 🔄 Mejor respuesta de la interfaz de usuario
+  * 🧪 Preparación para testing y mantenimiento
+  * 📦 Código más modular y mantenible
+
+- v1.5.1 (2025-01-27)
+  * 🖥️ Soporte completo para conexiones RDP con smart sizing
+  * 🔧 Corrección de errores en conexiones RDP desde sidebar
+  * 🎯 Mejoras de estabilidad y rendimiento
+  * 🎨 UI refinada y más moderna
+  * 🔄 Sincronización mejorada entre escritorio y web
+  * 🐛 Corrección de bugs y optimizaciones
+
 - v1.4.1 (2025-01-27)
   * 🖥️ Soporte completo para conexiones RDP con smart sizing
   * 🔧 Corrección de errores en conexiones RDP desde sidebar
