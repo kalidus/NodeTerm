@@ -7,7 +7,7 @@ import GuacamoleTerminal from './GuacamoleTerminal';
 import GuacamoleTab from './GuacamoleTab';
 import TerminalComponent from './TerminalComponent';
 
-const TabContentRenderer = ({
+const TabContentRenderer = React.memo(({
   tab,
   isActiveTab,
   // HomeTab props
@@ -249,6 +249,6 @@ const TabContentRenderer = ({
       statusBarIconTheme={statusBarIconTheme}
     />
   );
-};
+});
 
 export default TabContentRenderer;

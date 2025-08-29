@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from 'primereact/button';
 import DistroIcon from './DistroIcon';
 
-const TabHeader = ({ 
+const TabHeader = React.memo(({ 
   // Props básicas de PrimeReact
   className,
   onClick,
@@ -134,6 +134,6 @@ const TabHeader = ({
       {rightIcon}
     </div>
   );
-};
+});
 
 export default TabHeader;
