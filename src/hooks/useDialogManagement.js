@@ -12,6 +12,7 @@ export const useDialogManagement = () => {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [showRdpManager, setShowRdpManager] = useState(false);
+  const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
 
   // ============ ESTADOS DE FORMULARIOS SSH ============
   
@@ -160,6 +161,7 @@ export const useDialogManagement = () => {
     showSettingsDialog, setShowSettingsDialog,
     showSyncDialog, setShowSyncDialog,
     showRdpManager, setShowRdpManager,
+    showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
 
     // Estados de formularios SSH
     sshName, setSSHName,

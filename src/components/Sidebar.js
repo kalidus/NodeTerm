@@ -4,7 +4,7 @@ import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
 import { uiThemes } from '../themes/ui-themes';
-import { SSHDialog, FolderDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -43,6 +43,7 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showSSHDialog, setShowSSHDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
   const [sshName, setSSHName] = useState('');
   const [sshHost, setSSHHost] = useState('');
   const [sshUser, setSSHUser] = useState('');
@@ -598,6 +599,14 @@ const Sidebar = React.memo(({
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
               <Button 
+                icon="pi pi-link" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
+                tooltip="Nueva conexión (SSH/RDP)" 
+                tooltipOptions={{ position: 'bottom' }} 
+                style={{ background: 'rgba(33, 150, 243, 0.1)', color: '#2196f3' }}
+              />
+              <Button 
                 icon="pi pi-server" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={() => setShowSSHDialog(true)} 
@@ -708,6 +717,46 @@ const Sidebar = React.memo(({
         folderName={folderName}
         setFolderName={setFolderName}
         onConfirm={createNewFolder}
+      />
+      <UnifiedConnectionDialog
+        visible={showUnifiedConnectionDialog}
+        onHide={() => {
+          setShowUnifiedConnectionDialog(false);
+          // Resetear formularios SSH
+          setSSHName('');
+          setSSHHost('');
+          setSSHUser('');
+          setSSHPassword('');
+          setSSHPort(22);
+          setSSHRemoteFolder('');
+          setSSHTargetFolder(null);
+        }}
+        // Props SSH
+        sshName={sshName}
+        setSSHName={setSSHName}
+        sshHost={sshHost}
+        setSSHHost={setSSHHost}
+        sshUser={sshUser}
+        setSSHUser={setSSHUser}
+        sshPassword={sshPassword}
+        setSSHPassword={setSSHPassword}
+        sshPort={sshPort}
+        setSSHPort={setSSHPort}
+        sshRemoteFolder={sshRemoteFolder}
+        setSSHRemoteFolder={setSSHRemoteFolder}
+        sshTargetFolder={sshTargetFolder}
+        setSSHTargetFolder={setSSHTargetFolder}
+        foldersOptions={getAllFolders(nodes)}
+        onSSHConfirm={createNewSSH}
+        sshLoading={false}
+        // Props RDP
+        rdpNodeData={null}
+        onSaveToSidebar={(rdpConfig) => {
+          // Lógica para guardar RDP en sidebar - implementar según necesidad
+          console.log('Guardar RDP:', rdpConfig);
+          setShowUnifiedConnectionDialog(false);
+        }}
+        editingNode={null}
       />
     </div>
   );
