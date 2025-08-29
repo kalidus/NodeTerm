@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTabManagement } from '../hooks/useTabManagement';
 import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
@@ -617,6 +617,70 @@ const App = () => {
     }
   }, [rdpTabs, onCreateActivateTabKey, lastOpenedTabKey, openTabOrder]);
 
+  // === FUNCIONES MEMOIZADAS PARA OPTIMIZAR RENDERS ===
+  // Estas funciones se crean una sola vez y no cambian entre renders
+  const memoizedTabHandlers = useCallback(() => ({
+    onTabDragStart: handleTabDragStart,
+    onTabDragOver: handleTabDragOver,
+    onTabDragLeave: handleTabDragLeave,
+    onTabDrop: handleTabDrop,
+    onTabDragEnd: handleTabDragEnd,
+    onTabContextMenu: handleTabContextMenu,
+    onTabClose: handleTabClose
+  }), [handleTabDragStart, handleTabDragOver, handleTabDragLeave, handleTabDrop, handleTabDragEnd, handleTabContextMenu, handleTabClose]);
+
+  const tabHandlers = memoizedTabHandlers();
+
+  // === PROPS MEMOIZADAS PARA TABHEADER ===
+  // Memoizar props que no cambian frecuentemente
+  const memoizedTabProps = useMemo(() => ({
+    tabDistros,
+    dragStartTimer,
+    draggedTabIndex
+  }), [tabDistros, dragStartTimer, draggedTabIndex]);
+
+  // === PROPS MEMOIZADAS PARA TABCONTENTRENDERER ===
+  // Memoizar props que no cambian frecuentemente
+  const memoizedContentRendererProps = useMemo(() => ({
+    // HomeTab props
+    onCreateSSHConnection: onOpenSSHConnection,
+    openFolderDialog,
+    onOpenRdpConnection,
+    handleLoadGroupFromFavorites,
+    openEditRdpDialog,
+    openEditSSHDialog,
+    nodes,
+    localFontFamily,
+    localFontSize,
+    localLinuxTerminalTheme,
+    localPowerShellTheme,
+    // FileExplorer props
+    iconTheme,
+    explorerFont,
+    explorerColorTheme,
+    explorerFontSize,
+    // SplitLayout props
+    fontFamily,
+    fontSize,
+    terminalTheme,
+    handleTerminalContextMenu,
+    showTerminalContextMenu,
+    sshStatsByTabId,
+    terminalRefs,
+    statusBarIconTheme,
+    handleCloseSplitPanel,
+    // RDP props
+    rdpTabs,
+    findNodeByKey
+  }), [
+    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, handleLoadGroupFromFavorites,
+    openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
+    localLinuxTerminalTheme, localPowerShellTheme, iconTheme, explorerFont,
+    explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
+    handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
+    terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey
+  ]);
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
       <TitleBar
@@ -902,22 +966,22 @@ const App = () => {
                               idx={idx}
                               
                               // Estados de drag & drop
-                              isDragging={draggedTabIndex === idx}
+                              isDragging={memoizedTabProps.draggedTabIndex === idx}
                               isDragOver={dragOverTabIndex === idx}
-                              dragStartTimer={dragStartTimer}
-                              draggedTabIndex={draggedTabIndex}
+                              dragStartTimer={memoizedTabProps.dragStartTimer}
+                              draggedTabIndex={memoizedTabProps.draggedTabIndex}
                               
                               // Props de iconos
-                              tabDistros={tabDistros}
+                              tabDistros={memoizedTabProps.tabDistros}
                               
-                              // Event handlers
-                              onTabDragStart={handleTabDragStart}
-                              onTabDragOver={handleTabDragOver}
-                              onTabDragLeave={handleTabDragLeave}
-                              onTabDrop={handleTabDrop}
-                              onTabDragEnd={handleTabDragEnd}
-                              onTabContextMenu={handleTabContextMenu}
-                              onTabClose={handleTabClose}
+                              // Event handlers (memoizados)
+                              onTabDragStart={tabHandlers.onTabDragStart}
+                              onTabDragOver={tabHandlers.onTabDragOver}
+                              onTabDragLeave={tabHandlers.onTabDragLeave}
+                              onTabDrop={tabHandlers.onTabDrop}
+                              onTabDragEnd={tabHandlers.onTabDragEnd}
+                              onTabContextMenu={tabHandlers.onTabContextMenu}
+                              onTabClose={tabHandlers.onTabClose}
                             />
                           )}
                         />
@@ -1008,38 +1072,10 @@ const App = () => {
                           <TabContentRenderer
                             tab={tab}
                             isActiveTab={isActiveTab}
-                            // HomeTab props
-                              onCreateSSHConnection={onOpenSSHConnection}
-                            openFolderDialog={openFolderDialog}
-                            onOpenRdpConnection={onOpenRdpConnection}
-                            handleLoadGroupFromFavorites={handleLoadGroupFromFavorites}
-                            openEditRdpDialog={openEditRdpDialog}
-                            openEditSSHDialog={openEditSSHDialog}
-                            nodes={nodes}
-                              localFontFamily={localFontFamily}
-                              localFontSize={localFontSize}
-                              localLinuxTerminalTheme={localLinuxTerminalTheme}
-                            localPowerShellTheme={localPowerShellTheme}
-                            // FileExplorer props
-                              iconTheme={iconTheme}
-                              explorerFont={explorerFont}
-                              explorerColorTheme={explorerColorTheme}
-                              explorerFontSize={explorerFontSize}
-                            // SplitLayout props
-                              fontFamily={fontFamily}
-                              fontSize={fontSize}
-                            terminalTheme={terminalTheme}
-                            handleTerminalContextMenu={handleTerminalContextMenu}
-                            showTerminalContextMenu={showTerminalContextMenu}
-                              sshStatsByTabId={sshStatsByTabId}
-                              terminalRefs={terminalRefs}
-                              statusBarIconTheme={statusBarIconTheme}
-                            handleCloseSplitPanel={handleCloseSplitPanel}
-                            // RDP props
-                            rdpTabs={rdpTabs}
-                            findNodeByKey={findNodeByKey}
-                            // Terminal props
-                            terminalSshStatsByTabId={sshStatsByTabId}
+                            // Props memoizadas
+                            {...memoizedContentRendererProps}
+                            // Terminal props (específicas)
+                            sshStatsByTabId={sshStatsByTabId}
                           />
                         </div>
                       );
