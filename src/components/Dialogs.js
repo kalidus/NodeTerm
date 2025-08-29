@@ -5,6 +5,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
 import { Checkbox } from 'primereact/checkbox';
 import { Card } from 'primereact/card';
+import { TabView, TabPanel } from 'primereact/tabview';
 
 // --- SSHDialog: para crear o editar conexiones SSH ---
 export function SSHDialog({
@@ -198,6 +199,198 @@ export function GroupDialog({
           />
         </div>
       </div>
+    </Dialog>
+  );
+}
+
+// --- UnifiedConnectionDialog: diálogo unificado para SSH y RDP ---
+export function UnifiedConnectionDialog({
+  visible,
+  onHide,
+  // Props SSH
+  sshName, setSSHName,
+  sshHost, setSSHHost,
+  sshUser, setSSHUser,
+  sshPassword, setSSHPassword,
+  sshPort, setSSHPort,
+  sshRemoteFolder, setSSHRemoteFolder,
+  sshTargetFolder, setSSHTargetFolder,
+  foldersOptions = [],
+  onSSHConfirm,
+  sshLoading = false,
+  // Props RDP
+  rdpNodeData,
+  onSaveToSidebar,
+  editingNode = null
+}) {
+  const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP
+
+  return (
+    <Dialog 
+      header="Nueva Conexión" 
+      visible={visible} 
+      style={{ width: '650px', minHeight: '600px' }} 
+      modal 
+      onHide={onHide}
+      maximizable
+    >
+      <TabView 
+        activeIndex={activeTabIndex} 
+        onTabChange={(e) => setActiveTabIndex(e.index)}
+        style={{ marginTop: '10px' }}
+      >
+        {/* Tab SSH */}
+        <TabPanel header="SSH" leftIcon="pi pi-server">
+          <div className="p-fluid" style={{ padding: '8px 0' }}>
+            <div className="p-field" style={{ marginBottom: 14 }}>
+              <label htmlFor="unifiedSSHName">Nombre</label>
+              <InputText 
+                id="unifiedSSHName" 
+                value={sshName} 
+                onChange={e => setSSHName(e.target.value)} 
+                autoFocus={activeTabIndex === 0} 
+              />
+            </div>
+            <div className="p-field" style={{ marginBottom: 14 }}>
+              <label htmlFor="unifiedSSHHost">Host</label>
+              <InputText 
+                id="unifiedSSHHost" 
+                value={sshHost} 
+                onChange={e => setSSHHost(e.target.value)} 
+              />
+            </div>
+            <div className="p-field" style={{ marginBottom: 14 }}>
+              <label htmlFor="unifiedSSHUser">Usuario</label>
+              <InputText 
+                id="unifiedSSHUser" 
+                value={sshUser} 
+                onChange={e => setSSHUser(e.target.value)} 
+              />
+            </div>
+            <div className="p-field" style={{ marginBottom: 14 }}>
+              <label htmlFor="unifiedSSHPassword">Contraseña</label>
+              <InputText 
+                id="unifiedSSHPassword" 
+                type="password" 
+                value={sshPassword} 
+                onChange={e => setSSHPassword(e.target.value)} 
+              />
+            </div>
+            <div className="p-field" style={{ marginBottom: 14 }}>
+              <label htmlFor="unifiedSSHPort">Puerto</label>
+              <InputText 
+                id="unifiedSSHPort" 
+                value={sshPort} 
+                onChange={e => setSSHPort(e.target.value)} 
+              />
+            </div>
+            <div className="p-field" style={{ marginBottom: 14 }}>
+              <label htmlFor="unifiedSSHTargetFolder">Carpeta destino (opcional)</label>
+              <Dropdown 
+                id="unifiedSSHTargetFolder" 
+                value={sshTargetFolder} 
+                options={foldersOptions} 
+                onChange={e => setSSHTargetFolder(e.value)} 
+                placeholder="Selecciona una carpeta" 
+                showClear 
+                filter
+              />
+            </div>
+            <div className="p-field" style={{ marginBottom: 18 }}>
+              <label htmlFor="unifiedSSHRemoteFolder">Carpeta remota (opcional)</label>
+              <InputText 
+                id="unifiedSSHRemoteFolder" 
+                value={sshRemoteFolder} 
+                onChange={e => setSSHRemoteFolder(e.target.value)} 
+              />
+            </div>
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 18, justifyContent: 'flex-end' }}>
+              <Button 
+                label="Cancelar" 
+                icon="pi pi-times" 
+                className="p-button-text" 
+                onClick={onHide} 
+                style={{ minWidth: 120 }} 
+              />
+              <Button 
+                label="Crear SSH" 
+                icon="pi pi-check" 
+                className="p-button-primary" 
+                onClick={onSSHConfirm} 
+                style={{ minWidth: 120 }} 
+                loading={sshLoading} 
+              />
+            </div>
+          </div>
+        </TabPanel>
+
+        {/* Tab RDP */}
+        <TabPanel header="RDP" leftIcon="pi pi-desktop">
+          <div className="p-fluid" style={{ padding: '8px 0' }}>
+            <Card title="Configuración RDP" className="mb-3">
+              <div className="formgrid grid">
+                <div className="field col-12">
+                  <label htmlFor="rdpName">Nombre de la Conexión</label>
+                  <InputText 
+                    id="rdpName" 
+                    placeholder="Nombre descriptivo para la conexión"
+                    autoFocus={activeTabIndex === 1}
+                  />
+                </div>
+                <div className="field col-12 md:col-6">
+                  <label htmlFor="rdpServer">Servidor *</label>
+                  <InputText 
+                    id="rdpServer" 
+                    placeholder="IP o nombre del servidor"
+                  />
+                </div>
+                <div className="field col-12 md:col-6">
+                  <label htmlFor="rdpPort">Puerto</label>
+                  <InputText 
+                    id="rdpPort" 
+                    defaultValue="3389"
+                  />
+                </div>
+                <div className="field col-12 md:col-6">
+                  <label htmlFor="rdpUsername">Usuario</label>
+                  <InputText 
+                    id="rdpUsername" 
+                    placeholder="Nombre de usuario"
+                  />
+                </div>
+                <div className="field col-12 md:col-6">
+                  <label htmlFor="rdpPassword">Contraseña</label>
+                  <InputText 
+                    id="rdpPassword" 
+                    type="password"
+                    placeholder="Contraseña"
+                  />
+                </div>
+              </div>
+            </Card>
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 18, justifyContent: 'flex-end' }}>
+              <Button 
+                label="Cancelar" 
+                icon="pi pi-times" 
+                className="p-button-text" 
+                onClick={onHide} 
+                style={{ minWidth: 120 }} 
+              />
+              <Button 
+                label="Crear RDP" 
+                icon="pi pi-check" 
+                className="p-button-primary" 
+                onClick={() => {
+                  // Por ahora, solo cerrar y mostrar mensaje
+                  console.log('Crear conexión RDP - funcionalidad pendiente');
+                  onHide();
+                }} 
+                style={{ minWidth: 120 }} 
+              />
+            </div>
+          </div>
+        </TabPanel>
+      </TabView>
     </Dialog>
   );
 }
