@@ -13,6 +13,7 @@ export const useFormHandlers = ({
   setShowEditSSHDialog,
   setShowEditFolderDialog,
   setShowRdpManager,
+  setShowUnifiedConnectionDialog,
   
   // Estados de formularios SSH
   sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder,
@@ -285,6 +286,7 @@ export const useFormHandlers = ({
     
     setNodes(nodesCopy);
     closeEditSSHDialogWithReset();
+    setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
     setEditSSHNode(null);
     setEditSSHName(''); 
     setEditSSHHost(''); 
@@ -348,8 +350,9 @@ export const useFormHandlers = ({
     setEditSSHPassword(node.data?.password || '');
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
     setEditSSHPort(node.data?.port || 22);
-    setShowEditSSHDialog(true);
-  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setShowEditSSHDialog]);
+    // Usar el diálogo unificado en modo edición SSH
+    setShowUnifiedConnectionDialog(true);
+  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setShowUnifiedConnectionDialog]);
 
   /**
    * Abrir diálogo nuevo RDP
@@ -385,8 +388,9 @@ export const useFormHandlers = ({
     // Abrir el gestor de conexiones RDP con los datos del nodo para editar
     setRdpNodeData(node.data);
     setEditingRdpNode(node);
-    setShowRdpManager(true);
-  }, [setRdpNodeData, setEditingRdpNode, setShowRdpManager]);
+    // Usar el diálogo unificado en modo edición RDP
+    setShowUnifiedConnectionDialog(true);
+  }, [setRdpNodeData, setEditingRdpNode, setShowUnifiedConnectionDialog]);
 
   /**
    * Guardar RDP en sidebar
@@ -549,8 +553,10 @@ export const useFormHandlers = ({
 
     // Cerrar el diálogo del RdpManager
     setShowRdpManager(false);
+    setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
     setRdpNodeData(null);
-  }, [setNodes, findNodeByKey, setRdpTabs, setShowRdpManager, setRdpNodeData]);
+    setEditingRdpNode(null);
+  }, [setNodes, findNodeByKey, setRdpTabs, setShowRdpManager, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode]);
 
   return {
     // Funciones de creación
