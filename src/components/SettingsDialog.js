@@ -10,6 +10,7 @@ import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { Toast } from 'primereact/toast';
 import { Badge } from 'primereact/badge';
+import { Checkbox } from 'primereact/checkbox';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
@@ -21,6 +22,7 @@ import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { STORAGE_KEYS } from '../utils/constants';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
@@ -81,6 +83,12 @@ const SettingsDialog = ({
   const [statusBarHeight, setStatusBarHeight] = useState(() => {
     const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
     return saved ? parseInt(saved, 10) : 24;
+  });
+
+  // Configuración para bloquear el botón de inicio
+  const [lockHomeButton, setLockHomeButton] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.LOCK_HOME_BUTTON);
+    return saved ? JSON.parse(saved) : false;
   });
 
   // RDP settings (persisted in localStorage)
@@ -167,6 +175,11 @@ const SettingsDialog = ({
     // Verificar si hay clave maestra guardada
     setHasMasterKey(secureStorage.hasSavedMasterKey());
   }, [secureStorage]);
+
+  // Persistir configuración del botón de inicio
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.LOCK_HOME_BUTTON, JSON.stringify(lockHomeButton));
+  }, [lockHomeButton]);
 
   // Persist RDP settings (guardar en milisegundos)
   useEffect(() => {
@@ -478,7 +491,52 @@ const SettingsDialog = ({
         className="settings-dialog-tabview"
       >
         <TabPanel header="General" leftIcon="pi pi-cog">
-          <div style={{ padding: '1rem 0' }}></div>
+          <div style={{ padding: '2rem' }}>
+            <h3 style={{ 
+              margin: '0 0 1.5rem 0', 
+              color: 'var(--text-color)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <i className="pi pi-cog" style={{ color: 'var(--primary-color)' }}></i>
+              Configuración General
+            </h3>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.75rem',
+                padding: '1rem',
+                background: 'var(--surface-card)',
+                border: '1px solid var(--surface-border)',
+                borderRadius: '8px'
+              }}>
+                <Checkbox
+                  id="lock-home-button"
+                  checked={lockHomeButton}
+                  onChange={(e) => setLockHomeButton(e.checked)}
+                />
+                <div>
+                  <label htmlFor="lock-home-button" style={{
+                    display: 'block',
+                    color: 'var(--text-color)',
+                    fontWeight: '500',
+                    marginBottom: '0.25rem'
+                  }}>
+                    Bloquear Botón de Inicio
+                  </label>
+                  <span style={{
+                    fontSize: '0.9rem',
+                    color: 'var(--text-color-secondary)'
+                  }}>
+                    Cuando está activado, el botón de inicio no se puede cerrar ni mover
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </TabPanel>
         <TabPanel header="Seguridad" leftIcon="pi pi-shield">
           <div style={{ marginTop: 0, padding: 0, width: '100%' }}>

@@ -60,22 +60,56 @@ export const useTabManagement = (toast, {
     const pool = groupId ? allTabs.filter(tab => tab.groupId === groupId) : allTabs.filter(tab => !tab.groupId);
     const home = pool.filter(t => t.type === 'home');
     const nonHome = pool.filter(t => t.type !== 'home');
-    const byKey = new Map(nonHome.map(t => [t.key, t]));
-    const ordered = [];
     
-    // Respeta el orden de apertura más reciente a más antiguo
-    for (const key of openTabOrder) {
-      const t = byKey.get(key);
-      if (t) {
-        ordered.push(t);
-        byKey.delete(key);
+    // Verificar si el botón de inicio está bloqueado
+    const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+    
+    if (isHomeButtonLocked) {
+      // Si está bloqueado, mantener las pestañas de inicio al principio
+      const byKey = new Map(nonHome.map(t => [t.key, t]));
+      const ordered = [];
+      
+      // Respeta el orden de apertura más reciente a más antiguo
+      for (const key of openTabOrder) {
+        const t = byKey.get(key);
+        if (t) {
+          ordered.push(t);
+          byKey.delete(key);
+        }
       }
+      
+      // Si quedan pestañas sin entrada en openTabOrder, apéndalas por createdAt desc
+      const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+      return [...home, ...ordered, ...rest];
+    } else {
+      // Si no está bloqueado, incluir las pestañas de inicio en el reordenamiento normal
+      const allTabsWithHome = [...home, ...nonHome];
+      const byKey = new Map(allTabsWithHome.map(t => [t.key, t]));
+      const ordered = [];
+      
+      // Respeta el orden de apertura más reciente a más antiguo
+      for (const key of openTabOrder) {
+        const t = byKey.get(key);
+        if (t) {
+          ordered.push(t);
+          byKey.delete(key);
+        }
+      }
+      
+      // Si quedan pestañas sin entrada en openTabOrder, apéndalas por createdAt desc
+      const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+      
+      // Actualizar openTabOrder para incluir las pestañas de inicio si no están ya incluidas
+      const homeKeys = home.map(t => t.key);
+      const currentHomeInOrder = openTabOrder.filter(k => homeKeys.includes(k));
+      if (currentHomeInOrder.length === 0) {
+        // Solo actualizar si no hay pestañas de inicio en openTabOrder
+        setTimeout(() => updateOpenTabOrderForHomeButton(), 0);
+      }
+      
+      return [...ordered, ...rest];
     }
-    
-    // Si quedan pestañas sin entrada en openTabOrder, apéndalas por createdAt desc
-    const rest = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
-    return [...home, ...ordered, ...rest];
-  }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, openTabOrder]);
+  }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, openTabOrder, updateOpenTabOrderForHomeButton]);
 
   const getFilteredTabs = useCallback(() => {
     return getTabsInGroup(activeGroupId);
@@ -376,6 +410,13 @@ export const useTabManagement = (toast, {
     const isSSHTab = closedTab.type === 'terminal' || closedTab.type === 'split' || closedTab.isExplorerInSSH;
     
     if (isHomeTab) {
+      // Verificar si el botón de inicio está bloqueado
+      const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+      if (isHomeButtonLocked && closedTab.label === 'Inicio') {
+        // No permitir cerrar la pestaña de inicio si está bloqueada
+        return;
+      }
+      
       // Manejar cierre de pestañas de inicio según su tipo
       if (closedTab.type === 'powershell' && window.electron && window.electron.ipcRenderer) {
         // PowerShell - usar su handler específico existente
@@ -510,6 +551,24 @@ export const useTabManagement = (toast, {
     }
   }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, activeTabIndex, activeGroupId, getTabsInGroup, externalCleanupTabDistro, setSshConnectionStatus, externalTerminalRefs, GROUP_KEYS]);
 
+  // Función para actualizar openTabOrder basado en la configuración de bloqueo
+  const updateOpenTabOrderForHomeButton = useCallback(() => {
+    const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+    
+    if (!isHomeButtonLocked) {
+      // Si no está bloqueado, incluir las pestañas de inicio en openTabOrder
+      const homeKeys = homeTabs.map(t => t.key);
+      setOpenTabOrder(prev => {
+        const withoutHome = prev.filter(k => !homeKeys.includes(k));
+        return [...homeKeys, ...prev];
+      });
+    } else {
+      // Si está bloqueado, remover las pestañas de inicio de openTabOrder
+      const homeKeys = homeTabs.map(t => t.key);
+      setOpenTabOrder(prev => prev.filter(k => !homeKeys.includes(k)));
+    }
+  }, [homeTabs, setOpenTabOrder]);
+
   // === RETORNO DEL HOOK ===
   return {
     // Estado
@@ -549,6 +608,7 @@ export const useTabManagement = (toast, {
     moveTabToGroup,
     cleanupTabDistro,
     handleTabContextMenu,
-    handleTabClose
+    handleTabClose,
+    updateOpenTabOrderForHomeButton
   };
 };
