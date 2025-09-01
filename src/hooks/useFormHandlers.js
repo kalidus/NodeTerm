@@ -116,7 +116,9 @@ export const useFormHandlers = ({
    * Crear nueva conexión SSH
    */
   const createNewSSH = useCallback(() => {
-    if (!sshName.trim() || !sshHost.trim() || !sshUser.trim() || !sshPassword.trim()) {
+    // Validar que los campos obligatorios existan y no estén vacíos
+    if (!sshName || !sshHost || !sshUser || !sshPassword || 
+        !sshName.trim() || !sshHost.trim() || !sshUser.trim() || !sshPassword.trim()) {
       toast.current.show({
         severity: 'error',
         summary: 'Error',
@@ -137,7 +139,7 @@ export const useFormHandlers = ({
         host: sshHost.trim(),
         user: userInfo.isWallix ? userInfo.targetUser : sshUser.trim(),
         password: sshPassword.trim(),
-        remoteFolder: sshRemoteFolder.trim(),
+        remoteFolder: sshRemoteFolder ? sshRemoteFolder.trim() : '',
         port: sshPort,
         type: 'ssh',
         // Datos del bastión Wallix (si aplica)
@@ -250,7 +252,9 @@ export const useFormHandlers = ({
    * Guardar edición SSH
    */
   const saveEditSSH = useCallback(() => {
-    if (!editSSHName.trim() || !editSSHHost.trim() || !editSSHUser.trim() || !editSSHPassword.trim()) {
+    // Validar que los campos obligatorios existan y no estén vacíos
+    if (!editSSHName || !editSSHHost || !editSSHUser || !editSSHPassword || 
+        !editSSHName.trim() || !editSSHHost.trim() || !editSSHUser.trim() || !editSSHPassword.trim()) {
       toast.current.show({
         severity: 'error',
         summary: 'Error',
@@ -272,7 +276,7 @@ export const useFormHandlers = ({
         host: userInfo.isWallix ? userInfo.targetServer : editSSHHost.trim(), // Si es Wallix, el host real es el targetServer
         user: userInfo.isWallix ? userInfo.targetUser : editSSHUser.trim(),
         password: editSSHPassword.trim(),
-        remoteFolder: editSSHRemoteFolder.trim(),
+        remoteFolder: editSSHRemoteFolder ? editSSHRemoteFolder.trim() : '',
         port: editSSHPort,
         type: 'ssh',
         // Datos del bastión Wallix (si aplica)
