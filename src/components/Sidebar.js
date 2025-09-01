@@ -4,7 +4,7 @@ import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
 import { uiThemes } from '../themes/ui-themes';
-import { SSHDialog, FolderDialog, UnifiedConnectionDialog } from './Dialogs';
+import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -27,7 +27,7 @@ const Sidebar = React.memo(({
   setExpandedKeys,
   setShowCreateGroupDialog,
   setShowSettingsDialog,
-  setShowRdpManager, // Nuevo prop para RDP Manager
+
   iconTheme,
   explorerFont,
   explorerFontSize = 14,
@@ -41,16 +41,8 @@ const Sidebar = React.memo(({
   setSelectedNodeKey // setter de selección del hook
 }) => {
   // Estado para diálogos
-  const [showSSHDialog, setShowSSHDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
-  const [sshName, setSSHName] = useState('');
-  const [sshHost, setSSHHost] = useState('');
-  const [sshUser, setSSHUser] = useState('');
-  const [sshPassword, setSSHPassword] = useState('');
-  const [sshPort, setSSHPort] = useState(22);
-  const [sshRemoteFolder, setSSHRemoteFolder] = useState('');
-  const [sshTargetFolder, setSSHTargetFolder] = useState(null);
   const [folderName, setFolderName] = useState('');
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
@@ -139,89 +131,8 @@ const Sidebar = React.memo(({
     setParentNodeKey(null);
     setEditingNode(null);
   };
-  // Crear nueva conexión SSH o editar existente
-  const createNewSSH = () => {
-    if (!sshName.trim() || !sshHost.trim() || !sshUser.trim() || !sshPassword.trim()) {
-      showToast && showToast({ severity: 'error', summary: 'Error', detail: 'Todos los campos son obligatorios', life: 3000 });
-      return;
-    }
-    
-    const nodesCopy = deepCopy(nodes);
-    
-    if (editingNode) {
-      // Modo edición: actualizar conexión SSH existente
-      const updateSSHInTree = (nodes, targetKey, newData) => {
-        return nodes.map(node => {
-          if (node.key === targetKey) {
-            return { 
-              ...node, 
-              label: newData.label,
-              data: { ...node.data, ...newData.data }
-            };
-          }
-          if (node.children) {
-            return { ...node, children: updateSSHInTree(node.children, targetKey, newData) };
-          }
-          return node;
-        });
-      };
-      
-      const updatedData = {
-        label: sshName.trim(),
-        data: {
-          host: sshHost.trim(),
-          user: sshUser.trim(),
-          password: sshPassword.trim(),
-          remoteFolder: sshRemoteFolder.trim(),
-          port: sshPort,
-          type: 'ssh'
-        }
-      };
-      
-      const updatedNodes = updateSSHInTree(nodesCopy, editingNode.key, updatedData);
-      setNodes(() => logSetNodes('Sidebar', updatedNodes));
-      showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Conexión SSH "${sshName}" actualizada`, life: 3000 });
-    } else {
-      // Modo creación: crear nueva conexión SSH
-      const newKey = `node_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
-      const newSSHNode = {
-        key: newKey,
-        label: sshName.trim(),
-        data: {
-          host: sshHost.trim(),
-          user: sshUser.trim(),
-          password: sshPassword.trim(),
-          remoteFolder: sshRemoteFolder.trim(),
-          port: sshPort,
-          type: 'ssh'
-        },
-        draggable: true,
-        droppable: false,
-        uid: newKey,
-        createdAt: new Date().toISOString(),
-        isUserCreated: true
-      };
-      
-      if (sshTargetFolder) {
-        const parentNode = findNodeByKey(nodesCopy, sshTargetFolder);
-        if (parentNode) {
-          parentNode.children = parentNode.children || [];
-          parentNode.children.unshift(newSSHNode);
-        } else {
-          nodesCopy.push(newSSHNode);
-        }
-      } else {
-        nodesCopy.unshift(newSSHNode);
-      }
-      setNodes(() => logSetNodes('Sidebar', nodesCopy));
-      showToast && showToast({ severity: 'success', summary: 'SSH añadida', detail: `Conexión SSH "${sshName}" añadida al árbol`, life: 3000 });
-    }
-    
-    // Limpiar formulario
-    setShowSSHDialog(false);
-    setSSHName(''); setSSHHost(''); setSSHUser(''); setSSHTargetFolder(null); setSSHPassword(''); setSSHRemoteFolder(''); setSSHPort(22);
-    setEditingNode(null);
-  };
+
+
   // Drag and drop helpers y lógica igual que antes
   // Clona el árbol y actualiza solo el subárbol con la key indicada
   function cloneTreeWithUpdatedNode(tree, targetKey, updateFn) {
@@ -282,9 +193,7 @@ const Sidebar = React.memo(({
           setParentNodeKey(parentKey);
           setShowFolderDialog(true);
         },
-        createSSH: () => {
-          setShowSSHDialog(true);
-        },
+
         createRDP: () => {
           // Esta función debe ser pasada desde App.js
           if (window.createRDP) {
@@ -297,32 +206,7 @@ const Sidebar = React.memo(({
             window.editRDP(node);
           }
         },
-        editSSH: (node) => {
-          // Cargar datos del nodo SSH en el formulario para editar
-          setSSHName(node.label);
-          setSSHHost(node.data.host);
-          setSSHUser(node.data.user);
-          setSSHPassword(node.data.password);
-          setSSHPort(node.data.port || 22);
-          setSSHRemoteFolder(node.data.remoteFolder || '');
-          // Encontrar la carpeta padre para el dropdown
-          const findParent = (nodes, targetKey, currentParent = null) => {
-            for (let n of nodes) {
-              if (n.children && n.children.some(child => child.key === targetKey)) {
-                return n.key;
-              }
-              if (n.children) {
-                const found = findParent(n.children, targetKey, n.key);
-                if (found) return found;
-              }
-            }
-            return currentParent;
-          };
-          const parentKey = findParent(nodes, node.key);
-          setSSHTargetFolder(parentKey);
-          setEditingNode(node); // Estado para saber que estamos editando
-          setShowSSHDialog(true);
-        },
+
         editFolder: (node) => {
           // Cargar datos de la carpeta para editar
           setFolderName(node.label);
@@ -370,9 +254,8 @@ const Sidebar = React.memo(({
         }
       };
     }
-  }, [nodes, setShowFolderDialog, setShowSSHDialog, deepCopy, findNodeByKey, showToast, 
-      setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHPort, setSSHRemoteFolder, setSSHTargetFolder, setEditingNode,
-      setFolderName, setParentNodeKey, setNodes]);
+  }, [nodes, setShowFolderDialog, deepCopy, findNodeByKey, showToast, 
+      setEditingNode, setFolderName, setParentNodeKey, setNodes]);
 
 
 
@@ -478,29 +361,12 @@ const Sidebar = React.memo(({
               border: 'none'
             }} 
           />
-          <Button 
-            icon="pi pi-server" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
-            onClick={() => setShowSSHDialog(true)} 
-            tooltip="Nueva conexión SSH" 
-            tooltipOptions={{ position: 'right' }} 
-            style={{ 
-              margin: 0, 
-              width: 40, 
-              height: 40, 
-              minWidth: 40, 
-              minHeight: 40, 
-              fontSize: 18,
-              backgroundColor: colors.sidebarBackground,
-              color: colors.sidebarText,
-              border: 'none'
-            }} 
-          />
+
           <Button 
             icon="pi pi-desktop" 
             className="p-button-rounded p-button-text sidebar-action-button" 
-            onClick={() => setShowRdpManager && setShowRdpManager(true)} 
-            tooltip="Gestor de conexiones RDP" 
+            onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
+            tooltip="Nueva conexión" 
             tooltipOptions={{ position: 'right' }} 
             style={{ 
               margin: 0, 
@@ -599,25 +465,10 @@ const Sidebar = React.memo(({
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
               <Button 
-                icon="pi pi-link" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
-                tooltip="Nueva conexión (SSH/RDP)" 
-                tooltipOptions={{ position: 'bottom' }} 
-                style={{ background: 'rgba(33, 150, 243, 0.1)', color: '#2196f3' }}
-              />
-              <Button 
-                icon="pi pi-server" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => setShowSSHDialog(true)} 
-                tooltip="Nueva conexión SSH" 
-                tooltipOptions={{ position: 'bottom' }} 
-              />
-              <Button 
                 icon="pi pi-desktop" 
                 className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => setShowRdpManager && setShowRdpManager(true)} 
-                tooltip="Gestor de conexiones RDP" 
+                onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
+                tooltip="Nueva conexión" 
                 tooltipOptions={{ position: 'bottom' }} 
               />
               <Button 
@@ -683,30 +534,7 @@ const Sidebar = React.memo(({
           />
         </>
       )}
-      <SSHDialog
-        visible={showSSHDialog}
-        onHide={() => {
-          setShowSSHDialog(false);
-          setEditingNode(null); // Limpiar estado de edición al cerrar
-        }}
-        mode={editingNode ? "edit" : "new"}
-        name={sshName}
-        setName={setSSHName}
-        host={sshHost}
-        setHost={setSSHHost}
-        user={sshUser}
-        setUser={setSSHUser}
-        password={sshPassword}
-        setPassword={setSSHPassword}
-        port={sshPort}
-        setPort={setSSHPort}
-        remoteFolder={sshRemoteFolder}
-        setRemoteFolder={setSSHRemoteFolder}
-        targetFolder={sshTargetFolder}
-        setTargetFolder={setSSHTargetFolder}
-        foldersOptions={getAllFolders(nodes)}
-        onConfirm={createNewSSH}
-      />
+
       <FolderDialog
         visible={showFolderDialog}
         onHide={() => {
@@ -722,32 +550,10 @@ const Sidebar = React.memo(({
         visible={showUnifiedConnectionDialog}
         onHide={() => {
           setShowUnifiedConnectionDialog(false);
-          // Resetear formularios SSH
-          setSSHName('');
-          setSSHHost('');
-          setSSHUser('');
-          setSSHPassword('');
-          setSSHPort(22);
-          setSSHRemoteFolder('');
-          setSSHTargetFolder(null);
         }}
-        // Props SSH
-        sshName={sshName}
-        setSSHName={setSSHName}
-        sshHost={sshHost}
-        setSSHHost={setSSHHost}
-        sshUser={sshUser}
-        setSSHUser={setSSHUser}
-        sshPassword={sshPassword}
-        setSSHPassword={setSSHPassword}
-        sshPort={sshPort}
-        setSSHPort={setSSHPort}
-        sshRemoteFolder={sshRemoteFolder}
-        setSSHRemoteFolder={setSSHRemoteFolder}
-        sshTargetFolder={sshTargetFolder}
-        setSSHTargetFolder={setSSHTargetFolder}
+
         foldersOptions={getAllFolders(nodes)}
-        onSSHConfirm={createNewSSH}
+
         sshLoading={false}
         // Props RDP
         rdpNodeData={null}

@@ -12,7 +12,7 @@ export const useFormHandlers = ({
   setShowRdpDialog,
   setShowEditSSHDialog,
   setShowEditFolderDialog,
-  setShowRdpManager,
+
   setShowUnifiedConnectionDialog,
   
   // Estados de formularios SSH
@@ -551,12 +551,11 @@ export const useFormHandlers = ({
       });
     }
 
-    // Cerrar el diálogo del RdpManager
-    setShowRdpManager(false);
+
     setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
     setRdpNodeData(null);
     setEditingRdpNode(null);
-  }, [setNodes, findNodeByKey, setRdpTabs, setShowRdpManager, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode]);
+  }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode]);
 
   return {
     // Funciones de creación
