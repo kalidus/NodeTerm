@@ -38,7 +38,38 @@ const Sidebar = React.memo(({
   onTreeAreaContextMenu, // handler del menú contextual del área del árbol
   sidebarCallbacksRef, // ref para registrar callbacks del menú contextual
   selectedNodeKey, // estado de selección del hook
-  setSelectedNodeKey // setter de selección del hook
+  setSelectedNodeKey, // setter de selección del hook
+  
+  // Props para conexiones
+  getAllFolders,
+  createNewSSH,
+  saveEditSSH,
+  openEditSSHDialog,
+  handleSaveRdpToSidebar,
+  
+  // Estados de formularios SSH
+  sshName, setSSHName,
+  sshHost, setSSHHost,
+  sshUser, setSSHUser,
+  sshPassword, setSSHPassword,
+  sshPort, setSSHPort,
+  sshRemoteFolder, setSSHRemoteFolder,
+  sshTargetFolder, setSSHTargetFolder,
+  
+  // Estados de formularios Edit SSH
+  editSSHName, setEditSSHName,
+  editSSHHost, setEditSSHHost,
+  editSSHUser, setEditSSHUser,
+  editSSHPassword, setEditSSHPassword,
+  editSSHRemoteFolder, setEditSSHRemoteFolder,
+  editSSHPort, setEditSSHPort,
+  
+  // Estados para modo edición
+  editSSHNode, setEditSSHNode,
+  
+  // Estados de formularios RDP
+  rdpNodeData, setRdpNodeData,
+  editingRdpNode, setEditingRdpNode
 }) => {
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -59,19 +90,22 @@ const Sidebar = React.memo(({
     }
     return null;
   };
-  // Función para obtener todas las carpetas
-  const getAllFolders = (nodes, prefix = '') => {
+  // Función para obtener todas las carpetas (fallback si no viene como prop)
+  const getAllFoldersFallback = (nodes, prefix = '') => {
     let folders = [];
     for (const node of nodes) {
       if (node.droppable) {
         folders.push({ label: prefix + node.label, value: node.key });
         if (node.children && node.children.length > 0) {
-          folders = folders.concat(getAllFolders(node.children, prefix + node.label + ' / '));
+          folders = folders.concat(getAllFoldersFallback(node.children, prefix + node.label + ' / '));
         }
       }
     }
     return folders;
   };
+  
+  // Usar la función del prop o el fallback
+  const getAllFoldersToUse = getAllFolders || getAllFoldersFallback;
   // Crear nueva carpeta o editar existente
   const createNewFolder = () => {
     if (!folderName.trim()) {
@@ -207,6 +241,11 @@ const Sidebar = React.memo(({
           }
         },
 
+        editSSH: (node) => {
+          // Llamar a la función de edición SSH que viene como prop
+          openEditSSHDialog(node);
+        },
+
         editFolder: (node) => {
           // Cargar datos de la carpeta para editar
           setFolderName(node.label);
@@ -255,7 +294,7 @@ const Sidebar = React.memo(({
       };
     }
   }, [nodes, setShowFolderDialog, deepCopy, findNodeByKey, showToast, 
-      setEditingNode, setFolderName, setParentNodeKey, setNodes]);
+      setEditingNode, setFolderName, setParentNodeKey, setNodes, openEditSSHDialog]);
 
 
 
@@ -552,17 +591,33 @@ const Sidebar = React.memo(({
           setShowUnifiedConnectionDialog(false);
         }}
 
-        foldersOptions={getAllFolders(nodes)}
+        foldersOptions={getAllFoldersToUse(nodes)}
 
         sshLoading={false}
         // Props RDP
-        rdpNodeData={null}
-        onSaveToSidebar={(rdpConfig) => {
-          // Lógica para guardar RDP en sidebar - implementar según necesidad
-          console.log('Guardar RDP:', rdpConfig);
-          setShowUnifiedConnectionDialog(false);
-        }}
-        editingNode={null}
+        rdpNodeData={rdpNodeData}
+        onSaveToSidebar={handleSaveRdpToSidebar}
+        editingNode={editingRdpNode}
+        // Props para modo edición
+        isEditMode={!!(editSSHNode || editingRdpNode)}
+        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
+        editNodeData={editSSHNode || editingRdpNode}
+        // Props SSH
+        sshName={editSSHNode ? editSSHName : sshName}
+        setSSHName={editSSHNode ? setEditSSHName : setSSHName}
+        sshHost={editSSHNode ? editSSHHost : sshHost}
+        setSSHHost={editSSHNode ? setEditSSHHost : setSSHHost}
+        sshUser={editSSHNode ? editSSHUser : sshUser}
+        setSSHUser={editSSHNode ? setEditSSHUser : setSSHUser}
+        sshPassword={editSSHNode ? editSSHPassword : sshPassword}
+        setSSHPassword={editSSHNode ? setEditSSHPassword : setSSHPassword}
+        sshPort={editSSHNode ? editSSHPort : sshPort}
+        setSSHPort={editSSHNode ? setEditSSHPort : setSSHPort}
+        sshRemoteFolder={editSSHNode ? editSSHRemoteFolder : sshRemoteFolder}
+        setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
+        sshTargetFolder={sshTargetFolder}
+        setSSHTargetFolder={setSSHTargetFolder}
+        onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
       />
     </div>
   );

@@ -185,6 +185,8 @@ const App = () => {
     homeTabs, fileExplorerTabs, sshTabs
   });
 
+
+
   // Storage key moved to constants
 
   // Tras crear una pestaña marcada para activación, fijar activeTabIndex al índice real y limpiar la marca
@@ -278,6 +280,8 @@ const App = () => {
     closeEditSSHDialogWithReset, closeEditFolderDialogWithReset
   } = useDialogManagement();
 
+
+
   // Context menu management hook
   const {
     // Estados de menús contextuales
@@ -327,52 +331,7 @@ const App = () => {
     confirmDeleteNode
   } = useTreeManagement({ toast, confirmDialog });
 
-  // Form handlers hook
-  const {
-    createNewFolder,
-    createNewSSH,
-    createNewRdp,
-    saveEditSSH,
-    saveEditFolder,
-    openEditSSHDialog,
-    openNewRdpDialog,
-    closeRdpDialog,
-    openEditRdpDialog,
-    handleSaveRdpToSidebar
-  } = useFormHandlers({
-    toast,
-    setShowRdpDialog,
-    setShowEditSSHDialog,
-    setShowEditFolderDialog,
 
-    setShowUnifiedConnectionDialog,
-    sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder,
-    closeSSHDialogWithReset,
-    editSSHNode, setEditSSHNode,
-    editSSHName, setEditSSHName,
-    editSSHHost, setEditSSHHost, 
-    editSSHUser, setEditSSHUser,
-    editSSHPassword, setEditSSHPassword,
-    editSSHRemoteFolder, setEditSSHRemoteFolder,
-    editSSHPort, setEditSSHPort,
-    closeEditSSHDialogWithReset,
-    rdpName, setRdpName,
-    rdpServer, setRdpServer,
-    rdpUsername, setRdpUsername, 
-    rdpPassword, setRdpPassword,
-    rdpPort, setRdpPort,
-    rdpClientType, setRdpClientType,
-    rdpTargetFolder, setRdpTargetFolder,
-    rdpNodeData, setRdpNodeData,
-    editingRdpNode, setEditingRdpNode,
-    folderName, parentNodeKey,
-    editFolderNode, setEditFolderNode,
-    editFolderName, setEditFolderName,
-    closeFolderDialogWithReset,
-    nodes, setNodes,
-    findNodeByKey, deepCopy, generateNextKey, parseWallixUser,
-    rdpTabs, setRdpTabs
-  });
 
   // Tree operations hook
   const {
@@ -392,6 +351,60 @@ const App = () => {
     deepCopy,
     findParentNodeAndIndex,
     onDragDropTree
+  });
+
+  // Form handlers hook (movido aquí para tener acceso a generateUniqueKey y parseWallixUser)
+  const {
+    createNewFolder,
+    createNewSSH,
+    createNewRdp,
+    saveEditSSH,
+    saveEditFolder,
+    openEditSSHDialog,
+    openNewRdpDialog,
+    closeRdpDialog,
+    openEditRdpDialog,
+    handleSaveRdpToSidebar
+  } = useFormHandlers({
+    toast,
+    setShowRdpDialog,
+    setShowEditSSHDialog,
+    setShowEditFolderDialog,
+
+    setShowUnifiedConnectionDialog,
+    // Estados SSH para creación
+    sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, 
+    sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder, 
+    sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
+    closeSSHDialogWithReset,
+    // Estados SSH para edición
+    editSSHNode, setEditSSHNode,
+    editSSHName, setEditSSHName,
+    editSSHHost, setEditSSHHost, 
+    editSSHUser, setEditSSHUser,
+    editSSHPassword, setEditSSHPassword,
+    editSSHRemoteFolder, setEditSSHRemoteFolder,
+    editSSHPort, setEditSSHPort,
+    closeEditSSHDialogWithReset,
+    // Estados RDP
+    rdpName, setRdpName,
+    rdpServer, setRdpServer,
+    rdpUsername, setRdpUsername, 
+    rdpPassword, setRdpPassword,
+    rdpPort, setRdpPort,
+    rdpClientType, setRdpClientType,
+    rdpTargetFolder, setRdpTargetFolder,
+    rdpNodeData, setRdpNodeData,
+    editingRdpNode, setEditingRdpNode,
+    // Estados Folder
+    folderName, parentNodeKey,
+    editFolderNode, setEditFolderNode,
+    editFolderName, setEditFolderName,
+    closeFolderDialogWithReset,
+    // Utilidades
+    nodes, setNodes,
+    findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser,
+    rdpTabs, setRdpTabs
   });
 
   // Node template hook
@@ -658,13 +671,53 @@ const App = () => {
     onTreeAreaContextMenu,
     sidebarCallbacksRef,
     selectedNodeKey,
-    setSelectedNodeKey
+    setSelectedNodeKey,
+    
+    // Props para conexiones
+    getAllFolders,
+    createNewSSH,
+    saveEditSSH,
+    openEditSSHDialog,
+    handleSaveRdpToSidebar,
+    
+    // Estados de formularios SSH
+    sshName, setSSHName,
+    sshHost, setSSHHost,
+    sshUser, setSSHUser,
+    sshPassword, setSSHPassword,
+    sshPort, setSSHPort,
+    sshRemoteFolder, setSSHRemoteFolder,
+    sshTargetFolder, setSSHTargetFolder,
+    
+    // Estados de formularios Edit SSH
+    editSSHName, setEditSSHName,
+    editSSHHost, setEditSSHHost,
+    editSSHUser, setEditSSHUser,
+    editSSHPassword, setEditSSHPassword,
+    editSSHRemoteFolder, setEditSSHRemoteFolder,
+    editSSHPort, setEditSSHPort,
+    
+    // Estados para modo edición
+    editSSHNode, setEditSSHNode,
+    
+    // Estados de formularios RDP
+    rdpNodeData, setRdpNodeData,
+    editingRdpNode, setEditingRdpNode
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
     iconThemeSidebar, sidebarFont, sidebarFontSize, terminalTheme,
     toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu,
-    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey
+    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
+    
+    // Dependencias para conexiones
+    getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,
+    sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, sshPassword, setSSHPassword,
+    sshPort, setSSHPort, sshRemoteFolder, setSSHRemoteFolder, sshTargetFolder, setSSHTargetFolder,
+    editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
+    editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
+    editSSHPort, setEditSSHPort, editSSHNode, setEditSSHNode,
+    rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
