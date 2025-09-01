@@ -6,7 +6,7 @@ import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
-import RdpManager from './RdpManager';
+
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog } from './Dialogs';
@@ -34,8 +34,7 @@ const DialogsManager = ({
   setShowSettingsDialog,
   showSyncDialog,
   setShowSyncDialog,
-  showRdpManager,
-  setShowRdpManager,
+
   showCreateGroupDialog,
   setShowCreateGroupDialog,
   showUnifiedConnectionDialog,
@@ -170,18 +169,7 @@ const DialogsManager = ({
       {/* Toast para notificaciones */}
       <Toast ref={toast} />
       
-      {/* RDP Manager - Reemplazado por UnifiedConnectionDialog */}
-      {/* <RdpManager 
-        visible={showRdpManager} 
-        onHide={() => {
-          setShowRdpManager(false);
-          setRdpNodeData(null);
-          setEditingRdpNode(null);
-        }} 
-        rdpNodeData={rdpNodeData}
-        onSaveToSidebar={handleSaveRdpToSidebar}
-        editingNode={editingRdpNode}
-      /> */}
+
       
       {/* Settings Dialog */}
       <SettingsDialog

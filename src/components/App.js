@@ -38,7 +38,7 @@ import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 
 import SyncSettingsDialog from './SyncSettingsDialog';
-import RdpManager from './RdpManager';
+
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
@@ -237,7 +237,7 @@ const App = () => {
     showEditFolderDialog, setShowEditFolderDialog,
     showSettingsDialog, setShowSettingsDialog,
     showSyncDialog, setShowSyncDialog,
-    showRdpManager, setShowRdpManager,
+  
     showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
@@ -344,7 +344,7 @@ const App = () => {
     setShowRdpDialog,
     setShowEditSSHDialog,
     setShowEditFolderDialog,
-    setShowRdpManager,
+
     setShowUnifiedConnectionDialog,
     sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder,
     closeSSHDialogWithReset,
@@ -648,7 +648,6 @@ const App = () => {
     setExpandedKeys,
     setShowCreateGroupDialog,
     setShowSettingsDialog,
-    setShowRdpManager,
     iconTheme: iconThemeSidebar,
     explorerFont: sidebarFont,
     explorerFontSize: sidebarFontSize,
@@ -663,7 +662,7 @@ const App = () => {
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    setShowRdpManager, iconThemeSidebar, sidebarFont, sidebarFontSize, terminalTheme,
+    iconThemeSidebar, sidebarFont, sidebarFontSize, terminalTheme,
     toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey
   ]);
@@ -746,8 +745,7 @@ const App = () => {
         setShowSettingsDialog={setShowSettingsDialog}
         showSyncDialog={showSyncDialog}
         setShowSyncDialog={setShowSyncDialog}
-        showRdpManager={showRdpManager}
-        setShowRdpManager={setShowRdpManager}
+
         showCreateGroupDialog={showCreateGroupDialog}
         setShowCreateGroupDialog={setShowCreateGroupDialog}
         showUnifiedConnectionDialog={showUnifiedConnectionDialog}
