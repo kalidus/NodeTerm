@@ -9,7 +9,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import RdpManager from './RdpManager';
 import SettingsDialog from './SettingsDialog';
 import SyncSettingsDialog from './SyncSettingsDialog';
-import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
+import { SSHDialog, FolderDialog, GroupDialog, UnifiedConnectionDialog } from './Dialogs';
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -38,6 +38,8 @@ const DialogsManager = ({
   setShowRdpManager,
   showCreateGroupDialog,
   setShowCreateGroupDialog,
+  showUnifiedConnectionDialog,
+  setShowUnifiedConnectionDialog,
   
   // Estados de formularios SSH
   sshName,
@@ -53,6 +55,7 @@ const DialogsManager = ({
   sshPort,
   setSSHPort,
   sshTargetFolder,
+  setSSHTargetFolder,
   
   // Estados de formularios Edit SSH
   editSSHName,
@@ -86,6 +89,10 @@ const DialogsManager = ({
   setRdpNodeData,
   editingRdpNode,
   setEditingRdpNode,
+  
+  // Estados para modo edición
+  editSSHNode,
+  setEditSSHNode,
   
   // Estados de formularios Folder
   folderName,
@@ -163,8 +170,8 @@ const DialogsManager = ({
       {/* Toast para notificaciones */}
       <Toast ref={toast} />
       
-      {/* RDP Manager */}
-      <RdpManager 
+      {/* RDP Manager - Reemplazado por UnifiedConnectionDialog */}
+      {/* <RdpManager 
         visible={showRdpManager} 
         onHide={() => {
           setShowRdpManager(false);
@@ -174,7 +181,7 @@ const DialogsManager = ({
         rdpNodeData={rdpNodeData}
         onSaveToSidebar={handleSaveRdpToSidebar}
         editingNode={editingRdpNode}
-      />
+      /> */}
       
       {/* Settings Dialog */}
       <SettingsDialog
@@ -267,8 +274,8 @@ const DialogsManager = ({
         onConfirm={saveEditFolder}
       />
       
-      {/* Diálogo: Editar SSH */}
-      <SSHDialog
+      {/* Diálogo: Editar SSH - Reemplazado por UnifiedConnectionDialog */}
+      {/* <SSHDialog
         visible={showEditSSHDialog}
         onHide={() => setShowEditSSHDialog(false)}
         sshName={editSSHName}
@@ -285,7 +292,7 @@ const DialogsManager = ({
         setSshPort={setEditSSHPort}
         foldersOptions={getAllFolders(nodes)}
         onConfirm={saveEditSSH}
-      />
+      /> */}
       
       {/* Diálogo: Crear grupo */}
       <GroupDialog
@@ -388,6 +395,48 @@ const DialogsManager = ({
           </div>
         </div>
       </Dialog>
+      
+      {/* Diálogo: Conexión Unificada (SSH/RDP) */}
+      <UnifiedConnectionDialog
+        visible={showUnifiedConnectionDialog}
+        onHide={() => {
+          setShowUnifiedConnectionDialog(false);
+          // Limpiar estados de edición
+          if (editSSHNode) {
+            setEditSSHNode(null);
+          }
+          if (editingRdpNode) {
+            setEditingRdpNode(null);
+            setRdpNodeData(null);
+          }
+        }}
+        // Props SSH
+        sshName={editSSHNode ? editSSHName : sshName}
+        setSSHName={editSSHNode ? setEditSSHName : setSSHName}
+        sshHost={editSSHNode ? editSSHHost : sshHost}
+        setSSHHost={editSSHNode ? setEditSSHHost : setSSHHost}
+        sshUser={editSSHNode ? editSSHUser : sshUser}
+        setSSHUser={editSSHNode ? setEditSSHUser : setSSHUser}
+        sshPassword={editSSHNode ? editSSHPassword : sshPassword}
+        setSSHPassword={editSSHNode ? setEditSSHPassword : setSSHPassword}
+        sshPort={editSSHNode ? editSSHPort : sshPort}
+        setSSHPort={editSSHNode ? setEditSSHPort : setSSHPort}
+        sshRemoteFolder={editSSHNode ? editSSHRemoteFolder : sshRemoteFolder}
+        setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
+        sshTargetFolder={sshTargetFolder}
+        setSSHTargetFolder={setSSHTargetFolder}
+        foldersOptions={getAllFolders(nodes)}
+        onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
+        sshLoading={false}
+        // Props RDP
+        rdpNodeData={rdpNodeData}
+        onSaveToSidebar={handleSaveRdpToSidebar}
+        editingNode={editingRdpNode}
+        // Props para modo edición
+        isEditMode={!!(editSSHNode || editingRdpNode)}
+        editConnectionType={editSSHNode ? 'ssh' : (editingRdpNode ? 'rdp' : null)}
+        editNodeData={editSSHNode || editingRdpNode}
+      />
     </>
   );
 };

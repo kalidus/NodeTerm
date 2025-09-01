@@ -238,6 +238,7 @@ const App = () => {
     showSettingsDialog, setShowSettingsDialog,
     showSyncDialog, setShowSyncDialog,
     showRdpManager, setShowRdpManager,
+    showUnifiedConnectionDialog, setShowUnifiedConnectionDialog,
     // Estados de formularios SSH
     sshName, setSSHName,
     sshHost, setSSHHost,
@@ -344,6 +345,7 @@ const App = () => {
     setShowEditSSHDialog,
     setShowEditFolderDialog,
     setShowRdpManager,
+    setShowUnifiedConnectionDialog,
     sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder,
     closeSSHDialogWithReset,
     editSSHNode, setEditSSHNode,
@@ -748,6 +750,8 @@ const App = () => {
         setShowRdpManager={setShowRdpManager}
         showCreateGroupDialog={showCreateGroupDialog}
         setShowCreateGroupDialog={setShowCreateGroupDialog}
+        showUnifiedConnectionDialog={showUnifiedConnectionDialog}
+        setShowUnifiedConnectionDialog={setShowUnifiedConnectionDialog}
         
         // Estados de formularios SSH
         sshName={sshName}
@@ -763,6 +767,7 @@ const App = () => {
         sshPort={sshPort}
         setSSHPort={setSSHPort}
         sshTargetFolder={sshTargetFolder}
+        setSSHTargetFolder={setSSHTargetFolder}
         
         // Estados de formularios Edit SSH
         editSSHName={editSSHName}
@@ -777,6 +782,10 @@ const App = () => {
         setEditSSHRemoteFolder={setEditSSHRemoteFolder}
         editSSHPort={editSSHPort}
         setEditSSHPort={setEditSSHPort}
+        
+        // Estados para modo edición
+        editSSHNode={editSSHNode}
+        setEditSSHNode={setEditSSHNode}
         
         // Estados de formularios RDP
         rdpName={rdpName}
