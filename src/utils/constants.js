@@ -1,7 +1,8 @@
 // Constantes de almacenamiento
 export const STORAGE_KEYS = {
   TREE_DATA: 'basicapp2_tree_data',
-  UI_THEME: 'ui_theme'
+  UI_THEME: 'ui_theme',
+  LOCK_HOME_BUTTON: 'lock_home_button'
 };
 
 // Constantes de grupos

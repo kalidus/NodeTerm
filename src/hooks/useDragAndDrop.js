@@ -21,8 +21,11 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     const tab = filtered[tabIndex];
     if (!tab) return;
     
-    // No permitir arrastrar la pestaña de Inicio
-    if (tab.type === 'home' || tab.label === 'Inicio') return;
+    // Verificar si el botón de inicio está bloqueado
+    const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+    
+    // Solo bloquear el arrastre de la pestaña de Inicio si está configurada para bloquear
+    if ((tab.type === 'home' || tab.label === 'Inicio') && isHomeButtonLocked) return;
     
     // Pequeño delay para distinguir entre click y drag
     const timer = setTimeout(() => {
@@ -70,38 +73,45 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
     }
 
     const isHome = (t) => t && (t.type === 'home' || t.label === 'Inicio');
-    // No permitir mover/soltar la pestaña de Inicio
-    if (isHome(draggedTab) || isHome(dropTab) || (dropIndex === 0 && isHome(filtered[0]))) {
+    
+    // Verificar si el botón de inicio está bloqueado
+    const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+    
+    // Si está bloqueado, no permitir mover la pestaña de inicio
+    if (isHomeButtonLocked && isHome(draggedTab)) {
+      setDraggedTabIndex(null);
+      setDragOverTabIndex(null);
+      return;
+    }
+    
+    // Si está bloqueado, no permitir soltar sobre la pestaña de inicio
+    if (isHomeButtonLocked && isHome(dropTab)) {
       setDraggedTabIndex(null);
       setDragOverTabIndex(null);
       return;
     }
 
-    // Reordenación global entre tipos usando openTabOrder
-    const hasHomeAtZero = filtered.length > 0 && isHome(filtered[0]);
-    // Claves visibles (excluyendo Home)
-    const visibleKeys = filtered.filter(t => !isHome(t)).map(t => t.key);
-
-    const from = visibleKeys.indexOf(draggedTab.key);
-    let to = hasHomeAtZero ? dropIndex - 1 : dropIndex;
-    to = Math.max(0, Math.min(visibleKeys.length - 1, to));
-
-    if (from === -1 || from === to) {
+    // Obtener todas las claves de pestañas en el orden actual
+    const allTabKeys = filtered.map(t => t.key);
+    
+    // Encontrar los índices de origen y destino
+    const fromIndex = allTabKeys.indexOf(draggedTab.key);
+    const toIndex = dropIndex;
+    
+    if (fromIndex === -1 || fromIndex === toIndex) {
       setDraggedTabIndex(null);
       setDragOverTabIndex(null);
       return;
     }
 
-    const reorderedVisible = [...visibleKeys];
-    const [movedKey] = reorderedVisible.splice(from, 1);
-    reorderedVisible.splice(to, 0, movedKey);
+    // Crear el nuevo orden de pestañas
+    const newOrder = [...allTabKeys];
+    const [movedKey] = newOrder.splice(fromIndex, 1);
+    newOrder.splice(toIndex, 0, movedKey);
 
-    // Nuevo openTabOrder: primero las visibles reordenadas, luego el resto en su orden actual
-    const restKeys = openTabOrder.filter(k => !reorderedVisible.includes(k));
-    const newOpenOrder = [...reorderedVisible, ...restKeys];
-
-    setOpenTabOrder(newOpenOrder);
-    setActiveTabIndex(dropIndex);
+    // Actualizar el orden de pestañas
+    setOpenTabOrder(newOrder);
+    setActiveTabIndex(toIndex);
     
     setDraggedTabIndex(null);
     setDragOverTabIndex(null);
