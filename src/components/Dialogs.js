@@ -647,6 +647,27 @@ export function UnifiedConnectionDialog({
                               />
                               <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '11px' }}>💾 Redirigir carpetas</label>
                             </div>
+                            
+                            {/* Configuración de carpetas condicional */}
+                            {formData.guacEnableDrive && (
+                              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
+                                <div className="field col-12">
+                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500' }}>📁 Carpeta local para "NodeTerm Drive"</label>
+                                  <InputText
+                                    id="guacDriveHostDir"
+                                    value={formData.guacDriveHostDir}
+                                    onChange={handleTextChange('guacDriveHostDir')}
+                                    placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
+                                    style={{ padding: '4px 6px', fontSize: '12px' }}
+                                  />
+                                  {!formData.guacDriveHostDir && (
+                                    <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
+                                      Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
+                                    </small>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
@@ -1161,6 +1182,27 @@ export function UnifiedConnectionDialog({
                               />
                               <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '11px' }}>💾 Redirigir carpetas</label>
                             </div>
+                            
+                            {/* Configuración de carpetas condicional */}
+                            {formData.guacEnableDrive && (
+                              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
+                                <div className="field col-12">
+                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500' }}>📁 Carpeta local para "NodeTerm Drive"</label>
+                                  <InputText
+                                    id="guacDriveHostDir"
+                                    value={formData.guacDriveHostDir}
+                                    onChange={handleTextChange('guacDriveHostDir')}
+                                    placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
+                                    style={{ padding: '4px 6px', fontSize: '12px' }}
+                                  />
+                                  {!formData.guacDriveHostDir && (
+                                    <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
+                                      Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
+                                    </small>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
