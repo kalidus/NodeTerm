@@ -242,7 +242,7 @@ export function UnifiedConnectionDialog({
     username: '',
     password: '',
     port: 3389,
-    clientType: 'mstsc',
+    clientType: 'guacamole',
     preset: 'default',
     resolution: '1600x1000',
     colorDepth: 32,
@@ -336,7 +336,7 @@ export function UnifiedConnectionDialog({
           username: data.username || '',
           password: data.password || '',
           port: data.port || 3389,
-          clientType: data.clientType || 'mstsc',
+          clientType: data.clientType || 'guacamole',
           preset: data.preset || 'default',
           resolution: data.resolution || '1600x1000',
           colorDepth: data.colorDepth || 32,
@@ -493,25 +493,25 @@ export function UnifiedConnectionDialog({
                         style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div className="field col-12">
-                      <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
-                      <Dropdown
-                        id="clientType"
-                        value={formData.clientType}
-                        options={[
-                          { label: 'Windows MSTSC', value: 'mstsc' },
-                          { label: 'Apache Guacamole', value: 'guacamole' }
-                        ]}
-                        onChange={(e) => handleInputChange('clientType', e.value)}
-                        placeholder="Seleccionar tipo"
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-
-                    {/* Sección de Seguridad (solo para Guacamole) */}
-                    {formData.clientType === 'guacamole' && (
-                      <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                        <div className="field col-12">
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      <div className="field" style={{ flex: '1', minWidth: '200px' }}>
+                        <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
+                        <Dropdown
+                          id="clientType"
+                          value={formData.clientType}
+                          options={[
+                            { label: 'Windows MSTSC', value: 'mstsc' },
+                            { label: 'Apache Guacamole', value: 'guacamole' }
+                          ]}
+                          onChange={(e) => handleInputChange('clientType', e.value)}
+                          placeholder="Seleccionar tipo"
+                          style={{ fontSize: '13px' }}
+                        />
+                      </div>
+                      
+                      {/* Protocolo de seguridad (solo para Guacamole) */}
+                      {formData.clientType === 'guacamole' && (
+                        <div className="field" style={{ flex: '1', minWidth: '200px' }}>
                           <label htmlFor="guacSecurity" style={{ fontSize: '11px', fontWeight: '500' }}>🔒 Protocolo de seguridad</label>
                           <Dropdown
                             id="guacSecurity"
@@ -530,8 +530,8 @@ export function UnifiedConnectionDialog({
                             Nivel de seguridad para la conexión RDP
                           </small>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -1017,25 +1017,25 @@ export function UnifiedConnectionDialog({
                         style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div className="field col-12">
-                      <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
-                      <Dropdown
-                        id="clientType"
-                        value={formData.clientType}
-                        options={[
-                          { label: 'Windows MSTSC', value: 'mstsc' },
-                          { label: 'Apache Guacamole', value: 'guacamole' }
-                        ]}
-                        onChange={(e) => handleInputChange('clientType', e.value)}
-                        placeholder="Seleccionar tipo"
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-
-                    {/* Sección de Seguridad (solo para Guacamole) */}
-                    {formData.clientType === 'guacamole' && (
-                      <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                        <div className="field col-12">
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      <div className="field" style={{ flex: '1', minWidth: '200px' }}>
+                        <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
+                        <Dropdown
+                          id="clientType"
+                          value={formData.clientType}
+                          options={[
+                            { label: 'Windows MSTSC', value: 'mstsc' },
+                            { label: 'Apache Guacamole', value: 'guacamole' }
+                          ]}
+                          onChange={(e) => handleInputChange('clientType', e.value)}
+                          placeholder="Seleccionar tipo"
+                          style={{ fontSize: '13px' }}
+                        />
+                      </div>
+                      
+                      {/* Protocolo de seguridad (solo para Guacamole) */}
+                      {formData.clientType === 'guacamole' && (
+                        <div className="field" style={{ flex: '1', minWidth: '200px' }}>
                           <label htmlFor="guacSecurity" style={{ fontSize: '11px', fontWeight: '500' }}>🔒 Protocolo de seguridad</label>
                           <Dropdown
                             id="guacSecurity"
@@ -1054,8 +1054,8 @@ export function UnifiedConnectionDialog({
                             Nivel de seguridad para la conexión RDP
                           </small>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </Card>
               </div>

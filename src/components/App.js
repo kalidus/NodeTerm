@@ -264,6 +264,7 @@ const App = () => {
     rdpPassword, setRdpPassword,
     rdpPort, setRdpPort,
     rdpClientType, setRdpClientType,
+    rdpGuacSecurity, setRdpGuacSecurity,
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,
@@ -851,6 +852,8 @@ const App = () => {
         setRdpPort={setRdpPort}
         rdpClientType={rdpClientType}
         setRdpClientType={setRdpClientType}
+        rdpGuacSecurity={rdpGuacSecurity}
+        setRdpGuacSecurity={setRdpGuacSecurity}
         rdpTargetFolder={rdpTargetFolder}
         rdpNodeData={rdpNodeData}
         setRdpNodeData={setRdpNodeData}
