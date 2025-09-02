@@ -385,8 +385,8 @@ export function UnifiedConnectionDialog({
           // Formulario RDP optimizado para edición (mismo diseño que el tab RDP)
           <div className="p-fluid" style={{ padding: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
             
-            {/* Diseño en 3 columnas para mejor organización */}
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
               
               {/* Columna 1: Configuración de Conexión */}
               <div style={{ flex: '1', minWidth: '280px' }}>
@@ -469,43 +469,47 @@ export function UnifiedConnectionDialog({
                 </Card>
               </div>
 
-              {/* Columna 2: Configuración de Pantalla */}
+              {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
               <div style={{ flex: '1', minWidth: '280px' }}>
                 <Card title="🖥️ Pantalla" className="mb-3" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
-                    <div className="field col-12">
-                      <label htmlFor="preset" style={{ fontSize: '12px', fontWeight: '500' }}>Preset</label>
-                      <Dropdown
-                        id="preset"
-                        value={formData.preset}
-                        options={[
-                          { label: 'Por defecto', value: 'default' },
-                          { label: 'Rendimiento', value: 'performance' },
-                          { label: 'Calidad', value: 'quality' }
-                        ]}
-                        onChange={(e) => handleInputChange('preset', e.value)}
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="resolution" style={{ fontSize: '12px', fontWeight: '500' }}>Resolución</label>
-                      <Dropdown
-                        id="resolution"
-                        value={formData.resolution}
-                        options={[
-                          { label: 'Pantalla completa', value: 'fullscreen' },
-                          { label: '1920x1080', value: '1920x1080' },
-                          { label: '1600x1000', value: '1600x1000' },
-                          { label: '1366x768', value: '1366x768' },
-                          { label: '1024x768', value: '1024x768' }
-                        ]}
-                        onChange={(e) => handleInputChange('resolution', e.value)}
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div className="field col-6">
-                        <label htmlFor="colorDepth" style={{ fontSize: '12px', fontWeight: '500' }}>Color</label>
+                        <label htmlFor="preset" style={{ fontSize: '11px', fontWeight: '500' }}>Preset</label>
+                        <Dropdown
+                          id="preset"
+                          value={formData.preset}
+                          options={[
+                            { label: 'Por defecto', value: 'default' },
+                            { label: 'Rendimiento', value: 'performance' },
+                            { label: 'Calidad', value: 'quality' }
+                          ]}
+                          onChange={(e) => handleInputChange('preset', e.value)}
+                          style={{ fontSize: '12px', padding: '4px 6px' }}
+                          className="compact-dropdown"
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="resolution" style={{ fontSize: '11px', fontWeight: '500' }}>Resolución</label>
+                        <Dropdown
+                          id="resolution"
+                          value={formData.resolution}
+                          options={[
+                            { label: 'Pantalla completa', value: 'fullscreen' },
+                            { label: '1920x1080', value: '1920x1080' },
+                            { label: '1600x1000', value: '1600x1000' },
+                            { label: '1366x768', value: '1366x768' },
+                            { label: '1024x768', value: '1024x768' }
+                          ]}
+                          onChange={(e) => handleInputChange('resolution', e.value)}
+                          style={{ fontSize: '12px', padding: '4px 6px' }}
+                          className="compact-dropdown"
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      <div className="field col-6">
+                        <label htmlFor="colorDepth" style={{ fontSize: '11px', fontWeight: '500' }}>Color</label>
                         <Dropdown
                           id="colorDepth"
                           value={formData.colorDepth}
@@ -516,135 +520,137 @@ export function UnifiedConnectionDialog({
                             { label: '15 bits', value: 15 }
                           ]}
                           onChange={(e) => handleInputChange('colorDepth', e.value)}
-                          style={{ fontSize: '13px' }}
+                          style={{ fontSize: '12px', padding: '4px 6px' }}
+                          className="compact-dropdown"
                         />
                       </div>
                       <div className="field col-6">
-                        <label htmlFor="guacDpi" style={{ fontSize: '12px', fontWeight: '500' }}>DPI</label>
+                        <label htmlFor="guacDpi" style={{ fontSize: '11px', fontWeight: '500' }}>DPI</label>
                         <InputText
                           id="guacDpi"
                           value={formData.guacDpi}
                           onChange={handleTextChange('guacDpi')}
                           placeholder="96"
-                          style={{ padding: '8px 10px', fontSize: '13px' }}
+                          style={{ padding: '4px 6px', fontSize: '12px' }}
                         />
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </div>
 
-              {/* Columna 3: Opciones Principales */}
-              <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="⚙️ Opciones" style={{ height: 'fit-content' }}>
-                  <div className="formgrid grid">
-                    {/* Opciones para MSTSC */}
-                    {formData.clientType === 'mstsc' && (
-                      <>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectFolders"
-                            checked={formData.redirectFolders}
-                            onChange={handleCheckboxChange('redirectFolders')}
-                          />
-                          <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '12px' }}>📁 Redirigir carpetas</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectClipboard"
-                            checked={formData.redirectClipboard}
-                            onChange={handleCheckboxChange('redirectClipboard')}
-                          />
-                          <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '12px' }}>📋 Compartir portapapeles</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectPrinters"
-                            checked={formData.redirectPrinters}
-                            onChange={handleCheckboxChange('redirectPrinters')}
-                          />
-                          <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '12px' }}>🖨️ Redirigir impresoras</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectAudio"
-                            checked={formData.redirectAudio}
-                            onChange={handleCheckboxChange('redirectAudio')}
-                          />
-                          <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '12px' }}>🔊 Redirigir audio</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="smartSizing"
-                            checked={formData.smartSizing}
-                            onChange={handleCheckboxChange('smartSizing')}
-                          />
-                          <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '12px' }}>📐 Ajuste automático</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="fullscreen"
-                            checked={formData.fullscreen}
-                            onChange={handleCheckboxChange('fullscreen')}
-                          />
-                          <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '12px' }}>🖥️ Pantalla completa</label>
-                        </div>
-                      </>
-                    )}
+                    {/* Opciones integradas en la misma columna */}
+                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
+                      <h6 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)' }}>
+                        ⚙️ Opciones
+                      </h6>
+                      <div className="formgrid grid">
+                        {/* Opciones para MSTSC */}
+                        {formData.clientType === 'mstsc' && (
+                          <>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectFolders"
+                                checked={formData.redirectFolders}
+                                onChange={handleCheckboxChange('redirectFolders')}
+                              />
+                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '11px' }}>📁 Redirigir carpetas</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectClipboard"
+                                checked={formData.redirectClipboard}
+                                onChange={handleCheckboxChange('redirectClipboard')}
+                              />
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectPrinters"
+                                checked={formData.redirectPrinters}
+                                onChange={handleCheckboxChange('redirectPrinters')}
+                              />
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectAudio"
+                                checked={formData.redirectAudio}
+                                onChange={handleCheckboxChange('redirectAudio')}
+                              />
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="smartSizing"
+                                checked={formData.smartSizing}
+                                onChange={handleCheckboxChange('smartSizing')}
+                              />
+                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="fullscreen"
+                                checked={formData.fullscreen}
+                                onChange={handleCheckboxChange('fullscreen')}
+                              />
+                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '11px' }}>🖥️ Pantalla completa</label>
+                            </div>
+                          </>
+                        )}
 
-                    {/* Opciones para Guacamole */}
-                    {formData.clientType === 'guacamole' && (
-                      <>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectClipboard"
-                            checked={formData.redirectClipboard}
-                            onChange={handleCheckboxChange('redirectClipboard')}
-                          />
-                          <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '12px' }}>📋 Compartir portapapeles</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectPrinters"
-                            checked={formData.redirectPrinters}
-                            onChange={handleCheckboxChange('redirectPrinters')}
-                          />
-                          <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '12px' }}>🖨️ Redirigir impresoras</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectAudio"
-                            checked={formData.redirectAudio}
-                            onChange={handleCheckboxChange('redirectAudio')}
-                          />
-                          <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '12px' }}>🔊 Redirigir audio</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="autoResize"
-                            checked={formData.autoResize}
-                            onChange={handleCheckboxChange('autoResize')}
-                          />
-                          <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '12px' }}>📐 Ajuste automático</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="guacEnableWallpaper"
-                            checked={formData.guacEnableWallpaper}
-                            onChange={handleCheckboxChange('guacEnableWallpaper')}
-                          />
-                          <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '12px' }}>🖼️ Mostrar fondo</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="guacEnableDrive"
-                            checked={formData.guacEnableDrive}
-                            onChange={handleCheckboxChange('guacEnableDrive')}
-                          />
-                          <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '12px' }}>💾 Redirigir carpetas</label>
-                        </div>
-                      </>
-                    )}
+                        {/* Opciones para Guacamole */}
+                        {formData.clientType === 'guacamole' && (
+                          <>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectClipboard"
+                                checked={formData.redirectClipboard}
+                                onChange={handleCheckboxChange('redirectClipboard')}
+                              />
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectPrinters"
+                                checked={formData.redirectPrinters}
+                                onChange={handleCheckboxChange('redirectPrinters')}
+                              />
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectAudio"
+                                checked={formData.redirectAudio}
+                                onChange={handleCheckboxChange('redirectAudio')}
+                              />
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="autoResize"
+                                checked={formData.autoResize}
+                                onChange={handleCheckboxChange('autoResize')}
+                              />
+                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="guacEnableWallpaper"
+                                checked={formData.guacEnableWallpaper}
+                                onChange={handleCheckboxChange('guacEnableWallpaper')}
+                              />
+                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '11px' }}>🖼️ Mostrar fondo</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="guacEnableDrive"
+                                checked={formData.guacEnableDrive}
+                                onChange={handleCheckboxChange('guacEnableDrive')}
+                              />
+                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '11px' }}>💾 Redirigir carpetas</label>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -675,101 +681,160 @@ export function UnifiedConnectionDialog({
             {formData.clientType === 'guacamole' && (
               <Card title="🔧 Opciones Avanzadas" className="mb-3">
                 <Fieldset legend="Configuración avanzada de Guacamole" toggleable collapsed style={{ border: 'none', padding: '0' }}>
-                  <div className="formgrid grid">
-                    <div className="field col-12 md:col-6">
-                      <label htmlFor="guacSecurity" style={{ fontSize: '12px', fontWeight: '500' }}>Seguridad</label>
+                  <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    {/* Columna 1: Opciones de Rendimiento */}
+                    <div style={{ flex: '1', minWidth: '250px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '6px' }}>
+                        🚀 Rendimiento
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacEnableGfx"
+                            checked={formData.guacEnableGfx}
+                            onChange={handleCheckboxChange('guacEnableGfx')}
+                          />
+                          <label htmlFor="guacEnableGfx" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🎨 Habilitar GFX
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacEnableDesktopComposition"
+                            checked={formData.guacEnableDesktopComposition}
+                            onChange={handleCheckboxChange('guacEnableDesktopComposition')}
+                          />
+                          <label htmlFor="guacEnableDesktopComposition" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🖼️ Desktop Composition
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacEnableFontSmoothing"
+                            checked={formData.guacEnableFontSmoothing}
+                            onChange={handleCheckboxChange('guacEnableFontSmoothing')}
+                          />
+                          <label htmlFor="guacEnableFontSmoothing" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            ✨ Font Smoothing
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacEnableTheming"
+                            checked={formData.guacEnableTheming}
+                            onChange={handleCheckboxChange('guacEnableTheming')}
+                          />
+                          <label htmlFor="guacEnableTheming" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🎨 Theming
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Columna 2: Opciones de Interfaz */}
+                    <div style={{ flex: '1', minWidth: '250px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '6px' }}>
+                        🖱️ Interfaz
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacEnableFullWindowDrag"
+                            checked={formData.guacEnableFullWindowDrag}
+                            onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
+                          />
+                          <label htmlFor="guacEnableFullWindowDrag" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🖱️ Full Window Drag
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacEnableMenuAnimations"
+                            checked={formData.guacEnableMenuAnimations}
+                            onChange={handleCheckboxChange('guacEnableMenuAnimations')}
+                          />
+                          <label htmlFor="guacEnableMenuAnimations" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🎭 Animaciones de menú
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Columna 3: Opciones de Caché */}
+                    <div style={{ flex: '1', minWidth: '250px' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '6px' }}>
+                        💾 Caché
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacDisableGlyphCaching"
+                            checked={formData.guacDisableGlyphCaching}
+                            onChange={handleCheckboxChange('guacDisableGlyphCaching')}
+                          />
+                          <label htmlFor="guacDisableGlyphCaching" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🚫 Desactivar glyph caching
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacDisableOffscreenCaching"
+                            checked={formData.guacDisableOffscreenCaching}
+                            onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
+                          />
+                          <label htmlFor="guacDisableOffscreenCaching" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🚫 Desactivar offscreen caching
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacDisableBitmapCaching"
+                            checked={formData.guacDisableBitmapCaching}
+                            onChange={handleCheckboxChange('guacDisableBitmapCaching')}
+                          />
+                          <label htmlFor="guacDisableBitmapCaching" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🚫 Desactivar bitmap caching
+                          </label>
+                        </div>
+                        <div className="field-checkbox">
+                          <Checkbox
+                            inputId="guacDisableCopyRect"
+                            checked={formData.guacDisableCopyRect}
+                            onChange={handleCheckboxChange('guacDisableCopyRect')}
+                          />
+                          <label htmlFor="guacDisableCopyRect" className="ml-2" style={{ fontSize: '12px', cursor: 'pointer' }}>
+                            🚫 Desactivar copy-rect
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selector de Seguridad al final */}
+                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--surface-border)' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: 'var(--text-color)' }}>
+                      🔒 Seguridad
+                    </h4>
+                    <div className="field" style={{ maxWidth: '300px' }}>
+                      <label htmlFor="guacSecurity" style={{ fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '6px' }}>
+                        Protocolo de seguridad
+                      </label>
                       <Dropdown
                         id="guacSecurity"
                         value={formData.guacSecurity}
                         options={[
-                          { label: 'Cualquiera (Recomendado)', value: 'any' },
-                          { label: 'RDP Estándar', value: 'rdp' },
-                          { label: 'TLS', value: 'tls' },
-                          { label: 'Network Level Authentication', value: 'nla' }
+                          { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
+                          { label: '🔐 RDP Estándar', value: 'rdp' },
+                          { label: '🔒 TLS', value: 'tls' },
+                          { label: '🛡️ Network Level Authentication', value: 'nla' }
                         ]}
                         onChange={(e) => handleInputChange('guacSecurity', e.value)}
                         style={{ fontSize: '13px' }}
+                        placeholder="Seleccionar protocolo de seguridad"
                       />
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacEnableGfx"
-                        checked={formData.guacEnableGfx}
-                        onChange={handleCheckboxChange('guacEnableGfx')}
-                      />
-                      <label htmlFor="guacEnableGfx" className="ml-2" style={{ fontSize: '12px' }}>Habilitar GFX</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacEnableDesktopComposition"
-                        checked={formData.guacEnableDesktopComposition}
-                        onChange={handleCheckboxChange('guacEnableDesktopComposition')}
-                      />
-                      <label htmlFor="guacEnableDesktopComposition" className="ml-2" style={{ fontSize: '12px' }}>Desktop Composition</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacEnableFontSmoothing"
-                        checked={formData.guacEnableFontSmoothing}
-                        onChange={handleCheckboxChange('guacEnableFontSmoothing')}
-                      />
-                      <label htmlFor="guacEnableFontSmoothing" className="ml-2" style={{ fontSize: '12px' }}>Font Smoothing</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacEnableTheming"
-                        checked={formData.guacEnableTheming}
-                        onChange={handleCheckboxChange('guacEnableTheming')}
-                      />
-                      <label htmlFor="guacEnableTheming" className="ml-2" style={{ fontSize: '12px' }}>Theming</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacEnableFullWindowDrag"
-                        checked={formData.guacEnableFullWindowDrag}
-                        onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
-                      />
-                      <label htmlFor="guacEnableFullWindowDrag" className="ml-2" style={{ fontSize: '12px' }}>Full Window Drag</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacEnableMenuAnimations"
-                        checked={formData.guacEnableMenuAnimations}
-                        onChange={handleCheckboxChange('guacEnableMenuAnimations')}
-                      />
-                      <label htmlFor="guacEnableMenuAnimations" className="ml-2" style={{ fontSize: '12px' }}>Animaciones de menú</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacDisableGlyphCaching"
-                        checked={formData.guacDisableGlyphCaching}
-                        onChange={handleCheckboxChange('guacDisableGlyphCaching')}
-                      />
-                      <label htmlFor="guacDisableGlyphCaching" className="ml-2" style={{ fontSize: '12px' }}>Desactivar glyph caching</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacDisableOffscreenCaching"
-                        checked={formData.guacDisableOffscreenCaching}
-                        onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
-                      />
-                      <label htmlFor="guacDisableOffscreenCaching" className="ml-2" style={{ fontSize: '12px' }}>Desactivar offscreen caching</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacDisableBitmapCaching"
-                        checked={formData.guacDisableBitmapCaching}
-                        onChange={handleCheckboxChange('guacDisableBitmapCaching')}
-                      />
-                      <label htmlFor="guacDisableBitmapCaching" className="ml-2" style={{ fontSize: '12px' }}>Desactivar bitmap caching</label>
-                    </div>
-                    <div className="field-checkbox col-12 md:col-6">
-                      <Checkbox
-                        inputId="guacDisableCopyRect"
-                        checked={formData.guacDisableCopyRect}
-                        onChange={handleCheckboxChange('guacDisableCopyRect')}
-                      />
-                      <label htmlFor="guacDisableCopyRect" className="ml-2" style={{ fontSize: '12px' }}>Desactivar copy-rect</label>
+                      <small style={{ color: 'var(--text-color-secondary)', fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                        Selecciona el nivel de seguridad para la conexión RDP
+                      </small>
                     </div>
                   </div>
                 </Fieldset>
@@ -834,8 +899,8 @@ export function UnifiedConnectionDialog({
         <TabPanel header="RDP" leftIcon="pi pi-desktop">
           <div className="p-fluid" style={{ padding: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
             
-            {/* Diseño en 3 columnas para mejor organización */}
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
               
               {/* Columna 1: Configuración de Conexión */}
               <div style={{ flex: '1', minWidth: '280px' }}>
@@ -918,43 +983,47 @@ export function UnifiedConnectionDialog({
                 </Card>
               </div>
 
-              {/* Columna 2: Configuración de Pantalla */}
+              {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
               <div style={{ flex: '1', minWidth: '280px' }}>
                 <Card title="🖥️ Pantalla" className="mb-3" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
-                    <div className="field col-12">
-                      <label htmlFor="preset" style={{ fontSize: '12px', fontWeight: '500' }}>Preset</label>
-                      <Dropdown
-                        id="preset"
-                        value={formData.preset}
-                        options={[
-                          { label: 'Por defecto', value: 'default' },
-                          { label: 'Rendimiento', value: 'performance' },
-                          { label: 'Calidad', value: 'quality' }
-                        ]}
-                        onChange={(e) => handleInputChange('preset', e.value)}
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="resolution" style={{ fontSize: '12px', fontWeight: '500' }}>Resolución</label>
-                      <Dropdown
-                        id="resolution"
-                        value={formData.resolution}
-                        options={[
-                          { label: 'Pantalla completa', value: 'fullscreen' },
-                          { label: '1920x1080', value: '1920x1080' },
-                          { label: '1600x1000', value: '1600x1000' },
-                          { label: '1366x768', value: '1366x768' },
-                          { label: '1024x768', value: '1024x768' }
-                        ]}
-                        onChange={(e) => handleInputChange('resolution', e.value)}
-                        style={{ fontSize: '13px' }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div className="field col-6">
-                        <label htmlFor="colorDepth" style={{ fontSize: '12px', fontWeight: '500' }}>Color</label>
+                        <label htmlFor="preset" style={{ fontSize: '11px', fontWeight: '500' }}>Preset</label>
+                        <Dropdown
+                          id="preset"
+                          value={formData.preset}
+                          options={[
+                            { label: 'Por defecto', value: 'default' },
+                            { label: 'Rendimiento', value: 'performance' },
+                            { label: 'Calidad', value: 'quality' }
+                          ]}
+                          onChange={(e) => handleInputChange('preset', e.value)}
+                          style={{ fontSize: '12px', padding: '4px 6px' }}
+                          className="compact-dropdown"
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="resolution" style={{ fontSize: '11px', fontWeight: '500' }}>Resolución</label>
+                        <Dropdown
+                          id="resolution"
+                          value={formData.resolution}
+                          options={[
+                            { label: 'Pantalla completa', value: 'fullscreen' },
+                            { label: '1920x1080', value: '1920x1080' },
+                            { label: '1600x1000', value: '1600x1000' },
+                            { label: '1366x768', value: '1366x768' },
+                            { label: '1024x768', value: '1024x768' }
+                          ]}
+                          onChange={(e) => handleInputChange('resolution', e.value)}
+                          style={{ fontSize: '12px', padding: '4px 6px' }}
+                          className="compact-dropdown"
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      <div className="field col-6">
+                        <label htmlFor="colorDepth" style={{ fontSize: '11px', fontWeight: '500' }}>Color</label>
                         <Dropdown
                           id="colorDepth"
                           value={formData.colorDepth}
@@ -965,135 +1034,137 @@ export function UnifiedConnectionDialog({
                             { label: '15 bits', value: 15 }
                           ]}
                           onChange={(e) => handleInputChange('colorDepth', e.value)}
-                          style={{ fontSize: '13px' }}
+                          style={{ fontSize: '12px', padding: '4px 6px' }}
+                          className="compact-dropdown"
                         />
                       </div>
                       <div className="field col-6">
-                        <label htmlFor="guacDpi" style={{ fontSize: '12px', fontWeight: '500' }}>DPI</label>
+                        <label htmlFor="guacDpi" style={{ fontSize: '11px', fontWeight: '500' }}>DPI</label>
                         <InputText
                           id="guacDpi"
                           value={formData.guacDpi}
                           onChange={handleTextChange('guacDpi')}
                           placeholder="96"
-                          style={{ padding: '8px 10px', fontSize: '13px' }}
+                          style={{ padding: '4px 6px', fontSize: '12px' }}
                         />
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </div>
 
-              {/* Columna 3: Opciones Principales */}
-              <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="⚙️ Opciones" style={{ height: 'fit-content' }}>
-                  <div className="formgrid grid">
-                    {/* Opciones para MSTSC */}
-                    {formData.clientType === 'mstsc' && (
-                      <>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectFolders"
-                            checked={formData.redirectFolders}
-                            onChange={handleCheckboxChange('redirectFolders')}
-                          />
-                          <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '12px' }}>📁 Redirigir carpetas</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectClipboard"
-                            checked={formData.redirectClipboard}
-                            onChange={handleCheckboxChange('redirectClipboard')}
-                          />
-                          <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '12px' }}>📋 Compartir portapapeles</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectPrinters"
-                            checked={formData.redirectPrinters}
-                            onChange={handleCheckboxChange('redirectPrinters')}
-                          />
-                          <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '12px' }}>🖨️ Redirigir impresoras</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectAudio"
-                            checked={formData.redirectAudio}
-                            onChange={handleCheckboxChange('redirectAudio')}
-                          />
-                          <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '12px' }}>🔊 Redirigir audio</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="smartSizing"
-                            checked={formData.smartSizing}
-                            onChange={handleCheckboxChange('smartSizing')}
-                          />
-                          <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '12px' }}>📐 Ajuste automático</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="fullscreen"
-                            checked={formData.fullscreen}
-                            onChange={handleCheckboxChange('fullscreen')}
-                          />
-                          <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '12px' }}>🖥️ Pantalla completa</label>
-                        </div>
-                      </>
-                    )}
+                    {/* Opciones integradas en la misma columna */}
+                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
+                      <h6 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)' }}>
+                        ⚙️ Opciones
+                      </h6>
+                      <div className="formgrid grid">
+                        {/* Opciones para MSTSC */}
+                        {formData.clientType === 'mstsc' && (
+                          <>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectFolders"
+                                checked={formData.redirectFolders}
+                                onChange={handleCheckboxChange('redirectFolders')}
+                              />
+                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '11px' }}>📁 Redirigir carpetas</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectClipboard"
+                                checked={formData.redirectClipboard}
+                                onChange={handleCheckboxChange('redirectClipboard')}
+                              />
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectPrinters"
+                                checked={formData.redirectPrinters}
+                                onChange={handleCheckboxChange('redirectPrinters')}
+                              />
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectAudio"
+                                checked={formData.redirectAudio}
+                                onChange={handleCheckboxChange('redirectAudio')}
+                              />
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="smartSizing"
+                                checked={formData.smartSizing}
+                                onChange={handleCheckboxChange('smartSizing')}
+                              />
+                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="fullscreen"
+                                checked={formData.fullscreen}
+                                onChange={handleCheckboxChange('fullscreen')}
+                              />
+                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '11px' }}>🖥️ Pantalla completa</label>
+                            </div>
+                          </>
+                        )}
 
-                    {/* Opciones para Guacamole */}
-                    {formData.clientType === 'guacamole' && (
-                      <>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectClipboard"
-                            checked={formData.redirectClipboard}
-                            onChange={handleCheckboxChange('redirectClipboard')}
-                          />
-                          <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '12px' }}>📋 Compartir portapapeles</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectPrinters"
-                            checked={formData.redirectPrinters}
-                            onChange={handleCheckboxChange('redirectPrinters')}
-                          />
-                          <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '12px' }}>🖨️ Redirigir impresoras</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="redirectAudio"
-                            checked={formData.redirectAudio}
-                            onChange={handleCheckboxChange('redirectAudio')}
-                          />
-                          <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '12px' }}>🔊 Redirigir audio</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="autoResize"
-                            checked={formData.autoResize}
-                            onChange={handleCheckboxChange('autoResize')}
-                          />
-                          <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '12px' }}>📐 Ajuste automático</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="guacEnableWallpaper"
-                            checked={formData.guacEnableWallpaper}
-                            onChange={handleCheckboxChange('guacEnableWallpaper')}
-                          />
-                          <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '12px' }}>🖼️ Mostrar fondo</label>
-                        </div>
-                        <div className="field-checkbox col-12">
-                          <Checkbox
-                            inputId="guacEnableDrive"
-                            checked={formData.guacEnableDrive}
-                            onChange={handleCheckboxChange('guacEnableDrive')}
-                          />
-                          <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '12px' }}>💾 Redirigir carpetas</label>
-                        </div>
-                      </>
-                    )}
+                        {/* Opciones para Guacamole */}
+                        {formData.clientType === 'guacamole' && (
+                          <>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectClipboard"
+                                checked={formData.redirectClipboard}
+                                onChange={handleCheckboxChange('redirectClipboard')}
+                              />
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectPrinters"
+                                checked={formData.redirectPrinters}
+                                onChange={handleCheckboxChange('redirectPrinters')}
+                              />
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="redirectAudio"
+                                checked={formData.redirectAudio}
+                                onChange={handleCheckboxChange('redirectAudio')}
+                              />
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="autoResize"
+                                checked={formData.autoResize}
+                                onChange={handleCheckboxChange('autoResize')}
+                              />
+                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="guacEnableWallpaper"
+                                checked={formData.guacEnableWallpaper}
+                                onChange={handleCheckboxChange('guacEnableWallpaper')}
+                              />
+                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '11px' }}>🖼️ Mostrar fondo</label>
+                            </div>
+                            <div className="field-checkbox col-12">
+                              <Checkbox
+                                inputId="guacEnableDrive"
+                                checked={formData.guacEnableDrive}
+                                onChange={handleCheckboxChange('guacEnableDrive')}
+                              />
+                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '11px' }}>💾 Redirigir carpetas</label>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </Card>
               </div>

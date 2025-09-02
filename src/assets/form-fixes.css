@@ -108,3 +108,67 @@ input, textarea, select {
 .p-dialog-mask .p-dialog {
   pointer-events: auto !important;
 } 
+
+/* Estilos para hacer los selectores más compactos */
+.compact-dropdown .p-dropdown {
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  background: var(--surface-card);
+  transition: border-color 0.2s;
+}
+
+.compact-dropdown .p-dropdown:hover {
+  border-color: var(--primary-color);
+}
+
+.compact-dropdown .p-dropdown:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.compact-dropdown .p-dropdown-trigger {
+  padding: 0 8px;
+}
+
+.compact-dropdown .p-dropdown-label {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+/* Hacer los selectores más pequeños y compactos */
+.compact-dropdown .p-dropdown {
+  min-height: 32px;
+  height: 32px;
+}
+
+/* Reducir el padding interno de los dropdowns */
+.compact-dropdown .p-dropdown-label.p-inputtext {
+  padding: 4px 6px;
+}
+
+/* Estilos para los campos de entrada compactos */
+.compact-input .p-inputtext {
+  padding: 4px 6px;
+  font-size: 12px;
+  min-height: 32px;
+  height: 32px;
+}
+
+/* Hacer las opciones más compactas */
+.field-checkbox .p-checkbox {
+  margin-right: 6px;
+}
+
+.field-checkbox label {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+/* Reducir el espaciado entre elementos */
+.field {
+  margin-bottom: 8px;
+}
+
+.field-checkbox {
+  margin-bottom: 4px;
+} 
