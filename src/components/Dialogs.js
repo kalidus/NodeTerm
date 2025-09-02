@@ -288,6 +288,22 @@ export function UnifiedConnectionDialog({
     setFormData(prev => ({ ...prev, [field]: e.checked }));
   };
 
+  // Función para abrir el selector de carpeta
+  const handleSelectFolder = async () => {
+    try {
+      const result = await window.electron.dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar carpeta para NodeTerm Drive'
+      });
+      
+      if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+        setFormData(prev => ({ ...prev, guacDriveHostDir: result.filePaths[0] }));
+      }
+    } catch (error) {
+      console.error('Error al abrir selector de carpeta:', error);
+    }
+  };
+
   // Precargar datos cuando esté en modo edición
   useEffect(() => {
     if (isEditMode && editNodeData && visible) {
@@ -383,14 +399,14 @@ export function UnifiedConnectionDialog({
           />
         ) : (
           // Formulario RDP optimizado para edición (mismo diseño que el tab RDP)
-          <div className="p-fluid" style={{ padding: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
+          <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
             
             {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
               
               {/* Columna 1: Configuración de Conexión */}
               <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🔗 Conexión" className="mb-3" style={{ height: 'fit-content' }}>
+                <Card title="🔗 Conexión" className="mb-2" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
                     <div className="field col-12">
                       <label htmlFor="name" style={{ fontSize: '12px', fontWeight: '500' }}>Nombre *</label>
@@ -471,7 +487,7 @@ export function UnifiedConnectionDialog({
 
               {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
               <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🖥️ Pantalla" className="mb-3" style={{ height: 'fit-content' }}>
+                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div className="field col-6">
@@ -537,129 +553,138 @@ export function UnifiedConnectionDialog({
                     </div>
 
                     {/* Opciones integradas en la misma columna */}
-                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
-                      <h6 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)' }}>
+                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '8px' }}>
+                      <h6 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color)' }}>
                         ⚙️ Opciones
                       </h6>
                       <div className="formgrid grid">
-                        {/* Opciones para MSTSC */}
+                        {/* Opciones para MSTSC en 2 columnas */}
                         {formData.clientType === 'mstsc' && (
                           <>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectFolders"
                                 checked={formData.redirectFolders}
                                 onChange={handleCheckboxChange('redirectFolders')}
                               />
-                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '11px' }}>📁 Redirigir carpetas</label>
+                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '10px' }}>📁 Redirigir carpetas</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectClipboard"
                                 checked={formData.redirectClipboard}
                                 onChange={handleCheckboxChange('redirectClipboard')}
                               />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectPrinters"
                                 checked={formData.redirectPrinters}
                                 onChange={handleCheckboxChange('redirectPrinters')}
                               />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectAudio"
                                 checked={formData.redirectAudio}
                                 onChange={handleCheckboxChange('redirectAudio')}
                               />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="smartSizing"
                                 checked={formData.smartSizing}
                                 onChange={handleCheckboxChange('smartSizing')}
                               />
-                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="fullscreen"
                                 checked={formData.fullscreen}
                                 onChange={handleCheckboxChange('fullscreen')}
                               />
-                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '11px' }}>🖥️ Pantalla completa</label>
+                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '10px' }}>🖥️ Pantalla completa</label>
                             </div>
                           </>
                         )}
 
-                        {/* Opciones para Guacamole */}
+                        {/* Opciones para Guacamole en 2 columnas */}
                         {formData.clientType === 'guacamole' && (
                           <>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectClipboard"
                                 checked={formData.redirectClipboard}
                                 onChange={handleCheckboxChange('redirectClipboard')}
                               />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectPrinters"
                                 checked={formData.redirectPrinters}
                                 onChange={handleCheckboxChange('redirectPrinters')}
                               />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectAudio"
                                 checked={formData.redirectAudio}
                                 onChange={handleCheckboxChange('redirectAudio')}
                               />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="autoResize"
                                 checked={formData.autoResize}
                                 onChange={handleCheckboxChange('autoResize')}
                               />
-                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="guacEnableWallpaper"
                                 checked={formData.guacEnableWallpaper}
                                 onChange={handleCheckboxChange('guacEnableWallpaper')}
                               />
-                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '11px' }}>🖼️ Mostrar fondo</label>
+                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '10px' }}>🖼️ Mostrar fondo</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="guacEnableDrive"
                                 checked={formData.guacEnableDrive}
                                 onChange={handleCheckboxChange('guacEnableDrive')}
                               />
-                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '11px' }}>💾 Redirigir carpetas</label>
+                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '10px' }}>💾 Redirigir carpetas</label>
                             </div>
                             
                             {/* Configuración de carpetas condicional */}
                             {formData.guacEnableDrive && (
                               <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                                <div className="field col-12">
-                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500' }}>📁 Carpeta local para "NodeTerm Drive"</label>
-                                  <InputText
-                                    id="guacDriveHostDir"
-                                    value={formData.guacDriveHostDir}
-                                    onChange={handleTextChange('guacDriveHostDir')}
-                                    placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
-                                    style={{ padding: '4px 6px', fontSize: '12px' }}
-                                  />
+                                <div className="field" style={{ width: '100%', marginBottom: '8px' }}>
+                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>📁 Carpeta local para "NodeTerm Drive"</label>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%' }}>
+                                    <Button
+                                      icon="pi pi-folder-open"
+                                      className="p-button-outlined p-button-sm"
+                                      onClick={handleSelectFolder}
+                                      tooltip="Seleccionar carpeta"
+                                      style={{ padding: '6px 10px', fontSize: '11px', minWidth: 'auto', flexShrink: 0 }}
+                                    />
+                                    <InputText
+                                      id="guacDriveHostDir"
+                                      value={formData.guacDriveHostDir}
+                                      onChange={handleTextChange('guacDriveHostDir')}
+                                      placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
+                                      style={{ padding: '6px 8px', fontSize: '12px', flex: 1, minWidth: '0' }}
+                                    />
+                                  </div>
                                   {!formData.guacDriveHostDir && (
                                     <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
                                       Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
@@ -899,14 +924,14 @@ export function UnifiedConnectionDialog({
 
         {/* Tab RDP */}
         <TabPanel header="RDP" leftIcon="pi pi-desktop">
-          <div className="p-fluid" style={{ padding: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
+          <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
             
             {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
               
               {/* Columna 1: Configuración de Conexión */}
               <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🔗 Conexión" className="mb-3" style={{ height: 'fit-content' }}>
+                <Card title="🔗 Conexión" className="mb-2" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
                     <div className="field col-12">
                       <label htmlFor="name" style={{ fontSize: '12px', fontWeight: '500' }}>Nombre *</label>
@@ -987,7 +1012,7 @@ export function UnifiedConnectionDialog({
 
               {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
               <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🖥️ Pantalla" className="mb-3" style={{ height: 'fit-content' }}>
+                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div className="field col-6">
@@ -1053,129 +1078,138 @@ export function UnifiedConnectionDialog({
                     </div>
 
                     {/* Opciones integradas en la misma columna */}
-                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
-                      <h6 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)' }}>
+                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '8px' }}>
+                      <h6 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color)' }}>
                         ⚙️ Opciones
                       </h6>
                       <div className="formgrid grid">
-                        {/* Opciones para MSTSC */}
+                        {/* Opciones para MSTSC en 2 columnas */}
                         {formData.clientType === 'mstsc' && (
                           <>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectFolders"
                                 checked={formData.redirectFolders}
                                 onChange={handleCheckboxChange('redirectFolders')}
                               />
-                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '11px' }}>📁 Redirigir carpetas</label>
+                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '10px' }}>📁 Redirigir carpetas</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectClipboard"
                                 checked={formData.redirectClipboard}
                                 onChange={handleCheckboxChange('redirectClipboard')}
                               />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectPrinters"
                                 checked={formData.redirectPrinters}
                                 onChange={handleCheckboxChange('redirectPrinters')}
                               />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectAudio"
                                 checked={formData.redirectAudio}
                                 onChange={handleCheckboxChange('redirectAudio')}
                               />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="smartSizing"
                                 checked={formData.smartSizing}
                                 onChange={handleCheckboxChange('smartSizing')}
                               />
-                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="fullscreen"
                                 checked={formData.fullscreen}
                                 onChange={handleCheckboxChange('fullscreen')}
                               />
-                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '11px' }}>🖥️ Pantalla completa</label>
+                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '10px' }}>🖥️ Pantalla completa</label>
                             </div>
                           </>
                         )}
 
-                        {/* Opciones para Guacamole */}
+                        {/* Opciones para Guacamole en 2 columnas */}
                         {formData.clientType === 'guacamole' && (
                           <>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectClipboard"
                                 checked={formData.redirectClipboard}
                                 onChange={handleCheckboxChange('redirectClipboard')}
                               />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '11px' }}>📋 Compartir portapapeles</label>
+                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectPrinters"
                                 checked={formData.redirectPrinters}
                                 onChange={handleCheckboxChange('redirectPrinters')}
                               />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '11px' }}>🖨️ Redirigir impresoras</label>
+                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="redirectAudio"
                                 checked={formData.redirectAudio}
                                 onChange={handleCheckboxChange('redirectAudio')}
                               />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '11px' }}>🔊 Redirigir audio</label>
+                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="autoResize"
                                 checked={formData.autoResize}
                                 onChange={handleCheckboxChange('autoResize')}
                               />
-                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '11px' }}>📐 Ajuste automático</label>
+                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="guacEnableWallpaper"
                                 checked={formData.guacEnableWallpaper}
                                 onChange={handleCheckboxChange('guacEnableWallpaper')}
                               />
-                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '11px' }}>🖼️ Mostrar fondo</label>
+                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '10px' }}>🖼️ Mostrar fondo</label>
                             </div>
-                            <div className="field-checkbox col-12">
+                            <div className="field-checkbox col-6">
                               <Checkbox
                                 inputId="guacEnableDrive"
                                 checked={formData.guacEnableDrive}
                                 onChange={handleCheckboxChange('guacEnableDrive')}
                               />
-                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '11px' }}>💾 Redirigir carpetas</label>
+                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '10px' }}>💾 Redirigir carpetas</label>
                             </div>
                             
                             {/* Configuración de carpetas condicional */}
                             {formData.guacEnableDrive && (
                               <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                                <div className="field col-12">
-                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500' }}>📁 Carpeta local para "NodeTerm Drive"</label>
-                                  <InputText
-                                    id="guacDriveHostDir"
-                                    value={formData.guacDriveHostDir}
-                                    onChange={handleTextChange('guacDriveHostDir')}
-                                    placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
-                                    style={{ padding: '4px 6px', fontSize: '12px' }}
-                                  />
+                                <div className="field" style={{ width: '100%', marginBottom: '8px' }}>
+                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>📁 Carpeta local para "NodeTerm Drive"</label>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%' }}>
+                                    <Button
+                                      icon="pi pi-folder-open"
+                                      className="p-button-outlined p-button-sm"
+                                      onClick={handleSelectFolder}
+                                      tooltip="Seleccionar carpeta"
+                                      style={{ padding: '6px 10px', fontSize: '11px', minWidth: 'auto', flexShrink: 0 }}
+                                    />
+                                    <InputText
+                                      id="guacDriveHostDir"
+                                      value={formData.guacDriveHostDir}
+                                      onChange={handleTextChange('guacDriveHostDir')}
+                                      placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
+                                      style={{ padding: '6px 8px', fontSize: '12px', flex: 1, minWidth: '0' }}
+                                    />
+                                  </div>
                                   {!formData.guacDriveHostDir && (
                                     <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
                                       Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
