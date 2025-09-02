@@ -409,7 +409,7 @@ export function UnifiedConnectionDialog({
                 <Card title="🔗 Conexión" className="mb-2" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
                     <div className="field col-12">
-                      <label htmlFor="name" style={{ fontSize: '12px', fontWeight: '500' }}>Nombre *</label>
+                      <label htmlFor="name" style={{ fontSize: '11px', fontWeight: '500' }}>Nombre *</label>
                       <InputText
                         id="name"
                         value={formData.name}
@@ -420,7 +420,7 @@ export function UnifiedConnectionDialog({
                       />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="server" style={{ fontSize: '12px', fontWeight: '500' }}>Servidor *</label>
+                      <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
                       <InputText
                         id="server"
                         value={formData.server}
@@ -432,7 +432,7 @@ export function UnifiedConnectionDialog({
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div className="field col-6">
-                        <label htmlFor="username" style={{ fontSize: '12px', fontWeight: '500' }}>Usuario *</label>
+                        <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
                         <InputText
                           id="username"
                           value={formData.username}
@@ -443,7 +443,7 @@ export function UnifiedConnectionDialog({
                         />
                       </div>
                       <div className="field col-6">
-                        <label htmlFor="port" style={{ fontSize: '12px', fontWeight: '500' }}>Puerto</label>
+                        <label htmlFor="port" style={{ fontSize: '11px', fontWeight: '500' }}>Puerto</label>
                         <InputText
                           id="port"
                           type="number"
@@ -456,7 +456,7 @@ export function UnifiedConnectionDialog({
                       </div>
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="password" style={{ fontSize: '12px', fontWeight: '500' }}>Contraseña</label>
+                      <label htmlFor="password" style={{ fontSize: '11px', fontWeight: '500' }}>Contraseña</label>
                       <InputText
                         id="password"
                         type="password"
@@ -468,7 +468,7 @@ export function UnifiedConnectionDialog({
                       />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="clientType" style={{ fontSize: '12px', fontWeight: '500' }}>Tipo de Cliente</label>
+                      <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
                       <Dropdown
                         id="clientType"
                         value={formData.clientType}
@@ -481,6 +481,31 @@ export function UnifiedConnectionDialog({
                         style={{ fontSize: '13px' }}
                       />
                     </div>
+
+                    {/* Sección de Seguridad (solo para Guacamole) */}
+                    {formData.clientType === 'guacamole' && (
+                      <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
+                        <div className="field col-12">
+                          <label htmlFor="guacSecurity" style={{ fontSize: '11px', fontWeight: '500' }}>🔒 Protocolo de seguridad</label>
+                          <Dropdown
+                            id="guacSecurity"
+                            value={formData.guacSecurity}
+                            options={[
+                              { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
+                              { label: '🔐 RDP Estándar', value: 'rdp' },
+                              { label: '🔒 TLS', value: 'tls' },
+                              { label: '🛡️ Network Level Authentication', value: 'nla' }
+                            ]}
+                            onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                            style={{ fontSize: '12px', padding: '6px 8px' }}
+                            placeholder="Seleccionar protocolo"
+                          />
+                          <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
+                            Nivel de seguridad para la conexión RDP
+                          </small>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Card>
               </div>
@@ -697,6 +722,8 @@ export function UnifiedConnectionDialog({
                         )}
                       </div>
                     </div>
+
+
                   </div>
                 </Card>
               </div>
@@ -837,33 +864,7 @@ export function UnifiedConnectionDialog({
                     </div>
                   </div>
 
-                  {/* Selector de Seguridad al final */}
-                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--surface-border)' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: 'var(--text-color)' }}>
-                      🔒 Seguridad
-                    </h4>
-                    <div className="field" style={{ maxWidth: '300px' }}>
-                      <label htmlFor="guacSecurity" style={{ fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '6px' }}>
-                        Protocolo de seguridad
-                      </label>
-                      <Dropdown
-                        id="guacSecurity"
-                        value={formData.guacSecurity}
-                        options={[
-                          { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
-                          { label: '🔐 RDP Estándar', value: 'rdp' },
-                          { label: '🔒 TLS', value: 'tls' },
-                          { label: '🛡️ Network Level Authentication', value: 'nla' }
-                        ]}
-                        onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                        style={{ fontSize: '13px' }}
-                        placeholder="Seleccionar protocolo de seguridad"
-                      />
-                      <small style={{ color: 'var(--text-color-secondary)', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                        Selecciona el nivel de seguridad para la conexión RDP
-                      </small>
-                    </div>
-                  </div>
+
                 </Fieldset>
               </Card>
             )}
@@ -934,7 +935,7 @@ export function UnifiedConnectionDialog({
                 <Card title="🔗 Conexión" className="mb-2" style={{ height: 'fit-content' }}>
                   <div className="formgrid grid">
                     <div className="field col-12">
-                      <label htmlFor="name" style={{ fontSize: '12px', fontWeight: '500' }}>Nombre *</label>
+                      <label htmlFor="name" style={{ fontSize: '11px', fontWeight: '500' }}>Nombre *</label>
                       <InputText
                         id="name"
                         value={formData.name}
@@ -945,7 +946,7 @@ export function UnifiedConnectionDialog({
                       />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="server" style={{ fontSize: '12px', fontWeight: '500' }}>Servidor *</label>
+                      <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
                       <InputText
                         id="server"
                         value={formData.server}
@@ -957,7 +958,7 @@ export function UnifiedConnectionDialog({
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div className="field col-6">
-                        <label htmlFor="username" style={{ fontSize: '12px', fontWeight: '500' }}>Usuario *</label>
+                        <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
                         <InputText
                           id="username"
                           value={formData.username}
@@ -968,7 +969,7 @@ export function UnifiedConnectionDialog({
                         />
                       </div>
                       <div className="field col-6">
-                        <label htmlFor="port" style={{ fontSize: '12px', fontWeight: '500' }}>Puerto</label>
+                        <label htmlFor="port" style={{ fontSize: '11px', fontWeight: '500' }}>Puerto</label>
                         <InputText
                           id="port"
                           type="number"
@@ -981,7 +982,7 @@ export function UnifiedConnectionDialog({
                       </div>
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="password" style={{ fontSize: '12px', fontWeight: '500' }}>Contraseña</label>
+                      <label htmlFor="password" style={{ fontSize: '11px', fontWeight: '500' }}>Contraseña</label>
                       <InputText
                         id="password"
                         type="password"
@@ -993,7 +994,7 @@ export function UnifiedConnectionDialog({
                       />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="clientType" style={{ fontSize: '12px', fontWeight: '500' }}>Tipo de Cliente</label>
+                      <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
                       <Dropdown
                         id="clientType"
                         value={formData.clientType}
@@ -1006,6 +1007,31 @@ export function UnifiedConnectionDialog({
                         style={{ fontSize: '13px' }}
                       />
                     </div>
+
+                    {/* Sección de Seguridad (solo para Guacamole) */}
+                    {formData.clientType === 'guacamole' && (
+                      <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
+                        <div className="field col-12">
+                          <label htmlFor="guacSecurity" style={{ fontSize: '11px', fontWeight: '500' }}>🔒 Protocolo de seguridad</label>
+                          <Dropdown
+                            id="guacSecurity"
+                            value={formData.guacSecurity}
+                            options={[
+                              { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
+                              { label: '🔐 RDP Estándar', value: 'rdp' },
+                              { label: '🔒 TLS', value: 'tls' },
+                              { label: '🛡️ Network Level Authentication', value: 'nla' }
+                            ]}
+                            onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                            style={{ fontSize: '12px', padding: '6px 8px' }}
+                            placeholder="Seleccionar protocolo"
+                          />
+                          <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
+                            Nivel de seguridad para la conexión RDP
+                          </small>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Card>
               </div>
@@ -1222,6 +1248,8 @@ export function UnifiedConnectionDialog({
                         )}
                       </div>
                     </div>
+
+
                   </div>
                 </Card>
               </div>
@@ -1362,33 +1390,7 @@ export function UnifiedConnectionDialog({
                     </div>
                   </div>
 
-                  {/* Selector de Seguridad al final */}
-                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--surface-border)' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 12px 0', color: 'var(--text-color)' }}>
-                      🔒 Seguridad
-                    </h4>
-                    <div className="field" style={{ maxWidth: '300px' }}>
-                      <label htmlFor="guacSecurity" style={{ fontSize: '12px', fontWeight: '500', display: 'block', marginBottom: '6px' }}>
-                        Protocolo de seguridad
-                      </label>
-                      <Dropdown
-                        id="guacSecurity"
-                        value={formData.guacSecurity}
-                        options={[
-                          { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
-                          { label: '🔐 RDP Estándar', value: 'rdp' },
-                          { label: '🔒 TLS', value: 'tls' },
-                          { label: '🛡️ Network Level Authentication', value: 'nla' }
-                        ]}
-                        onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                        style={{ fontSize: '13px' }}
-                        placeholder="Seleccionar protocolo de seguridad"
-                      />
-                      <small style={{ color: 'var(--text-color-secondary)', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                        Selecciona el nivel de seguridad para la conexión RDP
-                      </small>
-                    </div>
-                  </div>
+
                 </Fieldset>
               </Card>
             )}
