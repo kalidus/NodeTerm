@@ -677,26 +677,7 @@ export function UnifiedConnectionDialog({
               </div>
             </div>
 
-            {/* Opciones específicas de Guacamole Drive */}
-            {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-              <Card title="💾 Configuración de Carpetas" className="mb-3">
-                <div className="field col-12">
-                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '12px', fontWeight: '500' }}>Carpeta local para "NodeTerm Drive"</label>
-                  <InputText
-                    id="guacDriveHostDir"
-                    value={formData.guacDriveHostDir}
-                    onChange={handleTextChange('guacDriveHostDir')}
-                    placeholder="Vacío = Descargas/NodeTerm Drive"
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
-                  />
-                  {!formData.guacDriveHostDir && (
-                    <small style={{ color: 'var(--text-color-secondary)', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                      Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
-                    </small>
-                  )}
-                </div>
-              </Card>
-            )}
+
 
             {/* Opciones avanzadas (solo Guacamole) */}
             {formData.clientType === 'guacamole' && (
@@ -1212,26 +1193,7 @@ export function UnifiedConnectionDialog({
               </div>
             </div>
 
-            {/* Opciones específicas de Guacamole Drive */}
-            {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-              <Card title="💾 Configuración de Carpetas" className="mb-3">
-                <div className="field col-12">
-                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '12px', fontWeight: '500' }}>Carpeta local para "NodeTerm Drive"</label>
-                  <InputText
-                    id="guacDriveHostDir"
-                    value={formData.guacDriveHostDir}
-                    onChange={handleTextChange('guacDriveHostDir')}
-                    placeholder="Vacío = Descargas/NodeTerm Drive"
-                    style={{ padding: '8px 10px', fontSize: '13px' }}
-                  />
-                  {!formData.guacDriveHostDir && (
-                    <small style={{ color: 'var(--text-color-secondary)', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                      Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
-                    </small>
-                  )}
-                </div>
-              </Card>
-            )}
+
 
             {/* Opciones avanzadas (solo Guacamole) */}
             {formData.clientType === 'guacamole' && (
