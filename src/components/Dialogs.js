@@ -751,8 +751,8 @@ export function UnifiedConnectionDialog({
 
                     {/* Opciones avanzadas integradas (solo Guacamole) */}
                     {formData.clientType === 'guacamole' && (
-                      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }}>
-                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0' }}>
+                      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }} className="advanced-options-container">
+                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0', margin: '0', marginLeft: '0px' }}>
                           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             {/* Columna 1: Opciones de Rendimiento */}
                             <div style={{ flex: '1', minWidth: '250px' }}>
@@ -1275,8 +1275,8 @@ export function UnifiedConnectionDialog({
 
                     {/* Opciones avanzadas integradas (solo Guacamole) */}
                     {formData.clientType === 'guacamole' && (
-                      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }}>
-                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0' }}>
+                      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }} className="advanced-options-container">
+                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0', margin: '0', marginLeft: '0px' }}>
                           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             {/* Columna 1: Opciones de Rendimiento */}
                             <div style={{ flex: '1', minWidth: '250px' }}>
