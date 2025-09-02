@@ -172,3 +172,67 @@ input, textarea, select {
 .field-checkbox {
   margin-bottom: 4px;
 } 
+
+/* === Unified Connection Dialog: compact form controls (32px) === */
+.unified-connection-dialog .p-inputtext {
+  padding: 4px 6px;
+  font-size: 12px;
+  height: 32px;
+  min-height: 32px;
+}
+
+.unified-connection-dialog .p-dropdown {
+  min-height: 32px;
+  height: 32px;
+}
+
+.unified-connection-dialog .p-dropdown .p-dropdown-label.p-inputtext {
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 24px;
+}
+
+.unified-connection-dialog .p-dropdown .p-dropdown-trigger {
+  padding: 0 8px;
+}
+
+.unified-connection-dialog .field-checkbox label {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.unified-connection-dialog .p-checkbox .p-checkbox-box {
+  width: 16px;
+  height: 16px;
+}
+
+.unified-connection-dialog .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 12px;
+}
+
+/* Advanced options fieldset integrated look */
+.unified-connection-dialog .advanced-fieldset.p-fieldset {
+  border: none !important;
+  background: transparent !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  padding: 0 !important;
+  margin: 0 0 6px 0 !important;
+  border: none !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .p-fieldset-toggler {
+  color: var(--primary-color) !important; /* toma el color del tema */
+}
+
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content {
+  padding: 0 !important;
+}

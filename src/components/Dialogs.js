@@ -752,7 +752,7 @@ export function UnifiedConnectionDialog({
                     {/* Opciones avanzadas integradas (solo Guacamole) */}
                     {formData.clientType === 'guacamole' && (
                       <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }}>
-                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed style={{ border: 'none', padding: '0' }}>
+                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0' }}>
                           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             {/* Columna 1: Opciones de Rendimiento */}
                             <div style={{ flex: '1', minWidth: '250px' }}>
@@ -1276,7 +1276,7 @@ export function UnifiedConnectionDialog({
                     {/* Opciones avanzadas integradas (solo Guacamole) */}
                     {formData.clientType === 'guacamole' && (
                       <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }}>
-                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed style={{ border: 'none', padding: '0' }}>
+                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0' }}>
                           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             {/* Columna 1: Opciones de Rendimiento */}
                             <div style={{ flex: '1', minWidth: '250px' }}>
