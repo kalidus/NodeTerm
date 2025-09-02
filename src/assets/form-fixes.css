@@ -273,12 +273,21 @@ input, textarea, select {
   padding-right: 0 !important;
 }
 
-/* Advanced options fieldset integrated look */
-.unified-connection-dialog .advanced-fieldset.p-fieldset {
+/* Advanced options fieldset integrated look - SUPER FORZADO */
+.unified-connection-dialog .advanced-fieldset.p-fieldset,
+.unified-connection-dialog .p-fieldset.advanced-fieldset,
+div[style*="borderTop"] .advanced-fieldset.p-fieldset,
+div[style*="paddingLeft"] .advanced-fieldset.p-fieldset {
   border: none !important;
   background: transparent !important;
-  margin: 16px 8px 0 8px !important; /* mismo margen lateral que las opciones normales */
+  margin: 0 !important; /* sin margen */
   padding: 0 !important;
+}
+
+/* Forzar alineación del contenedor de opciones avanzadas */
+div[style*="borderTop"][style*="paddingLeft"] {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
 }
 
 /* Contenedor padre de opciones avanzadas */
@@ -287,28 +296,89 @@ input, textarea, select {
   padding: 0 !important;
 }
 
-.unified-connection-dialog .advanced-fieldset .p-fieldset-legend {
+/* Legend de opciones avanzadas - FORZADO */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-legend,
+.unified-connection-dialog .p-fieldset.advanced-fieldset .p-fieldset-legend,
+div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
   background: transparent !important;
   color: var(--ui-dialog-text, var(--text-color)) !important;
   padding: 0 !important;
   margin: 0 0 6px 0 !important;
   border: none !important;
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important; /* texto a la izquierda, botón a la derecha */
+  width: 100% !important;
+  gap: 16px !important; /* separación entre texto y botón */
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
   font-size: 11px !important;
   font-weight: 600 !important;
+  order: 1; /* texto primero */
+  flex: 1;
+  padding-left: 8px !important; /* padding izquierdo para alinear con "Opciones" */
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-toggler {
-  color: var(--primary-color) !important; /* toma el color del tema */
-  margin-right: 6px;
+  color: var(--primary-color) !important;
+  margin-left: 16px !important; /* margen específico a la izquierda del botón */
+  order: 2; /* botón al final */
+  flex-shrink: 0; /* evita que se comprima */
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-content {
   padding: 0 !important;
+}
+
+/* HACK: Forzar alineación absoluta de opciones avanzadas */
+.unified-connection-dialog div[style*="borderTop"] {
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+}
+
+.unified-connection-dialog .p-fieldset {
+  margin: 0 !important;
+}
+
+.unified-connection-dialog .p-fieldset-legend {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Alineación específica del contenedor de opciones avanzadas */
+.unified-connection-dialog .advanced-options-container {
+  margin-left: 0px !important; /* alineado exactamente con el ícono de Opciones */
+  margin-right: 8px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* ÚLTIMO RECURSO: Especificidad máxima */
+.unified-connection-dialog .advanced-options-container .advanced-fieldset.p-fieldset[style*="margin"] {
+  margin: 0 !important;
+  margin-left: 0 !important;
+}
+
+.unified-connection-dialog .advanced-options-container .p-fieldset-legend[style] {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Eliminar el padding del header del fieldset que causa la desalineación */
+.unified-connection-dialog .p-fieldset-legend,
+.unified-connection-dialog [id*="pr_id"][id*="header"] {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Específico para el botón de opciones avanzadas */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-legend {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-left: -6px !important; /* ajuste fino para alinear exactamente con el ícono ⚙️ */
 }
 
 /* Alinear checkboxes de opciones avanzadas con el mismo estilo */
@@ -322,6 +392,112 @@ input, textarea, select {
   background: transparent !important; /* sin fondo, igual que las opciones normales */
   border-radius: 4px;
   min-height: 24px;
+}
+
+/* Opciones avanzadas en 2 columnas compactas con secciones */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content {
+  margin: 0 8px !important;
+  padding: 0 !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Responsividad para opciones avanzadas */
+@media (max-width: 900px) {
+  .unified-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+    grid-template-columns: 1fr !important;
+    gap: 2px !important;
+  }
+}
+
+/* Cada sección en las columnas */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: unset !important;
+  flex: unset !important;
+}
+
+/* Contenedores de opciones pegados */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content > div > div > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ELIMINAR TODO PADDING INTERNO de PrimeReact */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content * {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Solo mantener padding horizontal en las opciones */
+.unified-connection-dialog .advanced-fieldset .field-checkbox {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* ELIMINAR PADDING de elementos internos específicos */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content .p-element,
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content .p-component,
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content div {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Títulos de sección mejorados sin línea */
+.unified-connection-dialog .advanced-fieldset h4,
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content h4,
+.unified-connection-dialog .p-fieldset-content > div > div h4 {
+  font-size: 11px !important; /* más grande */
+  font-weight: 600 !important;
+  margin: 4px 0 2px 0 !important; /* espaciado reducido */
+  padding: 0 !important;
+  color: var(--text-color-secondary) !important;
+  border-bottom: none !important; /* sin línea */
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  background: transparent !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+
+/* Contenedor de checkboxes compacto sin espaciado extra */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content div[style*="flexDirection"] {
+  gap: 0px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Todos los checkboxes sin margen para estar pegados */
+.unified-connection-dialog .advanced-fieldset .field-checkbox:first-child,
+.unified-connection-dialog .advanced-fieldset .field-checkbox:not(:first-child) {
+  margin: 0 !important;
+}
+
+/* Checkboxes de opciones avanzadas IGUALES a las opciones normales */
+.unified-connection-dialog .advanced-fieldset .field-checkbox,
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox,
+.unified-connection-dialog .p-fieldset-content > div > div .field-checkbox {
+  margin: 0 !important; /* sin margen para pegarlas como las opciones normales */
+  padding: 2px 12px !important; /* padding vertical reducido */
+  min-height: 20px !important; /* altura reducida */
+  max-height: 20px !important; /* altura máxima fija */
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  border-radius: 4px;
 }
 
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
@@ -341,6 +517,7 @@ input, textarea, select {
   line-height: 1.3;
 }
 
+/* Checkboxes (círculos) IGUALES a las opciones normales */
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
   width: 12px !important;
   height: 12px !important;
@@ -353,4 +530,28 @@ input, textarea, select {
 
 .unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
   font-size: 8px !important;
+}
+
+/* Labels de opciones avanzadas IGUALES a las opciones normales */
+.unified-connection-dialog .advanced-fieldset .field-checkbox label,
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content .field-checkbox label,
+.unified-connection-dialog .p-fieldset-content > div > div .field-checkbox label {
+  font-size: 10px !important; /* mismo tamaño que las opciones normales */
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-color) !important; /* usa la variable del tema */
+  background: transparent !important;
+  font-weight: 400 !important;
+}
+
+/* FORZAR eliminación de fondos azules y estilos de inspector */
+.unified-connection-dialog .advanced-fieldset * {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .field-checkbox {
+  background: transparent !important;
+  background-color: transparent !important;
 }
