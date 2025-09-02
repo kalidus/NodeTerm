@@ -233,6 +233,7 @@ export function UnifiedConnectionDialog({
   editNodeData = null
 }) {
   const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP
+  const [isExpanded, setIsExpanded] = useState(false); // Estado para controlar si está expandido
   
   // Estados para RDP
   const [formData, setFormData] = useState({
@@ -304,6 +305,16 @@ export function UnifiedConnectionDialog({
     }
   };
 
+  // Función para alternar expansión
+  const toggleExpansion = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  // Calcular estilo dinámico basado en expansión
+  const dialogStyle = isExpanded 
+    ? { width: '95vw', height: '95vh', minWidth: '800px', minHeight: '600px' }
+    : { width: '900px', height: '70vh', minWidth: '800px', minHeight: '600px' };
+
   // Precargar datos cuando esté en modo edición
   useEffect(() => {
     if (isEditMode && editNodeData && visible) {
@@ -363,12 +374,27 @@ export function UnifiedConnectionDialog({
     }
   }, [isEditMode, editNodeData, editConnectionType, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort]);
 
+  // Header personalizado con botón de expansión
+  const customHeader = (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+      <span>{isEditMode ? "Editar Conexión" : "Nueva Conexión"}</span>
+      <Button
+        icon={isExpanded ? "pi pi-window-minimize" : "pi pi-window-maximize"}
+        className="p-button-text p-button-sm"
+        onClick={toggleExpansion}
+        tooltip={isExpanded ? "Contraer" : "Expandir"}
+        style={{ marginRight: '8px' }}
+      />
+    </div>
+  );
+
   return (
     <Dialog 
-      header={isEditMode ? "Editar Conexión" : "Nueva Conexión"} 
+      header={customHeader}
       visible={visible} 
-      style={{ width: '90vw', maxWidth: '900px', height: '90vh' }} 
+      style={dialogStyle} 
       modal 
+      resizable={true}
       onHide={onHide}
       contentStyle={{ padding: '0', overflow: 'auto' }}
       className="unified-connection-dialog"
