@@ -202,18 +202,89 @@ input, textarea, select {
 }
 
 .unified-connection-dialog .p-checkbox .p-checkbox-box {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .unified-connection-dialog .p-checkbox .p-checkbox-box .p-checkbox-icon {
-  font-size: 12px;
+  font-size: 11px;
+}
+
+/* Mejor alineación vertical entre checkbox y etiqueta */
+.unified-connection-dialog .field-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* texto a la izquierda, checkbox a la derecha */
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 4px 12px; /* más padding horizontal para más separación de los bordes */
+  background: transparent !important; /* sin fondo, igual que el resto */
+  border-radius: 4px;
+  min-height: 24px; /* altura mínima para alineación consistente */
+}
+
+.unified-connection-dialog .field-checkbox .p-checkbox {
+  margin: 0 !important;
+  order: 2; /* checkbox al final */
+  display: flex !important;
+  align-items: center !important; /* centra verticalmente el checkbox */
+}
+
+.unified-connection-dialog .field-checkbox label {
+  margin: 0 !important; /* sin margen */
+  white-space: nowrap;
+  order: 1; /* texto al principio */
+  flex: 1;
+  display: flex;
+  align-items: center; /* centra verticalmente el texto */
+  line-height: 1.3;
+}
+
+/* Hacer checkboxes redondos y más pequeños */
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important; /* redondo */
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 8px !important;
+}
+
+/* añadir margen a las columnas de checkboxes */
+.unified-connection-dialog .formgrid.grid .field-checkbox.col-6 {
+  padding: 0 8px !important; /* margen reducido para alinear con la "O" de Opciones */
+}
+
+/* Forzar margen en toda la sección de opciones */
+.unified-connection-dialog .formgrid.grid {
+  margin: 0 8px !important; /* margen reducido para alinear con la "O" de Opciones */
+  padding: 0 !important;
+}
+
+/* Margen adicional para el contenedor de opciones */
+.unified-connection-dialog div[style*="borderTop"] {
+  margin: 0 8px !important; /* margen reducido para alinear con la "O" de Opciones */
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Advanced options fieldset integrated look */
 .unified-connection-dialog .advanced-fieldset.p-fieldset {
   border: none !important;
   background: transparent !important;
+  margin: 16px 8px 0 8px !important; /* mismo margen lateral que las opciones normales */
+  padding: 0 !important;
+}
+
+/* Contenedor padre de opciones avanzadas */
+.unified-connection-dialog .advanced-fieldset .p-fieldset-content > div {
+  margin: 0 !important; /* sin margen adicional para no duplicar */
+  padding: 0 !important;
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-legend {
@@ -222,6 +293,8 @@ input, textarea, select {
   padding: 0 !important;
   margin: 0 0 6px 0 !important;
   border: none !important;
+  display: flex;
+  align-items: center;
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-legend-text {
@@ -231,8 +304,53 @@ input, textarea, select {
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-toggler {
   color: var(--primary-color) !important; /* toma el color del tema */
+  margin-right: 6px;
 }
 
 .unified-connection-dialog .advanced-fieldset .p-fieldset-content {
   padding: 0 !important;
+}
+
+/* Alinear checkboxes de opciones avanzadas con el mismo estilo */
+.unified-connection-dialog .advanced-fieldset .field-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 4px 12px;
+  background: transparent !important; /* sin fondo, igual que las opciones normales */
+  border-radius: 4px;
+  min-height: 24px;
+}
+
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox {
+  margin: 0 !important;
+  order: 2;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .field-checkbox label {
+  margin: 0 !important;
+  white-space: nowrap;
+  order: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  line-height: 1.3;
+}
+
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon {
+  font-size: 8px !important;
 }
