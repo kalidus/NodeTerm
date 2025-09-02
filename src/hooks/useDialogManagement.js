@@ -41,7 +41,8 @@ export const useDialogManagement = () => {
   const [rdpUsername, setRdpUsername] = useState('');
   const [rdpPassword, setRdpPassword] = useState('');
   const [rdpPort, setRdpPort] = useState(3389);
-  const [rdpClientType, setRdpClientType] = useState('mstsc');
+  const [rdpClientType, setRdpClientType] = useState('guacamole');
+  const [rdpGuacSecurity, setRdpGuacSecurity] = useState('any');
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
   const [rdpNodeData, setRdpNodeData] = useState(null);
   const [editingRdpNode, setEditingRdpNode] = useState(null);
@@ -73,7 +74,8 @@ export const useDialogManagement = () => {
     setRdpUsername('');
     setRdpPassword('');
     setRdpPort(3389);
-    setRdpClientType('mstsc');
+    setRdpClientType('guacamole');
+    setRdpGuacSecurity('any');
     setRdpTargetFolder(null);
   };
 
@@ -188,6 +190,7 @@ export const useDialogManagement = () => {
     rdpPassword, setRdpPassword,
     rdpPort, setRdpPort,
     rdpClientType, setRdpClientType,
+    rdpGuacSecurity, setRdpGuacSecurity,
     rdpTargetFolder, setRdpTargetFolder,
     rdpNodeData, setRdpNodeData,
     editingRdpNode, setEditingRdpNode,

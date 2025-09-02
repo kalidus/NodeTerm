@@ -83,6 +83,8 @@ const DialogsManager = ({
   setRdpPort,
   rdpClientType,
   setRdpClientType,
+  rdpGuacSecurity,
+  setRdpGuacSecurity,
   rdpTargetFolder,
   rdpNodeData,
   setRdpNodeData,
@@ -356,19 +358,43 @@ const DialogsManager = ({
               max={65535}
             />
           </div>
-          <div className="field">
-            <label htmlFor="rdpClientType">Cliente RDP:</label>
-            <Dropdown
-              id="rdpClientType"
-              value={rdpClientType}
-              options={[
-                { label: 'Windows MSTSC', value: 'mstsc' },
-                { label: 'FreeRDP', value: 'freerdp' },
-                { label: 'Apache Guacamole', value: 'guacamole' }
-              ]}
-              onChange={(e) => setRdpClientType(e.value)}
-              placeholder="Selecciona el cliente RDP"
-            />
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <div className="field" style={{ flex: '1', minWidth: '200px' }}>
+              <label htmlFor="rdpClientType">Cliente RDP:</label>
+              <Dropdown
+                id="rdpClientType"
+                value={rdpClientType}
+                options={[
+                  { label: 'Windows MSTSC', value: 'mstsc' },
+                  { label: 'FreeRDP', value: 'freerdp' },
+                  { label: 'Apache Guacamole', value: 'guacamole' }
+                ]}
+                onChange={(e) => setRdpClientType(e.value)}
+                placeholder="Selecciona el cliente RDP"
+              />
+            </div>
+            
+            {/* Protocolo de seguridad (solo para Guacamole) */}
+            {rdpClientType === 'guacamole' && (
+              <div className="field" style={{ flex: '1', minWidth: '200px' }}>
+                <label htmlFor="rdpGuacSecurity">🔒 Protocolo de seguridad:</label>
+                <Dropdown
+                  id="rdpGuacSecurity"
+                  value={rdpGuacSecurity || 'any'}
+                  options={[
+                    { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
+                    { label: '🔐 RDP Estándar', value: 'rdp' },
+                    { label: '🔒 TLS', value: 'tls' },
+                    { label: '🛡️ Network Level Authentication', value: 'nla' }
+                  ]}
+                  onChange={(e) => setRdpGuacSecurity(e.value)}
+                  placeholder="Seleccionar protocolo"
+                />
+                <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
+                  Nivel de seguridad para la conexión RDP
+                </small>
+              </div>
+            )}
           </div>
           <div className="field">
             <label htmlFor="rdpTargetFolder">Carpeta de destino:</label>
