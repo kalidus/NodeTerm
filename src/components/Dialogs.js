@@ -445,30 +445,19 @@ export function UnifiedConnectionDialog({
                         style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div className="field col-12">
-                      <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
-                      <InputText
-                        id="server"
-                        value={formData.server}
-                        onChange={handleTextChange('server')}
-                        placeholder="IP o nombre del servidor"
-                        autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
-                      />
-                    </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <div className="field col-6">
-                        <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
+                      <div className="field col-8">
+                        <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
                         <InputText
-                          id="username"
-                          value={formData.username}
-                          onChange={handleTextChange('username')}
-                          placeholder="Usuario"
+                          id="server"
+                          value={formData.server}
+                          onChange={handleTextChange('server')}
+                          placeholder="IP o nombre del servidor"
                           autoComplete="off"
                           style={{ padding: '8px 10px', fontSize: '13px' }}
                         />
                       </div>
-                      <div className="field col-6">
+                      <div className="field col-4">
                         <label htmlFor="port" style={{ fontSize: '11px', fontWeight: '500' }}>Puerto</label>
                         <InputText
                           id="port"
@@ -480,6 +469,17 @@ export function UnifiedConnectionDialog({
                           style={{ padding: '8px 10px', fontSize: '13px' }}
                         />
                       </div>
+                    </div>
+                    <div className="field col-12">
+                      <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
+                      <InputText
+                        id="username"
+                        value={formData.username}
+                        onChange={handleTextChange('username')}
+                        placeholder="Usuario"
+                        autoComplete="off"
+                        style={{ padding: '8px 10px', fontSize: '13px' }}
+                      />
                     </div>
                     <div className="field col-12">
                       <label htmlFor="password" style={{ fontSize: '11px', fontWeight: '500' }}>Contraseña</label>
@@ -969,30 +969,19 @@ export function UnifiedConnectionDialog({
                         style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div className="field col-12">
-                      <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
-                      <InputText
-                        id="server"
-                        value={formData.server}
-                        onChange={handleTextChange('server')}
-                        placeholder="IP o nombre del servidor"
-                        autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
-                      />
-                    </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <div className="field col-6">
-                        <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
+                      <div className="field col-8">
+                        <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
                         <InputText
-                          id="username"
-                          value={formData.username}
-                          onChange={handleTextChange('username')}
-                          placeholder="Usuario"
+                          id="server"
+                          value={formData.server}
+                          onChange={handleTextChange('server')}
+                          placeholder="IP o nombre del servidor"
                           autoComplete="off"
                           style={{ padding: '8px 10px', fontSize: '13px' }}
                         />
                       </div>
-                      <div className="field col-6">
+                      <div className="field col-4">
                         <label htmlFor="port" style={{ fontSize: '11px', fontWeight: '500' }}>Puerto</label>
                         <InputText
                           id="port"
@@ -1004,6 +993,17 @@ export function UnifiedConnectionDialog({
                           style={{ padding: '8px 10px', fontSize: '13px' }}
                         />
                       </div>
+                    </div>
+                    <div className="field col-12">
+                      <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
+                      <InputText
+                        id="username"
+                        value={formData.username}
+                        onChange={handleTextChange('username')}
+                        placeholder="Usuario"
+                        autoComplete="off"
+                        style={{ padding: '8px 10px', fontSize: '13px' }}
+                      />
                     </div>
                     <div className="field col-12">
                       <label htmlFor="password" style={{ fontSize: '11px', fontWeight: '500' }}>Contraseña</label>
