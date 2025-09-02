@@ -428,11 +428,11 @@ export function UnifiedConnectionDialog({
           <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
             
             {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'stretch' }}>
               
               {/* Columna 1: Configuración de Conexión */}
-              <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🔗 Conexión" className="mb-2" style={{ height: 'fit-content' }}>
+              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
+                <Card title="🔗 Conexión" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <div className="formgrid grid">
                     <div className="field col-12">
                       <label htmlFor="name" style={{ fontSize: '11px', fontWeight: '500' }}>Nombre *</label>
@@ -537,8 +537,8 @@ export function UnifiedConnectionDialog({
               </div>
 
               {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
-              <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: 'fit-content' }}>
+              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
+                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <div className="formgrid grid">
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div className="field col-6">
@@ -952,11 +952,11 @@ export function UnifiedConnectionDialog({
           <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
             
             {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'stretch' }}>
               
               {/* Columna 1: Configuración de Conexión */}
-              <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🔗 Conexión" className="mb-2" style={{ height: 'fit-content' }}>
+              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
+                <Card title="🔗 Conexión" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <div className="formgrid grid">
                     <div className="field col-12">
                       <label htmlFor="name" style={{ fontSize: '11px', fontWeight: '500' }}>Nombre *</label>
@@ -1061,8 +1061,8 @@ export function UnifiedConnectionDialog({
               </div>
 
               {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
-              <div style={{ flex: '1', minWidth: '280px' }}>
-                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: 'fit-content' }}>
+              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
+                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <div className="formgrid grid">
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div className="field col-6">
