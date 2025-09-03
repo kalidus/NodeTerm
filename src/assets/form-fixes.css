@@ -546,6 +546,7 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 }
 
 /* FORZAR eliminación de fondos azules y estilos de inspector */
+/* TEMPORALMENTE COMENTADO PARA DEBUGGING
 .unified-connection-dialog .advanced-fieldset * {
   background-color: transparent !important;
   background: transparent !important;
@@ -555,3 +556,185 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
   background: transparent !important;
   background-color: transparent !important;
 }
+*/
+
+/* ===== HEADERS DEL DIÁLOGO MÁS COMPACTOS ===== */
+
+/* Header principal del diálogo más compacto */
+.unified-connection-dialog .p-dialog-header {
+  padding: 4px 16px !important;
+  min-height: auto !important;
+  margin-bottom: 0 !important;
+}
+
+.unified-connection-dialog .p-dialog-header .p-dialog-title {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.2 !important;
+}
+
+/* Pestañas SSH/RDP más compactas */
+.unified-connection-dialog .p-tabview .p-tabview-nav {
+  padding: 2px 12px !important;
+  min-height: auto !important;
+  margin-top: 0 !important;
+}
+
+.unified-connection-dialog .p-tabview .p-tabview-nav .p-tabview-nav-link {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  min-height: 28px !important;
+}
+
+.unified-connection-dialog .p-tabview .p-tabview-nav .p-tabview-nav-link .p-tabview-left-icon {
+  font-size: 14px !important;
+  margin-right: 6px !important;
+}
+
+/* Headers de las secciones (Conexión, Pantalla) más compactos */
+.unified-connection-dialog .p-card .p-card-header {
+  padding: 6px 12px !important;
+  min-height: auto !important;
+}
+
+.unified-connection-dialog .p-card .p-card-title {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+}
+
+/* Eliminar padding extra de PrimeReact en los headers */
+.unified-connection-dialog .p-dialog-header *,
+.unified-connection-dialog .p-card-header * {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Eliminar separación entre header y pestañas */
+.unified-connection-dialog .p-tabview {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.unified-connection-dialog .p-tabview .p-tabview-nav-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Forzar que no haya espacio entre header y tabs */
+.unified-connection-dialog .p-dialog-content {
+  padding-top: 0 !important;
+}
+
+/* ===== RESTAURAR REGLAS BÁSICAS PARA OPCIONES NORMALES ===== */
+
+/* REGLA BÁSICA: Checkboxes normales redondos */
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  border: 1.5px solid var(--surface-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* REGLA BÁSICA: Rellenado completo cuando están seleccionados */
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA BÁSICA: Ocultar iconos para rellenado sólido en opciones normales */
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box .pi-check,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box .pi-check {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 0 !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  content: "" !important;
+  text-indent: -9999px !important;
+}
+
+/* REGLA BÁSICA: Eliminar outline molesto */
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box:focus,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box:focus,
+.unified-connection-dialog .field-checkbox .p-checkbox .p-checkbox-box:focus-visible,
+.unified-connection-dialog .formgrid.grid .field-checkbox .p-checkbox .p-checkbox-box:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ===== FIN DE RESTAURAR REGLAS BÁSICAS PARA OPCIONES NORMALES ===== */
+
+/* ===== REGLAS ESPECÍFICAS PARA OPCIONES AVANZADAS (ALTA ESPECIFICIDAD) ===== */
+
+/* REGLA CRÍTICA: Checkboxes de opciones avanzadas - MAYOR ESPECIFICIDAD */
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Ocultar icono completamente para rellenado sólido en opciones avanzadas */
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight .p-checkbox-icon,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked .p-checkbox-icon,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .p-checkbox-icon,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-highlight *,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box.p-checkbox-checked *,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi,
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox .p-checkbox-box .pi-check {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 0 !important;
+  height: 0 !important;
+  font-size: 0 !important;
+  content: "" !important;
+  text-indent: -9999px !important;
+}
+
+/* REGLA CRÍTICA: Contenedor de checkbox en opciones avanzadas */
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox.p-checkbox-checked .p-checkbox-box {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* REGLA CRÍTICA: Input nativo en opciones avanzadas */
+.unified-connection-dialog .advanced-fieldset .field-checkbox .p-checkbox input[type="checkbox"]:checked {
+  background: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* ===== FIN DE REGLAS ESPECÍFICAS PARA OPCIONES AVANZADAS ===== */
