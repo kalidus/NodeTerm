@@ -312,8 +312,8 @@ export function UnifiedConnectionDialog({
 
   // Calcular estilo dinámico basado en expansión
   const dialogStyle = isExpanded 
-    ? { width: '95vw', height: '95vh', minWidth: '800px', minHeight: '600px' }
-    : { width: '900px', height: '70vh', minWidth: '800px', minHeight: '600px' };
+    ? { width: '98vw', height: '98vh', minWidth: '1000px', minHeight: '800px' }
+    : { width: '1100px', height: '80vh', minWidth: '1000px', minHeight: '700px' };
 
   // Precargar datos cuando esté en modo edición
   useEffect(() => {
@@ -376,14 +376,14 @@ export function UnifiedConnectionDialog({
 
   // Header personalizado con botón de expansión
   const customHeader = (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-      <span>{isEditMode ? "Editar Conexión" : "Nueva Conexión"}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '4px 0' }}>
+      <span style={{ fontSize: '16px', fontWeight: '500' }}>{isEditMode ? "Editar Conexión" : "Nueva Conexión"}</span>
       <Button
         icon={isExpanded ? "pi pi-window-minimize" : "pi pi-window-maximize"}
         className="p-button-text p-button-sm"
         onClick={toggleExpansion}
         tooltip={isExpanded ? "Contraer" : "Expandir"}
-        style={{ marginRight: '8px' }}
+        style={{ marginRight: '8px', padding: '3px 6px' }}
       />
     </div>
   );
@@ -749,136 +749,127 @@ export function UnifiedConnectionDialog({
                       </div>
                     </div>
 
-                    {/* Opciones avanzadas integradas (solo Guacamole) */}
+                    {/* Opciones avanzadas integradas (solo Guacamole) - MISMO FORMATO que las Opciones */}
                     {formData.clientType === 'guacamole' && (
                       <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }} className="advanced-options-container">
                         <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0', margin: '0', marginLeft: '0px' }}>
-                          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                          <div className="formgrid grid">
                             {/* Columna 1: Opciones de Rendimiento */}
-                            <div style={{ flex: '1', minWidth: '250px' }}>
-                              <h4 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '4px' }}>
-                                🚀 Rendimiento
+                            <div className="col-6">
+                              <h4 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                🚀 RENDIMIENTO
                               </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableGfx"
-                                    checked={formData.guacEnableGfx}
-                                    onChange={handleCheckboxChange('guacEnableGfx')}
-                                  />
-                                  <label htmlFor="guacEnableGfx" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🎨 Habilitar GFX
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableDesktopComposition"
-                                    checked={formData.guacEnableDesktopComposition}
-                                    onChange={handleCheckboxChange('guacEnableDesktopComposition')}
-                                  />
-                                  <label htmlFor="guacEnableDesktopComposition" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🖼️ Desktop Composition
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableFontSmoothing"
-                                    checked={formData.guacEnableFontSmoothing}
-                                    onChange={handleCheckboxChange('guacEnableFontSmoothing')}
-                                  />
-                                  <label htmlFor="guacEnableFontSmoothing" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    ✨ Font Smoothing
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableTheming"
-                                    checked={formData.guacEnableTheming}
-                                    onChange={handleCheckboxChange('guacEnableTheming')}
-                                  />
-                                  <label htmlFor="guacEnableTheming" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🎨 Theming
-                                  </label>
-                                </div>
+                              <div className="field-checkbox">
+                                <Checkbox
+                                  inputId="guacEnableGfx"
+                                  checked={formData.guacEnableGfx}
+                                  onChange={handleCheckboxChange('guacEnableGfx')}
+                                />
+                                <label htmlFor="guacEnableGfx" className="ml-2" style={{ fontSize: '10px' }}>
+                                  🎨 Habilitar GFX
+                                </label>
+                              </div>
+                              <div className="field-checkbox">
+                                <Checkbox
+                                  inputId="guacEnableDesktopComposition"
+                                  checked={formData.guacEnableDesktopComposition}
+                                  onChange={handleCheckboxChange('guacEnableDesktopComposition')}
+                                />
+                                <label htmlFor="guacEnableDesktopComposition" className="ml-2" style={{ fontSize: '10px' }}>
+                                  🖼️ Desktop Composition
+                                </label>
+                              </div>
+                              <div className="field-checkbox">
+                                <Checkbox
+                                  inputId="guacEnableFontSmoothing"
+                                  checked={formData.guacEnableFontSmoothing}
+                                  onChange={handleCheckboxChange('guacEnableFontSmoothing')}
+                                />
+                                <label htmlFor="guacEnableFontSmoothing" className="ml-2" style={{ fontSize: '10px' }}>
+                                  ✨ Font Smoothing
+                                </label>
+                              </div>
+                              <div className="field-checkbox">
+                                <Checkbox
+                                  inputId="guacEnableTheming"
+                                  checked={formData.guacEnableTheming}
+                                  onChange={handleCheckboxChange('guacEnableTheming')}
+                                />
+                                <label htmlFor="guacEnableTheming" className="ml-2" style={{ fontSize: '10px' }}>
+                                  🎨 Theming
+                                </label>
                               </div>
                             </div>
 
-                            {/* Columna 2: Opciones de Interfaz */}
-                            <div style={{ flex: '1', minWidth: '250px' }}>
-                              <h4 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '4px' }}>
-                                🖱️ Interfaz
+                            {/* Columna 2: Opciones de Interfaz y Caché */}
+                            <div className="col-6">
+                              <h4 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                🖱️ INTERFAZ
                               </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableFullWindowDrag"
-                                    checked={formData.guacEnableFullWindowDrag}
-                                    onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
-                                  />
-                                  <label htmlFor="guacEnableFullWindowDrag" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🖱️ Full Window Drag
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableMenuAnimations"
-                                    checked={formData.guacEnableMenuAnimations}
-                                    onChange={handleCheckboxChange('guacEnableMenuAnimations')}
-                                  />
-                                  <label htmlFor="guacEnableMenuAnimations" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🎭 Animaciones de menú
-                                  </label>
-                                </div>
+                              <div className="field-checkbox">
+                                <Checkbox
+                                  inputId="guacEnableFullWindowDrag"
+                                  checked={formData.guacEnableFullWindowDrag}
+                                  onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
+                                />
+                                <label htmlFor="guacEnableFullWindowDrag" className="ml-2" style={{ fontSize: '10px' }}>
+                                  🖱️ Full Window Drag
+                                </label>
                               </div>
-                            </div>
-
-                            {/* Columna 3: Opciones de Caché */}
-                            <div style={{ flex: '1', minWidth: '250px' }}>
-                              <h4 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '4px' }}>
-                                💾 Caché
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableGlyphCaching"
-                                    checked={formData.guacDisableGlyphCaching}
-                                    onChange={handleCheckboxChange('guacDisableGlyphCaching')}
-                                  />
-                                  <label htmlFor="guacDisableGlyphCaching" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar glyph caching
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableOffscreenCaching"
-                                    checked={formData.guacDisableOffscreenCaching}
-                                    onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
-                                  />
-                                  <label htmlFor="guacDisableOffscreenCaching" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar offscreen caching
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableBitmapCaching"
-                                    checked={formData.guacDisableBitmapCaching}
-                                    onChange={handleCheckboxChange('guacDisableBitmapCaching')}
-                                  />
-                                  <label htmlFor="guacDisableBitmapCaching" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar bitmap caching
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableCopyRect"
-                                    checked={formData.guacDisableCopyRect}
-                                    onChange={handleCheckboxChange('guacDisableCopyRect')}
-                                  />
-                                  <label htmlFor="guacDisableCopyRect" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar copy-rect
-                                  </label>
-                                </div>
+                              <div className="field-checkbox">
+                                <Checkbox
+                                  inputId="guacEnableMenuAnimations"
+                                  checked={formData.guacEnableMenuAnimations}
+                                  onChange={handleCheckboxChange('guacEnableMenuAnimations')}
+                                />
+                                <label htmlFor="guacEnableMenuAnimations" className="ml-2" style={{ fontSize: '10px' }}>
+                                  🎭 Animaciones de menú
+                                </label>
                               </div>
+                              
+                                                             <h4 style={{ fontSize: '11px', fontWeight: '600', margin: '16px 0 6px 0', color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                 💾 CACHÉ
+                               </h4>
+                               <div className="field-checkbox">
+                                 <Checkbox
+                                   inputId="guacDisableGlyphCaching"
+                                   checked={formData.guacDisableGlyphCaching}
+                                   onChange={handleCheckboxChange('guacDisableGlyphCaching')}
+                                 />
+                                 <label htmlFor="guacDisableGlyphCaching" className="ml-2" style={{ fontSize: '10px' }}>
+                                   🚫 Desactivar glyph caching
+                                 </label>
+                               </div>
+                               <div className="field-checkbox">
+                                 <Checkbox
+                                   inputId="guacDisableOffscreenCaching"
+                                   checked={formData.guacDisableOffscreenCaching}
+                                   onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
+                                 />
+                                 <label htmlFor="guacDisableOffscreenCaching" className="ml-2" style={{ fontSize: '10px' }}>
+                                   🚫 Desactivar offscreen caching
+                                 </label>
+                               </div>
+                               <div className="field-checkbox">
+                                 <Checkbox
+                                   inputId="guacDisableBitmapCaching"
+                                   checked={formData.guacDisableBitmapCaching}
+                                   onChange={handleCheckboxChange('guacDisableBitmapCaching')}
+                                 />
+                                 <label htmlFor="guacDisableBitmapCaching" className="ml-2" style={{ fontSize: '10px' }}>
+                                   🚫 Desactivar bitmap caching
+                                 </label>
+                               </div>
+                               <div className="field-checkbox">
+                                 <Checkbox
+                                   inputId="guacDisableCopyRect"
+                                   checked={formData.guacDisableCopyRect}
+                                   onChange={handleCheckboxChange('guacDisableCopyRect')}
+                                 />
+                                 <label htmlFor="guacDisableCopyRect" className="ml-2" style={{ fontSize: '10px' }}>
+                                   🚫 Desactivar copy-rect
+                                 </label>
+                               </div>
                             </div>
                           </div>
                         </Fieldset>
