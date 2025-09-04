@@ -43,7 +43,8 @@ import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
-import '../assets/form-fixes.css';
+// import '../assets/form-fixes.css';
+import '../assets/sidebar-theme-fixes.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
 import { 
   getTabTypeAndIndex, 

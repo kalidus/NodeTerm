@@ -7,6 +7,7 @@ import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import "primeflex/primeflex.css";
+import './styles/base/base.css'; // Importamos la nueva base de estilos
 
 // Configuración global de PrimeReact para evitar errores de overlays
 if (typeof window !== 'undefined') {
@@ -42,8 +43,9 @@ if (typeof window !== 'undefined') {
 // Custom styles
 import './assets/styles.css';
 import './assets/sidebar-theme-fixes.css';
-import './assets/DashboardStyles.css';
-import './assets/Dashboard.css';
+// import './assets/DashboardStyles.css';
+// import './assets/Dashboard.css';
+// import './assets/form-fixes.css';
 
 const container = document.getElementById('root');
 const root = createRoot(container);
