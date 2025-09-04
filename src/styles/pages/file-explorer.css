@@ -1,0 +1,260 @@
+/* --- Page: File Explorer --- */
+
+.file-explorer-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.file-explorer-container, .file-explorer-container * {
+  font-family: var(--explorer-font, inherit) !important;
+}
+
+.file-explorer-card,
+.file-explorer-card .p-card,
+.file-explorer-card .p-card-body,
+.file-explorer-card .p-card-content {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+}
+
+.file-explorer-card .p-card-body {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0.75rem !important;
+  overflow: hidden !important;
+}
+
+.file-explorer-card .p-card-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.file-explorer-toolbar {
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.file-explorer-toolbar .p-toolbar {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.file-explorer-breadcrumb {
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.file-explorer-breadcrumb .p-breadcrumb {
+  background: var(--ui-sidebar-bg) !important;
+  color: var(--ui-sidebar-text) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.file-explorer-table-container {
+  flex: 1;
+  min-height: 0;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-content-text) !important;
+  border: 1px solid var(--ui-content-border) !important;
+  border-radius: 6px;
+}
+
+.file-explorer-table-container.drag-active {
+  border: 2px dashed var(--primary-color, #007ad9);
+  background: rgba(0, 122, 217, 0.08);
+  transition: border 0.2s, background 0.2s;
+}
+
+.file-explorer-datatable {
+  border: none !important;
+}
+
+.file-explorer-datatable .p-datatable-wrapper {
+  border: none !important;
+}
+
+.file-explorer-datatable .p-datatable-header {
+  background: var(--surface-50) !important;
+  border-bottom: 1px solid var(--surface-300) !important;
+}
+
+/* Icons */
+.file-icon {
+  margin-right: 0.5rem;
+  width: 16px;
+  text-align: center;
+}
+
+.directory-icon {
+  color: var(--ui-sidebar-folder, #007ad9) !important;
+}
+
+.file-type-icon, .symlink-icon {
+  color: var(--ui-sidebar-text) !important;
+}
+
+.symlink-name {
+  font-style: italic;
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Row Styles */
+.file-explorer-table .p-datatable tbody tr:hover {
+  background-color: var(--ui-sidebar-hover) !important;
+  color: var(--ui-sidebar-text) !important;
+  cursor: pointer;
+}
+
+.file-explorer-table .p-datatable tbody tr.p-highlight {
+  background-color: var(--ui-sidebar-selected) !important;
+  color: var(--ui-sidebar-text) !important;
+}
+
+/* Breadcrumb */
+.file-explorer-breadcrumb .p-breadcrumb ol {
+  margin: 0;
+}
+
+/* Loading Progress */
+.file-explorer-loading {
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Toolbar Buttons */
+.file-explorer-toolbar .p-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: var(--ui-file-button-bg, transparent) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.3s ease;
+}
+
+.file-explorer-toolbar .p-button:hover {
+  background: var(--ui-file-button-hover, rgba(0,0,0,0.1)) !important;
+  transform: translateY(-1px);
+}
+
+.file-explorer-toolbar .p-button .p-button-icon {
+  margin: 0 !important;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  transition: color 0.3s ease;
+}
+
+.file-explorer-toolbar .p-button .p-button-label {
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  transition: color 0.3s ease;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger {
+  background: #f87171 !important;
+  color: #fff !important;
+  border: 1px solid #f87171 !important;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger .p-button-label,
+.file-explorer-toolbar .p-button.p-button-danger:hover .p-button-label {
+  color: #fff !important;
+}
+
+.file-explorer-toolbar .p-button.p-button-danger:hover {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+/* Transfer Progress */
+.transfer-progress {
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.transfer-progress-text {
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+
+/* Action Buttons in Rows */
+.file-actions-button {
+  margin-right: 0.25rem;
+}
+
+.file-actions-button:last-child {
+  margin-right: 0;
+}
+
+.file-explorer-datatable .p-button-text .p-button-label {
+  color: var(--ui-file-button-text, var(--text-color)) !important;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.file-explorer-datatable .p-button-text:hover .p-button-label {
+  color: var(--ui-button-primary, #007ad9) !important;
+}
+
+.file-explorer-datatable .p-button-text.p-button-danger .p-button-label {
+  color: #f87171 !important;
+}
+
+.file-explorer-datatable .p-button-text.p-button-danger:hover .p-button-label {
+  color: #dc2626 !important;
+}
+
+/* Theming for DataTable */
+.file-explorer-table-container .p-datatable,
+.file-explorer-table-container .p-datatable-wrapper,
+.file-explorer-table-container .p-datatable-header,
+.file-explorer-table-container .p-datatable-thead > tr > th,
+.file-explorer-table-container .p-datatable-tbody > tr > td {
+  background: var(--ui-content-bg) !important;
+  color: var(--ui-content-text) !important;
+  border-color: var(--ui-content-border) !important;
+}
+
+.file-explorer-table-container .p-datatable-header {
+  border-bottom: 1px solid var(--ui-content-border) !important;
+}
+
+.file-explorer-table-container .p-datatable-thead > tr > th {
+  background: var(--ui-content-bg) !important;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .file-explorer-table-container {
+    max-height: calc(100vh - 320px);
+  }
+}
