@@ -44,7 +44,7 @@ import GuacamoleTab from './GuacamoleTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
-import '../assets/sidebar-theme-fixes.css';
+import '../styles/layout/sidebar.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
 import { 
   getTabTypeAndIndex, 
