@@ -1,0 +1,219 @@
+.main-tab-view {
+  flex-shrink: 0 !important; /* Solución preventiva: Evita que el componente TabView se estire */
+}
+
+/* Estilos para la barra de pestañas principal */
+.p-tabview .p-tabview-nav {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  height: 26px;
+  min-height: 26px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  background: var(--ui-content-bg) !important;
+  border-bottom: 1px solid var(--ui-tab-border) !important;
+}
+
+.p-tabview .p-tabview-nav li {
+  flex: 0 0 auto;
+  min-width: 130px !important;
+  max-width: 220px !important;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  margin-right: 2px !important;
+}
+
+.p-tabview .p-tabview-nav li .p-tabview-nav-link {
+  padding: 0 0.7rem !important;
+  font-size: 0.78rem !important;
+  height: 100%;
+  min-height: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Barra de tinta para la pestaña activa */
+.p-tabview .p-tabview-nav .p-tabview-ink-bar {
+  display: block !important;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background-color: var(--primary-color);
+  transition: width 0.2s, left 0.2s;
+  border-radius: 0 0 3px 3px;
+}
+
+.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  color: var(--primary-color);
+  border-color: transparent;
+  background: var(--surface-100);
+}
+
+/* Botón de cierre en cada pestaña */
+.p-tabview .p-tabview-nav li .p-button {
+  min-width: 12px !important;
+  min-height: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  font-size: 0.5rem !important;
+  margin-left: 2px !important;
+}
+
+.p-tabview .p-tabview-nav li .p-button.p-button-rounded.p-button-text.p-button-sm {
+  min-width: 12px !important;
+  min-height: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+  font-size: 0.5rem !important;
+  padding: 0 !important;
+  margin: 0 0 0 2px !important;
+}
+
+/* Botón para pestañas que no caben en la vista (overflow) */
+.overflow-tab-btn {
+  min-width: 22px !important;
+  min-height: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: absolute !important;
+  right: 3px !important;
+  top: 3px !important;
+  z-index: 10 !important;
+  background: var(--surface-0, #ffffff) !important;
+  border: 1px solid var(--surface-400, #dee2e6) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  color: var(--text-color, #495057) !important;
+  padding: 0 !important;
+}
+
+.overflow-tab-btn:hover {
+  background: var(--surface-100, #f8f9fa) !important;
+  border-color: var(--surface-500, #adb5bd) !important;
+  color: var(--text-color, #212529) !important;
+}
+
+.overflow-tab-btn:focus {
+  box-shadow: 0 0 0 2px var(--primary-200, rgba(0, 123, 255, 0.25)) !important;
+}
+
+.overflow-tab-btn .p-button-icon {
+  font-size: 0.75rem !important;
+  color: inherit !important;
+  margin: 0 !important;
+}
+
+.p-tabview .p-tabview-panels {
+  padding: 0 !important;
+}
+
+/* --- Drag & Drop para pestañas --- */
+.p-tabview .p-tabview-nav li[draggable="true"] {
+  transition: opacity 0.2s, border-left 0.2s, transform 0.1s;
+}
+
+.p-tabview .p-tabview-nav li[draggable="true"]:hover {
+  cursor: grab;
+}
+
+.p-tabview .p-tabview-nav li[draggable="true"]:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+.tab-drag-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--primary-color, #007ad9);
+  opacity: 0.8;
+  z-index: 1000;
+}
+
+.tab-dragging {
+  opacity: 0.5 !important;
+  pointer-events: none;
+}
+
+.tab-drop-zone {
+  border-left: 3px solid var(--primary-color, #007ad9) !important;
+  background: rgba(0, 122, 217, 0.05);
+}
+
+.p-tabview .p-tabview-nav li {
+  transition: transform 0.2s ease-out;
+}
+
+/* --- Grupos de Pestañas --- */
+.group-delete-x {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.group-hover .group-delete-x {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.tabview-groups-bar .p-tabview-nav {
+  border-bottom: 2px solid #bdbdbd;
+  margin-bottom: 0;
+  z-index: 2;
+  position: relative;
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-ink-bar {
+  background-color: var(--group-ink-bar-color, #bbb) !important;
+}
+
+.tabview-groups-bar .p-tabview-nav li {
+  min-width: 90px !important;
+  max-width: 150px !important;
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+  padding-right: 32px !important;
+  overflow: hidden;
+  background-color: var(--tab-bg-color, #f5f5f5) !important;
+  border: 1px solid var(--tab-border-color, #d0d0d0) !important;
+}
+
+.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.tabview-groups-bar .group-delete-x {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+}
+
+.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link,
+.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-tab-active-bg) !important;
+  color: var(--ui-tab-active-text) !important;
+  border-color: var(--ui-tab-border) !important;
+}

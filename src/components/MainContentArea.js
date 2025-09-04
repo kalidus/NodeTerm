@@ -161,7 +161,7 @@ const MainContentArea = ({
                     }}
                     renderActiveOnly={false}
                     scrollable={false}
-                    className=""
+                    className="main-tab-view"
                   >
                     {filteredTabs.map((tab, idx) => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
