@@ -27,78 +27,7 @@
 }
 
 /* === PrimeReact Tree Style Matching === */
-.sidebar-tree {
-  font-family: "Public Sans", Arial, sans-serif;
-  font-size: 0.8rem;
-  color: #495057;
-  background: #fff;
-  border: none;
-  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
-}
-.sidebar-tree .p-treenode {
-  margin: 0 !important;
-  padding: 0 !important;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-.sidebar-tree .p-treenode-content {
-  padding: 0.1rem 0.5rem !important;
-  min-height: 22px !important;
-  line-height: 22px !important;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  transition: background 0.2s;
-}
-.sidebar-tree .p-treenode-content:hover,
-.sidebar-tree .p-treenode-content.p-highlight {
-  background: #f6f9fa;
-  color: #2c3e50;
-}
-.sidebar-tree .p-treenode-label {
-  font-size: 0.8rem;
-  color: #495057;
-  font-weight: 400;
-}
-.sidebar-tree .pi {
-  font-size: 0.8rem;
-  color: #6c757d;
-}
-.sidebar-tree .p-treenode-children {
-  padding-left: 0.6rem !important;
-}
-.sidebar-tree .p-treenode-content {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-}
-.sidebar-tree .p-treenode-content::before,
-.sidebar-tree .p-treenode::before,
-.sidebar-tree .p-treenode-children::before,
-.sidebar-tree .p-treenode-children > .p-treenode::before {
-  display: none !important;
-  background: none !important;
-  border: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  content: none !important;
-}
-.sidebar-tree .p-treenode-leaf > .p-treenode-content .pi {
-  color: #b0b0b0;
-}
-.sidebar-tree .p-treenode-content .connection-indicator {
-  font-size: 0.7rem;
-  margin-right: 0.25rem;
-}
-.sidebar-tree .p-treenode-content .node-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sidebar-tree .p-treenode-content .ml-auto {
-  margin-left: auto;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 .p-splitter-panel h3 {
   font-size: 0.95rem;
@@ -124,64 +53,10 @@
   max-width: 44px !important;
 }
 
-.p-treenode:hover .node-action-button {
-  visibility: visible;
-}
-
-.node-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.75rem;
-  line-height: 1.2;
-}
-
-.p-treenode-content {
-  display: flex;
-  width: 100%;
-}
-
-.node-action-button .p-button-icon {
-  font-size: 0.65rem;
-}
-
-.node-action-button {
-  width: 1.5rem !important;
-  height: 1.5rem !important;
-  margin-left: auto;
-  visibility: hidden;
-}
-
-.p-tree-filter-container {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-  padding: 0 0.5rem;
-}
-
-.p-tree-filter {
-  padding: 0.25rem 0.4rem !important;
-  font-size: 0.75rem;
-}
-
-.p-splitter-panel .p-button {
-  width: 1.8rem !important;
-  height: 1.8rem !important;
-}
-
-.p-splitter-panel .p-button .p-button-icon {
-  font-size: 0.7rem !important;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Estilo para los botones de acción de la barra lateral */
-.p-splitter-panel .sidebar-action-button {
-  width: 2.0rem !important;
-  height: 2.0rem !important;
-}
-
-.p-splitter-panel .sidebar-action-button .p-button-icon {
-  font-size: 1.0rem !important;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Custom scrollbar */
 /* Eliminado y movido a src/styles/base/_base.css */
@@ -327,10 +202,7 @@
 }
 
 /* Borde para el buscador del arbol */
-.sidebar-tree .p-tree-filter-container {
-  border: 1px solid var(--surface-d) !important;
-  border-radius: 6px;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Elimina el espacio entre las pestañas y el contenido del terminal */
 
@@ -837,97 +709,25 @@
 }
 
 /* Indicadores de estado de conexión SSH */
-.connection-indicator {
-  font-size: 8px;
-  margin-left: 4px;
-  margin-right: 4px;
-  transition: color 0.3s ease;
-}
-
-.connection-indicator.connected {
-  color: #28a745; /* Verde */
-}
-
-.connection-indicator.error {
-  color: #dc3545; /* Rojo */
-}
-
-.connection-indicator.disconnected {
-  color: #6c757d; /* Gris */
-}
-
-.connection-indicator.unknown {
-  color: #ffc107; /* Amarillo */
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
-.sidebar-tree .p-treenode {
-  margin-bottom: 1px;
-  /* Reduce el espacio entre nodos */
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Línea vertical continua para nivel raíz */
-.sidebar-tree .p-tree-container {
-  position: relative;
-}
-.sidebar-tree .p-tree-container::before {
-  display: none !important;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Evitar huecos: nodos droppoint (espacios de drop) */
-.sidebar-tree .p-treenode-droppoint {
-  height: 1px !important;
-  min-height: 1px !important;
-}
-.sidebar-tree .p-treenode-droppoint::before {
-  display: none !important;
-}
-/* Mostrar línea resaltada solo durante dragover */
-.sidebar-tree .p-treenode-droppoint-active {
-  height: 3px !important; /* ligeramente más alto para ver el indicador */
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Colores de iconos personalizados */
-/* Los colores de carpetas e iconos ahora se manejan por tema específico */
-.sidebar-tree .pi-desktop {
-  color: #42a5f5 !important; /* Azul fijo para iconos de sesión */
-}
-/* Color de toggler (flecha) */
-.sidebar-tree .p-tree-toggler {
-  margin-right: 1px !important;
-  padding: 0 !important;
-  width: 0.7rem !important;
-  height: 0.7rem !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sidebar-tree .p-tree-toggler-icon {
-  font-size: 0.45rem !important; /* flecha más pequeña */
-}
-
-:root {
-  --tree-indent: 24px; /* ancho flecha+icono */
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Alineación: cada nivel mantiene padding y compensa margen */
-.sidebar-tree .p-treenode-children {
-  padding-left: var(--tree-indent) !important;
-  border-left: none !important;
-}
-.sidebar-tree .p-treenode-content {
-  margin-left: calc(-1 * var(--tree-indent));
-  padding-left: 0.25rem !important;
-}
-.sidebar-tree .p-treenode-icon {
-  margin: 0 0.125rem 0 0 !important; /* icono más cerca del texto */
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Alinear nodos hoja con su carpeta padre */
-.sidebar-tree .p-treenode-leaf > .p-treenode-content {
-  margin-left: calc(-0.75rem); /* compensa padding del ul */
-  padding-left: 0.75rem;       /* mantiene espacio para icono */
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* Mostrar la X de eliminar grupo solo en hover */
 .group-delete-x {
@@ -1108,33 +908,7 @@
 }
 
 /* Restablecer estilos del árbol para asegurar funcionalidad */
-.sidebar-tree .p-tree,
-.sidebar-tree .p-treenode,
-.sidebar-tree .p-treenode-content {
-  pointer-events: auto;
-  cursor: default;
-  user-select: none;
-}
-
-/* Cursor pointer solo para elementos clicables */
-.sidebar-tree .p-treenode-content:hover {
-  cursor: pointer;
-}
-
-/* Botones de la sidebar */
-.sidebar-container .p-button {
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-/* Drag & drop */
-.sidebar-tree .p-treenode-content[draggable="true"] {
-  cursor: grab;
-}
-
-.sidebar-tree .p-treenode-content[draggable="true"]:active {
-  cursor: grabbing;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */
 
 /* El gutter del Splitter ahora es temático, ver themeManager.js */
 
@@ -1496,10 +1270,4 @@
 }
 
 /* Estilos para el botón de menú en el sidebar footer */
-.sidebar-footer .sidebar-action-button.p-button-text {
-  transition: all 0.2s ease !important;
-}
-
-.sidebar-footer .sidebar-action-button.p-button-text:hover {
-  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
-}
+/* MOVISTO A src/styles/layout/sidebar.css */

@@ -42,10 +42,10 @@ if (typeof window !== 'undefined') {
 
 // Custom styles
 import './assets/styles.css';
-import './assets/sidebar-theme-fixes.css';
 // import './assets/DashboardStyles.css';
 // import './assets/Dashboard.css';
 // import './assets/form-fixes.css';
+// import './assets/sidebar-theme-fixes.css';
 
 const container = document.getElementById('root');
 const root = createRoot(container);
