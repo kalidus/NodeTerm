@@ -1,0 +1,28 @@
+/* ---
+  Main Stylesheet
+  Este archivo actúa como el punto de entrada principal para todos los estilos de la aplicación.
+--- */
+
+/* --- Base --- */
+@import './base/base.css';
+
+/* --- Layout --- */
+@import './layout/splitter.css';
+@import './layout/statusbar.css';
+@import './layout/sidebar.css';
+
+/* --- Components --- */
+@import './components/tabs.css';
+@import './components/forms.css';
+@import './components/menubar.css';
+@import './components/dialogs.css';
+@import './components/menus.css';
+@import './components/terminal.css';
+
+
+/* --- Pages --- */
+@import './pages/dashboard.css';
+@import './pages/file-explorer.css';
+
+/* --- Themes --- */
+@import './themes/theme-previews.css';
