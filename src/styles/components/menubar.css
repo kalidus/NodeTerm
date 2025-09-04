@@ -1,0 +1,19 @@
+.p-menubar {
+  border-radius: 0;
+  min-height: 2.2rem !important;
+  height: 2.2rem !important;
+  padding: 0 0.5rem !important;
+  font-size: 0.75rem !important;
+}
+
+.p-menubar .p-menuitem-link {
+  min-height: 2.2rem !important;
+  height: 2.2rem !important;
+  padding: 0 0.7rem !important;
+  font-size: 0.75rem !important;
+}
+
+.p-menubar .p-menuitem-text,
+.p-menubar .p-menuitem-icon {
+  font-size: 0.85em !important;
+}

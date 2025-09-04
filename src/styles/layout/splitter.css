@@ -1,0 +1,27 @@
+.p-splitter {
+  border: none;
+}
+
+.p-splitter-panel h3 {
+  font-size: 0.95rem;
+  margin: 0.3rem 0;
+}
+
+.p-splitter-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Tamaño mínimo para el panel lateral */
+.p-splitter .p-splitter-panel:first-child {
+  min-width: 240px !important;
+  min-height: 47px !important;
+  max-width: 400px;
+}
+/* Cuando la sidebar está colapsada (ancho 44px) */
+.p-splitter .p-splitter-panel:first-child[style*="width: 44px"] {
+  min-width: 44px !important;
+  max-width: 44px !important;
+}
