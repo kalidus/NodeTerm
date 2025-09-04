@@ -1,0 +1,37 @@
+/* --- Component: Terminal --- */
+
+/* Añade un margen interno al área del terminal para que el texto no esté pegado a los bordes */
+.xterm-viewport {
+  padding: 2px !important;
+  /* Asegura que el padding no afecte al cálculo de tamaño del addon 'fit' */
+  box-sizing: border-box !important;
+}
+
+.xterm, .xterm-viewport, .xterm-screen {
+  height: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* --- Split Terminal Styles --- */
+.split-terminal-splitter {
+  height: 100% !important;
+}
+
+.split-terminal-splitter .p-splitter-gutter {
+  transition: background 0.2s;
+  cursor: col-resize;
+}
+
+.split-terminal-splitter .p-splitter-gutter:hover {
+  background: var(--ui-button-hover, #ddd) !important;
+}
+
+/* Padding externo opcional para el terminal */
+.terminal-outer-padding .xterm-viewport,
+.terminal-outer-padding .xterm {
+  padding: 10px !important;
+  box-sizing: border-box !important;
+}
