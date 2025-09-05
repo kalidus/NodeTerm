@@ -520,6 +520,25 @@ export function UnifiedConnectionDialog({
                       )}
                     </div>
                   </Card>
+
+                  {/* Nueva Card condicional para NodeTerm Drive - MODO EDICIÓN */}
+                  {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                    <Card title="📁 Directorio Local" className="mt-3">
+                      <div className="field">
+                        <label htmlFor="guacDriveHostDir-edit">Carpeta para "NodeTerm Drive"</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                          <InputText
+                            id="guacDriveHostDir-edit"
+                            value={formData.guacDriveHostDir}
+                            onChange={handleTextChange('guacDriveHostDir')}
+                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                          />
+                        </div>
+                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
+                      </div>
+                    </Card>
+                  )}
                 </div>
 
                 {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
@@ -608,22 +627,8 @@ export function UnifiedConnectionDialog({
                         </>
                       )}
                     </div>
-                    {/* Configuración de carpetas condicional para Guacamole */}
-                    {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                      <div className="field" style={{ marginTop: '1rem' }}>
-                        <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
-                          <InputText
-                            id="guacDriveHostDir-edit"
-                            value={formData.guacDriveHostDir}
-                            onChange={handleTextChange('guacDriveHostDir')}
-                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
-                          />
-                        </div>
-                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
-                      </div>
-                    )}
+                    {/* Configuración de carpetas condicional para Guacamole - ELIMINADO DE AQUÍ */}
+                    
 
                     {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
                     {formData.clientType === 'guacamole' && (
@@ -809,6 +814,25 @@ export function UnifiedConnectionDialog({
                       )}
                     </div>
                   </Card>
+
+                  {/* Nueva Card condicional para NodeTerm Drive - MODO CREACIÓN */}
+                  {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                    <Card title="📁 Directorio Local" className="mt-3">
+                      <div className="field">
+                        <label htmlFor="guacDriveHostDir-create">Carpeta para "NodeTerm Drive"</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                          <InputText
+                            id="guacDriveHostDir-create"
+                            value={formData.guacDriveHostDir}
+                            onChange={handleTextChange('guacDriveHostDir')}
+                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                          />
+                        </div>
+                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
+                      </div>
+                    </Card>
+                  )}
                 </div>
 
                 {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
@@ -897,22 +921,8 @@ export function UnifiedConnectionDialog({
                         </>
                       )}
                     </div>
-                    {/* Configuración de carpetas condicional para Guacamole */}
-                    {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                      <div className="field" style={{ marginTop: '1rem' }}>
-                        <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
-                          <InputText
-                            id="guacDriveHostDir-edit"
-                            value={formData.guacDriveHostDir}
-                            onChange={handleTextChange('guacDriveHostDir')}
-                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
-                          />
-                        </div>
-                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
-                      </div>
-                    )}
+                    {/* Configuración de carpetas condicional para Guacamole - ELIMINADO DE AQUÍ */}
+                    
 
                     {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
                     {formData.clientType === 'guacamole' && (
