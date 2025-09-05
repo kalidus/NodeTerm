@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { Splitter, SplitterPanel } from 'primereact/splitter';
 import TerminalComponent from './TerminalComponent';
 
 // Utilidad para ajustar brillo de un color hex
@@ -32,216 +33,186 @@ const SplitLayout = ({
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
-  const containerRef = useRef(null);
   
-  // Estado para el tamaño del panel izquierdo/superior
-  const [internalPaneSize, setInternalPaneSize] = useState(
-    orientation === 'vertical' ? 400 : 300
-  );
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
+  // Estado para funcionalidad de colapso (solo para vertical)
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const enableCollapse = orientation === 'vertical'; // Solo colapso en vertical
   
-  // Usar tamaño externo si se proporciona, sino usar el interno
-  const primaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
-
-  // Custom drag handlers para mejor precisión
-  const handleMouseDown = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY,
-      size: primaryPaneSize
-    });
-    
-    // Notificar inicio de resize
-    window.isMovingSplit = true;
-    window.dispatchEvent(new Event('split-move-start'));
-    
-    // Si había un tamaño externo activo y el usuario redimensiona manualmente,
-    // notificar que quiere volver al modo manual
-    if (externalPaneSize !== null && onManualResize) {
+  // Configuración del splitter basado en el sidebar que funciona perfecto
+  const collapsedSize = 4; // Porcentaje cuando está colapsado (como el sidebar: 44px de ~1000px = ~4%)
+  const defaultSize = orientation === 'vertical' ? 30 : 50; // Tamaño por defecto (50% para horizontal como antes)
+  
+  // Función para manejar resize del splitter
+  const handleResize = useCallback((e) => {
+    if (onManualResize) {
       onManualResize();
     }
-  }, [primaryPaneSize, externalPaneSize, onManualResize]);
+  }, [onManualResize]);
+  
+  // Función para toggle del colapso (mantener funcionalidad)
+  const handleToggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => !prev);
+  }, []);
 
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
-    
-    const isVertical = orientation === 'vertical';
-    const delta = isVertical ? (e.clientX - dragStart.x) : (e.clientY - dragStart.y);
-    const newSize = Math.round(dragStart.size + delta);
-    
-    // Aplicar límites
-    const minSize = 10;
-    const maxSize = isVertical 
-      ? Math.max(containerSize - 10, 10)
-      : Math.max(containerSize - 40, 10);
-    
-    const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
-    setInternalPaneSize(clampedSize);
-  }, [isDragging, dragStart, orientation, containerSize]);
-
-  const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      window.isMovingSplit = false;
-      window.dispatchEvent(new Event('split-move-stop'));
-    }
-  }, [isDragging]);
-
-  // Agregar event listeners globales
+  // Aplicar optimizaciones del sidebar que funciona perfecto
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = orientation === 'vertical' ? 'col-resize' : 'row-resize';
-      document.body.style.userSelect = 'none';
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp, orientation]);
+    const splitterElement = document.querySelector('.terminal-splitter');
+    if (!splitterElement) return;
 
-  const isVertical = orientation === 'vertical';
-  const containerStyle = {
-    height: '100%',
-    width: '100%',
-    display: 'flex',
-    flexDirection: isVertical ? 'row' : 'column',
-    overflow: 'hidden'
-  };
-
-  const primaryPaneStyle = {
-    width: isVertical ? `${primaryPaneSize}px` : '100%',
-    height: isVertical ? '100%' : `${primaryPaneSize}px`,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
-  };
-
-  const secondaryPaneStyle = {
-    width: isVertical ? `calc(100% - ${primaryPaneSize}px)` : '100%',
-    height: isVertical ? '100%' : `calc(100% - ${primaryPaneSize}px)`,
-    minHeight: isVertical ? 'auto' : '40px', // Altura mínima para mostrar las pestañas
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none',
-    background: theme?.background || undefined
-  };
-
-  // Calcular color base y hover para el separador
-  const baseColor = splitterColor || '#ddd';
-  // Determinar si el color es claro u oscuro
-  const isDark = (() => {
-    if (!baseColor.startsWith('#') || baseColor.length < 7) return true;
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
-  })();
-  // Color base: ligeramente más claro/oscuro (12%)
-  const visibleBaseColor = adjustColorBrightness(baseColor, isDark ? 12 : -12);
-  // Hover: aún más contraste (24%)
-  const handleColor = adjustColorBrightness(baseColor, isDark ? 24 : -24);
-
-  const [isHover, setIsHover] = React.useState(false);
-
-  const resizeHandleStyle = {
-    position: 'absolute',
-    backgroundColor: isHover ? handleColor : visibleBaseColor,
-    zIndex: 1000,
-    transition: 'background-color 0.2s ease',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-    MozUserSelect: 'none',
-    cursor: isVertical ? 'col-resize' : 'row-resize',
-    ...(isVertical ? {
-      width: '4px',
-      height: '100%',
-      right: '-2px',
-      top: 0
-    } : {
-      height: '6px',
-      width: '100%',
-      bottom: '-3px',
-      left: 0
-    })
-  };
-
-  const minPanelSize = 10; // Tamaño mínimo para mantener la barra siempre accesible
-  const minTerminalSize = 40; // Altura mínima para mostrar pestañas del terminal
-  const [containerSize, setContainerSize] = useState(0);
-
-  // Actualizar el tamaño del contenedor al montar y redimensionar
-  React.useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        setContainerSize(isVertical ? containerRef.current.offsetWidth : containerRef.current.offsetHeight);
+    const handleResizeStart = (e) => {
+      // Solo aplicar optimizaciones si el click es en el gutter (igual que el sidebar)
+      if (e.target.classList.contains('p-splitter-gutter')) {
+        splitterElement.classList.add('p-splitter-resizing');
+        // Deshabilitar transiciones durante el redimensionamiento para fluidez
+        document.documentElement.style.setProperty('--split-transition', 'none');
       }
     };
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, [isVertical]);
 
-  // Para horizontal: permitir que el dashboard vaya hasta casi toda la pantalla (dejando 40px para terminal)
-  // Para vertical: usar límites normales
-  const maxPrimaryPaneSize = isVertical 
-    ? Math.max(containerSize - minPanelSize, minPanelSize)
-    : Math.max(containerSize - minTerminalSize, minPanelSize);
+    const handleResizeEnd = () => {
+      splitterElement.classList.remove('p-splitter-resizing');
+      // Reactivar transiciones después del redimensionamiento
+      document.documentElement.style.removeProperty('--split-transition');
+    };
 
-  return (
-    <div ref={containerRef} style={containerStyle}>
-      {/* Panel principal con handle custom */}
-      <div style={{ ...primaryPaneStyle, position: 'relative' }}>
-        {/* Header del panel izquierdo */}
-        {onCloseLeft && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '4px 8px',
-            background: theme?.background || '#1e1e1e',
-            borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
-            fontSize: '12px',
-            color: theme?.foreground || '#fff',
-            minHeight: '24px'
-          }}>
-            <span style={{ 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-              flex: 1
-            }}>
-              {leftTerminal.label || leftTerminal.key}
-            </span>
-            <button
-              onClick={() => onCloseLeft(leftTerminal.key)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: theme?.foreground || '#fff',
-                cursor: 'pointer',
-                padding: '2px 4px',
-                fontSize: '14px',
-                marginLeft: '8px',
-                opacity: 0.7
-              }}
-              onMouseEnter={e => e.target.style.opacity = '1'}
-              onMouseLeave={e => e.target.style.opacity = '0.7'}
-            >
-              ×
-            </button>
-          </div>
-        )}
-        <div style={{ flex: 1, minHeight: 0 }}>
+    // Eventos para detectar inicio y fin del redimensionamiento (igual que el sidebar)
+    splitterElement.addEventListener('mousedown', handleResizeStart);
+    document.addEventListener('mouseup', handleResizeEnd);
+    
+    return () => {
+      splitterElement.removeEventListener('mousedown', handleResizeStart);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+  }, []);
+
+  // Configuración del gutter igual que el sidebar que funciona perfecto
+  const gutterStyle = {
+    transition: 'none', // Clave: sin transición como el sidebar
+    background: splitterColor || 'var(--ui-sidebar-gutter-bg, #dee2e6)',
+    borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
+    width: orientation === 'vertical' ? '2px' : '100%', // 2px como el sidebar
+    height: orientation === 'horizontal' ? '2px' : '100%'
+  };
+
+  // Usar PrimeReact solo para vertical, sistema original para horizontal
+  if (orientation === 'horizontal') {
+    // Mantener sistema original para HomeTab
+    const isVertical = orientation === 'vertical';
+    const containerStyle = {
+      height: '100%',
+      width: '100%',
+      display: 'flex',
+      flexDirection: isVertical ? 'row' : 'column',
+      overflow: 'hidden'
+    };
+
+    const primaryPaneSize = externalPaneSize !== null ? externalPaneSize : 400;
+
+    const primaryPaneStyle = {
+      width: isVertical ? `${primaryPaneSize}px` : '100%',
+      height: isVertical ? '100%' : `${primaryPaneSize}px`,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none'
+    };
+
+    const secondaryPaneStyle = {
+      width: isVertical ? `calc(100% - ${primaryPaneSize}px)` : '100%',
+      height: isVertical ? '100%' : `calc(100% - ${primaryPaneSize}px)`,
+      minHeight: isVertical ? 'auto' : '40px',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      transition: externalPaneSize !== null ? 'all 0.1s ease' : 'none',
+      background: theme?.background || undefined
+    };
+
+    // Necesitamos agregar el handle de resize horizontal
+    const [internalPaneSize, setInternalPaneSize] = useState(400);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
+    
+    const finalPrimaryPaneSize = externalPaneSize !== null ? externalPaneSize : internalPaneSize;
+    
+    // Actualizar los estilos con el tamaño final
+    const finalPrimaryPaneStyle = {
+      ...primaryPaneStyle,
+      height: `${finalPrimaryPaneSize}px`,
+      position: 'relative'
+    };
+    
+    const finalSecondaryPaneStyle = {
+      ...secondaryPaneStyle,
+      height: `calc(100% - ${finalPrimaryPaneSize}px)`
+    };
+
+    // Handlers de resize horizontal
+    const handleMouseDown = useCallback((e) => {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+        size: finalPrimaryPaneSize
+      });
+      
+      if (externalPaneSize !== null && onManualResize) {
+        onManualResize();
+      }
+    }, [finalPrimaryPaneSize, externalPaneSize, onManualResize]);
+
+    const handleMouseMove = useCallback((e) => {
+      if (!isDragging) return;
+      
+      const delta = e.clientY - dragStart.y;
+      const newSize = Math.round(dragStart.size + delta);
+      
+      const minSize = 100;
+      const maxSize = window.innerHeight - 100;
+      
+      const clampedSize = Math.max(minSize, Math.min(maxSize, newSize));
+      setInternalPaneSize(clampedSize);
+    }, [isDragging, dragStart]);
+
+    const handleMouseUp = useCallback(() => {
+      if (isDragging) {
+        setIsDragging(false);
+      }
+    }, [isDragging]);
+
+    // Event listeners para el drag horizontal
+    React.useEffect(() => {
+      if (isDragging) {
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+        
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        };
+      }
+    }, [isDragging, handleMouseMove, handleMouseUp]);
+
+    // Estilo del handle horizontal
+    const horizontalHandleStyle = {
+      position: 'absolute',
+      bottom: '-3px',
+      left: 0,
+      width: '100%',
+      height: '6px',
+      backgroundColor: splitterColor || '#ddd',
+      cursor: 'row-resize',
+      zIndex: 1000,
+      userSelect: 'none'
+    };
+
+    return (
+      <div style={containerStyle}>
+        <div style={finalPrimaryPaneStyle}>
           {leftTerminal.content ? (
             leftTerminal.content
           ) : (
@@ -263,18 +234,191 @@ const SplitLayout = ({
               statusBarIconTheme={statusBarIconTheme}
             />
           )}
+          
+          {/* Handle de resize horizontal */}
+          <div 
+            style={horizontalHandleStyle}
+            onMouseDown={handleMouseDown}
+          />
         </div>
         
-        {/* Custom resize handle */}
-        <div 
-          style={resizeHandleStyle}
-          onMouseDown={handleMouseDown}
-          onMouseEnter={() => setIsHover(true)}
-          onMouseLeave={() => setIsHover(false)}
-        />
+        <div style={finalSecondaryPaneStyle}>
+          {rightTerminal.content ? (
+            rightTerminal.content
+          ) : (
+            <TerminalComponent
+              ref={el => {
+                rightTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
+              }}
+              key={rightTerminal.key}
+              tabId={rightTerminal.key}
+              sshConfig={rightTerminal.sshConfig}
+              fontFamily={fontFamily}
+              fontSize={fontSize}
+              theme={theme}
+              onContextMenu={onContextMenu}
+              active={true}
+              stats={sshStatsByTabId[rightTerminal.key]}
+              hideStatusBar={true}
+              statusBarIconTheme={statusBarIconTheme}
+            />
+          )}
+        </div>
       </div>
+    );
+  }
+
+  // PrimeReact Splitter solo para orientación vertical
+  return (
+    <Splitter
+      style={{ height: '100%', width: '100%' }}
+      layout={orientation}
+      onResize={handleResize}
+      className="terminal-splitter"
+      pt={{
+        gutter: {
+          style: gutterStyle
+        }
+      }}
+    >
+      <SplitterPanel
+        size={(enableCollapse && isCollapsed) ? collapsedSize : defaultSize}
+        minSize={(enableCollapse && isCollapsed) ? collapsedSize : 10}
+        maxSize={(enableCollapse && isCollapsed) ? collapsedSize : 90}
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+          transition: 'all 0.2s ease'
+        }}
+      >
+        {/* Header del panel izquierdo con funcionalidad de colapso */}
+        {(onCloseLeft || enableCollapse) && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: (enableCollapse && isCollapsed) ? 'center' : 'space-between',
+            padding: (enableCollapse && isCollapsed) ? '4px 2px' : '4px 8px',
+            background: theme?.background || '#1e1e1e',
+            borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
+            fontSize: '12px',
+            color: theme?.foreground || '#fff',
+            minHeight: '24px'
+          }}>
+            {(enableCollapse && isCollapsed) ? (
+              // Botón para expandir cuando está colapsado
+              <button
+                onClick={handleToggleCollapse}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: theme?.foreground || '#fff',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  fontSize: '16px',
+                  opacity: 0.7,
+                  borderRadius: '3px'
+                }}
+                onMouseEnter={e => e.target.style.opacity = '1'}
+                onMouseLeave={e => e.target.style.opacity = '0.7'}
+                title="Expandir panel"
+              >
+                ▶
+              </button>
+            ) : (
+              <>
+                <span style={{ 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap',
+                  flex: 1
+                }}>
+                  {leftTerminal.label || leftTerminal.key}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {enableCollapse && (
+                    <button
+                      onClick={handleToggleCollapse}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: theme?.foreground || '#fff',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        fontSize: '12px',
+                        opacity: 0.7
+                      }}
+                      onMouseEnter={e => e.target.style.opacity = '1'}
+                      onMouseLeave={e => e.target.style.opacity = '0.7'}
+                      title="Colapsar panel"
+                    >
+                      ◀
+                    </button>
+                  )}
+                  {onCloseLeft && (
+                    <button
+                      onClick={() => onCloseLeft(leftTerminal.key)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: theme?.foreground || '#fff',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        fontSize: '14px',
+                        opacity: 0.7
+                      }}
+                      onMouseEnter={e => e.target.style.opacity = '1'}
+                      onMouseLeave={e => e.target.style.opacity = '0.7'}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        
+        {/* Contenido del panel izquierdo */}
+        <div style={{ 
+          flex: 1, 
+          minHeight: 0, 
+          display: (enableCollapse && isCollapsed) ? 'none' : 'flex', 
+          flexDirection: 'column' 
+        }}>
+          {!(enableCollapse && isCollapsed) && (leftTerminal.content ? (
+            leftTerminal.content
+          ) : (
+            <TerminalComponent
+              ref={el => {
+                leftTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+              }}
+              key={leftTerminal.key}
+              tabId={leftTerminal.key}
+              sshConfig={leftTerminal.sshConfig}
+              fontFamily={fontFamily}
+              fontSize={fontSize}
+              theme={theme}
+              onContextMenu={onContextMenu}
+              active={true}
+              stats={sshStatsByTabId[leftTerminal.key]}
+              hideStatusBar={true}
+              statusBarIconTheme={statusBarIconTheme}
+            />
+          ))}
+        </div>
+      </SplitterPanel>
       
-      <div style={secondaryPaneStyle}>
+      <SplitterPanel style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 0,
+        background: theme?.background || undefined
+      }}>
         {/* Header del panel derecho */}
         {onCloseRight && (
           <div style={{
@@ -315,6 +459,8 @@ const SplitLayout = ({
             </button>
           </div>
         )}
+        
+        {/* Contenido del panel derecho */}
         <div style={{ flex: 1, minHeight: 0 }}>
           {rightTerminal.content ? (
             rightTerminal.content
@@ -338,8 +484,8 @@ const SplitLayout = ({
             />
           )}
         </div>
-      </div>
-    </div>
+      </SplitterPanel>
+    </Splitter>
   );
 };
 

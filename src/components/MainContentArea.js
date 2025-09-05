@@ -91,16 +91,18 @@ const MainContentArea = ({
       <Splitter 
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={sidebarCollapsed ? undefined : handleResize}
-        onResize={sidebarCollapsed ? undefined : handleResizeThrottled}
+        onResize={sidebarCollapsed ? undefined : handleResize} // Usar handleResize directo sin throttling
         disabled={sidebarCollapsed}
         className="main-splitter"
         pt={{
           gutter: {
             style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {
-              transition: 'none',
+              transition: 'none', // Clave: sin transición para fluidez
               background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
               borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
-              width: '2px'
+              width: '4px', // Área ligeramente más amplia para mejor detección
+              cursor: 'col-resize', // Asegurar cursor correcto
+              margin: '0 -1px' // Centrar el área de detección
             }
           }
         }}
@@ -110,8 +112,8 @@ const MainContentArea = ({
           minSize={sidebarCollapsed ? 44 : 10} 
           maxSize={sidebarCollapsed ? 44 : 600}
           style={sidebarCollapsed 
-            ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'all 0.2s', display: 'flex', flexDirection: 'column' }
-            : { minWidth: 240, maxWidth: 400, padding: 0, height: '100%', transition: 'all 0.2s', display: 'flex', flexDirection: 'column' }
+            ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+            : { minWidth: 240, maxWidth: 400, padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
         >
           <Sidebar {...memoizedSidebarProps} />
