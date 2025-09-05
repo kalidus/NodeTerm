@@ -188,6 +188,18 @@
   flex-direction: column;
 }
 
+/* --- Fix para que el contenido de TabView ocupe todo el espacio --- */
+.unified-connection-dialog .p-tabview-panels {
+  flex-grow: 1 !important;
+  padding: 0 !important;
+  overflow: hidden !important; /* El scroll lo manejará el panel interno */
+}
+
+.unified-connection-dialog .p-tabview-panel {
+  height: 100% !important;
+  padding: 0 !important; /* El padding ya está en el componente del formulario */
+}
+
 .unified-connection-dialog .formgrid.grid {
   margin-top: 0.5rem;
 }
