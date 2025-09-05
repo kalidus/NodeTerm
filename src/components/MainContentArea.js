@@ -129,6 +129,7 @@ const MainContentArea = ({
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
+        key={sidebarCollapsed ? 'collapsed' : 'expanded'} // Forzar recreación al cambiar estado
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeWithAutoCollapse} // Con colapso automático
@@ -148,7 +149,7 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel 
-          size={sidebarCollapsed ? 4 : 15} 
+          size={sidebarCollapsed ? 4 : 18} 
           minSize={sidebarCollapsed ? 4 : 4} 
           maxSize={sidebarCollapsed ? 4 : 35}
           style={sidebarCollapsed 
