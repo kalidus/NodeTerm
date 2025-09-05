@@ -138,11 +138,11 @@ const MainContentArea = ({
           gutter: {
             style: {
               transition: 'none', // Clave: sin transición para fluidez
-              background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
-              borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
-              width: '4px', // Área ligeramente más amplia para mejor detección
+              background: 'transparent', // Línea invisible pero área de detección amplia
+              borderColor: 'transparent',
+              width: '8px', // Área mucho más amplia para mejor detección
               cursor: 'col-resize', // Asegurar cursor correcto
-              margin: '0 -1px' // Centrar el área de detección
+              margin: '0 -4px' // Centrar el área de detección más amplia
             }
           }
         }}
