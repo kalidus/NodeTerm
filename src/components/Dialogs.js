@@ -627,7 +627,7 @@ export function UnifiedConnectionDialog({
                   {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
                   {formData.clientType === 'guacamole' && (
                     <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                      <Fieldset legend="🚀 Opciones Avanzadas" toggleable collapsed>
+                      <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
                         <div className="formgrid grid">
                           <div className="col-4">
                             <h5>Rendimiento</h5>
@@ -915,7 +915,7 @@ export function UnifiedConnectionDialog({
                   {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
                   {formData.clientType === 'guacamole' && (
                     <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                      <Fieldset legend="🚀 Opciones Avanzadas" toggleable collapsed>
+                      <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
                         <div className="formgrid grid">
                           <div className="col-4">
                             <h5>Rendimiento</h5>
