@@ -86,8 +86,19 @@ const MainContentArea = ({
   selectedNode,
   treeContextMenuRef
 }) => {
-  // Función de colapso automático más fluida e inmediata
-  const handleResizeWithAutoCollapse = (e) => {
+  // Estado para controlar cuándo forzar reset del splitter
+  const [forceReset, setForceReset] = React.useState(0);
+
+  // Función de resize sin colapso automático (para arrastre libre)
+  const handleResizeOnly = (e) => {
+    console.log('🔄 onResize (manual):', e.sizes, '- Solo resize, sin auto-colapso');
+    // No llamar handleResize durante el arrastre para evitar interferencias
+  };
+
+  // Función de colapso automático solo al terminar el arrastre
+  const handleResizeEndWithAutoCollapse = (e) => {
+    console.log('🏁 onResizeEnd ejecutado:', e.sizes);
+    
     // Calcular ancho real del panel en píxeles
     const splitterElement = document.querySelector('.main-splitter');
     if (splitterElement) {
@@ -99,40 +110,37 @@ const MainContentArea = ({
       const collapseThresholdPx = 80;   // Colapsar antes del límite físico
       const expandThresholdPx = 60;     // Expandir muy fácilmente desde colapsado
       
-      console.log('📊 Resize:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
+      console.log('📊 ResizeEnd:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
       
-      // Usar requestAnimationFrame para transición más fluida
+      // Solo evaluar colapso/expansión al soltar el mouse
       if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
         console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
         requestAnimationFrame(() => {
           setSidebarCollapsed(true);
+          setForceReset(prev => prev + 1); // Forzar reset solo en auto-colapso
         });
       } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
         console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
         requestAnimationFrame(() => {
           setSidebarCollapsed(false);
+          setForceReset(prev => prev + 1); // Forzar reset solo en auto-expansión
         });
       }
     }
     
-    // Llamar al resize original
+    // Llamar al resize original solo al final (para redimensionar terminales)
     if (handleResize) {
       handleResize(e);
     }
   };
 
-  const handleResizeEndWithAutoCollapse = (e) => {
-    console.log('🏁 onResizeEnd ejecutado:', e.sizes);
-    handleResizeWithAutoCollapse(e);
-  };
-
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
-        key={sidebarCollapsed ? 'collapsed' : 'expanded'} // Forzar recreación al cambiar estado
+        // key={forceReset} // Temporalmente quitado para debugging
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={handleResizeEndWithAutoCollapse}
-        onResize={handleResizeWithAutoCollapse} // Con colapso automático
+        onResize={handleResizeOnly} // Sin colapso durante arrastre
         disabled={false}
         className="main-splitter"
         pt={{
