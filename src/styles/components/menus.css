@@ -1,0 +1,152 @@
+/* --- Component: Menus --- */
+
+/* Menú contextual de PrimeReact (usado para terminal, etc.) */
+.p-menu.p-menu-overlay {
+  min-width: 180px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid var(--surface-300, #dee2e6) !important;
+  border-radius: 6px !important;
+  background: var(--surface-0, #ffffff) !important;
+  z-index: 9999 !important;
+  animation: contextMenuFadeIn 0.15s ease-out !important;
+  position: fixed !important;
+  transform: none !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+}
+
+/* Asegurar que elementos ocultos no interfieran */
+.p-menu.p-menu-overlay[style*="display: none"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.p-menu .p-menuitem-link {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+  border-radius: 4px;
+  margin: 2px 4px;
+}
+
+.p-menu .p-menuitem-link:hover {
+  background-color: var(--surface-100, #f8f9fa);
+}
+
+.p-menu .p-menuitem-icon {
+  width: 1rem;
+  text-align: center;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.p-menu .p-menuitem-text {
+  color: var(--text-color, #212529);
+  font-weight: 500;
+}
+
+.p-menu .p-separator {
+  margin: 0.25rem 0;
+  border-top: 1px solid var(--surface-300, #dee2e6);
+}
+
+/* Estilos para el menú personalizado de la aplicación (sidebar, etc.) */
+.app-context-menu, .app-submenu {
+  font-family: var(--font-family, 'Public Sans', Arial, sans-serif) !important;
+  color: var(--ui-text-primary) !important;
+  background: var(--ui-sidebar-bg) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  user-select: none;
+}
+
+.app-context-menu .menu-item,
+.app-submenu .menu-item {
+  transition: background-color 0.15s ease !important;
+  position: relative;
+}
+
+.app-context-menu .menu-item:hover,
+.app-submenu .menu-item:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.app-context-menu .menu-item:active,
+.app-submenu .menu-item:active {
+  background: var(--ui-active-bg, rgba(255, 255, 255, 0.2)) !important;
+}
+
+.app-context-menu .menu-item[data-has-submenu="true"]:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.15)) !important;
+}
+
+.app-submenu {
+  animation: slideIn 0.15s ease-out;
+}
+
+/* Área de hover extendida para mejorar la UX del submenú */
+.app-context-menu .menu-item[data-has-submenu="true"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10px;
+  width: 10px;
+  height: 100%;
+  background: transparent;
+  z-index: 10001;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.app-context-menu .menu-separator,
+.app-submenu .menu-separator {
+  height: 1px;
+  background: var(--ui-sidebar-border) !important;
+  margin: 4px 8px;
+  opacity: 0.5;
+}
+
+.menu-shortcut {
+  font-size: 12px !important;
+  color: var(--ui-text-secondary, #888) !important;
+  font-weight: normal !important;
+}
+
+.app-context-menu .menu-item i,
+.app-submenu .menu-item i {
+  color: var(--ui-text-secondary, #888) !important;
+  transition: color 0.15s ease;
+}
+
+.app-context-menu .menu-item:hover i,
+.app-submenu .menu-item:hover i {
+  color: var(--ui-text-primary) !important;
+}
+
+/* Puente invisible para mejorar la transición entre menú y submenú */
+.menu-bridge {
+  pointer-events: auto;
+  user-select: none;
+}

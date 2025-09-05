@@ -25,3 +25,30 @@
   min-width: 44px !important;
   max-width: 44px !important;
 }
+
+.p-splitter.p-splitter-resizing .sidebar-container {
+  will-change: width, min-width, max-width !important;
+}
+
+/* --- Estilos para react-split-pane (divisor vertical alternativo) --- */
+.SplitPane .Resizer {
+  background: #888;
+  opacity: 0.7;
+  z-index: 1;
+  box-sizing: border-box;
+  background-clip: padding-box;
+}
+
+.SplitPane .Resizer.vertical {
+  width: 8px;
+  margin: 0 -4px;
+  cursor: col-resize;
+  border-left: 2px solid #666;
+  border-right: 2px solid #666;
+}
+
+.SplitPane .Resizer:hover {
+  transition: all 0.2s ease;
+  opacity: 1;
+  background: #555;
+}
