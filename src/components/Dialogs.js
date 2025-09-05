@@ -1082,252 +1082,160 @@ export function EnhancedSSHForm({
   };
 
   return (
-    <div style={{ padding: '16px', height: '100%', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+    <div className="p-fluid" style={{ padding: '12px', height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         
-        {/* Columna izquierda - Información de Conexión */}
-        <div style={{ flex: '1', minWidth: '300px' }}>
-          <div className="card" style={{ padding: '12px', margin: '0', height: 'fit-content' }}>
-            <h6 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: 'var(--primary-color)' }}>
-              📡 Información de Conexión
-            </h6>
-            
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                Nombre *
-              </label>
-              <InputText 
-                value={sshName} 
-                onChange={(e) => setSSHName(e.target.value)}
-                placeholder="Servidor producción"
-                autoFocus={activeTabIndex === 0}
-                className={`w-full ${validationErrors.name ? 'p-invalid' : ''}`}
-                style={{ padding: '8px 10px', fontSize: '13px' }}
-              />
-              {validationErrors.name && (
-                <small style={{ color: 'var(--red-400)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                  {validationErrors.name}
-                </small>
-              )}
-            </div>
-            
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-              <div style={{ flex: 2 }}>
-                <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Host *
-                </label>
+        {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+        <div style={{ flex: '1', minWidth: '320px' }}>
+          <Card title="🔗 Conexión">
+            <div className="formgrid grid">
+              <div className="field col-12">
+                <label htmlFor="sshName">Nombre *</label>
                 <InputText 
+                  id="sshName"
+                  value={sshName} 
+                  onChange={(e) => setSSHName(e.target.value)}
+                  placeholder="Servidor de producción"
+                  autoFocus={activeTabIndex === 0}
+                  className={validationErrors.name ? 'p-invalid' : ''}
+                />
+                {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
+              </div>
+
+              <div className="field col-8">
+                <label htmlFor="sshHost">Host *</label>
+                <InputText 
+                  id="sshHost"
                   value={sshHost} 
                   onChange={(e) => setSSHHost(e.target.value)}
-                  placeholder="192.168.1.100"
-                  className={`w-full ${validationErrors.host ? 'p-invalid' : ''}`}
-                  style={{ padding: '8px 10px', fontSize: '13px' }}
+                  placeholder="IP o nombre del servidor"
+                  className={validationErrors.host ? 'p-invalid' : ''}
                 />
-                {validationErrors.host && (
-                  <small style={{ color: 'var(--red-400)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                    {validationErrors.host}
-                  </small>
-                )}
+                {validationErrors.host && <small className="p-error">{validationErrors.host}</small>}
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Puerto
-                </label>
+
+              <div className="field col-4">
+                <label htmlFor="sshPort">Puerto</label>
                 <InputText 
+                  id="sshPort"
                   value={sshPort} 
                   onChange={(e) => setSSHPort(e.target.value)}
                   placeholder="22"
-                  className={`w-full ${validationErrors.port ? 'p-invalid' : ''}`}
-                  style={{ padding: '8px 10px', fontSize: '13px' }}
+                  className={validationErrors.port ? 'p-invalid' : ''}
                 />
-                {validationErrors.port && (
-                  <small style={{ color: 'var(--red-400)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                    {validationErrors.port}
-                  </small>
-                )}
+                 {validationErrors.port && <small className="p-error">{validationErrors.port}</small>}
+              </div>
+
+              <div className="field col-12">
+                <label htmlFor="sshUser">Usuario *</label>
+                <InputText 
+                  id="sshUser"
+                  value={sshUser} 
+                  onChange={(e) => setSSHUser(e.target.value)}
+                  placeholder="root"
+                  className={validationErrors.user ? 'p-invalid' : ''}
+                />
+                {validationErrors.user && <small className="p-error">{validationErrors.user}</small>}
               </div>
             </div>
-            
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                Usuario *
-              </label>
-              <InputText 
-                value={sshUser} 
-                onChange={(e) => setSSHUser(e.target.value)}
-                placeholder="root"
-                className={`w-full ${validationErrors.user ? 'p-invalid' : ''}`}
-                style={{ padding: '8px 10px', fontSize: '13px' }}
-              />
-              {validationErrors.user && (
-                <small style={{ color: 'var(--red-400)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                  {validationErrors.user}
-                </small>
+          </Card>
+        </div>
+
+        {/* --- COLUMNA DERECHA: Autenticación y Opciones --- */}
+        <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <Card title="🔐 Autenticación">
+            <div className="formgrid grid">
+              <div className="field col-12" style={{ display: 'flex', gap: '2rem' }}>
+                <div className="field-radiobutton">
+                  <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
+                  <label htmlFor="authPassword">Contraseña</label>
+                </div>
+                <div className="field-radiobutton">
+                  <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
+                  <label htmlFor="authKey">Clave SSH</label>
+                </div>
+              </div>
+
+              {authMethod === 'password' && (
+                <div className="field col-12">
+                  <label htmlFor="sshPassword">Contraseña *</label>
+                  <InputText 
+                    id="sshPassword"
+                    type="password" 
+                    value={sshPassword} 
+                    onChange={(e) => setSSHPassword(e.target.value)}
+                    placeholder="Ingresa tu contraseña"
+                    className={validationErrors.auth ? 'p-invalid' : ''}
+                  />
+                  {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
+                </div>
+              )}
+
+              {authMethod === 'key' && (
+                <div className="field col-12">
+                   <label>Clave Privada SSH *</label>
+                   <FileUpload 
+                      mode="basic" 
+                      name="sshKey" 
+                      accept=".pem,.key,.ppk,*" 
+                      maxFileSize={1000000}
+                      onSelect={handleFileUpload}
+                      chooseLabel="📁 Cargar desde archivo"
+                      className="p-button-outlined p-button-sm"
+                      auto
+                    />
+                  <InputTextarea 
+                    value={sshPrivateKey}
+                    onChange={(e) => setSSHPrivateKey(e.target.value)}
+                    rows={8}
+                    placeholder="O pega tu clave privada aquí (ej. -----BEGIN...)"
+                    className={`w-full ${validationErrors.auth ? 'p-invalid' : ''}`}
+                    style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '12px' }}
+                  />
+                  {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
+                </div>
               )}
             </div>
+          </Card>
 
-            {/* Configuración opcional */}
-            <h6 style={{ margin: '12px 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--text-color-secondary)', paddingTop: '8px' }}>
-              ⚙️ Configuración Opcional
-            </h6>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Carpeta destino
-                </label>
+          <Card title="⚙️ Opciones">
+            <div className="formgrid grid">
+              <div className="field col-6">
+                <label htmlFor="sshTargetFolder">Carpeta destino</label>
                 <Dropdown 
+                  id="sshTargetFolder"
                   value={sshTargetFolder} 
                   options={foldersOptions} 
                   onChange={(e) => setSSHTargetFolder(e.value)} 
-                  placeholder="Seleccionar"
-                  showClear 
-                  className="w-full"
-                  style={{ fontSize: '12px' }}
+                  placeholder="Opcional"
+                  showClear
                 />
               </div>
-            </div>
-            <div style={{ marginBottom: '8px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                Directorio remoto inicial
-              </label>
-              <InputText 
-                value={sshRemoteFolder} 
-                onChange={(e) => setSSHRemoteFolder(e.target.value)}
-                placeholder="/home/usuario"
-                className="w-full"
-                style={{ padding: '6px 8px', fontSize: '12px' }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Columna derecha - Autenticación */}
-        <div style={{ flex: '1', minWidth: '300px' }}>
-          <div className="card" style={{ 
-            padding: '12px',
-            margin: '0',
-            height: 'fit-content',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <h6 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: 'var(--primary-color)' }}>
-              🔐 Autenticación
-            </h6>
-            
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <RadioButton 
-                  inputId="authPassword" 
-                  name="authMethod" 
-                  value="password" 
-                  onChange={(e) => setAuthMethod(e.value)} 
-                  checked={authMethod === 'password'} 
-                />
-                <label htmlFor="authPassword" style={{ fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}>
-                  🔑 Contraseña
-                </label>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <RadioButton 
-                  inputId="authKey" 
-                  name="authMethod" 
-                  value="key" 
-                  onChange={(e) => setAuthMethod(e.value)} 
-                  checked={authMethod === 'key'} 
-                />
-                <label htmlFor="authKey" style={{ fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}>
-                  🗝️ Clave SSH
-                </label>
-              </div>
-            </div>
-
-            {authMethod === 'password' && (
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-color-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Contraseña *
-                </label>
+              <div className="field col-6">
+                <label htmlFor="sshRemoteFolder">Directorio remoto inicial</label>
                 <InputText 
-                  type="password" 
-                  value={sshPassword} 
-                  onChange={(e) => setSSHPassword(e.target.value)}
-                  placeholder="Ingresa tu contraseña"
-                  className={`w-full ${validationErrors.auth ? 'p-invalid' : ''}`}
-                  style={{ padding: '8px 10px', fontSize: '13px' }}
+                  id="sshRemoteFolder"
+                  value={sshRemoteFolder} 
+                  onChange={(e) => setSSHRemoteFolder(e.target.value)}
+                  placeholder="/home/usuario"
                 />
-                {validationErrors.auth && authMethod === 'password' && (
-                  <small style={{ color: 'var(--red-400)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                    {validationErrors.auth}
-                  </small>
-                )}
               </div>
-            )}
-
-            {authMethod === 'key' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ marginBottom: '8px' }}>
-                  <FileUpload 
-                    mode="basic" 
-                    name="sshKey" 
-                    accept=".pem,.key,.ppk,*" 
-                    maxFileSize={1000000}
-                    onSelect={handleFileUpload}
-                    chooseLabel="📁 Cargar clave SSH"
-                    className="p-button-outlined"
-                    style={{ fontSize: '11px', padding: '6px 12px' }}
-                    auto
-                  />
-                </div>
-                <label style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-color-secondary)', marginBottom: '4px', display: 'block' }}>
-                  O pega tu clave privada SSH:
-                </label>
-                <InputTextarea 
-                  value={sshPrivateKey}
-                  onChange={(e) => setSSHPrivateKey(e.target.value)}
-                  rows={10}
-                  placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----"
-                  className={`w-full ${validationErrors.auth ? 'p-invalid' : ''}`}
-                  style={{ 
-                    fontFamily: 'Monaco, Consolas, "Courier New", monospace', 
-                    fontSize: '10px',
-                    flex: 1,
-                    resize: 'none',
-                    minHeight: '200px',
-                    lineHeight: '1.2'
-                  }}
-                />
-                {validationErrors.auth && authMethod === 'key' && (
-                  <small style={{ color: 'var(--red-400)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                    {validationErrors.auth}
-                  </small>
-                )}
-                <small style={{ color: 'var(--text-color-secondary)', fontSize: '9px', marginTop: '4px', display: 'block' }}>
-                  💡 Soporta claves OpenSSH, RSA, DSA y ECDSA
-                </small>
-              </div>
-            )}
-          </div>
+            </div>
+          </Card>
         </div>
-
-
       </div>
 
-      {/* Botones en la parte inferior */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '8px', 
-        justifyContent: 'flex-end', 
-        paddingTop: '12px',
-        marginTop: '8px'
-      }}>
+      {/* Botones */}
+      <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
         <Button 
           label="Cancelar" 
           icon="pi pi-times" 
           className="p-button-text" 
-          onClick={onHide} 
-          style={{ fontSize: '12px', padding: '6px 12px' }}
+          onClick={onHide}
+          style={{ fontSize: '13px', padding: '8px 16px' }}
         />
         <Button 
-          label="Crear SSH" 
+          label="Guardar" 
           icon="pi pi-check" 
           className="p-button-primary" 
           onClick={() => {
@@ -1338,7 +1246,7 @@ export function EnhancedSSHForm({
               });
             }
           }}
-          style={{ fontSize: '12px', padding: '6px 16px' }}
+          style={{ fontSize: '13px', padding: '8px 16px' }}
           loading={sshLoading}
           disabled={!isFormValid()}
         />
