@@ -35,3 +35,10 @@
   padding: 10px !important;
   box-sizing: border-box !important;
 }
+
+/* Elimina el recuadro azul de foco en el terminal */
+.xterm.focus, .xterm:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important; /* Asegura que no haya ninguna sombra de foco */
+}

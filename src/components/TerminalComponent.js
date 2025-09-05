@@ -348,8 +348,6 @@ const TerminalComponent = forwardRef(({ tabId, sshConfig, fontFamily, fontSize, 
                     height: '100%',
                     overflow: 'hidden',
                     position: 'relative',
-                    border: '2px solid cyan',
-                    background: 'rgba(0,255,255,0.08)',
                     padding: 0,
                     margin: 0
                 }} 
