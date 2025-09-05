@@ -425,238 +425,239 @@ export function UnifiedConnectionDialog({
           />
         ) : (
           // Formulario RDP optimizado para edición (mismo diseño que el tab RDP)
-          <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
-            
-            {/* Contenedor principal de 2 columnas */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              
-              {/* --- COLUMNA IZQUIERDA: Conexión --- */}
-              <div style={{ flex: '1', minWidth: '320px' }}>
-                <Card title="🔗 Conexión" className="mb-2">
-                  <div className="formgrid grid">
-                    <div className="field col-12">
-                      <label htmlFor="name-edit">Nombre *</label>
-                      <InputText
-                        id="name-edit"
-                        value={formData.name}
-                        onChange={handleTextChange('name')}
-                        placeholder="Nombre descriptivo"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-8">
-                      <label htmlFor="server-edit">Servidor *</label>
-                      <InputText
-                        id="server-edit"
-                        value={formData.server}
-                        onChange={handleTextChange('server')}
-                        placeholder="IP o nombre del servidor"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-4">
-                      <label htmlFor="port-edit">Puerto</label>
-                      <InputText
-                        id="port-edit"
-                        type="number"
-                        value={formData.port}
-                        onChange={handleTextChange('port')}
-                        placeholder="3389"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="username-edit">Usuario *</label>
-                      <InputText
-                        id="username-edit"
-                        value={formData.username}
-                        onChange={handleTextChange('username')}
-                        placeholder="Usuario"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="password-edit">Contraseña</label>
-                      <InputText
-                        id="password-edit"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleTextChange('password')}
-                        placeholder="Contraseña (opcional)"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="clientType-edit">💻 Cliente</label>
-                      <Dropdown
-                        id="clientType-edit"
-                        value={formData.clientType}
-                        options={[
-                          { label: 'Windows MSTSC', value: 'mstsc' },
-                          { label: 'Apache Guacamole', value: 'guacamole' }
-                        ]}
-                        onChange={(e) => handleInputChange('clientType', e.value)}
-                        placeholder="Seleccionar tipo"
-                      />
-                    </div>
-                    {formData.clientType === 'guacamole' && (
-                      <div className="field col-12">
-                        <label htmlFor="guacSecurity-edit">🔒 Seguridad</label>
-                        <Dropdown
-                          id="guacSecurity-edit"
-                          value={formData.guacSecurity}
-                          options={[
-                            { label: '🛡️ Automático', value: 'any' },
-                            { label: '🔐 RDP Estándar', value: 'rdp' },
-                            { label: '🔒 TLS', value: 'tls' },
-                            { label: '🛡️ Network Level Authentication', value: 'nla' }
-                          ]}
-                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                          placeholder="Seleccionar protocolo"
-                        />
-                        <small>Nivel de seguridad para la conexión RDP</small>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </div>
-
-              {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
-              <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Contenedor principal que se expande */}
+            <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+              {/* Contenedor principal de 2 columnas */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 
-                {/* Card: Pantalla */}
-                <Card title="🖥️ Pantalla">
-                  <div className="formgrid grid">
-                    <div className="field col-6">
-                      <label htmlFor="preset-edit">Preset</label>
-                      <Dropdown
-                        id="preset-edit"
-                        value={formData.preset}
-                        options={[
-                          { label: 'Por defecto', value: 'default' },
-                          { label: 'Rendimiento', value: 'performance' },
-                          { label: 'Calidad', value: 'quality' }
-                        ]}
-                        onChange={(e) => handleInputChange('preset', e.value)}
-                      />
-                    </div>
-                    <div className="field col-6">
-                      <label htmlFor="resolution-edit">Resolución</label>
-                      <Dropdown
-                        id="resolution-edit"
-                        value={formData.resolution}
-                        options={[
-                          { label: 'Pantalla completa', value: 'fullscreen' },
-                          { label: '1920x1080', value: '1920x1080' },
-                          { label: '1600x1000', value: '1600x1000' },
-                          { label: '1366x768', value: '1366x768' },
-                          { label: '1024x768', value: '1024x768' }
-                        ]}
-                        onChange={(e) => handleInputChange('resolution', e.value)}
-                      />
-                    </div>
-                    <div className="field col-6">
-                      <label htmlFor="colorDepth-edit">Color</label>
-                      <Dropdown
-                        id="colorDepth-edit"
-                        value={formData.colorDepth}
-                        options={[
-                          { label: '32 bits', value: 32 },
-                          { label: '24 bits', value: 24 },
-                          { label: '16 bits', value: 16 },
-                          { label: '15 bits', value: 15 }
-                        ]}
-                        onChange={(e) => handleInputChange('colorDepth', e.value)}
-                      />
-                    </div>
-                    <div className="field col-6">
-                      <label htmlFor="guacDpi-edit">DPI</label>
-                      <InputText
-                        id="guacDpi-edit"
-                        value={formData.guacDpi}
-                        onChange={handleTextChange('guacDpi')}
-                        placeholder="96"
-                      />
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Card: Recursos Locales */}
-                <Card title="⚙️ Opciones">
-                  <div className="formgrid grid">
-                    {/* Opciones para MSTSC */}
-                    {formData.clientType === 'mstsc' && (
-                      <>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit">📋 Portapapeles</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit">🔊 Audio</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit">🖨️ Impresoras</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit">📁 Carpetas</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit">📐 Ajuste automático</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit">🖥️ Pantalla completa</label></div>
-                      </>
-                    )}
-                    {/* Opciones para Guacamole */}
-                    {formData.clientType === 'guacamole' && (
-                      <>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
-                      </>
-                    )}
-                  </div>
-                  {/* Configuración de carpetas condicional para Guacamole */}
-                  {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                    <div className="field" style={{ marginTop: '1rem' }}>
-                      <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+                <div style={{ flex: '1', minWidth: '320px' }}>
+                  <Card title="🔗 Conexión" className="mb-2">
+                    <div className="formgrid grid">
+                      <div className="field col-12">
+                        <label htmlFor="name-edit">Nombre *</label>
                         <InputText
-                          id="guacDriveHostDir-edit"
-                          value={formData.guacDriveHostDir}
-                          onChange={handleTextChange('guacDriveHostDir')}
-                          placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                          id="name-edit"
+                          value={formData.name}
+                          onChange={handleTextChange('name')}
+                          placeholder="Nombre descriptivo"
+                          autoComplete="off"
                         />
                       </div>
-                      {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
-                    </div>
-                  )}
-
-                  {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
-                  {formData.clientType === 'guacamole' && (
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                      <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
-                        <div className="formgrid grid">
-                          <div className="col-4">
-                            <h5>Rendimiento</h5>
-                            <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit">🎨 Habilitar GFX</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-composition-edit" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit">🖼️ Desktop Composition</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-font-edit" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit">✨ Font Smoothing</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-theming-edit" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit">🎭 Theming</label></div>
-                          </div>
-                          <div className="col-4">
-                            <h5>Interfaz</h5>
-                            <div className="field-checkbox"><Checkbox inputId="guac-drag-edit" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit">🖱️ Full Window Drag</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-menu-edit" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit">🎬 Animaciones de menú</label></div>
-                          </div>
-                          <div className="col-4">
-                            <h5>Caché</h5>
-                            <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit">🔤 Glyph Caching</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit">📱 Offscreen Caching</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit">🖼️ Bitmap Caching</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit">📋 Copy-Rect</label></div>
-                          </div>
+                      <div className="field col-8">
+                        <label htmlFor="server-edit">Servidor *</label>
+                        <InputText
+                          id="server-edit"
+                          value={formData.server}
+                          onChange={handleTextChange('server')}
+                          placeholder="IP o nombre del servidor"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-4">
+                        <label htmlFor="port-edit">Puerto</label>
+                        <InputText
+                          id="port-edit"
+                          type="number"
+                          value={formData.port}
+                          onChange={handleTextChange('port')}
+                          placeholder="3389"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-12">
+                        <label htmlFor="username-edit">Usuario *</label>
+                        <InputText
+                          id="username-edit"
+                          value={formData.username}
+                          onChange={handleTextChange('username')}
+                          placeholder="Usuario"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-12">
+                        <label htmlFor="password-edit">Contraseña</label>
+                        <InputText
+                          id="password-edit"
+                          type="password"
+                          value={formData.password}
+                          onChange={handleTextChange('password')}
+                          placeholder="Contraseña (opcional)"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-12">
+                        <label htmlFor="clientType-edit">💻 Cliente</label>
+                        <Dropdown
+                          id="clientType-edit"
+                          value={formData.clientType}
+                          options={[
+                            { label: 'Windows MSTSC', value: 'mstsc' },
+                            { label: 'Apache Guacamole', value: 'guacamole' }
+                          ]}
+                          onChange={(e) => handleInputChange('clientType', e.value)}
+                          placeholder="Seleccionar tipo"
+                        />
+                      </div>
+                      {formData.clientType === 'guacamole' && (
+                        <div className="field col-12">
+                          <label htmlFor="guacSecurity-edit">🔒 Seguridad</label>
+                          <Dropdown
+                            id="guacSecurity-edit"
+                            value={formData.guacSecurity}
+                            options={[
+                              { label: '🛡️ Automático', value: 'any' },
+                              { label: '🔐 RDP Estándar', value: 'rdp' },
+                              { label: '🔒 TLS', value: 'tls' },
+                              { label: '🛡️ Network Level Authentication', value: 'nla' }
+                            ]}
+                            onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                            placeholder="Seleccionar protocolo"
+                          />
+                          <small>Nivel de seguridad para la conexión RDP</small>
                         </div>
-                      </Fieldset>
+                      )}
                     </div>
-                  )}
-                </Card>
+                  </Card>
+                </div>
 
+                {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
+                <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  
+                  {/* Card: Pantalla */}
+                  <Card title="🖥️ Pantalla">
+                    <div className="formgrid grid">
+                      <div className="field col-6">
+                        <label htmlFor="preset-edit">Preset</label>
+                        <Dropdown
+                          id="preset-edit"
+                          value={formData.preset}
+                          options={[
+                            { label: 'Por defecto', value: 'default' },
+                            { label: 'Rendimiento', value: 'performance' },
+                            { label: 'Calidad', value: 'quality' }
+                          ]}
+                          onChange={(e) => handleInputChange('preset', e.value)}
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="resolution-edit">Resolución</label>
+                        <Dropdown
+                          id="resolution-edit"
+                          value={formData.resolution}
+                          options={[
+                            { label: 'Pantalla completa', value: 'fullscreen' },
+                            { label: '1920x1080', value: '1920x1080' },
+                            { label: '1600x1000', value: '1600x1000' },
+                            { label: '1366x768', value: '1366x768' },
+                            { label: '1024x768', value: '1024x768' }
+                          ]}
+                          onChange={(e) => handleInputChange('resolution', e.value)}
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="colorDepth-edit">Color</label>
+                        <Dropdown
+                          id="colorDepth-edit"
+                          value={formData.colorDepth}
+                          options={[
+                            { label: '32 bits', value: 32 },
+                            { label: '24 bits', value: 24 },
+                            { label: '16 bits', value: 16 },
+                            { label: '15 bits', value: 15 }
+                          ]}
+                          onChange={(e) => handleInputChange('colorDepth', e.value)}
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="guacDpi-edit">DPI</label>
+                        <InputText
+                          id="guacDpi-edit"
+                          value={formData.guacDpi}
+                          onChange={handleTextChange('guacDpi')}
+                          placeholder="96"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Card: Recursos Locales */}
+                  <Card title="⚙️ Opciones">
+                    <div className="formgrid grid">
+                      {/* Opciones para MSTSC */}
+                      {formData.clientType === 'mstsc' && (
+                        <>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit">📋 Portapapeles</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit">🔊 Audio</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit">📁 Carpetas</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit">📐 Ajuste automático</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit">🖥️ Pantalla completa</label></div>
+                        </>
+                      )}
+                      {/* Opciones para Guacamole */}
+                      {formData.clientType === 'guacamole' && (
+                        <>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
+                        </>
+                      )}
+                    </div>
+                    {/* Configuración de carpetas condicional para Guacamole */}
+                    {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                      <div className="field" style={{ marginTop: '1rem' }}>
+                        <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                          <InputText
+                            id="guacDriveHostDir-edit"
+                            value={formData.guacDriveHostDir}
+                            onChange={handleTextChange('guacDriveHostDir')}
+                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                          />
+                        </div>
+                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
+                      </div>
+                    )}
+
+                    {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
+                    {formData.clientType === 'guacamole' && (
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
+                        <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
+                          <div className="formgrid grid">
+                            <div className="col-4">
+                              <h5>Rendimiento</h5>
+                              <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit">🎨 Habilitar GFX</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-composition-edit" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit">🖼️ Desktop Composition</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-font-edit" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit">✨ Font Smoothing</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-theming-edit" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit">🎭 Theming</label></div>
+                            </div>
+                            <div className="col-4">
+                              <h5>Interfaz</h5>
+                              <div className="field-checkbox"><Checkbox inputId="guac-drag-edit" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit">🖱️ Full Window Drag</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-menu-edit" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit">🎬 Animaciones de menú</label></div>
+                            </div>
+                            <div className="col-4">
+                              <h5>Caché</h5>
+                              <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit">🔤 Glyph Caching</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit">📱 Offscreen Caching</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit">🖼️ Bitmap Caching</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit">📋 Copy-Rect</label></div>
+                            </div>
+                          </div>
+                        </Fieldset>
+                      </div>
+                    )}
+                  </Card>
+
+                </div>
               </div>
             </div>
-
             {/* Botones */}
             <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
               <Button 
@@ -713,238 +714,239 @@ export function UnifiedConnectionDialog({
 
         {/* Tab RDP */}
         <TabPanel header="RDP" leftIcon="pi pi-desktop">
-          <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
-            
-            {/* Contenedor principal de 2 columnas */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              
-              {/* --- COLUMNA IZQUIERDA: Conexión --- */}
-              <div style={{ flex: '1', minWidth: '320px' }}>
-                <Card title="🔗 Conexión" className="mb-2">
-                  <div className="formgrid grid">
-                    <div className="field col-12">
-                      <label htmlFor="name-edit">Nombre *</label>
-                      <InputText
-                        id="name-edit"
-                        value={formData.name}
-                        onChange={handleTextChange('name')}
-                        placeholder="Nombre descriptivo"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-8">
-                      <label htmlFor="server-edit">Servidor *</label>
-                      <InputText
-                        id="server-edit"
-                        value={formData.server}
-                        onChange={handleTextChange('server')}
-                        placeholder="IP o nombre del servidor"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-4">
-                      <label htmlFor="port-edit">Puerto</label>
-                      <InputText
-                        id="port-edit"
-                        type="number"
-                        value={formData.port}
-                        onChange={handleTextChange('port')}
-                        placeholder="3389"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="username-edit">Usuario *</label>
-                      <InputText
-                        id="username-edit"
-                        value={formData.username}
-                        onChange={handleTextChange('username')}
-                        placeholder="Usuario"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="password-edit">Contraseña</label>
-                      <InputText
-                        id="password-edit"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleTextChange('password')}
-                        placeholder="Contraseña (opcional)"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <div className="field col-12">
-                      <label htmlFor="clientType-edit">💻 Cliente</label>
-                      <Dropdown
-                        id="clientType-edit"
-                        value={formData.clientType}
-                        options={[
-                          { label: 'Windows MSTSC', value: 'mstsc' },
-                          { label: 'Apache Guacamole', value: 'guacamole' }
-                        ]}
-                        onChange={(e) => handleInputChange('clientType', e.value)}
-                        placeholder="Seleccionar tipo"
-                      />
-                    </div>
-                    {formData.clientType === 'guacamole' && (
-                      <div className="field col-12">
-                        <label htmlFor="guacSecurity-edit">🔒 Seguridad</label>
-                        <Dropdown
-                          id="guacSecurity-edit"
-                          value={formData.guacSecurity}
-                          options={[
-                            { label: '🛡️ Automático', value: 'any' },
-                            { label: '🔐 RDP Estándar', value: 'rdp' },
-                            { label: '🔒 TLS', value: 'tls' },
-                            { label: '🛡️ Network Level Authentication', value: 'nla' }
-                          ]}
-                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                          placeholder="Seleccionar protocolo"
-                        />
-                        <small>Nivel de seguridad para la conexión RDP</small>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </div>
-
-              {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
-              <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Contenedor principal que se expande */}
+            <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+              {/* Contenedor principal de 2 columnas */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 
-                {/* Card: Pantalla */}
-                <Card title="🖥️ Pantalla">
-                  <div className="formgrid grid">
-                    <div className="field col-6">
-                      <label htmlFor="preset-edit">Preset</label>
-                      <Dropdown
-                        id="preset-edit"
-                        value={formData.preset}
-                        options={[
-                          { label: 'Por defecto', value: 'default' },
-                          { label: 'Rendimiento', value: 'performance' },
-                          { label: 'Calidad', value: 'quality' }
-                        ]}
-                        onChange={(e) => handleInputChange('preset', e.value)}
-                      />
-                    </div>
-                    <div className="field col-6">
-                      <label htmlFor="resolution-edit">Resolución</label>
-                      <Dropdown
-                        id="resolution-edit"
-                        value={formData.resolution}
-                        options={[
-                          { label: 'Pantalla completa', value: 'fullscreen' },
-                          { label: '1920x1080', value: '1920x1080' },
-                          { label: '1600x1000', value: '1600x1000' },
-                          { label: '1366x768', value: '1366x768' },
-                          { label: '1024x768', value: '1024x768' }
-                        ]}
-                        onChange={(e) => handleInputChange('resolution', e.value)}
-                      />
-                    </div>
-                    <div className="field col-6">
-                      <label htmlFor="colorDepth-edit">Color</label>
-                      <Dropdown
-                        id="colorDepth-edit"
-                        value={formData.colorDepth}
-                        options={[
-                          { label: '32 bits', value: 32 },
-                          { label: '24 bits', value: 24 },
-                          { label: '16 bits', value: 16 },
-                          { label: '15 bits', value: 15 }
-                        ]}
-                        onChange={(e) => handleInputChange('colorDepth', e.value)}
-                      />
-                    </div>
-                    <div className="field col-6">
-                      <label htmlFor="guacDpi-edit">DPI</label>
-                      <InputText
-                        id="guacDpi-edit"
-                        value={formData.guacDpi}
-                        onChange={handleTextChange('guacDpi')}
-                        placeholder="96"
-                      />
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Card: Recursos Locales */}
-                <Card title="⚙️ Opciones">
-                  <div className="formgrid grid">
-                    {/* Opciones para MSTSC */}
-                    {formData.clientType === 'mstsc' && (
-                      <>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit">📋 Portapapeles</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit">🔊 Audio</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit">🖨️ Impresoras</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit">📁 Carpetas</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit">📐 Ajuste automático</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit">🖥️ Pantalla completa</label></div>
-                      </>
-                    )}
-                    {/* Opciones para Guacamole */}
-                    {formData.clientType === 'guacamole' && (
-                      <>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
-                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
-                      </>
-                    )}
-                  </div>
-                  {/* Configuración de carpetas condicional para Guacamole */}
-                  {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                    <div className="field" style={{ marginTop: '1rem' }}>
-                      <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+                <div style={{ flex: '1', minWidth: '320px' }}>
+                  <Card title="🔗 Conexión" className="mb-2">
+                    <div className="formgrid grid">
+                      <div className="field col-12">
+                        <label htmlFor="name-edit">Nombre *</label>
                         <InputText
-                          id="guacDriveHostDir-edit"
-                          value={formData.guacDriveHostDir}
-                          onChange={handleTextChange('guacDriveHostDir')}
-                          placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                          id="name-edit"
+                          value={formData.name}
+                          onChange={handleTextChange('name')}
+                          placeholder="Nombre descriptivo"
+                          autoComplete="off"
                         />
                       </div>
-                      {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
-                    </div>
-                  )}
-
-                  {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
-                  {formData.clientType === 'guacamole' && (
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                      <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
-                        <div className="formgrid grid">
-                          <div className="col-4">
-                            <h5>Rendimiento</h5>
-                            <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit">🎨 Habilitar GFX</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-composition-edit" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit">🖼️ Desktop Composition</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-font-edit" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit">✨ Font Smoothing</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-theming-edit" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit">🎭 Theming</label></div>
-                          </div>
-                          <div className="col-4">
-                            <h5>Interfaz</h5>
-                            <div className="field-checkbox"><Checkbox inputId="guac-drag-edit" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit">🖱️ Full Window Drag</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-menu-edit" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit">🎬 Animaciones de menú</label></div>
-                          </div>
-                          <div className="col-4">
-                            <h5>Caché</h5>
-                            <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit">🔤 Glyph Caching</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit">📱 Offscreen Caching</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit">🖼️ Bitmap Caching</label></div>
-                            <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit">📋 Copy-Rect</label></div>
-                          </div>
+                      <div className="field col-8">
+                        <label htmlFor="server-edit">Servidor *</label>
+                        <InputText
+                          id="server-edit"
+                          value={formData.server}
+                          onChange={handleTextChange('server')}
+                          placeholder="IP o nombre del servidor"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-4">
+                        <label htmlFor="port-edit">Puerto</label>
+                        <InputText
+                          id="port-edit"
+                          type="number"
+                          value={formData.port}
+                          onChange={handleTextChange('port')}
+                          placeholder="3389"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-12">
+                        <label htmlFor="username-edit">Usuario *</label>
+                        <InputText
+                          id="username-edit"
+                          value={formData.username}
+                          onChange={handleTextChange('username')}
+                          placeholder="Usuario"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-12">
+                        <label htmlFor="password-edit">Contraseña</label>
+                        <InputText
+                          id="password-edit"
+                          type="password"
+                          value={formData.password}
+                          onChange={handleTextChange('password')}
+                          placeholder="Contraseña (opcional)"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="field col-12">
+                        <label htmlFor="clientType-edit">💻 Cliente</label>
+                        <Dropdown
+                          id="clientType-edit"
+                          value={formData.clientType}
+                          options={[
+                            { label: 'Windows MSTSC', value: 'mstsc' },
+                            { label: 'Apache Guacamole', value: 'guacamole' }
+                          ]}
+                          onChange={(e) => handleInputChange('clientType', e.value)}
+                          placeholder="Seleccionar tipo"
+                        />
+                      </div>
+                      {formData.clientType === 'guacamole' && (
+                        <div className="field col-12">
+                          <label htmlFor="guacSecurity-edit">🔒 Seguridad</label>
+                          <Dropdown
+                            id="guacSecurity-edit"
+                            value={formData.guacSecurity}
+                            options={[
+                              { label: '🛡️ Automático', value: 'any' },
+                              { label: '🔐 RDP Estándar', value: 'rdp' },
+                              { label: '🔒 TLS', value: 'tls' },
+                              { label: '🛡️ Network Level Authentication', value: 'nla' }
+                            ]}
+                            onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                            placeholder="Seleccionar protocolo"
+                          />
+                          <small>Nivel de seguridad para la conexión RDP</small>
                         </div>
-                      </Fieldset>
+                      )}
                     </div>
-                  )}
-                </Card>
+                  </Card>
+                </div>
 
+                {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
+                <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  
+                  {/* Card: Pantalla */}
+                  <Card title="🖥️ Pantalla">
+                    <div className="formgrid grid">
+                      <div className="field col-6">
+                        <label htmlFor="preset-edit">Preset</label>
+                        <Dropdown
+                          id="preset-edit"
+                          value={formData.preset}
+                          options={[
+                            { label: 'Por defecto', value: 'default' },
+                            { label: 'Rendimiento', value: 'performance' },
+                            { label: 'Calidad', value: 'quality' }
+                          ]}
+                          onChange={(e) => handleInputChange('preset', e.value)}
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="resolution-edit">Resolución</label>
+                        <Dropdown
+                          id="resolution-edit"
+                          value={formData.resolution}
+                          options={[
+                            { label: 'Pantalla completa', value: 'fullscreen' },
+                            { label: '1920x1080', value: '1920x1080' },
+                            { label: '1600x1000', value: '1600x1000' },
+                            { label: '1366x768', value: '1366x768' },
+                            { label: '1024x768', value: '1024x768' }
+                          ]}
+                          onChange={(e) => handleInputChange('resolution', e.value)}
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="colorDepth-edit">Color</label>
+                        <Dropdown
+                          id="colorDepth-edit"
+                          value={formData.colorDepth}
+                          options={[
+                            { label: '32 bits', value: 32 },
+                            { label: '24 bits', value: 24 },
+                            { label: '16 bits', value: 16 },
+                            { label: '15 bits', value: 15 }
+                          ]}
+                          onChange={(e) => handleInputChange('colorDepth', e.value)}
+                        />
+                      </div>
+                      <div className="field col-6">
+                        <label htmlFor="guacDpi-edit">DPI</label>
+                        <InputText
+                          id="guacDpi-edit"
+                          value={formData.guacDpi}
+                          onChange={handleTextChange('guacDpi')}
+                          placeholder="96"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Card: Recursos Locales */}
+                  <Card title="⚙️ Opciones">
+                    <div className="formgrid grid">
+                      {/* Opciones para MSTSC */}
+                      {formData.clientType === 'mstsc' && (
+                        <>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit">📋 Portapapeles</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit">🔊 Audio</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit">📁 Carpetas</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit">📐 Ajuste automático</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit">🖥️ Pantalla completa</label></div>
+                        </>
+                      )}
+                      {/* Opciones para Guacamole */}
+                      {formData.clientType === 'guacamole' && (
+                        <>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
+                        </>
+                      )}
+                    </div>
+                    {/* Configuración de carpetas condicional para Guacamole */}
+                    {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                      <div className="field" style={{ marginTop: '1rem' }}>
+                        <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                          <InputText
+                            id="guacDriveHostDir-edit"
+                            value={formData.guacDriveHostDir}
+                            onChange={handleTextChange('guacDriveHostDir')}
+                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                          />
+                        </div>
+                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
+                      </div>
+                    )}
+
+                    {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
+                    {formData.clientType === 'guacamole' && (
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
+                        <Fieldset legend="⚙️ Opciones Avanzadas" toggleable collapsed>
+                          <div className="formgrid grid">
+                            <div className="col-4">
+                              <h5>Rendimiento</h5>
+                              <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit">🎨 Habilitar GFX</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-composition-edit" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit">🖼️ Desktop Composition</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-font-edit" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit">✨ Font Smoothing</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-theming-edit" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit">🎭 Theming</label></div>
+                            </div>
+                            <div className="col-4">
+                              <h5>Interfaz</h5>
+                              <div className="field-checkbox"><Checkbox inputId="guac-drag-edit" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit">🖱️ Full Window Drag</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-menu-edit" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit">🎬 Animaciones de menú</label></div>
+                            </div>
+                            <div className="col-4">
+                              <h5>Caché</h5>
+                              <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit">🔤 Glyph Caching</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit">📱 Offscreen Caching</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit">🖼️ Bitmap Caching</label></div>
+                              <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit">📋 Copy-Rect</label></div>
+                            </div>
+                          </div>
+                        </Fieldset>
+                      </div>
+                    )}
+                  </Card>
+
+                </div>
               </div>
             </div>
-
             {/* Botones */}
             <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
               <Button 
@@ -1082,151 +1084,154 @@ export function EnhancedSSHForm({
   };
 
   return (
-    <div className="p-fluid" style={{ padding: '12px', height: '100%', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        
-        {/* --- COLUMNA IZQUIERDA: Conexión --- */}
-        <div style={{ flex: '1', minWidth: '320px' }}>
-          <Card title="🔗 Conexión">
-            <div className="formgrid grid">
-              <div className="field col-12">
-                <label htmlFor="sshName">Nombre *</label>
-                <InputText 
-                  id="sshName"
-                  value={sshName} 
-                  onChange={(e) => setSSHName(e.target.value)}
-                  placeholder="Servidor de producción"
-                  autoFocus={activeTabIndex === 0}
-                  className={validationErrors.name ? 'p-invalid' : ''}
-                />
-                {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
-              </div>
-
-              <div className="field col-8">
-                <label htmlFor="sshHost">Host *</label>
-                <InputText 
-                  id="sshHost"
-                  value={sshHost} 
-                  onChange={(e) => setSSHHost(e.target.value)}
-                  placeholder="IP o nombre del servidor"
-                  className={validationErrors.host ? 'p-invalid' : ''}
-                />
-                {validationErrors.host && <small className="p-error">{validationErrors.host}</small>}
-              </div>
-
-              <div className="field col-4">
-                <label htmlFor="sshPort">Puerto</label>
-                <InputText 
-                  id="sshPort"
-                  value={sshPort} 
-                  onChange={(e) => setSSHPort(e.target.value)}
-                  placeholder="22"
-                  className={validationErrors.port ? 'p-invalid' : ''}
-                />
-                 {validationErrors.port && <small className="p-error">{validationErrors.port}</small>}
-              </div>
-
-              <div className="field col-12">
-                <label htmlFor="sshUser">Usuario *</label>
-                <InputText 
-                  id="sshUser"
-                  value={sshUser} 
-                  onChange={(e) => setSSHUser(e.target.value)}
-                  placeholder="root"
-                  className={validationErrors.user ? 'p-invalid' : ''}
-                />
-                {validationErrors.user && <small className="p-error">{validationErrors.user}</small>}
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* --- COLUMNA DERECHA: Autenticación y Opciones --- */}
-        <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <Card title="🔐 Autenticación">
-            <div className="formgrid grid">
-              <div className="field col-12" style={{ display: 'flex', gap: '2rem' }}>
-                <div className="field-radiobutton">
-                  <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
-                  <label htmlFor="authPassword">Contraseña</label>
-                </div>
-                <div className="field-radiobutton">
-                  <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
-                  <label htmlFor="authKey">Clave SSH</label>
-                </div>
-              </div>
-
-              {authMethod === 'password' && (
+    <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Contenedor principal que se expande */}
+      <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          
+          {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+          <div style={{ flex: '1', minWidth: '320px' }}>
+            <Card title="🔗 Conexión">
+              <div className="formgrid grid">
                 <div className="field col-12">
-                  <label htmlFor="sshPassword">Contraseña *</label>
+                  <label htmlFor="sshName">Nombre *</label>
                   <InputText 
-                    id="sshPassword"
-                    type="password" 
-                    value={sshPassword} 
-                    onChange={(e) => setSSHPassword(e.target.value)}
-                    placeholder="Ingresa tu contraseña"
-                    className={validationErrors.auth ? 'p-invalid' : ''}
+                    id="sshName"
+                    value={sshName} 
+                    onChange={(e) => setSSHName(e.target.value)}
+                    placeholder="Servidor de producción"
+                    autoFocus={activeTabIndex === 0}
+                    className={validationErrors.name ? 'p-invalid' : ''}
                   />
-                  {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
+                  {validationErrors.name && <small className="p-error">{validationErrors.name}</small>}
                 </div>
-              )}
 
-              {authMethod === 'key' && (
+                <div className="field col-8">
+                  <label htmlFor="sshHost">Host *</label>
+                  <InputText 
+                    id="sshHost"
+                    value={sshHost} 
+                    onChange={(e) => setSSHHost(e.target.value)}
+                    placeholder="IP o nombre del servidor"
+                    className={validationErrors.host ? 'p-invalid' : ''}
+                  />
+                  {validationErrors.host && <small className="p-error">{validationErrors.host}</small>}
+                </div>
+
+                <div className="field col-4">
+                  <label htmlFor="sshPort">Puerto</label>
+                  <InputText 
+                    id="sshPort"
+                    value={sshPort} 
+                    onChange={(e) => setSSHPort(e.target.value)}
+                    placeholder="22"
+                    className={validationErrors.port ? 'p-invalid' : ''}
+                  />
+                  {validationErrors.port && <small className="p-error">{validationErrors.port}</small>}
+                </div>
+
                 <div className="field col-12">
-                   <label>Clave Privada SSH *</label>
-                   <FileUpload 
-                      mode="basic" 
-                      name="sshKey" 
-                      accept=".pem,.key,.ppk,*" 
-                      maxFileSize={1000000}
-                      onSelect={handleFileUpload}
-                      chooseLabel="📁 Cargar desde archivo"
-                      className="p-button-outlined p-button-sm"
-                      auto
-                    />
-                  <InputTextarea 
-                    value={sshPrivateKey}
-                    onChange={(e) => setSSHPrivateKey(e.target.value)}
-                    rows={8}
-                    placeholder="O pega tu clave privada aquí (ej. -----BEGIN...)"
-                    className={`w-full ${validationErrors.auth ? 'p-invalid' : ''}`}
-                    style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '12px' }}
+                  <label htmlFor="sshUser">Usuario *</label>
+                  <InputText 
+                    id="sshUser"
+                    value={sshUser} 
+                    onChange={(e) => setSSHUser(e.target.value)}
+                    placeholder="root"
+                    className={validationErrors.user ? 'p-invalid' : ''}
                   />
-                  {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
+                  {validationErrors.user && <small className="p-error">{validationErrors.user}</small>}
                 </div>
-              )}
-            </div>
-          </Card>
+              </div>
+            </Card>
+          </div>
 
-          <Card title="⚙️ Opciones">
-            <div className="formgrid grid">
-              <div className="field col-6">
-                <label htmlFor="sshTargetFolder">Carpeta destino</label>
-                <Dropdown 
-                  id="sshTargetFolder"
-                  value={sshTargetFolder} 
-                  options={foldersOptions} 
-                  onChange={(e) => setSSHTargetFolder(e.value)} 
-                  placeholder="Opcional"
-                  showClear
-                />
+          {/* --- COLUMNA DERECHA: Autenticación y Opciones --- */}
+          <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Card title="🔐 Autenticación">
+              <div className="formgrid grid">
+                <div className="field col-12" style={{ display: 'flex', gap: '2rem' }}>
+                  <div className="field-radiobutton">
+                    <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
+                    <label htmlFor="authPassword">Contraseña</label>
+                  </div>
+                  <div className="field-radiobutton">
+                    <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
+                    <label htmlFor="authKey">Clave SSH</label>
+                  </div>
+                </div>
+
+                {authMethod === 'password' && (
+                  <div className="field col-12">
+                    <label htmlFor="sshPassword">Contraseña *</label>
+                    <InputText 
+                      id="sshPassword"
+                      type="password" 
+                      value={sshPassword} 
+                      onChange={(e) => setSSHPassword(e.target.value)}
+                      placeholder="Ingresa tu contraseña"
+                      className={validationErrors.auth ? 'p-invalid' : ''}
+                    />
+                    {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
+                  </div>
+                )}
+
+                {authMethod === 'key' && (
+                  <div className="field col-12">
+                    <label>Clave Privada SSH *</label>
+                    <FileUpload 
+                        mode="basic" 
+                        name="sshKey" 
+                        accept=".pem,.key,.ppk,*" 
+                        maxFileSize={1000000}
+                        onSelect={handleFileUpload}
+                        chooseLabel="📁 Cargar desde archivo"
+                        className="p-button-outlined p-button-sm"
+                        auto
+                      />
+                    <InputTextarea 
+                      value={sshPrivateKey}
+                      onChange={(e) => setSSHPrivateKey(e.target.value)}
+                      rows={8}
+                      placeholder="O pega tu clave privada aquí (ej. -----BEGIN...)"
+                      className={`w-full ${validationErrors.auth ? 'p-invalid' : ''}`}
+                      style={{ marginTop: '0.5rem', fontFamily: 'monospace', fontSize: '12px' }}
+                    />
+                    {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
+                  </div>
+                )}
               </div>
-              <div className="field col-6">
-                <label htmlFor="sshRemoteFolder">Directorio remoto inicial</label>
-                <InputText 
-                  id="sshRemoteFolder"
-                  value={sshRemoteFolder} 
-                  onChange={(e) => setSSHRemoteFolder(e.target.value)}
-                  placeholder="/home/usuario"
-                />
+            </Card>
+
+            <Card title="⚙️ Opciones">
+              <div className="formgrid grid">
+                <div className="field col-6">
+                  <label htmlFor="sshTargetFolder">Carpeta destino</label>
+                  <Dropdown 
+                    id="sshTargetFolder"
+                    value={sshTargetFolder} 
+                    options={foldersOptions} 
+                    onChange={(e) => setSSHTargetFolder(e.value)} 
+                    placeholder="Opcional"
+                    showClear
+                  />
+                </div>
+                <div className="field col-6">
+                  <label htmlFor="sshRemoteFolder">Directorio remoto inicial</label>
+                  <InputText 
+                    id="sshRemoteFolder"
+                    value={sshRemoteFolder} 
+                    onChange={(e) => setSSHRemoteFolder(e.target.value)}
+                    placeholder="/home/usuario"
+                  />
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* Botones */}
-      <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
+      {/* Botones (se mantienen al fondo) */}
+      <div className="p-field" style={{ flexShrink: 0, display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: '12px' }}>
         <Button 
           label="Cancelar" 
           icon="pi pi-times" 
