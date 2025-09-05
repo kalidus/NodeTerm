@@ -28,6 +28,12 @@
 
 .p-splitter.p-splitter-resizing .sidebar-container {
   will-change: width, min-width, max-width !important;
+  transition: none !important; /* Sin transición durante el arrastre para fluidez */
+}
+
+/* Transición suave solo cuando no se está redimensionando */
+.sidebar-container {
+  transition: all 0.15s ease-out !important;
 }
 
 /* --- Estilos para react-split-pane (divisor vertical alternativo) --- */

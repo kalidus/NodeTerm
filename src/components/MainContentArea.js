@@ -86,10 +86,8 @@ const MainContentArea = ({
   selectedNode,
   treeContextMenuRef
 }) => {
-  // Función de colapso automático inteligente (tanto durante como al final)
+  // Función de colapso automático más fluida e inmediata
   const handleResizeWithAutoCollapse = (e) => {
-    console.log('🔍 onResize ejecutado:', e.sizes);
-    
     // Calcular ancho real del panel en píxeles
     const splitterElement = document.querySelector('.main-splitter');
     if (splitterElement) {
@@ -97,25 +95,23 @@ const MainContentArea = ({
       const sidebarPercentage = e.sizes[0];
       const sidebarWidthPx = (splitterWidth * sidebarPercentage) / 100;
       
-      console.log('📊 Datos resize:', { 
-        splitterWidth, 
-        sidebarPercentage, 
-        sidebarWidthPx, 
-        sidebarCollapsed 
-      });
+      // Umbrales más agresivos para mejor fluidez
+      const collapseThresholdPx = 80;   // Más alto para colapsar antes
+      const expandThresholdPx = 140;    // Más alto para expandir más tarde
       
-      // Umbrales en píxeles (basados en datos reales)
-      const collapseThresholdPx = 70;  // Mayor que 65px para que se active al llegar al límite
-      const expandThresholdPx = 120;   // Si es mayor a 120px, expandir
+      console.log('📊 Resize:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
       
+      // Usar requestAnimationFrame para transición más fluida
       if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
-        // Colapsar automáticamente
-        console.log('🔄 AUTO-COLAPSANDO sidebar por tamaño:', sidebarWidthPx);
-        setSidebarCollapsed(true);
+        console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
+        requestAnimationFrame(() => {
+          setSidebarCollapsed(true);
+        });
       } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
-        // Expandir automáticamente
-        console.log('🔄 AUTO-EXPANDIENDO sidebar por tamaño:', sidebarWidthPx);
-        setSidebarCollapsed(false);
+        console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
+        requestAnimationFrame(() => {
+          setSidebarCollapsed(false);
+        });
       }
     }
     
