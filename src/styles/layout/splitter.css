@@ -36,6 +36,29 @@
   transition: all 0.15s ease-out !important;
 }
 
+/* Área de detección ampliada para el gutter principal */
+.main-splitter .p-splitter-gutter {
+  width: 12px !important;
+  margin: 0 -6px !important;
+  cursor: col-resize !important;
+  transition: none !important;
+  position: relative;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Área invisible adicional para mejor detección */
+.main-splitter .p-splitter-gutter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  right: -8px;
+  bottom: 0;
+  cursor: col-resize;
+  z-index: 1;
+}
+
 /* --- Estilos para react-split-pane (divisor vertical alternativo) --- */
 .SplitPane .Resizer {
   background: #888;
