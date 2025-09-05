@@ -16,9 +16,9 @@
 
 /* Tamaño mínimo para el panel lateral */
 .p-splitter .p-splitter-panel:first-child {
-  min-width: 240px !important;
   min-height: 47px !important;
   max-width: 400px;
+  min-width: 44px !important; /* Límite mínimo: tamaño de sidebar colapsada */
 }
 /* Cuando la sidebar está colapsada (ancho 44px) */
 .p-splitter .p-splitter-panel:first-child[style*="width: 44px"] {
