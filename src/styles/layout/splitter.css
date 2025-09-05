@@ -47,6 +47,20 @@
   border: none !important;
 }
 
+/* Específicamente eliminar el rectángulo rojo molesto */
+.main-splitter .p-splitter-gutter {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+.main-splitter .p-splitter-gutter:focus,
+.main-splitter .p-splitter-gutter:active,
+.main-splitter .p-splitter-gutter:hover {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
 /* Área invisible adicional para mejor detección */
 .main-splitter .p-splitter-gutter::before {
   content: '';
