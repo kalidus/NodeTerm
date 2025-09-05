@@ -356,7 +356,7 @@ const Sidebar = React.memo(({
     <div 
       className="sidebar-container"
       style={{
-        transition: sidebarCollapsed ? 'max-width 0.2s, min-width 0.2s, width 0.2s' : 'width 0.2s',
+        transition: 'all 0.15s ease-out',
         width: sidebarCollapsed ? 44 : undefined,
         minWidth: sidebarCollapsed ? 44 : undefined,
         maxWidth: sidebarCollapsed ? 44 : undefined,
