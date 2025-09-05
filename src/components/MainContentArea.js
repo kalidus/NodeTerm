@@ -95,9 +95,9 @@ const MainContentArea = ({
       const sidebarPercentage = e.sizes[0];
       const sidebarWidthPx = (splitterWidth * sidebarPercentage) / 100;
       
-      // Umbrales más agresivos para mejor fluidez
-      const collapseThresholdPx = 80;   // Más alto para colapsar antes
-      const expandThresholdPx = 140;    // Más alto para expandir más tarde
+      // Umbrales optimizados para expansión muy fácil
+      const collapseThresholdPx = 80;   // Colapsar antes del límite físico
+      const expandThresholdPx = 60;     // Expandir muy fácilmente desde colapsado
       
       console.log('📊 Resize:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
       
