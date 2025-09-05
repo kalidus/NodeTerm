@@ -523,20 +523,22 @@ export function UnifiedConnectionDialog({
 
                   {/* Nueva Card condicional para NodeTerm Drive - MODO EDICIÓN */}
                   {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                    <Card title="📁 Directorio Local" className="mt-3">
-                      <div className="field">
-                        <label htmlFor="guacDriveHostDir-edit">Carpeta para "NodeTerm Drive"</label>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
-                          <InputText
-                            id="guacDriveHostDir-edit"
-                            value={formData.guacDriveHostDir}
-                            onChange={handleTextChange('guacDriveHostDir')}
-                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
-                          />
+                    <Card title="📁 Carpeta Compartida" className="mt-3">
+                        <div className="field">
+                            <label htmlFor="guacDriveHostDir-edit">Ruta del directorio local</label>
+                            <div className="p-inputgroup">
+                                <InputText
+                                    id="guacDriveHostDir-edit"
+                                    value={formData.guacDriveHostDir}
+                                    onChange={handleTextChange('guacDriveHostDir')}
+                                    placeholder="Ej: C:\Users\TuUsuario\Compartido"
+                                />
+                                <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip="Seleccionar carpeta" />
+                            </div>
+                            <small className="p-d-block mt-2 text-color-secondary">
+                                Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP.
+                            </small>
                         </div>
-                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
-                      </div>
                     </Card>
                   )}
                 </div>
@@ -620,10 +622,10 @@ export function UnifiedConnectionDialog({
                         <>
                           <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
                           <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
                           <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
                           <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
                         </>
                       )}
                     </div>
@@ -817,20 +819,22 @@ export function UnifiedConnectionDialog({
 
                   {/* Nueva Card condicional para NodeTerm Drive - MODO CREACIÓN */}
                   {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                    <Card title="📁 Directorio Local" className="mt-3">
-                      <div className="field">
-                        <label htmlFor="guacDriveHostDir-create">Carpeta para "NodeTerm Drive"</label>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
-                          <InputText
-                            id="guacDriveHostDir-create"
-                            value={formData.guacDriveHostDir}
-                            onChange={handleTextChange('guacDriveHostDir')}
-                            placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
-                          />
+                    <Card title="📁 Carpeta Compartida" className="mt-3">
+                        <div className="field">
+                            <label htmlFor="guacDriveHostDir-create">Ruta del directorio local</label>
+                            <div className="p-inputgroup">
+                                <InputText
+                                    id="guacDriveHostDir-create"
+                                    value={formData.guacDriveHostDir}
+                                    onChange={handleTextChange('guacDriveHostDir')}
+                                    placeholder="Ej: C:\Users\TuUsuario\Compartido"
+                                />
+                                <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip="Seleccionar carpeta" />
+                            </div>
+                            <small className="p-d-block mt-2 text-color-secondary">
+                                Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP.
+                            </small>
                         </div>
-                        {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
-                      </div>
                     </Card>
                   )}
                 </div>
@@ -912,12 +916,12 @@ export function UnifiedConnectionDialog({
                       {/* Opciones para Guacamole */}
                       {formData.clientType === 'guacamole' && (
                         <>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
-                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-create" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-create">📋 Portapapeles</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-create" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-create">🔊 Audio</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-create" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-create">💾 Carpetas (NodeTerm Drive)</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-create" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-create">📐 Ajuste automático</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-create" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-create">🖼️ Mostrar fondo</label></div>
+                          <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-create" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-create">🖨️ Impresoras</label></div>
                         </>
                       )}
                     </div>

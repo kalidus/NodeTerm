@@ -298,3 +298,12 @@
 .unified-connection-dialog .p-button-outlined[icon="pi pi-folder-open"] .p-button-icon {
   font-size: 0.9rem !important;
 }
+
+/* Forzar la misma altura para Input y Button en el InputGroup */
+.unified-connection-dialog .p-inputgroup .p-inputtext,
+.unified-connection-dialog .p-inputgroup .p-button {
+    height: 38px !important; /* Altura fija para ambos */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
