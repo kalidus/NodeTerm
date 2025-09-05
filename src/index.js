@@ -8,6 +8,7 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import "primeflex/primeflex.css";
 import './styles/base/base.css'; // Importamos la nueva base de estilos
+import PrimeReact from 'primereact/api';
 
 // Configuración global de PrimeReact para evitar errores de overlays
 if (typeof window !== 'undefined') {
@@ -41,11 +42,14 @@ if (typeof window !== 'undefined') {
 }
 
 // Custom styles
-import './assets/styles.css';
+import './styles/main.css';
 // import './assets/DashboardStyles.css';
 // import './assets/Dashboard.css';
 // import './assets/form-fixes.css';
 // import './assets/sidebar-theme-fixes.css';
+
+// Habilitar el modo "ripple" para los componentes de PrimeReact
+PrimeReact.ripple = true;
 
 const container = document.getElementById('root');
 const root = createRoot(container);
