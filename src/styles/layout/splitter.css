@@ -47,6 +47,16 @@
   border: none !important;
 }
 
+/* Asegurar que NINGÚN elemento del gutter tenga background */
+.main-splitter .p-splitter-gutter,
+.main-splitter .p-splitter-gutter *,
+.main-splitter .p-splitter-gutter::before,
+.main-splitter .p-splitter-gutter::after {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 /* Específicamente eliminar el rectángulo rojo molesto */
 .main-splitter .p-splitter-gutter {
   outline: none !important;
@@ -71,6 +81,9 @@
   bottom: 0;
   cursor: col-resize;
   z-index: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
 }
 
 /* --- Estilos para react-split-pane (divisor vertical alternativo) --- */
