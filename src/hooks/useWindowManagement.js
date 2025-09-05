@@ -34,7 +34,7 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
   // ============ FUNCIONES DE RESIZE ============
   
-  // Función principal de resize
+  // Función principal de resize (optimizada para fluidez)
   const handleResize = useCallback(() => {
     const filteredTabs = getFilteredTabs();
     const activeTab = filteredTabs[activeTabIndex];
@@ -43,13 +43,13 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
     // Cancelar resize anterior si existe
     if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
+      cancelAnimationFrame(resizeTimeoutRef.current);
     }
     
-    // Usar requestAnimationFrame para optimizar el redimensionamiento
-    resizeTimeoutRef.current = setTimeout(() => {
+    // Usar requestAnimationFrame para máxima fluidez
+    resizeTimeoutRef.current = requestAnimationFrame(() => {
       resizeTerminals(activeTab, [], []); // homeTabs y fileExplorerTabs los pasamos vacíos ya que están en el hook de tabs
-    }, 16); // ~60fps
+    });
   }, [getFilteredTabs, activeTabIndex, resizeTerminals]);
   
   // Versión con throttling para onResize del splitter
@@ -149,7 +149,7 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
   useEffect(() => {
     return () => {
       if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
+        cancelAnimationFrame(resizeTimeoutRef.current);
       }
     };
   }, []);
