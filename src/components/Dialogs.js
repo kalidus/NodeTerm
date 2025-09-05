@@ -427,465 +427,238 @@ export function UnifiedConnectionDialog({
           // Formulario RDP optimizado para edición (mismo diseño que el tab RDP)
           <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
             
-            {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'stretch' }}>
+            {/* Contenedor principal de 2 columnas */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               
-              {/* Columna 1: Configuración de Conexión */}
-              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
-                <Card title="🔗 Conexión" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+              <div style={{ flex: '1', minWidth: '320px' }}>
+                <Card title="🔗 Conexión" className="mb-2">
                   <div className="formgrid grid">
                     <div className="field col-12">
-                      <label htmlFor="name" style={{ fontSize: '11px', fontWeight: '500' }}>Nombre *</label>
+                      <label htmlFor="name-edit">Nombre *</label>
                       <InputText
-                        id="name"
+                        id="name-edit"
                         value={formData.name}
                         onChange={handleTextChange('name')}
                         placeholder="Nombre descriptivo"
                         autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div className="field col-8">
-                        <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
-                        <InputText
-                          id="server"
-                          value={formData.server}
-                          onChange={handleTextChange('server')}
-                          placeholder="IP o nombre del servidor"
-                          autoComplete="off"
-                          style={{ padding: '8px 10px', fontSize: '13px' }}
-                        />
-                      </div>
-                      <div className="field col-4">
-                        <label htmlFor="port" style={{ fontSize: '11px', fontWeight: '500' }}>Puerto</label>
-                        <InputText
-                          id="port"
-                          type="number"
-                          value={formData.port}
-                          onChange={handleTextChange('port')}
-                          placeholder="3389"
-                          autoComplete="off"
-                          style={{ padding: '8px 10px', fontSize: '13px' }}
-                        />
-                      </div>
+                    <div className="field col-8">
+                      <label htmlFor="server-edit">Servidor *</label>
+                      <InputText
+                        id="server-edit"
+                        value={formData.server}
+                        onChange={handleTextChange('server')}
+                        placeholder="IP o nombre del servidor"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="field col-4">
+                      <label htmlFor="port-edit">Puerto</label>
+                      <InputText
+                        id="port-edit"
+                        type="number"
+                        value={formData.port}
+                        onChange={handleTextChange('port')}
+                        placeholder="3389"
+                        autoComplete="off"
+                      />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
+                      <label htmlFor="username-edit">Usuario *</label>
                       <InputText
-                        id="username"
+                        id="username-edit"
                         value={formData.username}
                         onChange={handleTextChange('username')}
                         placeholder="Usuario"
                         autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="password" style={{ fontSize: '11px', fontWeight: '500' }}>Contraseña</label>
+                      <label htmlFor="password-edit">Contraseña</label>
                       <InputText
-                        id="password"
+                        id="password-edit"
                         type="password"
                         value={formData.password}
                         onChange={handleTextChange('password')}
                         placeholder="Contraseña (opcional)"
                         autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <div className="field" style={{ flex: '1', minWidth: '200px' }}>
-                        <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
-                        <Dropdown
-                          id="clientType"
-                          value={formData.clientType}
-                          options={[
-                            { label: 'Windows MSTSC', value: 'mstsc' },
-                            { label: 'Apache Guacamole', value: 'guacamole' }
-                          ]}
-                          onChange={(e) => handleInputChange('clientType', e.value)}
-                          placeholder="Seleccionar tipo"
-                          style={{ fontSize: '13px' }}
-                        />
-                      </div>
-                      
-                      {/* Protocolo de seguridad (solo para Guacamole) */}
-                      {formData.clientType === 'guacamole' && (
-                        <div className="field" style={{ flex: '1', minWidth: '200px' }}>
-                          <label htmlFor="guacSecurity" style={{ fontSize: '11px', fontWeight: '500' }}>🔒 Protocolo de seguridad</label>
-                          <Dropdown
-                            id="guacSecurity"
-                            value={formData.guacSecurity}
-                            options={[
-                              { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
-                              { label: '🔐 RDP Estándar', value: 'rdp' },
-                              { label: '🔒 TLS', value: 'tls' },
-                              { label: '🛡️ Network Level Authentication', value: 'nla' }
-                            ]}
-                            onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                            style={{ fontSize: '12px', padding: '6px 8px' }}
-                            placeholder="Seleccionar protocolo"
-                          />
-                          <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                            Nivel de seguridad para la conexión RDP
-                          </small>
-                        </div>
-                      )}
+                    <div className="field col-12">
+                      <label htmlFor="clientType-edit">💻 Cliente</label>
+                      <Dropdown
+                        id="clientType-edit"
+                        value={formData.clientType}
+                        options={[
+                          { label: 'Windows MSTSC', value: 'mstsc' },
+                          { label: 'Apache Guacamole', value: 'guacamole' }
+                        ]}
+                        onChange={(e) => handleInputChange('clientType', e.value)}
+                        placeholder="Seleccionar tipo"
+                      />
                     </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
-              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
-                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <div className="formgrid grid">
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      <div className="field col-6">
-                        <label htmlFor="preset" style={{ fontSize: '11px', fontWeight: '500' }}>Preset</label>
-                        <Dropdown
-                          id="preset"
-                          value={formData.preset}
-                          options={[
-                            { label: 'Por defecto', value: 'default' },
-                            { label: 'Rendimiento', value: 'performance' },
-                            { label: 'Calidad', value: 'quality' }
-                          ]}
-                          onChange={(e) => handleInputChange('preset', e.value)}
-                          style={{ fontSize: '12px', padding: '4px 6px' }}
-                          className="compact-dropdown"
-                        />
-                      </div>
-                      <div className="field col-6">
-                        <label htmlFor="resolution" style={{ fontSize: '11px', fontWeight: '500' }}>Resolución</label>
-                        <Dropdown
-                          id="resolution"
-                          value={formData.resolution}
-                          options={[
-                            { label: 'Pantalla completa', value: 'fullscreen' },
-                            { label: '1920x1080', value: '1920x1080' },
-                            { label: '1600x1000', value: '1600x1000' },
-                            { label: '1366x768', value: '1366x768' },
-                            { label: '1024x768', value: '1024x768' }
-                          ]}
-                          onChange={(e) => handleInputChange('resolution', e.value)}
-                          style={{ fontSize: '12px', padding: '4px 6px' }}
-                          className="compact-dropdown"
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                      <div className="field col-6">
-                        <label htmlFor="colorDepth" style={{ fontSize: '11px', fontWeight: '500' }}>Color</label>
-                        <Dropdown
-                          id="colorDepth"
-                          value={formData.colorDepth}
-                          options={[
-                            { label: '32 bits', value: 32 },
-                            { label: '24 bits', value: 24 },
-                            { label: '16 bits', value: 16 },
-                            { label: '15 bits', value: 15 }
-                          ]}
-                          onChange={(e) => handleInputChange('colorDepth', e.value)}
-                          style={{ fontSize: '12px', padding: '4px 6px' }}
-                          className="compact-dropdown"
-                        />
-                      </div>
-                      <div className="field col-6">
-                        <label htmlFor="guacDpi" style={{ fontSize: '11px', fontWeight: '500' }}>DPI</label>
-                        <InputText
-                          id="guacDpi"
-                          value={formData.guacDpi}
-                          onChange={handleTextChange('guacDpi')}
-                          placeholder="96"
-                          style={{ padding: '4px 6px', fontSize: '12px' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Opciones integradas en la misma columna */}
-                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '8px' }}>
-                      <h6 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color)' }}>
-                        ⚙️ Opciones
-                      </h6>
-                      <div className="formgrid grid">
-                        {/* Opciones para MSTSC en 2 columnas */}
-                        {formData.clientType === 'mstsc' && (
-                          <>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectFolders"
-                                checked={formData.redirectFolders}
-                                onChange={handleCheckboxChange('redirectFolders')}
-                              />
-                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '10px' }}>📁 Redirigir carpetas</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectClipboard"
-                                checked={formData.redirectClipboard}
-                                onChange={handleCheckboxChange('redirectClipboard')}
-                              />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectPrinters"
-                                checked={formData.redirectPrinters}
-                                onChange={handleCheckboxChange('redirectPrinters')}
-                              />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectAudio"
-                                checked={formData.redirectAudio}
-                                onChange={handleCheckboxChange('redirectAudio')}
-                              />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="smartSizing"
-                                checked={formData.smartSizing}
-                                onChange={handleCheckboxChange('smartSizing')}
-                              />
-                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="fullscreen"
-                                checked={formData.fullscreen}
-                                onChange={handleCheckboxChange('fullscreen')}
-                              />
-                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '10px' }}>🖥️ Pantalla completa</label>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Opciones para Guacamole en 2 columnas */}
-                        {formData.clientType === 'guacamole' && (
-                          <>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectClipboard"
-                                checked={formData.redirectClipboard}
-                                onChange={handleCheckboxChange('redirectClipboard')}
-                              />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectPrinters"
-                                checked={formData.redirectPrinters}
-                                onChange={handleCheckboxChange('redirectPrinters')}
-                              />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectAudio"
-                                checked={formData.redirectAudio}
-                                onChange={handleCheckboxChange('redirectAudio')}
-                              />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="autoResize"
-                                checked={formData.autoResize}
-                                onChange={handleCheckboxChange('autoResize')}
-                              />
-                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="guacEnableWallpaper"
-                                checked={formData.guacEnableWallpaper}
-                                onChange={handleCheckboxChange('guacEnableWallpaper')}
-                              />
-                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '10px' }}>🖼️ Mostrar fondo</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="guacEnableDrive"
-                                checked={formData.guacEnableDrive}
-                                onChange={handleCheckboxChange('guacEnableDrive')}
-                              />
-                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '10px' }}>💾 Redirigir carpetas</label>
-                            </div>
-                            
-                            {/* Configuración de carpetas condicional */}
-                            {formData.guacEnableDrive && (
-                              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                                <div className="field" style={{ width: '100%', marginBottom: '8px' }}>
-                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>📁 Carpeta local para "NodeTerm Drive"</label>
-                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%' }}>
-                                    <Button
-                                      icon="pi pi-folder-open"
-                                      className="p-button-outlined p-button-sm"
-                                      onClick={handleSelectFolder}
-                                      tooltip="Seleccionar carpeta"
-                                      style={{ padding: '6px 10px', fontSize: '11px', minWidth: 'auto', flexShrink: 0 }}
-                                    />
-                                    <InputText
-                                      id="guacDriveHostDir"
-                                      value={formData.guacDriveHostDir}
-                                      onChange={handleTextChange('guacDriveHostDir')}
-                                      placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
-                                      style={{ padding: '6px 8px', fontSize: '12px', flex: 1, minWidth: '0' }}
-                                    />
-                                  </div>
-                                  {!formData.guacDriveHostDir && (
-                                    <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
-                                      Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
-                                    </small>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Opciones avanzadas integradas (solo Guacamole) - MISMO FORMATO que las Opciones */}
                     {formData.clientType === 'guacamole' && (
-                      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }} className="advanced-options-container">
-                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0', margin: '0', marginLeft: '0px' }}>
-                          <div className="formgrid grid">
-                            {/* Columna 1: Opciones de Rendimiento */}
-                            <div className="col-6">
-                              <h4 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                                🚀 RENDIMIENTO
-                              </h4>
-                              <div className="field-checkbox">
-                                <Checkbox
-                                  inputId="guacEnableGfx"
-                                  checked={formData.guacEnableGfx}
-                                  onChange={handleCheckboxChange('guacEnableGfx')}
-                                />
-                                <label htmlFor="guacEnableGfx" className="ml-2" style={{ fontSize: '10px' }}>
-                                  🎨 Habilitar GFX
-                                </label>
-                              </div>
-                              <div className="field-checkbox">
-                                <Checkbox
-                                  inputId="guacEnableDesktopComposition"
-                                  checked={formData.guacEnableDesktopComposition}
-                                  onChange={handleCheckboxChange('guacEnableDesktopComposition')}
-                                />
-                                <label htmlFor="guacEnableDesktopComposition" className="ml-2" style={{ fontSize: '10px' }}>
-                                  🖼️ Desktop Composition
-                                </label>
-                              </div>
-                              <div className="field-checkbox">
-                                <Checkbox
-                                  inputId="guacEnableFontSmoothing"
-                                  checked={formData.guacEnableFontSmoothing}
-                                  onChange={handleCheckboxChange('guacEnableFontSmoothing')}
-                                />
-                                <label htmlFor="guacEnableFontSmoothing" className="ml-2" style={{ fontSize: '10px' }}>
-                                  ✨ Font Smoothing
-                                </label>
-                              </div>
-                              <div className="field-checkbox">
-                                <Checkbox
-                                  inputId="guacEnableTheming"
-                                  checked={formData.guacEnableTheming}
-                                  onChange={handleCheckboxChange('guacEnableTheming')}
-                                />
-                                <label htmlFor="guacEnableTheming" className="ml-2" style={{ fontSize: '10px' }}>
-                                  🎨 Theming
-                                </label>
-                              </div>
-                            </div>
-
-                            {/* Columna 2: Opciones de Interfaz y Caché */}
-                            <div className="col-6">
-                              <h4 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                                🖱️ INTERFAZ
-                              </h4>
-                              <div className="field-checkbox">
-                                <Checkbox
-                                  inputId="guacEnableFullWindowDrag"
-                                  checked={formData.guacEnableFullWindowDrag}
-                                  onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
-                                />
-                                <label htmlFor="guacEnableFullWindowDrag" className="ml-2" style={{ fontSize: '10px' }}>
-                                  🖱️ Full Window Drag
-                                </label>
-                              </div>
-                              <div className="field-checkbox">
-                                <Checkbox
-                                  inputId="guacEnableMenuAnimations"
-                                  checked={formData.guacEnableMenuAnimations}
-                                  onChange={handleCheckboxChange('guacEnableMenuAnimations')}
-                                />
-                                <label htmlFor="guacEnableMenuAnimations" className="ml-2" style={{ fontSize: '10px' }}>
-                                  🎭 Animaciones de menú
-                                </label>
-                              </div>
-                              
-                                                             <h4 style={{ fontSize: '11px', fontWeight: '600', margin: '16px 0 6px 0', color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                                 💾 CACHÉ
-                               </h4>
-                               <div className="field-checkbox">
-                                 <Checkbox
-                                   inputId="guacDisableGlyphCaching"
-                                   checked={formData.guacDisableGlyphCaching}
-                                   onChange={handleCheckboxChange('guacDisableGlyphCaching')}
-                                 />
-                                 <label htmlFor="guacDisableGlyphCaching" className="ml-2" style={{ fontSize: '10px' }}>
-                                   🚫 Desactivar glyph caching
-                                 </label>
-                               </div>
-                               <div className="field-checkbox">
-                                 <Checkbox
-                                   inputId="guacDisableOffscreenCaching"
-                                   checked={formData.guacDisableOffscreenCaching}
-                                   onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
-                                 />
-                                 <label htmlFor="guacDisableOffscreenCaching" className="ml-2" style={{ fontSize: '10px' }}>
-                                   🚫 Desactivar offscreen caching
-                                 </label>
-                               </div>
-                               <div className="field-checkbox">
-                                 <Checkbox
-                                   inputId="guacDisableBitmapCaching"
-                                   checked={formData.guacDisableBitmapCaching}
-                                   onChange={handleCheckboxChange('guacDisableBitmapCaching')}
-                                 />
-                                 <label htmlFor="guacDisableBitmapCaching" className="ml-2" style={{ fontSize: '10px' }}>
-                                   🚫 Desactivar bitmap caching
-                                 </label>
-                               </div>
-                               <div className="field-checkbox">
-                                 <Checkbox
-                                   inputId="guacDisableCopyRect"
-                                   checked={formData.guacDisableCopyRect}
-                                   onChange={handleCheckboxChange('guacDisableCopyRect')}
-                                 />
-                                 <label htmlFor="guacDisableCopyRect" className="ml-2" style={{ fontSize: '10px' }}>
-                                   🚫 Desactivar copy-rect
-                                 </label>
-                               </div>
-                            </div>
-                          </div>
-                        </Fieldset>
+                      <div className="field col-12">
+                        <label htmlFor="guacSecurity-edit">🔒 Seguridad</label>
+                        <Dropdown
+                          id="guacSecurity-edit"
+                          value={formData.guacSecurity}
+                          options={[
+                            { label: '🛡️ Automático', value: 'any' },
+                            { label: '🔐 RDP Estándar', value: 'rdp' },
+                            { label: '🔒 TLS', value: 'tls' },
+                            { label: '🛡️ Network Level Authentication', value: 'nla' }
+                          ]}
+                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                          placeholder="Seleccionar protocolo"
+                        />
+                        <small>Nivel de seguridad para la conexión RDP</small>
                       </div>
                     )}
                   </div>
                 </Card>
               </div>
+
+              {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
+              <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Card: Pantalla */}
+                <Card title="🖥️ Pantalla">
+                  <div className="formgrid grid">
+                    <div className="field col-6">
+                      <label htmlFor="preset-edit">Preset</label>
+                      <Dropdown
+                        id="preset-edit"
+                        value={formData.preset}
+                        options={[
+                          { label: 'Por defecto', value: 'default' },
+                          { label: 'Rendimiento', value: 'performance' },
+                          { label: 'Calidad', value: 'quality' }
+                        ]}
+                        onChange={(e) => handleInputChange('preset', e.value)}
+                      />
+                    </div>
+                    <div className="field col-6">
+                      <label htmlFor="resolution-edit">Resolución</label>
+                      <Dropdown
+                        id="resolution-edit"
+                        value={formData.resolution}
+                        options={[
+                          { label: 'Pantalla completa', value: 'fullscreen' },
+                          { label: '1920x1080', value: '1920x1080' },
+                          { label: '1600x1000', value: '1600x1000' },
+                          { label: '1366x768', value: '1366x768' },
+                          { label: '1024x768', value: '1024x768' }
+                        ]}
+                        onChange={(e) => handleInputChange('resolution', e.value)}
+                      />
+                    </div>
+                    <div className="field col-6">
+                      <label htmlFor="colorDepth-edit">Color</label>
+                      <Dropdown
+                        id="colorDepth-edit"
+                        value={formData.colorDepth}
+                        options={[
+                          { label: '32 bits', value: 32 },
+                          { label: '24 bits', value: 24 },
+                          { label: '16 bits', value: 16 },
+                          { label: '15 bits', value: 15 }
+                        ]}
+                        onChange={(e) => handleInputChange('colorDepth', e.value)}
+                      />
+                    </div>
+                    <div className="field col-6">
+                      <label htmlFor="guacDpi-edit">DPI</label>
+                      <InputText
+                        id="guacDpi-edit"
+                        value={formData.guacDpi}
+                        onChange={handleTextChange('guacDpi')}
+                        placeholder="96"
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Card: Recursos Locales */}
+                <Card title="⚙️ Recursos Locales">
+                  <div className="formgrid grid">
+                    {/* Opciones para MSTSC */}
+                    {formData.clientType === 'mstsc' && (
+                      <>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit">📋 Portapapeles</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit">🔊 Audio</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit">📁 Carpetas</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit">📐 Ajuste automático</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit">🖥️ Pantalla completa</label></div>
+                      </>
+                    )}
+                    {/* Opciones para Guacamole */}
+                    {formData.clientType === 'guacamole' && (
+                      <>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
+                      </>
+                    )}
+                  </div>
+                  {/* Configuración de carpetas condicional para Guacamole */}
+                  {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                    <div className="field" style={{ marginTop: '1rem' }}>
+                      <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                        <InputText
+                          id="guacDriveHostDir-edit"
+                          value={formData.guacDriveHostDir}
+                          onChange={handleTextChange('guacDriveHostDir')}
+                          placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                        />
+                      </div>
+                      {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
+                    </div>
+                  )}
+
+                  {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
+                  {formData.clientType === 'guacamole' && (
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                      <Fieldset legend="🚀 Opciones Avanzadas" toggleable collapsed>
+                        <div className="formgrid grid">
+                          <div className="col-4">
+                            <h5>Rendimiento</h5>
+                            <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit">🎨 Habilitar GFX</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-composition-edit" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit">🖼️ Desktop Composition</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-font-edit" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit">✨ Font Smoothing</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-theming-edit" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit">🎭 Theming</label></div>
+                          </div>
+                          <div className="col-4">
+                            <h5>Interfaz</h5>
+                            <div className="field-checkbox"><Checkbox inputId="guac-drag-edit" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit">🖱️ Full Window Drag</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-menu-edit" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit">🎬 Animaciones de menú</label></div>
+                          </div>
+                          <div className="col-4">
+                            <h5>Caché</h5>
+                            <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit">🔤 Glyph Caching</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit">📱 Offscreen Caching</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit">🖼️ Bitmap Caching</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit">📋 Copy-Rect</label></div>
+                          </div>
+                        </div>
+                      </Fieldset>
+                    </div>
+                  )}
+                </Card>
+
+              </div>
             </div>
 
-
-
-
-
             {/* Botones */}
-            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 18, justifyContent: 'flex-end' }}>
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
               <Button 
                 label="Cancelar" 
                 icon="pi pi-times" 
@@ -942,474 +715,238 @@ export function UnifiedConnectionDialog({
         <TabPanel header="RDP" leftIcon="pi pi-desktop">
           <div className="p-fluid" style={{ padding: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
             
-            {/* Diseño en 2 columnas: Conexión + Pantalla compacta arriba, Opciones abajo */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'stretch' }}>
+            {/* Contenedor principal de 2 columnas */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               
-              {/* Columna 1: Configuración de Conexión */}
-              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
-                <Card title="🔗 Conexión" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              {/* --- COLUMNA IZQUIERDA: Conexión --- */}
+              <div style={{ flex: '1', minWidth: '320px' }}>
+                <Card title="🔗 Conexión" className="mb-2">
                   <div className="formgrid grid">
                     <div className="field col-12">
-                      <label htmlFor="name" style={{ fontSize: '11px', fontWeight: '500' }}>Nombre *</label>
+                      <label htmlFor="name-edit">Nombre *</label>
                       <InputText
-                        id="name"
+                        id="name-edit"
                         value={formData.name}
                         onChange={handleTextChange('name')}
                         placeholder="Nombre descriptivo"
                         autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div className="field col-8">
-                        <label htmlFor="server" style={{ fontSize: '11px', fontWeight: '500' }}>Servidor *</label>
-                        <InputText
-                          id="server"
-                          value={formData.server}
-                          onChange={handleTextChange('server')}
-                          placeholder="IP o nombre del servidor"
-                          autoComplete="off"
-                          style={{ padding: '8px 10px', fontSize: '13px' }}
-                        />
-                      </div>
-                      <div className="field col-4">
-                        <label htmlFor="port" style={{ fontSize: '11px', fontWeight: '500' }}>Puerto</label>
-                        <InputText
-                          id="port"
-                          type="number"
-                          value={formData.port}
-                          onChange={handleTextChange('port')}
-                          placeholder="3389"
-                          autoComplete="off"
-                          style={{ padding: '8px 10px', fontSize: '13px' }}
-                        />
-                      </div>
+                    <div className="field col-8">
+                      <label htmlFor="server-edit">Servidor *</label>
+                      <InputText
+                        id="server-edit"
+                        value={formData.server}
+                        onChange={handleTextChange('server')}
+                        placeholder="IP o nombre del servidor"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="field col-4">
+                      <label htmlFor="port-edit">Puerto</label>
+                      <InputText
+                        id="port-edit"
+                        type="number"
+                        value={formData.port}
+                        onChange={handleTextChange('port')}
+                        placeholder="3389"
+                        autoComplete="off"
+                      />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="username" style={{ fontSize: '11px', fontWeight: '500' }}>Usuario *</label>
+                      <label htmlFor="username-edit">Usuario *</label>
                       <InputText
-                        id="username"
+                        id="username-edit"
                         value={formData.username}
                         onChange={handleTextChange('username')}
                         placeholder="Usuario"
                         autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
                     <div className="field col-12">
-                      <label htmlFor="password" style={{ fontSize: '11px', fontWeight: '500' }}>Contraseña</label>
+                      <label htmlFor="password-edit">Contraseña</label>
                       <InputText
-                        id="password"
+                        id="password-edit"
                         type="password"
                         value={formData.password}
                         onChange={handleTextChange('password')}
                         placeholder="Contraseña (opcional)"
                         autoComplete="off"
-                        style={{ padding: '8px 10px', fontSize: '13px' }}
                       />
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <div className="field" style={{ flex: '1', minWidth: '200px' }}>
-                        <label htmlFor="clientType" style={{ fontSize: '11px', fontWeight: '500' }}>Tipo de Cliente</label>
-                        <Dropdown
-                          id="clientType"
-                          value={formData.clientType}
-                          options={[
-                            { label: 'Windows MSTSC', value: 'mstsc' },
-                            { label: 'Apache Guacamole', value: 'guacamole' }
-                          ]}
-                          onChange={(e) => handleInputChange('clientType', e.value)}
-                          placeholder="Seleccionar tipo"
-                          style={{ fontSize: '13px' }}
-                        />
-                      </div>
-                      
-                      {/* Protocolo de seguridad (solo para Guacamole) */}
-                      {formData.clientType === 'guacamole' && (
-                        <div className="field" style={{ flex: '1', minWidth: '200px' }}>
-                          <label htmlFor="guacSecurity" style={{ fontSize: '11px', fontWeight: '500' }}>🔒 Protocolo de seguridad</label>
-                          <Dropdown
-                            id="guacSecurity"
-                            value={formData.guacSecurity}
-                            options={[
-                              { label: '🛡️ Cualquiera (Recomendado)', value: 'any' },
-                              { label: '🔐 RDP Estándar', value: 'rdp' },
-                              { label: '🔒 TLS', value: 'tls' },
-                              { label: '🛡️ Network Level Authentication', value: 'nla' }
-                            ]}
-                            onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                            style={{ fontSize: '12px', padding: '6px 8px' }}
-                            placeholder="Seleccionar protocolo"
-                          />
-                          <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '2px' }}>
-                            Nivel de seguridad para la conexión RDP
-                          </small>
-                        </div>
-                      )}
+                    <div className="field col-12">
+                      <label htmlFor="clientType-edit">💻 Cliente</label>
+                      <Dropdown
+                        id="clientType-edit"
+                        value={formData.clientType}
+                        options={[
+                          { label: 'Windows MSTSC', value: 'mstsc' },
+                          { label: 'Apache Guacamole', value: 'guacamole' }
+                        ]}
+                        onChange={(e) => handleInputChange('clientType', e.value)}
+                        placeholder="Seleccionar tipo"
+                      />
                     </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Columna 2: Pantalla + Opciones (COMPACTO) */}
-              <div style={{ flex: '1', minWidth: '280px', display: 'flex' }}>
-                <Card title="🖥️ Pantalla" className="mb-2" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <div className="formgrid grid">
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      <div className="field col-6">
-                        <label htmlFor="preset" style={{ fontSize: '11px', fontWeight: '500' }}>Preset</label>
-                        <Dropdown
-                          id="preset"
-                          value={formData.preset}
-                          options={[
-                            { label: 'Por defecto', value: 'default' },
-                            { label: 'Rendimiento', value: 'performance' },
-                            { label: 'Calidad', value: 'quality' }
-                          ]}
-                          onChange={(e) => handleInputChange('preset', e.value)}
-                          style={{ fontSize: '12px', padding: '4px 6px' }}
-                          className="compact-dropdown"
-                        />
-                      </div>
-                      <div className="field col-6">
-                        <label htmlFor="resolution" style={{ fontSize: '11px', fontWeight: '500' }}>Resolución</label>
-                        <Dropdown
-                          id="resolution"
-                          value={formData.resolution}
-                          options={[
-                            { label: 'Pantalla completa', value: 'fullscreen' },
-                            { label: '1920x1080', value: '1920x1080' },
-                            { label: '1600x1000', value: '1600x1000' },
-                            { label: '1366x768', value: '1366x768' },
-                            { label: '1024x768', value: '1024x768' }
-                          ]}
-                          onChange={(e) => handleInputChange('resolution', e.value)}
-                          style={{ fontSize: '12px', padding: '4px 6px' }}
-                          className="compact-dropdown"
-                        />
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                      <div className="field col-6">
-                        <label htmlFor="colorDepth" style={{ fontSize: '11px', fontWeight: '500' }}>Color</label>
-                        <Dropdown
-                          id="colorDepth"
-                          value={formData.colorDepth}
-                          options={[
-                            { label: '32 bits', value: 32 },
-                            { label: '24 bits', value: 24 },
-                            { label: '16 bits', value: 16 },
-                            { label: '15 bits', value: 15 }
-                          ]}
-                          onChange={(e) => handleInputChange('colorDepth', e.value)}
-                          style={{ fontSize: '12px', padding: '4px 6px' }}
-                          className="compact-dropdown"
-                        />
-                      </div>
-                      <div className="field col-6">
-                        <label htmlFor="guacDpi" style={{ fontSize: '11px', fontWeight: '500' }}>DPI</label>
-                        <InputText
-                          id="guacDpi"
-                          value={formData.guacDpi}
-                          onChange={handleTextChange('guacDpi')}
-                          placeholder="96"
-                          style={{ padding: '4px 6px', fontSize: '12px' }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Opciones integradas en la misma columna */}
-                    <div style={{ borderTop: '1px solid var(--surface-border)', paddingTop: '8px' }}>
-                      <h6 style={{ fontSize: '11px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--text-color)' }}>
-                        ⚙️ Opciones
-                      </h6>
-                      <div className="formgrid grid">
-                        {/* Opciones para MSTSC en 2 columnas */}
-                        {formData.clientType === 'mstsc' && (
-                          <>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectFolders"
-                                checked={formData.redirectFolders}
-                                onChange={handleCheckboxChange('redirectFolders')}
-                              />
-                              <label htmlFor="redirectFolders" className="ml-2" style={{ fontSize: '10px' }}>📁 Redirigir carpetas</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectClipboard"
-                                checked={formData.redirectClipboard}
-                                onChange={handleCheckboxChange('redirectClipboard')}
-                              />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectPrinters"
-                                checked={formData.redirectPrinters}
-                                onChange={handleCheckboxChange('redirectPrinters')}
-                              />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectAudio"
-                                checked={formData.redirectAudio}
-                                onChange={handleCheckboxChange('redirectAudio')}
-                              />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="smartSizing"
-                                checked={formData.smartSizing}
-                                onChange={handleCheckboxChange('smartSizing')}
-                              />
-                              <label htmlFor="smartSizing" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="fullscreen"
-                                checked={formData.fullscreen}
-                                onChange={handleCheckboxChange('fullscreen')}
-                              />
-                              <label htmlFor="fullscreen" className="ml-2" style={{ fontSize: '10px' }}>🖥️ Pantalla completa</label>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Opciones para Guacamole en 2 columnas */}
-                        {formData.clientType === 'guacamole' && (
-                          <>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectClipboard"
-                                checked={formData.redirectClipboard}
-                                onChange={handleCheckboxChange('redirectClipboard')}
-                              />
-                              <label htmlFor="redirectClipboard" className="ml-2" style={{ fontSize: '10px' }}>📋 Compartir portapapeles</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectPrinters"
-                                checked={formData.redirectPrinters}
-                                onChange={handleCheckboxChange('redirectPrinters')}
-                              />
-                              <label htmlFor="redirectPrinters" className="ml-2" style={{ fontSize: '10px' }}>🖨️ Redirigir impresoras</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="redirectAudio"
-                                checked={formData.redirectAudio}
-                                onChange={handleCheckboxChange('redirectAudio')}
-                              />
-                              <label htmlFor="redirectAudio" className="ml-2" style={{ fontSize: '10px' }}>🔊 Redirigir audio</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="autoResize"
-                                checked={formData.autoResize}
-                                onChange={handleCheckboxChange('autoResize')}
-                              />
-                              <label htmlFor="autoResize" className="ml-2" style={{ fontSize: '10px' }}>📐 Ajuste automático</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="guacEnableWallpaper"
-                                checked={formData.guacEnableWallpaper}
-                                onChange={handleCheckboxChange('guacEnableWallpaper')}
-                              />
-                              <label htmlFor="guacEnableWallpaper" className="ml-2" style={{ fontSize: '10px' }}>🖼️ Mostrar fondo</label>
-                            </div>
-                            <div className="field-checkbox col-6">
-                              <Checkbox
-                                inputId="guacEnableDrive"
-                                checked={formData.guacEnableDrive}
-                                onChange={handleCheckboxChange('guacEnableDrive')}
-                              />
-                              <label htmlFor="guacEnableDrive" className="ml-2" style={{ fontSize: '10px' }}>💾 Redirigir carpetas</label>
-                            </div>
-                            
-                            {/* Configuración de carpetas condicional */}
-                            {formData.guacEnableDrive && (
-                              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--surface-border)' }}>
-                                <div className="field" style={{ width: '100%', marginBottom: '8px' }}>
-                                  <label htmlFor="guacDriveHostDir" style={{ fontSize: '11px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>📁 Carpeta local para "NodeTerm Drive"</label>
-                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', width: '100%' }}>
-                                    <Button
-                                      icon="pi pi-folder-open"
-                                      className="p-button-outlined p-button-sm"
-                                      onClick={handleSelectFolder}
-                                      tooltip="Seleccionar carpeta"
-                                      style={{ padding: '6px 10px', fontSize: '11px', minWidth: 'auto', flexShrink: 0 }}
-                                    />
-                                    <InputText
-                                      id="guacDriveHostDir"
-                                      value={formData.guacDriveHostDir}
-                                      onChange={handleTextChange('guacDriveHostDir')}
-                                      placeholder="C:\Users\kalid\Downloads\NodeTerm Drive"
-                                      style={{ padding: '6px 8px', fontSize: '12px', flex: 1, minWidth: '0' }}
-                                    />
-                                  </div>
-                                  {!formData.guacDriveHostDir && (
-                                    <small style={{ color: 'var(--text-color-secondary)', fontSize: '10px', display: 'block', marginTop: '4px' }}>
-                                      Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive
-                                    </small>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Opciones avanzadas integradas (solo Guacamole) */}
                     {formData.clientType === 'guacamole' && (
-                      <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--surface-border)' }} className="advanced-options-container">
-                        <Fieldset legend="🔧 Opciones Avanzadas" toggleable collapsed className="advanced-fieldset" style={{ border: 'none', padding: '0', margin: '0', marginLeft: '0px' }}>
-                          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                            {/* Columna 1: Opciones de Rendimiento */}
-                            <div style={{ flex: '1', minWidth: '250px' }}>
-                              <h4 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '4px' }}>
-                                🚀 Rendimiento
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableGfx"
-                                    checked={formData.guacEnableGfx}
-                                    onChange={handleCheckboxChange('guacEnableGfx')}
-                                  />
-                                  <label htmlFor="guacEnableGfx" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🎨 Habilitar GFX
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableDesktopComposition"
-                                    checked={formData.guacEnableDesktopComposition}
-                                    onChange={handleCheckboxChange('guacEnableDesktopComposition')}
-                                  />
-                                  <label htmlFor="guacEnableDesktopComposition" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🖼️ Desktop Composition
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableFontSmoothing"
-                                    checked={formData.guacEnableFontSmoothing}
-                                    onChange={handleCheckboxChange('guacEnableFontSmoothing')}
-                                  />
-                                  <label htmlFor="guacEnableFontSmoothing" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    ✨ Font Smoothing
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableTheming"
-                                    checked={formData.guacEnableTheming}
-                                    onChange={handleCheckboxChange('guacEnableTheming')}
-                                  />
-                                  <label htmlFor="guacEnableTheming" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🎨 Theming
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Columna 2: Opciones de Interfaz */}
-                            <div style={{ flex: '1', minWidth: '250px' }}>
-                              <h4 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '4px' }}>
-                                🖱️ Interfaz
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableFullWindowDrag"
-                                    checked={formData.guacEnableFullWindowDrag}
-                                    onChange={handleCheckboxChange('guacEnableFullWindowDrag')}
-                                  />
-                                  <label htmlFor="guacEnableFullWindowDrag" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🖱️ Full Window Drag
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacEnableMenuAnimations"
-                                    checked={formData.guacEnableMenuAnimations}
-                                    onChange={handleCheckboxChange('guacEnableMenuAnimations')}
-                                  />
-                                  <label htmlFor="guacEnableMenuAnimations" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🎭 Animaciones de menú
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Columna 3: Opciones de Caché */}
-                            <div style={{ flex: '1', minWidth: '250px' }}>
-                              <h4 style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--text-color)', borderBottom: '1px solid var(--surface-border)', paddingBottom: '4px' }}>
-                                💾 Caché
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableGlyphCaching"
-                                    checked={formData.guacDisableGlyphCaching}
-                                    onChange={handleCheckboxChange('guacDisableGlyphCaching')}
-                                  />
-                                  <label htmlFor="guacDisableGlyphCaching" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar glyph caching
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableOffscreenCaching"
-                                    checked={formData.guacDisableOffscreenCaching}
-                                    onChange={handleCheckboxChange('guacDisableOffscreenCaching')}
-                                  />
-                                  <label htmlFor="guacDisableOffscreenCaching" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar offscreen caching
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableBitmapCaching"
-                                    checked={formData.guacDisableBitmapCaching}
-                                    onChange={handleCheckboxChange('guacDisableBitmapCaching')}
-                                  />
-                                  <label htmlFor="guacDisableBitmapCaching" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar bitmap caching
-                                  </label>
-                                </div>
-                                <div className="field-checkbox">
-                                  <Checkbox
-                                    inputId="guacDisableCopyRect"
-                                    checked={formData.guacDisableCopyRect}
-                                    onChange={handleCheckboxChange('guacDisableCopyRect')}
-                                  />
-                                  <label htmlFor="guacDisableCopyRect" className="ml-2" style={{ fontSize: '10px', cursor: 'pointer' }}>
-                                    🚫 Desactivar copy-rect
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Fieldset>
+                      <div className="field col-12">
+                        <label htmlFor="guacSecurity-edit">🔒 Seguridad</label>
+                        <Dropdown
+                          id="guacSecurity-edit"
+                          value={formData.guacSecurity}
+                          options={[
+                            { label: '🛡️ Automático', value: 'any' },
+                            { label: '🔐 RDP Estándar', value: 'rdp' },
+                            { label: '🔒 TLS', value: 'tls' },
+                            { label: '🛡️ Network Level Authentication', value: 'nla' }
+                          ]}
+                          onChange={(e) => handleInputChange('guacSecurity', e.value)}
+                          placeholder="Seleccionar protocolo"
+                        />
+                        <small>Nivel de seguridad para la conexión RDP</small>
                       </div>
                     )}
                   </div>
                 </Card>
               </div>
+
+              {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
+              <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Card: Pantalla */}
+                <Card title="🖥️ Pantalla">
+                  <div className="formgrid grid">
+                    <div className="field col-6">
+                      <label htmlFor="preset-edit">Preset</label>
+                      <Dropdown
+                        id="preset-edit"
+                        value={formData.preset}
+                        options={[
+                          { label: 'Por defecto', value: 'default' },
+                          { label: 'Rendimiento', value: 'performance' },
+                          { label: 'Calidad', value: 'quality' }
+                        ]}
+                        onChange={(e) => handleInputChange('preset', e.value)}
+                      />
+                    </div>
+                    <div className="field col-6">
+                      <label htmlFor="resolution-edit">Resolución</label>
+                      <Dropdown
+                        id="resolution-edit"
+                        value={formData.resolution}
+                        options={[
+                          { label: 'Pantalla completa', value: 'fullscreen' },
+                          { label: '1920x1080', value: '1920x1080' },
+                          { label: '1600x1000', value: '1600x1000' },
+                          { label: '1366x768', value: '1366x768' },
+                          { label: '1024x768', value: '1024x768' }
+                        ]}
+                        onChange={(e) => handleInputChange('resolution', e.value)}
+                      />
+                    </div>
+                    <div className="field col-6">
+                      <label htmlFor="colorDepth-edit">Color</label>
+                      <Dropdown
+                        id="colorDepth-edit"
+                        value={formData.colorDepth}
+                        options={[
+                          { label: '32 bits', value: 32 },
+                          { label: '24 bits', value: 24 },
+                          { label: '16 bits', value: 16 },
+                          { label: '15 bits', value: 15 }
+                        ]}
+                        onChange={(e) => handleInputChange('colorDepth', e.value)}
+                      />
+                    </div>
+                    <div className="field col-6">
+                      <label htmlFor="guacDpi-edit">DPI</label>
+                      <InputText
+                        id="guacDpi-edit"
+                        value={formData.guacDpi}
+                        onChange={handleTextChange('guacDpi')}
+                        placeholder="96"
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Card: Recursos Locales */}
+                <Card title="⚙️ Recursos Locales">
+                  <div className="formgrid grid">
+                    {/* Opciones para MSTSC */}
+                    {formData.clientType === 'mstsc' && (
+                      <>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit">📋 Portapapeles</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit">🔊 Audio</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit">📁 Carpetas</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit">📐 Ajuste automático</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit">🖥️ Pantalla completa</label></div>
+                      </>
+                    )}
+                    {/* Opciones para Guacamole */}
+                    {formData.clientType === 'guacamole' && (
+                      <>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="guac-redirectClipboard-edit">📋 Portapapeles</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="guac-redirectAudio-edit">🔊 Audio</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="guac-redirectPrinters-edit">🖨️ Impresoras</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit" checked={formData.autoResize} onChange={handleCheckboxChange('autoResize')} /><label htmlFor="guac-autoResize-edit">📐 Ajuste automático</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit" checked={formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} /><label htmlFor="guac-enableWallpaper-edit">🖼️ Mostrar fondo</label></div>
+                        <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit" checked={formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} /><label htmlFor="guac-enableDrive-edit">💾 Carpetas (NodeTerm Drive)</label></div>
+                      </>
+                    )}
+                  </div>
+                  {/* Configuración de carpetas condicional para Guacamole */}
+                  {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+                    <div className="field" style={{ marginTop: '1rem' }}>
+                      <label htmlFor="guacDriveHostDir-edit">📁 Carpeta local para "NodeTerm Drive"</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <Button icon="pi pi-folder-open" className="p-button-outlined" onClick={handleSelectFolder} />
+                        <InputText
+                          id="guacDriveHostDir-edit"
+                          value={formData.guacDriveHostDir}
+                          onChange={handleTextChange('guacDriveHostDir')}
+                          placeholder="C:\Users\tu_usuario\Downloads\NodeTermDrive"
+                        />
+                      </div>
+                      {!formData.guacDriveHostDir && <small>Por defecto: C:\Users\&lt;usuario&gt;\Downloads\NodeTerm Drive</small>}
+                    </div>
+                  )}
+
+                  {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
+                  {formData.clientType === 'guacamole' && (
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                      <Fieldset legend="🚀 Opciones Avanzadas" toggleable collapsed>
+                        <div className="formgrid grid">
+                          <div className="col-4">
+                            <h5>Rendimiento</h5>
+                            <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit" checked={formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} /><label htmlFor="guac-gfx-edit">🎨 Habilitar GFX</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-composition-edit" checked={formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} /><label htmlFor="guac-composition-edit">🖼️ Desktop Composition</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-font-edit" checked={formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} /><label htmlFor="guac-font-edit">✨ Font Smoothing</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-theming-edit" checked={formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} /><label htmlFor="guac-theming-edit">🎭 Theming</label></div>
+                          </div>
+                          <div className="col-4">
+                            <h5>Interfaz</h5>
+                            <div className="field-checkbox"><Checkbox inputId="guac-drag-edit" checked={formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} /><label htmlFor="guac-drag-edit">🖱️ Full Window Drag</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-menu-edit" checked={formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} /><label htmlFor="guac-menu-edit">🎬 Animaciones de menú</label></div>
+                          </div>
+                          <div className="col-4">
+                            <h5>Caché</h5>
+                            <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit" checked={!formData.guacDisableGlyphCaching} onChange={(e) => handleInputChange('guacDisableGlyphCaching', !e.checked)} /><label htmlFor="guac-glyph-cache-edit">🔤 Glyph Caching</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit" checked={!formData.guacDisableOffscreenCaching} onChange={(e) => handleInputChange('guacDisableOffscreenCaching', !e.checked)} /><label htmlFor="guac-offscreen-cache-edit">📱 Offscreen Caching</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit" checked={!formData.guacDisableBitmapCaching} onChange={(e) => handleInputChange('guacDisableBitmapCaching', !e.checked)} /><label htmlFor="guac-bitmap-cache-edit">🖼️ Bitmap Caching</label></div>
+                            <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit" checked={!formData.guacDisableCopyRect} onChange={(e) => handleInputChange('guacDisableCopyRect', !e.checked)} /><label htmlFor="guac-copy-rect-edit">📋 Copy-Rect</label></div>
+                          </div>
+                        </div>
+                      </Fieldset>
+                    </div>
+                  )}
+                </Card>
+
+              </div>
             </div>
 
-
-
-
-
             {/* Botones */}
-            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 18, justifyContent: 'flex-end' }}>
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
               <Button 
                 label="Cancelar" 
                 icon="pi pi-times" 
@@ -1418,7 +955,7 @@ export function UnifiedConnectionDialog({
                 style={{ fontSize: '13px', padding: '8px 16px' }}
               />
               <Button 
-                label="Crear RDP" 
+                label="Guardar" 
                 icon="pi pi-check" 
                 className="p-button-primary" 
                 onClick={() => {
