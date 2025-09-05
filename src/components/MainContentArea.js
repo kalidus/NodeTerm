@@ -86,17 +86,61 @@ const MainContentArea = ({
   selectedNode,
   treeContextMenuRef
 }) => {
+  // Función de colapso automático inteligente (tanto durante como al final)
+  const handleResizeWithAutoCollapse = (e) => {
+    console.log('🔍 onResize ejecutado:', e.sizes);
+    
+    // Calcular ancho real del panel en píxeles
+    const splitterElement = document.querySelector('.main-splitter');
+    if (splitterElement) {
+      const splitterWidth = splitterElement.offsetWidth;
+      const sidebarPercentage = e.sizes[0];
+      const sidebarWidthPx = (splitterWidth * sidebarPercentage) / 100;
+      
+      console.log('📊 Datos resize:', { 
+        splitterWidth, 
+        sidebarPercentage, 
+        sidebarWidthPx, 
+        sidebarCollapsed 
+      });
+      
+      // Umbrales en píxeles (basados en datos reales)
+      const collapseThresholdPx = 70;  // Mayor que 65px para que se active al llegar al límite
+      const expandThresholdPx = 120;   // Si es mayor a 120px, expandir
+      
+      if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
+        // Colapsar automáticamente
+        console.log('🔄 AUTO-COLAPSANDO sidebar por tamaño:', sidebarWidthPx);
+        setSidebarCollapsed(true);
+      } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
+        // Expandir automáticamente
+        console.log('🔄 AUTO-EXPANDIENDO sidebar por tamaño:', sidebarWidthPx);
+        setSidebarCollapsed(false);
+      }
+    }
+    
+    // Llamar al resize original
+    if (handleResize) {
+      handleResize(e);
+    }
+  };
+
+  const handleResizeEndWithAutoCollapse = (e) => {
+    console.log('🏁 onResizeEnd ejecutado:', e.sizes);
+    handleResizeWithAutoCollapse(e);
+  };
+
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
         style={{ height: '100%', width: '100%' }} 
-        onResizeEnd={sidebarCollapsed ? undefined : handleResize}
-        onResize={sidebarCollapsed ? undefined : handleResize} // Usar handleResize directo sin throttling
-        disabled={sidebarCollapsed}
+        onResizeEnd={handleResizeEndWithAutoCollapse}
+        onResize={handleResizeWithAutoCollapse} // Con colapso automático
+        disabled={false}
         className="main-splitter"
         pt={{
           gutter: {
-            style: sidebarCollapsed ? { display: 'none', pointerEvents: 'none' } : {
+            style: {
               transition: 'none', // Clave: sin transición para fluidez
               background: 'var(--ui-sidebar-gutter-bg, #dee2e6)',
               borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
@@ -109,12 +153,20 @@ const MainContentArea = ({
       >
         <SplitterPanel 
           size={sidebarCollapsed ? 4 : 15} 
-          minSize={sidebarCollapsed ? 44 : 10} 
-          maxSize={sidebarCollapsed ? 44 : 600}
+          minSize={sidebarCollapsed ? 4 : 4} 
+          maxSize={sidebarCollapsed ? 4 : 35}
           style={sidebarCollapsed 
             ? { width: 44, minWidth: 44, maxWidth: 44, padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
-            : { minWidth: 240, maxWidth: 400, padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
+            : { padding: 0, height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
+          pt={{
+            root: {
+              style: {
+                minWidth: '44px !important',
+                width: 'auto'
+              }
+            }
+          }}
         >
           <Sidebar {...memoizedSidebarProps} />
         </SplitterPanel>
