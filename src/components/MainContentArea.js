@@ -86,8 +86,7 @@ const MainContentArea = ({
   selectedNode,
   treeContextMenuRef
 }) => {
-  // Estado para controlar cuándo forzar reset del splitter
-  const [forceReset, setForceReset] = React.useState(0);
+  // Estados removidos - sin reset del splitter
 
   // Función de resize sin colapso automático (para arrastre libre)
   const handleResizeOnly = (e) => {
@@ -112,20 +111,20 @@ const MainContentArea = ({
       
       console.log('📊 ResizeEnd:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
       
-      // Solo evaluar colapso/expansión al soltar el mouse
-      if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
-        console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
-        requestAnimationFrame(() => {
-          setSidebarCollapsed(true);
-          setForceReset(prev => prev + 1); // Forzar reset solo en auto-colapso
-        });
-      } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
-        console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
-        requestAnimationFrame(() => {
-          setSidebarCollapsed(false);
-          setForceReset(prev => prev + 1); // Forzar reset solo en auto-expansión
-        });
-      }
+             // Solo evaluar colapso/expansión al soltar el mouse
+       if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
+         console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
+         requestAnimationFrame(() => {
+           setSidebarCollapsed(true);
+           // Sin reset - solo cambio de estado
+         });
+       } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
+         console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
+         requestAnimationFrame(() => {
+           setSidebarCollapsed(false);
+           // Sin reset - solo cambio de estado
+         });
+       }
     }
     
     // Llamar al resize original solo al final (para redimensionar terminales)
@@ -137,7 +136,7 @@ const MainContentArea = ({
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
-        key={`splitter-${sidebarCollapsed}-${forceReset}`} // Reset cuando cambia estado + auto-colapso
+// key removed - no reset needed for collapse/expand
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
