@@ -20,10 +20,10 @@
   max-width: 400px;
   min-width: 44px !important; /* Límite mínimo: tamaño de sidebar colapsada */
 }
-/* Cuando la sidebar está colapsada (ancho 44px) */
+/* Cuando la sidebar está colapsada (ancho 44px) - permitir resize visual temporal */
 .p-splitter .p-splitter-panel:first-child[style*="width: 44px"] {
   min-width: 44px !important;
-  max-width: 44px !important;
+  /* max-width temporalmente removido para resize visual */
 }
 
 .p-splitter.p-splitter-resizing .sidebar-container {

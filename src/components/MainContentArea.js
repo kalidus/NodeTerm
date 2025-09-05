@@ -137,7 +137,7 @@ const MainContentArea = ({
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
-        // key={forceReset} // Temporalmente quitado para debugging
+        key={`splitter-${sidebarCollapsed}-${forceReset}`} // Reset cuando cambia estado + auto-colapso
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
