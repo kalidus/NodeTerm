@@ -167,3 +167,95 @@
   background: var(--ui-button-primary) !important;
   color: var(--ui-button-primary-text) !important;
 }
+
+/* --- Estilos para UnifiedConnectionDialog --- */
+.unified-connection-dialog .p-card-content {
+  padding: 0; /* Eliminar padding por defecto del contenido de la Card */
+}
+
+.unified-connection-dialog .p-card .p-card-body {
+  padding: 1rem; /* Añadir un padding consistente al cuerpo de la Card */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.unified-connection-dialog .formgrid.grid {
+  margin-top: 0.5rem;
+}
+
+.unified-connection-dialog .field {
+  margin-bottom: 0.8rem;
+}
+
+.unified-connection-dialog .field label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.unified-connection-dialog .field-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.unified-connection-dialog .field-checkbox label {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Estilo para el Fieldset de Opciones Avanzadas (Ajustado) */
+.unified-connection-dialog .p-fieldset {
+  border: none !important;
+  background: transparent !important; /* Usar el fondo del contenedor (la Card) */
+  padding: 0;
+  margin: 0;
+}
+
+.unified-connection-dialog .p-fieldset .p-fieldset-legend {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.unified-connection-dialog .p-fieldset .p-fieldset-legend a {
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1rem !important; /* Coincidir con el título de la Card */
+  font-weight: 600 !important; /* Coincidir con el título de la Card */
+  color: var(--text-color) !important;
+  background: transparent !important;
+  border: none !important;
+  text-decoration: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.unified-connection-dialog .p-fieldset .p-fieldset-legend a:hover {
+  background: transparent !important;
+  color: var(--text-color) !important;
+}
+
+/* Añadir espaciado solo cuando el fieldset está expandido */
+.unified-connection-dialog .p-fieldset:not(.p-fieldset-collapsed) .p-fieldset-legend {
+  margin-bottom: 1rem !important;
+}
+
+.unified-connection-dialog .p-fieldset .p-fieldset-content {
+  padding: 0;
+}
+
+.unified-connection-dialog .p-fieldset h5 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-color-secondary);
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.75rem;
+}
