@@ -273,3 +273,16 @@
   margin-bottom: 0.4rem;
   margin-top: 0.6rem;
 }
+
+/* Icono de carpeta ajustado al tamaño del input field */
+.unified-connection-dialog .p-button-outlined[icon="pi pi-folder-open"] {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  padding: 0.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+}
+
+.unified-connection-dialog .p-button-outlined[icon="pi pi-folder-open"] .p-button-icon {
+  font-size: 0.9rem !important;
+}
