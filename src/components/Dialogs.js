@@ -582,7 +582,7 @@ export function UnifiedConnectionDialog({
                 </Card>
 
                 {/* Card: Recursos Locales */}
-                <Card title="⚙️ Recursos Locales">
+                <Card title="⚙️ Opciones">
                   <div className="formgrid grid">
                     {/* Opciones para MSTSC */}
                     {formData.clientType === 'mstsc' && (
@@ -626,7 +626,7 @@ export function UnifiedConnectionDialog({
 
                   {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
                   {formData.clientType === 'guacamole' && (
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
                       <Fieldset legend="🚀 Opciones Avanzadas" toggleable collapsed>
                         <div className="formgrid grid">
                           <div className="col-4">
@@ -658,7 +658,7 @@ export function UnifiedConnectionDialog({
             </div>
 
             {/* Botones */}
-            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
               <Button 
                 label="Cancelar" 
                 icon="pi pi-times" 
@@ -870,7 +870,7 @@ export function UnifiedConnectionDialog({
                 </Card>
 
                 {/* Card: Recursos Locales */}
-                <Card title="⚙️ Recursos Locales">
+                <Card title="⚙️ Opciones">
                   <div className="formgrid grid">
                     {/* Opciones para MSTSC */}
                     {formData.clientType === 'mstsc' && (
@@ -914,7 +914,7 @@ export function UnifiedConnectionDialog({
 
                   {/* Fieldset: Opciones Avanzadas (anidado y con separador) */}
                   {formData.clientType === 'guacamole' && (
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
                       <Fieldset legend="🚀 Opciones Avanzadas" toggleable collapsed>
                         <div className="formgrid grid">
                           <div className="col-4">
@@ -946,7 +946,7 @@ export function UnifiedConnectionDialog({
             </div>
 
             {/* Botones */}
-            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', borderTop: '1px solid var(--surface-border)', paddingTop: '12px' }}>
+            <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
               <Button 
                 label="Cancelar" 
                 icon="pi pi-times" 
@@ -1167,7 +1167,7 @@ export function EnhancedSSHForm({
             </div>
 
             {/* Configuración opcional */}
-            <h6 style={{ margin: '12px 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--text-color-secondary)', borderTop: '1px solid var(--surface-border)', paddingTop: '8px' }}>
+            <h6 style={{ margin: '12px 0 8px 0', fontSize: '12px', fontWeight: '600', color: 'var(--text-color-secondary)', paddingTop: '8px' }}>
               ⚙️ Configuración Opcional
             </h6>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -1317,7 +1317,6 @@ export function EnhancedSSHForm({
         gap: '8px', 
         justifyContent: 'flex-end', 
         paddingTop: '12px',
-        borderTop: '1px solid var(--surface-border)',
         marginTop: '8px'
       }}>
         <Button 
