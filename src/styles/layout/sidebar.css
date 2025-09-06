@@ -391,6 +391,78 @@
 .p-splitter.p-splitter-resizing .sidebar-container {
   will-change: width, min-width, max-width !important;
 }
+
+/* === BOTÓN DE COLAPSAR SIEMPRE VISIBLE === */
+/* Contenedor del header de la sidebar expandida */
+.sidebar-container > div:first-child {
+  position: relative;
+  min-width: 44px; /* Ancho mínimo para mostrar al menos el botón de colapsar */
+  overflow: visible; /* Permitir que el botón sea visible */
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Botón de colapsar (primer botón del header) con máxima prioridad */
+.sidebar-container > div:first-child > .sidebar-action-button:first-child {
+  position: relative !important;
+  z-index: 1000 !important;
+  flex-shrink: 0 !important; /* No permitir que se reduzca */
+  min-width: 40px !important;
+  min-height: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  margin-right: 8px !important;
+}
+
+/* Contenedor de botones adicionales que pueden ocultarse */
+.sidebar-container > div:first-child > div:last-child {
+  overflow: hidden; /* Ocultar botones que no caben */
+  white-space: nowrap;
+  flex-shrink: 1; /* Permitir que se reduzca */
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+/* Durante el redimensionamiento, asegurar que el botón de colapsar sea visible */
+.p-splitter.p-splitter-resizing .sidebar-container > div:first-child > .sidebar-action-button:first-child {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1001 !important;
+}
+
+/* Comportamiento responsivo basado en el ancho del contenedor */
+.sidebar-container[style*="width: "] > div:first-child > div:last-child .sidebar-action-button {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Cuando la sidebar es muy estrecha, ocultar botones adicionales gradualmente */
+.sidebar-container[style*="width: "] {
+  --sidebar-width: 200px; /* Valor por defecto */
+}
+
+/* Usar CSS container queries si están disponibles, sino usar JavaScript */
+@supports (container-type: inline-size) {
+  .sidebar-container {
+    container-type: inline-size;
+  }
+  
+  @container (max-width: 120px) {
+    .sidebar-container > div:first-child > div:last-child .sidebar-action-button {
+      opacity: 0.3;
+      transform: scale(0.8);
+      pointer-events: none;
+    }
+  }
+  
+  @container (max-width: 80px) {
+    .sidebar-container > div:first-child > div:last-child {
+      display: none !important;
+    }
+  }
+}
 /* Restablecer estilos del árbol para asegurar funcionalidad */
 .sidebar-tree .p-tree,
 .sidebar-tree .p-treenode,
@@ -422,4 +494,62 @@
 
 .sidebar-footer .sidebar-action-button.p-button-text:hover {
   background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+}
+
+/* === ESTILOS PARA SIDEBAR COLAPSADA === */
+/* Contenedor principal de la sidebar colapsada */
+.sidebar-container[style*="width: 44px"] {
+  overflow: visible !important;
+}
+
+/* Forzar visibilidad de todos los botones en sidebar colapsada */
+.sidebar-container[style*="width: 44px"] .sidebar-action-button,
+.sidebar-container[style*="width: 44px"] .p-button {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Botón de colapsar alineado a la izquierda */
+.sidebar-container[style*="width: 44px"] > div:first-child > div:first-child {
+  justify-content: flex-start !important;
+  padding-left: 2px !important;
+  display: flex !important;
+  visibility: visible !important;
+}
+
+/* Contenedor de botones del footer */
+.sidebar-container[style*="width: 44px"] > div:first-child > div:last-child {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  gap: 6px !important;
+  padding-bottom: 4px;
+}
+
+/* Botones del footer de la sidebar colapsada */
+.sidebar-container[style*="width: 44px"] .sidebar-action-button {
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #333 !important;
+  color: #fff !important;
+  border: 1px solid #555 !important;
+}
+
+.sidebar-container[style*="width: 44px"] .sidebar-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background-color: #444 !important;
+}
+
+/* Asegurar que los iconos sean visibles */
+.sidebar-container[style*="width: 44px"] .sidebar-action-button .p-button-icon,
+.sidebar-container[style*="width: 44px"] .sidebar-action-button i {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #fff !important;
 }
