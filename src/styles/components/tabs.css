@@ -159,14 +159,35 @@
 
 /* --- Grupos de Pestañas --- */
 .group-delete-x {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0.6;
+  pointer-events: auto;
   transition: opacity 0.2s;
 }
-.group-hover .group-delete-x {
+
+/* Mostrar X al hacer hover sobre el grupo */
+.group-hover:hover .group-delete-x,
+.group-hover .group-delete-x:hover {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+/* Regla adicional para asegurar visibilidad en grupos */
+.tabview-groups-bar .p-tabview-nav li:not(:first-child) .group-delete-x {
+  opacity: 0.8 !important;
+  pointer-events: auto !important;
+}
+
+.tabview-groups-bar .p-tabview-nav li:not(:first-child):hover .group-delete-x {
+  opacity: 1 !important;
+}
+
+/* Estilo para el botón X personalizado */
+.custom-delete-button {
+  position: relative !important;
+  z-index: 1000 !important;
+  pointer-events: auto !important;
+}
+
 
 .tabview-groups-bar .p-tabview-nav {
   border-bottom: 2px solid #bdbdbd;
@@ -236,7 +257,7 @@
   align-items: center;
   justify-content: flex-start;
   position: relative;
-  padding-right: 32px !important;
+  padding-right: 8px !important;
   overflow: hidden;
   background-color: var(--tab-bg-color, #f5f5f5) !important;
   border: 1px solid var(--tab-border-color, #d0d0d0) !important;
@@ -256,6 +277,18 @@
   top: 50%;
   transform: translateY(-50%);
   margin-left: 0;
+}
+
+/* Botón X simple - usar los estilos por defecto de PrimeReact */
+.group-delete-x {
+  opacity: 0.7;
+  pointer-events: auto;
+  transition: opacity 0.2s;
+}
+
+.group-hover:hover .group-delete-x,
+.group-delete-x:hover {
+  opacity: 1 !important;
 }
 
 .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link,

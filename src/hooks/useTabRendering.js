@@ -25,7 +25,16 @@ export const useTabRendering = ({
   toast
 }) => {
 
-  // Renderizar TabView de grupos
+  /**
+   * RENDERIZA LA BARRA DE PESTAÑAS DE GRUPOS
+   * 
+   * Estructura del header de cada grupo:
+   * - Contenedor principal: flexbox space-between para separar contenido y botón X
+   * - Lado izquierdo: círculo de color + texto del grupo (con ellipsis)
+   * - Lado derecho: botón X para cerrar grupo (16x16px, centrado)
+   * 
+   * IMPORTANTE: No usar position absolute en el botón X - causa desalineación
+   */
   const renderGroupTabs = () => {
     if (tabGroups.length === 0) return null;
     
@@ -93,7 +102,8 @@ export const useTabRendering = ({
             }}
             header={
               <span 
-                style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}
+                className="group-hover"
+                style={{ display: 'flex', alignItems: 'center', maxWidth: 180 }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -107,17 +117,46 @@ export const useTabRendering = ({
                 }}
               >
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.color, marginRight: 4 }} />
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.name}</span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>{group.name}</span>
                 <Button
                   icon="pi pi-times"
-                  className="p-button-rounded p-button-text p-button-sm"
-                  style={{ marginLeft: 6, width: 16, height: 16, color: group.color, padding: 0 }}
-                  onClick={e => {
+                  className="p-button-rounded p-button-text p-button-sm group-delete-x"
+                  style={{ marginLeft: 0, width: 16, height: 16, color: group.color, padding: 0 }}
+                  onMouseDown={e => {
+                    console.log('🖱️ MouseDown - Botón eliminar grupo:', group.id, group.name);
+                    e.preventDefault();
                     e.stopPropagation();
-                    // Mover todas las pestañas del grupo a 'Home' antes de eliminar
-                    const tabsInGroup = getTabsInGroup(group.id);
-                    tabsInGroup.forEach(tab => moveTabToGroup(tab.key, null));
-                    deleteGroup(group.id);
+                    
+                    try {
+                      const tabsInGroup = getTabsInGroup(group.id);
+                      console.log('📑 Pestañas encontradas en grupo:', tabsInGroup.length);
+                      
+                      tabsInGroup.forEach(tab => {
+                        console.log('🔄 Moviendo pestaña a Home:', tab.key);
+                        moveTabToGroup(tab.key, null);
+                      });
+                      
+                      console.log('🗑️ Eliminando grupo:', group.id);
+                      deleteGroup(group.id);
+                      
+                      console.log('✅ Grupo eliminado exitosamente');
+                      
+                      if (toast && toast.current) {
+                        toast.current.show({
+                          severity: 'success',
+                          summary: 'Grupo eliminado',
+                          detail: `El grupo "${group.name}" ha sido eliminado`,
+                          life: 3000
+                        });
+                      }
+                    } catch (error) {
+                      console.error('❌ Error eliminando grupo:', error);
+                    }
+                  }}
+                  onClick={e => {
+                    console.log('🖱️ Click backup - Botón eliminar grupo:', group.id, group.name);
+                    e.preventDefault();
+                    e.stopPropagation();
                   }}
                   tooltip={"Eliminar grupo"}
                 />
