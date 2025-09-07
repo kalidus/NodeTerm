@@ -69,7 +69,7 @@ export const useTabRendering = ({
           marginBottom: 0, 
           '--group-ink-bar-color': activeGroupId === null ? '#bbb' : (tabGroups.find(g => g.id === activeGroupId)?.color || '#bbb')
         }}
-        className="tabview-groups-bar"
+        className={`tabview-groups-bar ${activeGroupId === null ? 'home-active' : ''}`}
       >
         <TabPanel key="no-group" 
           style={{
@@ -77,9 +77,8 @@ export const useTabRendering = ({
             '--tab-border-color': '#d0d0d0'
           }}
           header={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 180 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#bbb', marginRight: 4 }} />
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Home</span>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              <i className="pi pi-home" style={{ fontSize: '14px', color: 'var(--ui-tab-text, #666)' }}></i>
             </span>
           }
         >
