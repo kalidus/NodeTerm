@@ -8,7 +8,7 @@
   border-radius: 6px !important;
   background: var(--surface-0, #ffffff) !important;
   z-index: 9999 !important;
-  animation: contextMenuFadeIn 0.15s ease-out !important;
+  animation: none !important;
   position: fixed !important;
   transform: none !important;
   margin: 0 !important;
@@ -38,7 +38,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: background-color 0.2s;
+  transition: none;
   border-radius: 4px;
   margin: 2px 4px;
 }
@@ -75,7 +75,7 @@
 
 .app-context-menu .menu-item,
 .app-submenu .menu-item {
-  transition: background-color 0.15s ease !important;
+  transition: none !important;
   position: relative;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .app-submenu {
-  animation: slideIn 0.15s ease-out;
+  animation: none !important;
 }
 
 /* Área de hover extendida para mejorar la UX del submenú */
@@ -137,7 +137,7 @@
 .app-context-menu .menu-item i,
 .app-submenu .menu-item i {
   color: var(--ui-text-secondary, #888) !important;
-  transition: color 0.15s ease;
+  transition: none;
 }
 
 .app-context-menu .menu-item:hover i,
