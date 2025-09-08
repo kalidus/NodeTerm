@@ -284,46 +284,87 @@ const Sidebar = React.memo(({
 
         const createContainerFolder = !!importResult.createContainerFolder;
         const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+        const overwrite = !!importResult.overwrite;
         const nodesCopy = deepCopy(nodes || []);
         let addedConnections = 0;
         let addedFolders = 0;
         if (createContainerFolder) {
-          // buscar contenedor existente por nombre para fusionar, si no, crear
-          const idx = nodesCopy.findIndex(n => isFolder(n) && normalize(n.label) === normalize(containerLabel));
-          if (idx !== -1) {
-            const container = nodesCopy[idx];
-            const mergeResult = mergeChildren(container.children || [], toAdd);
-            container.children = mergeResult.children;
-            addedConnections += mergeResult.addedConnections;
-            addedFolders += mergeResult.addedFolders;
+          if (overwrite) {
+            // buscar contenedor existente por nombre para fusionar, si no, crear y fusionar
+            const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(containerLabel));
+            if (idx !== -1) {
+              const container = nodesCopy[idx];
+              const mergeResult = mergeChildren(container.children || [], toAdd);
+              container.children = mergeResult.children;
+              addedConnections += mergeResult.addedConnections;
+              addedFolders += mergeResult.addedFolders;
+            } else {
+              const containerKey = `import_container_${Date.now()}`;
+              const mergeResult = mergeChildren([], toAdd);
+              nodesCopy.push({
+                key: containerKey,
+                uid: containerKey,
+                label: containerLabel,
+                droppable: true,
+                children: mergeResult.children,
+                createdAt: new Date().toISOString(),
+                isUserCreated: true,
+                imported: true,
+                importedFrom: 'mRemoteNG'
+              });
+              addedConnections += mergeResult.addedConnections;
+              addedFolders += mergeResult.addedFolders;
+            }
           } else {
+            // no overwrite: crear SIEMPRE una nueva carpeta contenedora y añadir tal cual
             const containerKey = `import_container_${Date.now()}`;
             nodesCopy.push({
               key: containerKey,
               uid: containerKey,
               label: containerLabel,
               droppable: true,
-              children: [],
+              children: toAdd,
               createdAt: new Date().toISOString(),
               isUserCreated: true,
               imported: true,
               importedFrom: 'mRemoteNG'
             });
-            const mergeResult = mergeChildren(nodesCopy[nodesCopy.length - 1].children, toAdd);
-            nodesCopy[nodesCopy.length - 1].children = mergeResult.children;
-            addedConnections += mergeResult.addedConnections;
-            addedFolders += mergeResult.addedFolders;
+            // métricas simples
+            const countInside = (arr) => {
+              let folders = 0, conns = 0;
+              for (const it of arr || []) {
+                if (isFolder(it)) { folders += 1; const r = countInside(it.children); folders += r.folders; conns += r.conns; }
+                else if (isConnection(it)) conns += 1;
+              }
+              return { folders, conns };
+            };
+            const r = countInside(toAdd);
+            addedConnections += r.conns;
+            addedFolders += r.folders;
           }
         } else {
-          // raíz: fusionar por nombre de carpeta al nivel root
-          const mergeResult = mergeChildren(nodesCopy, toAdd);
-          // mergeChildren devuelve children completo; como aquí el destino es root, sustituimos root
-          // pero mergeChildren ya devolvió un array completo deduplicado
-          // Sin embargo, para mantener referencias, reasignamos nodesCopy
-          nodesCopy.length = 0;
-          nodesCopy.push(...mergeResult.children);
-          addedConnections += mergeResult.addedConnections;
-          addedFolders += mergeResult.addedFolders;
+          if (overwrite) {
+            // raíz: fusionar por nombre de carpeta al nivel root
+            const mergeResult = mergeChildren(nodesCopy, toAdd);
+            nodesCopy.length = 0;
+            nodesCopy.push(...mergeResult.children);
+            addedConnections += mergeResult.addedConnections;
+            addedFolders += mergeResult.addedFolders;
+          } else {
+            // raíz sin overwrite: añadir tal cual
+            nodesCopy.push(...toAdd);
+            const countInside = (arr) => {
+              let folders = 0, conns = 0;
+              for (const it of arr || []) {
+                if (isFolder(it)) { folders += 1; const r = countInside(it.children); folders += r.folders; conns += r.conns; }
+                else if (isConnection(it)) conns += 1;
+              }
+              return { folders, conns };
+            };
+            const r = countInside(toAdd);
+            addedConnections += r.conns;
+            addedFolders += r.folders;
+          }
         }
 
         setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
@@ -351,58 +392,49 @@ const Sidebar = React.memo(({
 
       const createContainerFolder = !!importResult.createContainerFolder;
       const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+      const overwrite = !!importResult.overwrite;
       const nodesCopy = deepCopy(nodes || []);
       let addedConnections = 0;
 
       if (createContainerFolder) {
         // Fusionar dentro del contenedor (crear si no existe por nombre)
-        const idx = nodesCopy.findIndex(n => isFolder(n) && normalize(n.label) === normalize(containerLabel));
-        // Convertir conexiones planas a children y deduplicar contra hijos del contenedor
-        const mergeResult = (() => {
+        const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(containerLabel));
+        if (overwrite) {
           const existingChildren = idx !== -1 ? (nodesCopy[idx].children || []) : [];
-          return mergeChildren(existingChildren, importedConnections);
-        })();
-
-        if (idx !== -1) {
-          nodesCopy[idx].children = mergeResult.children;
+          const mergeResult = mergeChildren(existingChildren, importedConnections);
+          if (idx !== -1) nodesCopy[idx].children = mergeResult.children; else {
+            const containerKey = `import_container_${Date.now()}`;
+            nodesCopy.push({ key: containerKey, uid: containerKey, label: containerLabel, droppable: true, children: mergeResult.children, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+          }
+          addedConnections += mergeResult.addedConnections;
         } else {
-          const containerKey = `import_container_${Date.now()}`;
-          nodesCopy.push({
-            key: containerKey,
-            uid: containerKey,
-            label: containerLabel,
-            droppable: true,
-            children: mergeResult.children,
-            createdAt: new Date().toISOString(),
-            isUserCreated: true,
-            imported: true,
-            importedFrom: 'mRemoteNG'
-          });
+          const childrenToAdd = importedConnections;
+          if (idx !== -1) nodesCopy[idx].children = (nodesCopy[idx].children || []).concat(childrenToAdd); else {
+            const containerKey = `import_container_${Date.now()}`;
+            nodesCopy.push({ key: containerKey, uid: containerKey, label: containerLabel, droppable: true, children: childrenToAdd, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+          }
+          addedConnections += childrenToAdd.length;
         }
-        addedConnections += mergeResult.addedConnections;
       } else {
         // raíz: colocar dentro de carpeta nueva etiquetada, pero fusionando si ya existe carpeta con ese nombre
         const rootFolderLabel = `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`;
-        const idx = nodesCopy.findIndex(n => isFolder(n) && normalize(n.label) === normalize(rootFolderLabel));
-        if (idx !== -1) {
-          const mergeResult = mergeChildren(nodesCopy[idx].children || [], importedConnections);
-          nodesCopy[idx].children = mergeResult.children;
-          addedConnections += mergeResult.addedConnections;
+        const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(rootFolderLabel));
+        if (overwrite) {
+          if (idx !== -1) {
+            const mergeResult = mergeChildren(nodesCopy[idx].children || [], importedConnections);
+            nodesCopy[idx].children = mergeResult.children;
+            addedConnections += mergeResult.addedConnections;
+          } else {
+            const importFolderKey = `imported_folder_${Date.now()}`;
+            const mergeResult = mergeChildren([], importedConnections);
+            nodesCopy.push({ key: importFolderKey, label: rootFolderLabel, droppable: true, children: mergeResult.children, uid: importFolderKey, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+            addedConnections += mergeResult.addedConnections;
+          }
         } else {
+          // siempre crear nueva carpeta raíz para esta importación
           const importFolderKey = `imported_folder_${Date.now()}`;
-          const mergeResult = mergeChildren([], importedConnections);
-          nodesCopy.push({
-            key: importFolderKey,
-            label: rootFolderLabel,
-            droppable: true,
-            children: mergeResult.children,
-            uid: importFolderKey,
-            createdAt: new Date().toISOString(),
-            isUserCreated: true,
-            imported: true,
-            importedFrom: 'mRemoteNG'
-          });
-          addedConnections += mergeResult.addedConnections;
+          nodesCopy.push({ key: importFolderKey, label: rootFolderLabel, droppable: true, children: importedConnections, uid: importFolderKey, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+          addedConnections += importedConnections.length;
         }
       }
 

@@ -21,6 +21,7 @@ const ImportDialog = ({
   const fileUploadRef = useRef(null);
   const toast = useRef(null);
   const [placeInFolder, setPlaceInFolder] = useState(false);
+  const [overwrite, setOverwrite] = useState(false);
   const containerFolderName = `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
 
   const handleFileSelect = (event) => {
@@ -137,7 +138,12 @@ const ImportDialog = ({
       // Llamar callback con el resultado completo (estructura incluida)
       if (onImportComplete) {
         console.log('📞 Llamando a onImportComplete...');
-        await onImportComplete({ ...result, createContainerFolder: !!placeInFolder, containerFolderName });
+        await onImportComplete({
+          ...result,
+          createContainerFolder: !!placeInFolder,
+          containerFolderName,
+          overwrite: !!overwrite
+        });
         console.log('✅ onImportComplete ejecutado');
       }
 
@@ -313,6 +319,21 @@ const ImportDialog = ({
             </div>
             {placeInFolder && (
               <div className="text-sm text-gray-600">Se creará la carpeta “{containerFolderName}” en la raíz y se colocarán todos los elementos dentro.</div>
+            )}
+          </div>
+          <div className="mb-3">
+            <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+              <input
+                type="checkbox"
+                id="overwrite"
+                checked={overwrite}
+                onChange={(e) => setOverwrite(e.target.checked)}
+                disabled={importing}
+              />
+              <label htmlFor="overwrite">Sobrescribir (evitar duplicados y fusionar por nombre)</label>
+            </div>
+            {!overwrite && (
+              <div className="text-sm text-gray-600">Si no está activado, se permiten duplicados de carpetas y sesiones.</div>
             )}
           </div>
           
