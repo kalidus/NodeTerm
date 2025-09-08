@@ -86,7 +86,31 @@ const MainContentArea = ({
   selectedNode,
   treeContextMenuRef
 }) => {
-  // Estados removidos - sin reset del splitter
+  // Ancho fijo para restauración del botón (ancho inicial de la app)
+  const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
+  
+  // Estado para forzar reset del splitter cuando se usa el botón
+  const [splitterKey, setSplitterKey] = React.useState(0);
+
+  // Función personalizada para manejar toggle del sidebar
+  const handleSidebarToggle = React.useCallback((toggleFunctionOrValue) => {
+    // Determinar el nuevo estado
+    let newCollapsedState;
+    if (typeof toggleFunctionOrValue === 'function') {
+      newCollapsedState = toggleFunctionOrValue(sidebarCollapsed);
+    } else {
+      newCollapsedState = toggleFunctionOrValue;
+    }
+    
+    // Si vamos a expandir (newCollapsedState = false), resetear el splitter para forzar ancho fijo
+    if (!newCollapsedState && sidebarCollapsed) {
+      console.log('🔄 Expandiendo sidebar - forzando ancho fijo de', FIXED_EXPANDED_SIZE + '%');
+      setSplitterKey(prev => prev + 1); // Cambiar key para forzar reset del splitter
+    }
+    
+    // Proceder con el cambio de estado
+    setSidebarCollapsed(newCollapsedState);
+  }, [sidebarCollapsed, setSidebarCollapsed, FIXED_EXPANDED_SIZE]);
 
   // Función de resize sin colapso automático (para arrastre libre)
   const handleResizeOnly = (e) => {
@@ -115,13 +139,13 @@ const MainContentArea = ({
        if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
          console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
          requestAnimationFrame(() => {
-           setSidebarCollapsed(true);
+           setSidebarCollapsed(true); // Usar función original para auto-colapso
            // Sin reset - solo cambio de estado
          });
        } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
          console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
          requestAnimationFrame(() => {
-           setSidebarCollapsed(false);
+           setSidebarCollapsed(false); // Usar función original para auto-expansión
            // Sin reset - solo cambio de estado
          });
        }
@@ -136,7 +160,7 @@ const MainContentArea = ({
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
-// key removed - no reset needed for collapse/expand
+        key={splitterKey} // Key que cambia para forzar reset del splitter
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
@@ -156,7 +180,7 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel 
-          size={sidebarCollapsed ? 4 : 18} 
+          size={sidebarCollapsed ? 4 : FIXED_EXPANDED_SIZE} 
           minSize={sidebarCollapsed ? 4 : 4} 
           maxSize={sidebarCollapsed ? 4 : 35}
           style={sidebarCollapsed 
@@ -172,7 +196,10 @@ const MainContentArea = ({
             }
           }}
         >
-          <Sidebar {...memoizedSidebarProps} />
+          <Sidebar 
+            {...memoizedSidebarProps} 
+            setSidebarCollapsed={handleSidebarToggle}
+          />
         </SplitterPanel>
         
         <SplitterPanel size={sidebarVisible ? 85 : 100} style={{ 
