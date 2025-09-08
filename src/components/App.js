@@ -78,10 +78,11 @@ const App = () => {
   const toast = useRef(null);
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   
-  // Función para manejar la importación completa
-  const handleImportComplete = async (importedConnections) => {
+  // Función para manejar la importación completa (estructura + conexiones)
+  const handleImportComplete = async (importResult) => {
     try {
-      if (!importedConnections || importedConnections.length === 0) {
+      console.log('🎯 handleImportComplete IN', importResult && typeof importResult, importResult?.structure?.nodes?.length);
+      if (!importResult) {
         toast.current?.show({
           severity: 'warn',
           summary: 'Sin datos',
@@ -91,34 +92,71 @@ const App = () => {
         return;
       }
 
-      // Crear una carpeta para las conexiones importadas
-      const timestamp = Date.now();
-      const importFolderKey = `imported_folder_${timestamp}`;
-      const importFolder = {
-        key: importFolderKey,
-        label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-        droppable: true,
-        children: importedConnections,
-        uid: importFolderKey,
-        createdAt: new Date().toISOString(),
-        isUserCreated: true,
-        imported: true,
-        importedFrom: 'mRemoteNG'
-      };
+      let addedFolders = 0;
+      let addedConnections = 0;
 
-      // Clonar nodos actuales y agregar la carpeta de importación
-      const nodesCopy = JSON.parse(JSON.stringify(nodes));
-      nodesCopy.push(importFolder);
-      
-      // Actualizar el estado de nodos
-      setNodes(nodesCopy);
+      // Si tenemos estructura con carpetas, agregamos los nodos raíz tal cual
+      if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
+        console.log('📁 Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
+        // Regenerar keys por seguridad para evitar colisiones
+        const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
+          ...n,
+          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
+          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
+        }));
+        setNodes(prev => {
+          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+          toAdd.forEach(n => nodesCopy.push(n));
+          return nodesCopy;
+        });
+        addedFolders = importResult.structure.folderCount || 0;
+        addedConnections = importResult.structure.connectionCount || 0;
+        toast.current?.show({
+          severity: 'success',
+          summary: 'Importación exitosa',
+          detail: `Se importaron ${addedConnections} conexiones y ${addedFolders} carpetas`,
+          life: 5000
+        });
+      } else {
+        // Compatibilidad: lista plana de conexiones
+        const importedConnections = importResult.connections || importResult;
+        console.log('🔄 Modo legacy conexiones planas:', Array.isArray(importedConnections) ? importedConnections.length : 'N/A');
+        if (!Array.isArray(importedConnections) || importedConnections.length === 0) {
+          toast.current?.show({
+            severity: 'warn',
+            summary: 'Sin datos',
+            detail: 'No se encontraron conexiones para importar',
+            life: 3000
+          });
+          return;
+        }
 
-      toast.current?.show({
-        severity: 'success',
-        summary: 'Importación exitosa',
-        detail: `Se importaron ${importedConnections.length} conexiones en la carpeta "${importFolder.label}"`,
-        life: 5000
-      });
+        const timestamp = Date.now();
+        const importFolderKey = `imported_folder_${timestamp}`;
+        const importFolder = {
+          key: importFolderKey,
+          label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
+          droppable: true,
+          children: importedConnections,
+          uid: importFolderKey,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG'
+        };
+
+        setNodes(prev => {
+          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+          nodesCopy.push(importFolder);
+          return nodesCopy;
+        });
+        toast.current?.show({
+          severity: 'success',
+          summary: 'Importación exitosa',
+          detail: `Se importaron ${importedConnections.length} conexiones en la carpeta "${importFolder.label}"`,
+          life: 5000
+        });
+      }
 
     } catch (error) {
       console.error('Error al procesar importación:', error);
