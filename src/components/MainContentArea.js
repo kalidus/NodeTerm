@@ -89,7 +89,8 @@ const MainContentArea = ({
 }) => {
   // Ancho fijo para restauración del botón (ancho inicial de la app)
   const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
-  
+  // Estado de tamaño actual del sidebar (en %), usado cuando está expandido
+  const [sidebarSizePercent, setSidebarSizePercent] = React.useState(FIXED_EXPANDED_SIZE);
   
 
   // Función personalizada para manejar toggle del sidebar
@@ -102,6 +103,10 @@ const MainContentArea = ({
       newCollapsedState = toggleFunctionOrValue;
     }
     
+    // Si se expande por botón, restaurar tamaño fijo
+    if (newCollapsedState === false) {
+      setSidebarSizePercent(FIXED_EXPANDED_SIZE);
+    }
     // Proceder con el cambio de estado
     setSidebarCollapsed(newCollapsedState);
   }, [sidebarCollapsed, setSidebarCollapsed, FIXED_EXPANDED_SIZE]);
@@ -129,20 +134,23 @@ const MainContentArea = ({
       
       console.log('📊 ResizeEnd:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
       
-             // Solo evaluar colapso/expansión al soltar el mouse
-       if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
-         console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
-         requestAnimationFrame(() => {
-           setSidebarCollapsed(true); // Usar función original para auto-colapso
-           // Sin reset - solo cambio de estado
-         });
-       } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
-         console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
-         requestAnimationFrame(() => {
-           setSidebarCollapsed(false); // Usar función original para auto-expansión
-           // Sin reset - solo cambio de estado
-         });
-       }
+      // Guardar el tamaño resultante del arrastre
+      setSidebarSizePercent(sidebarPercentage);
+      
+      // Solo evaluar colapso/expansión al soltar el mouse
+      if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
+        console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
+        requestAnimationFrame(() => {
+          setSidebarCollapsed(true);
+        });
+      } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
+        console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
+        requestAnimationFrame(() => {
+          // Respetar el tamaño arrastrado al expandir
+          setSidebarSizePercent(sidebarPercentage);
+          setSidebarCollapsed(false);
+        });
+      }
     }
     
     // Llamar al resize original solo al final (para redimensionar terminales)
@@ -151,7 +159,7 @@ const MainContentArea = ({
     }
   };
 
-  // Al expandir, forzar ancho fijo del sidebar sin remount
+  // Aplicar ancho actual del sidebar sin remount
   React.useEffect(() => {
     const splitterElement = document.querySelector('.main-splitter');
     if (!splitterElement) return;
@@ -161,9 +169,9 @@ const MainContentArea = ({
     const leftPanel = panels[0];
 
     if (!sidebarCollapsed) {
-      // Expandido: aplicar tamaño fijo deseado
+      // Expandido: aplicar tamaño actual deseado
       try {
-        leftPanel.style.flexBasis = `${FIXED_EXPANDED_SIZE}%`;
+        leftPanel.style.flexBasis = `${sidebarSizePercent}%`;
         leftPanel.style.width = '';
         leftPanel.style.minWidth = '';
         leftPanel.style.maxWidth = '';
@@ -174,7 +182,7 @@ const MainContentArea = ({
         leftPanel.style.flexBasis = '44px';
       } catch {}
     }
-  }, [sidebarCollapsed, FIXED_EXPANDED_SIZE]);
+  }, [sidebarCollapsed, sidebarSizePercent]);
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
@@ -198,7 +206,7 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel 
-          size={sidebarCollapsed ? 4 : FIXED_EXPANDED_SIZE} 
+          size={sidebarCollapsed ? 4 : sidebarSizePercent} 
           minSize={sidebarCollapsed ? 4 : 4} 
           maxSize={sidebarCollapsed ? 4 : 35}
           style={sidebarCollapsed 
