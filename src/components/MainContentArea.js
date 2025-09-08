@@ -90,8 +90,7 @@ const MainContentArea = ({
   // Ancho fijo para restauración del botón (ancho inicial de la app)
   const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
   
-  // Estado para forzar reset del splitter cuando se usa el botón
-  const [splitterKey, setSplitterKey] = React.useState(0);
+  
 
   // Función personalizada para manejar toggle del sidebar
   const handleSidebarToggle = React.useCallback((toggleFunctionOrValue) => {
@@ -101,12 +100,6 @@ const MainContentArea = ({
       newCollapsedState = toggleFunctionOrValue(sidebarCollapsed);
     } else {
       newCollapsedState = toggleFunctionOrValue;
-    }
-    
-    // Si vamos a expandir (newCollapsedState = false), resetear el splitter para forzar ancho fijo
-    if (!newCollapsedState && sidebarCollapsed) {
-      console.log('🔄 Expandiendo sidebar - forzando ancho fijo de', FIXED_EXPANDED_SIZE + '%');
-      setSplitterKey(prev => prev + 1); // Cambiar key para forzar reset del splitter
     }
     
     // Proceder con el cambio de estado
@@ -161,7 +154,6 @@ const MainContentArea = ({
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
-        key={splitterKey} // Key que cambia para forzar reset del splitter
         style={{ height: '100%', width: '100%' }} 
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
