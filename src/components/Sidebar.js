@@ -369,6 +369,28 @@ const Sidebar = React.memo(({
 
         setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
 
+        // Registrar fuente vinculada si aplica (estructura)
+        if (importResult.linkFile && importResult.linkedFileHash && importResult.linkedFileName) {
+          const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
+          const id = `${importResult.linkedFilePath || importResult.linkedFileName}|${importResult.linkedFileHash}`;
+          const newSource = {
+            id,
+            fileName: importResult.linkedFileName,
+            filePath: importResult.linkedFilePath || null,
+            fileHash: importResult.linkedFileHash,
+            lastCheckedAt: Date.now(),
+            intervalMs: Number(importResult.pollInterval) || 30000,
+            options: {
+              overwrite: !!importResult.overwrite,
+              createContainerFolder: !!importResult.createContainerFolder,
+              containerFolderName: importResult.containerFolderName || null
+            }
+          };
+          const filtered = sources.filter(s => s.id !== id);
+          filtered.push(newSource);
+          localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
+        }
+
         showToast && showToast({
           severity: 'success',
           summary: 'Importación exitosa',
@@ -440,6 +462,28 @@ const Sidebar = React.memo(({
 
       setNodes(() => logSetNodes('Sidebar-Import', nodesCopy));
 
+      // Registrar fuente vinculada si aplica (lista plana)
+      if (importResult.linkFile && importResult.linkedFileHash && importResult.linkedFileName) {
+        const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
+        const id = `${importResult.linkedFilePath || importResult.linkedFileName}|${importResult.linkedFileHash}`;
+        const newSource = {
+          id,
+          fileName: importResult.linkedFileName,
+          filePath: importResult.linkedFilePath || null,
+          fileHash: importResult.linkedFileHash,
+          lastCheckedAt: Date.now(),
+          intervalMs: Number(importResult.pollInterval) || 30000,
+          options: {
+            overwrite: !!importResult.overwrite,
+            createContainerFolder: !!importResult.createContainerFolder,
+            containerFolderName: importResult.containerFolderName || null
+          }
+        };
+        const filtered = sources.filter(s => s.id !== id);
+        filtered.push(newSource);
+        localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
+      }
+
       showToast && showToast({
         severity: 'success',
         summary: 'Importación exitosa',
@@ -457,6 +501,35 @@ const Sidebar = React.memo(({
       });
     }
   };
+
+  // Sondeo de cambios en fuentes vinculadas (renderer-only, eficiente con timestamp)
+  useEffect(() => {
+    const KEY = 'IMPORT_SOURCES';
+    let timers = [];
+    const schedule = () => {
+      // Limpiar timers previos
+      timers.forEach(t => clearInterval(t));
+      timers = [];
+      const sources = JSON.parse(localStorage.getItem(KEY) || '[]');
+      sources.forEach(source => {
+        const interval = Math.max(5000, Number(source.intervalMs) || 30000);
+        const timer = setInterval(async () => {
+          // Estrategia eficiente: pedir al usuario revalidar solo si lo desea
+          // Aquí lanzamos un CustomEvent para que TitleBar muestre banner
+          const event = new CustomEvent('import-source:poll', { detail: { source } });
+          window.dispatchEvent(event);
+        }, interval);
+        timers.push(timer);
+      });
+    };
+    schedule();
+    const onStorage = (e) => { if (e.key === KEY) schedule(); };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      timers.forEach(t => clearInterval(t));
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
   // Crear nueva carpeta o editar existente
   const createNewFolder = () => {
     if (!folderName.trim()) {
@@ -656,12 +729,12 @@ const Sidebar = React.memo(({
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
               console.log('✅ setNodes ejecutado');
               
-              showToast && showToast({ 
-                severity: 'success', 
-                summary: 'Eliminado', 
-                detail: `"${nodeLabel}" ha sido eliminado`, 
-                life: 3000 
-              });
+            showToast && showToast({ 
+              severity: 'success', 
+              summary: 'Eliminado', 
+              detail: `"${nodeLabel}" ha sido eliminado`, 
+              life: 3000 
+            });
               console.log('✅ Toast mostrado');
               
               // Cerrar menú contextual manualmente

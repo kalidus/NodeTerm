@@ -23,6 +23,62 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   }, [sidebarFilter, allNodes, findAllConnections]);
 
+  // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
+  const [importBanner, setImportBanner] = useState(null);
+  const [bannerTime, setBannerTime] = useState(null);
+  useEffect(() => {
+    const handler = (e) => {
+      const { source } = e.detail || {};
+      setImportBanner({ fileName: source?.fileName, source });
+      setBannerTime(new Date());
+    };
+    window.addEventListener('import-source:poll', handler);
+    return () => window.removeEventListener('import-source:poll', handler);
+  }, []);
+
+  const handleRecheckImportSource = async (source) => {
+    try {
+      // Intento directo: si tenemos ruta guardada, comparar hash y ofrecer actualizar
+      const filePath = source?.filePath;
+      if (!filePath) {
+        onShowImportDialog && onShowImportDialog(true);
+        setImportBanner(null);
+        return;
+      }
+      const info = await window.electron?.import?.getFileInfo?.(filePath);
+      if (!info?.ok) {
+        onShowImportDialog && onShowImportDialog(true);
+        setImportBanner(null);
+        return;
+      }
+      const hashRes = await window.electron?.import?.getFileHash?.(filePath);
+      if (!hashRes?.ok) {
+        onShowImportDialog && onShowImportDialog(true);
+        setImportBanner(null);
+        return;
+      }
+      const changed = hashRes.hash && source.fileHash && hashRes.hash !== source.fileHash;
+      if (changed) {
+        // Mostrar confirmación inline: Actualizar ahora / Abrir diálogo
+        const confirmed = window.confirm(`Se detectaron cambios en "${source.fileName}". ¿Actualizar ahora?`);
+        if (confirmed) {
+          const readRes = await window.electron?.import?.readFile?.(filePath);
+          if (readRes?.ok) {
+            // reenviar al flujo de importación simple: abrir dialog para completar con opciones (mantener UX consistente)
+            onShowImportDialog && onShowImportDialog(true);
+          }
+        } else {
+          onShowImportDialog && onShowImportDialog(true);
+        }
+      } else {
+        alert('No se han detectado cambios en el archivo vinculado.');
+      }
+      setImportBanner(null);
+    } catch (err) {
+      console.error('Error revalidando fuente de importación:', err);
+    }
+  };
+
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
@@ -509,6 +565,50 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         position: 'relative'
       }}
     >
+      {importBanner && (
+        <div style={{
+          position: 'absolute',
+          top: 34,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--surface-card, #2b2f33)',
+          border: '1px solid var(--surface-border, #3a3f44)',
+          color: 'var(--text-color, #e0e0e0)',
+          padding: '6px 10px',
+          borderRadius: 6,
+          fontSize: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          zIndex: 2000
+        }}>
+          <span>Detectado posible cambio en “{importBanner.fileName}”. {bannerTime ? `(${bannerTime.toLocaleTimeString()})` : ''}</span>
+          <button
+            onClick={() => handleRecheckImportSource(importBanner.source)}
+            style={{
+              background: 'var(--primary-color, #1976d2)',
+              color: 'var(--primary-color-text, #fff)',
+              border: 'none',
+              padding: '4px 8px',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12
+            }}
+          >Revisar ahora</button>
+          <button
+            onClick={() => setImportBanner(null)}
+            style={{
+              background: 'transparent',
+              color: 'var(--text-color-secondary, #a0a0a0)',
+              border: 'none',
+              padding: '2px 6px',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12
+            }}
+          >Ignorar</button>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
         <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'block' }} />
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18 }}>NodeTerm</span>

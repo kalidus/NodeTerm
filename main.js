@@ -2032,6 +2032,36 @@ ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
   return await dialog.showOpenDialog(win, safeOptions);
 });
 
+// IMPORT: utilidades mínimas para lectura de mtime y hash
+const crypto = require('crypto');
+function safeStatSync(path) { try { return fs.statSync(path); } catch { return null; } }
+function hashFileSync(path) {
+  try {
+    const data = fs.readFileSync(path);
+    return crypto.createHash('sha256').update(data).digest('hex');
+  } catch {
+    return null;
+  }
+}
+ipcMain.handle('import:get-file-info', async (event, filePath) => {
+  const stat = safeStatSync(filePath);
+  if (!stat) return { ok: false };
+  return { ok: true, mtimeMs: stat.mtimeMs, size: stat.size };
+});
+ipcMain.handle('import:get-file-hash', async (event, filePath) => {
+  const hash = hashFileSync(filePath);
+  if (!hash) return { ok: false };
+  return { ok: true, hash };
+});
+ipcMain.handle('import:read-file', async (event, filePath) => {
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return { ok: true, content: data };
+  } catch (e) {
+    return { ok: false, error: e?.message };
+  }
+});
+
 // Handler para descargar archivos por SSH
 
 ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
