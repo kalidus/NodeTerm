@@ -12,7 +12,7 @@ const ImportDialog = ({
   visible, 
   onHide, 
   onImportComplete, 
-  showToast 
+  showToast
 }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -20,6 +20,8 @@ const ImportDialog = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileUploadRef = useRef(null);
   const toast = useRef(null);
+  const [placeInFolder, setPlaceInFolder] = useState(false);
+  const containerFolderName = `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
 
   const handleFileSelect = (event) => {
     const file = event.files[0];
@@ -135,7 +137,7 @@ const ImportDialog = ({
       // Llamar callback con el resultado completo (estructura incluida)
       if (onImportComplete) {
         console.log('📞 Llamando a onImportComplete...');
-        await onImportComplete(result);
+        await onImportComplete({ ...result, createContainerFolder: !!placeInFolder, containerFolderName });
         console.log('✅ onImportComplete ejecutado');
       }
 
@@ -296,6 +298,23 @@ const ImportDialog = ({
           />
           
           {customFileUploadTemplate()}
+
+          <Divider />
+          <div className="mb-3">
+            <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+              <input
+                type="checkbox"
+                id="placeInFolder"
+                checked={placeInFolder}
+                onChange={(e) => setPlaceInFolder(e.target.checked)}
+                disabled={importing}
+              />
+              <label htmlFor="placeInFolder">Importar dentro de una carpeta</label>
+            </div>
+            {placeInFolder && (
+              <div className="text-sm text-gray-600">Se creará la carpeta “{containerFolderName}” en la raíz y se colocarán todos los elementos dentro.</div>
+            )}
+          </div>
           
           <Divider />
           
