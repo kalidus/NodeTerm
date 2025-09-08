@@ -151,6 +151,31 @@ const MainContentArea = ({
     }
   };
 
+  // Al expandir, forzar ancho fijo del sidebar sin remount
+  React.useEffect(() => {
+    const splitterElement = document.querySelector('.main-splitter');
+    if (!splitterElement) return;
+    const panels = splitterElement.querySelectorAll('.p-splitter-panel');
+    if (!panels || panels.length === 0) return;
+
+    const leftPanel = panels[0];
+
+    if (!sidebarCollapsed) {
+      // Expandido: aplicar tamaño fijo deseado
+      try {
+        leftPanel.style.flexBasis = `${FIXED_EXPANDED_SIZE}%`;
+        leftPanel.style.width = '';
+        leftPanel.style.minWidth = '';
+        leftPanel.style.maxWidth = '';
+      } catch {}
+    } else {
+      // Colapsado: asegurar anchura mínima visual (alineado con estilos del panel)
+      try {
+        leftPanel.style.flexBasis = '44px';
+      } catch {}
+    }
+  }, [sidebarCollapsed, FIXED_EXPANDED_SIZE]);
+
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%' }}>
       <Splitter 
