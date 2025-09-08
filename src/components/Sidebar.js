@@ -189,8 +189,26 @@ const Sidebar = React.memo(({
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
           uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
         }));
+
+        const createContainerFolder = !!importResult.createContainerFolder;
+        const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
         const nodesCopy = deepCopy(nodes || []);
-        toAdd.forEach(n => nodesCopy.push(n));
+        if (createContainerFolder) {
+          const containerKey = `import_container_${Date.now()}`;
+          nodesCopy.push({
+            key: containerKey,
+            uid: containerKey,
+            label: containerLabel,
+            droppable: true,
+            children: toAdd,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          });
+        } else {
+          toAdd.forEach(n => nodesCopy.push(n));
+        }
         setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
 
         const addedFolders = importResult.structure.folderCount || 0;
@@ -216,22 +234,37 @@ const Sidebar = React.memo(({
         return;
       }
 
-      const timestamp = Date.now();
-      const importFolderKey = `imported_folder_${timestamp}`;
-      const importFolder = {
-        key: importFolderKey,
-        label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-        droppable: true,
-        children: importedConnections,
-        uid: importFolderKey,
-        createdAt: new Date().toISOString(),
-        isUserCreated: true,
-        imported: true,
-        importedFrom: 'mRemoteNG'
-      };
-
+      const createContainerFolder = !!importResult.createContainerFolder;
+      const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
       const nodesCopy = deepCopy(nodes || []);
-      nodesCopy.push(importFolder);
+      if (createContainerFolder) {
+        const containerKey = `import_container_${Date.now()}`;
+        nodesCopy.push({
+          key: containerKey,
+          uid: containerKey,
+          label: containerLabel,
+          droppable: true,
+          children: importedConnections,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG'
+        });
+      } else {
+        const timestamp = Date.now();
+        const importFolderKey = `imported_folder_${timestamp}`;
+        nodesCopy.push({
+          key: importFolderKey,
+          label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
+          droppable: true,
+          children: importedConnections,
+          uid: importFolderKey,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG'
+        });
+      }
       setNodes(() => logSetNodes('Sidebar-Import', nodesCopy));
 
       showToast && showToast({

@@ -99,16 +99,36 @@ const App = () => {
       if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
         console.log('📁 Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
         // Regenerar keys por seguridad para evitar colisiones
-        const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
+        let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
           ...n,
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
           uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
         }));
-        setNodes(prev => {
-          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          toAdd.forEach(n => nodesCopy.push(n));
-          return nodesCopy;
-        });
+        if (importResult.createContainerFolder) {
+          const containerKey = `import_container_${Date.now()}`;
+          const container = {
+            key: containerKey,
+            uid: containerKey,
+            label: importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`,
+            droppable: true,
+            children: toAdd,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          };
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            nodesCopy.push(container);
+            return nodesCopy;
+          });
+        } else {
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            nodesCopy.push(...toAdd);
+            return nodesCopy;
+          });
+        }
         addedFolders = importResult.structure.folderCount || 0;
         addedConnections = importResult.structure.connectionCount || 0;
         toast.current?.show({
@@ -131,25 +151,44 @@ const App = () => {
           return;
         }
 
-        const timestamp = Date.now();
-        const importFolderKey = `imported_folder_${timestamp}`;
-        const importFolder = {
-          key: importFolderKey,
-          label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-          droppable: true,
-          children: importedConnections,
-          uid: importFolderKey,
-          createdAt: new Date().toISOString(),
-          isUserCreated: true,
-          imported: true,
-          importedFrom: 'mRemoteNG'
-        };
-
-        setNodes(prev => {
-          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          nodesCopy.push(importFolder);
-          return nodesCopy;
-        });
+        const createContainerFolder = !!importResult.createContainerFolder;
+        const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+        if (createContainerFolder) {
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            const containerKey = `import_container_${Date.now()}`;
+            nodesCopy.push({
+              key: containerKey,
+              uid: containerKey,
+              label: containerLabel,
+              droppable: true,
+              children: importedConnections,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            });
+            return nodesCopy;
+          });
+        } else {
+          const timestamp = Date.now();
+          const importFolderKey = `imported_folder_${timestamp}`;
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            nodesCopy.push({
+              key: importFolderKey,
+              label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
+              droppable: true,
+              children: importedConnections,
+              uid: importFolderKey,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            });
+            return nodesCopy;
+          });
+        }
         toast.current?.show({
           severity: 'success',
           summary: 'Importación exitosa',
@@ -1116,6 +1155,21 @@ const App = () => {
         onHide={() => setShowImportDialog(false)}
         onImportComplete={handleImportComplete}
         showToast={(message) => toast.current?.show(message)}
+        targetFolderOptions={(() => {
+          const list = [];
+          const walk = (arr, prefix = '') => {
+            if (!Array.isArray(arr)) return;
+            for (const n of arr) {
+              if (n && n.droppable) {
+                list.push({ label: `${prefix}${n.label}`, value: n.key });
+                if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+              }
+            }
+          };
+          walk(nodes || []);
+          return list;
+        })()}
+        defaultTargetFolderKey={null}
       />
     </div>
   );
