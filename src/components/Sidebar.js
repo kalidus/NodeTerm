@@ -168,10 +168,10 @@ const Sidebar = React.memo(({
   // Usar la función del prop o el fallback
   const getAllFoldersToUse = getAllFolders || getAllFoldersFallback;
 
-  // Función para manejar la importación completa
-  const handleImportComplete = async (importedConnections) => {
+  // Función para manejar la importación completa (estructura + conexiones)
+  const handleImportComplete = async (importResult) => {
     try {
-      if (!importedConnections || importedConnections.length === 0) {
+      if (!importResult) {
         showToast && showToast({
           severity: 'warn',
           summary: 'Sin datos',
@@ -181,7 +181,41 @@ const Sidebar = React.memo(({
         return;
       }
 
-      // Crear una carpeta para las conexiones importadas
+      // Estructura con carpetas
+      if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
+        // Regenerar keys por seguridad
+        const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
+          ...n,
+          key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
+          uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
+        }));
+        const nodesCopy = deepCopy(nodes || []);
+        toAdd.forEach(n => nodesCopy.push(n));
+        setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
+
+        const addedFolders = importResult.structure.folderCount || 0;
+        const addedConnections = importResult.structure.connectionCount || 0;
+        showToast && showToast({
+          severity: 'success',
+          summary: 'Importación exitosa',
+          detail: `Se importaron ${addedConnections} conexiones y ${addedFolders} carpetas`,
+          life: 5000
+        });
+        return;
+      }
+
+      // Compatibilidad: lista plana
+      const importedConnections = importResult.connections || importResult;
+      if (!Array.isArray(importedConnections) || importedConnections.length === 0) {
+        showToast && showToast({
+          severity: 'warn',
+          summary: 'Sin datos',
+          detail: 'No se encontraron conexiones para importar',
+          life: 3000
+        });
+        return;
+      }
+
       const timestamp = Date.now();
       const importFolderKey = `imported_folder_${timestamp}`;
       const importFolder = {
@@ -196,11 +230,8 @@ const Sidebar = React.memo(({
         importedFrom: 'mRemoteNG'
       };
 
-      // Clonar nodos actuales y agregar la carpeta de importación
-      const nodesCopy = deepCopy(nodes);
+      const nodesCopy = deepCopy(nodes || []);
       nodesCopy.push(importFolder);
-      
-      // Actualizar el estado de nodos
       setNodes(() => logSetNodes('Sidebar-Import', nodesCopy));
 
       showToast && showToast({

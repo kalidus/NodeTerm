@@ -4,6 +4,13 @@
  */
 
 class ImportService {
+  // Contador para claves únicas durante la sesión
+  static _idCounter = 0;
+
+  static generateKey(prefix) {
+    const randomPart = Math.floor(Math.random() * 1e6);
+    return `${prefix}_${Date.now()}_${randomPart}_${ImportService._idCounter++}`;
+  }
   /**
    * Importa sesiones desde un archivo XML de mRemoteNG
    * @param {File} file - Archivo XML seleccionado
@@ -20,16 +27,23 @@ class ImportService {
       // Validar estructura
       this.validateMRemoteNGStructure(xmlDoc);
       
-      // Extraer conexiones
-      const connections = this.extractMRemoteNGConnections(xmlDoc);
-      
-      // Convertir al formato interno
-      const convertedConnections = this.convertToInternalFormat(connections);
-      
+      // Extraer estructura jerárquica (carpetas y conexiones)
+      const treeStructure = this.extractMRemoteNGStructure(xmlDoc);
+
+      // Convertir estructura al formato interno (árbol de nodos)
+      const { nodes, flatConnections, connectionCount, folderCount } = this.convertStructureToInternalFormat(treeStructure);
+
       return {
         success: true,
-        connections: convertedConnections,
-        count: convertedConnections.length,
+        structure: {
+          nodes,
+          flatConnections,
+          connectionCount,
+          folderCount
+        },
+        // Compatibilidad hacia atrás (lista plana)
+        connections: flatConnections,
+        count: connectionCount,
         metadata: {
           source: 'mRemoteNG',
           importDate: new Date().toISOString(),
@@ -128,6 +142,59 @@ class ImportService {
   }
 
   /**
+   * Extrae estructura jerárquica (carpetas y conexiones) del XML
+   * @param {Document} xmlDoc
+   * @returns {Array} Árbol intermedio con tipos 'folder' y 'connection'
+   */
+  static extractMRemoteNGStructure(xmlDoc) {
+    const allNodeElements = Array.from(xmlDoc.getElementsByTagName('Node'));
+    if (allNodeElements.length === 0) {
+      // Fallback: algunos XML usan mayúsculas/min/min mezcladas
+      const anyNodes = Array.from(xmlDoc.querySelectorAll('Node, node'));
+      if (anyNodes.length > 0) {
+        allNodeElements.push(...anyNodes);
+      }
+    }
+
+    // Detectar nodos raíz: aquellos cuyo ancestro no es un <Node>
+    const isRootNode = (el) => {
+      // Un nodo es raíz si su padre no es <Node> y además su atributo ParentId/Parent puede estar vacío
+      const parentEl = el.parentElement;
+      if (parentEl && parentEl.tagName && parentEl.tagName.toLowerCase() === 'node') return false;
+      const parentId = this.getNodeAttribute(el, ['ParentId', 'Parent']);
+      if (parentId && parentId.trim() !== '') return false;
+      return true;
+    };
+
+    const rootNodeElements = allNodeElements.filter(isRootNode);
+
+    const processNode = (el) => {
+      const typeAttr = this.getNodeAttribute(el, ['Type', 'NodeType']);
+      const name = this.getNodeAttribute(el, ['Name']) || 'Sin nombre';
+      const childNodes = Array.from(el.children || []).filter(c => c.tagName && c.tagName.toLowerCase() === 'node');
+
+      const isContainer = typeAttr === 'Container' || childNodes.length > 0;
+      const isConnection = typeAttr === 'Connection' || (!!this.getNodeAttribute(el, ['Hostname', 'Host', 'Server']));
+
+      if (isContainer && !isConnection) {
+        return {
+          type: 'folder',
+          name,
+          children: childNodes.map(processNode).filter(Boolean)
+        };
+      }
+
+      // Tratar como conexión
+      const parsed = this.parseConnectionNode(el);
+      if (!parsed) return null;
+      return { type: 'connection', connection: parsed };
+    };
+
+    const tree = rootNodeElements.map(processNode).filter(Boolean);
+    return tree;
+  }
+
+  /**
    * Parsea un nodo de conexión individual
    * @param {Element} node 
    * @returns {Object|null}
@@ -135,9 +202,10 @@ class ImportService {
   static parseConnectionNode(node) {
     // Determinar el tipo de nodo
     const nodeType = this.getNodeAttribute(node, ['Type', 'NodeType']);
+    const hasHostLike = !!this.getNodeAttribute(node, ['Hostname', 'Host', 'Server']);
     
-    // Solo procesar nodos de tipo Connection
-    if (nodeType !== 'Connection') {
+    // Aceptar tanto Type="Connection" como nodos con atributos de host
+    if (nodeType !== 'Connection' && !hasHostLike) {
       return null;
     }
     
@@ -234,15 +302,15 @@ class ImportService {
    * @returns {Array}
    */
   static convertToInternalFormat(mRemoteConnections) {
-    return mRemoteConnections.map((conn, index) => {
-      const timestamp = Date.now() + index;
+    return mRemoteConnections.map((conn) => {
+      const key = this.generateKey('imported_mremoteng');
       const protocol = conn.protocol?.toUpperCase();
       
       // Crear nodo base
       const baseNode = {
-        key: `imported_mremoteng_${timestamp}`,
+        key,
         label: conn.name,
-        uid: `imported_mremoteng_${timestamp}`,
+        uid: key,
         createdAt: new Date().toISOString(),
         isUserCreated: true,
         imported: true,
@@ -260,6 +328,71 @@ class ImportService {
         return this.createSSHNodeFromOther(baseNode, conn);
       }
     });
+  }
+
+  /**
+   * Convierte estructura intermedia (folders + connections) al formato de árbol interno
+   * @param {Array} tree
+   * @returns {{nodes: Array, flatConnections: Array, connectionCount: number, folderCount: number}}
+   */
+  static convertStructureToInternalFormat(tree) {
+    const resultNodes = [];
+    const flatConnections = [];
+    let folderCount = 0;
+    let connectionCount = 0;
+
+    const convertNode = (node) => {
+      if (node.type === 'folder') {
+        folderCount += 1;
+        const folderKey = this.generateKey('folder');
+        return {
+          key: folderKey,
+          uid: folderKey,
+          label: node.name,
+          droppable: true,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG',
+          data: { type: 'folder', name: node.name },
+          children: (node.children || []).map(convertNode).filter(Boolean)
+        };
+      }
+      if (node.type === 'connection') {
+        connectionCount += 1;
+        // Crear nodo de conexión con clave única basada en protocolo
+        const key = this.generateKey('imported_mremoteng');
+        const protocol = node.connection.protocol?.toUpperCase();
+        const baseNode = {
+          key,
+          label: node.connection.name,
+          uid: key,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG',
+          originalProtocol: node.connection.protocol
+        };
+        let converted;
+        if (this.isSSHProtocol(protocol)) {
+          converted = this.createSSHNode(baseNode, node.connection);
+        } else if (protocol === 'RDP') {
+          converted = this.createRDPNode(baseNode, node.connection);
+        } else {
+          converted = this.createSSHNodeFromOther(baseNode, node.connection);
+        }
+        flatConnections.push(converted);
+        return converted;
+      }
+      return null;
+    };
+
+    for (const root of tree) {
+      const conv = convertNode(root);
+      if (conv) resultNodes.push(conv);
+    }
+
+    return { nodes: resultNodes, flatConnections, connectionCount, folderCount };
   }
 
   /**

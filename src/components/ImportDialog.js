@@ -42,41 +42,20 @@ const ImportDialog = ({
     setSelectedFile(null);
   };
 
-  // Función para manejar el click en "Elegir archivo"
+  // Función para manejar el click en "Elegir archivo" (siempre input nativo)
   const handleChooseFile = () => {
-    console.log('Intentando abrir selector de archivos...');
-    if (fileUploadRef.current) {
-      console.log('FileUpload ref encontrado, llamando choose()...');
-      try {
-        fileUploadRef.current.choose();
-      } catch (error) {
-        console.error('Error al abrir selector de archivos:', error);
-        // Fallback: crear input file manual
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.xml';
-        input.onchange = (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            handleFileSelect({ files: [file] });
-          }
-        };
-        input.click();
+    console.log('Intentando abrir selector de archivos (input nativo)...');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xml';
+    input.onchange = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        console.log('Archivo seleccionado:', file.name);
+        handleFileSelect({ files: [file] });
       }
-    } else {
-      console.error('FileUpload ref no está disponible');
-      // Fallback: crear input file manual
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.xml';
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          handleFileSelect({ files: [file] });
-        }
-      };
-      input.click();
-    }
+    };
+    input.click();
   };
 
   // Funciones para drag & drop
@@ -146,15 +125,18 @@ const ImportDialog = ({
 
       // Usar ImportService para procesar el archivo
       const result = await ImportService.importFromMRemoteNG(selectedFile);
+      console.log('📋 Resultado de ImportService:', result);
       setImportProgress(80);
 
       if (!result.success) {
         throw new Error(result.error || 'Error al procesar el archivo');
       }
 
-      // Llamar callback con las conexiones importadas
+      // Llamar callback con el resultado completo (estructura incluida)
       if (onImportComplete) {
-        await onImportComplete(result.connections);
+        console.log('📞 Llamando a onImportComplete...');
+        await onImportComplete(result);
+        console.log('✅ onImportComplete ejecutado');
       }
 
       setImportProgress(100);
@@ -162,7 +144,9 @@ const ImportDialog = ({
       showToast && showToast({
         severity: 'success',
         summary: 'Importación exitosa',
-        detail: `Se importaron ${result.count} conexiones desde ${result.metadata.source}`,
+        detail: result.structure && result.structure.folderCount > 0
+          ? `Se importaron ${result.structure.connectionCount} conexiones y ${result.structure.folderCount} carpetas`
+          : `Se importaron ${result.count} conexiones desde ${result.metadata.source}`,
         life: 5000
       });
 
@@ -281,7 +265,7 @@ const ImportDialog = ({
       <Dialog
         visible={visible}
         style={{ width: '600px' }}
-        headerTemplate={headerTemplate}
+        header={headerTemplate()}
         modal
         onHide={handleClose}
         closable={!importing}
