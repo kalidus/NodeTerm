@@ -64,18 +64,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         icon: 'pi pi-file',
         submenu: [
           {
-            label: 'Importar',
-            icon: 'pi pi-upload',
-            submenu: [
-              {
-                label: 'Desde mRemoteNG',
-                icon: 'pi pi-file-excel',
-                command: () => {
-                  console.log('Abriendo ImportDialog desde TitleBar...');
-                  onShowImportDialog && onShowImportDialog(true);
-                }
-              }
-            ]
+            label: 'Importar desde mRemoteNG',
+            icon: 'pi pi-file-excel',
+            command: () => {
+              console.log('Abriendo ImportDialog desde TitleBar...');
+              onShowImportDialog && onShowImportDialog(true);
+            }
           }
         ]
       },
@@ -234,7 +228,28 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     let activeSubmenu = null;
     let submenuTimer = null;
     
-    // Función para cerrar submenú con delay
+    // Función de limpieza completa
+    const cleanupMenus = () => {
+      if (submenuTimer) clearTimeout(submenuTimer);
+      if (activeSubmenu && document.body.contains(activeSubmenu)) {
+        document.body.removeChild(activeSubmenu);
+      }
+      const allMenus = document.querySelectorAll('.app-context-menu-titlebar');
+      allMenus.forEach(menu => {
+        // Limpiar todos los hovers antes de remover
+        const menuItems = menu.querySelectorAll('.menu-item-titlebar');
+        menuItems.forEach(item => {
+          item.style.backgroundColor = 'transparent';
+        });
+        if (document.body.contains(menu)) {
+          document.body.removeChild(menu);
+        }
+      });
+      activeSubmenu = null;
+      submenuTimer = null;
+    };
+    
+    // Función simplificada para cerrar submenú (como funciona "Ver")
     const scheduleSubmenuClose = () => {
       if (submenuTimer) clearTimeout(submenuTimer);
       submenuTimer = setTimeout(() => {
@@ -242,7 +257,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           document.body.removeChild(activeSubmenu);
           activeSubmenu = null;
         }
-      }, 500);
+      }, 300); // Timer más corto y simple
     };
     
     // Función para cancelar el cierre
@@ -335,6 +350,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       if (item.submenu) {
         menuItem.addEventListener('mouseenter', () => {
           cancelSubmenuClose();
+          
+          // Limpiar hover de otros elementos
+          const allMenuItems = contextMenu.querySelectorAll('.menu-item-titlebar');
+          allMenuItems.forEach(item => {
+            if (item !== menuItem) {
+              item.style.backgroundColor = 'transparent';
+            }
+          });
           menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
           
           // Limpiar submenú anterior
@@ -358,7 +381,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             font-size: 14px;
           `;
           
-          // Agregar eventos al submenú ANTES de agregar items
+          // Eventos simplificados del submenú (igual que funciona "Ver")
           activeSubmenu.addEventListener('mouseenter', cancelSubmenuClose);
           activeSubmenu.addEventListener('mouseleave', scheduleSubmenuClose);
           
@@ -369,17 +392,17 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           
           document.body.appendChild(activeSubmenu);
           
-          // Posicionar submenú
+          // Posicionar submenú de manera simple y directa
           setTimeout(() => {
             const menuRect = menuItem.getBoundingClientRect();
             const submenuRect = activeSubmenu.getBoundingClientRect();
             
-            let left = menuRect.right - 1;
+            let left = menuRect.right;
             let top = menuRect.top;
             
             // Ajustar si se sale de la pantalla
             if (left + submenuRect.width > window.innerWidth) {
-              left = menuRect.left - submenuRect.width + 1;
+              left = menuRect.left - submenuRect.width;
             }
             if (top + submenuRect.height > window.innerHeight) {
               top = window.innerHeight - submenuRect.height - 8;
@@ -394,6 +417,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       } else {
         // Eventos para elementos normales
         menuItem.addEventListener('mouseenter', () => {
+          // Limpiar hover de otros elementos
+          const allMenuItems = contextMenu.querySelectorAll('.menu-item-titlebar');
+          allMenuItems.forEach(item => {
+            if (item !== menuItem) {
+              item.style.backgroundColor = 'transparent';
+            }
+          });
           menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
         });
         
@@ -405,17 +435,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       if (item.command) {
         menuItem.addEventListener('click', () => {
           item.command();
-          // Cerrar todo
-          if (submenuTimer) clearTimeout(submenuTimer);
-          if (activeSubmenu && document.body.contains(activeSubmenu)) {
-            document.body.removeChild(activeSubmenu);
-          }
-          const allMenus = document.querySelectorAll('.app-context-menu-titlebar');
-          allMenus.forEach(menu => {
-            if (document.body.contains(menu)) {
-              document.body.removeChild(menu);
-            }
-          });
+          // Cerrar todo usando la función de limpieza
+          cleanupMenus();
         });
       }
       
@@ -459,16 +480,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       const isClickOnSubmenu = submenu && submenu.contains(e.target);
       
       if (!isClickOnButton && !isClickOnMenu && !isClickOnSubmenu) {
-        if (submenuTimer) clearTimeout(submenuTimer);
-        if (activeSubmenu && document.body.contains(activeSubmenu)) {
-          document.body.removeChild(activeSubmenu);
-        }
-        const allMenus = document.querySelectorAll('.app-context-menu-titlebar');
-        allMenus.forEach(menu => {
-          if (document.body.contains(menu)) {
-            document.body.removeChild(menu);
-          }
-        });
+        cleanupMenus();
         document.removeEventListener('click', closeMenu);
       }
     };
