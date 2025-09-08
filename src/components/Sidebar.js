@@ -168,7 +168,7 @@ const Sidebar = React.memo(({
   // Usar la función del prop o el fallback
   const getAllFoldersToUse = getAllFolders || getAllFoldersFallback;
 
-  // Función para manejar la importación completa (estructura + conexiones)
+  // Función para manejar la importación completa (estructura + conexiones) con deduplicación local
   const handleImportComplete = async (importResult) => {
     try {
       if (!importResult) {
@@ -180,6 +180,98 @@ const Sidebar = React.memo(({
         });
         return;
       }
+
+      // Helpers de deduplicación
+      // Normalización para campos exactos (hosts/puertos/usuarios)
+      const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
+      // Normalización robusta para etiquetas de carpetas (ignora acentos, múltiples espacios y signos)
+      const normalizeLabel = (v) => {
+        const s = (v || '').toString();
+        return s
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ') // cualquier separador lo tratamos como espacio
+          .replace(/\s+/g, ' ') // colapsar espacios
+          .trim();
+      };
+      const makeConnKey = (node) => {
+        if (!node || !node.data) return null;
+        if (node.data.type === 'ssh') {
+          return `ssh|${normalizeExact(node.data.host)}|${normalizeExact(node.data.port)}|${normalizeExact(node.data.user)}`;
+        }
+        if (node.data.type === 'rdp') {
+          return `rdp|${normalizeExact(node.data.server)}|${normalizeExact(node.data.port)}|${normalizeExact(node.data.username)}`;
+        }
+        return null;
+      };
+      // Considerar carpeta si es droppable o tiene hijos (mayor tolerancia)
+      const isFolder = (n) => !!(n && (n.droppable === true || Array.isArray(n.children)) && !(n.data && (n.data.type === 'ssh' || n.data.type === 'rdp')));
+      const isConnection = (n) => n && n.data && (n.data.type === 'ssh' || n.data.type === 'rdp');
+
+      // Fusionar arrays de hijos en destinoFolder: añade solo no duplicados y fusiona carpetas por nombre
+      const mergeChildren = (destChildren, incomingChildren) => {
+        const result = Array.isArray(destChildren) ? [...destChildren] : [];
+
+        // Índices para búsqueda rápida
+        const folderByName = new Map();
+        const connKeys = new Set();
+
+        for (const child of result) {
+          if (isFolder(child)) {
+            folderByName.set(normalizeLabel(child.label), child);
+          } else if (isConnection(child)) {
+            const key = makeConnKey(child);
+            if (key) connKeys.add(key);
+          }
+        }
+
+        let addedConnections = 0;
+        let addedFolders = 0;
+
+        const appendUnique = (node) => {
+          if (isFolder(node)) {
+            const existing = folderByName.get(normalizeLabel(node.label));
+            if (existing) {
+              // fusionar recursivamente hijos
+              const mergeResult = mergeChildren(existing.children || [], node.children || []);
+              existing.children = mergeResult.children;
+              addedConnections += mergeResult.addedConnections;
+              addedFolders += mergeResult.addedFolders;
+            } else {
+              // carpeta nueva completa
+              result.push(node);
+              folderByName.set(normalizeLabel(node.label), node);
+              addedFolders += 1;
+              // además, contar elementos añadidos recursivamente dentro para métricas
+              const countInside = (arr) => {
+                let c = 0;
+                for (const it of arr || []) {
+                  if (isConnection(it)) c += 1;
+                  if (isFolder(it)) c += countInside(it.children);
+                }
+                return c;
+              };
+              addedConnections += countInside(node.children || []);
+            }
+          } else if (isConnection(node)) {
+            const key = makeConnKey(node);
+            if (key && !connKeys.has(key)) {
+              result.push(node);
+              connKeys.add(key);
+              addedConnections += 1;
+            }
+          } else {
+            // otro tipo de nodo: añadir sin dedupe
+            result.push(node);
+          }
+        };
+
+        for (const inc of incomingChildren || []) {
+          appendUnique(inc);
+        }
+
+        return { children: result, addedConnections, addedFolders };
+      };
 
       // Estructura con carpetas
       if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
@@ -193,30 +285,53 @@ const Sidebar = React.memo(({
         const createContainerFolder = !!importResult.createContainerFolder;
         const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
         const nodesCopy = deepCopy(nodes || []);
+        let addedConnections = 0;
+        let addedFolders = 0;
         if (createContainerFolder) {
-          const containerKey = `import_container_${Date.now()}`;
-          nodesCopy.push({
-            key: containerKey,
-            uid: containerKey,
-            label: containerLabel,
-            droppable: true,
-            children: toAdd,
-            createdAt: new Date().toISOString(),
-            isUserCreated: true,
-            imported: true,
-            importedFrom: 'mRemoteNG'
-          });
+          // buscar contenedor existente por nombre para fusionar, si no, crear
+          const idx = nodesCopy.findIndex(n => isFolder(n) && normalize(n.label) === normalize(containerLabel));
+          if (idx !== -1) {
+            const container = nodesCopy[idx];
+            const mergeResult = mergeChildren(container.children || [], toAdd);
+            container.children = mergeResult.children;
+            addedConnections += mergeResult.addedConnections;
+            addedFolders += mergeResult.addedFolders;
+          } else {
+            const containerKey = `import_container_${Date.now()}`;
+            nodesCopy.push({
+              key: containerKey,
+              uid: containerKey,
+              label: containerLabel,
+              droppable: true,
+              children: [],
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            });
+            const mergeResult = mergeChildren(nodesCopy[nodesCopy.length - 1].children, toAdd);
+            nodesCopy[nodesCopy.length - 1].children = mergeResult.children;
+            addedConnections += mergeResult.addedConnections;
+            addedFolders += mergeResult.addedFolders;
+          }
         } else {
-          toAdd.forEach(n => nodesCopy.push(n));
+          // raíz: fusionar por nombre de carpeta al nivel root
+          const mergeResult = mergeChildren(nodesCopy, toAdd);
+          // mergeChildren devuelve children completo; como aquí el destino es root, sustituimos root
+          // pero mergeChildren ya devolvió un array completo deduplicado
+          // Sin embargo, para mantener referencias, reasignamos nodesCopy
+          nodesCopy.length = 0;
+          nodesCopy.push(...mergeResult.children);
+          addedConnections += mergeResult.addedConnections;
+          addedFolders += mergeResult.addedFolders;
         }
+
         setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
 
-        const addedFolders = importResult.structure.folderCount || 0;
-        const addedConnections = importResult.structure.connectionCount || 0;
         showToast && showToast({
           severity: 'success',
           summary: 'Importación exitosa',
-          detail: `Se importaron ${addedConnections} conexiones y ${addedFolders} carpetas`,
+          detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas (sin duplicados)`,
           life: 5000
         });
         return;
@@ -237,40 +352,66 @@ const Sidebar = React.memo(({
       const createContainerFolder = !!importResult.createContainerFolder;
       const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
       const nodesCopy = deepCopy(nodes || []);
+      let addedConnections = 0;
+
       if (createContainerFolder) {
-        const containerKey = `import_container_${Date.now()}`;
-        nodesCopy.push({
-          key: containerKey,
-          uid: containerKey,
-          label: containerLabel,
-          droppable: true,
-          children: importedConnections,
-          createdAt: new Date().toISOString(),
-          isUserCreated: true,
-          imported: true,
-          importedFrom: 'mRemoteNG'
-        });
+        // Fusionar dentro del contenedor (crear si no existe por nombre)
+        const idx = nodesCopy.findIndex(n => isFolder(n) && normalize(n.label) === normalize(containerLabel));
+        // Convertir conexiones planas a children y deduplicar contra hijos del contenedor
+        const mergeResult = (() => {
+          const existingChildren = idx !== -1 ? (nodesCopy[idx].children || []) : [];
+          return mergeChildren(existingChildren, importedConnections);
+        })();
+
+        if (idx !== -1) {
+          nodesCopy[idx].children = mergeResult.children;
+        } else {
+          const containerKey = `import_container_${Date.now()}`;
+          nodesCopy.push({
+            key: containerKey,
+            uid: containerKey,
+            label: containerLabel,
+            droppable: true,
+            children: mergeResult.children,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          });
+        }
+        addedConnections += mergeResult.addedConnections;
       } else {
-        const timestamp = Date.now();
-        const importFolderKey = `imported_folder_${timestamp}`;
-        nodesCopy.push({
-          key: importFolderKey,
-          label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-          droppable: true,
-          children: importedConnections,
-          uid: importFolderKey,
-          createdAt: new Date().toISOString(),
-          isUserCreated: true,
-          imported: true,
-          importedFrom: 'mRemoteNG'
-        });
+        // raíz: colocar dentro de carpeta nueva etiquetada, pero fusionando si ya existe carpeta con ese nombre
+        const rootFolderLabel = `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`;
+        const idx = nodesCopy.findIndex(n => isFolder(n) && normalize(n.label) === normalize(rootFolderLabel));
+        if (idx !== -1) {
+          const mergeResult = mergeChildren(nodesCopy[idx].children || [], importedConnections);
+          nodesCopy[idx].children = mergeResult.children;
+          addedConnections += mergeResult.addedConnections;
+        } else {
+          const importFolderKey = `imported_folder_${Date.now()}`;
+          const mergeResult = mergeChildren([], importedConnections);
+          nodesCopy.push({
+            key: importFolderKey,
+            label: rootFolderLabel,
+            droppable: true,
+            children: mergeResult.children,
+            uid: importFolderKey,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          });
+          addedConnections += mergeResult.addedConnections;
+        }
       }
+
       setNodes(() => logSetNodes('Sidebar-Import', nodesCopy));
 
       showToast && showToast({
         severity: 'success',
         summary: 'Importación exitosa',
-        detail: `Se importaron ${importedConnections.length} conexiones en la carpeta "${importFolder.label}"`,
+        detail: `Añadidas ${addedConnections} conexiones (sin duplicados)`,
         life: 5000
       });
 
