@@ -17,6 +17,7 @@ const ImportDialog = ({
   const [selectedFile, setSelectedFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileUploadRef = useRef(null);
   const toast = useRef(null);
 
@@ -39,6 +40,90 @@ const ImportDialog = ({
 
   const handleFileRemove = () => {
     setSelectedFile(null);
+  };
+
+  // Función para manejar el click en "Elegir archivo"
+  const handleChooseFile = () => {
+    console.log('Intentando abrir selector de archivos...');
+    if (fileUploadRef.current) {
+      console.log('FileUpload ref encontrado, llamando choose()...');
+      try {
+        fileUploadRef.current.choose();
+      } catch (error) {
+        console.error('Error al abrir selector de archivos:', error);
+        // Fallback: crear input file manual
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xml';
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleFileSelect({ files: [file] });
+          }
+        };
+        input.click();
+      }
+    } else {
+      console.error('FileUpload ref no está disponible');
+      // Fallback: crear input file manual
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xml';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileSelect({ files: [file] });
+        }
+      };
+      input.click();
+    }
+  };
+
+  // Funciones para drag & drop
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Solo cambiar estado si realmente salimos del área
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      console.log('Archivo arrastrado:', file.name);
+      
+      // Validar que sea un archivo XML
+      if (!file.name.toLowerCase().endsWith('.xml')) {
+        showToast && showToast({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Solo se permiten archivos XML de mRemoteNG',
+          life: 3000
+        });
+        return;
+      }
+      
+      handleFileSelect({ files: [file] });
+    }
   };
 
   const processImport = async () => {
@@ -103,6 +188,7 @@ const ImportDialog = ({
     setSelectedFile(null);
     setImporting(false);
     setImportProgress(0);
+    setIsDragOver(false);
     onHide();
   };
 
@@ -118,7 +204,17 @@ const ImportDialog = ({
   const customFileUploadTemplate = () => {
     return (
       <div className="p-4">
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <div 
+          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 ${
+            isDragOver 
+              ? 'border-blue-400 bg-blue-50' 
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+        >
           <i className="pi pi-file-excel text-4xl text-gray-400 mb-3"></i>
           <div className="text-lg font-medium text-gray-700 mb-2">
             Seleccionar archivo XML de mRemoteNG
@@ -129,7 +225,7 @@ const ImportDialog = ({
           <Button
             label="Elegir archivo"
             icon="pi pi-folder-open"
-            onClick={() => fileUploadRef.current.choose()}
+            onClick={handleChooseFile}
             className="p-button-outlined"
             disabled={importing}
           />
