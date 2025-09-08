@@ -38,6 +38,7 @@ import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 
 import SyncSettingsDialog from './SyncSettingsDialog';
+import ImportDialog from './ImportDialog';
 
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
@@ -75,6 +76,60 @@ import {
 
 const App = () => {
   const toast = useRef(null);
+  const [showImportDialog, setShowImportDialog] = React.useState(false);
+  
+  // Función para manejar la importación completa
+  const handleImportComplete = async (importedConnections) => {
+    try {
+      if (!importedConnections || importedConnections.length === 0) {
+        toast.current?.show({
+          severity: 'warn',
+          summary: 'Sin datos',
+          detail: 'No se encontraron conexiones para importar',
+          life: 3000
+        });
+        return;
+      }
+
+      // Crear una carpeta para las conexiones importadas
+      const timestamp = Date.now();
+      const importFolderKey = `imported_folder_${timestamp}`;
+      const importFolder = {
+        key: importFolderKey,
+        label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
+        droppable: true,
+        children: importedConnections,
+        uid: importFolderKey,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true,
+        imported: true,
+        importedFrom: 'mRemoteNG'
+      };
+
+      // Clonar nodos actuales y agregar la carpeta de importación
+      const nodesCopy = JSON.parse(JSON.stringify(nodes));
+      nodesCopy.push(importFolder);
+      
+      // Actualizar el estado de nodos
+      setNodes(nodesCopy);
+
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Importación exitosa',
+        detail: `Se importaron ${importedConnections.length} conexiones en la carpeta "${importFolder.label}"`,
+        life: 5000
+      });
+
+    } catch (error) {
+      console.error('Error al procesar importación:', error);
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error de importación',
+        detail: 'Error al agregar las conexiones importadas a la sidebar',
+        life: 5000
+      });
+    }
+  };
   
   // Usar el hook de gestión de pestañas
   const {
@@ -780,6 +835,7 @@ const App = () => {
         allNodes={nodes}
         findAllConnections={findAllConnections}
         onOpenSSHConnection={onOpenSSHConnection}
+        onShowImportDialog={setShowImportDialog}
       />
       <DialogsManager
         // Referencias
@@ -1015,6 +1071,13 @@ const App = () => {
         getTreeContextMenuItems={getTreeContextMenuItems}
         selectedNode={selectedNode}
                 treeContextMenuRef={treeContextMenuRef}
+      />
+      
+      <ImportDialog
+        visible={showImportDialog}
+        onHide={() => setShowImportDialog(false)}
+        onImportComplete={handleImportComplete}
+        showToast={(message) => toast.current?.show(message)}
       />
     </div>
   );
