@@ -22,6 +22,15 @@ const ImportDialog = ({
   const toast = useRef(null);
   const [placeInFolder, setPlaceInFolder] = useState(false);
   const [overwrite, setOverwrite] = useState(false);
+  const [linkFile, setLinkFile] = useState(false);
+  const [pollInterval, setPollInterval] = useState(30000); // 30s por defecto
+  const [linkedPath, setLinkedPath] = useState('');
+  const [linkStatus, setLinkStatus] = useState(null); // { text, color }
+  const lastCheckRef = useRef(null);
+  const previewTimerRef = useRef(null);
+  const linkFileInputRef = useRef(null);
+  const [lastKnownHash, setLastKnownHash] = useState(null);
+  const [changesDetected, setChangesDetected] = useState(false);
   const containerFolderName = `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
 
   const handleFileSelect = (event) => {
@@ -108,14 +117,51 @@ const ImportDialog = ({
     }
   };
 
+  // Sondeo previo dentro del diálogo para mostrar "última actualización"
+  const startPreviewPolling = () => {
+    if (!linkFile || !linkedPath) return;
+    if (previewTimerRef.current) clearInterval(previewTimerRef.current);
+    const run = async () => {
+      try {
+        const info = await window.electron?.import?.getFileInfo?.(linkedPath);
+        if (info?.ok) {
+          lastCheckRef.current = Date.now();
+          const d = new Date(lastCheckRef.current);
+          setLinkStatus({ text: `Vinculado • Última comprobación ${d.toLocaleTimeString()} • ${Math.round(info.size/1024)} KB`, color: '#2e7d32' });
+        }
+      } catch {}
+    };
+    run();
+    previewTimerRef.current = setInterval(run, Math.max(5000, Number(pollInterval) || 30000));
+  };
+
+  React.useEffect(() => {
+    if (linkFile && linkedPath) {
+      startPreviewPolling();
+    }
+    return () => {
+      if (previewTimerRef.current) clearInterval(previewTimerRef.current);
+    };
+  }, [linkFile, linkedPath, pollInterval]);
+
   const processImport = async () => {
-    if (!selectedFile) {
-      showToast && showToast({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Debe seleccionar un archivo XML',
-        life: 3000
-      });
+    // Determinar el archivo a importar de forma síncrona (evitar depender de setState)
+    let fileToImport = selectedFile;
+    if (!fileToImport && linkedPath) {
+      const readRes = await window.electron?.import?.readFile?.(linkedPath);
+      if (readRes?.ok) {
+        try {
+          const fileName = linkedPath.split('\\').pop() || 'import.xml';
+          fileToImport = new File([readRes.content], fileName, { type: 'text/xml' });
+        } catch (e) {
+          fileToImport = new Blob([readRes.content], { type: 'text/xml' });
+        }
+        // Guardar para futuras operaciones, pero usar fileToImport directamente ahora
+        try { setSelectedFile(fileToImport); } catch {}
+      }
+    }
+    if (!fileToImport) {
+      showToast && showToast({ severity: 'error', summary: 'Error', detail: 'Debe seleccionar un archivo XML', life: 3000 });
       return;
     }
 
@@ -127,7 +173,7 @@ const ImportDialog = ({
       setImportProgress(10);
 
       // Usar ImportService para procesar el archivo
-      const result = await ImportService.importFromMRemoteNG(selectedFile);
+      const result = await ImportService.importFromMRemoteNG(fileToImport);
       console.log('📋 Resultado de ImportService:', result);
       setImportProgress(80);
 
@@ -142,7 +188,13 @@ const ImportDialog = ({
           ...result,
           createContainerFolder: !!placeInFolder,
           containerFolderName,
-          overwrite: !!overwrite
+          overwrite: !!overwrite,
+          linkFile: !!linkFile,
+          pollInterval: Number(pollInterval) || 30000,
+          linkedFileName: linkedPath ? linkedPath.split('\\').pop() : (fileToImport?.name || null),
+          linkedFilePath: linkedPath || null,
+          linkedFileSize: fileToImport?.size || null,
+          linkedFileHash: result?.metadata?.contentHash || null
         });
         console.log('✅ onImportComplete ejecutado');
       }
@@ -334,6 +386,126 @@ const ImportDialog = ({
             </div>
             {!overwrite && (
               <div className="text-sm text-gray-600">Si no está activado, se permiten duplicados de carpetas y sesiones.</div>
+            )}
+          </div>
+          <Divider />
+          <div className="mb-3">
+            <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+              <input
+                type="checkbox"
+                id="linkFile"
+                checked={linkFile}
+                onChange={(e) => setLinkFile(e.target.checked)}
+                disabled={importing}
+              />
+              <label htmlFor="linkFile">Vincular archivo y detectar cambios</label>
+            </div>
+            {linkFile && (
+              <>
+              <div style={{
+                border: '1px solid #ddd',
+                borderRadius: 6,
+                padding: 10,
+                marginBottom: 8,
+                background: '#f9fafb'
+              }}>
+                <div className="flex align-items-center" style={{ gap: 8, marginBottom: 8 }}>
+                  <label style={{ minWidth: 130, fontSize: 12, color: '#555' }}>Archivo vinculado:</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={linkedPath || 'No seleccionado'}
+                    style={{ flex: 1, height: 26, fontSize: 12, padding: '2px 6px' }}
+                  />
+                  <Button
+                    label={linkedPath ? 'Cambiar…' : 'Seleccionar…'}
+                    icon="pi pi-link"
+                    onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
+                    className="p-button-outlined"
+                    disabled={importing}
+                  />
+                  <input
+                    type="file"
+                    accept=".xml"
+                    ref={linkFileInputRef}
+                    onChange={async (e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (!f) return;
+                      const p = f.path || f.name;
+                      setLinkedPath(p);
+                      // Usar este fichero como seleccionado para importar
+                      setSelectedFile(f);
+                      // Hash inicial
+                      const hashRes = await window.electron?.import?.getFileHash?.(p);
+                      if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+                      startPreviewPolling();
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+                <div className="flex align-items-center" style={{ gap: 8 }}>
+                  <label style={{ minWidth: 130, fontSize: 12, color: '#555' }}>Estado:</label>
+                  <span style={{ fontSize: 12, color: linkStatus?.color || '#666' }}>{linkStatus?.text || 'Sin comprobaciones aún'}</span>
+                  {linkedPath && (
+                    <>
+                      <Button
+                        label="Detectar cambios"
+                        icon="pi pi-refresh"
+                        className="p-button-text"
+                        onClick={async () => {
+                          const h = await window.electron?.import?.getFileHash?.(linkedPath);
+                          if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+                            setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+                            setChangesDetected(true);
+                          } else {
+                            setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
+                            setChangesDetected(false);
+                          }
+                        }}
+                        disabled={importing}
+                      />
+                      <Button
+                        label="Actualizar ahora"
+                        icon="pi pi-upload"
+                        onClick={processImport}
+                        disabled={!changesDetected || importing}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex align-items-center" style={{ gap: 12, marginTop: 6 }}>
+                <div className="flex align-items-center" style={{ gap: 8 }}>
+                  <label htmlFor="pollInterval" className="text-sm text-gray-600">Sondeo:</label>
+                  <select
+                    id="pollIntervalPreset"
+                    value={String(pollInterval)}
+                    onChange={(e) => setPollInterval(Number(e.target.value))}
+                    disabled={importing}
+                    style={{ height: 28 }}
+                  >
+                    <option value="10000">10s</option>
+                    <option value="30000">30s</option>
+                    <option value="60000">1 min</option>
+                    <option value="120000">2 min</option>
+                    <option value="300000">5 min</option>
+                  </select>
+                </div>
+                <div className="flex align-items-center" style={{ gap: 8 }}>
+                  <label htmlFor="pollInterval" className="text-sm text-gray-600">Personalizado (ms):</label>
+                  <input
+                    id="pollInterval"
+                    type="number"
+                    min={5000}
+                    step={1000}
+                    value={pollInterval}
+                    onChange={(e) => setPollInterval(Number(e.target.value))}
+                    disabled={importing}
+                    style={{ width: 120, height: 26 }}
+                  />
+                </div>
+              </div>
+              </>
             )}
           </div>
           

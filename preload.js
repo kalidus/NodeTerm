@@ -45,7 +45,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
         /^rdp:.*$/,
-        /^guacamole:.*$/
+        /^guacamole:.*$/,
+        /^import:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -110,6 +111,11 @@ contextBridge.exposeInMainWorld('electron', {
     disconnectAll: () => ipcRenderer.invoke('guacamole:disconnect-all'),
     setGuacdTimeoutMs: (ms) => ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms),
     getGuacdTimeoutMs: () => ipcRenderer.invoke('guacamole:get-guacd-timeout-ms')
+  },
+  import: {
+    getFileInfo: (path) => ipcRenderer.invoke('import:get-file-info', path),
+    getFileHash: (path) => ipcRenderer.invoke('import:get-file-hash', path),
+    readFile: (path) => ipcRenderer.invoke('import:read-file', path)
   }
 });
 
