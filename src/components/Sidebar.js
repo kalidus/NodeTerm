@@ -382,27 +382,71 @@ const Sidebar = React.memo(({
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
+          console.log('🗑️ deleteNode llamado con:', { nodeKey, nodeLabel });
+          
           // Confirmar eliminación y proceder
           if (window.confirm(`¿Estás seguro de que quieres eliminar "${nodeLabel}"?`)) {
+            console.log('✅ Usuario confirmó eliminación');
+            
             const removeNodeFromTree = (nodes, targetKey) => {
+              // Verificar que nodes sea un array válido
+              if (!Array.isArray(nodes)) {
+                console.error('❌ removeNodeFromTree: nodes no es un array:', typeof nodes, nodes);
+                return [];
+              }
+              
               return nodes.filter(node => {
                 if (node.key === targetKey) {
+                  console.log('🎯 Nodo encontrado y eliminado:', node.label);
                   return false; // Eliminar este nodo
                 }
-                if (node.children) {
+                // Solo procesar children si existe y es un array
+                if (node.children && Array.isArray(node.children)) {
                   node.children = removeNodeFromTree(node.children, targetKey);
                 }
                 return true;
               });
             };
-            const newNodes = removeNodeFromTree(deepCopy(nodes), nodeKey);
-            setNodes(() => logSetNodes('Sidebar', newNodes));
-            showToast && showToast({ 
-              severity: 'success', 
-              summary: 'Eliminado', 
-              detail: `"${nodeLabel}" ha sido eliminado`, 
-              life: 3000 
-            });
+            
+            try {
+              // Crear copia profunda de los nodos usando JSON
+              const nodesCopy = JSON.parse(JSON.stringify(nodes));
+              console.log('📋 Nodos antes de eliminar:', nodesCopy.length);
+              console.log('📋 Tipo de nodesCopy:', typeof nodesCopy, Array.isArray(nodesCopy));
+              const newNodes = removeNodeFromTree(nodesCopy, nodeKey);
+              console.log('📋 Nodos después de eliminar:', newNodes.length);
+              
+              setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
+              console.log('✅ setNodes ejecutado');
+              
+              showToast && showToast({ 
+                severity: 'success', 
+                summary: 'Eliminado', 
+                detail: `"${nodeLabel}" ha sido eliminado`, 
+                life: 3000 
+              });
+              console.log('✅ Toast mostrado');
+              
+              // Cerrar menú contextual manualmente
+              setTimeout(() => {
+                const contextMenus = document.querySelectorAll('.p-contextmenu');
+                contextMenus.forEach(menu => {
+                  if (menu.style.display !== 'none') {
+                    menu.style.display = 'none';
+                  }
+                });
+              }, 100);
+            } catch (error) {
+              console.error('❌ Error en deleteNode:', error);
+              showToast && showToast({ 
+                severity: 'error', 
+                summary: 'Error', 
+                detail: `Error al eliminar "${nodeLabel}": ${error.message}`, 
+                life: 5000 
+              });
+            }
+          } else {
+            console.log('❌ Usuario canceló eliminación');
           }
         }
       };

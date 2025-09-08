@@ -250,6 +250,9 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     padding: 4px 0;
     font-family: var(--font-family, sans-serif);
     font-size: 14px;
+    left: -9999px;
+    top: -9999px;
+    opacity: 0;
   `;
   
   const createMenuItem = (item, isSubmenu = false) => {
@@ -347,6 +350,9 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           padding: 4px 0;
           font-family: var(--font-family, sans-serif);
           font-size: 14px;
+          left: -9999px;
+          top: -9999px;
+          opacity: 0;
         `;
         
         // Eventos simplificados del submenú (igual que funciona "Ver")
@@ -360,7 +366,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         
         document.body.appendChild(activeSubmenu);
         
-        // Posicionar submenú de manera simple y directa
+        // Posicionar submenú de manera simple y directa (sin destellos)
         setTimeout(() => {
           const menuRect = menuItem.getBoundingClientRect();
           const submenuRect = activeSubmenu.getBoundingClientRect();
@@ -378,6 +384,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           
           activeSubmenu.style.left = `${left}px`;
           activeSubmenu.style.top = `${top}px`;
+          activeSubmenu.style.opacity = '1';
         }, 5);
       });
       
@@ -418,7 +425,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
   
   document.body.appendChild(contextMenu);
   
-  // Posicionar el menú principal
+  // Posicionar el menú principal (sin destellos)
   setTimeout(() => {
     const rect = event.target.closest('button').getBoundingClientRect();
     const menuRect = contextMenu.getBoundingClientRect();
@@ -436,6 +443,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     
     contextMenu.style.left = `${left}px`;
     contextMenu.style.top = `${top}px`;
+    contextMenu.style.opacity = '1';
   }, 10);
   
   // Cerrar el menú al hacer clic fuera

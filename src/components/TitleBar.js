@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
+import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 
 const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onShowImportDialog }) => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -48,17 +49,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   // Función para manejar el menú de aplicación del TitleBar
   const handleAppMenuClick = (event) => {
-    console.log('handleAppMenuClick TitleBar ejecutado');
-    
-    // Remover menú existente si está abierto
-    const existingMenu = document.querySelector('.app-context-menu-titlebar');
-    if (existingMenu) {
-      existingMenu.remove();
-      return;
-    }
-    
-    // Estructura del menú con submenús
-    const menuStructure = [
+    console.log('handleAppMenuClick TitleBar ejecutado - menú unificado');
+    const menuStructure = createAppMenu(onShowImportDialog);
+    createContextMenu(event, menuStructure, 'app-context-menu-unified');
+    return;
+
+    // Código legacy (no usado):
+    const menuStructureLegacy = [
       {
         label: 'Archivo',
         icon: 'pi pi-file',
@@ -249,23 +246,65 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       submenuTimer = null;
     };
     
-    // Función simplificada para cerrar submenú (como funciona "Ver")
-    const scheduleSubmenuClose = () => {
-      if (submenuTimer) clearTimeout(submenuTimer);
-      submenuTimer = setTimeout(() => {
-        if (activeSubmenu && document.body.contains(activeSubmenu)) {
-          document.body.removeChild(activeSubmenu);
-          activeSubmenu = null;
-        }
-      }, 300); // Timer más corto y simple
+    // SIN TIMERS - Control directo del submenú
+    const hideSubmenu = () => {
+      if (activeSubmenu && document.body.contains(activeSubmenu)) {
+        document.body.removeChild(activeSubmenu);
+        activeSubmenu = null;
+      }
     };
     
-    // Función para cancelar el cierre
-    const cancelSubmenuClose = () => {
-      if (submenuTimer) {
-        clearTimeout(submenuTimer);
-        submenuTimer = null;
+    const showSubmenu = (menuItem, submenuItems) => {
+      // PRIMERO: Ocultar cualquier submenú existente
+      hideSubmenu();
+      
+      // SEGUNDO: Crear el nuevo submenú
+      activeSubmenu = document.createElement('div');
+      activeSubmenu.className = 'app-submenu-titlebar';
+      activeSubmenu.style.cssText = `
+        position: fixed;
+        background: var(--ui-sidebar-bg, #333);
+        border: 1px solid var(--ui-sidebar-border, #555);
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        min-width: 200px;
+        padding: 4px 0;
+        font-family: var(--font-family, sans-serif);
+        font-size: 14px;
+      `;
+      
+      submenuItems.forEach(subItem => {
+        const subMenuItem = createMenuItem(subItem, true);
+        activeSubmenu.appendChild(subMenuItem);
+      });
+      
+      // Agregar eventos para mantener el submenú abierto
+      activeSubmenu.addEventListener('mouseenter', () => {
+        // Mantener submenú abierto mientras el mouse esté sobre él
+      });
+      
+      activeSubmenu.addEventListener('mouseleave', () => {
+        hideSubmenu();
+      });
+      
+      document.body.appendChild(activeSubmenu);
+      
+      // Posicionar inmediatamente
+      const menuRect = menuItem.getBoundingClientRect();
+      let left = menuRect.right;
+      let top = menuRect.top;
+      
+      // Ajustar si se sale de la pantalla
+      if (left + 200 > window.innerWidth) {
+        left = menuRect.left - 200;
       }
+      if (top + 300 > window.innerHeight) {
+        top = window.innerHeight - 300 - 8;
+      }
+      
+      activeSubmenu.style.left = `${left}px`;
+      activeSubmenu.style.top = `${top}px`;
     };
     
     // Crear el menú contextual principal
@@ -349,7 +388,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       // Eventos para elementos con submenú
       if (item.submenu) {
         menuItem.addEventListener('mouseenter', () => {
-          cancelSubmenuClose();
           
           // Limpiar hover de otros elementos
           const allMenuItems = contextMenu.querySelectorAll('.menu-item-titlebar');
@@ -360,60 +398,22 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           });
           menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
           
-          // Limpiar submenú anterior
-          if (activeSubmenu && document.body.contains(activeSubmenu)) {
-            document.body.removeChild(activeSubmenu);
-          }
-          
-          // Crear nuevo submenú
-          activeSubmenu = document.createElement('div');
-          activeSubmenu.className = 'app-submenu-titlebar';
-          activeSubmenu.style.cssText = `
-            position: fixed;
-            background: var(--ui-sidebar-bg, #333);
-            border: 1px solid var(--ui-sidebar-border, #555);
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            z-index: 10000;
-            min-width: 200px;
-            padding: 4px 0;
-            font-family: var(--font-family, sans-serif);
-            font-size: 14px;
-          `;
-          
-          // Eventos simplificados del submenú (igual que funciona "Ver")
-          activeSubmenu.addEventListener('mouseenter', cancelSubmenuClose);
-          activeSubmenu.addEventListener('mouseleave', scheduleSubmenuClose);
-          
-          item.submenu.forEach(subItem => {
-            const subMenuItem = createMenuItem(subItem, true);
-            activeSubmenu.appendChild(subMenuItem);
-          });
-          
-          document.body.appendChild(activeSubmenu);
-          
-          // Posicionar submenú de manera simple y directa
-          setTimeout(() => {
-            const menuRect = menuItem.getBoundingClientRect();
-            const submenuRect = activeSubmenu.getBoundingClientRect();
-            
-            let left = menuRect.right;
-            let top = menuRect.top;
-            
-            // Ajustar si se sale de la pantalla
-            if (left + submenuRect.width > window.innerWidth) {
-              left = menuRect.left - submenuRect.width;
-            }
-            if (top + submenuRect.height > window.innerHeight) {
-              top = window.innerHeight - submenuRect.height - 8;
-            }
-            
-            activeSubmenu.style.left = `${left}px`;
-            activeSubmenu.style.top = `${top}px`;
-          }, 5);
+          // Mostrar submenú directamente - SIN TIMERS
+          showSubmenu(menuItem, item.submenu);
         });
         
-        menuItem.addEventListener('mouseleave', scheduleSubmenuClose);
+        menuItem.addEventListener('mouseleave', (e) => {
+          // Solo ocultar si NO se va hacia el submenú
+          const rect = activeSubmenu ? activeSubmenu.getBoundingClientRect() : null;
+          if (!rect || (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)) {
+            setTimeout(() => {
+              // Verificar nuevamente después de un pequeño delay
+              if (activeSubmenu && !activeSubmenu.matches(':hover') && !menuItem.matches(':hover')) {
+                hideSubmenu();
+              }
+            }, 100);
+          }
+        });
       } else {
         // Eventos para elementos normales
         menuItem.addEventListener('mouseenter', () => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Card } from 'primereact/card';
+import { ContextMenu } from 'primereact/contextmenu';
 import Sidebar from './Sidebar';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
@@ -409,6 +410,13 @@ const MainContentArea = ({
           )}
         </SplitterPanel>
       </Splitter>
+
+      {/* Context Menu para el árbol de la sidebar */}
+      <ContextMenu
+        ref={treeContextMenuRef}
+        model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
+        breakpoint="767px"
+      />
     </div>
   );
 };
