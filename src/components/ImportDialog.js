@@ -430,11 +430,11 @@ const ImportDialog = ({
                       disabled={importing}
                     />
                     <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                      Sobrescribir (evitar duplicados)
+                      Reemplazar duplicados
                     </label>
                   </div>
                   <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                    {overwrite ? 'Fusiona carpetas por nombre y elimina conexiones duplicadas' : 'Permite duplicados de carpetas y sesiones'}
+                    {overwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo importado.' : 'Permite duplicados sin reemplazar'}
                   </div>
                 </div>
               </div>
