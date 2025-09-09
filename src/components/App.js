@@ -373,8 +373,7 @@ const App = () => {
         return;
       }
 
-      // Helpers para merge/dedupe cuando overwrite=true
-      const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
+      // Helper para eliminar duplicados cuando overwrite=true
       const normalizeLabel = (v) => {
         const s = (v || '').toString();
         return s
@@ -384,61 +383,28 @@ const App = () => {
           .replace(/\s+/g, ' ')
           .trim();
       };
-      const isFolder = (node) => !!(node && (node.droppable || (node.children && node.children.length)));
-      const isConnection = (node) => !!(node && node.data && (node.data.type === 'ssh' || node.data.type === 'rdp'));
-      const makeConnKey = (node) => {
-        if (!node || !node.data) return null;
-        if (node.data.type === 'ssh') {
-          return [normalizeExact(node.data.host), normalizeExact(node.data.port), normalizeExact(node.data.user)].join('|');
+      
+      const removeConflictsAndAdd = (existingNodes, incomingNodes) => {
+        if (!Array.isArray(existingNodes) || !Array.isArray(incomingNodes)) {
+          return [...(existingNodes || []), ...(incomingNodes || [])];
         }
-        if (node.data.type === 'rdp') {
-          return [normalizeExact(node.data.server), normalizeExact(node.data.port), normalizeExact(node.data.username)].join('|');
-        }
-        return null;
-      };
-      const mergeChildren = (targetChildren, incomingChildren) => {
-        const result = Array.isArray(targetChildren) ? JSON.parse(JSON.stringify(targetChildren)) : [];
-        const existingFolderIdxByNorm = new Map();
-        const existingConnKeySet = new Set();
-
-        for (let i = 0; i < result.length; i++) {
-          const it = result[i];
-          if (isFolder(it)) {
-            existingFolderIdxByNorm.set(normalizeLabel(it.label), i);
-          } else if (isConnection(it)) {
-            const k = makeConnKey(it);
-            if (k) existingConnKeySet.add(k);
+        
+        // Crear un Set con los nombres normalizados de los nodos entrantes
+        const incomingLabels = new Set();
+        incomingNodes.forEach(node => {
+          if (node && node.label) {
+            incomingLabels.add(normalizeLabel(node.label));
           }
-        }
-
-        const appendUnique = (node) => {
-          if (isFolder(node)) {
-            const norm = normalizeLabel(node.label);
-            if (existingFolderIdxByNorm.has(norm)) {
-              const idx = existingFolderIdxByNorm.get(norm);
-              const existing = result[idx];
-              const mergeRes = mergeChildren(existing.children || [], node.children || []);
-              existing.children = mergeRes.children;
-            } else {
-              const newFolder = JSON.parse(JSON.stringify(node));
-              newFolder.children = newFolder.children || [];
-              result.push(newFolder);
-              existingFolderIdxByNorm.set(norm, result.length - 1);
-            }
-          } else if (isConnection(node)) {
-            const k = makeConnKey(node);
-            if (k && !existingConnKeySet.has(k)) {
-              result.push(node);
-              existingConnKeySet.add(k);
-            }
-          }
-        };
-
-        for (const inc of incomingChildren || []) {
-          appendUnique(inc);
-        }
-
-        return { children: result };
+        });
+        
+        // Filtrar los nodos existentes, eliminando los que tienen conflicto
+        const filteredExisting = existingNodes.filter(node => {
+          if (!node || !node.label) return true;
+          return !incomingLabels.has(normalizeLabel(node.label));
+        });
+        
+        // Retornar existentes filtrados + nuevos (los nuevos tienen prioridad)
+        return [...filteredExisting, ...incomingNodes];
       };
 
       const overwrite = !!importResult.overwrite;
@@ -459,27 +425,50 @@ const App = () => {
 
         if (createContainerFolder) {
           const containerKey = `import_container_${Date.now()}`;
-          const container = {
-            key: containerKey,
-            uid: containerKey,
-            label: containerLabel,
-            droppable: true,
-            children: toAdd,
-            createdAt: new Date().toISOString(),
-            isUserCreated: true,
-            imported: true,
-            importedFrom: 'mRemoteNG'
-          };
           setNodes(prev => {
             const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            nodesCopy.push(container);
-            return nodesCopy;
+            
+            if (overwrite) {
+              // Eliminar carpeta contenedora existente si hay conflicto
+              const finalNodes = removeConflictsAndAdd(nodesCopy, [{
+                key: containerKey,
+                uid: containerKey,
+                label: containerLabel,
+                droppable: true,
+                children: toAdd,
+                createdAt: new Date().toISOString(),
+                isUserCreated: true,
+                imported: true,
+                importedFrom: 'mRemoteNG'
+              }]);
+              return finalNodes;
+            } else {
+              const container = {
+                key: containerKey,
+                uid: containerKey,
+                label: containerLabel,
+                droppable: true,
+                children: toAdd,
+                createdAt: new Date().toISOString(),
+                isUserCreated: true,
+                imported: true,
+                importedFrom: 'mRemoteNG'
+              };
+              nodesCopy.push(container);
+              return nodesCopy;
+            }
           });
         } else {
           setNodes(prev => {
             const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            nodesCopy.push(...toAdd);
-            return nodesCopy;
+            
+            if (overwrite) {
+              // Eliminar duplicados de la raíz y agregar los nuevos
+              return removeConflictsAndAdd(nodesCopy, toAdd);
+            } else {
+              nodesCopy.push(...toAdd);
+              return nodesCopy;
+            }
           });
         }
 
@@ -507,39 +496,75 @@ const App = () => {
       }
 
       if (createContainerFolder) {
+        const containerKey = `import_container_${Date.now()}`;
         setNodes(prev => {
           const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          const containerKey = `import_container_${Date.now()}`;
-          nodesCopy.push({
-            key: containerKey,
-            uid: containerKey,
-            label: containerLabel,
-            droppable: true,
-            children: importedConnections,
-            createdAt: new Date().toISOString(),
-            isUserCreated: true,
-            imported: true,
-            importedFrom: 'mRemoteNG'
-          });
-          return nodesCopy;
+          
+          if (overwrite) {
+            // Eliminar carpeta contenedora existente si hay conflicto
+            const finalNodes = removeConflictsAndAdd(nodesCopy, [{
+              key: containerKey,
+              uid: containerKey,
+              label: containerLabel,
+              droppable: true,
+              children: importedConnections,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            }]);
+            return finalNodes;
+          } else {
+            nodesCopy.push({
+              key: containerKey,
+              uid: containerKey,
+              label: containerLabel,
+              droppable: true,
+              children: importedConnections,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            });
+            return nodesCopy;
+          }
         });
       } else {
         const timestamp = Date.now();
         const importFolderKey = `imported_folder_${timestamp}`;
+        const defaultFolderLabel = `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`;
+        
         setNodes(prev => {
           const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          nodesCopy.push({
-            key: importFolderKey,
-            label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-            droppable: true,
-            children: importedConnections,
-            uid: importFolderKey,
-            createdAt: new Date().toISOString(),
-            isUserCreated: true,
-            imported: true,
-            importedFrom: 'mRemoteNG'
-          });
-          return nodesCopy;
+          
+          if (overwrite) {
+            // Eliminar carpeta de importación existente si hay conflicto
+            const finalNodes = removeConflictsAndAdd(nodesCopy, [{
+              key: importFolderKey,
+              label: defaultFolderLabel,
+              droppable: true,
+              children: importedConnections,
+              uid: importFolderKey,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            }]);
+            return finalNodes;
+          } else {
+            nodesCopy.push({
+              key: importFolderKey,
+              label: defaultFolderLabel,
+              droppable: true,
+              children: importedConnections,
+              uid: importFolderKey,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            });
+            return nodesCopy;
+          }
         });
       }
       toast.current?.show({
