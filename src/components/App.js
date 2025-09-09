@@ -258,17 +258,30 @@ const App = () => {
       if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
         const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
         const stableId = importResult.linkedFilePath || importResult.linkedFileName;
+
+        // Usar hash del sistema de archivos para alinear con el poller y evitar banners falsos
+        let osHash = importResult.linkedFileHash || null;
+        try {
+          const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
+          if (h?.ok && h?.hash) osHash = h.hash;
+        } catch {}
+
         const newSource = {
           id: stableId,
           fileName: importResult.linkedFileName || null,
           filePath: importResult.linkedFilePath || null,
-          fileHash: importResult.linkedFileHash || null,
+          fileHash: osHash,
           lastCheckedAt: Date.now(),
           intervalMs: Number(importResult.pollInterval) || 30000,
           options: {
+            // Básicas (compatibilidad con UI existente)
             overwrite: !!importResult.overwrite,
             createContainerFolder: !!importResult.createContainerFolder,
-            containerFolderName: importResult.containerFolderName || null
+            containerFolderName: importResult.containerFolderName || importResult.linkedContainerFolderName || null,
+            // Específicas de modo vinculado (usadas por el banner)
+            linkedOverwrite: !!importResult.linkedOverwrite,
+            linkedCreateContainerFolder: !!importResult.linkedCreateContainerFolder,
+            linkedContainerFolderName: importResult.linkedContainerFolderName || importResult.containerFolderName || null
           }
         };
         const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
@@ -419,14 +432,15 @@ const App = () => {
       // Opciones específicas según el modo (manual vs vinculado)
       const isLinkedMode = !!importResult?.linkFile;
       const finalCreateContainerFolder = isLinkedMode 
-        ? (importResult?.linkedCreateContainerFolder || false)
-        : (importResult?.createContainerFolder || false);
+        ? (importResult?.linkedCreateContainerFolder === true)
+        : (importResult?.createContainerFolder === true);
+      // Respetar exactamente el nombre del modo vinculado si viene informado; no aplicar fallback
       const finalContainerLabel = isLinkedMode
-        ? (importResult?.linkedContainerFolderName || `mRemoteNG linked - ${new Date().toLocaleDateString()}`)
-        : (importResult?.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`);
+        ? (importResult?.linkedContainerFolderName ?? importResult?.containerFolderName ?? '')
+        : (importResult?.containerFolderName ?? '');
       const finalOverwrite = isLinkedMode
-        ? (importResult?.linkedOverwrite || false)
-        : (importResult?.overwrite || false);
+        ? (importResult?.linkedOverwrite === true)
+        : (importResult?.overwrite === true);
 
       console.log('🔍 DEBUG handleImportComplete:', {
         isLinkedMode,
@@ -1330,19 +1344,51 @@ const App = () => {
             } catch {
               fileBlob = new Blob([readRes.content], { type: 'text/xml' });
             }
-            
-            // Para archivos vinculados: SIEMPRE sobrescribir y usar opciones guardadas de la fuente
+
+            // Importar y aplicar EXACTAMENTE las mismas opciones que el diálogo vinculado
             const result = await ImportService.importFromMRemoteNG(fileBlob);
-            await unifiedHandleImportComplete({
+
+            // Refrescar la fuente desde localStorage para obtener las últimas opciones del diálogo
+            const allSources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
+            const fresh = (() => {
+              const byId = allSources.find(s => (source?.id && s.id === source.id));
+              if (byId) return byId;
+              const byPath = allSources.find(s => (source?.filePath && s.filePath === source.filePath));
+              if (byPath) return byPath;
+              const byName = allSources.find(s => (source?.fileName && s.fileName === source.fileName));
+              return byName || source;
+            })();
+
+            const opts = fresh?.options || source?.options || {};
+            const linkedOverwrite = !!(opts.linkedOverwrite ?? opts.overwrite);
+            const linkedCreateContainerFolder = !!(opts.linkedCreateContainerFolder ?? opts.createContainerFolder);
+            // Tomar exactamente el nombre configurado en el diálogo (si existe)
+            const effectiveContainerName = (opts.linkedContainerFolderName ?? opts.containerFolderName ?? '').toString();
+
+            // Usar el MISMO hash que usa el poller para evitar banners repetidos
+            let effectiveHash = result?.metadata?.contentHash || null;
+            try {
+              const hashRes = await window.electron?.import?.getFileHash?.(source.filePath);
+              if (hashRes?.ok && hashRes?.hash) effectiveHash = hashRes.hash;
+            } catch {}
+
+            // Llamar a la MISMA ruta que usa el diálogo
+            await handleImportComplete({
               ...result,
-              overwrite: true, // SIEMPRE sobrescribir para archivos vinculados
-              createContainerFolder: !!source?.options?.createContainerFolder,
-              containerFolderName: source?.options?.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`,
+              // Modo vinculado
               linkFile: true,
               pollInterval: Number(source?.intervalMs) || 30000,
               linkedFileName: source?.fileName || null,
               linkedFilePath: source?.filePath || null,
-              linkedFileHash: result?.metadata?.contentHash || null
+              linkedFileHash: effectiveHash,
+              // Opciones específicas de modo vinculado (las que usa el diálogo)
+              linkedOverwrite,
+              linkedCreateContainerFolder,
+              linkedContainerFolderName: effectiveContainerName,
+              // Por compatibilidad, reflejamos en las opciones básicas también
+              overwrite: linkedOverwrite,
+              createContainerFolder: linkedCreateContainerFolder,
+              containerFolderName: effectiveContainerName
             });
           } catch (e) {
             console.error('Quick import failed:', e);
