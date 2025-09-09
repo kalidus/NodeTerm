@@ -198,21 +198,9 @@ const ImportDialog = ({
     try { localStorage.setItem('IMPORT_DIALOG_OPTS', JSON.stringify(toSave)); } catch {}
   }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey, linkedPlaceInFolder, linkedOverwrite, linkedContainerFolderName]);
 
-  const processImport = async () => {
-    let fileToImport = selectedFile;
-    if (!fileToImport && linkedPath) {
-      const readRes = await window.electron?.import?.readFile?.(linkedPath);
-      if (readRes?.ok) {
-        try {
-          const fileName = linkedPath.split('\\').pop() || 'import.xml';
-          fileToImport = new File([readRes.content], fileName, { type: 'text/xml' });
-        } catch (e) {
-          fileToImport = new Blob([readRes.content], { type: 'text/xml' });
-        }
-        try { setSelectedFile(fileToImport); } catch {}
-      }
-    }
-    if (!fileToImport) {
+  // Función para importación manual (columna izquierda)
+  const processManualImport = async () => {
+    if (!selectedFile) {
       showToast && showToast({ severity: 'error', summary: 'Error', detail: 'Debe seleccionar un archivo XML', life: 3000 });
       return;
     }
@@ -223,8 +211,8 @@ const ImportDialog = ({
     try {
       setImportProgress(10);
 
-      const result = await ImportService.importFromMRemoteNG(fileToImport);
-      console.log('📋 Resultado de ImportService:', result);
+      const result = await ImportService.importFromMRemoteNG(selectedFile);
+      console.log('📋 Resultado de ImportService (manual):', result);
       setImportProgress(80);
 
       if (!result.success) {
@@ -232,35 +220,30 @@ const ImportDialog = ({
       }
 
       if (onImportComplete) {
-        console.log('📞 Llamando a onImportComplete...');
-        console.log('🔍 DEBUG ImportDialog - onImportComplete es:', typeof onImportComplete);
-        console.log('🔍 DEBUG ImportDialog - onImportComplete función:', onImportComplete.toString().substring(0, 100));
+        console.log('📞 Llamando a onImportComplete (manual)...');
         try {
           await onImportComplete({
             ...result,
             createContainerFolder: !!placeInFolder,
             containerFolderName: containerFolderName,
             overwrite: !!overwrite,
-            linkFile: !!linkFile,
+            linkFile: false, // Importación manual, no vinculada
             pollInterval: Number(pollInterval) || 30000,
-            linkedFileName: linkedPath ? linkedPath.split('\\').pop() : (fileToImport?.name || null),
-            linkedFilePath: linkedPath || null,
-            linkedFileSize: fileToImport?.size || null,
-            linkedFileHash: result?.metadata?.contentHash || null,
+            linkedFileName: null,
+            linkedFilePath: null,
+            linkedFileSize: null,
+            linkedFileHash: null,
             targetBaseFolderKey: targetFolderKey || ROOT_VALUE,
-            linkedTargetFolderKey: linkedTargetFolderKey || ROOT_VALUE,
-            // Opciones específicas para modo vinculado
-            linkedCreateContainerFolder: !!linkedPlaceInFolder,
-            linkedContainerFolderName: linkedContainerFolderName,
-            linkedOverwrite: !!linkedOverwrite
+            linkedTargetFolderKey: targetFolderKey || ROOT_VALUE,
+            // Opciones específicas para modo vinculado (no aplican aquí)
+            linkedCreateContainerFolder: false,
+            linkedContainerFolderName: '',
+            linkedOverwrite: false
           });
-          console.log('✅ onImportComplete ejecutado');
-          console.log('🔍 DEBUG ImportDialog - Después de onImportComplete');
-          console.log('🔍 DEBUG ImportDialog - onImportComplete retornó:', typeof result);
+          console.log('✅ onImportComplete (manual) ejecutado');
         } catch (error) {
-          console.error('❌ Error en onImportComplete:', error);
-          console.error('❌ Stack trace:', error.stack);
-          throw error; // Re-lanzar el error para que se maneje arriba
+          console.error('❌ Error en onImportComplete (manual):', error);
+          throw error;
         }
       }
 
@@ -278,11 +261,106 @@ const ImportDialog = ({
       handleClose();
 
     } catch (error) {
-      console.error('Error durante la importación:', error);
+      console.error('Error durante la importación manual:', error);
       showToast && showToast({
         severity: 'error',
         summary: 'Error de importación',
         detail: error.message || 'Error al procesar el archivo XML',
+        life: 5000
+      });
+    } finally {
+      setImporting(false);
+      setImportProgress(0);
+    }
+  };
+
+  // Función para importación vinculada (columna derecha)
+  const processLinkedImport = async () => {
+    if (!linkedPath) {
+      showToast && showToast({ severity: 'error', summary: 'Error', detail: 'Debe vincular un archivo XML', life: 3000 });
+      return;
+    }
+
+    setImporting(true);
+    setImportProgress(0);
+
+    try {
+      setImportProgress(10);
+
+      // Leer el archivo vinculado
+      const readRes = await window.electron?.import?.readFile?.(linkedPath);
+      if (!readRes?.ok) {
+        throw new Error('No se pudo leer el archivo vinculado');
+      }
+
+      let fileToImport;
+      try {
+        const fileName = linkedPath.split('\\').pop() || 'import.xml';
+        fileToImport = new File([readRes.content], fileName, { type: 'text/xml' });
+      } catch (e) {
+        fileToImport = new Blob([readRes.content], { type: 'text/xml' });
+      }
+
+      const result = await ImportService.importFromMRemoteNG(fileToImport);
+      console.log('📋 Resultado de ImportService (vinculado):', result);
+      setImportProgress(80);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error al procesar el archivo');
+      }
+
+      if (onImportComplete) {
+        console.log('📞 Llamando a onImportComplete (vinculado)...');
+        try {
+          await onImportComplete({
+            ...result,
+            createContainerFolder: !!linkedPlaceInFolder,
+            containerFolderName: linkedContainerFolderName,
+            overwrite: !!linkedOverwrite,
+            linkFile: true, // Importación vinculada
+            pollInterval: Number(pollInterval) || 30000,
+            linkedFileName: linkedPath ? linkedPath.split('\\').pop() : null,
+            linkedFilePath: linkedPath || null,
+            linkedFileSize: fileToImport?.size || null,
+            linkedFileHash: result?.metadata?.contentHash || null,
+            targetBaseFolderKey: linkedTargetFolderKey || ROOT_VALUE,
+            linkedTargetFolderKey: linkedTargetFolderKey || ROOT_VALUE,
+            // Opciones específicas para modo vinculado
+            linkedCreateContainerFolder: !!linkedPlaceInFolder,
+            linkedContainerFolderName: linkedContainerFolderName,
+            linkedOverwrite: !!linkedOverwrite
+          });
+          console.log('✅ onImportComplete (vinculado) ejecutado');
+        } catch (error) {
+          console.error('❌ Error en onImportComplete (vinculado):', error);
+          throw error;
+        }
+      }
+
+      setImportProgress(100);
+
+      showToast && showToast({
+        severity: 'success',
+        summary: 'Importación vinculada exitosa',
+        detail: result.structure && result.structure.folderCount > 0
+          ? `Se importaron ${result.structure.connectionCount} conexiones y ${result.structure.folderCount} carpetas desde el archivo vinculado`
+          : `Se importaron ${result.count} conexiones desde ${result.metadata.source}`,
+        life: 5000
+      });
+
+      // Actualizar el hash conocido
+      const hashRes = await window.electron?.import?.getFileHash?.(linkedPath);
+      if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+
+      setChangesDetected(false);
+      startPreviewPolling();
+
+    } catch (error) {
+      console.error('Error durante la importación vinculada:', error);
+      showToast && showToast({
+        severity: 'error',
+        summary: 'Error de importación vinculada',
+        detail: error.message || 'Error al procesar el archivo XML vinculado',
         life: 5000
       });
     } finally {
@@ -396,18 +474,11 @@ const ImportDialog = ({
         footer={
           <div className="flex justify-content-end">
             <Button
-              label="Cancelar"
+              label="Cerrar"
               icon="pi pi-times"
               onClick={handleClose}
               className="p-button-text"
               disabled={importing}
-            />
-            <Button
-              label={importing ? "Importando..." : "Importar"}
-              icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
-              onClick={processImport}
-              disabled={((!selectedFile) && !(linkFile && linkedPath)) || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
-              autoFocus
             />
           </div>
         }
@@ -502,6 +573,18 @@ const ImportDialog = ({
                       Archivo XML a importar:
                     </label>
                     {customFileUploadTemplate()}
+                  </div>
+
+                  {/* Botón de importación manual */}
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                    <Button
+                      label={importing ? "Importando..." : "Importar"}
+                      icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+                      onClick={processManualImport}
+                      disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
+                      className="w-full"
+                      severity="primary"
+                    />
                   </div>
                 </div>
               </Card>
@@ -599,7 +682,7 @@ const ImportDialog = ({
                               label="Actualizar ahora"
                               icon="pi pi-upload"
                               size="small"
-                              onClick={processImport}
+                              onClick={processLinkedImport}
                               disabled={!changesDetected || importing}
                             />
                           </div>
@@ -722,6 +805,18 @@ const ImportDialog = ({
                           />
                           <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>ms</span>
                         </div>
+                      </div>
+
+                      {/* Botón principal para importación vinculada */}
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                        <Button
+                          label={importing ? "Importando..." : "Importar archivo vinculado"}
+                          icon={importing ? "pi pi-spin pi-spinner" : "pi pi-link"}
+                          onClick={processLinkedImport}
+                          disabled={!linkedPath || importing || (linkedPlaceInFolder && !(linkedContainerFolderName || '').toString().trim())}
+                          className="w-full"
+                          severity="secondary"
+                        />
                       </div>
                     </div>
                   )}
