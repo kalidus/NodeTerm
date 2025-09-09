@@ -38,12 +38,10 @@ const ImportDialog = ({
   const [lastKnownHash, setLastKnownHash] = useState(null);
   const [changesDetected, setChangesDetected] = useState(false);
   const [containerFolderName, setContainerFolderName] = useState(`mRemoteNG imported - ${new Date().toLocaleDateString()}`);
-  const [selectedTargetFolder, setSelectedTargetFolder] = useState(null); // Para archivo vinculado
 
   const handleFileSelect = (event) => {
     const file = event.files[0];
     if (file) {
-      // Validar que sea un archivo XML
       if (!file.name.toLowerCase().endsWith('.xml')) {
         showToast && showToast({
           severity: 'error',
@@ -61,7 +59,6 @@ const ImportDialog = ({
     setSelectedFile(null);
   };
 
-  // Función para manejar el click en "Elegir archivo" (siempre input nativo)
   const handleChooseFile = () => {
     console.log('Intentando abrir selector de archivos (input nativo)...');
     const input = document.createElement('input');
@@ -77,7 +74,6 @@ const ImportDialog = ({
     input.click();
   };
 
-  // Funciones para drag & drop
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -93,7 +89,6 @@ const ImportDialog = ({
   const handleDragLeave = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Solo cambiar estado si realmente salimos del área
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setIsDragOver(false);
     }
@@ -109,7 +104,6 @@ const ImportDialog = ({
       const file = files[0];
       console.log('Archivo arrastrado:', file.name);
       
-      // Validar que sea un archivo XML
       if (!file.name.toLowerCase().endsWith('.xml')) {
         showToast && showToast({
           severity: 'error',
@@ -124,7 +118,6 @@ const ImportDialog = ({
     }
   };
 
-  // Sondeo previo dentro del diálogo para mostrar "última actualización"
   const startPreviewPolling = () => {
     if (!linkFile || !linkedPath) return;
     if (previewTimerRef.current) clearInterval(previewTimerRef.current);
@@ -151,7 +144,6 @@ const ImportDialog = ({
     };
   }, [linkFile, linkedPath, pollInterval]);
 
-  // Persistencia de opciones del diálogo
   React.useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('IMPORT_DIALOG_OPTS') || '{}');
@@ -161,16 +153,13 @@ const ImportDialog = ({
         if (typeof saved.linkFile === 'boolean') setLinkFile(saved.linkFile);
         if (typeof saved.pollInterval === 'number') setPollInterval(saved.pollInterval);
         if (typeof saved.linkedPath === 'string') setLinkedPath(saved.linkedPath);
-        if (saved.selectedTargetFolder) setSelectedTargetFolder(saved.selectedTargetFolder);
       }
-      // Aplicar preset prioritario (viene del banner)
       if (presetOptions) {
         if (typeof presetOptions.placeInFolder === 'boolean') setPlaceInFolder(presetOptions.placeInFolder);
         if (typeof presetOptions.overwrite === 'boolean') setOverwrite(presetOptions.overwrite);
         if (typeof presetOptions.linkFile === 'boolean') setLinkFile(presetOptions.linkFile);
         if (typeof presetOptions.pollInterval === 'number') setPollInterval(presetOptions.pollInterval);
         if (typeof presetOptions.linkedPath === 'string') setLinkedPath(presetOptions.linkedPath);
-        // Al abrir con preset, marcamos cambios detectados por UX
         setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
       }
     } catch {}
@@ -181,14 +170,12 @@ const ImportDialog = ({
       overwrite,
       linkFile,
       pollInterval,
-      linkedPath,
-      selectedTargetFolder
+      linkedPath
     };
     try { localStorage.setItem('IMPORT_DIALOG_OPTS', JSON.stringify(toSave)); } catch {}
-  }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath, selectedTargetFolder]);
+  }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath]);
 
   const processImport = async () => {
-    // Determinar el archivo a importar de forma síncrona (evitar depender de setState)
     let fileToImport = selectedFile;
     if (!fileToImport && linkedPath) {
       const readRes = await window.electron?.import?.readFile?.(linkedPath);
@@ -199,7 +186,6 @@ const ImportDialog = ({
         } catch (e) {
           fileToImport = new Blob([readRes.content], { type: 'text/xml' });
         }
-        // Guardar para futuras operaciones, pero usar fileToImport directamente ahora
         try { setSelectedFile(fileToImport); } catch {}
       }
     }
@@ -212,10 +198,8 @@ const ImportDialog = ({
     setImportProgress(0);
 
     try {
-      // Simular progreso inicial
       setImportProgress(10);
 
-      // Usar ImportService para procesar el archivo
       const result = await ImportService.importFromMRemoteNG(fileToImport);
       console.log('📋 Resultado de ImportService:', result);
       setImportProgress(80);
@@ -224,13 +208,12 @@ const ImportDialog = ({
         throw new Error(result.error || 'Error al procesar el archivo');
       }
 
-      // Llamar callback con el resultado completo (estructura incluida)
       if (onImportComplete) {
         console.log('📞 Llamando a onImportComplete...');
         await onImportComplete({
           ...result,
-          createContainerFolder: linkFile ? !!selectedTargetFolder : !!placeInFolder,
-          containerFolderName: linkFile ? (selectedTargetFolder?.label || null) : containerFolderName,
+          createContainerFolder: !!placeInFolder,
+          containerFolderName: containerFolderName,
           overwrite: !!overwrite,
           linkFile: !!linkFile,
           pollInterval: Number(pollInterval) || 30000,
@@ -253,7 +236,6 @@ const ImportDialog = ({
         life: 5000
       });
 
-      // Cerrar diálogo
       handleClose();
 
     } catch (error) {
@@ -323,7 +305,7 @@ const ImportDialog = ({
           mode="basic"
           name="mremoteng-file"
           accept=".xml"
-          maxFileSize={10000000} // 10MB
+          maxFileSize={10000000}
           onSelect={handleFileSelect}
           onRemove={handleFileRemove}
           style={{ display: 'none' }}
@@ -385,7 +367,7 @@ const ImportDialog = ({
               label={importing ? "Importando..." : "Importar"}
               icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
               onClick={processImport}
-              disabled={!selectedFile || importing}
+              disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
               autoFocus
             />
           </div>
@@ -401,7 +383,6 @@ const ImportDialog = ({
           {customFileUploadTemplate()}
 
           <div style={{ marginTop: '1rem' }}>
-            {/* Opciones de importación básicas */}
             <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
               <div className="p-3">
                 <h6 style={{ margin: '0 0 12px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
@@ -415,21 +396,26 @@ const ImportDialog = ({
                       id="placeInFolder"
                       checked={placeInFolder}
                       onChange={(e) => setPlaceInFolder(e.target.checked)}
-                      disabled={importing || linkFile}
+                      disabled={importing}
                     />
                     <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
                       Importar dentro de una carpeta
                     </label>
                   </div>
-                  {placeInFolder && !linkFile && (
+                  {placeInFolder && (
                     <div style={{ marginLeft: '26px' }}>
-                      <InputText
-                        value={containerFolderName}
-                        onChange={(e) => setContainerFolderName(e.target.value)}
-                        placeholder="Nombre de la carpeta"
-                        disabled={importing}
-                        style={{ width: '300px', fontSize: '13px' }}
-                      />
+                      <div className="mb-2">
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                          Nombre de la carpeta (crear nueva):
+                        </label>
+                        <InputText
+                          value={containerFolderName}
+                          onChange={(e) => setContainerFolderName(e.target.value)}
+                          placeholder="Nombre de la carpeta"
+                          disabled={importing}
+                          style={{ width: '300px', fontSize: '13px' }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -441,7 +427,7 @@ const ImportDialog = ({
                       id="overwrite"
                       checked={overwrite}
                       onChange={(e) => setOverwrite(e.target.checked)}
-                      disabled={importing || linkFile}
+                      disabled={importing}
                     />
                     <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
                       Sobrescribir (evitar duplicados)
@@ -454,7 +440,6 @@ const ImportDialog = ({
               </div>
             </Card>
 
-            {/* Opciones de vinculación de archivo */}
             <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
               <div className="p-3">
                 <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
@@ -472,7 +457,6 @@ const ImportDialog = ({
                 
                 {linkFile && (
                   <div style={{ marginLeft: '26px' }}>
-                    {/* Selector de archivo */}
                     <div className="mb-3">
                       <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
                         Archivo a vincular:
@@ -510,25 +494,6 @@ const ImportDialog = ({
                       />
                     </div>
 
-                    {/* Selector de carpeta destino */}
-                    <div className="mb-3">
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                        Importar en:
-                      </label>
-                      <Dropdown
-                        value={selectedTargetFolder}
-                        onChange={(e) => setSelectedTargetFolder(e.value)}
-                        options={[
-                          { label: 'Raíz (sin carpeta)', value: null },
-                          ...(targetFolderOptions || [])
-                        ]}
-                        placeholder="Seleccionar carpeta destino"
-                        style={{ width: '100%' }}
-                        disabled={importing}
-                      />
-                    </div>
-
-                    {/* Estado y controles */}
                     {linkedPath && (
                       <div style={{ 
                         background: 'var(--surface-ground)', 
@@ -572,7 +537,6 @@ const ImportDialog = ({
                       </div>
                     )}
 
-                    {/* Configuración de sondeo */}
                     <div style={{ 
                       background: 'var(--surface-ground)', 
                       border: '1px solid var(--surface-border)', 

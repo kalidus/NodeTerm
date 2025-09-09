@@ -373,24 +373,96 @@ const App = () => {
         return;
       }
 
+      // Helpers para merge/dedupe cuando overwrite=true
+      const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
+      const normalizeLabel = (v) => {
+        const s = (v || '').toString();
+        return s
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+      const isFolder = (node) => !!(node && (node.droppable || (node.children && node.children.length)));
+      const isConnection = (node) => !!(node && node.data && (node.data.type === 'ssh' || node.data.type === 'rdp'));
+      const makeConnKey = (node) => {
+        if (!node || !node.data) return null;
+        if (node.data.type === 'ssh') {
+          return [normalizeExact(node.data.host), normalizeExact(node.data.port), normalizeExact(node.data.user)].join('|');
+        }
+        if (node.data.type === 'rdp') {
+          return [normalizeExact(node.data.server), normalizeExact(node.data.port), normalizeExact(node.data.username)].join('|');
+        }
+        return null;
+      };
+      const mergeChildren = (targetChildren, incomingChildren) => {
+        const result = Array.isArray(targetChildren) ? JSON.parse(JSON.stringify(targetChildren)) : [];
+        const existingFolderIdxByNorm = new Map();
+        const existingConnKeySet = new Set();
+
+        for (let i = 0; i < result.length; i++) {
+          const it = result[i];
+          if (isFolder(it)) {
+            existingFolderIdxByNorm.set(normalizeLabel(it.label), i);
+          } else if (isConnection(it)) {
+            const k = makeConnKey(it);
+            if (k) existingConnKeySet.add(k);
+          }
+        }
+
+        const appendUnique = (node) => {
+          if (isFolder(node)) {
+            const norm = normalizeLabel(node.label);
+            if (existingFolderIdxByNorm.has(norm)) {
+              const idx = existingFolderIdxByNorm.get(norm);
+              const existing = result[idx];
+              const mergeRes = mergeChildren(existing.children || [], node.children || []);
+              existing.children = mergeRes.children;
+            } else {
+              const newFolder = JSON.parse(JSON.stringify(node));
+              newFolder.children = newFolder.children || [];
+              result.push(newFolder);
+              existingFolderIdxByNorm.set(norm, result.length - 1);
+            }
+          } else if (isConnection(node)) {
+            const k = makeConnKey(node);
+            if (k && !existingConnKeySet.has(k)) {
+              result.push(node);
+              existingConnKeySet.add(k);
+            }
+          }
+        };
+
+        for (const inc of incomingChildren || []) {
+          appendUnique(inc);
+        }
+
+        return { children: result };
+      };
+
+      const overwrite = !!importResult.overwrite;
+      const createContainerFolder = !!importResult.createContainerFolder;
+      const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+
       let addedFolders = 0;
       let addedConnections = 0;
 
-      // Si tenemos estructura con carpetas, agregamos los nodos raíz tal cual
+      // Si tenemos estructura con carpetas
       if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
         console.log('📁 Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
-        // Regenerar keys por seguridad para evitar colisiones
         let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
           ...n,
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
           uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
         }));
-        if (importResult.createContainerFolder) {
+
+        if (createContainerFolder) {
           const containerKey = `import_container_${Date.now()}`;
           const container = {
             key: containerKey,
             uid: containerKey,
-            label: importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`,
+            label: containerLabel,
             droppable: true,
             children: toAdd,
             createdAt: new Date().toISOString(),
@@ -410,6 +482,7 @@ const App = () => {
             return nodesCopy;
           });
         }
+
         addedFolders = importResult.structure.folderCount || 0;
         addedConnections = importResult.structure.connectionCount || 0;
         toast.current?.show({
@@ -418,65 +491,63 @@ const App = () => {
           detail: `Se importaron ${addedConnections} conexiones y ${addedFolders} carpetas`,
           life: 5000
         });
-      } else {
-        // Compatibilidad: lista plana de conexiones
-        const importedConnections = importResult.connections || importResult;
-        console.log('🔄 Modo legacy conexiones planas:', Array.isArray(importedConnections) ? importedConnections.length : 'N/A');
-        if (!Array.isArray(importedConnections) || importedConnections.length === 0) {
-          toast.current?.show({
-            severity: 'warn',
-            summary: 'Sin datos',
-            detail: 'No se encontraron conexiones para importar',
-            life: 3000
-          });
-          return;
-        }
+        return;
+      }
 
-        const createContainerFolder = !!importResult.createContainerFolder;
-        const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
-        if (createContainerFolder) {
-          setNodes(prev => {
-            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            const containerKey = `import_container_${Date.now()}`;
-            nodesCopy.push({
-              key: containerKey,
-              uid: containerKey,
-              label: containerLabel,
-              droppable: true,
-              children: importedConnections,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            });
-            return nodesCopy;
-          });
-        } else {
-          const timestamp = Date.now();
-          const importFolderKey = `imported_folder_${timestamp}`;
-          setNodes(prev => {
-            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            nodesCopy.push({
-              key: importFolderKey,
-              label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-              droppable: true,
-              children: importedConnections,
-              uid: importFolderKey,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            });
-            return nodesCopy;
-          });
-        }
+      // Lista plana
+      const importedConnections = importResult.connections || importResult;
+      if (!Array.isArray(importedConnections) || importedConnections.length === 0) {
         toast.current?.show({
-          severity: 'success',
-          summary: 'Importación exitosa',
-          detail: `Se importaron ${importedConnections.length} conexiones en la carpeta "${importFolder.label}"`,
-          life: 5000
+          severity: 'warn',
+          summary: 'Sin datos',
+          detail: 'No se encontraron conexiones para importar',
+          life: 3000
+        });
+        return;
+      }
+
+      if (createContainerFolder) {
+        setNodes(prev => {
+          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+          const containerKey = `import_container_${Date.now()}`;
+          nodesCopy.push({
+            key: containerKey,
+            uid: containerKey,
+            label: containerLabel,
+            droppable: true,
+            children: importedConnections,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          });
+          return nodesCopy;
+        });
+      } else {
+        const timestamp = Date.now();
+        const importFolderKey = `imported_folder_${timestamp}`;
+        setNodes(prev => {
+          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+          nodesCopy.push({
+            key: importFolderKey,
+            label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
+            droppable: true,
+            children: importedConnections,
+            uid: importFolderKey,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          });
+          return nodesCopy;
         });
       }
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Importación exitosa',
+        detail: `Se importaron ${importedConnections.length} conexiones`,
+        life: 5000
+      });
 
     } catch (error) {
       console.error('Error al procesar importación:', error);
