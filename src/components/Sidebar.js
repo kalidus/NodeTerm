@@ -351,6 +351,42 @@ const Sidebar = React.memo(({
 
         addedFolders = importResult.structure.folderCount || 0;
         addedConnections = importResult.structure.connectionCount || 0;
+
+        // Persistir fuente vinculada y opciones para el banner
+        if (isLinkedMode && (importResult.linkedFilePath || importResult.linkedFileName)) {
+          try {
+            const KEY = 'IMPORT_SOURCES';
+            const sources = JSON.parse(localStorage.getItem(KEY) || '[]');
+            const stableId = importResult.linkedFilePath || importResult.linkedFileName;
+            // Alinear hash con el poller
+            let osHash = importResult.linkedFileHash || null;
+            try {
+              const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
+              if (h?.ok && h?.hash) osHash = h.hash;
+            } catch {}
+            const newSource = {
+              id: stableId,
+              fileName: importResult.linkedFileName || null,
+              filePath: importResult.linkedFilePath || null,
+              fileHash: osHash,
+              lastCheckedAt: Date.now(),
+              intervalMs: Number(importResult.pollInterval) || 30000,
+              options: {
+                // Básicas para compatibilidad con el diálogo
+                overwrite: !!(importResult.overwrite ?? finalOverwrite),
+                createContainerFolder: !!(importResult.createContainerFolder ?? finalCreateContainerFolder),
+                containerFolderName: (importResult.containerFolderName || importResult.linkedContainerFolderName || finalContainerLabel) || null,
+                // Específicas de modo vinculado (las que usa el banner)
+                linkedOverwrite: !!importResult.linkedOverwrite,
+                linkedCreateContainerFolder: !!importResult.linkedCreateContainerFolder,
+                linkedContainerFolderName: importResult.linkedContainerFolderName || importResult.containerFolderName || null
+              }
+            };
+            const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+            filtered.push(newSource);
+            localStorage.setItem(KEY, JSON.stringify(filtered));
+          } catch {}
+        }
         showToast && showToast({
           severity: 'success',
           summary: 'Importación exitosa',
@@ -374,6 +410,39 @@ const Sidebar = React.memo(({
 
       // Para lista plana, insertar directamente en target según configuración
       insertIntoTarget(importedConnections);
+
+      // Persistir fuente vinculada y opciones para el banner
+      if (isLinkedMode && (importResult.linkedFilePath || importResult.linkedFileName)) {
+        try {
+          const KEY = 'IMPORT_SOURCES';
+          const sources = JSON.parse(localStorage.getItem(KEY) || '[]');
+          const stableId = importResult.linkedFilePath || importResult.linkedFileName;
+          let osHash = importResult.linkedFileHash || null;
+          try {
+            const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
+            if (h?.ok && h?.hash) osHash = h.hash;
+          } catch {}
+          const newSource = {
+            id: stableId,
+            fileName: importResult.linkedFileName || null,
+            filePath: importResult.linkedFilePath || null,
+            fileHash: osHash,
+            lastCheckedAt: Date.now(),
+            intervalMs: Number(importResult.pollInterval) || 30000,
+            options: {
+              overwrite: !!(importResult.overwrite ?? finalOverwrite),
+              createContainerFolder: !!(importResult.createContainerFolder ?? finalCreateContainerFolder),
+              containerFolderName: (importResult.containerFolderName || importResult.linkedContainerFolderName || finalContainerLabel) || null,
+              linkedOverwrite: !!importResult.linkedOverwrite,
+              linkedCreateContainerFolder: !!importResult.linkedCreateContainerFolder,
+              linkedContainerFolderName: importResult.linkedContainerFolderName || importResult.containerFolderName || null
+            }
+          };
+          const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+          filtered.push(newSource);
+          localStorage.setItem(KEY, JSON.stringify(filtered));
+        } catch {}
+      }
       showToast && showToast({
         severity: 'success',
         summary: 'Importación exitosa',
