@@ -39,6 +39,7 @@ import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 
 import SyncSettingsDialog from './SyncSettingsDialog';
 import ImportDialog from './ImportDialog';
+import ImportService from '../services/ImportService';
 
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
@@ -77,7 +78,287 @@ import {
 const App = () => {
   const toast = useRef(null);
   const [showImportDialog, setShowImportDialog] = React.useState(false);
+  const [importPreset, setImportPreset] = React.useState(null);
   
+  // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas
+  const unifiedHandleImportComplete = async (importResult) => {
+    const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
+    const normalizeLabel = (v) => {
+      const s = (v || '').toString();
+      return s
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+    const isFolder = (node) => !!(node && (node.droppable || (node.children && node.children.length)));
+    const isConnection = (node) => !!(node && node.data && (node.data.type === 'ssh' || node.data.type === 'rdp'));
+    const makeConnKey = (node) => {
+      if (!node || !node.data) return null;
+      if (node.data.type === 'ssh') {
+        return [normalizeExact(node.data.host), normalizeExact(node.data.port), normalizeExact(node.data.user)].join('|');
+      }
+      if (node.data.type === 'rdp') {
+        return [normalizeExact(node.data.server), normalizeExact(node.data.port), normalizeExact(node.data.username)].join('|');
+      }
+      return null;
+    };
+    const deepCopyLocal = (obj) => JSON.parse(JSON.stringify(obj));
+
+    const mergeChildren = (targetChildren, incomingChildren) => {
+      const result = Array.isArray(targetChildren) ? deepCopyLocal(targetChildren) : [];
+      const existingFolderIdxByNorm = new Map();
+      const existingConnKeySet = new Set();
+
+      for (let i = 0; i < result.length; i++) {
+        const it = result[i];
+        if (isFolder(it)) {
+          existingFolderIdxByNorm.set(normalizeLabel(it.label), i);
+        } else if (isConnection(it)) {
+          const k = makeConnKey(it);
+          if (k) existingConnKeySet.add(k);
+        }
+      }
+
+      let addedConnections = 0;
+      let addedFolders = 0;
+
+      const appendUnique = (node) => {
+        if (isFolder(node)) {
+          const norm = normalizeLabel(node.label);
+          if (existingFolderIdxByNorm.has(norm)) {
+            const idx = existingFolderIdxByNorm.get(norm);
+            const existing = result[idx];
+            const mergeRes = mergeChildren(existing.children || [], node.children || []);
+            existing.children = mergeRes.children;
+            addedConnections += mergeRes.addedConnections;
+            addedFolders += mergeRes.addedFolders;
+          } else {
+            const newFolder = deepCopyLocal(node);
+            newFolder.children = newFolder.children || [];
+            result.push(newFolder);
+            existingFolderIdxByNorm.set(norm, result.length - 1);
+            addedFolders += 1;
+          }
+        } else if (isConnection(node)) {
+          const k = makeConnKey(node);
+          if (k && !existingConnKeySet.has(k)) {
+            result.push(node);
+            existingConnKeySet.add(k);
+            addedConnections += 1;
+          }
+        }
+      };
+
+      for (const inc of incomingChildren || []) {
+        appendUnique(inc);
+      }
+
+      return { children: result, addedConnections, addedFolders };
+    };
+
+    if (!importResult) {
+      toast.current?.show({ severity: 'warn', summary: 'Sin datos', detail: 'No se encontraron conexiones para importar', life: 3000 });
+      return;
+    }
+
+    // Estructura con carpetas
+    if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
+      const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
+        ...n,
+        key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
+        uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
+      }));
+
+      const createContainerFolder = !!importResult.createContainerFolder;
+      const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+      const overwrite = !!importResult.overwrite;
+      const nodesCopy = deepCopyLocal(nodes || []);
+      let addedConnections = 0;
+      let addedFolders = 0;
+
+      if (createContainerFolder) {
+        if (overwrite) {
+          const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(containerLabel));
+          if (idx !== -1) {
+            const container = nodesCopy[idx];
+            const mergeResult = mergeChildren(container.children || [], toAdd);
+            container.children = mergeResult.children;
+            addedConnections += mergeResult.addedConnections;
+            addedFolders += mergeResult.addedFolders;
+          } else {
+            const containerKey = `import_container_${Date.now()}`;
+            const mergeResult = mergeChildren([], toAdd);
+            nodesCopy.push({
+              key: containerKey,
+              uid: containerKey,
+              label: containerLabel,
+              droppable: true,
+              children: mergeResult.children,
+              createdAt: new Date().toISOString(),
+              isUserCreated: true,
+              imported: true,
+              importedFrom: 'mRemoteNG'
+            });
+            addedConnections += mergeResult.addedConnections;
+            addedFolders += mergeResult.addedFolders;
+          }
+        } else {
+          const containerKey = `import_container_${Date.now()}`;
+          nodesCopy.push({
+            key: containerKey,
+            uid: containerKey,
+            label: containerLabel,
+            droppable: true,
+            children: toAdd,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'mRemoteNG'
+          });
+          const countInside = (arr) => {
+            let folders = 0, conns = 0;
+            for (const it of arr || []) {
+              if (isFolder(it)) { folders += 1; const r = countInside(it.children); folders += r.folders; conns += r.conns; }
+              else if (isConnection(it)) conns += 1;
+            }
+            return { folders, conns };
+          };
+          const r = countInside(toAdd);
+          addedConnections += r.conns;
+          addedFolders += r.folders;
+        }
+      } else {
+        if (overwrite) {
+          const mergeResult = mergeChildren(nodesCopy, toAdd);
+          nodesCopy.length = 0;
+          nodesCopy.push(...mergeResult.children);
+          addedConnections += mergeResult.addedConnections;
+          addedFolders += mergeResult.addedFolders;
+        } else {
+          nodesCopy.push(...toAdd);
+          const countInside = (arr) => {
+            let folders = 0, conns = 0;
+            for (const it of arr || []) {
+              if (isFolder(it)) { folders += 1; const r = countInside(it.children); folders += r.folders; conns += r.conns; }
+              else if (isConnection(it)) conns += 1;
+            }
+            return { folders, conns };
+          };
+          const r = countInside(toAdd);
+          addedConnections += r.conns;
+          addedFolders += r.folders;
+        }
+      }
+
+      setNodes(nodesCopy);
+
+      // Registrar/actualizar fuente vinculada con id estable
+      if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
+        const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
+        const stableId = importResult.linkedFilePath || importResult.linkedFileName;
+        const newSource = {
+          id: stableId,
+          fileName: importResult.linkedFileName || null,
+          filePath: importResult.linkedFilePath || null,
+          fileHash: importResult.linkedFileHash || null,
+          lastCheckedAt: Date.now(),
+          intervalMs: Number(importResult.pollInterval) || 30000,
+          options: {
+            overwrite: !!importResult.overwrite,
+            createContainerFolder: !!importResult.createContainerFolder,
+            containerFolderName: importResult.containerFolderName || null
+          }
+        };
+        const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+        filtered.push(newSource);
+        localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
+      }
+
+      toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas`, life: 5000 });
+      return;
+    }
+
+    // Lista plana
+    const importedConnections = importResult.connections || importResult;
+    if (!Array.isArray(importedConnections) || importedConnections.length === 0) {
+      toast.current?.show({ severity: 'warn', summary: 'Sin datos', detail: 'No se encontraron conexiones para importar', life: 3000 });
+      return;
+    }
+
+    const createContainerFolder = !!importResult.createContainerFolder;
+    const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+    const overwrite = !!importResult.overwrite;
+    const nodesCopy = deepCopyLocal(nodes || []);
+    let addedConnections = 0;
+
+    if (createContainerFolder) {
+      const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(containerLabel));
+      if (overwrite) {
+        const existingChildren = idx !== -1 ? (nodesCopy[idx].children || []) : [];
+        const mergeResult = mergeChildren(existingChildren, importedConnections);
+        if (idx !== -1) nodesCopy[idx].children = mergeResult.children; else {
+          const containerKey = `import_container_${Date.now()}`;
+          nodesCopy.push({ key: containerKey, uid: containerKey, label: containerLabel, droppable: true, children: mergeResult.children, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+        }
+        addedConnections += mergeResult.addedConnections;
+      } else {
+        const childrenToAdd = importedConnections;
+        if (idx !== -1) nodesCopy[idx].children = (nodesCopy[idx].children || []).concat(childrenToAdd); else {
+          const containerKey = `import_container_${Date.now()}`;
+          nodesCopy.push({ key: containerKey, uid: containerKey, label: containerLabel, droppable: true, children: childrenToAdd, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+        }
+        addedConnections += childrenToAdd.length;
+      }
+    } else {
+      const rootFolderLabel = `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`;
+      const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(rootFolderLabel));
+      if (overwrite) {
+        if (idx !== -1) {
+          const mergeResult = mergeChildren(nodesCopy[idx].children || [], importedConnections);
+          nodesCopy[idx].children = mergeResult.children;
+          addedConnections += mergeResult.addedConnections;
+        } else {
+          const importFolderKey = `imported_folder_${Date.now()}`;
+          const mergeResult = mergeChildren([], importedConnections);
+          nodesCopy.push({ key: importFolderKey, label: rootFolderLabel, droppable: true, children: mergeResult.children, uid: importFolderKey, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+          addedConnections += mergeResult.addedConnections;
+        }
+      } else {
+        const importFolderKey = `imported_folder_${Date.now()}`;
+        nodesCopy.push({ key: importFolderKey, label: rootFolderLabel, droppable: true, children: importedConnections, uid: importFolderKey, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
+        addedConnections += importedConnections.length;
+      }
+    }
+
+    setNodes(nodesCopy);
+
+    // Registrar/actualizar fuente vinculada
+    if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
+      const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
+      const stableId = importResult.linkedFilePath || importResult.linkedFileName;
+      const newSource = {
+        id: stableId,
+        fileName: importResult.linkedFileName || null,
+        filePath: importResult.linkedFilePath || null,
+        fileHash: importResult.linkedFileHash || null,
+        lastCheckedAt: Date.now(),
+        intervalMs: Number(importResult.pollInterval) || 30000,
+        options: {
+          overwrite: !!importResult.overwrite,
+          createContainerFolder: !!importResult.createContainerFolder,
+          containerFolderName: importResult.containerFolderName || null
+        }
+      };
+      const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+      filtered.push(newSource);
+      localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
+    }
+
+    toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones`, life: 5000 });
+  };
+
   // Función para manejar la importación completa (estructura + conexiones)
   const handleImportComplete = async (importResult) => {
     try {
@@ -913,6 +1194,56 @@ const App = () => {
         findAllConnections={findAllConnections}
         onOpenSSHConnection={onOpenSSHConnection}
         onShowImportDialog={setShowImportDialog}
+        onOpenImportWithSource={(source) => {
+          try {
+            setImportPreset({
+              linkFile: true,
+              linkedPath: source?.filePath || null,
+              pollInterval: Number(source?.intervalMs) || 30000,
+              overwrite: !!source?.options?.overwrite,
+              placeInFolder: !!source?.options?.createContainerFolder,
+              containerFolderName: source?.options?.containerFolderName || null
+            });
+          } catch {}
+          setShowImportDialog(true);
+        }}
+        onQuickImportFromSource={async (source) => {
+          try {
+            if (!source?.filePath) {
+              setShowImportDialog(true);
+              return;
+            }
+            const readRes = await window.electron?.import?.readFile?.(source.filePath);
+            if (!readRes?.ok) {
+              setShowImportDialog(true);
+              return;
+            }
+            let fileBlob;
+            try {
+              const fileName = source.fileName || source.filePath.split('\\').pop() || 'import.xml';
+              fileBlob = new File([readRes.content], fileName, { type: 'text/xml' });
+            } catch {
+              fileBlob = new Blob([readRes.content], { type: 'text/xml' });
+            }
+            
+            // Para archivos vinculados: SIEMPRE sobrescribir y usar opciones guardadas de la fuente
+            const result = await ImportService.importFromMRemoteNG(fileBlob);
+            await unifiedHandleImportComplete({
+              ...result,
+              overwrite: true, // SIEMPRE sobrescribir para archivos vinculados
+              createContainerFolder: !!source?.options?.createContainerFolder,
+              containerFolderName: source?.options?.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`,
+              linkFile: true,
+              pollInterval: Number(source?.intervalMs) || 30000,
+              linkedFileName: source?.fileName || null,
+              linkedFilePath: source?.filePath || null,
+              linkedFileHash: result?.metadata?.contentHash || null
+            });
+          } catch (e) {
+            console.error('Quick import failed:', e);
+            setShowImportDialog(true);
+          }
+        }}
       />
       <DialogsManager
         // Referencias
@@ -1155,6 +1486,7 @@ const App = () => {
         onHide={() => setShowImportDialog(false)}
         onImportComplete={handleImportComplete}
         showToast={(message) => toast.current?.show(message)}
+        presetOptions={importPreset}
         targetFolderOptions={(() => {
           const list = [];
           const walk = (arr, prefix = '') => {

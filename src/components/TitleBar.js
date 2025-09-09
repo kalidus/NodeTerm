@@ -4,7 +4,7 @@ import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onShowImportDialog }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -28,9 +28,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const [bannerTime, setBannerTime] = useState(null);
   useEffect(() => {
     const handler = (e) => {
-      const { source } = e.detail || {};
-      setImportBanner({ fileName: source?.fileName, source });
-      setBannerTime(new Date());
+      const { source, hasChange } = e.detail || {};
+      if (!source) return;
+      // Mostrar banner solo si hay cambio confirmado
+      if (hasChange === true) {
+        setImportBanner({ fileName: source?.fileName, source });
+        setBannerTime(new Date());
+      }
     };
     window.addEventListener('import-source:poll', handler);
     return () => window.removeEventListener('import-source:poll', handler);
@@ -59,17 +63,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       }
       const changed = hashRes.hash && source.fileHash && hashRes.hash !== source.fileHash;
       if (changed) {
-        // Mostrar confirmación inline: Actualizar ahora / Abrir diálogo
-        const confirmed = window.confirm(`Se detectaron cambios en "${source.fileName}". ¿Actualizar ahora?`);
-        if (confirmed) {
-          const readRes = await window.electron?.import?.readFile?.(filePath);
-          if (readRes?.ok) {
-            // reenviar al flujo de importación simple: abrir dialog para completar con opciones (mantener UX consistente)
-            onShowImportDialog && onShowImportDialog(true);
-          }
-        } else {
-          onShowImportDialog && onShowImportDialog(true);
-        }
+        // Abrir diálogo directamente para aplicar con opciones
+        onShowImportDialog && onShowImportDialog(true);
       } else {
         alert('No se han detectado cambios en el archivo vinculado.');
       }
@@ -582,9 +577,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           gap: 8,
           zIndex: 2000
         }}>
-          <span>Detectado posible cambio en “{importBanner.fileName}”. {bannerTime ? `(${bannerTime.toLocaleTimeString()})` : ''}</span>
+          <span>Detectado cambio en “{importBanner.fileName}”. {bannerTime ? `(${bannerTime.toLocaleTimeString()})` : ''}</span>
           <button
-            onClick={() => handleRecheckImportSource(importBanner.source)}
+            onClick={() => { if (onQuickImportFromSource) onQuickImportFromSource(importBanner.source); setImportBanner(null); }}
             style={{
               background: 'var(--primary-color, #1976d2)',
               color: 'var(--primary-color-text, #fff)',
@@ -594,7 +589,22 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               cursor: 'pointer',
               fontSize: 12
             }}
-          >Revisar ahora</button>
+          >Actualizar ahora</button>
+          <button
+            onClick={() => {
+              if (onOpenImportWithSource) onOpenImportWithSource(importBanner.source);
+              setImportBanner(null);
+            }}
+            style={{
+              background: 'transparent',
+              color: 'var(--primary-color, #1976d2)',
+              border: '1px solid var(--primary-color, #1976d2)',
+              padding: '3px 8px',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 12
+            }}
+          >Revisar</button>
           <button
             onClick={() => setImportBanner(null)}
             style={{
