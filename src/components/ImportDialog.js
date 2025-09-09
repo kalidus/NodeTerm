@@ -495,6 +495,14 @@ const ImportDialog = ({
                       {overwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo importado.' : 'Permite duplicados sin reemplazar'}
                     </div>
                   </div>
+
+                  {/* Selector de archivo integrado */}
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
+                      Archivo XML a importar:
+                    </label>
+                    {customFileUploadTemplate()}
+                  </div>
                 </div>
               </Card>
             </div>
@@ -720,10 +728,6 @@ const ImportDialog = ({
                 </div>
               </Card>
             </div>
-          </div>
-          {/* Sección de selección de archivo debajo de las dos columnas */}
-          <div style={{ marginTop: '1rem' }}>
-            {customFileUploadTemplate()}
           </div>
           
           <Divider />
