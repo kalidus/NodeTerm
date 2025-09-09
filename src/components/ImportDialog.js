@@ -6,13 +6,19 @@ import { Toast } from 'primereact/toast';
 import { ProgressBar } from 'primereact/progressbar';
 import { Divider } from 'primereact/divider';
 import { Message } from 'primereact/message';
+import { Dropdown } from 'primereact/dropdown';
+import { InputText } from 'primereact/inputtext';
+import { Card } from 'primereact/card';
 import ImportService from '../services/ImportService';
 
 const ImportDialog = ({ 
   visible, 
   onHide, 
   onImportComplete, 
-  showToast
+  showToast,
+  presetOptions,
+  targetFolderOptions,
+  defaultTargetFolderKey
 }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -31,7 +37,8 @@ const ImportDialog = ({
   const linkFileInputRef = useRef(null);
   const [lastKnownHash, setLastKnownHash] = useState(null);
   const [changesDetected, setChangesDetected] = useState(false);
-  const containerFolderName = `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
+  const [containerFolderName, setContainerFolderName] = useState(`mRemoteNG imported - ${new Date().toLocaleDateString()}`);
+  const [selectedTargetFolder, setSelectedTargetFolder] = useState(null); // Para archivo vinculado
 
   const handleFileSelect = (event) => {
     const file = event.files[0];
@@ -144,6 +151,42 @@ const ImportDialog = ({
     };
   }, [linkFile, linkedPath, pollInterval]);
 
+  // Persistencia de opciones del diálogo
+  React.useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('IMPORT_DIALOG_OPTS') || '{}');
+      if (saved) {
+        if (typeof saved.placeInFolder === 'boolean') setPlaceInFolder(saved.placeInFolder);
+        if (typeof saved.overwrite === 'boolean') setOverwrite(saved.overwrite);
+        if (typeof saved.linkFile === 'boolean') setLinkFile(saved.linkFile);
+        if (typeof saved.pollInterval === 'number') setPollInterval(saved.pollInterval);
+        if (typeof saved.linkedPath === 'string') setLinkedPath(saved.linkedPath);
+        if (saved.selectedTargetFolder) setSelectedTargetFolder(saved.selectedTargetFolder);
+      }
+      // Aplicar preset prioritario (viene del banner)
+      if (presetOptions) {
+        if (typeof presetOptions.placeInFolder === 'boolean') setPlaceInFolder(presetOptions.placeInFolder);
+        if (typeof presetOptions.overwrite === 'boolean') setOverwrite(presetOptions.overwrite);
+        if (typeof presetOptions.linkFile === 'boolean') setLinkFile(presetOptions.linkFile);
+        if (typeof presetOptions.pollInterval === 'number') setPollInterval(presetOptions.pollInterval);
+        if (typeof presetOptions.linkedPath === 'string') setLinkedPath(presetOptions.linkedPath);
+        // Al abrir con preset, marcamos cambios detectados por UX
+        setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+      }
+    } catch {}
+  }, [presetOptions]);
+  React.useEffect(() => {
+    const toSave = {
+      placeInFolder,
+      overwrite,
+      linkFile,
+      pollInterval,
+      linkedPath,
+      selectedTargetFolder
+    };
+    try { localStorage.setItem('IMPORT_DIALOG_OPTS', JSON.stringify(toSave)); } catch {}
+  }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath, selectedTargetFolder]);
+
   const processImport = async () => {
     // Determinar el archivo a importar de forma síncrona (evitar depender de setState)
     let fileToImport = selectedFile;
@@ -186,8 +229,8 @@ const ImportDialog = ({
         console.log('📞 Llamando a onImportComplete...');
         await onImportComplete({
           ...result,
-          createContainerFolder: !!placeInFolder,
-          containerFolderName,
+          createContainerFolder: linkFile ? !!selectedTargetFolder : !!placeInFolder,
+          containerFolderName: linkFile ? (selectedTargetFolder?.label || null) : containerFolderName,
           overwrite: !!overwrite,
           linkFile: !!linkFile,
           pollInterval: Number(pollInterval) || 30000,
@@ -324,7 +367,7 @@ const ImportDialog = ({
       <Toast ref={toast} />
       <Dialog
         visible={visible}
-        style={{ width: '600px' }}
+        style={{ width: '700px', maxWidth: '90vw' }}
         header={headerTemplate()}
         modal
         onHide={handleClose}
@@ -357,156 +400,220 @@ const ImportDialog = ({
           
           {customFileUploadTemplate()}
 
-          <Divider />
-          <div className="mb-3">
-            <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-              <input
-                type="checkbox"
-                id="placeInFolder"
-                checked={placeInFolder}
-                onChange={(e) => setPlaceInFolder(e.target.checked)}
-                disabled={importing}
-              />
-              <label htmlFor="placeInFolder">Importar dentro de una carpeta</label>
-            </div>
-            {placeInFolder && (
-              <div className="text-sm text-gray-600">Se creará la carpeta “{containerFolderName}” en la raíz y se colocarán todos los elementos dentro.</div>
-            )}
-          </div>
-          <div className="mb-3">
-            <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-              <input
-                type="checkbox"
-                id="overwrite"
-                checked={overwrite}
-                onChange={(e) => setOverwrite(e.target.checked)}
-                disabled={importing}
-              />
-              <label htmlFor="overwrite">Sobrescribir (evitar duplicados y fusionar por nombre)</label>
-            </div>
-            {!overwrite && (
-              <div className="text-sm text-gray-600">Si no está activado, se permiten duplicados de carpetas y sesiones.</div>
-            )}
-          </div>
-          <Divider />
-          <div className="mb-3">
-            <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-              <input
-                type="checkbox"
-                id="linkFile"
-                checked={linkFile}
-                onChange={(e) => setLinkFile(e.target.checked)}
-                disabled={importing}
-              />
-              <label htmlFor="linkFile">Vincular archivo y detectar cambios</label>
-            </div>
-            {linkFile && (
-              <>
-              <div style={{
-                border: '1px solid #ddd',
-                borderRadius: 6,
-                padding: 10,
-                marginBottom: 8,
-                background: '#f9fafb'
-              }}>
-                <div className="flex align-items-center" style={{ gap: 8, marginBottom: 8 }}>
-                  <label style={{ minWidth: 130, fontSize: 12, color: '#555' }}>Archivo vinculado:</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={linkedPath || 'No seleccionado'}
-                    style={{ flex: 1, height: 26, fontSize: 12, padding: '2px 6px' }}
-                  />
-                  <Button
-                    label={linkedPath ? 'Cambiar…' : 'Seleccionar…'}
-                    icon="pi pi-link"
-                    onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
-                    className="p-button-outlined"
-                    disabled={importing}
-                  />
-                  <input
-                    type="file"
-                    accept=".xml"
-                    ref={linkFileInputRef}
-                    onChange={async (e) => {
-                      const f = e.target.files && e.target.files[0];
-                      if (!f) return;
-                      const p = f.path || f.name;
-                      setLinkedPath(p);
-                      // Usar este fichero como seleccionado para importar
-                      setSelectedFile(f);
-                      // Hash inicial
-                      const hashRes = await window.electron?.import?.getFileHash?.(p);
-                      if (hashRes?.ok) setLastKnownHash(hashRes.hash);
-                      startPreviewPolling();
-                    }}
-                    style={{ display: 'none' }}
-                  />
-                </div>
-                <div className="flex align-items-center" style={{ gap: 8 }}>
-                  <label style={{ minWidth: 130, fontSize: 12, color: '#555' }}>Estado:</label>
-                  <span style={{ fontSize: 12, color: linkStatus?.color || '#666' }}>{linkStatus?.text || 'Sin comprobaciones aún'}</span>
-                  {linkedPath && (
-                    <>
-                      <Button
-                        label="Detectar cambios"
-                        icon="pi pi-refresh"
-                        className="p-button-text"
-                        onClick={async () => {
-                          const h = await window.electron?.import?.getFileHash?.(linkedPath);
-                          if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
-                            setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
-                            setChangesDetected(true);
-                          } else {
-                            setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
-                            setChangesDetected(false);
-                          }
-                        }}
+          <div style={{ marginTop: '1rem' }}>
+            {/* Opciones de importación básicas */}
+            <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+              <div className="p-3">
+                <h6 style={{ margin: '0 0 12px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
+                  <i className="pi pi-cog mr-2"></i>Opciones de importación
+                </h6>
+                
+                <div className="mb-3">
+                  <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="placeInFolder"
+                      checked={placeInFolder}
+                      onChange={(e) => setPlaceInFolder(e.target.checked)}
+                      disabled={importing || linkFile}
+                    />
+                    <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                      Importar dentro de una carpeta
+                    </label>
+                  </div>
+                  {placeInFolder && !linkFile && (
+                    <div style={{ marginLeft: '26px' }}>
+                      <InputText
+                        value={containerFolderName}
+                        onChange={(e) => setContainerFolderName(e.target.value)}
+                        placeholder="Nombre de la carpeta"
                         disabled={importing}
+                        style={{ width: '300px', fontSize: '13px' }}
                       />
-                      <Button
-                        label="Actualizar ahora"
-                        icon="pi pi-upload"
-                        onClick={processImport}
-                        disabled={!changesDetected || importing}
-                      />
-                    </>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="flex align-items-center" style={{ gap: 12, marginTop: 6 }}>
-                <div className="flex align-items-center" style={{ gap: 8 }}>
-                  <label htmlFor="pollInterval" className="text-sm text-gray-600">Sondeo:</label>
-                  <select
-                    id="pollIntervalPreset"
-                    value={String(pollInterval)}
-                    onChange={(e) => setPollInterval(Number(e.target.value))}
-                    disabled={importing}
-                    style={{ height: 28 }}
-                  >
-                    <option value="10000">10s</option>
-                    <option value="30000">30s</option>
-                    <option value="60000">1 min</option>
-                    <option value="120000">2 min</option>
-                    <option value="300000">5 min</option>
-                  </select>
+
+                <div className="mb-2">
+                  <div className="flex align-items-center" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="overwrite"
+                      checked={overwrite}
+                      onChange={(e) => setOverwrite(e.target.checked)}
+                      disabled={importing || linkFile}
+                    />
+                    <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                      Sobrescribir (evitar duplicados)
+                    </label>
+                  </div>
+                  <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                    {overwrite ? 'Fusiona carpetas por nombre y elimina conexiones duplicadas' : 'Permite duplicados de carpetas y sesiones'}
+                  </div>
                 </div>
-                <div className="flex align-items-center" style={{ gap: 8 }}>
-                  <label htmlFor="pollInterval" className="text-sm text-gray-600">Personalizado (ms):</label>
+              </div>
+            </Card>
+
+            {/* Opciones de vinculación de archivo */}
+            <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
+              <div className="p-3">
+                <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
                   <input
-                    id="pollInterval"
-                    type="number"
-                    min={5000}
-                    step={1000}
-                    value={pollInterval}
-                    onChange={(e) => setPollInterval(Number(e.target.value))}
+                    type="checkbox"
+                    id="linkFile"
+                    checked={linkFile}
+                    onChange={(e) => setLinkFile(e.target.checked)}
                     disabled={importing}
-                    style={{ width: 120, height: 26 }}
                   />
+                  <label htmlFor="linkFile" style={{ fontWeight: '600', color: 'var(--text-color)', fontSize: '14px' }}>
+                    <i className="pi pi-link mr-2"></i>Vincular archivo y detectar cambios
+                  </label>
                 </div>
+                
+                {linkFile && (
+                  <div style={{ marginLeft: '26px' }}>
+                    {/* Selector de archivo */}
+                    <div className="mb-3">
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                        Archivo a vincular:
+                      </label>
+                      <div className="flex align-items-center" style={{ gap: 8 }}>
+                        <InputText
+                          value={linkedPath || 'No seleccionado'}
+                          readOnly
+                          style={{ flex: 1, fontSize: '13px' }}
+                          disabled={importing}
+                        />
+                        <Button
+                          label={linkedPath ? 'Cambiar' : 'Seleccionar'}
+                          icon="pi pi-folder-open"
+                          size="small"
+                          onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
+                          disabled={importing}
+                        />
+                      </div>
+                      <input
+                        type="file"
+                        accept=".xml"
+                        ref={linkFileInputRef}
+                        onChange={async (e) => {
+                          const f = e.target.files && e.target.files[0];
+                          if (!f) return;
+                          const p = f.path || f.name;
+                          setLinkedPath(p);
+                          setSelectedFile(f);
+                          const hashRes = await window.electron?.import?.getFileHash?.(p);
+                          if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+                          startPreviewPolling();
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+
+                    {/* Selector de carpeta destino */}
+                    <div className="mb-3">
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                        Importar en:
+                      </label>
+                      <Dropdown
+                        value={selectedTargetFolder}
+                        onChange={(e) => setSelectedTargetFolder(e.value)}
+                        options={[
+                          { label: 'Raíz (sin carpeta)', value: null },
+                          ...(targetFolderOptions || [])
+                        ]}
+                        placeholder="Seleccionar carpeta destino"
+                        style={{ width: '100%' }}
+                        disabled={importing}
+                      />
+                    </div>
+
+                    {/* Estado y controles */}
+                    {linkedPath && (
+                      <div style={{ 
+                        background: 'var(--surface-ground)', 
+                        border: '1px solid var(--surface-border)', 
+                        borderRadius: '6px', 
+                        padding: '12px',
+                        marginBottom: '12px'
+                      }}>
+                        <div className="flex align-items-center justify-content-between mb-2">
+                          <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>Estado:</span>
+                          <span style={{ fontSize: '13px', color: linkStatus?.color || 'var(--text-color-secondary)' }}>
+                            {linkStatus?.text || 'Sin comprobaciones aún'}
+                          </span>
+                        </div>
+                        <div className="flex align-items-center" style={{ gap: 8 }}>
+                          <Button
+                            label="Detectar cambios"
+                            icon="pi pi-refresh"
+                            size="small"
+                            className="p-button-outlined"
+                            onClick={async () => {
+                              const h = await window.electron?.import?.getFileHash?.(linkedPath);
+                              if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+                                setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+                                setChangesDetected(true);
+                              } else {
+                                setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
+                                setChangesDetected(false);
+                              }
+                            }}
+                            disabled={importing}
+                          />
+                          <Button
+                            label="Actualizar ahora"
+                            icon="pi pi-upload"
+                            size="small"
+                            onClick={processImport}
+                            disabled={!changesDetected || importing}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Configuración de sondeo */}
+                    <div style={{ 
+                      background: 'var(--surface-ground)', 
+                      border: '1px solid var(--surface-border)', 
+                      borderRadius: '6px', 
+                      padding: '12px'
+                    }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
+                        Frecuencia de sondeo:
+                      </label>
+                      <div className="flex align-items-center" style={{ gap: 12 }}>
+                        <Dropdown
+                          value={String(pollInterval)}
+                          onChange={(e) => setPollInterval(Number(e.value))}
+                          options={[
+                            { label: '10 segundos', value: '10000' },
+                            { label: '30 segundos', value: '30000' },
+                            { label: '1 minuto', value: '60000' },
+                            { label: '2 minutos', value: '120000' },
+                            { label: '5 minutos', value: '300000' }
+                          ]}
+                          style={{ width: '150px' }}
+                          disabled={importing}
+                        />
+                        <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>o</span>
+                        <InputText
+                          type="number"
+                          value={pollInterval}
+                          onChange={(e) => setPollInterval(Number(e.target.value))}
+                          placeholder="ms"
+                          min={5000}
+                          step={1000}
+                          style={{ width: '100px' }}
+                          disabled={importing}
+                        />
+                        <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>ms</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              </>
-            )}
+            </Card>
           </div>
           
           <Divider />

@@ -7,6 +7,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
+import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -369,15 +370,15 @@ const Sidebar = React.memo(({
 
         setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
 
-        // Registrar fuente vinculada si aplica (estructura)
-        if (importResult.linkFile && importResult.linkedFileHash && importResult.linkedFileName) {
+        // Registrar fuente vinculada si aplica (estructura) - usar id estable por ruta/nombre
+        if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
           const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
-          const id = `${importResult.linkedFilePath || importResult.linkedFileName}|${importResult.linkedFileHash}`;
+          const stableId = importResult.linkedFilePath || importResult.linkedFileName;
           const newSource = {
-            id,
-            fileName: importResult.linkedFileName,
+            id: stableId,
+            fileName: importResult.linkedFileName || null,
             filePath: importResult.linkedFilePath || null,
-            fileHash: importResult.linkedFileHash,
+            fileHash: importResult.linkedFileHash || null,
             lastCheckedAt: Date.now(),
             intervalMs: Number(importResult.pollInterval) || 30000,
             options: {
@@ -386,7 +387,7 @@ const Sidebar = React.memo(({
               containerFolderName: importResult.containerFolderName || null
             }
           };
-          const filtered = sources.filter(s => s.id !== id);
+          const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
           filtered.push(newSource);
           localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
         }
@@ -462,15 +463,15 @@ const Sidebar = React.memo(({
 
       setNodes(() => logSetNodes('Sidebar-Import', nodesCopy));
 
-      // Registrar fuente vinculada si aplica (lista plana)
-      if (importResult.linkFile && importResult.linkedFileHash && importResult.linkedFileName) {
+      // Registrar fuente vinculada si aplica (lista plana) - usar id estable por ruta/nombre
+      if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
         const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
-        const id = `${importResult.linkedFilePath || importResult.linkedFileName}|${importResult.linkedFileHash}`;
+        const stableId = importResult.linkedFilePath || importResult.linkedFileName;
         const newSource = {
-          id,
-          fileName: importResult.linkedFileName,
+          id: stableId,
+          fileName: importResult.linkedFileName || null,
           filePath: importResult.linkedFilePath || null,
-          fileHash: importResult.linkedFileHash,
+          fileHash: importResult.linkedFileHash || null,
           lastCheckedAt: Date.now(),
           intervalMs: Number(importResult.pollInterval) || 30000,
           options: {
@@ -479,7 +480,7 @@ const Sidebar = React.memo(({
             containerFolderName: importResult.containerFolderName || null
           }
         };
-        const filtered = sources.filter(s => s.id !== id);
+        const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
         filtered.push(newSource);
         localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
       }
@@ -514,10 +515,27 @@ const Sidebar = React.memo(({
       sources.forEach(source => {
         const interval = Math.max(5000, Number(source.intervalMs) || 30000);
         const timer = setInterval(async () => {
-          // Estrategia eficiente: pedir al usuario revalidar solo si lo desea
-          // Aquí lanzamos un CustomEvent para que TitleBar muestre banner
-          const event = new CustomEvent('import-source:poll', { detail: { source } });
-          window.dispatchEvent(event);
+          // Consultar hash actual si tenemos ruta; si difiere, notificar
+          try {
+            let hasChange = false;
+            if (source.filePath) {
+              // Recargar fuentes para obtener el hash más actualizado
+              const freshSources = JSON.parse(localStorage.getItem(KEY) || '[]');
+              const freshSource = freshSources.find(s => s.id === source.id || s.filePath === source.filePath);
+              const currentStoredHash = freshSource?.fileHash || source.fileHash;
+              
+              const h = await window.electron?.import?.getFileHash?.(source.filePath);
+              if (h?.ok && currentStoredHash && h.hash !== currentStoredHash) {
+                hasChange = true;
+              }
+            }
+            if (hasChange) {
+              const event = new CustomEvent('import-source:poll', { detail: { source, hasChange: true } });
+              window.dispatchEvent(event);
+            }
+          } catch {
+            // Silencio en error para evitar banners falsos
+          }
         }, interval);
         timers.push(timer);
       });

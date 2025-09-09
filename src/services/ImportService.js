@@ -20,6 +20,8 @@ class ImportService {
     try {
       // Leer contenido del archivo
       const fileContent = await this.readFileAsText(file);
+      // Calcular hash del contenido (SHA-256) si es posible
+      const contentHash = await this.computeContentHash(fileContent);
       
       // Parsear XML
       const xmlDoc = this.parseXML(fileContent);
@@ -47,7 +49,8 @@ class ImportService {
         metadata: {
           source: 'mRemoteNG',
           importDate: new Date().toISOString(),
-          originalFile: file.name
+          originalFile: file.name,
+          contentHash: contentHash || null
         }
       };
     } catch (error) {
@@ -68,6 +71,25 @@ class ImportService {
       reader.onerror = () => reject(new Error('Error al leer el archivo'));
       reader.readAsText(file, 'utf-8');
     });
+  }
+
+  /**
+   * Calcula SHA-256 de un string en el renderer. Fallback a null si no hay WebCrypto.
+   * @param {string} text
+   * @returns {Promise<string|null>} hex string
+   */
+  static async computeContentHash(text) {
+    try {
+      const enc = new TextEncoder();
+      const data = enc.encode(text);
+      const cryptoObj = (typeof window !== 'undefined' ? window.crypto : null) || (globalThis.crypto || null);
+      if (!cryptoObj || !cryptoObj.subtle) return null;
+      const hashBuf = await cryptoObj.subtle.digest('SHA-256', data);
+      const bytes = Array.from(new Uint8Array(hashBuf));
+      return bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      return null;
+    }
   }
 
   /**
