@@ -411,6 +411,83 @@ const App = () => {
       const createContainerFolder = !!importResult.createContainerFolder;
       const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
 
+      // Carpeta destino: raíz por defecto o una seleccionada en el diálogo
+      const ROOT_VALUE = 'ROOT';
+      const baseTargetKey = importResult?.linkFile
+        ? (importResult?.linkedTargetFolderKey || ROOT_VALUE)
+        : (importResult?.targetBaseFolderKey || ROOT_VALUE);
+
+      const insertIntoTarget = (nodesToInsert) => {
+        // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
+        const containerize = (children) => ({
+          key: `import_container_${Date.now()}`,
+          uid: `import_container_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
+          label: containerLabel,
+          droppable: true,
+          children: children,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG'
+        });
+
+        if (baseTargetKey === ROOT_VALUE) {
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            if (createContainerFolder) {
+              if (overwrite) {
+                return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
+              } else {
+                nodesCopy.push(containerize(nodesToInsert));
+                return nodesCopy;
+              }
+            }
+            if (overwrite) {
+              return removeConflictsAndAdd(nodesCopy, nodesToInsert);
+            } else {
+              nodesCopy.push(...nodesToInsert);
+              return nodesCopy;
+            }
+          });
+          return;
+        }
+
+        setNodes(prev => {
+          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+          const targetNode = findNodeByKey(nodesCopy, baseTargetKey);
+          if (!targetNode || !targetNode.droppable) {
+            // Fallback a raíz si la carpeta no existe o no es droppable
+            if (createContainerFolder) {
+              if (overwrite) {
+                return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
+              }
+              nodesCopy.push(containerize(nodesToInsert));
+              return nodesCopy;
+            }
+            if (overwrite) return removeConflictsAndAdd(nodesCopy, nodesToInsert);
+            nodesCopy.push(...nodesToInsert);
+            return nodesCopy;
+          }
+          // Inserción dentro de la carpeta seleccionada
+          const currentChildren = Array.isArray(targetNode.children) ? targetNode.children : [];
+          if (createContainerFolder) {
+            const newChild = containerize(nodesToInsert);
+            if (overwrite) {
+              targetNode.children = removeConflictsAndAdd(currentChildren, [newChild]);
+            } else {
+              targetNode.children = [...currentChildren, newChild];
+            }
+          } else {
+            if (overwrite) {
+              targetNode.children = removeConflictsAndAdd(currentChildren, nodesToInsert);
+            } else {
+              targetNode.children = [...currentChildren, ...nodesToInsert];
+            }
+          }
+          return nodesCopy;
+        });
+      };
+
       let addedFolders = 0;
       let addedConnections = 0;
 
@@ -422,55 +499,7 @@ const App = () => {
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
           uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
         }));
-
-        if (createContainerFolder) {
-          const containerKey = `import_container_${Date.now()}`;
-          setNodes(prev => {
-            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            
-            if (overwrite) {
-              // Eliminar carpeta contenedora existente si hay conflicto
-              const finalNodes = removeConflictsAndAdd(nodesCopy, [{
-                key: containerKey,
-                uid: containerKey,
-                label: containerLabel,
-                droppable: true,
-                children: toAdd,
-                createdAt: new Date().toISOString(),
-                isUserCreated: true,
-                imported: true,
-                importedFrom: 'mRemoteNG'
-              }]);
-              return finalNodes;
-            } else {
-              const container = {
-                key: containerKey,
-                uid: containerKey,
-                label: containerLabel,
-                droppable: true,
-                children: toAdd,
-                createdAt: new Date().toISOString(),
-                isUserCreated: true,
-                imported: true,
-                importedFrom: 'mRemoteNG'
-              };
-              nodesCopy.push(container);
-              return nodesCopy;
-            }
-          });
-        } else {
-          setNodes(prev => {
-            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            
-            if (overwrite) {
-              // Eliminar duplicados de la raíz y agregar los nuevos
-              return removeConflictsAndAdd(nodesCopy, toAdd);
-            } else {
-              nodesCopy.push(...toAdd);
-              return nodesCopy;
-            }
-          });
-        }
+        insertIntoTarget(toAdd);
 
         addedFolders = importResult.structure.folderCount || 0;
         addedConnections = importResult.structure.connectionCount || 0;
@@ -495,77 +524,24 @@ const App = () => {
         return;
       }
 
+      // Para lista plana, insertar en target según configuración. Si no se usa contenedor, crearemos una carpeta por defecto para agrupar.
       if (createContainerFolder) {
-        const containerKey = `import_container_${Date.now()}`;
-        setNodes(prev => {
-          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          
-          if (overwrite) {
-            // Eliminar carpeta contenedora existente si hay conflicto
-            const finalNodes = removeConflictsAndAdd(nodesCopy, [{
-              key: containerKey,
-              uid: containerKey,
-              label: containerLabel,
-              droppable: true,
-              children: importedConnections,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            }]);
-            return finalNodes;
-          } else {
-            nodesCopy.push({
-              key: containerKey,
-              uid: containerKey,
-              label: containerLabel,
-              droppable: true,
-              children: importedConnections,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            });
-            return nodesCopy;
-          }
-        });
+        insertIntoTarget(importedConnections);
       } else {
+        // Crear automáticamente una subcarpeta por defecto para agrupar conexiones importadas cuando no se especifica contenedor
         const timestamp = Date.now();
-        const importFolderKey = `imported_folder_${timestamp}`;
-        const defaultFolderLabel = `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`;
-        
-        setNodes(prev => {
-          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-          
-          if (overwrite) {
-            // Eliminar carpeta de importación existente si hay conflicto
-            const finalNodes = removeConflictsAndAdd(nodesCopy, [{
-              key: importFolderKey,
-              label: defaultFolderLabel,
-              droppable: true,
-              children: importedConnections,
-              uid: importFolderKey,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            }]);
-            return finalNodes;
-          } else {
-            nodesCopy.push({
-              key: importFolderKey,
-              label: defaultFolderLabel,
-              droppable: true,
-              children: importedConnections,
-              uid: importFolderKey,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            });
-            return nodesCopy;
-          }
-        });
+        const defaultFolder = [{
+          key: `imported_folder_${timestamp}`,
+          label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
+          droppable: true,
+          children: importedConnections,
+          uid: `imported_folder_${timestamp}`,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG'
+        }];
+        insertIntoTarget(defaultFolder);
       }
       toast.current?.show({
         severity: 'success',
