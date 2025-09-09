@@ -360,9 +360,12 @@ const App = () => {
   };
 
   // Función para manejar la importación completa (estructura + conexiones)
+  console.log('🔍 DEBUG App.js - Definiendo handleImportComplete...');
   const handleImportComplete = async (importResult) => {
+    console.log('🚀 handleImportComplete INICIANDO...');
     try {
       console.log('🎯 handleImportComplete IN', importResult && typeof importResult, importResult?.structure?.nodes?.length);
+      console.log('🔍 DEBUG handleImportComplete - importResult completo:', importResult);
       if (!importResult) {
         toast.current?.show({
           severity: 'warn',
@@ -407,22 +410,53 @@ const App = () => {
         return [...filteredExisting, ...incomingNodes];
       };
 
-      const overwrite = !!importResult.overwrite;
-      const createContainerFolder = !!importResult.createContainerFolder;
-      const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
-
       // Carpeta destino: raíz por defecto o una seleccionada en el diálogo
       const ROOT_VALUE = 'ROOT';
       const baseTargetKey = importResult?.linkFile
         ? (importResult?.linkedTargetFolderKey || ROOT_VALUE)
         : (importResult?.targetBaseFolderKey || ROOT_VALUE);
 
+      // Opciones específicas según el modo (manual vs vinculado)
+      const isLinkedMode = !!importResult?.linkFile;
+      const finalCreateContainerFolder = isLinkedMode 
+        ? (importResult?.linkedCreateContainerFolder || false)
+        : (importResult?.createContainerFolder || false);
+      const finalContainerLabel = isLinkedMode
+        ? (importResult?.linkedContainerFolderName || `mRemoteNG linked - ${new Date().toLocaleDateString()}`)
+        : (importResult?.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`);
+      const finalOverwrite = isLinkedMode
+        ? (importResult?.linkedOverwrite || false)
+        : (importResult?.overwrite || false);
+
+      console.log('🔍 DEBUG handleImportComplete:', {
+        isLinkedMode,
+        baseTargetKey,
+        finalCreateContainerFolder,
+        finalContainerLabel,
+        finalOverwrite,
+        importResult: {
+          linkFile: importResult?.linkFile,
+          createContainerFolder: importResult?.createContainerFolder,
+          linkedCreateContainerFolder: importResult?.linkedCreateContainerFolder,
+          overwrite: importResult?.overwrite,
+          linkedOverwrite: importResult?.linkedOverwrite
+        }
+      });
+
       const insertIntoTarget = (nodesToInsert) => {
+        console.log('🔍 DEBUG insertIntoTarget:', {
+          baseTargetKey,
+          finalCreateContainerFolder,
+          finalOverwrite,
+          finalContainerLabel,
+          nodesToInsertLength: nodesToInsert?.length
+        });
+
         // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
         const containerize = (children) => ({
           key: `import_container_${Date.now()}`,
           uid: `import_container_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
-          label: containerLabel,
+          label: finalContainerLabel,
           droppable: true,
           children: children,
           createdAt: new Date().toISOString(),
@@ -432,19 +466,25 @@ const App = () => {
         });
 
         if (baseTargetKey === ROOT_VALUE) {
+          console.log('🔍 DEBUG: Insertando en raíz');
           setNodes(prev => {
             const nodesCopy = JSON.parse(JSON.stringify(prev || []));
-            if (createContainerFolder) {
-              if (overwrite) {
+            if (finalCreateContainerFolder) {
+              console.log('🔍 DEBUG: Creando contenedor en raíz');
+              if (finalOverwrite) {
+                console.log('🔍 DEBUG: Con overwrite');
                 return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
               } else {
+                console.log('🔍 DEBUG: Sin overwrite');
                 nodesCopy.push(containerize(nodesToInsert));
                 return nodesCopy;
               }
             }
-            if (overwrite) {
+            if (finalOverwrite) {
+              console.log('🔍 DEBUG: Insertando directo en raíz con overwrite');
               return removeConflictsAndAdd(nodesCopy, nodesToInsert);
             } else {
+              console.log('🔍 DEBUG: Insertando directo en raíz sin overwrite');
               nodesCopy.push(...nodesToInsert);
               return nodesCopy;
             }
@@ -457,28 +497,28 @@ const App = () => {
           const targetNode = findNodeByKey(nodesCopy, baseTargetKey);
           if (!targetNode || !targetNode.droppable) {
             // Fallback a raíz si la carpeta no existe o no es droppable
-            if (createContainerFolder) {
-              if (overwrite) {
+            if (finalCreateContainerFolder) {
+              if (finalOverwrite) {
                 return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
               }
               nodesCopy.push(containerize(nodesToInsert));
               return nodesCopy;
             }
-            if (overwrite) return removeConflictsAndAdd(nodesCopy, nodesToInsert);
+            if (finalOverwrite) return removeConflictsAndAdd(nodesCopy, nodesToInsert);
             nodesCopy.push(...nodesToInsert);
             return nodesCopy;
           }
           // Inserción dentro de la carpeta seleccionada
           const currentChildren = Array.isArray(targetNode.children) ? targetNode.children : [];
-          if (createContainerFolder) {
+          if (finalCreateContainerFolder) {
             const newChild = containerize(nodesToInsert);
-            if (overwrite) {
+            if (finalOverwrite) {
               targetNode.children = removeConflictsAndAdd(currentChildren, [newChild]);
             } else {
               targetNode.children = [...currentChildren, newChild];
             }
           } else {
-            if (overwrite) {
+            if (finalOverwrite) {
               targetNode.children = removeConflictsAndAdd(currentChildren, nodesToInsert);
             } else {
               targetNode.children = [...currentChildren, ...nodesToInsert];
@@ -524,34 +564,25 @@ const App = () => {
         return;
       }
 
-      // Para lista plana, insertar en target según configuración. Si no se usa contenedor, crearemos una carpeta por defecto para agrupar.
-      if (createContainerFolder) {
-        insertIntoTarget(importedConnections);
-      } else {
-        // Crear automáticamente una subcarpeta por defecto para agrupar conexiones importadas cuando no se especifica contenedor
-        const timestamp = Date.now();
-        const defaultFolder = [{
-          key: `imported_folder_${timestamp}`,
-          label: `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`,
-          droppable: true,
-          children: importedConnections,
-          uid: `imported_folder_${timestamp}`,
-          createdAt: new Date().toISOString(),
-          isUserCreated: true,
-          imported: true,
-          importedFrom: 'mRemoteNG'
-        }];
-        insertIntoTarget(defaultFolder);
-      }
+      // Para lista plana, insertar directamente en target según configuración
+      insertIntoTarget(importedConnections);
       toast.current?.show({
         severity: 'success',
         summary: 'Importación exitosa',
         detail: `Se importaron ${importedConnections.length} conexiones`,
         life: 5000
       });
+      
+      console.log('✅ handleImportComplete COMPLETADO EXITOSAMENTE');
 
     } catch (error) {
-      console.error('Error al procesar importación:', error);
+      console.error('❌ Error al procesar importación:', error);
+      console.error('❌ Stack trace:', error.stack);
+      console.error('❌ Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       toast.current?.show({
         severity: 'error',
         summary: 'Error de importación',
@@ -560,6 +591,8 @@ const App = () => {
       });
     }
   };
+  
+  console.log('🔍 DEBUG App.js - handleImportComplete definida:', typeof handleImportComplete);
   
   // Usar el hook de gestión de pestañas
   const {
@@ -1556,7 +1589,19 @@ const App = () => {
       <ImportDialog
         visible={showImportDialog}
         onHide={() => setShowImportDialog(false)}
-        onImportComplete={handleImportComplete}
+        onImportComplete={async (result) => {
+          console.log('🔍 DEBUG App.js - WRAPPER EJECUTÁNDOSE');
+          console.log('🔍 DEBUG App.js - handleImportComplete recibido:', typeof handleImportComplete);
+          console.log('🔍 DEBUG App.js - result recibido:', result);
+          try {
+            const res = await handleImportComplete(result);
+            console.log('🔍 DEBUG App.js - handleImportComplete completado');
+            return res;
+          } catch (error) {
+            console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);
+            throw error;
+          }
+        }}
         showToast={(message) => toast.current?.show(message)}
         presetOptions={importPreset}
         targetFolderOptions={(() => {

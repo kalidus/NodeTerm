@@ -43,6 +43,10 @@ const ImportDialog = ({
   const folderOptionsWithRoot = [{ label: 'Raíz', value: ROOT_VALUE }, ...((targetFolderOptions || []))];
   const [targetFolderKey, setTargetFolderKey] = useState(defaultTargetFolderKey || ROOT_VALUE);
   const [linkedTargetFolderKey, setLinkedTargetFolderKey] = useState(defaultTargetFolderKey || ROOT_VALUE);
+  // Opciones específicas para modo vinculado
+  const [linkedPlaceInFolder, setLinkedPlaceInFolder] = useState(false);
+  const [linkedOverwrite, setLinkedOverwrite] = useState(false);
+  const [linkedContainerFolderName, setLinkedContainerFolderName] = useState(`mRemoteNG linked - ${new Date().toLocaleDateString()}`);
   const getFolderLabel = (key) => {
     const opt = (folderOptionsWithRoot || []).find(o => o.value === key);
     return opt ? opt.label : 'Raíz';
@@ -164,6 +168,9 @@ const ImportDialog = ({
         if (typeof saved.linkedPath === 'string') setLinkedPath(saved.linkedPath);
         if (typeof saved.targetFolderKey === 'string') setTargetFolderKey(saved.targetFolderKey);
         if (typeof saved.linkedTargetFolderKey === 'string') setLinkedTargetFolderKey(saved.linkedTargetFolderKey);
+        if (typeof saved.linkedPlaceInFolder === 'boolean') setLinkedPlaceInFolder(saved.linkedPlaceInFolder);
+        if (typeof saved.linkedOverwrite === 'boolean') setLinkedOverwrite(saved.linkedOverwrite);
+        if (typeof saved.linkedContainerFolderName === 'string') setLinkedContainerFolderName(saved.linkedContainerFolderName);
       }
       if (presetOptions) {
         if (typeof presetOptions.placeInFolder === 'boolean') setPlaceInFolder(presetOptions.placeInFolder);
@@ -183,10 +190,13 @@ const ImportDialog = ({
       pollInterval,
       linkedPath,
       targetFolderKey,
-      linkedTargetFolderKey
+      linkedTargetFolderKey,
+      linkedPlaceInFolder,
+      linkedOverwrite,
+      linkedContainerFolderName
     };
     try { localStorage.setItem('IMPORT_DIALOG_OPTS', JSON.stringify(toSave)); } catch {}
-  }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey]);
+  }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey, linkedPlaceInFolder, linkedOverwrite, linkedContainerFolderName]);
 
   const processImport = async () => {
     let fileToImport = selectedFile;
@@ -223,21 +233,35 @@ const ImportDialog = ({
 
       if (onImportComplete) {
         console.log('📞 Llamando a onImportComplete...');
-        await onImportComplete({
-          ...result,
-          createContainerFolder: !!placeInFolder,
-          containerFolderName: containerFolderName,
-          overwrite: !!overwrite,
-          linkFile: !!linkFile,
-          pollInterval: Number(pollInterval) || 30000,
-          linkedFileName: linkedPath ? linkedPath.split('\\').pop() : (fileToImport?.name || null),
-          linkedFilePath: linkedPath || null,
-          linkedFileSize: fileToImport?.size || null,
-          linkedFileHash: result?.metadata?.contentHash || null,
-          targetBaseFolderKey: targetFolderKey || ROOT_VALUE,
-          linkedTargetFolderKey: linkedTargetFolderKey || ROOT_VALUE
-        });
-        console.log('✅ onImportComplete ejecutado');
+        console.log('🔍 DEBUG ImportDialog - onImportComplete es:', typeof onImportComplete);
+        console.log('🔍 DEBUG ImportDialog - onImportComplete función:', onImportComplete.toString().substring(0, 100));
+        try {
+          await onImportComplete({
+            ...result,
+            createContainerFolder: !!placeInFolder,
+            containerFolderName: containerFolderName,
+            overwrite: !!overwrite,
+            linkFile: !!linkFile,
+            pollInterval: Number(pollInterval) || 30000,
+            linkedFileName: linkedPath ? linkedPath.split('\\').pop() : (fileToImport?.name || null),
+            linkedFilePath: linkedPath || null,
+            linkedFileSize: fileToImport?.size || null,
+            linkedFileHash: result?.metadata?.contentHash || null,
+            targetBaseFolderKey: targetFolderKey || ROOT_VALUE,
+            linkedTargetFolderKey: linkedTargetFolderKey || ROOT_VALUE,
+            // Opciones específicas para modo vinculado
+            linkedCreateContainerFolder: !!linkedPlaceInFolder,
+            linkedContainerFolderName: linkedContainerFolderName,
+            linkedOverwrite: !!linkedOverwrite
+          });
+          console.log('✅ onImportComplete ejecutado');
+          console.log('🔍 DEBUG ImportDialog - Después de onImportComplete');
+          console.log('🔍 DEBUG ImportDialog - onImportComplete retornó:', typeof result);
+        } catch (error) {
+          console.error('❌ Error en onImportComplete:', error);
+          console.error('❌ Stack trace:', error.stack);
+          throw error; // Re-lanzar el error para que se maneje arriba
+        }
       }
 
       setImportProgress(100);
@@ -594,6 +618,63 @@ const ImportDialog = ({
                         />
                         <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
                           Actualizando en: {getFolderLabel(linkedTargetFolderKey)}
+                        </div>
+                      </div>
+
+                      {/* Opciones específicas para modo vinculado */}
+                      <div className="mb-3" style={{ 
+                        background: 'var(--surface-ground)', 
+                        border: '1px solid var(--surface-border)', 
+                        borderRadius: '6px', 
+                        padding: '12px'
+                      }}>
+                        <div className="mb-3">
+                          <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              id="linkedPlaceInFolder"
+                              checked={linkedPlaceInFolder}
+                              onChange={(e) => setLinkedPlaceInFolder(e.target.checked)}
+                              disabled={importing}
+                            />
+                            <label htmlFor="linkedPlaceInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                              Crear subcarpeta contenedora
+                            </label>
+                          </div>
+                          {linkedPlaceInFolder && (
+                            <div style={{ marginLeft: '26px' }}>
+                              <div className="mb-2">
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                                  Nombre de la subcarpeta:
+                                </label>
+                                <InputText
+                                  value={linkedContainerFolderName}
+                                  onChange={(e) => setLinkedContainerFolderName(e.target.value)}
+                                  placeholder="Nombre de la carpeta"
+                                  disabled={importing}
+                                  style={{ width: '100%', maxWidth: '300px', fontSize: '13px' }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mb-2">
+                          <div className="flex align-items-center" style={{ gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              id="linkedOverwrite"
+                              checked={linkedOverwrite}
+                              onChange={(e) => setLinkedOverwrite(e.target.checked)}
+                              disabled={importing}
+                            />
+                            <label htmlFor="linkedOverwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                              Reemplazar duplicados
+                            </label>
+                          </div>
+                          <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                            {linkedOverwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo vinculado.' : 'Permite duplicados sin reemplazar'}
+                          </div>
                         </div>
                       </div>
 

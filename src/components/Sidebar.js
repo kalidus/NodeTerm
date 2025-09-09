@@ -171,7 +171,9 @@ const Sidebar = React.memo(({
 
   // Función para manejar la importación completa (estructura + conexiones) con deduplicación local
   const handleImportComplete = async (importResult) => {
+    console.log('🚀 Sidebar handleImportComplete INICIANDO...');
     try {
+      console.log('🔍 DEBUG Sidebar handleImportComplete - importResult completo:', importResult);
       if (!importResult) {
         showToast && showToast({
           severity: 'warn',
@@ -182,226 +184,183 @@ const Sidebar = React.memo(({
         return;
       }
 
-      // Helpers de deduplicación
-      // Normalización para campos exactos (hosts/puertos/usuarios)
-      const normalizeExact = (v) => (v || '').toString().trim().toLowerCase();
-      // Normalización robusta para etiquetas de carpetas (ignora acentos, múltiples espacios y signos)
+      // Helper para eliminar duplicados cuando overwrite=true
       const normalizeLabel = (v) => {
         const s = (v || '').toString();
         return s
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
           .toLowerCase()
-          .replace(/[^a-z0-9]+/g, ' ') // cualquier separador lo tratamos como espacio
-          .replace(/\s+/g, ' ') // colapsar espacios
+          .replace(/[^a-z0-9]+/g, ' ')
+          .replace(/\s+/g, ' ')
           .trim();
       };
-      const makeConnKey = (node) => {
-        if (!node || !node.data) return null;
-        if (node.data.type === 'ssh') {
-          return `ssh|${normalizeExact(node.data.host)}|${normalizeExact(node.data.port)}|${normalizeExact(node.data.user)}`;
+      
+      const removeConflictsAndAdd = (existingNodes, incomingNodes) => {
+        if (!Array.isArray(existingNodes) || !Array.isArray(incomingNodes)) {
+          return [...(existingNodes || []), ...(incomingNodes || [])];
         }
-        if (node.data.type === 'rdp') {
-          return `rdp|${normalizeExact(node.data.server)}|${normalizeExact(node.data.port)}|${normalizeExact(node.data.username)}`;
-        }
-        return null;
-      };
-      // Considerar carpeta si es droppable o tiene hijos (mayor tolerancia)
-      const isFolder = (n) => !!(n && (n.droppable === true || Array.isArray(n.children)) && !(n.data && (n.data.type === 'ssh' || n.data.type === 'rdp')));
-      const isConnection = (n) => n && n.data && (n.data.type === 'ssh' || n.data.type === 'rdp');
-
-      // Fusionar arrays de hijos en destinoFolder: añade solo no duplicados y fusiona carpetas por nombre
-      const mergeChildren = (destChildren, incomingChildren) => {
-        const result = Array.isArray(destChildren) ? [...destChildren] : [];
-
-        // Índices para búsqueda rápida
-        const folderByName = new Map();
-        const connKeys = new Set();
-
-        for (const child of result) {
-          if (isFolder(child)) {
-            folderByName.set(normalizeLabel(child.label), child);
-          } else if (isConnection(child)) {
-            const key = makeConnKey(child);
-            if (key) connKeys.add(key);
+        
+        // Crear un Set con los nombres normalizados de los nodos entrantes
+        const incomingLabels = new Set();
+        incomingNodes.forEach(node => {
+          if (node && node.label) {
+            incomingLabels.add(normalizeLabel(node.label));
           }
+        });
+        
+        // Filtrar los nodos existentes, eliminando los que tienen conflicto
+        const filteredExisting = existingNodes.filter(node => {
+          if (!node || !node.label) return true;
+          return !incomingLabels.has(normalizeLabel(node.label));
+        });
+        
+        // Retornar existentes filtrados + nuevos (los nuevos tienen prioridad)
+        return [...filteredExisting, ...incomingNodes];
+      };
+
+      // Carpeta destino: raíz por defecto o una seleccionada en el diálogo
+      const ROOT_VALUE = 'ROOT';
+      const baseTargetKey = importResult?.linkFile
+        ? (importResult?.linkedTargetFolderKey || ROOT_VALUE)
+        : (importResult?.targetBaseFolderKey || ROOT_VALUE);
+
+      // Opciones específicas según el modo (manual vs vinculado)
+      const isLinkedMode = !!importResult?.linkFile;
+      const finalCreateContainerFolder = isLinkedMode 
+        ? (importResult?.linkedCreateContainerFolder || false)
+        : (importResult?.createContainerFolder || false);
+      const finalContainerLabel = isLinkedMode
+        ? (importResult?.linkedContainerFolderName || `mRemoteNG linked - ${new Date().toLocaleDateString()}`)
+        : (importResult?.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`);
+      const finalOverwrite = isLinkedMode
+        ? (importResult?.linkedOverwrite || false)
+        : (importResult?.overwrite || false);
+
+      console.log('🔍 DEBUG Sidebar handleImportComplete:', {
+        isLinkedMode,
+        baseTargetKey,
+        finalCreateContainerFolder,
+        finalContainerLabel,
+        finalOverwrite,
+        importResult: {
+          linkFile: importResult?.linkFile,
+          createContainerFolder: importResult?.createContainerFolder,
+          linkedCreateContainerFolder: importResult?.linkedCreateContainerFolder,
+          overwrite: importResult?.overwrite,
+          linkedOverwrite: importResult?.linkedOverwrite
+        }
+      });
+
+      const insertIntoTarget = (nodesToInsert) => {
+        console.log('🔍 DEBUG Sidebar insertIntoTarget:', {
+          baseTargetKey,
+          finalCreateContainerFolder,
+          finalOverwrite,
+          finalContainerLabel,
+          nodesToInsertLength: nodesToInsert?.length
+        });
+
+        // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
+        const containerize = (children) => ({
+          key: `import_container_${Date.now()}`,
+          uid: `import_container_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
+          label: finalContainerLabel,
+          droppable: true,
+          children: children,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          imported: true,
+          importedFrom: 'mRemoteNG'
+        });
+
+        if (baseTargetKey === ROOT_VALUE) {
+          console.log('🔍 DEBUG Sidebar: Insertando en raíz');
+          setNodes(prev => {
+            const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+            if (finalCreateContainerFolder) {
+              console.log('🔍 DEBUG Sidebar: Creando contenedor en raíz');
+              if (finalOverwrite) {
+                console.log('🔍 DEBUG Sidebar: Con overwrite');
+                return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
+              } else {
+                console.log('🔍 DEBUG Sidebar: Sin overwrite');
+                nodesCopy.push(containerize(nodesToInsert));
+                return nodesCopy;
+              }
+            }
+            if (finalOverwrite) {
+              console.log('🔍 DEBUG Sidebar: Insertando directo en raíz con overwrite');
+              return removeConflictsAndAdd(nodesCopy, nodesToInsert);
+            } else {
+              console.log('🔍 DEBUG Sidebar: Insertando directo en raíz sin overwrite');
+              nodesCopy.push(...nodesToInsert);
+              return nodesCopy;
+            }
+          });
+          return;
         }
 
-        let addedConnections = 0;
-        let addedFolders = 0;
-
-        const appendUnique = (node) => {
-          if (isFolder(node)) {
-            const existing = folderByName.get(normalizeLabel(node.label));
-            if (existing) {
-              // fusionar recursivamente hijos
-              const mergeResult = mergeChildren(existing.children || [], node.children || []);
-              existing.children = mergeResult.children;
-              addedConnections += mergeResult.addedConnections;
-              addedFolders += mergeResult.addedFolders;
-            } else {
-              // carpeta nueva completa
-              result.push(node);
-              folderByName.set(normalizeLabel(node.label), node);
-              addedFolders += 1;
-              // además, contar elementos añadidos recursivamente dentro para métricas
-              const countInside = (arr) => {
-                let c = 0;
-                for (const it of arr || []) {
-                  if (isConnection(it)) c += 1;
-                  if (isFolder(it)) c += countInside(it.children);
-                }
-                return c;
-              };
-              addedConnections += countInside(node.children || []);
+        setNodes(prev => {
+          const nodesCopy = JSON.parse(JSON.stringify(prev || []));
+          const targetNode = findNodeByKey(nodesCopy, baseTargetKey);
+          if (!targetNode || !targetNode.droppable) {
+            // Fallback a raíz si la carpeta no existe o no es droppable
+            if (finalCreateContainerFolder) {
+              if (finalOverwrite) {
+                return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
+              }
+              nodesCopy.push(containerize(nodesToInsert));
+              return nodesCopy;
             }
-          } else if (isConnection(node)) {
-            const key = makeConnKey(node);
-            if (key && !connKeys.has(key)) {
-              result.push(node);
-              connKeys.add(key);
-              addedConnections += 1;
+            if (finalOverwrite) return removeConflictsAndAdd(nodesCopy, nodesToInsert);
+            nodesCopy.push(...nodesToInsert);
+            return nodesCopy;
+          }
+          // Inserción dentro de la carpeta seleccionada
+          const currentChildren = Array.isArray(targetNode.children) ? targetNode.children : [];
+          if (finalCreateContainerFolder) {
+            const newChild = containerize(nodesToInsert);
+            if (finalOverwrite) {
+              targetNode.children = removeConflictsAndAdd(currentChildren, [newChild]);
+            } else {
+              targetNode.children = [...currentChildren, newChild];
             }
           } else {
-            // otro tipo de nodo: añadir sin dedupe
-            result.push(node);
+            if (finalOverwrite) {
+              targetNode.children = removeConflictsAndAdd(currentChildren, nodesToInsert);
+            } else {
+              targetNode.children = [...currentChildren, ...nodesToInsert];
+            }
           }
-        };
-
-        for (const inc of incomingChildren || []) {
-          appendUnique(inc);
-        }
-
-        return { children: result, addedConnections, addedFolders };
+          return nodesCopy;
+        });
       };
 
-      // Estructura con carpetas
+      let addedFolders = 0;
+      let addedConnections = 0;
+
+      // Si tenemos estructura con carpetas
       if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
-        // Regenerar keys por seguridad
-        const toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
+        console.log('📁 Sidebar: Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
+        let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
           ...n,
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
           uid: n.uid || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`
         }));
+        insertIntoTarget(toAdd);
 
-        const createContainerFolder = !!importResult.createContainerFolder;
-        const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
-        const overwrite = !!importResult.overwrite;
-        const nodesCopy = deepCopy(nodes || []);
-        let addedConnections = 0;
-        let addedFolders = 0;
-        if (createContainerFolder) {
-          if (overwrite) {
-            // buscar contenedor existente por nombre para fusionar, si no, crear y fusionar
-            const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(containerLabel));
-            if (idx !== -1) {
-              const container = nodesCopy[idx];
-              const mergeResult = mergeChildren(container.children || [], toAdd);
-              container.children = mergeResult.children;
-              addedConnections += mergeResult.addedConnections;
-              addedFolders += mergeResult.addedFolders;
-            } else {
-              const containerKey = `import_container_${Date.now()}`;
-              const mergeResult = mergeChildren([], toAdd);
-              nodesCopy.push({
-                key: containerKey,
-                uid: containerKey,
-                label: containerLabel,
-                droppable: true,
-                children: mergeResult.children,
-                createdAt: new Date().toISOString(),
-                isUserCreated: true,
-                imported: true,
-                importedFrom: 'mRemoteNG'
-              });
-              addedConnections += mergeResult.addedConnections;
-              addedFolders += mergeResult.addedFolders;
-            }
-          } else {
-            // no overwrite: crear SIEMPRE una nueva carpeta contenedora y añadir tal cual
-            const containerKey = `import_container_${Date.now()}`;
-            nodesCopy.push({
-              key: containerKey,
-              uid: containerKey,
-              label: containerLabel,
-              droppable: true,
-              children: toAdd,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              imported: true,
-              importedFrom: 'mRemoteNG'
-            });
-            // métricas simples
-            const countInside = (arr) => {
-              let folders = 0, conns = 0;
-              for (const it of arr || []) {
-                if (isFolder(it)) { folders += 1; const r = countInside(it.children); folders += r.folders; conns += r.conns; }
-                else if (isConnection(it)) conns += 1;
-              }
-              return { folders, conns };
-            };
-            const r = countInside(toAdd);
-            addedConnections += r.conns;
-            addedFolders += r.folders;
-          }
-        } else {
-          if (overwrite) {
-            // raíz: fusionar por nombre de carpeta al nivel root
-            const mergeResult = mergeChildren(nodesCopy, toAdd);
-            nodesCopy.length = 0;
-            nodesCopy.push(...mergeResult.children);
-            addedConnections += mergeResult.addedConnections;
-            addedFolders += mergeResult.addedFolders;
-          } else {
-            // raíz sin overwrite: añadir tal cual
-            nodesCopy.push(...toAdd);
-            const countInside = (arr) => {
-              let folders = 0, conns = 0;
-              for (const it of arr || []) {
-                if (isFolder(it)) { folders += 1; const r = countInside(it.children); folders += r.folders; conns += r.conns; }
-                else if (isConnection(it)) conns += 1;
-              }
-              return { folders, conns };
-            };
-            const r = countInside(toAdd);
-            addedConnections += r.conns;
-            addedFolders += r.folders;
-          }
-        }
-
-        setNodes(() => logSetNodes('Sidebar-Import-Structured', nodesCopy));
-
-        // Registrar fuente vinculada si aplica (estructura) - usar id estable por ruta/nombre
-        if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
-          const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
-          const stableId = importResult.linkedFilePath || importResult.linkedFileName;
-          const newSource = {
-            id: stableId,
-            fileName: importResult.linkedFileName || null,
-            filePath: importResult.linkedFilePath || null,
-            fileHash: importResult.linkedFileHash || null,
-            lastCheckedAt: Date.now(),
-            intervalMs: Number(importResult.pollInterval) || 30000,
-            options: {
-              overwrite: !!importResult.overwrite,
-              createContainerFolder: !!importResult.createContainerFolder,
-              containerFolderName: importResult.containerFolderName || null
-            }
-          };
-          const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
-          filtered.push(newSource);
-          localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
-        }
-
+        addedFolders = importResult.structure.folderCount || 0;
+        addedConnections = importResult.structure.connectionCount || 0;
         showToast && showToast({
           severity: 'success',
           summary: 'Importación exitosa',
-          detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas (sin duplicados)`,
+          detail: `Se importaron ${addedConnections} conexiones y ${addedFolders} carpetas`,
           life: 5000
         });
         return;
       }
 
-      // Compatibilidad: lista plana
+      // Lista plana
       const importedConnections = importResult.connections || importResult;
       if (!Array.isArray(importedConnections) || importedConnections.length === 0) {
         showToast && showToast({
@@ -413,84 +372,16 @@ const Sidebar = React.memo(({
         return;
       }
 
-      const createContainerFolder = !!importResult.createContainerFolder;
-      const containerLabel = importResult.containerFolderName || `mRemoteNG imported - ${new Date().toLocaleDateString()}`;
-      const overwrite = !!importResult.overwrite;
-      const nodesCopy = deepCopy(nodes || []);
-      let addedConnections = 0;
-
-      if (createContainerFolder) {
-        // Fusionar dentro del contenedor (crear si no existe por nombre)
-        const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(containerLabel));
-        if (overwrite) {
-          const existingChildren = idx !== -1 ? (nodesCopy[idx].children || []) : [];
-          const mergeResult = mergeChildren(existingChildren, importedConnections);
-          if (idx !== -1) nodesCopy[idx].children = mergeResult.children; else {
-            const containerKey = `import_container_${Date.now()}`;
-            nodesCopy.push({ key: containerKey, uid: containerKey, label: containerLabel, droppable: true, children: mergeResult.children, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
-          }
-          addedConnections += mergeResult.addedConnections;
-        } else {
-          const childrenToAdd = importedConnections;
-          if (idx !== -1) nodesCopy[idx].children = (nodesCopy[idx].children || []).concat(childrenToAdd); else {
-            const containerKey = `import_container_${Date.now()}`;
-            nodesCopy.push({ key: containerKey, uid: containerKey, label: containerLabel, droppable: true, children: childrenToAdd, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
-          }
-          addedConnections += childrenToAdd.length;
-        }
-      } else {
-        // raíz: colocar dentro de carpeta nueva etiquetada, pero fusionando si ya existe carpeta con ese nombre
-        const rootFolderLabel = `Importadas de mRemoteNG (${new Date().toLocaleDateString()})`;
-        const idx = nodesCopy.findIndex(n => isFolder(n) && normalizeLabel(n.label) === normalizeLabel(rootFolderLabel));
-        if (overwrite) {
-          if (idx !== -1) {
-            const mergeResult = mergeChildren(nodesCopy[idx].children || [], importedConnections);
-            nodesCopy[idx].children = mergeResult.children;
-            addedConnections += mergeResult.addedConnections;
-          } else {
-            const importFolderKey = `imported_folder_${Date.now()}`;
-            const mergeResult = mergeChildren([], importedConnections);
-            nodesCopy.push({ key: importFolderKey, label: rootFolderLabel, droppable: true, children: mergeResult.children, uid: importFolderKey, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
-            addedConnections += mergeResult.addedConnections;
-          }
-        } else {
-          // siempre crear nueva carpeta raíz para esta importación
-          const importFolderKey = `imported_folder_${Date.now()}`;
-          nodesCopy.push({ key: importFolderKey, label: rootFolderLabel, droppable: true, children: importedConnections, uid: importFolderKey, createdAt: new Date().toISOString(), isUserCreated: true, imported: true, importedFrom: 'mRemoteNG' });
-          addedConnections += importedConnections.length;
-        }
-      }
-
-      setNodes(() => logSetNodes('Sidebar-Import', nodesCopy));
-
-      // Registrar fuente vinculada si aplica (lista plana) - usar id estable por ruta/nombre
-      if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
-        const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
-        const stableId = importResult.linkedFilePath || importResult.linkedFileName;
-        const newSource = {
-          id: stableId,
-          fileName: importResult.linkedFileName || null,
-          filePath: importResult.linkedFilePath || null,
-          fileHash: importResult.linkedFileHash || null,
-          lastCheckedAt: Date.now(),
-          intervalMs: Number(importResult.pollInterval) || 30000,
-          options: {
-            overwrite: !!importResult.overwrite,
-            createContainerFolder: !!importResult.createContainerFolder,
-            containerFolderName: importResult.containerFolderName || null
-          }
-        };
-        const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
-        filtered.push(newSource);
-        localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
-      }
-
+      // Para lista plana, insertar directamente en target según configuración
+      insertIntoTarget(importedConnections);
       showToast && showToast({
         severity: 'success',
         summary: 'Importación exitosa',
-        detail: `Añadidas ${addedConnections} conexiones (sin duplicados)`,
+        detail: `Se importaron ${importedConnections.length} conexiones`,
         life: 5000
       });
+      
+      console.log('✅ Sidebar handleImportComplete COMPLETADO EXITOSAMENTE');
 
     } catch (error) {
       console.error('Error al procesar importación:', error);
