@@ -481,18 +481,44 @@ const Sidebar = React.memo(({
   // Sondeo de cambios en fuentes vinculadas (renderer-only, eficiente con timestamp)
   useEffect(() => {
     const KEY = 'IMPORT_SOURCES';
-    // Anti-rebote en memoria (no escribe en localStorage para evitar bucles de reprogramación)
+    // Anti-rebote en memoria (no escribe en localStorage en cada tick)
     const notifiedByKey = new Map();
     let timers = [];
-    const schedule = () => {
+    const schedule = async () => {
       // Limpiar timers previos
       timers.forEach(t => clearInterval(t));
       timers = [];
-      const sources = JSON.parse(localStorage.getItem(KEY) || '[]');
-      sources.forEach(snapshotSource => {
+
+      // 1) Reconciliar al inicio: alinear fileHash/lastNotifiedHash con hash del OS para evitar banner falso en arranque
+      let sources = JSON.parse(localStorage.getItem(KEY) || '[]');
+      try {
+        const updated = await Promise.all((sources || []).map(async (s) => {
+          if (s && s.filePath) {
+            try {
+              const h = await window.electron?.import?.getFileHash?.(s.filePath);
+              if (h?.ok && h?.hash) {
+                const osHash = h.hash;
+                if (s.fileHash !== osHash || s.lastNotifiedHash !== osHash || !s.lastCheckedAt) {
+                  return { ...s, fileHash: osHash, lastNotifiedHash: osHash, lastCheckedAt: Date.now() };
+                }
+              }
+            } catch {}
+          }
+          return s;
+        }));
+        // Solo escribir si hay cambios efectivos
+        const before = JSON.stringify(sources);
+        const after = JSON.stringify(updated);
+        if (before !== after) {
+          try { localStorage.setItem(KEY, JSON.stringify(updated)); } catch {}
+          sources = updated;
+        }
+      } catch {}
+
+      // 2) Programar timers usando snapshot actualizado
+      (sources || []).forEach(snapshotSource => {
         const interval = Math.max(5000, Number(snapshotSource.intervalMs) || 30000);
         const timer = setInterval(async () => {
-          // Consultar hash actual si tenemos ruta; si difiere, notificar
           try {
             let hasChange = false;
             // Cargar SIEMPRE la versión fresca de la fuente para usar el hash actualizado
@@ -503,9 +529,7 @@ const Sidebar = React.memo(({
               (snapshotSource.fileName && s.fileName === snapshotSource.fileName)
             );
             if (source?.filePath) {
-              // Recargar fuentes para obtener el hash más actualizado
               const currentStoredHash = source?.fileHash || null;
-              
               const h = await window.electron?.import?.getFileHash?.(source.filePath);
               if (h?.ok && currentStoredHash && h.hash !== currentStoredHash) {
                 // Anti-rebote: notificar solo si es un hash nuevo respecto al último notificado
@@ -516,7 +540,6 @@ const Sidebar = React.memo(({
                   notifiedByKey.set(stableKey, h.hash);
                 }
               }
-              // Si no hay cambio, no escribir en localStorage para evitar bucles
             }
             if (hasChange) {
               const event = new CustomEvent('import-source:poll', { detail: { source, hasChange: true } });

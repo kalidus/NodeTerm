@@ -359,12 +359,18 @@ const App = () => {
     if (importResult.linkFile && (importResult.linkedFilePath || importResult.linkedFileName)) {
       const sources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
       const stableId = importResult.linkedFilePath || importResult.linkedFileName;
+      // Alinear SIEMPRE con hash del OS para que el poller no dispare banner al iniciar
+      let osHash = importResult.linkedFileHash || null;
+      try {
+        const h = await window.electron?.import?.getFileHash?.(importResult.linkedFilePath);
+        if (h?.ok && h?.hash) osHash = h.hash;
+      } catch {}
       const newSource = {
         id: stableId,
         fileName: importResult.linkedFileName || null,
         filePath: importResult.linkedFilePath || null,
-        fileHash: importResult.linkedFileHash || null,
-        lastNotifiedHash: importResult.linkedFileHash || null,
+        fileHash: osHash,
+        lastNotifiedHash: osHash,
         lastCheckedAt: Date.now(),
         intervalMs: Number(importResult.pollInterval) || 30000,
         options: {
