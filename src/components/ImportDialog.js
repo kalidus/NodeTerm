@@ -769,13 +769,8 @@ const ImportDialog = ({
                       </div>
                     )}
 
-                    {/* Importar en Raíz para vinculado */}
-                    <div className="mb-3" style={{ 
-                      background: 'var(--surface-ground)', 
-                      border: '1px solid var(--surface-border)', 
-                      borderRadius: '6px', 
-                      padding: '12px'
-                    }}>
+                    {/* Importar en Raíz para vinculado (estilo compacto como en Opciones de importación) */}
+                    <div className="mb-3">
                       <div className="flex align-items-center" style={{ gap: 8 }}>
                         <input
                           type="checkbox"
@@ -801,13 +796,8 @@ const ImportDialog = ({
                       </div>
                     </div>
 
-                    {/* Opciones específicas para modo vinculado */}
-                    <div className="mb-3" style={{ 
-                      background: 'var(--surface-ground)', 
-                      border: '1px solid var(--surface-border)', 
-                      borderRadius: '6px', 
-                      padding: '12px'
-                    }}>
+                    {/* Opciones específicas para modo vinculado (compactas) */}
+                    <div className="mb-3">
                       <div className="mb-3">
                           <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
                             <input
