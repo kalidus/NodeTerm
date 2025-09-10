@@ -182,10 +182,10 @@ const ImportDialog = ({
 
   const handleFileRemoveLinked = () => {
     setLinkedPath('');
-    setSelectedFile(null);
     setLinkStatus(null);
     setLastKnownHash(null);
     setChangesDetected(false);
+    try { if (linkFileInputRef.current) linkFileInputRef.current.value = ''; } catch {}
   };
 
   const startPreviewPolling = () => {
@@ -936,10 +936,12 @@ const ImportDialog = ({
                               if (!f) return;
                               const p = f.path || f.name;
                               setLinkedPath(p);
-                              setSelectedFile(f);
-                              const hashRes = await window.electron?.import?.getFileHash?.(p);
-                              if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+                              try {
+                                const hashRes = await window.electron?.import?.getFileHash?.(p);
+                                if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+                              } catch {}
                               startPreviewPolling();
+                              try { e.target.value = ''; } catch {}
                             }}
                             style={{ display: 'none' }}
                           />
