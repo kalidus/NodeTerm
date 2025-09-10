@@ -318,3 +318,30 @@
     align-items: center;
     justify-content: center;
 }
+
+/* --- Layout de dos columnas para ImportDialog (manual) --- */
+.import-dialog .import-two-col-grid {
+  display: grid;
+  grid-template-columns: 2fr 3fr; /* 40/60 */
+  gap: 16px;
+  align-items: start;
+}
+
+.import-dialog .import-actions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--surface-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Responsive: apilar en una columna en anchos pequeños */
+@media (max-width: 900px) {
+  .import-dialog .import-two-col-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .import-dialog .import-actions {
+    justify-content: stretch;
+  }
+}

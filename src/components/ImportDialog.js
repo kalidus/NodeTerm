@@ -431,7 +431,7 @@ const ImportDialog = ({
         }
       >
         <div style={{ padding: '0 16px 16px 16px' }}>
-          {/* Layout de 2 filas con flexbox */}
+          {/* Layout de 2 filas: Card manual arriba y Card vinculada abajo */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             
             {/* Primera fila - Importación manual */}
@@ -455,198 +455,204 @@ const ImportDialog = ({
                     Opciones de importación
                   </h5>
                 </div>
-                
-                {/* 1. Crear carpeta */}
-                <div className="mb-3">
-                  <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      id="placeInFolder"
-                      checked={placeInFolder}
-                      onChange={(e) => {
-                        setPlaceInFolder(e.target.checked);
-                        if (e.target.checked) {
-                          setImportInRoot(false); // Desmarcar "Importar en Raíz" cuando se marca "Crear carpeta"
-                        }
-                      }}
-                      disabled={importing}
-                    />
-                    <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                      Crear carpeta
-                    </label>
-                  </div>
-                  {placeInFolder && (
-                    <div style={{ marginLeft: '26px' }}>
-                      <div className="mb-2">
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                          Nombre de la carpeta:
-                        </label>
-                        <InputText
-                          value={containerFolderName}
-                          onChange={(e) => setContainerFolderName(e.target.value)}
-                          placeholder="Nombre de la carpeta"
+                {/* Grid a dos columnas: izquierda (opciones), derecha (archivo) */}
+                <div className="import-two-col-grid">
+                  {/* Columna izquierda: Opciones de importación */}
+                  <div>
+                    {/* 1. Crear carpeta */}
+                    <div className="mb-3">
+                      <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          id="placeInFolder"
+                          checked={placeInFolder}
+                          onChange={(e) => {
+                            setPlaceInFolder(e.target.checked);
+                            if (e.target.checked) {
+                              setImportInRoot(false);
+                            }
+                          }}
                           disabled={importing}
-                          style={{ width: '300px', fontSize: '13px' }}
                         />
+                        <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                          Crear carpeta
+                        </label>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Importar en Raíz */}
-                <div className="mb-3">
-                  <div className="flex align-items-center" style={{ gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      id="importInRoot"
-                      checked={importInRoot}
-                      onChange={(e) => {
-                        setImportInRoot(e.target.checked);
-                        if (e.target.checked) {
-                          setTargetFolderKey('ROOT');
-                          setPlaceInFolder(false); // Desmarcar "Crear carpeta" cuando se importa en raíz
-                        } else {
-                          setTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
-                        }
-                      }}
-                      disabled={importing}
-                    />
-                    <label htmlFor="importInRoot" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                      Importar en Raíz
-                    </label>
-                  </div>
-                  <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                    {importInRoot ? 'Las conexiones se importarán directamente en la raíz de la sidebar' : `Importando en: ${getFolderLabel(targetFolderKey)}`}
-                  </div>
-                </div>
-
-                {/* 3. Reemplazar duplicados */}
-                <div className="mb-3">
-                  <div className="flex align-items-center" style={{ gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      id="overwrite"
-                      checked={overwrite}
-                      onChange={(e) => setOverwrite(e.target.checked)}
-                      disabled={importing}
-                    />
-                    <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                      Reemplazar duplicados
-                    </label>
-                  </div>
-                  <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                    {overwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo importado.' : 'Permite duplicados sin reemplazar'}
-                  </div>
-                </div>
-
-                {/* Selector de archivo rediseñado */}
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                  <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
-                    <i className="pi pi-file" style={{ fontSize: '16px', color: 'var(--text-color)' }}></i>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)' }}>
-                      Archivo XML
-                    </span>
-                  </div>
-                  
-                  {!selectedFile ? (
-                    <div 
-                      className={`border-2 border-dashed rounded-lg text-center transition-all duration-200 cursor-pointer ${
-                        isDragOver 
-                          ? 'border-blue-400 bg-blue-50' 
-                          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                      }`}
-                      style={{ padding: '20px' }}
-                      onDrop={handleDrop}
-                      onDragOver={handleDragOver}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onClick={handleChooseFile}
-                    >
-                      <i className="pi pi-cloud-upload text-2xl mb-2" style={{ color: 'var(--text-color-secondary)' }}></i>
-                      <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '4px' }}>
-                        Arrastra tu archivo XML aquí
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                        o haz clic para seleccionar
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ 
-                      background: 'var(--green-50)', 
-                      border: '1px solid var(--green-200)', 
-                      borderRadius: '8px', 
-                      padding: '16px'
-                    }}>
-                      <div className="flex align-items-center justify-content-between">
-                        <div className="flex align-items-center" style={{ gap: 12 }}>
-                          <div style={{ 
-                            background: 'var(--green-500)', 
-                            borderRadius: '50%', 
-                            width: '40px', 
-                            height: '40px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center' 
-                          }}>
-                            <i className="pi pi-file" style={{ color: 'white', fontSize: '16px' }}></i>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '2px' }}>
-                              {selectedFile.name}
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                              {(selectedFile.size / 1024).toFixed(1)} KB • Archivo XML de mRemoteNG
-                            </div>
+                      {placeInFolder && (
+                        <div style={{ marginLeft: '26px' }}>
+                          <div className="mb-2">
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                              Nombre de la carpeta:
+                            </label>
+                            <InputText
+                              value={containerFolderName}
+                              onChange={(e) => setContainerFolderName(e.target.value)}
+                              placeholder="Nombre de la carpeta"
+                              disabled={importing}
+                              style={{ width: '300px', fontSize: '13px' }}
+                            />
                           </div>
                         </div>
-                        <div className="flex align-items-center" style={{ gap: 8 }}>
-                          <Button
-                            icon="pi pi-refresh"
-                            className="p-button-outlined p-button-sm"
-                            onClick={handleChooseFile}
-                            disabled={importing}
-                            tooltip="Cambiar archivo"
-                            tooltipOptions={{ position: 'top' }}
-                          />
-                          <Button
-                            icon="pi pi-times"
-                            className="p-button-outlined p-button-danger p-button-sm"
-                            onClick={handleFileRemove}
-                            disabled={importing}
-                            tooltip="Remover archivo"
-                            tooltipOptions={{ position: 'top' }}
-                          />
+                      )}
+                    </div>
+
+                    {/* 2. Importar en Raíz */}
+                    <div className="mb-3">
+                      <div className="flex align-items-center" style={{ gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          id="importInRoot"
+                          checked={importInRoot}
+                          onChange={(e) => {
+                            setImportInRoot(e.target.checked);
+                            if (e.target.checked) {
+                              setTargetFolderKey('ROOT');
+                              setPlaceInFolder(false);
+                            } else {
+                              setTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
+                            }
+                          }}
+                          disabled={importing}
+                        />
+                        <label htmlFor="importInRoot" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                          Importar en Raíz
+                        </label>
+                      </div>
+                      <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                        {importInRoot ? 'Las conexiones se importarán directamente en la raíz de la sidebar' : `Importando en: ${getFolderLabel(targetFolderKey)}`}
+                      </div>
+                    </div>
+
+                    {/* 3. Reemplazar duplicados */}
+                    <div className="mb-3">
+                      <div className="flex align-items-center" style={{ gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          id="overwrite"
+                          checked={overwrite}
+                          onChange={(e) => setOverwrite(e.target.checked)}
+                          disabled={importing}
+                        />
+                        <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                          Reemplazar duplicados
+                        </label>
+                      </div>
+                      <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                        {overwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo importado.' : 'Permite duplicados sin reemplazar'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna derecha: Área de archivo XML y progreso */}
+                  <div>
+                    <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
+                      <i className="pi pi-file" style={{ fontSize: '16px', color: 'var(--text-color)' }}></i>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)' }}>
+                        Archivo XML
+                      </span>
+                    </div>
+
+                    {!selectedFile ? (
+                      <div 
+                        className={`border-2 border-dashed rounded-lg text-center transition-all duration-200 cursor-pointer ${
+                          isDragOver 
+                            ? 'border-blue-400 bg-blue-50' 
+                            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                        }`}
+                        style={{ padding: '20px' }}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onClick={handleChooseFile}
+                      >
+                        <i className="pi pi-cloud-upload text-2xl mb-2" style={{ color: 'var(--text-color-secondary)' }}></i>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '4px' }}>
+                          Arrastra tu archivo XML aquí
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                          o haz clic para seleccionar
                         </div>
                       </div>
-                    </div>
-                  )}
-                  
-                  {importing && (
-                    <div style={{ marginTop: '12px', padding: '12px', background: 'var(--surface-ground)', borderRadius: '6px' }}>
-                      <div className="flex align-items-center justify-content-between mb-2">
-                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>
-                          Importando conexiones...
-                        </span>
-                        <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>
-                          {importProgress}%
-                        </span>
+                    ) : (
+                      <div style={{ 
+                        background: 'var(--green-50)', 
+                        border: '1px solid var(--green-200)', 
+                        borderRadius: '8px', 
+                        padding: '16px'
+                      }}>
+                        <div className="flex align-items-center justify-content-between">
+                          <div className="flex align-items-center" style={{ gap: 12 }}>
+                            <div style={{ 
+                              background: 'var(--green-500)', 
+                              borderRadius: '50%', 
+                              width: '40px', 
+                              height: '40px', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}>
+                              <i className="pi pi-file" style={{ color: 'white', fontSize: '16px' }}></i>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '2px' }}>
+                                {selectedFile.name}
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                                {(selectedFile.size / 1024).toFixed(1)} KB • Archivo XML de mRemoteNG
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex align-items-center" style={{ gap: 8 }}>
+                            <Button
+                              icon="pi pi-refresh"
+                              className="p-button-outlined p-button-sm"
+                              onClick={handleChooseFile}
+                              disabled={importing}
+                              tooltip="Cambiar archivo"
+                              tooltipOptions={{ position: 'top' }}
+                            />
+                            <Button
+                              icon="pi pi-times"
+                              className="p-button-outlined p-button-danger p-button-sm"
+                              onClick={handleFileRemove}
+                              disabled={importing}
+                              tooltip="Remover archivo"
+                              tooltipOptions={{ position: 'top' }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <ProgressBar value={importProgress} style={{ height: '6px' }} />
-                    </div>
-                  )}
-                </div>
+                    )}
 
-                {/* Botón de importación manual */}
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                  <Button
-                    label={importing ? "Importando..." : "Importar"}
-                    icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
-                    onClick={processManualImport}
-                    disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
-                    className="w-full"
-                    severity="primary"
-                  />
+                    {importing && (
+                      <div style={{ marginTop: '12px', padding: '12px', background: 'var(--surface-ground)', borderRadius: '6px' }}>
+                        <div className="flex align-items-center justify-content-between mb-2">
+                          <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>
+                            Importando conexiones...
+                          </span>
+                          <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+                            {importProgress}%
+                          </span>
+                        </div>
+                        <ProgressBar value={importProgress} style={{ height: '6px' }} />
+                      </div>
+                    )}
+
+                    {/* Botón de importación manual dentro de la columna de Archivo */}
+                    <div style={{ marginTop: '1rem' }}>
+                      <Button
+                        label={importing ? "Importando..." : "Importar"}
+                        icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+                        onClick={processManualImport}
+                        disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
+                        className="w-full"
+                        severity="primary"
+                      />
+                    </div>
+                  </div>
                 </div>
+                
               </div>
             </Card>
 
