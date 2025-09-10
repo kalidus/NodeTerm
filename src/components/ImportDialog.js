@@ -31,6 +31,9 @@ const ImportDialog = ({
   const [linkFile, setLinkFile] = useState(false);
   const [pollInterval, setPollInterval] = useState(30000); // 30s por defecto
   const [linkedPath, setLinkedPath] = useState('');
+  const [linkedFromUrl, setLinkedFromUrl] = useState(false);
+  const [linkedUrl, setLinkedUrl] = useState('');
+  const [linkedDownloadSince, setLinkedDownloadSince] = useState(null);
   const [linkStatus, setLinkStatus] = useState(null); // { text, color }
   const lastCheckRef = useRef(null);
   const previewTimerRef = useRef(null);
@@ -189,15 +192,44 @@ const ImportDialog = ({
   };
 
   const startPreviewPolling = () => {
-    if (!linkFile || !linkedPath) return;
+    if (!linkFile) return;
     if (previewTimerRef.current) clearInterval(previewTimerRef.current);
     const run = async () => {
       try {
-        const info = await window.electron?.import?.getFileInfo?.(linkedPath);
-        if (info?.ok) {
-          lastCheckRef.current = Date.now();
-          const d = new Date(lastCheckRef.current);
-          setLinkStatus({ text: `Vinculado • Última comprobación ${d.toLocaleTimeString()} • ${Math.round(info.size/1024)} KB`, color: '#2e7d32' });
+        if (linkedFromUrl) {
+          if (!linkedUrl) return;
+          const res = await window.electron?.import?.findLatestXmlDownload?.({ sinceMs: Date.now() - Math.max(5000, Number(pollInterval) || 30000) });
+          if (res?.ok && res.latest) {
+            // Actualizar path si es distinto al actual
+            if (!linkedPath || linkedPath !== res.latest.path) {
+              setLinkedPath(res.latest.path);
+            }
+            // Hash y estado
+            const h = await window.electron?.import?.getFileHash?.(res.latest.path);
+            lastCheckRef.current = Date.now();
+            const d = new Date(lastCheckRef.current);
+            if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+              setLinkStatus({ text: `Cambios detectados • ${d.toLocaleTimeString()}`, color: '#e67e22' });
+              setChangesDetected(true);
+            } else {
+              setLinkStatus({ text: `Vinculado • Última comprobación ${d.toLocaleTimeString()} • ${Math.round((res.latest.size||0)/1024)} KB`, color: '#2e7d32' });
+              setChangesDetected(false);
+            }
+          }
+        } else if (linkedPath) {
+          const info = await window.electron?.import?.getFileInfo?.(linkedPath);
+          if (info?.ok) {
+            const h = await window.electron?.import?.getFileHash?.(linkedPath);
+            lastCheckRef.current = Date.now();
+            const d = new Date(lastCheckRef.current);
+            if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+              setLinkStatus({ text: `Cambios detectados • ${d.toLocaleTimeString()}`, color: '#e67e22' });
+              setChangesDetected(true);
+            } else {
+              setLinkStatus({ text: `Vinculado • Última comprobación ${d.toLocaleTimeString()} • ${Math.round(info.size/1024)} KB`, color: '#2e7d32' });
+              setChangesDetected(false);
+            }
+          }
         }
       } catch {}
     };
@@ -351,7 +383,7 @@ const ImportDialog = ({
 
   // Función para importación vinculada (columna derecha)
   const processLinkedImport = async () => {
-    if (!linkedPath) {
+    if (!linkedFromUrl && !linkedPath) {
       showToast && showToast({ severity: 'error', summary: 'Error', detail: 'Debe vincular un archivo XML', life: 3000 });
       return;
     }
@@ -362,18 +394,45 @@ const ImportDialog = ({
     try {
       setImportProgress(10);
 
-      // Leer el archivo vinculado
-      const readRes = await window.electron?.import?.readFile?.(linkedPath);
-      if (!readRes?.ok) {
-        throw new Error('No se pudo leer el archivo vinculado');
-      }
-
       let fileToImport;
-      try {
-        const fileName = linkedPath.split('\\').pop() || 'import.xml';
-        fileToImport = new File([readRes.content], fileName, { type: 'text/xml' });
-      } catch (e) {
-        fileToImport = new Blob([readRes.content], { type: 'text/xml' });
+      if (linkedFromUrl) {
+        // Descargar mediante navegador (sesión del usuario)
+        const startedAt = Date.now();
+        setLinkedDownloadSince(startedAt);
+        await window.electron?.import?.openExternal?.(linkedUrl);
+        // Esperar a que aparezca el XML en Descargas
+        const timeoutMs = 15000; // 15s
+        const pollEvery = 1000;
+        let found = null;
+        const downloadsPathRes = await window.electron?.import?.getDownloadsPath?.();
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+          const res = await window.electron?.import?.findLatestXmlDownload?.({ sinceMs: startedAt - 1000 });
+          if (res?.ok && res.latest) { found = res.latest; break; }
+          await new Promise(r => setTimeout(r, pollEvery));
+        }
+        if (!found) throw new Error('No se detectó la descarga del XML en la carpeta Descargas');
+        setLinkedPath(found.path);
+        const readRes = await window.electron?.import?.readFile?.(found.path);
+        if (!readRes?.ok) throw new Error('No se pudo leer el archivo descargado');
+        try {
+          const fileName = found.fileName || 'import.xml';
+          fileToImport = new File([readRes.content], fileName, { type: 'text/xml' });
+        } catch (e) {
+          fileToImport = new Blob([readRes.content], { type: 'text/xml' });
+        }
+      } else {
+        // Leer archivo vinculado del disco
+        const readRes = await window.electron?.import?.readFile?.(linkedPath);
+        if (!readRes?.ok) {
+          throw new Error('No se pudo leer el archivo vinculado');
+        }
+        try {
+          const fileName = linkedPath.split('\\').pop() || 'import.xml';
+          fileToImport = new File([readRes.content], fileName, { type: 'text/xml' });
+        } catch (e) {
+          fileToImport = new Blob([readRes.content], { type: 'text/xml' });
+        }
       }
 
       const result = await ImportService.importFromMRemoteNG(fileToImport);
@@ -394,7 +453,7 @@ const ImportDialog = ({
             overwrite: !!linkedOverwrite,
             linkFile: true, // Importación vinculada
             pollInterval: Number(pollInterval) || 30000,
-            linkedFileName: linkedPath ? linkedPath.split('\\').pop() : null,
+            linkedFileName: linkedFromUrl ? (linkedPath ? linkedPath.split('\\').pop() : 'descarga.xml') : (linkedPath ? linkedPath.split('\\').pop() : null),
             linkedFilePath: linkedPath || null,
             linkedFileSize: fileToImport?.size || null,
             linkedFileHash: result?.metadata?.contentHash || null,
@@ -859,7 +918,30 @@ const ImportDialog = ({
                           <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
                             Archivo XML
                           </label>
-                          {!linkedPath ? (
+                          <div className="flex align-items-center mb-2" style={{ gap: 10 }}>
+                            <div className="flex align-items-center" style={{ gap: 6 }}>
+                              <input
+                                type="radio"
+                                id="linkedSourceLocal"
+                                name="linkedSource"
+                                checked={!linkedFromUrl}
+                                onChange={() => setLinkedFromUrl(false)}
+                              />
+                              <label htmlFor="linkedSourceLocal" style={{ fontSize: 12, color: 'var(--text-color)' }}>Archivo local</label>
+                            </div>
+                            <div className="flex align-items-center" style={{ gap: 6 }}>
+                              <input
+                                type="radio"
+                                id="linkedSourceUrl"
+                                name="linkedSource"
+                                checked={linkedFromUrl}
+                                onChange={() => setLinkedFromUrl(true)}
+                              />
+                              <label htmlFor="linkedSourceUrl" style={{ fontSize: 12, color: 'var(--text-color)' }}>URL (navegador)</label>
+                            </div>
+                          </div>
+
+                          {!linkedFromUrl && !linkedPath ? (
                             <div
                               className={`${isDragOverLinked ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'} border-2 border-dashed rounded-lg text-center transition-all duration-200 cursor-pointer`}
                               style={{ padding: '20px' }}
@@ -876,6 +958,24 @@ const ImportDialog = ({
                               <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
                                 o haz clic para seleccionar
                               </div>
+                            </div>
+                          ) : linkedFromUrl && !linkedPath ? (
+                            <div className="flex align-items-center" style={{ gap: 8 }}>
+                              <InputText
+                                value={linkedUrl}
+                                onChange={(e) => setLinkedUrl(e.target.value)}
+                                placeholder="https://.../archivo.xml"
+                                style={{ flex: 1, fontSize: '13px' }}
+                              />
+                              <Button
+                                label="Abrir"
+                                icon="pi pi-external-link"
+                                onClick={async () => {
+                                  if (!linkedUrl) return;
+                                  setLinkedDownloadSince(Date.now());
+                                  await window.electron?.import?.openExternal?.(linkedUrl);
+                                }}
+                              />
                             </div>
                           ) : (
                             <div style={{ 
@@ -968,13 +1068,28 @@ const ImportDialog = ({
                                 size="small"
                                 className="p-button-outlined"
                                 onClick={async () => {
-                                  const h = await window.electron?.import?.getFileHash?.(linkedPath);
-                                  if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
-                                    setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
-                                    setChangesDetected(true);
+                                  if (linkedFromUrl) {
+                                    const res = await window.electron?.import?.findLatestXmlDownload?.({ sinceMs: Date.now() - 24*60*60*1000 });
+                                    if (res?.ok && res.latest) {
+                                      setLinkedPath(res.latest.path);
+                                      const h = await window.electron?.import?.getFileHash?.(res.latest.path);
+                                      if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+                                        setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+                                        setChangesDetected(true);
+                                      } else {
+                                        setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
+                                        setChangesDetected(false);
+                                      }
+                                    }
                                   } else {
-                                    setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
-                                    setChangesDetected(false);
+                                    const h = await window.electron?.import?.getFileHash?.(linkedPath);
+                                    if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+                                      setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+                                      setChangesDetected(true);
+                                    } else {
+                                      setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
+                                      setChangesDetected(false);
+                                    }
                                   }
                                 }}
                                 disabled={importing}
