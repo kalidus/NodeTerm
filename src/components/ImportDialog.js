@@ -26,7 +26,8 @@ const ImportDialog = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileUploadRef = useRef(null);
   const toast = useRef(null);
-  const [placeInFolder, setPlaceInFolder] = useState(false);
+  const [placeInFolder, setPlaceInFolder] = useState(true);
+  const [importInRoot, setImportInRoot] = useState(false);
   const [overwrite, setOverwrite] = useState(false);
   const [linkFile, setLinkFile] = useState(false);
   const [pollInterval, setPollInterval] = useState(30000); // 30s por defecto
@@ -44,7 +45,8 @@ const ImportDialog = ({
   const [targetFolderKey, setTargetFolderKey] = useState(defaultTargetFolderKey || ROOT_VALUE);
   const [linkedTargetFolderKey, setLinkedTargetFolderKey] = useState(defaultTargetFolderKey || ROOT_VALUE);
   // Opciones específicas para modo vinculado
-  const [linkedPlaceInFolder, setLinkedPlaceInFolder] = useState(false);
+  const [linkedImportInRoot, setLinkedImportInRoot] = useState(false);
+  const [linkedPlaceInFolder, setLinkedPlaceInFolder] = useState(true);
   const [linkedOverwrite, setLinkedOverwrite] = useState(false);
   const [linkedContainerFolderName, setLinkedContainerFolderName] = useState(`mRemoteNG linked - ${new Date().toLocaleDateString()}`);
   const getFolderLabel = (key) => {
@@ -162,12 +164,14 @@ const ImportDialog = ({
       const saved = JSON.parse(localStorage.getItem('IMPORT_DIALOG_OPTS') || '{}');
       if (saved) {
         if (typeof saved.placeInFolder === 'boolean') setPlaceInFolder(saved.placeInFolder);
+        if (typeof saved.importInRoot === 'boolean') setImportInRoot(saved.importInRoot);
         if (typeof saved.overwrite === 'boolean') setOverwrite(saved.overwrite);
         if (typeof saved.linkFile === 'boolean') setLinkFile(saved.linkFile);
         if (typeof saved.pollInterval === 'number') setPollInterval(saved.pollInterval);
         if (typeof saved.linkedPath === 'string') setLinkedPath(saved.linkedPath);
         if (typeof saved.targetFolderKey === 'string') setTargetFolderKey(saved.targetFolderKey);
         if (typeof saved.linkedTargetFolderKey === 'string') setLinkedTargetFolderKey(saved.linkedTargetFolderKey);
+        if (typeof saved.linkedImportInRoot === 'boolean') setLinkedImportInRoot(saved.linkedImportInRoot);
         if (typeof saved.linkedPlaceInFolder === 'boolean') setLinkedPlaceInFolder(saved.linkedPlaceInFolder);
         if (typeof saved.linkedOverwrite === 'boolean') setLinkedOverwrite(saved.linkedOverwrite);
         if (typeof saved.linkedContainerFolderName === 'string') setLinkedContainerFolderName(saved.linkedContainerFolderName);
@@ -185,18 +189,20 @@ const ImportDialog = ({
   React.useEffect(() => {
     const toSave = {
       placeInFolder,
+      importInRoot,
       overwrite,
       linkFile,
       pollInterval,
       linkedPath,
       targetFolderKey,
       linkedTargetFolderKey,
+      linkedImportInRoot,
       linkedPlaceInFolder,
       linkedOverwrite,
       linkedContainerFolderName
     };
     try { localStorage.setItem('IMPORT_DIALOG_OPTS', JSON.stringify(toSave)); } catch {}
-  }, [placeInFolder, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey, linkedPlaceInFolder, linkedOverwrite, linkedContainerFolderName]);
+  }, [placeInFolder, importInRoot, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey, linkedImportInRoot, linkedPlaceInFolder, linkedOverwrite, linkedContainerFolderName]);
 
   // Función para importación manual (columna izquierda)
   const processManualImport = async () => {
@@ -488,27 +494,35 @@ const ImportDialog = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
             {/* Primera fila - Importación manual */}
-            <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+            <Card style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
               <div className="p-3">
-                <h6 style={{ margin: '0 0 12px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
+                <h6 style={{ margin: '0 0 8px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
                   <i className="pi pi-cog mr-2"></i>Opciones de importación
                 </h6>
                 
-                {/* Carpeta de destino (manual) */}
+                {/* Importar en Raíz */}
                 <div className="mb-3">
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                    Carpeta de destino en la Sidebar
-                  </label>
-                  <Dropdown
-                    value={targetFolderKey}
-                    onChange={(e) => setTargetFolderKey(e.value)}
-                    options={folderOptionsWithRoot}
-                    placeholder="Selecciona carpeta"
-                    style={{ width: '100%', maxWidth: '360px' }}
-                    disabled={importing}
-                  />
-                  <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                    Destino actual: {getFolderLabel(targetFolderKey)}
+                  <div className="flex align-items-center" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="importInRoot"
+                      checked={importInRoot}
+                      onChange={(e) => {
+                        setImportInRoot(e.target.checked);
+                        if (e.target.checked) {
+                          setTargetFolderKey('ROOT');
+                        } else {
+                          setTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
+                        }
+                      }}
+                      disabled={importing}
+                    />
+                    <label htmlFor="importInRoot" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                      Importar en Raíz
+                    </label>
+                  </div>
+                  <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                    {importInRoot ? 'Las conexiones se importarán directamente en la raíz de la sidebar' : `Importando en: ${getFolderLabel(targetFolderKey)}`}
                   </div>
                 </div>
 
@@ -522,7 +536,7 @@ const ImportDialog = ({
                       disabled={importing}
                     />
                     <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                      Crear subcarpeta contenedora
+                      Crear carpeta
                     </label>
                   </div>
                   {placeInFolder && (
@@ -599,7 +613,7 @@ const ImportDialog = ({
             </Card>
 
             {/* Segunda fila - Modo vinculado */}
-            <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
+            <Card style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
               <div className="p-3">
                 <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
                   <input
@@ -696,26 +710,34 @@ const ImportDialog = ({
                       </div>
                     )}
 
-                    {/* Carpeta destino para vinculado */}
+                    {/* Importar en Raíz para vinculado */}
                     <div className="mb-3" style={{ 
                       background: 'var(--surface-ground)', 
                       border: '1px solid var(--surface-border)', 
                       borderRadius: '6px', 
                       padding: '12px'
                     }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
-                        Carpeta destino (modo vinculado)
-                      </label>
-                      <Dropdown
-                        value={linkedTargetFolderKey}
-                        onChange={(e) => setLinkedTargetFolderKey(e.value)}
-                        options={folderOptionsWithRoot}
-                        placeholder="Selecciona carpeta"
-                        style={{ width: '100%', maxWidth: '360px' }}
-                        disabled={importing}
-                      />
-                      <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                        Actualizando en: {getFolderLabel(linkedTargetFolderKey)}
+                      <div className="flex align-items-center" style={{ gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          id="linkedImportInRoot"
+                          checked={linkedImportInRoot}
+                          onChange={(e) => {
+                            setLinkedImportInRoot(e.target.checked);
+                            if (e.target.checked) {
+                              setLinkedTargetFolderKey('ROOT');
+                            } else {
+                              setLinkedTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
+                            }
+                          }}
+                          disabled={importing}
+                        />
+                        <label htmlFor="linkedImportInRoot" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                          Importar en Raíz (modo vinculado)
+                        </label>
+                      </div>
+                      <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                        {linkedImportInRoot ? 'Las actualizaciones se aplicarán directamente en la raíz de la sidebar' : `Actualizando en: ${getFolderLabel(linkedTargetFolderKey)}`}
                       </div>
                     </div>
 
@@ -736,7 +758,7 @@ const ImportDialog = ({
                             disabled={importing}
                           />
                           <label htmlFor="linkedPlaceInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                            Crear subcarpeta contenedora
+                            Crear carpeta
                           </label>
                         </div>
                         {linkedPlaceInFolder && (
