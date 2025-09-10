@@ -369,6 +369,7 @@ const Sidebar = React.memo(({
               fileName: importResult.linkedFileName || null,
               filePath: importResult.linkedFilePath || null,
               fileHash: osHash,
+              lastNotifiedHash: osHash,
               lastCheckedAt: Date.now(),
               intervalMs: Number(importResult.pollInterval) || 30000,
               options: {
@@ -382,7 +383,11 @@ const Sidebar = React.memo(({
                 linkedContainerFolderName: importResult.linkedContainerFolderName || importResult.containerFolderName || null
               }
             };
-            const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+            const filtered = sources.filter(s => !(
+              (stableId && s.id === stableId) ||
+              (newSource.filePath && s.filePath === newSource.filePath) ||
+              (newSource.fileName && s.fileName === newSource.fileName)
+            ));
             filtered.push(newSource);
             localStorage.setItem(KEY, JSON.stringify(filtered));
           } catch {}
@@ -427,6 +432,7 @@ const Sidebar = React.memo(({
             fileName: importResult.linkedFileName || null,
             filePath: importResult.linkedFilePath || null,
             fileHash: osHash,
+            lastNotifiedHash: osHash,
             lastCheckedAt: Date.now(),
             intervalMs: Number(importResult.pollInterval) || 30000,
             options: {
@@ -438,7 +444,11 @@ const Sidebar = React.memo(({
               linkedContainerFolderName: importResult.linkedContainerFolderName || importResult.containerFolderName || null
             }
           };
-          const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+          const filtered = sources.filter(s => !(
+            (stableId && s.id === stableId) ||
+            (newSource.filePath && s.filePath === newSource.filePath) ||
+            (newSource.fileName && s.fileName === newSource.fileName)
+          ));
           filtered.push(newSource);
           localStorage.setItem(KEY, JSON.stringify(filtered));
         } catch {}
@@ -472,21 +482,48 @@ const Sidebar = React.memo(({
       timers.forEach(t => clearInterval(t));
       timers = [];
       const sources = JSON.parse(localStorage.getItem(KEY) || '[]');
-      sources.forEach(source => {
-        const interval = Math.max(5000, Number(source.intervalMs) || 30000);
+      sources.forEach(snapshotSource => {
+        const interval = Math.max(5000, Number(snapshotSource.intervalMs) || 30000);
         const timer = setInterval(async () => {
           // Consultar hash actual si tenemos ruta; si difiere, notificar
           try {
             let hasChange = false;
-            if (source.filePath) {
+            // Cargar SIEMPRE la versión fresca de la fuente para usar el hash actualizado
+            const freshSources = JSON.parse(localStorage.getItem(KEY) || '[]');
+            const source = freshSources.find(s =>
+              (snapshotSource.id && s.id === snapshotSource.id) ||
+              (snapshotSource.filePath && s.filePath === snapshotSource.filePath) ||
+              (snapshotSource.fileName && s.fileName === snapshotSource.fileName)
+            );
+            if (source?.filePath) {
               // Recargar fuentes para obtener el hash más actualizado
-              const freshSources = JSON.parse(localStorage.getItem(KEY) || '[]');
-              const freshSource = freshSources.find(s => s.id === source.id || s.filePath === source.filePath);
-              const currentStoredHash = freshSource?.fileHash || source.fileHash;
+              const currentStoredHash = source?.fileHash || null;
               
               const h = await window.electron?.import?.getFileHash?.(source.filePath);
               if (h?.ok && currentStoredHash && h.hash !== currentStoredHash) {
-                hasChange = true;
+                // Anti-rebote: notificar solo si es un hash nuevo respecto al último notificado
+                if (h.hash !== source?.lastNotifiedHash) {
+                  hasChange = true;
+                  try {
+                    const updated = freshSources.map(s => (
+                      (s.id && source?.id && s.id === source.id) ||
+                      (s.filePath && source?.filePath && s.filePath === source.filePath) ||
+                      (s.fileName && source?.fileName && s.fileName === source.fileName)
+                    ) ? { ...s, lastNotifiedHash: h.hash, lastCheckedAt: Date.now() } : s);
+                    localStorage.setItem(KEY, JSON.stringify(updated));
+                  } catch {}
+                }
+              }
+              // Si no hay cambio, refrescar lastCheckedAt para dar margen y evitar rebotes del banner
+              if (h?.ok && currentStoredHash && h.hash === currentStoredHash) {
+                try {
+                  const updated = freshSources.map(s => (
+                    (s.id && source?.id && s.id === source.id) ||
+                    (s.filePath && source?.filePath && s.filePath === source.filePath) ||
+                    (s.fileName && source?.fileName && s.fileName === source.fileName)
+                  ) ? { ...s, lastCheckedAt: Date.now(), lastNotifiedHash: null } : s);
+                  localStorage.setItem(KEY, JSON.stringify(updated));
+                } catch {}
               }
             }
             if (hasChange) {

@@ -271,6 +271,7 @@ const App = () => {
           fileName: importResult.linkedFileName || null,
           filePath: importResult.linkedFilePath || null,
           fileHash: osHash,
+          lastNotifiedHash: osHash,
           lastCheckedAt: Date.now(),
           intervalMs: Number(importResult.pollInterval) || 30000,
           options: {
@@ -284,7 +285,12 @@ const App = () => {
             linkedContainerFolderName: importResult.linkedContainerFolderName || importResult.containerFolderName || null
           }
         };
-        const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+        // Reemplazar cualquier entrada que coincida por id, ruta o nombre
+        const filtered = sources.filter(s => !(
+          (stableId && s.id === stableId) ||
+          (newSource.filePath && s.filePath === newSource.filePath) ||
+          (newSource.fileName && s.fileName === newSource.fileName)
+        ));
         filtered.push(newSource);
         localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
       }
@@ -356,6 +362,7 @@ const App = () => {
         fileName: importResult.linkedFileName || null,
         filePath: importResult.linkedFilePath || null,
         fileHash: importResult.linkedFileHash || null,
+        lastNotifiedHash: importResult.linkedFileHash || null,
         lastCheckedAt: Date.now(),
         intervalMs: Number(importResult.pollInterval) || 30000,
         options: {
@@ -364,7 +371,11 @@ const App = () => {
           containerFolderName: importResult.containerFolderName || null
         }
       };
-      const filtered = sources.filter(s => (s.id !== stableId) && (s.filePath !== newSource.filePath) && (s.fileName !== newSource.fileName));
+      const filtered = sources.filter(s => !(
+        (stableId && s.id === stableId) ||
+        (newSource.filePath && s.filePath === newSource.filePath) ||
+        (newSource.fileName && s.fileName === newSource.fileName)
+      ));
       filtered.push(newSource);
       localStorage.setItem('IMPORT_SOURCES', JSON.stringify(filtered));
     }
