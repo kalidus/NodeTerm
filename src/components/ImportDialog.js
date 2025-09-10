@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
-import { FileUpload } from 'primereact/fileupload';
 import { Toast } from 'primereact/toast';
 import { ProgressBar } from 'primereact/progressbar';
 import { Divider } from 'primereact/divider';
@@ -24,11 +23,10 @@ const ImportDialog = ({
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const fileUploadRef = useRef(null);
   const toast = useRef(null);
   const [placeInFolder, setPlaceInFolder] = useState(true);
   const [importInRoot, setImportInRoot] = useState(false);
-  const [overwrite, setOverwrite] = useState(false);
+  const [overwrite, setOverwrite] = useState(true);
   const [linkFile, setLinkFile] = useState(false);
   const [pollInterval, setPollInterval] = useState(30000); // 30s por defecto
   const [linkedPath, setLinkedPath] = useState('');
@@ -47,7 +45,7 @@ const ImportDialog = ({
   // Opciones específicas para modo vinculado
   const [linkedImportInRoot, setLinkedImportInRoot] = useState(false);
   const [linkedPlaceInFolder, setLinkedPlaceInFolder] = useState(true);
-  const [linkedOverwrite, setLinkedOverwrite] = useState(false);
+  const [linkedOverwrite, setLinkedOverwrite] = useState(true);
   const [linkedContainerFolderName, setLinkedContainerFolderName] = useState(`mRemoteNG linked - ${new Date().toLocaleDateString()}`);
   const getFolderLabel = (key) => {
     const opt = (folderOptionsWithRoot || []).find(o => o.value === key);
@@ -159,11 +157,25 @@ const ImportDialog = ({
     };
   }, [linkFile, linkedPath, pollInterval]);
 
+  // Asegurar exclusión mutua entre placeInFolder e importInRoot
+  React.useEffect(() => {
+    if (placeInFolder && importInRoot) {
+      setImportInRoot(false);
+    }
+  }, [placeInFolder, importInRoot]);
+
+  // Asegurar exclusión mutua entre linkedPlaceInFolder y linkedImportInRoot
+  React.useEffect(() => {
+    if (linkedPlaceInFolder && linkedImportInRoot) {
+      setLinkedImportInRoot(false);
+    }
+  }, [linkedPlaceInFolder, linkedImportInRoot]);
+
   React.useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('IMPORT_DIALOG_OPTS') || '{}');
       if (saved) {
-        if (typeof saved.placeInFolder === 'boolean') setPlaceInFolder(saved.placeInFolder);
+        if (typeof saved.placeInFolder === 'boolean' && saved.placeInFolder) setPlaceInFolder(saved.placeInFolder);
         if (typeof saved.importInRoot === 'boolean') setImportInRoot(saved.importInRoot);
         if (typeof saved.overwrite === 'boolean') setOverwrite(saved.overwrite);
         if (typeof saved.linkFile === 'boolean') setLinkFile(saved.linkFile);
@@ -172,7 +184,7 @@ const ImportDialog = ({
         if (typeof saved.targetFolderKey === 'string') setTargetFolderKey(saved.targetFolderKey);
         if (typeof saved.linkedTargetFolderKey === 'string') setLinkedTargetFolderKey(saved.linkedTargetFolderKey);
         if (typeof saved.linkedImportInRoot === 'boolean') setLinkedImportInRoot(saved.linkedImportInRoot);
-        if (typeof saved.linkedPlaceInFolder === 'boolean') setLinkedPlaceInFolder(saved.linkedPlaceInFolder);
+        if (typeof saved.linkedPlaceInFolder === 'boolean' && saved.linkedPlaceInFolder) setLinkedPlaceInFolder(saved.linkedPlaceInFolder);
         if (typeof saved.linkedOverwrite === 'boolean') setLinkedOverwrite(saved.linkedOverwrite);
         if (typeof saved.linkedContainerFolderName === 'string') setLinkedContainerFolderName(saved.linkedContainerFolderName);
       }
@@ -393,79 +405,6 @@ const ImportDialog = ({
     );
   };
 
-  const customFileUploadTemplate = () => {
-    return (
-      <div className="p-4">
-        <div 
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 ${
-            isDragOver 
-              ? 'border-blue-400 bg-blue-50' 
-              : 'border-gray-300 hover:border-gray-400'
-          }`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-        >
-          <i className="pi pi-file-excel text-4xl text-gray-400 mb-3"></i>
-          <div className="text-lg font-medium text-gray-700 mb-2">
-            Seleccionar archivo XML de mRemoteNG
-          </div>
-          <div className="text-sm text-gray-500 mb-4">
-            Arrastra el archivo aquí o haz clic para seleccionar
-          </div>
-          <Button
-            label="Elegir archivo"
-            icon="pi pi-folder-open"
-            onClick={handleChooseFile}
-            className="p-button-outlined"
-            disabled={importing}
-          />
-        </div>
-        
-        <FileUpload
-          ref={fileUploadRef}
-          mode="basic"
-          name="mremoteng-file"
-          accept=".xml"
-          maxFileSize={10000000}
-          onSelect={handleFileSelect}
-          onRemove={handleFileRemove}
-          style={{ display: 'none' }}
-          chooseLabel="Seleccionar"
-        />
-        
-        {selectedFile && (
-          <div className="mt-4 p-3 border rounded-lg bg-gray-50">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium">{selectedFile.name}</div>
-                <div className="text-sm text-gray-500">
-                  {(selectedFile.size / 1024).toFixed(1)} KB
-                </div>
-              </div>
-              <Button
-                icon="pi pi-times"
-                className="p-button-rounded p-button-text p-button-danger"
-                onClick={handleFileRemove}
-                disabled={importing}
-                tooltip="Remover archivo"
-              />
-            </div>
-          </div>
-        )}
-        
-        {importing && (
-          <div className="mt-4">
-            <div className="text-sm text-gray-600 mb-2">
-              Importando conexiones... {importProgress}%
-            </div>
-            <ProgressBar value={importProgress} />
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <>
@@ -489,18 +428,70 @@ const ImportDialog = ({
           </div>
         }
       >
-        <div className="p-3">
+        <div style={{ padding: '8px 16px 16px 16px' }}>
           {/* Layout de 2 filas con flexbox */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
             {/* Primera fila - Importación manual */}
             <Card style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
-              <div className="p-3">
-                <h6 style={{ margin: '0 0 8px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
-                  <i className="pi pi-cog mr-2"></i>Opciones de importación
-                </h6>
+              <div style={{ padding: '8px 16px 16px 16px' }}>
+                <div style={{ 
+                  margin: '0 0 16px 0', 
+                  padding: '4px 0 8px 0',
+                  borderBottom: '1px solid var(--surface-border)'
+                }}>
+                  <h5 style={{ 
+                    margin: '0', 
+                    color: 'var(--text-color)', 
+                    fontSize: '16px', 
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <i className="pi pi-cog" style={{ fontSize: '16px', color: 'var(--primary-color)' }}></i>
+                    Opciones de importación
+                  </h5>
+                </div>
                 
-                {/* Importar en Raíz */}
+                {/* 1. Crear carpeta */}
+                <div className="mb-3">
+                  <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="placeInFolder"
+                      checked={placeInFolder}
+                      onChange={(e) => {
+                        setPlaceInFolder(e.target.checked);
+                        if (e.target.checked) {
+                          setImportInRoot(false); // Desmarcar "Importar en Raíz" cuando se marca "Crear carpeta"
+                        }
+                      }}
+                      disabled={importing}
+                    />
+                    <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                      Crear carpeta
+                    </label>
+                  </div>
+                  {placeInFolder && (
+                    <div style={{ marginLeft: '26px' }}>
+                      <div className="mb-2">
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                          Nombre de la carpeta:
+                        </label>
+                        <InputText
+                          value={containerFolderName}
+                          onChange={(e) => setContainerFolderName(e.target.value)}
+                          placeholder="Nombre de la carpeta"
+                          disabled={importing}
+                          style={{ width: '300px', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Importar en Raíz */}
                 <div className="mb-3">
                   <div className="flex align-items-center" style={{ gap: 8 }}>
                     <input
@@ -511,6 +502,7 @@ const ImportDialog = ({
                         setImportInRoot(e.target.checked);
                         if (e.target.checked) {
                           setTargetFolderKey('ROOT');
+                          setPlaceInFolder(false); // Desmarcar "Crear carpeta" cuando se importa en raíz
                         } else {
                           setTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
                         }
@@ -526,38 +518,8 @@ const ImportDialog = ({
                   </div>
                 </div>
 
+                {/* 3. Reemplazar duplicados */}
                 <div className="mb-3">
-                  <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      id="placeInFolder"
-                      checked={placeInFolder}
-                      onChange={(e) => setPlaceInFolder(e.target.checked)}
-                      disabled={importing}
-                    />
-                    <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                      Crear carpeta
-                    </label>
-                  </div>
-                  {placeInFolder && (
-                    <div style={{ marginLeft: '26px' }}>
-                      <div className="mb-2">
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                          Nombre de la subcarpeta:
-                        </label>
-                        <InputText
-                          value={containerFolderName}
-                          onChange={(e) => setContainerFolderName(e.target.value)}
-                          placeholder="Nombre de la carpeta"
-                          disabled={importing}
-                          style={{ width: '300px', fontSize: '13px' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mb-2">
                   <div className="flex align-items-center" style={{ gap: 8 }}>
                     <input
                       type="checkbox"
@@ -575,27 +537,101 @@ const ImportDialog = ({
                   </div>
                 </div>
 
-                {/* Selector de archivo integrado */}
+                {/* Selector de archivo rediseñado */}
                 <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
-                    Archivo XML a importar:
-                  </label>
-                  
-                  {/* Texto informativo integrado */}
-                  <div style={{ 
-                    background: 'var(--blue-50)', 
-                    border: '1px solid var(--blue-200)', 
-                    borderRadius: '6px', 
-                    padding: '12px',
-                    marginBottom: '12px',
-                    fontSize: '13px',
-                    color: 'var(--blue-700)'
-                  }}>
-                    <i className="pi pi-info-circle mr-2" style={{ color: 'var(--blue-600)' }}></i>
-                    Selecciona un archivo XML exportado desde mRemoteNG. Se importarán todas las conexiones SSH y RDP encontradas.
+                  <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
+                    <i className="pi pi-file" style={{ fontSize: '16px', color: 'var(--text-color)' }}></i>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)' }}>
+                      Archivo XML
+                    </span>
                   </div>
                   
-                  {customFileUploadTemplate()}
+                  {!selectedFile ? (
+                    <div 
+                      className={`border-2 border-dashed rounded-lg text-center transition-all duration-200 cursor-pointer ${
+                        isDragOver 
+                          ? 'border-blue-400 bg-blue-50' 
+                          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                      }`}
+                      style={{ padding: '20px' }}
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onClick={handleChooseFile}
+                    >
+                      <i className="pi pi-cloud-upload text-2xl mb-2" style={{ color: 'var(--text-color-secondary)' }}></i>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '4px' }}>
+                        Arrastra tu archivo XML aquí
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                        o haz clic para seleccionar
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ 
+                      background: 'var(--green-50)', 
+                      border: '1px solid var(--green-200)', 
+                      borderRadius: '8px', 
+                      padding: '16px'
+                    }}>
+                      <div className="flex align-items-center justify-content-between">
+                        <div className="flex align-items-center" style={{ gap: 12 }}>
+                          <div style={{ 
+                            background: 'var(--green-500)', 
+                            borderRadius: '50%', 
+                            width: '40px', 
+                            height: '40px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center' 
+                          }}>
+                            <i className="pi pi-file" style={{ color: 'white', fontSize: '16px' }}></i>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '2px' }}>
+                              {selectedFile.name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                              {(selectedFile.size / 1024).toFixed(1)} KB • Archivo XML de mRemoteNG
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex align-items-center" style={{ gap: 8 }}>
+                          <Button
+                            icon="pi pi-refresh"
+                            className="p-button-outlined p-button-sm"
+                            onClick={handleChooseFile}
+                            disabled={importing}
+                            tooltip="Cambiar archivo"
+                            tooltipOptions={{ position: 'top' }}
+                          />
+                          <Button
+                            icon="pi pi-times"
+                            className="p-button-outlined p-button-danger p-button-sm"
+                            onClick={handleFileRemove}
+                            disabled={importing}
+                            tooltip="Remover archivo"
+                            tooltipOptions={{ position: 'top' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {importing && (
+                    <div style={{ marginTop: '12px', padding: '12px', background: 'var(--surface-ground)', borderRadius: '6px' }}>
+                      <div className="flex align-items-center justify-content-between mb-2">
+                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>
+                          Importando conexiones...
+                        </span>
+                        <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+                          {importProgress}%
+                        </span>
+                      </div>
+                      <ProgressBar value={importProgress} style={{ height: '6px' }} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Botón de importación manual */}
@@ -614,18 +650,33 @@ const ImportDialog = ({
 
             {/* Segunda fila - Modo vinculado */}
             <Card style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
-              <div className="p-3">
-                <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    id="linkFile"
-                    checked={linkFile}
-                    onChange={(e) => setLinkFile(e.target.checked)}
-                    disabled={importing}
-                  />
-                  <label htmlFor="linkFile" style={{ fontWeight: '600', color: 'var(--text-color)', fontSize: '14px' }}>
-                    <i className="pi pi-link mr-2"></i>Vincular archivo y detectar cambios
-                  </label>
+              <div style={{ padding: '16px' }}>
+                <div style={{ 
+                  margin: '0 0 16px 0', 
+                  padding: '12px 0 8px 0',
+                  borderBottom: '1px solid var(--surface-border)'
+                }}>
+                  <div className="flex align-items-center" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="linkFile"
+                      checked={linkFile}
+                      onChange={(e) => setLinkFile(e.target.checked)}
+                      disabled={importing}
+                    />
+                    <h5 style={{ 
+                      margin: '0', 
+                      color: 'var(--text-color)', 
+                      fontSize: '16px', 
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <i className="pi pi-link" style={{ fontSize: '16px', color: 'var(--primary-color)' }}></i>
+                      Vincular archivo y detectar cambios
+                    </h5>
+                  </div>
                 </div>
                 
                 {linkFile && (
@@ -726,6 +777,7 @@ const ImportDialog = ({
                             setLinkedImportInRoot(e.target.checked);
                             if (e.target.checked) {
                               setLinkedTargetFolderKey('ROOT');
+                              setLinkedPlaceInFolder(false); // Desmarcar "Crear carpeta" cuando se importa en raíz
                             } else {
                               setLinkedTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
                             }
@@ -749,18 +801,23 @@ const ImportDialog = ({
                       padding: '12px'
                     }}>
                       <div className="mb-3">
-                        <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-                          <input
-                            type="checkbox"
-                            id="linkedPlaceInFolder"
-                            checked={linkedPlaceInFolder}
-                            onChange={(e) => setLinkedPlaceInFolder(e.target.checked)}
-                            disabled={importing}
-                          />
-                          <label htmlFor="linkedPlaceInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                            Crear carpeta
-                          </label>
-                        </div>
+                          <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              id="linkedPlaceInFolder"
+                              checked={linkedPlaceInFolder}
+                              onChange={(e) => {
+                                setLinkedPlaceInFolder(e.target.checked);
+                                if (e.target.checked) {
+                                  setLinkedImportInRoot(false); // Desmarcar "Importar en Raíz" cuando se marca "Crear carpeta"
+                                }
+                              }}
+                              disabled={importing}
+                            />
+                            <label htmlFor="linkedPlaceInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                              Crear carpeta
+                            </label>
+                          </div>
                         {linkedPlaceInFolder && (
                           <div style={{ marginLeft: '26px' }}>
                             <div className="mb-2">
