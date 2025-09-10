@@ -484,12 +484,6 @@ const ImportDialog = ({
         }
       >
         <div className="p-3">
-          <Message 
-            severity="info" 
-            text="Selecciona un archivo XML exportado desde mRemoteNG. Se importarán todas las conexiones SSH y RDP encontradas."
-            className="mb-4"
-          />
-          
           {/* Layout de 2 columnas con flexbox */}
           <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
             {/* Columna izquierda - Opciones de importación */}
@@ -572,6 +566,21 @@ const ImportDialog = ({
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
                       Archivo XML a importar:
                     </label>
+                    
+                    {/* Texto informativo integrado */}
+                    <div style={{ 
+                      background: 'var(--blue-50)', 
+                      border: '1px solid var(--blue-200)', 
+                      borderRadius: '6px', 
+                      padding: '12px',
+                      marginBottom: '12px',
+                      fontSize: '13px',
+                      color: 'var(--blue-700)'
+                    }}>
+                      <i className="pi pi-info-circle mr-2" style={{ color: 'var(--blue-600)' }}></i>
+                      Selecciona un archivo XML exportado desde mRemoteNG. Se importarán todas las conexiones SSH y RDP encontradas.
+                    </div>
+                    
                     {customFileUploadTemplate()}
                   </div>
 
