@@ -382,7 +382,7 @@ const ImportDialog = ({
     return (
       <div className="flex align-items-center">
         <i className="pi pi-upload mr-2" style={{ fontSize: '1.2rem' }}></i>
-        <span className="font-bold">Importar sesiones de mRemoteNG</span>
+        <span className="font-bold">Importar sesiones</span>
       </div>
     );
   };
@@ -484,354 +484,351 @@ const ImportDialog = ({
         }
       >
         <div className="p-3">
-          {/* Layout de 2 columnas con flexbox */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            {/* Columna izquierda - Opciones de importación */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
-                <div className="p-3">
-                  <h6 style={{ margin: '0 0 12px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
-                    <i className="pi pi-cog mr-2"></i>Opciones de importación
-                  </h6>
-                  
-                  {/* Carpeta de destino (manual) */}
-                  <div className="mb-3">
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                      Carpeta de destino en la Sidebar
-                    </label>
-                    <Dropdown
-                      value={targetFolderKey}
-                      onChange={(e) => setTargetFolderKey(e.value)}
-                      options={folderOptionsWithRoot}
-                      placeholder="Selecciona carpeta"
-                      style={{ width: '100%', maxWidth: '360px' }}
-                      disabled={importing}
-                    />
-                    <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                      Destino actual: {getFolderLabel(targetFolderKey)}
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-                      <input
-                        type="checkbox"
-                        id="placeInFolder"
-                        checked={placeInFolder}
-                        onChange={(e) => setPlaceInFolder(e.target.checked)}
-                        disabled={importing}
-                      />
-                      <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                        Crear subcarpeta contenedora
-                      </label>
-                    </div>
-                    {placeInFolder && (
-                      <div style={{ marginLeft: '26px' }}>
-                        <div className="mb-2">
-                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                            Nombre de la subcarpeta:
-                          </label>
-                          <InputText
-                            value={containerFolderName}
-                            onChange={(e) => setContainerFolderName(e.target.value)}
-                            placeholder="Nombre de la carpeta"
-                            disabled={importing}
-                            style={{ width: '300px', fontSize: '13px' }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mb-2">
-                    <div className="flex align-items-center" style={{ gap: 8 }}>
-                      <input
-                        type="checkbox"
-                        id="overwrite"
-                        checked={overwrite}
-                        onChange={(e) => setOverwrite(e.target.checked)}
-                        disabled={importing}
-                      />
-                      <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                        Reemplazar duplicados
-                      </label>
-                    </div>
-                    <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                      {overwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo importado.' : 'Permite duplicados sin reemplazar'}
-                    </div>
-                  </div>
-
-                  {/* Selector de archivo integrado */}
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
-                      Archivo XML a importar:
-                    </label>
-                    
-                    {/* Texto informativo integrado */}
-                    <div style={{ 
-                      background: 'var(--blue-50)', 
-                      border: '1px solid var(--blue-200)', 
-                      borderRadius: '6px', 
-                      padding: '12px',
-                      marginBottom: '12px',
-                      fontSize: '13px',
-                      color: 'var(--blue-700)'
-                    }}>
-                      <i className="pi pi-info-circle mr-2" style={{ color: 'var(--blue-600)' }}></i>
-                      Selecciona un archivo XML exportado desde mRemoteNG. Se importarán todas las conexiones SSH y RDP encontradas.
-                    </div>
-                    
-                    {customFileUploadTemplate()}
-                  </div>
-
-                  {/* Botón de importación manual */}
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                    <Button
-                      label={importing ? "Importando..." : "Importar"}
-                      icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
-                      onClick={processManualImport}
-                      disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
-                      className="w-full"
-                      severity="primary"
-                    />
+          {/* Layout de 2 filas con flexbox */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* Primera fila - Importación manual */}
+            <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
+              <div className="p-3">
+                <h6 style={{ margin: '0 0 12px 0', color: 'var(--text-color)', fontSize: '14px', fontWeight: '600' }}>
+                  <i className="pi pi-cog mr-2"></i>Opciones de importación
+                </h6>
+                
+                {/* Carpeta de destino (manual) */}
+                <div className="mb-3">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                    Carpeta de destino en la Sidebar
+                  </label>
+                  <Dropdown
+                    value={targetFolderKey}
+                    onChange={(e) => setTargetFolderKey(e.value)}
+                    options={folderOptionsWithRoot}
+                    placeholder="Selecciona carpeta"
+                    style={{ width: '100%', maxWidth: '360px' }}
+                    disabled={importing}
+                  />
+                  <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                    Destino actual: {getFolderLabel(targetFolderKey)}
                   </div>
                 </div>
-              </Card>
-            </div>
 
-            {/* Columna derecha - Vincular archivo */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
-                <div className="p-3">
-                  <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
+                <div className="mb-3">
+                  <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
                     <input
                       type="checkbox"
-                      id="linkFile"
-                      checked={linkFile}
-                      onChange={(e) => setLinkFile(e.target.checked)}
+                      id="placeInFolder"
+                      checked={placeInFolder}
+                      onChange={(e) => setPlaceInFolder(e.target.checked)}
                       disabled={importing}
                     />
-                    <label htmlFor="linkFile" style={{ fontWeight: '600', color: 'var(--text-color)', fontSize: '14px' }}>
-                      <i className="pi pi-link mr-2"></i>Vincular archivo y detectar cambios
+                    <label htmlFor="placeInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                      Crear subcarpeta contenedora
                     </label>
                   </div>
-                  
-                  {linkFile && (
+                  {placeInFolder && (
                     <div style={{ marginLeft: '26px' }}>
-                      <div className="mb-3">
+                      <div className="mb-2">
                         <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                          Archivo a vincular:
+                          Nombre de la subcarpeta:
                         </label>
-                        <div className="flex align-items-center" style={{ gap: 8 }}>
-                          <InputText
-                            value={linkedPath || 'No seleccionado'}
-                            readOnly
-                            style={{ flex: 1, fontSize: '13px' }}
-                            disabled={importing}
-                          />
-                          <Button
-                            label={linkedPath ? 'Cambiar' : 'Seleccionar'}
-                            icon="pi pi-folder-open"
-                            size="small"
-                            onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
-                            disabled={importing}
-                          />
-                        </div>
-                        <input
-                          type="file"
-                          accept=".xml"
-                          ref={linkFileInputRef}
-                          onChange={async (e) => {
-                            const f = e.target.files && e.target.files[0];
-                            if (!f) return;
-                            const p = f.path || f.name;
-                            setLinkedPath(p);
-                            setSelectedFile(f);
-                            const hashRes = await window.electron?.import?.getFileHash?.(p);
-                            if (hashRes?.ok) setLastKnownHash(hashRes.hash);
-                            startPreviewPolling();
-                          }}
-                          style={{ display: 'none' }}
-                        />
-                      </div>
-
-                      {linkedPath && (
-                        <div style={{ 
-                          background: 'var(--surface-ground)', 
-                          border: '1px solid var(--surface-border)', 
-                          borderRadius: '6px', 
-                          padding: '12px',
-                          marginBottom: '12px'
-                        }}>
-                          <div className="flex align-items-center justify-content-between mb-2">
-                            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>Estado:</span>
-                            <span style={{ fontSize: '13px', color: linkStatus?.color || 'var(--text-color-secondary)' }}>
-                              {linkStatus?.text || 'Sin comprobaciones aún'}
-                            </span>
-                          </div>
-                          <div className="flex align-items-center" style={{ gap: 8 }}>
-                            <Button
-                              label="Detectar cambios"
-                              icon="pi pi-refresh"
-                              size="small"
-                              className="p-button-outlined"
-                              onClick={async () => {
-                                const h = await window.electron?.import?.getFileHash?.(linkedPath);
-                                if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
-                                  setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
-                                  setChangesDetected(true);
-                                } else {
-                                  setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
-                                  setChangesDetected(false);
-                                }
-                              }}
-                              disabled={importing}
-                            />
-                            <Button
-                              label="Actualizar ahora"
-                              icon="pi pi-upload"
-                              size="small"
-                              onClick={processLinkedImport}
-                              disabled={!changesDetected || importing}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Carpeta destino para vinculado */}
-                      <div className="mb-3" style={{ 
-                        background: 'var(--surface-ground)', 
-                        border: '1px solid var(--surface-border)', 
-                        borderRadius: '6px', 
-                        padding: '12px'
-                      }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
-                          Carpeta destino (modo vinculado)
-                        </label>
-                        <Dropdown
-                          value={linkedTargetFolderKey}
-                          onChange={(e) => setLinkedTargetFolderKey(e.value)}
-                          options={folderOptionsWithRoot}
-                          placeholder="Selecciona carpeta"
-                          style={{ width: '100%', maxWidth: '360px' }}
+                        <InputText
+                          value={containerFolderName}
+                          onChange={(e) => setContainerFolderName(e.target.value)}
+                          placeholder="Nombre de la carpeta"
                           disabled={importing}
-                        />
-                        <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                          Actualizando en: {getFolderLabel(linkedTargetFolderKey)}
-                        </div>
-                      </div>
-
-                      {/* Opciones específicas para modo vinculado */}
-                      <div className="mb-3" style={{ 
-                        background: 'var(--surface-ground)', 
-                        border: '1px solid var(--surface-border)', 
-                        borderRadius: '6px', 
-                        padding: '12px'
-                      }}>
-                        <div className="mb-3">
-                          <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
-                            <input
-                              type="checkbox"
-                              id="linkedPlaceInFolder"
-                              checked={linkedPlaceInFolder}
-                              onChange={(e) => setLinkedPlaceInFolder(e.target.checked)}
-                              disabled={importing}
-                            />
-                            <label htmlFor="linkedPlaceInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                              Crear subcarpeta contenedora
-                            </label>
-                          </div>
-                          {linkedPlaceInFolder && (
-                            <div style={{ marginLeft: '26px' }}>
-                              <div className="mb-2">
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                                  Nombre de la subcarpeta:
-                                </label>
-                                <InputText
-                                  value={linkedContainerFolderName}
-                                  onChange={(e) => setLinkedContainerFolderName(e.target.value)}
-                                  placeholder="Nombre de la carpeta"
-                                  disabled={importing}
-                                  style={{ width: '100%', maxWidth: '300px', fontSize: '13px' }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mb-2">
-                          <div className="flex align-items-center" style={{ gap: 8 }}>
-                            <input
-                              type="checkbox"
-                              id="linkedOverwrite"
-                              checked={linkedOverwrite}
-                              onChange={(e) => setLinkedOverwrite(e.target.checked)}
-                              disabled={importing}
-                            />
-                            <label htmlFor="linkedOverwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                              Reemplazar duplicados
-                            </label>
-                          </div>
-                          <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                            {linkedOverwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo vinculado.' : 'Permite duplicados sin reemplazar'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ 
-                        background: 'var(--surface-ground)', 
-                        border: '1px solid var(--surface-border)', 
-                        borderRadius: '6px', 
-                        padding: '12px'
-                      }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
-                          Frecuencia de sondeo:
-                        </label>
-                        <div className="flex align-items-center" style={{ gap: 12 }}>
-                          <Dropdown
-                            value={String(pollInterval)}
-                            onChange={(e) => setPollInterval(Number(e.value))}
-                            options={[
-                              { label: '10 segundos', value: '10000' },
-                              { label: '30 segundos', value: '30000' },
-                              { label: '1 minuto', value: '60000' },
-                              { label: '2 minutos', value: '120000' },
-                              { label: '5 minutos', value: '300000' }
-                            ]}
-                            style={{ width: '150px' }}
-                            disabled={importing}
-                          />
-                          <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>o</span>
-                          <InputText
-                            type="number"
-                            value={pollInterval}
-                            onChange={(e) => setPollInterval(Number(e.target.value))}
-                            placeholder="ms"
-                            min={5000}
-                            step={1000}
-                            style={{ width: '100px' }}
-                            disabled={importing}
-                          />
-                          <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>ms</span>
-                        </div>
-                      </div>
-
-                      {/* Botón principal para importación vinculada */}
-                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                        <Button
-                          label={importing ? "Importando..." : "Importar archivo vinculado"}
-                          icon={importing ? "pi pi-spin pi-spinner" : "pi pi-link"}
-                          onClick={processLinkedImport}
-                          disabled={!linkedPath || importing || (linkedPlaceInFolder && !(linkedContainerFolderName || '').toString().trim())}
-                          className="w-full"
-                          severity="secondary"
+                          style={{ width: '300px', fontSize: '13px' }}
                         />
                       </div>
                     </div>
                   )}
                 </div>
-              </Card>
-            </div>
+
+                <div className="mb-2">
+                  <div className="flex align-items-center" style={{ gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="overwrite"
+                      checked={overwrite}
+                      onChange={(e) => setOverwrite(e.target.checked)}
+                      disabled={importing}
+                    />
+                    <label htmlFor="overwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                      Reemplazar duplicados
+                    </label>
+                  </div>
+                  <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                    {overwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo importado.' : 'Permite duplicados sin reemplazar'}
+                  </div>
+                </div>
+
+                {/* Selector de archivo integrado */}
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
+                    Archivo XML a importar:
+                  </label>
+                  
+                  {/* Texto informativo integrado */}
+                  <div style={{ 
+                    background: 'var(--blue-50)', 
+                    border: '1px solid var(--blue-200)', 
+                    borderRadius: '6px', 
+                    padding: '12px',
+                    marginBottom: '12px',
+                    fontSize: '13px',
+                    color: 'var(--blue-700)'
+                  }}>
+                    <i className="pi pi-info-circle mr-2" style={{ color: 'var(--blue-600)' }}></i>
+                    Selecciona un archivo XML exportado desde mRemoteNG. Se importarán todas las conexiones SSH y RDP encontradas.
+                  </div>
+                  
+                  {customFileUploadTemplate()}
+                </div>
+
+                {/* Botón de importación manual */}
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                  <Button
+                    label={importing ? "Importando..." : "Importar"}
+                    icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
+                    onClick={processManualImport}
+                    disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
+                    className="w-full"
+                    severity="primary"
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Segunda fila - Modo vinculado */}
+            <Card className="mb-3" style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
+              <div className="p-3">
+                <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    id="linkFile"
+                    checked={linkFile}
+                    onChange={(e) => setLinkFile(e.target.checked)}
+                    disabled={importing}
+                  />
+                  <label htmlFor="linkFile" style={{ fontWeight: '600', color: 'var(--text-color)', fontSize: '14px' }}>
+                    <i className="pi pi-link mr-2"></i>Vincular archivo y detectar cambios
+                  </label>
+                </div>
+                
+                {linkFile && (
+                  <div style={{ marginLeft: '26px' }}>
+                    <div className="mb-3">
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                        Archivo a vincular:
+                      </label>
+                      <div className="flex align-items-center" style={{ gap: 8 }}>
+                        <InputText
+                          value={linkedPath || 'No seleccionado'}
+                          readOnly
+                          style={{ flex: 1, fontSize: '13px' }}
+                          disabled={importing}
+                        />
+                        <Button
+                          label={linkedPath ? 'Cambiar' : 'Seleccionar'}
+                          icon="pi pi-folder-open"
+                          size="small"
+                          onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
+                          disabled={importing}
+                        />
+                      </div>
+                      <input
+                        type="file"
+                        accept=".xml"
+                        ref={linkFileInputRef}
+                        onChange={async (e) => {
+                          const f = e.target.files && e.target.files[0];
+                          if (!f) return;
+                          const p = f.path || f.name;
+                          setLinkedPath(p);
+                          setSelectedFile(f);
+                          const hashRes = await window.electron?.import?.getFileHash?.(p);
+                          if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+                          startPreviewPolling();
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+
+                    {linkedPath && (
+                      <div style={{ 
+                        background: 'var(--surface-ground)', 
+                        border: '1px solid var(--surface-border)', 
+                        borderRadius: '6px', 
+                        padding: '12px',
+                        marginBottom: '12px'
+                      }}>
+                        <div className="flex align-items-center justify-content-between mb-2">
+                          <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>Estado:</span>
+                          <span style={{ fontSize: '13px', color: linkStatus?.color || 'var(--text-color-secondary)' }}>
+                            {linkStatus?.text || 'Sin comprobaciones aún'}
+                          </span>
+                        </div>
+                        <div className="flex align-items-center" style={{ gap: 8 }}>
+                          <Button
+                            label="Detectar cambios"
+                            icon="pi pi-refresh"
+                            size="small"
+                            className="p-button-outlined"
+                            onClick={async () => {
+                              const h = await window.electron?.import?.getFileHash?.(linkedPath);
+                              if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+                                setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+                                setChangesDetected(true);
+                              } else {
+                                setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
+                                setChangesDetected(false);
+                              }
+                            }}
+                            disabled={importing}
+                          />
+                          <Button
+                            label="Actualizar ahora"
+                            icon="pi pi-upload"
+                            size="small"
+                            onClick={processLinkedImport}
+                            disabled={!changesDetected || importing}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Carpeta destino para vinculado */}
+                    <div className="mb-3" style={{ 
+                      background: 'var(--surface-ground)', 
+                      border: '1px solid var(--surface-border)', 
+                      borderRadius: '6px', 
+                      padding: '12px'
+                    }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
+                        Carpeta destino (modo vinculado)
+                      </label>
+                      <Dropdown
+                        value={linkedTargetFolderKey}
+                        onChange={(e) => setLinkedTargetFolderKey(e.value)}
+                        options={folderOptionsWithRoot}
+                        placeholder="Selecciona carpeta"
+                        style={{ width: '100%', maxWidth: '360px' }}
+                        disabled={importing}
+                      />
+                      <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                        Actualizando en: {getFolderLabel(linkedTargetFolderKey)}
+                      </div>
+                    </div>
+
+                    {/* Opciones específicas para modo vinculado */}
+                    <div className="mb-3" style={{ 
+                      background: 'var(--surface-ground)', 
+                      border: '1px solid var(--surface-border)', 
+                      borderRadius: '6px', 
+                      padding: '12px'
+                    }}>
+                      <div className="mb-3">
+                        <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
+                          <input
+                            type="checkbox"
+                            id="linkedPlaceInFolder"
+                            checked={linkedPlaceInFolder}
+                            onChange={(e) => setLinkedPlaceInFolder(e.target.checked)}
+                            disabled={importing}
+                          />
+                          <label htmlFor="linkedPlaceInFolder" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                            Crear subcarpeta contenedora
+                          </label>
+                        </div>
+                        {linkedPlaceInFolder && (
+                          <div style={{ marginLeft: '26px' }}>
+                            <div className="mb-2">
+                              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                                Nombre de la subcarpeta:
+                              </label>
+                              <InputText
+                                value={linkedContainerFolderName}
+                                onChange={(e) => setLinkedContainerFolderName(e.target.value)}
+                                placeholder="Nombre de la carpeta"
+                                disabled={importing}
+                                style={{ width: '100%', maxWidth: '300px', fontSize: '13px' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mb-2">
+                        <div className="flex align-items-center" style={{ gap: 8 }}>
+                          <input
+                            type="checkbox"
+                            id="linkedOverwrite"
+                            checked={linkedOverwrite}
+                            onChange={(e) => setLinkedOverwrite(e.target.checked)}
+                            disabled={importing}
+                          />
+                          <label htmlFor="linkedOverwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                            Reemplazar duplicados
+                          </label>
+                        </div>
+                        <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                          {linkedOverwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo vinculado.' : 'Permite duplicados sin reemplazar'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      background: 'var(--surface-ground)', 
+                      border: '1px solid var(--surface-border)', 
+                      borderRadius: '6px', 
+                      padding: '12px'
+                    }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
+                        Frecuencia de sondeo:
+                      </label>
+                      <div className="flex align-items-center" style={{ gap: 12 }}>
+                        <Dropdown
+                          value={String(pollInterval)}
+                          onChange={(e) => setPollInterval(Number(e.value))}
+                          options={[
+                            { label: '10 segundos', value: '10000' },
+                            { label: '30 segundos', value: '30000' },
+                            { label: '1 minuto', value: '60000' },
+                            { label: '2 minutos', value: '120000' },
+                            { label: '5 minutos', value: '300000' }
+                          ]}
+                          style={{ width: '150px' }}
+                          disabled={importing}
+                        />
+                        <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>o</span>
+                        <InputText
+                          type="number"
+                          value={pollInterval}
+                          onChange={(e) => setPollInterval(Number(e.target.value))}
+                          placeholder="ms"
+                          min={5000}
+                          step={1000}
+                          style={{ width: '100px' }}
+                          disabled={importing}
+                        />
+                        <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>ms</span>
+                      </div>
+                    </div>
+
+                    {/* Botón principal para importación vinculada */}
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
+                      <Button
+                        label={importing ? "Importando..." : "Importar archivo vinculado"}
+                        icon={importing ? "pi pi-spin pi-spinner" : "pi pi-link"}
+                        onClick={processLinkedImport}
+                        disabled={!linkedPath || importing || (linkedPlaceInFolder && !(linkedContainerFolderName || '').toString().trim())}
+                        className="w-full"
+                        severity="secondary"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
           
           <Divider />
