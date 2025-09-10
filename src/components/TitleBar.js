@@ -231,6 +231,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             
             overlay.appendChild(aboutDialog);
             document.body.appendChild(overlay);
+            // Evitar overlays colgados que bloqueen la UI
+            overlay.addEventListener('click', (e) => {
+              if (e.target === overlay) {
+                closeDialog();
+              }
+            });
             
             // Eventos para cerrar el diálogo
             const closeDialog = () => {

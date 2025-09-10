@@ -7,6 +7,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
+import { unblockAllInputs } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
@@ -459,6 +460,10 @@ const Sidebar = React.memo(({
         detail: `Se importaron ${importedConnections.length} conexiones`,
         life: 5000
       });
+      // Desbloquear formularios por si alguna máscara quedó activa
+      setTimeout(() => {
+        try { unblockAllInputs(); } catch {}
+      }, 0);
       
       console.log('✅ Sidebar handleImportComplete COMPLETADO EXITOSAMENTE');
 
@@ -476,6 +481,8 @@ const Sidebar = React.memo(({
   // Sondeo de cambios en fuentes vinculadas (renderer-only, eficiente con timestamp)
   useEffect(() => {
     const KEY = 'IMPORT_SOURCES';
+    // Anti-rebote en memoria (no escribe en localStorage para evitar bucles de reprogramación)
+    const notifiedByKey = new Map();
     let timers = [];
     const schedule = () => {
       // Limpiar timers previos
@@ -502,29 +509,14 @@ const Sidebar = React.memo(({
               const h = await window.electron?.import?.getFileHash?.(source.filePath);
               if (h?.ok && currentStoredHash && h.hash !== currentStoredHash) {
                 // Anti-rebote: notificar solo si es un hash nuevo respecto al último notificado
-                if (h.hash !== source?.lastNotifiedHash) {
+                const stableKey = source?.id || source?.filePath || source?.fileName;
+                const lastNotified = notifiedByKey.get(stableKey);
+                if (h.hash !== lastNotified) {
                   hasChange = true;
-                  try {
-                    const updated = freshSources.map(s => (
-                      (s.id && source?.id && s.id === source.id) ||
-                      (s.filePath && source?.filePath && s.filePath === source.filePath) ||
-                      (s.fileName && source?.fileName && s.fileName === source.fileName)
-                    ) ? { ...s, lastNotifiedHash: h.hash, lastCheckedAt: Date.now() } : s);
-                    localStorage.setItem(KEY, JSON.stringify(updated));
-                  } catch {}
+                  notifiedByKey.set(stableKey, h.hash);
                 }
               }
-              // Si no hay cambio, refrescar lastCheckedAt para dar margen y evitar rebotes del banner
-              if (h?.ok && currentStoredHash && h.hash === currentStoredHash) {
-                try {
-                  const updated = freshSources.map(s => (
-                    (s.id && source?.id && s.id === source.id) ||
-                    (s.filePath && source?.filePath && s.filePath === source.filePath) ||
-                    (s.fileName && source?.fileName && s.fileName === source.fileName)
-                  ) ? { ...s, lastCheckedAt: Date.now(), lastNotifiedHash: null } : s);
-                  localStorage.setItem(KEY, JSON.stringify(updated));
-                } catch {}
-              }
+              // Si no hay cambio, no escribir en localStorage para evitar bucles
             }
             if (hasChange) {
               const event = new CustomEvent('import-source:poll', { detail: { source, hasChange: true } });

@@ -40,11 +40,12 @@ import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import ImportDialog from './ImportDialog';
 import ImportService from '../services/ImportService';
+import { unblockAllInputs } from '../utils/formDebugger';
 
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
-import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
+import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
@@ -296,6 +297,7 @@ const App = () => {
       }
 
       toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas`, life: 5000 });
+      setTimeout(() => { try { unblockAllInputs(); } catch {} }, 0);
       return;
     }
 
@@ -381,6 +383,7 @@ const App = () => {
     }
 
     toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones`, life: 5000 });
+    setTimeout(() => { try { unblockAllInputs(); } catch {} }, 0);
   };
 
   // Función para manejar la importación completa (estructura + conexiones)
