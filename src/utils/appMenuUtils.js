@@ -139,7 +139,13 @@ export const createAppMenu = (onShowImportDialog) => {
           `;
           
           overlay.appendChild(aboutDialog);
+          // Asegurar que overlay no bloquee inputs si queda colgado
           document.body.appendChild(overlay);
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+              closeDialog();
+            }
+          });
           
           // Eventos para cerrar el diálogo
           const closeDialog = () => {
