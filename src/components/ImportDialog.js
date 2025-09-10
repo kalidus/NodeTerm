@@ -688,117 +688,39 @@ const ImportDialog = ({
                 </div>
                 
                 {linkFile && (
-                  <div style={{ marginLeft: '26px' }}>
-                    <div className="mb-3">
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                        Archivo a vincular:
-                      </label>
-                      <div className="flex align-items-center" style={{ gap: 8 }}>
-                        <InputText
-                          value={linkedPath || 'No seleccionado'}
-                          readOnly
-                          style={{ flex: 1, fontSize: '13px' }}
-                          disabled={importing}
-                        />
-                        <Button
-                          label={linkedPath ? 'Cambiar' : 'Seleccionar'}
-                          icon="pi pi-folder-open"
-                          size="small"
-                          onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
-                          disabled={importing}
-                        />
-                      </div>
-                      <input
-                        type="file"
-                        accept=".xml"
-                        ref={linkFileInputRef}
-                        onChange={async (e) => {
-                          const f = e.target.files && e.target.files[0];
-                          if (!f) return;
-                          const p = f.path || f.name;
-                          setLinkedPath(p);
-                          setSelectedFile(f);
-                          const hashRes = await window.electron?.import?.getFileHash?.(p);
-                          if (hashRes?.ok) setLastKnownHash(hashRes.hash);
-                          startPreviewPolling();
-                        }}
-                        style={{ display: 'none' }}
-                      />
-                    </div>
-
-                    {linkedPath && (
-                      <div style={{ 
-                        background: 'var(--surface-ground)', 
-                        border: '1px solid var(--surface-border)', 
-                        borderRadius: '6px', 
-                        padding: '12px',
-                        marginBottom: '12px'
-                      }}>
-                        <div className="flex align-items-center justify-content-between mb-2">
-                          <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>Estado:</span>
-                          <span style={{ fontSize: '13px', color: linkStatus?.color || 'var(--text-color-secondary)' }}>
-                            {linkStatus?.text || 'Sin comprobaciones aún'}
-                          </span>
+                  <div>
+                    <div className="import-two-col-grid">
+                      {/* Columna izquierda: opciones vinculadas */}
+                      <div>
+                        {/* Importar en Raíz para vinculado (estilo compacto) */}
+                        <div className="mb-3">
+                          <div className="flex align-items-center" style={{ gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              id="linkedImportInRoot"
+                              checked={linkedImportInRoot}
+                              onChange={(e) => {
+                                setLinkedImportInRoot(e.target.checked);
+                                if (e.target.checked) {
+                                  setLinkedTargetFolderKey('ROOT');
+                                  setLinkedPlaceInFolder(false);
+                                } else {
+                                  setLinkedTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
+                                }
+                              }}
+                              disabled={importing}
+                            />
+                            <label htmlFor="linkedImportInRoot" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                              Importar en Raíz (modo vinculado)
+                            </label>
+                          </div>
+                          <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                            {linkedImportInRoot ? 'Las actualizaciones se aplicarán directamente en la raíz de la sidebar' : `Actualizando en: ${getFolderLabel(linkedTargetFolderKey)}`}
+                          </div>
                         </div>
-                        <div className="flex align-items-center" style={{ gap: 8 }}>
-                          <Button
-                            label="Detectar cambios"
-                            icon="pi pi-refresh"
-                            size="small"
-                            className="p-button-outlined"
-                            onClick={async () => {
-                              const h = await window.electron?.import?.getFileHash?.(linkedPath);
-                              if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
-                                setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
-                                setChangesDetected(true);
-                              } else {
-                                setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
-                                setChangesDetected(false);
-                              }
-                            }}
-                            disabled={importing}
-                          />
-                          <Button
-                            label="Actualizar ahora"
-                            icon="pi pi-upload"
-                            size="small"
-                            onClick={processLinkedImport}
-                            disabled={!changesDetected || importing}
-                          />
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Importar en Raíz para vinculado (estilo compacto como en Opciones de importación) */}
-                    <div className="mb-3">
-                      <div className="flex align-items-center" style={{ gap: 8 }}>
-                        <input
-                          type="checkbox"
-                          id="linkedImportInRoot"
-                          checked={linkedImportInRoot}
-                          onChange={(e) => {
-                            setLinkedImportInRoot(e.target.checked);
-                            if (e.target.checked) {
-                              setLinkedTargetFolderKey('ROOT');
-                              setLinkedPlaceInFolder(false); // Desmarcar "Crear carpeta" cuando se importa en raíz
-                            } else {
-                              setLinkedTargetFolderKey(folderOptionsWithRoot[1]?.value || 'ROOT');
-                            }
-                          }}
-                          disabled={importing}
-                        />
-                        <label htmlFor="linkedImportInRoot" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                          Importar en Raíz (modo vinculado)
-                        </label>
-                      </div>
-                      <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                        {linkedImportInRoot ? 'Las actualizaciones se aplicarán directamente en la raíz de la sidebar' : `Actualizando en: ${getFolderLabel(linkedTargetFolderKey)}`}
-                      </div>
-                    </div>
-
-                    {/* Opciones específicas para modo vinculado (compactas) */}
-                    <div className="mb-3">
-                      <div className="mb-3">
+                        {/* Crear carpeta (vinculado) */}
+                        <div className="mb-3">
                           <div className="flex align-items-center mb-2" style={{ gap: 8 }}>
                             <input
                               type="checkbox"
@@ -807,7 +729,7 @@ const ImportDialog = ({
                               onChange={(e) => {
                                 setLinkedPlaceInFolder(e.target.checked);
                                 if (e.target.checked) {
-                                  setLinkedImportInRoot(false); // Desmarcar "Importar en Raíz" cuando se marca "Crear carpeta"
+                                  setLinkedImportInRoot(false);
                                 }
                               }}
                               disabled={importing}
@@ -816,91 +738,158 @@ const ImportDialog = ({
                               Crear carpeta
                             </label>
                           </div>
-                        {linkedPlaceInFolder && (
-                          <div style={{ marginLeft: '26px' }}>
-                            <div className="mb-2">
-                              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                                Nombre de la subcarpeta:
-                              </label>
-                              <InputText
-                                value={linkedContainerFolderName}
-                                onChange={(e) => setLinkedContainerFolderName(e.target.value)}
-                                placeholder="Nombre de la carpeta"
+                          {linkedPlaceInFolder && (
+                            <div style={{ marginLeft: '26px' }}>
+                              <div className="mb-2">
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                                  Nombre de la subcarpeta:
+                                </label>
+                                <InputText
+                                  value={linkedContainerFolderName}
+                                  onChange={(e) => setLinkedContainerFolderName(e.target.value)}
+                                  placeholder="Nombre de la carpeta"
+                                  disabled={importing}
+                                  style={{ width: '100%', maxWidth: '300px', fontSize: '13px' }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Reemplazar duplicados (vinculado) */}
+                        <div className="mb-2">
+                          <div className="flex align-items-center" style={{ gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              id="linkedOverwrite"
+                              checked={linkedOverwrite}
+                              onChange={(e) => setLinkedOverwrite(e.target.checked)}
+                              disabled={importing}
+                            />
+                            <label htmlFor="linkedOverwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                              Reemplazar duplicados
+                            </label>
+                          </div>
+                          <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
+                            {linkedOverwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo vinculado.' : 'Permite duplicados sin reemplazar'}
+                          </div>
+                        </div>
+
+                        {/* Frecuencia de sondeo (solo selector, alineado al margen izquierdo) */}
+                        <div className="mb-3">
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                            Frecuencia de sondeo:
+                          </label>
+                          <Dropdown
+                            value={String(pollInterval)}
+                            onChange={(e) => setPollInterval(Number(e.value))}
+                            options={[
+                              { label: '10 segundos', value: '10000' },
+                              { label: '30 segundos', value: '30000' },
+                              { label: '1 minuto', value: '60000' },
+                              { label: '2 minutos', value: '120000' },
+                              { label: '5 minutos', value: '300000' }
+                            ]}
+                            style={{ width: '180px' }}
+                            disabled={importing}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Columna derecha: archivo vinculado y controles */}
+                      <div>
+                        <div className="mb-3">
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
+                            Archivo a vincular:
+                          </label>
+                          <div className="flex align-items-center" style={{ gap: 8 }}>
+                            <InputText
+                              value={linkedPath || 'No seleccionado'}
+                              readOnly
+                              style={{ flex: 1, fontSize: '13px' }}
+                              disabled={importing}
+                            />
+                            <Button
+                              label={linkedPath ? 'Cambiar' : 'Seleccionar'}
+                              icon="pi pi-folder-open"
+                              size="small"
+                              onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
+                              disabled={importing}
+                            />
+                          </div>
+                          <input
+                            type="file"
+                            accept=".xml"
+                            ref={linkFileInputRef}
+                            onChange={async (e) => {
+                              const f = e.target.files && e.target.files[0];
+                              if (!f) return;
+                              const p = f.path || f.name;
+                              setLinkedPath(p);
+                              setSelectedFile(f);
+                              const hashRes = await window.electron?.import?.getFileHash?.(p);
+                              if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+                              startPreviewPolling();
+                            }}
+                            style={{ display: 'none' }}
+                          />
+                        </div>
+
+                        {linkedPath && (
+                          <div style={{ 
+                            background: 'var(--surface-ground)', 
+                            border: '1px solid var(--surface-border)', 
+                            borderRadius: '6px', 
+                            padding: '12px',
+                            marginBottom: '12px'
+                          }}>
+                            <div className="flex align-items-center justify-content-between mb-2">
+                              <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-color)' }}>Estado:</span>
+                              <span style={{ fontSize: '13px', color: linkStatus?.color || 'var(--text-color-secondary)' }}>
+                                {linkStatus?.text || 'Sin comprobaciones aún'}
+                              </span>
+                            </div>
+                            <div className="flex align-items-center" style={{ gap: 8 }}>
+                              <Button
+                                label="Detectar cambios"
+                                icon="pi pi-refresh"
+                                size="small"
+                                className="p-button-outlined"
+                                onClick={async () => {
+                                  const h = await window.electron?.import?.getFileHash?.(linkedPath);
+                                  if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
+                                    setLinkStatus({ text: 'Cambios detectados', color: '#e67e22' });
+                                    setChangesDetected(true);
+                                  } else {
+                                    setLinkStatus({ text: 'Sin cambios', color: '#2e7d32' });
+                                    setChangesDetected(false);
+                                  }
+                                }}
                                 disabled={importing}
-                                style={{ width: '100%', maxWidth: '300px', fontSize: '13px' }}
+                              />
+                              <Button
+                                label="Actualizar ahora"
+                                icon="pi pi-upload"
+                                size="small"
+                                onClick={processLinkedImport}
+                                disabled={!changesDetected || importing}
                               />
                             </div>
                           </div>
                         )}
-                      </div>
 
-                      <div className="mb-2">
-                        <div className="flex align-items-center" style={{ gap: 8 }}>
-                          <input
-                            type="checkbox"
-                            id="linkedOverwrite"
-                            checked={linkedOverwrite}
-                            onChange={(e) => setLinkedOverwrite(e.target.checked)}
-                            disabled={importing}
+                        {/* Botón principal para importación vinculada (sin línea superior) */}
+                        <div style={{ marginTop: '1rem' }}>
+                          <Button
+                            label={importing ? "Importando..." : "Importar archivo vinculado"}
+                            icon={importing ? "pi pi-spin pi-spinner" : "pi pi-link"}
+                            onClick={processLinkedImport}
+                            disabled={!linkedPath || importing || (linkedPlaceInFolder && !(linkedContainerFolderName || '').toString().trim())}
+                            className="w-full"
+                            severity="secondary"
                           />
-                          <label htmlFor="linkedOverwrite" style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                            Reemplazar duplicados
-                          </label>
-                        </div>
-                        <div style={{ marginLeft: '26px', fontSize: '12px', color: 'var(--text-color-secondary)', marginTop: '4px' }}>
-                          {linkedOverwrite ? 'Elimina y reemplaza carpetas/conexiones con el mismo nombre. Prioridad al archivo vinculado.' : 'Permite duplicados sin reemplazar'}
                         </div>
                       </div>
-                    </div>
-
-                    <div style={{ 
-                      background: 'var(--surface-ground)', 
-                      border: '1px solid var(--surface-border)', 
-                      borderRadius: '6px', 
-                      padding: '12px'
-                    }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '8px' }}>
-                        Frecuencia de sondeo:
-                      </label>
-                      <div className="flex align-items-center" style={{ gap: 12 }}>
-                        <Dropdown
-                          value={String(pollInterval)}
-                          onChange={(e) => setPollInterval(Number(e.value))}
-                          options={[
-                            { label: '10 segundos', value: '10000' },
-                            { label: '30 segundos', value: '30000' },
-                            { label: '1 minuto', value: '60000' },
-                            { label: '2 minutos', value: '120000' },
-                            { label: '5 minutos', value: '300000' }
-                          ]}
-                          style={{ width: '150px' }}
-                          disabled={importing}
-                        />
-                        <span style={{ fontSize: '13px', color: 'var(--text-color-secondary)' }}>o</span>
-                        <InputText
-                          type="number"
-                          value={pollInterval}
-                          onChange={(e) => setPollInterval(Number(e.target.value))}
-                          placeholder="ms"
-                          min={5000}
-                          step={1000}
-                          style={{ width: '100px' }}
-                          disabled={importing}
-                        />
-                        <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>ms</span>
-                      </div>
-                    </div>
-
-                    {/* Botón principal para importación vinculada */}
-                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--surface-border)' }}>
-                      <Button
-                        label={importing ? "Importando..." : "Importar archivo vinculado"}
-                        icon={importing ? "pi pi-spin pi-spinner" : "pi pi-link"}
-                        onClick={processLinkedImport}
-                        disabled={!linkedPath || importing || (linkedPlaceInFolder && !(linkedContainerFolderName || '').toString().trim())}
-                        className="w-full"
-                        severity="secondary"
-                      />
                     </div>
                   </div>
                 )}
