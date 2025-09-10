@@ -19,10 +19,11 @@ const ImportDialog = ({
   targetFolderOptions,
   defaultTargetFolderKey
 }) => {
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [manualSelectedFile, setManualSelectedFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDragOverLinked, setIsDragOverLinked] = useState(false);
   const toast = useRef(null);
   const [placeInFolder, setPlaceInFolder] = useState(true);
   const [importInRoot, setImportInRoot] = useState(false);
@@ -64,12 +65,12 @@ const ImportDialog = ({
         });
         return;
       }
-      setSelectedFile(file);
+      setManualSelectedFile(file);
     }
   };
 
   const handleFileRemove = () => {
-    setSelectedFile(null);
+    setManualSelectedFile(null);
   };
 
   const handleChooseFile = () => {
@@ -129,6 +130,62 @@ const ImportDialog = ({
       
       handleFileSelect({ files: [file] });
     }
+  };
+
+  // Handlers para drag & drop en modo vinculado
+  const handleDragOverLinked = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverLinked(true);
+  };
+
+  const handleDragEnterLinked = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverLinked(true);
+  };
+
+  const handleDragLeaveLinked = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOverLinked(false);
+    }
+  };
+
+  const handleDropLinked = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverLinked(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (!file.name.toLowerCase().endsWith('.xml')) {
+        showToast && showToast({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Solo se permiten archivos XML de mRemoteNG',
+          life: 3000
+        });
+        return;
+      }
+      const p = file.path || file.name;
+      setLinkedPath(p);
+      try {
+        const hashRes = await window.electron?.import?.getFileHash?.(p);
+        if (hashRes?.ok) setLastKnownHash(hashRes.hash);
+      } catch {}
+      startPreviewPolling();
+    }
+  };
+
+  const handleFileRemoveLinked = () => {
+    setLinkedPath('');
+    setSelectedFile(null);
+    setLinkStatus(null);
+    setLastKnownHash(null);
+    setChangesDetected(false);
   };
 
   const startPreviewPolling = () => {
@@ -218,7 +275,7 @@ const ImportDialog = ({
 
   // Función para importación manual (columna izquierda)
   const processManualImport = async () => {
-    if (!selectedFile) {
+    if (!manualSelectedFile) {
       showToast && showToast({ severity: 'error', summary: 'Error', detail: 'Debe seleccionar un archivo XML', life: 3000 });
       return;
     }
@@ -229,7 +286,7 @@ const ImportDialog = ({
     try {
       setImportProgress(10);
 
-      const result = await ImportService.importFromMRemoteNG(selectedFile);
+      const result = await ImportService.importFromMRemoteNG(manualSelectedFile);
       console.log('📋 Resultado de ImportService (manual):', result);
       setImportProgress(80);
 
@@ -389,7 +446,7 @@ const ImportDialog = ({
 
 
   const handleClose = () => {
-    setSelectedFile(null);
+    setManualSelectedFile(null);
     setImporting(false);
     setImportProgress(0);
     setIsDragOver(false);
@@ -552,7 +609,7 @@ const ImportDialog = ({
                       </span>
                     </div>
 
-                    {!selectedFile ? (
+                    {!manualSelectedFile ? (
                       <div 
                         className={`border-2 border-dashed rounded-lg text-center transition-all duration-200 cursor-pointer ${
                           isDragOver 
@@ -596,10 +653,10 @@ const ImportDialog = ({
                             </div>
                             <div>
                               <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '2px' }}>
-                                {selectedFile.name}
+                                {manualSelectedFile.name}
                               </div>
                               <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                                {(selectedFile.size / 1024).toFixed(1)} KB • Archivo XML de mRemoteNG
+                                {(manualSelectedFile.size / 1024).toFixed(1)} KB • Archivo XML de mRemoteNG
                               </div>
                             </div>
                           </div>
@@ -645,7 +702,7 @@ const ImportDialog = ({
                         label={importing ? "Importando..." : "Importar"}
                         icon={importing ? "pi pi-spin pi-spinner" : "pi pi-upload"}
                         onClick={processManualImport}
-                        disabled={!selectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
+                        disabled={!manualSelectedFile || importing || (placeInFolder && !(containerFolderName || '').toString().trim())}
                         className="w-full"
                         severity="primary"
                       />
@@ -800,23 +857,76 @@ const ImportDialog = ({
                       <div>
                         <div className="mb-3">
                           <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '6px' }}>
-                            Archivo a vincular:
+                            Archivo XML
                           </label>
-                          <div className="flex align-items-center" style={{ gap: 8 }}>
-                            <InputText
-                              value={linkedPath || 'No seleccionado'}
-                              readOnly
-                              style={{ flex: 1, fontSize: '13px' }}
-                              disabled={importing}
-                            />
-                            <Button
-                              label={linkedPath ? 'Cambiar' : 'Seleccionar'}
-                              icon="pi pi-folder-open"
-                              size="small"
+                          {!linkedPath ? (
+                            <div
+                              className={`${isDragOverLinked ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'} border-2 border-dashed rounded-lg text-center transition-all duration-200 cursor-pointer`}
+                              style={{ padding: '20px' }}
+                              onDrop={handleDropLinked}
+                              onDragOver={handleDragOverLinked}
+                              onDragEnter={handleDragEnterLinked}
+                              onDragLeave={handleDragLeaveLinked}
                               onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
-                              disabled={importing}
-                            />
-                          </div>
+                            >
+                              <i className="pi pi-cloud-upload text-2xl mb-2" style={{ color: 'var(--text-color-secondary)' }}></i>
+                              <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-color)', marginBottom: '4px' }}>
+                                Arrastra tu archivo XML aquí
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                                o haz clic para seleccionar
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ 
+                              background: 'var(--blue-50)', 
+                              border: '1px solid var(--blue-200)', 
+                              borderRadius: '8px', 
+                              padding: '16px'
+                            }}>
+                              <div className="flex align-items-center justify-content-between">
+                                <div className="flex align-items-center" style={{ gap: 12 }}>
+                                  <div style={{ 
+                                    background: 'var(--blue-500)', 
+                                    borderRadius: '50%', 
+                                    width: '40px', 
+                                    height: '40px', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center' 
+                                  }}>
+                                    <i className="pi pi-file" style={{ color: 'white', fontSize: '16px' }}></i>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '2px' }}>
+                                      {linkedPath.split('\\').pop()}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                                      Archivo XML vinculado
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex align-items-center" style={{ gap: 8 }}>
+                                  <Button
+                                    icon="pi pi-refresh"
+                                    className="p-button-outlined p-button-sm"
+                                    onClick={() => linkFileInputRef.current && linkFileInputRef.current.click()}
+                                    disabled={importing}
+                                    tooltip="Cambiar archivo"
+                                    tooltipOptions={{ position: 'top' }}
+                                  />
+                                  <Button
+                                    icon="pi pi-times"
+                                    className="p-button-outlined p-button-danger p-button-sm"
+                                    onClick={handleFileRemoveLinked}
+                                    disabled={importing}
+                                    tooltip="Remover archivo"
+                                    tooltipOptions={{ position: 'top' }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           <input
                             type="file"
                             accept=".xml"
