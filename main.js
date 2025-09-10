@@ -2062,6 +2062,45 @@ ipcMain.handle('import:read-file', async (event, filePath) => {
   }
 });
 
+// Utilidades adicionales para importación vinculada vía navegador/descargas
+ipcMain.handle('import:get-downloads-path', async () => {
+  try {
+    return { ok: true, path: app.getPath('downloads') };
+  } catch (e) {
+    return { ok: false, error: e?.message };
+  }
+});
+
+ipcMain.handle('import:open-external', async (event, url) => {
+  try {
+    const { shell } = require('electron');
+    await shell.openExternal(url);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e?.message };
+  }
+});
+
+ipcMain.handle('import:find-latest-xml-download', async (event, { sinceMs } = {}) => {
+  try {
+    const downloadsDir = app.getPath('downloads');
+    const entries = fs.readdirSync(downloadsDir).filter(name => name.toLowerCase().endsWith('.xml'));
+    let latest = null;
+    for (const name of entries) {
+      const fullPath = require('path').join(downloadsDir, name);
+      const stat = safeStatSync(fullPath);
+      if (!stat) continue;
+      if (sinceMs && stat.mtimeMs < sinceMs) continue;
+      if (!latest || stat.mtimeMs > latest.mtimeMs) {
+        latest = { path: fullPath, fileName: name, mtimeMs: stat.mtimeMs, size: stat.size };
+      }
+    }
+    return { ok: true, latest };
+  } catch (e) {
+    return { ok: false, error: e?.message };
+  }
+});
+
 // Handler para descargar archivos por SSH
 
 ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
