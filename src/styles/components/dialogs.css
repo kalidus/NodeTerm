@@ -145,6 +145,7 @@
 .p-dialog .p-dialog-content {
   background: var(--ui-dialog-bg) !important;
   color: var(--ui-dialog-text) !important;
+  padding-top: 8px !important; /* Compactar separación superior por defecto */
 }
 
 .p-dialog .p-dialog-footer {
@@ -171,6 +172,16 @@
 /* --- Estilos para UnifiedConnectionDialog --- */
 .unified-connection-dialog .p-card-content {
   padding: 0; /* Eliminar padding por defecto del contenido de la Card */
+}
+
+/* --- Estilos compactos para ImportDialog --- */
+.import-dialog .p-card .p-card-body {
+  padding-top: 8px !important; /* Reducir padding superior dentro de las Cards */
+}
+
+.import-dialog .section-title {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 /* Títulos de las Cards más grandes y con más espacio */

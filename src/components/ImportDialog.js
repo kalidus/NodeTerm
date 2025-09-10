@@ -412,6 +412,8 @@ const ImportDialog = ({
       <Dialog
         visible={visible}
         style={{ width: '900px', maxWidth: '95vw' }}
+        contentStyle={{ padding: '0' }}
+        className="import-dialog"
         header={headerTemplate()}
         modal
         onHide={handleClose}
@@ -428,16 +430,16 @@ const ImportDialog = ({
           </div>
         }
       >
-        <div style={{ padding: '8px 16px 16px 16px' }}>
+        <div style={{ padding: '0 16px 16px 16px' }}>
           {/* Layout de 2 filas con flexbox */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             
             {/* Primera fila - Importación manual */}
             <Card style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
-              <div style={{ padding: '8px 16px 16px 16px' }}>
+              <div style={{ padding: '0 16px 16px 16px' }}>
                 <div style={{ 
                   margin: '0 0 16px 0', 
-                  padding: '4px 0 8px 0',
+                  padding: '0 0 8px 0',
                   borderBottom: '1px solid var(--surface-border)'
                 }}>
                   <h5 style={{ 
@@ -650,10 +652,10 @@ const ImportDialog = ({
 
             {/* Segunda fila - Modo vinculado */}
             <Card style={{ backgroundColor: 'var(--surface-card)', border: linkFile ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)' }}>
-              <div style={{ padding: '16px' }}>
+              <div style={{ padding: '0 16px 16px 16px' }}>
                 <div style={{ 
                   margin: '0 0 16px 0', 
-                  padding: '12px 0 8px 0',
+                  padding: '0 0 8px 0',
                   borderBottom: '1px solid var(--surface-border)'
                 }}>
                   <div className="flex align-items-center" style={{ gap: 8 }}>
