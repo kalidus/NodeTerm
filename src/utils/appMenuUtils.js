@@ -10,7 +10,7 @@ export const createAppMenu = (onShowImportDialog) => {
       icon: 'pi pi-file',
       submenu: [
         {
-          label: 'Importar desde mRemoteNG',
+          label: 'Importar',
           icon: 'pi pi-file-excel',
           command: () => {
             console.log('Abriendo ImportDialog desde menú unificado...');

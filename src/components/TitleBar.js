@@ -112,7 +112,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         icon: 'pi pi-file',
         submenu: [
           {
-            label: 'Importar desde mRemoteNG',
+            label: 'Importar',
             icon: 'pi pi-file-excel',
             command: () => {
               console.log('Abriendo ImportDialog desde TitleBar...');
