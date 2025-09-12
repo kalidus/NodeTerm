@@ -64,7 +64,7 @@ const TabContentRenderer = React.memo(({
                 username: connection.username,
                 password: connection.password,
                 port: connection.port || 3389,
-                clientType: 'mstsc'
+                clientType: 'guacamole'
               }
             };
             openEditRdpDialog(tempNode);

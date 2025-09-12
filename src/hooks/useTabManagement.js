@@ -234,7 +234,7 @@ export const useTabManagement = (toast, {
             username: session.username,
             password: matchedSidebarNode?.data?.password || '',
             port: session.port,
-            clientType: session.clientType || matchedSidebarNode?.data?.clientType || 'mstsc'
+            clientType: session.clientType || matchedSidebarNode?.data?.clientType || 'guacamole'
           }
         };
         setRdpTabs(prev => [...prev, rdpTab]);

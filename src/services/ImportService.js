@@ -482,7 +482,8 @@ class ImportService {
         redirectPorts: conn.redirectPorts === 'true',
         redirectPrinters: conn.redirectPrinters === 'true',
         redirectSmartCards: conn.redirectSmartCards === 'true',
-        description: conn.description
+        description: conn.description,
+        clientType: 'guacamole'
       },
       droppable: false
     };

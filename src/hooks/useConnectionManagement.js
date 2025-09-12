@@ -323,7 +323,7 @@ export const useConnectionManagement = ({
       username: node.data.username,
       password: node.data.password,
       port: node.data.port || 3389,
-      clientType: node.data.clientType || 'mstsc',
+      clientType: node.data.clientType || 'guacamole',
       resolution: node.data.resolution || '1920x1080',
       colorDepth: node.data.colorDepth || 32,
       redirectFolders: node.data.redirectFolders === true,
