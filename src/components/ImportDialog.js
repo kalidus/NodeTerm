@@ -36,6 +36,7 @@ const ImportDialog = ({
   const [linkedDownloadSince, setLinkedDownloadSince] = useState(null);
   const [linkStatus, setLinkStatus] = useState(null); // { text, color }
   const lastCheckRef = useRef(null);
+  const [lastCheckMs, setLastCheckMs] = useState(null);
   const previewTimerRef = useRef(null);
   const linkFileInputRef = useRef(null);
   const [lastKnownHash, setLastKnownHash] = useState(null);
@@ -54,6 +55,17 @@ const ImportDialog = ({
   const getFolderLabel = (key) => {
     const opt = (folderOptionsWithRoot || []).find(o => o.value === key);
     return opt ? opt.label : 'Raíz';
+  };
+
+  // Helper para mostrar toasts aunque no pasen showToast desde fuera
+  const showToastSafe = (opts) => {
+    try {
+      if (showToast) {
+        showToast(opts);
+      } else if (toast?.current?.show) {
+        toast.current.show({ life: 4000, ...opts });
+      }
+    } catch {}
   };
 
   const handleFileSelect = (event) => {
@@ -207,13 +219,20 @@ const ImportDialog = ({
             // Hash y estado
             const h = await window.electron?.import?.getFileHash?.(res.latest.path);
             lastCheckRef.current = Date.now();
+            setLastCheckMs(lastCheckRef.current);
             const d = new Date(lastCheckRef.current);
             if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
               setLinkStatus({ text: `Cambios detectados • ${d.toLocaleTimeString()}`, color: '#e67e22' });
               setChangesDetected(true);
+              showToastSafe({ severity: 'info', summary: 'Cambios detectados', detail: 'Hay una nueva versión del XML descargado' });
             } else {
               setLinkStatus({ text: `Vinculado • Última comprobación ${d.toLocaleTimeString()} • ${Math.round((res.latest.size||0)/1024)} KB`, color: '#2e7d32' });
               setChangesDetected(false);
+            }
+            if (res.latest && res.latest.path) {
+              // Persistir última URL y hash cuando esté disponible
+              try { localStorage.setItem('IMPORT_DIALOG_LAST_URL', linkedUrl || ''); } catch {}
+              if (h?.ok) try { localStorage.setItem('IMPORT_DIALOG_LAST_HASH', h.hash); } catch {}
             }
           }
         } else if (linkedPath) {
@@ -221,6 +240,7 @@ const ImportDialog = ({
           if (info?.ok) {
             const h = await window.electron?.import?.getFileHash?.(linkedPath);
             lastCheckRef.current = Date.now();
+            setLastCheckMs(lastCheckRef.current);
             const d = new Date(lastCheckRef.current);
             if (h?.ok && lastKnownHash && h.hash !== lastKnownHash) {
               setLinkStatus({ text: `Cambios detectados • ${d.toLocaleTimeString()}`, color: '#e67e22' });
@@ -276,6 +296,24 @@ const ImportDialog = ({
         if (typeof saved.linkedPlaceInFolder === 'boolean' && saved.linkedPlaceInFolder) setLinkedPlaceInFolder(saved.linkedPlaceInFolder);
         if (typeof saved.linkedOverwrite === 'boolean') setLinkedOverwrite(saved.linkedOverwrite);
         if (typeof saved.linkedContainerFolderName === 'string') setLinkedContainerFolderName(saved.linkedContainerFolderName);
+        if (typeof saved.linkedFromUrl === 'boolean') setLinkedFromUrl(saved.linkedFromUrl);
+        if (typeof saved.linkedUrl === 'string') setLinkedUrl(saved.linkedUrl);
+      }
+      // Restaurar último fichero y hash de descarga si existen
+      const lastDlPath = localStorage.getItem('IMPORT_DIALOG_LAST_DL_PATH');
+      const lastDlHash = localStorage.getItem('IMPORT_DIALOG_LAST_HASH');
+      const lastDlMs = Number(localStorage.getItem('IMPORT_DIALOG_LAST_DL_MS') || 0);
+      if (lastDlPath) {
+        // Verificar que el archivo exista
+        (async () => {
+          try {
+            const info = await window.electron?.import?.getFileInfo?.(lastDlPath);
+            if (info?.ok) {
+              setLinkedPath(lastDlPath);
+              if (lastDlHash) setLastKnownHash(lastDlHash);
+            }
+          } catch {}
+        })();
       }
       if (presetOptions) {
         if (typeof presetOptions.placeInFolder === 'boolean') setPlaceInFolder(presetOptions.placeInFolder);
@@ -300,10 +338,71 @@ const ImportDialog = ({
       linkedImportInRoot,
       linkedPlaceInFolder,
       linkedOverwrite,
-      linkedContainerFolderName
+      linkedContainerFolderName,
+      linkedFromUrl,
+      linkedUrl
     };
     try { localStorage.setItem('IMPORT_DIALOG_OPTS', JSON.stringify(toSave)); } catch {}
-  }, [placeInFolder, importInRoot, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey, linkedImportInRoot, linkedPlaceInFolder, linkedOverwrite, linkedContainerFolderName]);
+  }, [placeInFolder, importInRoot, overwrite, linkFile, pollInterval, linkedPath, targetFolderKey, linkedTargetFolderKey, linkedImportInRoot, linkedPlaceInFolder, linkedOverwrite, linkedContainerFolderName, linkedFromUrl, linkedUrl]);
+
+  // Auto-cargar último fichero y refrescar en segundo plano al abrir el diálogo
+  React.useEffect(() => {
+    if (!visible) return;
+    (async () => {
+      try {
+        if (linkedFromUrl && (linkedUrl || localStorage.getItem('IMPORT_DIALOG_LAST_URL'))) {
+          const lastUrl = linkedUrl || localStorage.getItem('IMPORT_DIALOG_LAST_URL');
+          if (!linkedUrl) setLinkedUrl(lastUrl || '');
+          const lastDlPath = localStorage.getItem('IMPORT_DIALOG_LAST_DL_PATH');
+          const lastDlHash = localStorage.getItem('IMPORT_DIALOG_LAST_HASH');
+          const lastDlMs = Number(localStorage.getItem('IMPORT_DIALOG_LAST_DL_MS') || 0);
+
+          // Mostrar último fichero si existe
+          if (lastDlPath) {
+            const info = await window.electron?.import?.getFileInfo?.(lastDlPath);
+            if (info?.ok) {
+              setLinkedPath(lastDlPath);
+              if (lastDlHash) setLastKnownHash(lastDlHash);
+            }
+          }
+
+          // Intentar actualización transparente si está desactualizado
+          const maxAge = Math.max(5000, Number(pollInterval) || 30000);
+          if (!lastDlMs || (Date.now() - lastDlMs) > maxAge) {
+            showToastSafe({ severity: 'info', summary: 'Actualizando', detail: 'Abriendo URL para verificar cambios…' });
+            // Abrir navegador y esperar nueva descarga sin interacción
+            if (lastUrl) {
+              try { await window.electron?.import?.openExternal?.(lastUrl); } catch {}
+              const timeoutMs = 15000;
+              const pollEvery = 1000;
+              const startedAt = Date.now();
+              let found = null;
+              while (Date.now() - startedAt < timeoutMs) {
+                const res = await window.electron?.import?.findLatestXmlDownload?.({ sinceMs: startedAt - 1000 });
+                if (res?.ok && res.latest) { found = res.latest; break; }
+                await new Promise(r => setTimeout(r, pollEvery));
+              }
+              if (found) {
+                setLinkedPath(found.path);
+                const h = await window.electron?.import?.getFileHash?.(found.path);
+                if (h?.ok) {
+                  setLastKnownHash(h.hash);
+                  try { localStorage.setItem('IMPORT_DIALOG_LAST_HASH', h.hash); } catch {}
+                }
+                try {
+                  localStorage.setItem('IMPORT_DIALOG_LAST_DL_PATH', found.path);
+                  localStorage.setItem('IMPORT_DIALOG_LAST_DL_MS', String(found.mtimeMs || Date.now()));
+                } catch {}
+                showToastSafe({ severity: 'success', summary: 'Actualizado', detail: 'Archivo descargado y vinculado correctamente' });
+              } else {
+                showToastSafe({ severity: 'warn', summary: 'Descarga no detectada', detail: 'No se encontró el XML en Descargas (15s). Vuelve a intentar.' });
+              }
+            }
+          }
+        }
+      } catch {}
+    })();
+  }, [visible]);
 
   // Función para importación manual (columna izquierda)
   const processManualImport = async () => {
@@ -421,6 +520,11 @@ const ImportDialog = ({
         } catch (e) {
           fileToImport = new Blob([readRes.content], { type: 'text/xml' });
         }
+        // Guardar última descarga
+        try {
+          localStorage.setItem('IMPORT_DIALOG_LAST_DL_PATH', found.path);
+          localStorage.setItem('IMPORT_DIALOG_LAST_DL_MS', String(found.mtimeMs || Date.now()));
+        } catch {}
       } else {
         // Leer archivo vinculado del disco
         const readRes = await window.electron?.import?.readFile?.(linkedPath);
@@ -780,26 +884,33 @@ const ImportDialog = ({
                   padding: '0 0 8px 0',
                   borderBottom: '1px solid var(--surface-border)'
                 }}>
-                  <div className="flex align-items-center" style={{ gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      id="linkFile"
-                      checked={linkFile}
-                      onChange={(e) => setLinkFile(e.target.checked)}
-                      disabled={importing}
-                    />
-                    <h5 style={{ 
-                      margin: '0', 
-                      color: 'var(--text-color)', 
-                      fontSize: '16px', 
-                      fontWeight: '700',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <i className="pi pi-link" style={{ fontSize: '16px', color: 'var(--primary-color)' }}></i>
-                      Vincular archivo y detectar cambios
-                    </h5>
+                  <div className="flex align-items-center" style={{ gap: 8, justifyContent: 'space-between' }}>
+                    <div className="flex align-items-center" style={{ gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        id="linkFile"
+                        checked={linkFile}
+                        onChange={(e) => setLinkFile(e.target.checked)}
+                        disabled={importing}
+                      />
+                      <h5 style={{ 
+                        margin: '0', 
+                        color: 'var(--text-color)', 
+                        fontSize: '16px', 
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <i className="pi pi-link" style={{ fontSize: '16px', color: 'var(--primary-color)' }}></i>
+                        Vincular archivo y detectar cambios
+                      </h5>
+                    </div>
+                    <div style={{ fontSize: '12px', color: linkStatus?.color || 'var(--text-color-secondary)', textAlign: 'right' }}>
+                      {linkFile ? (
+                        `${linkedFromUrl ? 'URL' : 'Archivo'}${linkedPath ? ' • ' + (linkedPath.split('\\').pop() || linkedPath.split('/').pop()) : ''}${lastCheckMs ? ' • Última: ' + new Date(lastCheckMs).toLocaleTimeString() : ''}`
+                      ) : ''}
+                    </div>
                   </div>
                 </div>
                 
@@ -973,7 +1084,19 @@ const ImportDialog = ({
                                 onClick={async () => {
                                   if (!linkedUrl) return;
                                   setLinkedDownloadSince(Date.now());
+                                  try { localStorage.setItem('IMPORT_DIALOG_LAST_URL', linkedUrl); } catch {}
                                   await window.electron?.import?.openExternal?.(linkedUrl);
+                                }}
+                              />
+                              <Button
+                                label="Pegar URL"
+                                icon="pi pi-clipboard"
+                                className="p-button-outlined"
+                                onClick={async () => {
+                                  try {
+                                    const t = await window.electron?.clipboard?.readText?.();
+                                    if (t) setLinkedUrl(t.trim());
+                                  } catch {}
                                 }}
                               />
                             </div>
@@ -1101,6 +1224,9 @@ const ImportDialog = ({
                                 onClick={processLinkedImport}
                                 disabled={!changesDetected || importing}
                               />
+                              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-color-secondary)' }}>
+                                Origen: {linkedFromUrl ? 'URL' : 'Archivo local'}
+                              </span>
                             </div>
                           </div>
                         )}
