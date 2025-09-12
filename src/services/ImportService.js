@@ -513,6 +513,93 @@ class ImportService {
   }
 
   /**
+   * Extrae nombres de usuario de una cadena compleja
+   * @param {string} text - Texto que puede contener usuarios en diferentes formatos
+   * @returns {Array} Array de usuarios encontrados
+   */
+  static extractUsersFromString(text) {
+    if (!text || typeof text !== 'string') return [];
+    
+    const users = new Set();
+    const cleanText = text.trim();
+    
+    // Lista más selectiva de palabras que NO son nombres de usuario
+    const excludedWords = new Set([
+      // Protocolos y servicios comunes
+      'ssh', 'rdp', 'tcp', 'udp', 'http', 'https', 'ftp', 'sftp', 'ldap', 'kerberos', 'ntlm', 'ssl', 'tls', 'tacacs', 'radius',
+      // Aplicaciones y servicios específicos que aparecen en tu caso
+      'app', 'vmware', 'docker', 'kubernetes', 'jenkins', 'mysql', 'postgres', 'nginx', 'apache',
+      // Palabras muy comunes en sistemas que no son usuarios
+      'default', 'host', 'protocol', 'system', 'service', 'daemon', 'nobody', 'guest',
+      // Sistemas operativos principales
+      'windows', 'linux', 'unix', 'macos', 'ubuntu', 'centos', 'redhat'
+    ]);
+    
+    // Función más equilibrada para validar nombres de usuario
+    const isValidUsername = (word) => {
+      // Debe tener al menos 2 caracteres
+      if (word.length < 2) return false;
+      
+      // No debe ser solo números
+      if (/^\d+$/.test(word)) return false;
+      
+      // No debe estar en la lista de palabras excluidas
+      if (excludedWords.has(word.toLowerCase())) return false;
+      
+      // No debe ser una palabra muy larga (sospechosa)
+      if (word.length > 25) return false;
+      
+      // Debe contener al menos una letra
+      if (!/[a-zA-Z]/.test(word)) return false;
+      
+      // No debe ser una palabra que parezca un protocolo (patrón más específico)
+      if (/^(ssh|rdp|tcp|udp|http|https|ftp|sftp|ldap|kerberos|ntlm|ssl|tls|tacacs|radius)_/i.test(word)) {
+        return false;
+      }
+      
+      // No debe ser una palabra que parezca un servicio (patrón más específico)
+      if (/^(app|vmware|docker|kubernetes|jenkins|mysql|postgres|nginx|apache)_/i.test(word)) {
+        return false;
+      }
+      
+      return true;
+    };
+    
+    // Patrón 1: Usuario@dominio (extraer solo la parte del usuario) - PRIORIDAD ALTA
+    const userAtDomainPattern = /([a-zA-Z0-9._-]+)@[a-zA-Z0-9._-]+/g;
+    let match;
+    while ((match = userAtDomainPattern.exec(cleanText)) !== null) {
+      const user = match[1];
+      if (isValidUsername(user)) {
+        users.add(user);
+      }
+    }
+    
+    // Patrón 2: Usuario en cadenas complejas como "user@default@host:protocol:user" - PRIORIDAD ALTA
+    const complexPattern = /([a-zA-Z0-9._-]+)@[^:]+:[^:]+:([a-zA-Z0-9._-]+)/g;
+    while ((match = complexPattern.exec(cleanText)) !== null) {
+      const user1 = match[1];
+      const user2 = match[2];
+      if (isValidUsername(user1)) users.add(user1);
+      if (isValidUsername(user2)) users.add(user2);
+    }
+    
+    // Patrón 3: Usuario simple (solo letras, números, guiones bajos, puntos) - PRIORIDAD MEDIA
+    // Solo si no se encontraron usuarios con los patrones anteriores O si la cadena es muy simple
+    if (users.size === 0 || cleanText.length < 20) {
+      const simpleUserPattern = /\b([a-zA-Z0-9._-]+)\b/g;
+      while ((match = simpleUserPattern.exec(cleanText)) !== null) {
+        const potentialUser = match[1];
+        if (isValidUsername(potentialUser)) {
+          users.add(potentialUser);
+        }
+      }
+    }
+    
+    return Array.from(users);
+  }
+
+  /**
    * Analiza el XML y extrae los usuarios más frecuentes
    * @param {Document} xmlDoc 
    * @returns {Array} Array de objetos con {username, count, connections}
@@ -520,6 +607,7 @@ class ImportService {
   static analyzeUsersInXML(xmlDoc) {
     const userCounts = new Map();
     const userConnections = new Map();
+    const userContexts = new Map(); // Para guardar el contexto donde aparece cada usuario
     
     // Buscar todos los nodos de conexión
     const nodeElements = xmlDoc.getElementsByTagName('Node');
@@ -527,19 +615,28 @@ class ImportService {
     for (let i = 0; i < nodeElements.length; i++) {
       const node = nodeElements[i];
       const username = this.getNodeAttribute(node, ['Username', 'User']);
+      const connectionName = this.getNodeAttribute(node, ['Name']) || 'Conexión sin nombre';
       
       if (username && username.trim() !== '') {
-        const cleanUsername = username.trim();
-        const connectionName = this.getNodeAttribute(node, ['Name']) || 'Conexión sin nombre';
+        // Extraer usuarios de la cadena (puede ser simple o compleja)
+        const extractedUsers = this.extractUsersFromString(username);
         
-        // Contar frecuencia
-        if (userCounts.has(cleanUsername)) {
-          userCounts.set(cleanUsername, userCounts.get(cleanUsername) + 1);
-          userConnections.get(cleanUsername).push(connectionName);
-        } else {
-          userCounts.set(cleanUsername, 1);
-          userConnections.set(cleanUsername, [connectionName]);
-        }
+        extractedUsers.forEach(extractedUser => {
+          const cleanUsername = extractedUser.trim();
+          
+          if (cleanUsername) {
+            // Contar frecuencia
+            if (userCounts.has(cleanUsername)) {
+              userCounts.set(cleanUsername, userCounts.get(cleanUsername) + 1);
+              userConnections.get(cleanUsername).push(connectionName);
+              userContexts.get(cleanUsername).push(username); // Guardar el contexto original
+            } else {
+              userCounts.set(cleanUsername, 1);
+              userConnections.set(cleanUsername, [connectionName]);
+              userContexts.set(cleanUsername, [username]);
+            }
+          }
+        });
       }
     }
     
@@ -549,18 +646,26 @@ class ImportService {
       for (let i = 0; i < connectionElements.length; i++) {
         const connection = connectionElements[i];
         const username = this.getNodeAttribute(connection, ['Username', 'User']);
+        const connectionName = this.getNodeAttribute(connection, ['Name']) || 'Conexión sin nombre';
         
         if (username && username.trim() !== '') {
-          const cleanUsername = username.trim();
-          const connectionName = this.getNodeAttribute(connection, ['Name']) || 'Conexión sin nombre';
+          const extractedUsers = this.extractUsersFromString(username);
           
-          if (userCounts.has(cleanUsername)) {
-            userCounts.set(cleanUsername, userCounts.get(cleanUsername) + 1);
-            userConnections.get(cleanUsername).push(connectionName);
-          } else {
-            userCounts.set(cleanUsername, 1);
-            userConnections.set(cleanUsername, [connectionName]);
-          }
+          extractedUsers.forEach(extractedUser => {
+            const cleanUsername = extractedUser.trim();
+            
+            if (cleanUsername) {
+              if (userCounts.has(cleanUsername)) {
+                userCounts.set(cleanUsername, userCounts.get(cleanUsername) + 1);
+                userConnections.get(cleanUsername).push(connectionName);
+                userContexts.get(cleanUsername).push(username);
+              } else {
+                userCounts.set(cleanUsername, 1);
+                userConnections.set(cleanUsername, [connectionName]);
+                userContexts.set(cleanUsername, [username]);
+              }
+            }
+          });
         }
       }
     }
@@ -569,13 +674,71 @@ class ImportService {
     const userStats = Array.from(userCounts.entries()).map(([username, count]) => ({
       username,
       count,
-      connections: userConnections.get(username) || []
+      connections: userConnections.get(username) || [],
+      contexts: userContexts.get(username) || [] // Incluir contextos donde aparece
     }));
     
     // Ordenar por frecuencia descendente y tomar los 5 primeros
     userStats.sort((a, b) => b.count - a.count);
     
     return userStats.slice(0, 5);
+  }
+
+  /**
+   * Aplica sustituciones de usuarios en una cadena compleja
+   * @param {string} text - Texto que puede contener usuarios en diferentes formatos
+   * @param {Map} substitutionMap - Mapa de sustituciones
+   * @returns {string} Texto con usuarios sustituidos
+   */
+  static applySubstitutionsToString(text, substitutionMap) {
+    if (!text || typeof text !== 'string' || substitutionMap.size === 0) {
+      return text;
+    }
+    
+    let result = text;
+    
+    // Aplicar sustituciones para cada usuario en el mapa
+    substitutionMap.forEach((newUsername, originalUsername) => {
+      // Crear patrones para reemplazar todas las ocurrencias del usuario
+      const patterns = [
+        // Patrón 1: Usuario simple (palabra completa)
+        new RegExp(`\\b${this.escapeRegExp(originalUsername)}\\b`, 'g'),
+        // Patrón 2: Usuario@dominio
+        new RegExp(`\\b${this.escapeRegExp(originalUsername)}(@[a-zA-Z0-9._-]+)`, 'g'),
+        // Patrón 3: Usuario en cadenas complejas como "user@default@host:protocol:user"
+        new RegExp(`\\b${this.escapeRegExp(originalUsername)}(@[^:]+:[^:]+:)${this.escapeRegExp(originalUsername)}\\b`, 'g'),
+        // Patrón 4: Usuario al final de cadena compleja
+        new RegExp(`([^:]+:)${this.escapeRegExp(originalUsername)}\\b`, 'g')
+      ];
+      
+      patterns.forEach((pattern, index) => {
+        switch (index) {
+          case 0: // Usuario simple
+            result = result.replace(pattern, newUsername);
+            break;
+          case 1: // Usuario@dominio
+            result = result.replace(pattern, `${newUsername}$1`);
+            break;
+          case 2: // Usuario en cadena compleja (ambas ocurrencias)
+            result = result.replace(pattern, `${newUsername}$1${newUsername}`);
+            break;
+          case 3: // Usuario al final de cadena compleja
+            result = result.replace(pattern, `$1${newUsername}`);
+            break;
+        }
+      });
+    });
+    
+    return result;
+  }
+
+  /**
+   * Escapa caracteres especiales para expresiones regulares
+   * @param {string} string 
+   * @returns {string}
+   */
+  static escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**
@@ -605,17 +768,11 @@ class ImportService {
     const applySubstitutionsToNode = (node) => {
       // Si es un nodo de conexión SSH
       if (node.data && node.data.type === 'ssh' && node.data.user) {
-        const originalUsername = node.data.user;
-        if (substitutionMap.has(originalUsername.trim())) {
-          node.data.user = substitutionMap.get(originalUsername.trim());
-        }
+        node.data.user = this.applySubstitutionsToString(node.data.user, substitutionMap);
       }
       // Si es un nodo de conexión RDP
       else if (node.data && node.data.type === 'rdp' && node.data.username) {
-        const originalUsername = node.data.username;
-        if (substitutionMap.has(originalUsername.trim())) {
-          node.data.username = substitutionMap.get(originalUsername.trim());
-        }
+        node.data.username = this.applySubstitutionsToString(node.data.username, substitutionMap);
       }
       
       // Procesar nodos hijos recursivamente

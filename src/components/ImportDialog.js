@@ -979,8 +979,27 @@ const ImportDialog = ({
                                 </div>
                                 {user.connections.length > 0 && (
                                   <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-color-secondary)' }}>
-                                    Conexiones: {user.connections.slice(0, 3).join(', ')}
-                                    {user.connections.length > 3 && ` y ${user.connections.length - 3} más...`}
+                                    <div style={{ marginBottom: '4px' }}>
+                                      <strong>Conexiones:</strong> {user.connections.slice(0, 3).join(', ')}
+                                      {user.connections.length > 3 && ` y ${user.connections.length - 3} más...`}
+                                    </div>
+                                    {user.contexts && user.contexts.length > 0 && (
+                                      <div>
+                                        <strong>Contextos detectados:</strong>
+                                        <div style={{ marginTop: '2px', fontFamily: 'monospace', fontSize: '10px' }}>
+                                          {user.contexts.slice(0, 2).map((context, idx) => (
+                                            <div key={idx} style={{ marginBottom: '2px', wordBreak: 'break-all' }}>
+                                              {context}
+                                            </div>
+                                          ))}
+                                          {user.contexts.length > 2 && (
+                                            <div style={{ color: 'var(--text-color-secondary)' }}>
+                                              ... y {user.contexts.length - 2} más
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
