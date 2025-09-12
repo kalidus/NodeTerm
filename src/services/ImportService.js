@@ -32,6 +32,9 @@ class ImportService {
       // Extraer estructura jerárquica (carpetas y conexiones)
       const treeStructure = this.extractMRemoteNGStructure(xmlDoc);
 
+      // Analizar usuarios más frecuentes
+      const topUsers = this.analyzeUsersInXML(xmlDoc);
+
       // Convertir estructura al formato interno (árbol de nodos)
       const { nodes, flatConnections, connectionCount, folderCount } = this.convertStructureToInternalFormat(treeStructure);
 
@@ -46,6 +49,8 @@ class ImportService {
         // Compatibilidad hacia atrás (lista plana)
         connections: flatConnections,
         count: connectionCount,
+        // Información de usuarios para sustitución
+        topUsers,
         metadata: {
           source: 'mRemoteNG',
           importDate: new Date().toISOString(),
@@ -505,6 +510,123 @@ class ImportService {
       },
       droppable: false
     };
+  }
+
+  /**
+   * Analiza el XML y extrae los usuarios más frecuentes
+   * @param {Document} xmlDoc 
+   * @returns {Array} Array de objetos con {username, count, connections}
+   */
+  static analyzeUsersInXML(xmlDoc) {
+    const userCounts = new Map();
+    const userConnections = new Map();
+    
+    // Buscar todos los nodos de conexión
+    const nodeElements = xmlDoc.getElementsByTagName('Node');
+    
+    for (let i = 0; i < nodeElements.length; i++) {
+      const node = nodeElements[i];
+      const username = this.getNodeAttribute(node, ['Username', 'User']);
+      
+      if (username && username.trim() !== '') {
+        const cleanUsername = username.trim();
+        const connectionName = this.getNodeAttribute(node, ['Name']) || 'Conexión sin nombre';
+        
+        // Contar frecuencia
+        if (userCounts.has(cleanUsername)) {
+          userCounts.set(cleanUsername, userCounts.get(cleanUsername) + 1);
+          userConnections.get(cleanUsername).push(connectionName);
+        } else {
+          userCounts.set(cleanUsername, 1);
+          userConnections.set(cleanUsername, [connectionName]);
+        }
+      }
+    }
+    
+    // Si no se encontraron nodos, intentar buscar elementos Connection directos
+    if (userCounts.size === 0) {
+      const connectionElements = xmlDoc.getElementsByTagName('Connection');
+      for (let i = 0; i < connectionElements.length; i++) {
+        const connection = connectionElements[i];
+        const username = this.getNodeAttribute(connection, ['Username', 'User']);
+        
+        if (username && username.trim() !== '') {
+          const cleanUsername = username.trim();
+          const connectionName = this.getNodeAttribute(connection, ['Name']) || 'Conexión sin nombre';
+          
+          if (userCounts.has(cleanUsername)) {
+            userCounts.set(cleanUsername, userCounts.get(cleanUsername) + 1);
+            userConnections.get(cleanUsername).push(connectionName);
+          } else {
+            userCounts.set(cleanUsername, 1);
+            userConnections.set(cleanUsername, [connectionName]);
+          }
+        }
+      }
+    }
+    
+    // Convertir a array y ordenar por frecuencia (descendente)
+    const userStats = Array.from(userCounts.entries()).map(([username, count]) => ({
+      username,
+      count,
+      connections: userConnections.get(username) || []
+    }));
+    
+    // Ordenar por frecuencia descendente y tomar los 5 primeros
+    userStats.sort((a, b) => b.count - a.count);
+    
+    return userStats.slice(0, 5);
+  }
+
+  /**
+   * Aplica sustituciones de usuarios a las conexiones antes de la importación
+   * @param {Array} nodes - Array de nodos (estructura de árbol)
+   * @param {Array} substitutions - Array de {originalUsername, newUsername}
+   * @returns {Array} Nodos con usuarios sustituidos
+   */
+  static applyUserSubstitutions(nodes, substitutions) {
+    if (!substitutions || substitutions.length === 0) {
+      return nodes;
+    }
+    
+    // Crear mapa de sustituciones para acceso rápido
+    const substitutionMap = new Map();
+    substitutions.forEach(sub => {
+      if (sub.originalUsername && sub.newUsername && sub.originalUsername.trim() !== '' && sub.newUsername.trim() !== '') {
+        substitutionMap.set(sub.originalUsername.trim(), sub.newUsername.trim());
+      }
+    });
+    
+    if (substitutionMap.size === 0) {
+      return nodes;
+    }
+    
+    // Aplicar sustituciones recursivamente a la estructura de nodos
+    const applySubstitutionsToNode = (node) => {
+      // Si es un nodo de conexión SSH
+      if (node.data && node.data.type === 'ssh' && node.data.user) {
+        const originalUsername = node.data.user;
+        if (substitutionMap.has(originalUsername.trim())) {
+          node.data.user = substitutionMap.get(originalUsername.trim());
+        }
+      }
+      // Si es un nodo de conexión RDP
+      else if (node.data && node.data.type === 'rdp' && node.data.username) {
+        const originalUsername = node.data.username;
+        if (substitutionMap.has(originalUsername.trim())) {
+          node.data.username = substitutionMap.get(originalUsername.trim());
+        }
+      }
+      
+      // Procesar nodos hijos recursivamente
+      if (node.children && Array.isArray(node.children)) {
+        node.children = node.children.map(applySubstitutionsToNode);
+      }
+      
+      return node;
+    };
+    
+    return nodes.map(applySubstitutionsToNode);
   }
 
   /**
