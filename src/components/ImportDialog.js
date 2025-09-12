@@ -52,6 +52,13 @@ const ImportDialog = ({
   const [linkedPlaceInFolder, setLinkedPlaceInFolder] = useState(true);
   const [linkedOverwrite, setLinkedOverwrite] = useState(true);
   const [linkedContainerFolderName, setLinkedContainerFolderName] = useState(`mRemoteNG linked - ${new Date().toLocaleDateString()}`);
+  
+  // Estados para sustitución de usuarios
+  const [analyzedUsers, setAnalyzedUsers] = useState([]);
+  const [userSubstitutions, setUserSubstitutions] = useState([]);
+  const [showUserSubstitution, setShowUserSubstitution] = useState(false);
+  const [analyzedFileContent, setAnalyzedFileContent] = useState(null);
+  
   const getFolderLabel = (key) => {
     const opt = (folderOptionsWithRoot || []).find(o => o.value === key);
     return opt ? opt.label : 'Raíz';
@@ -68,7 +75,7 @@ const ImportDialog = ({
     } catch {}
   };
 
-  const handleFileSelect = (event) => {
+  const handleFileSelect = async (event) => {
     const file = event.files[0];
     if (file) {
       if (!file.name.toLowerCase().endsWith('.xml')) {
@@ -81,11 +88,40 @@ const ImportDialog = ({
         return;
       }
       setManualSelectedFile(file);
+      
+      // Analizar usuarios en el archivo
+      try {
+        const result = await ImportService.importFromMRemoteNG(file);
+        if (result.success && result.topUsers && result.topUsers.length > 0) {
+          setAnalyzedUsers(result.topUsers);
+          setShowUserSubstitution(true);
+          setAnalyzedFileContent(file);
+          // Inicializar sustituciones vacías
+          setUserSubstitutions(result.topUsers.map(user => ({
+            originalUsername: user.username,
+            newUsername: '',
+            enabled: false
+          })));
+        } else {
+          setAnalyzedUsers([]);
+          setShowUserSubstitution(false);
+          setAnalyzedFileContent(null);
+        }
+      } catch (error) {
+        console.error('Error analizando usuarios:', error);
+        setAnalyzedUsers([]);
+        setShowUserSubstitution(false);
+        setAnalyzedFileContent(null);
+      }
     }
   };
 
   const handleFileRemove = () => {
     setManualSelectedFile(null);
+    setAnalyzedUsers([]);
+    setUserSubstitutions([]);
+    setShowUserSubstitution(false);
+    setAnalyzedFileContent(null);
   };
 
   const handleChooseFile = () => {
@@ -419,17 +455,39 @@ const ImportDialog = ({
 
       const result = await ImportService.importFromMRemoteNG(manualSelectedFile);
       console.log('📋 Resultado de ImportService (manual):', result);
+      
+      // Aplicar sustituciones de usuarios si las hay
+      let finalResult = result;
+      const activeSubstitutions = userSubstitutions.filter(sub => sub.enabled && sub.newUsername.trim() !== '');
+      if (activeSubstitutions.length > 0) {
+        console.log('🔄 Aplicando sustituciones de usuarios:', activeSubstitutions);
+        const substitutions = activeSubstitutions.map(sub => ({
+          originalUsername: sub.originalUsername,
+          newUsername: sub.newUsername
+        }));
+        
+        // Aplicar sustituciones a la estructura
+        const modifiedStructure = ImportService.applyUserSubstitutions(result.structure.nodes, substitutions);
+        finalResult = {
+          ...result,
+          structure: {
+            ...result.structure,
+            nodes: modifiedStructure
+          }
+        };
+      }
+      
       setImportProgress(80);
 
-      if (!result.success) {
-        throw new Error(result.error || 'Error al procesar el archivo');
+      if (!finalResult.success) {
+        throw new Error(finalResult.error || 'Error al procesar el archivo');
       }
 
       if (onImportComplete) {
         console.log('📞 Llamando a onImportComplete (manual)...');
         try {
           await onImportComplete({
-            ...result,
+            ...finalResult,
             createContainerFolder: !!placeInFolder,
             containerFolderName: containerFolderName,
             overwrite: !!overwrite,
@@ -458,9 +516,9 @@ const ImportDialog = ({
       showToast && showToast({
         severity: 'success',
         summary: 'Importación exitosa',
-        detail: result.structure && result.structure.folderCount > 0
-          ? `Se importaron ${result.structure.connectionCount} conexiones y ${result.structure.folderCount} carpetas`
-          : `Se importaron ${result.count} conexiones desde ${result.metadata.source}`,
+        detail: finalResult.structure && finalResult.structure.folderCount > 0
+          ? `Se importaron ${finalResult.structure.connectionCount} conexiones y ${finalResult.structure.folderCount} carpetas`
+          : `Se importaron ${finalResult.count} conexiones desde ${finalResult.metadata.source}`,
         life: 5000
       });
 
@@ -608,11 +666,25 @@ const ImportDialog = ({
   };
 
 
+  // Funciones para manejar sustituciones de usuarios
+  const handleUserSubstitutionChange = (index, field, value) => {
+    const newSubstitutions = [...userSubstitutions];
+    newSubstitutions[index] = {
+      ...newSubstitutions[index],
+      [field]: value
+    };
+    setUserSubstitutions(newSubstitutions);
+  };
+
   const handleClose = () => {
     setManualSelectedFile(null);
     setImporting(false);
     setImportProgress(0);
     setIsDragOver(false);
+    setAnalyzedUsers([]);
+    setUserSubstitutions([]);
+    setShowUserSubstitution(false);
+    setAnalyzedFileContent(null);
     onHide();
   };
 
@@ -842,6 +914,79 @@ const ImportDialog = ({
                             />
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Sección de sustitución de usuarios */}
+                    {showUserSubstitution && analyzedUsers.length > 0 && (
+                      <div style={{ 
+                        marginTop: '16px', 
+                        padding: '16px', 
+                        background: 'var(--blue-50)', 
+                        border: '1px solid var(--blue-200)', 
+                        borderRadius: '8px' 
+                      }}>
+                        <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
+                          <i className="pi pi-users" style={{ fontSize: '16px', color: 'var(--primary-color)' }}></i>
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)' }}>
+                            Usuarios más frecuentes detectados
+                          </span>
+                        </div>
+                        
+                        <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)', marginBottom: '12px' }}>
+                          Puedes sustituir los nombres de usuario más utilizados antes de importar:
+                        </div>
+
+                        {analyzedUsers.map((user, index) => (
+                          <div key={user.username} style={{ 
+                            marginBottom: '12px', 
+                            padding: '12px', 
+                            background: 'white', 
+                            border: '1px solid var(--surface-border)', 
+                            borderRadius: '6px' 
+                          }}>
+                            <div className="flex align-items-center justify-content-between mb-2">
+                              <div className="flex align-items-center" style={{ gap: 8 }}>
+                                <input
+                                  type="checkbox"
+                                  id={`substitute-${index}`}
+                                  checked={userSubstitutions[index]?.enabled || false}
+                                  onChange={(e) => handleUserSubstitutionChange(index, 'enabled', e.target.checked)}
+                                  disabled={importing}
+                                />
+                                <label htmlFor={`substitute-${index}`} style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                                  <strong>{user.username}</strong>
+                                </label>
+                              </div>
+                              <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                                Usado en {user.count} conexiones
+                              </span>
+                            </div>
+                            
+                            {userSubstitutions[index]?.enabled && (
+                              <div style={{ marginLeft: '26px' }}>
+                                <div className="flex align-items-center" style={{ gap: 8 }}>
+                                  <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                                    Sustituir por:
+                                  </span>
+                                  <InputText
+                                    value={userSubstitutions[index]?.newUsername || ''}
+                                    onChange={(e) => handleUserSubstitutionChange(index, 'newUsername', e.target.value)}
+                                    placeholder="Nuevo nombre de usuario"
+                                    disabled={importing}
+                                    style={{ flex: 1, fontSize: '13px' }}
+                                  />
+                                </div>
+                                {user.connections.length > 0 && (
+                                  <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-color-secondary)' }}>
+                                    Conexiones: {user.connections.slice(0, 3).join(', ')}
+                                    {user.connections.length > 3 && ` y ${user.connections.length - 3} más...`}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
 
