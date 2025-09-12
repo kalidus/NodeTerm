@@ -678,10 +678,10 @@ class ImportService {
       contexts: userContexts.get(username) || [] // Incluir contextos donde aparece
     }));
     
-    // Ordenar por frecuencia descendente y tomar los 5 primeros
+    // Ordenar por frecuencia descendente y tomar los 10 primeros
     userStats.sort((a, b) => b.count - a.count);
     
-    return userStats.slice(0, 5);
+    return userStats.slice(0, 10);
   }
 
   /**

@@ -917,95 +917,98 @@ const ImportDialog = ({
                       </div>
                     )}
 
-                    {/* Sección de sustitución de usuarios */}
+                    {/* Sección de sustitución de usuarios - Layout compacto */}
                     {showUserSubstitution && analyzedUsers.length > 0 && (
                       <div style={{ 
-                        marginTop: '16px', 
-                        padding: '16px', 
+                        marginTop: '12px', 
+                        padding: '8px', 
                         background: 'var(--blue-50)', 
                         border: '1px solid var(--blue-200)', 
-                        borderRadius: '8px' 
+                        borderRadius: '6px' 
                       }}>
-                        <div className="flex align-items-center mb-3" style={{ gap: 8 }}>
-                          <i className="pi pi-users" style={{ fontSize: '16px', color: 'var(--primary-color)' }}></i>
-                          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-color)' }}>
+                        <div className="flex align-items-center mb-2" style={{ gap: 6 }}>
+                          <i className="pi pi-users" style={{ fontSize: '12px', color: 'var(--primary-color)' }}></i>
+                          <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-color)' }}>
                             Usuarios más frecuentes detectados
                           </span>
                         </div>
                         
-                        <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)', marginBottom: '12px' }}>
+                        <div style={{ fontSize: '10px', color: 'var(--text-color-secondary)', marginBottom: '8px' }}>
                           Puedes sustituir los nombres de usuario más utilizados antes de importar:
                         </div>
 
-                        {analyzedUsers.map((user, index) => (
-                          <div key={user.username} style={{ 
-                            marginBottom: '12px', 
-                            padding: '12px', 
-                            background: 'white', 
-                            border: '1px solid var(--surface-border)', 
-                            borderRadius: '6px' 
-                          }}>
-                            <div className="flex align-items-center justify-content-between mb-2">
-                              <div className="flex align-items-center" style={{ gap: 8 }}>
-                                <input
-                                  type="checkbox"
-                                  id={`substitute-${index}`}
-                                  checked={userSubstitutions[index]?.enabled || false}
-                                  onChange={(e) => handleUserSubstitutionChange(index, 'enabled', e.target.checked)}
-                                  disabled={importing}
-                                />
-                                <label htmlFor={`substitute-${index}`} style={{ fontWeight: '500', color: 'var(--text-color)' }}>
-                                  <strong>{user.username}</strong>
-                                </label>
-                              </div>
-                              <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                                Usado en {user.count} conexiones
-                              </span>
-                            </div>
-                            
-                            {userSubstitutions[index]?.enabled && (
-                              <div style={{ marginLeft: '26px' }}>
-                                <div className="flex align-items-center" style={{ gap: 8 }}>
-                                  <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                                    Sustituir por:
-                                  </span>
-                                  <InputText
-                                    value={userSubstitutions[index]?.newUsername || ''}
-                                    onChange={(e) => handleUserSubstitutionChange(index, 'newUsername', e.target.value)}
-                                    placeholder="Nuevo nombre de usuario"
+                        <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                          {analyzedUsers.map((user, index) => (
+                            <div key={user.username} style={{ 
+                              marginBottom: '6px', 
+                              padding: '6px', 
+                              background: 'white', 
+                              border: '1px solid var(--surface-border)', 
+                              borderRadius: '4px' 
+                            }}>
+                              <div className="flex align-items-center justify-content-between mb-1">
+                                <div className="flex align-items-center" style={{ gap: 6 }}>
+                                  <input
+                                    type="checkbox"
+                                    id={`substitute-${index}`}
+                                    checked={userSubstitutions[index]?.enabled || false}
+                                    onChange={(e) => handleUserSubstitutionChange(index, 'enabled', e.target.checked)}
                                     disabled={importing}
-                                    style={{ flex: 1, fontSize: '13px' }}
+                                    style={{ transform: 'scale(0.8)' }}
                                   />
+                                  <label htmlFor={`substitute-${index}`} style={{ fontWeight: '500', color: 'var(--text-color)', fontSize: '10px' }}>
+                                    <strong>{user.username}</strong>
+                                  </label>
                                 </div>
-                                {user.connections.length > 0 && (
-                                  <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-color-secondary)' }}>
-                                    <div style={{ marginBottom: '4px' }}>
-                                      <strong>Conexiones:</strong> {user.connections.slice(0, 3).join(', ')}
-                                      {user.connections.length > 3 && ` y ${user.connections.length - 3} más...`}
-                                    </div>
-                                    {user.contexts && user.contexts.length > 0 && (
-                                      <div>
-                                        <strong>Contextos detectados:</strong>
-                                        <div style={{ marginTop: '2px', fontFamily: 'monospace', fontSize: '10px' }}>
-                                          {user.contexts.slice(0, 2).map((context, idx) => (
-                                            <div key={idx} style={{ marginBottom: '2px', wordBreak: 'break-all' }}>
-                                              {context}
-                                            </div>
-                                          ))}
-                                          {user.contexts.length > 2 && (
-                                            <div style={{ color: 'var(--text-color-secondary)' }}>
-                                              ... y {user.contexts.length - 2} más
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                <span style={{ fontSize: '9px', color: 'var(--text-color-secondary)' }}>
+                                  {user.count} conexiones
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        ))}
+                              
+                              {userSubstitutions[index]?.enabled && (
+                                <div style={{ marginLeft: '20px' }}>
+                                  <div className="flex align-items-center" style={{ gap: 6 }}>
+                                    <span style={{ fontSize: '9px', color: 'var(--text-color-secondary)' }}>
+                                      Sustituir por:
+                                    </span>
+                                    <InputText
+                                      value={userSubstitutions[index]?.newUsername || ''}
+                                      onChange={(e) => handleUserSubstitutionChange(index, 'newUsername', e.target.value)}
+                                      placeholder="Nuevo nombre de usuario"
+                                      disabled={importing}
+                                      style={{ flex: 1, fontSize: '10px', height: '20px', padding: '2px 6px' }}
+                                    />
+                                  </div>
+                                  {user.connections.length > 0 && (
+                                    <div style={{ marginTop: '4px', fontSize: '8px', color: 'var(--text-color-secondary)' }}>
+                                      <div style={{ marginBottom: '2px' }}>
+                                        <strong>Conexiones:</strong> {user.connections.slice(0, 2).join(', ')}
+                                        {user.connections.length > 2 && ` +${user.connections.length - 2}`}
+                                      </div>
+                                      {user.contexts && user.contexts.length > 0 && (
+                                        <div>
+                                          <strong>Contextos:</strong>
+                                          <div style={{ marginTop: '1px', fontFamily: 'monospace', fontSize: '7px' }}>
+                                            {user.contexts.slice(0, 1).map((context, idx) => (
+                                              <div key={idx} style={{ marginBottom: '1px', wordBreak: 'break-all' }}>
+                                                {context}
+                                              </div>
+                                            ))}
+                                            {user.contexts.length > 1 && (
+                                              <div style={{ color: 'var(--text-color-secondary)' }}>
+                                                ... +{user.contexts.length - 1} más
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
