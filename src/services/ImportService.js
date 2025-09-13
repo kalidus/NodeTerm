@@ -743,37 +743,67 @@ class ImportService {
   }
 
   /**
-   * Aplica sustituciones de usuarios a las conexiones antes de la importación
+   * Aplica sustituciones de usuarios y passwords a las conexiones antes de la importación
    * @param {Array} nodes - Array de nodos (estructura de árbol)
-   * @param {Array} substitutions - Array de {originalUsername, newUsername}
-   * @returns {Array} Nodos con usuarios sustituidos
+   * @param {Array} substitutions - Array de {originalUsername, newUsername, newPassword}
+   * @returns {Array} Nodos con usuarios y passwords sustituidos
    */
   static applyUserSubstitutions(nodes, substitutions) {
     if (!substitutions || substitutions.length === 0) {
       return nodes;
     }
     
-    // Crear mapa de sustituciones para acceso rápido
-    const substitutionMap = new Map();
+    // Crear mapas de sustituciones para acceso rápido
+    const usernameSubstitutionMap = new Map();
+    const passwordSubstitutionMap = new Map();
+    
     substitutions.forEach(sub => {
-      if (sub.originalUsername && sub.newUsername && sub.originalUsername.trim() !== '' && sub.newUsername.trim() !== '') {
-        substitutionMap.set(sub.originalUsername.trim(), sub.newUsername.trim());
+      if (sub.originalUsername && sub.originalUsername.trim() !== '') {
+        const originalUsername = sub.originalUsername.trim();
+        
+        // Mapa de sustituciones de nombres de usuario
+        if (sub.newUsername && sub.newUsername.trim() !== '') {
+          usernameSubstitutionMap.set(originalUsername, sub.newUsername.trim());
+        }
+        
+        // Mapa de sustituciones de passwords
+        if (sub.newPassword && sub.newPassword.trim() !== '') {
+          passwordSubstitutionMap.set(originalUsername, sub.newPassword.trim());
+        }
       }
     });
     
-    if (substitutionMap.size === 0) {
+    if (usernameSubstitutionMap.size === 0 && passwordSubstitutionMap.size === 0) {
       return nodes;
     }
     
     // Aplicar sustituciones recursivamente a la estructura de nodos
     const applySubstitutionsToNode = (node) => {
       // Si es un nodo de conexión SSH
-      if (node.data && node.data.type === 'ssh' && node.data.user) {
-        node.data.user = this.applySubstitutionsToString(node.data.user, substitutionMap);
+      if (node.data && node.data.type === 'ssh') {
+        if (node.data.user && usernameSubstitutionMap.size > 0) {
+          node.data.user = this.applySubstitutionsToString(node.data.user, usernameSubstitutionMap);
+        }
+        if (node.data.password && passwordSubstitutionMap.size > 0) {
+          // Para SSH, aplicar sustitución de password si el usuario original coincide
+          const originalUser = this.findOriginalUserInNode(node, substitutions);
+          if (originalUser && passwordSubstitutionMap.has(originalUser)) {
+            node.data.password = passwordSubstitutionMap.get(originalUser);
+          }
+        }
       }
       // Si es un nodo de conexión RDP
-      else if (node.data && node.data.type === 'rdp' && node.data.username) {
-        node.data.username = this.applySubstitutionsToString(node.data.username, substitutionMap);
+      else if (node.data && node.data.type === 'rdp') {
+        if (node.data.username && usernameSubstitutionMap.size > 0) {
+          node.data.username = this.applySubstitutionsToString(node.data.username, usernameSubstitutionMap);
+        }
+        if (node.data.password && passwordSubstitutionMap.size > 0) {
+          // Para RDP, aplicar sustitución de password si el usuario original coincide
+          const originalUser = this.findOriginalUserInNode(node, substitutions);
+          if (originalUser && passwordSubstitutionMap.has(originalUser)) {
+            node.data.password = passwordSubstitutionMap.get(originalUser);
+          }
+        }
       }
       
       // Procesar nodos hijos recursivamente
@@ -785,6 +815,35 @@ class ImportService {
     };
     
     return nodes.map(applySubstitutionsToNode);
+  }
+
+  /**
+   * Encuentra el usuario original en un nodo basándose en las sustituciones
+   * @param {Object} node - Nodo de conexión
+   * @param {Array} substitutions - Array de sustituciones
+   * @returns {string|null} Usuario original o null si no se encuentra
+   */
+  static findOriginalUserInNode(node, substitutions) {
+    if (!node.data) return null;
+    
+    const currentUser = node.data.user || node.data.username;
+    if (!currentUser) return null;
+    
+    // Buscar en las sustituciones si el usuario actual es el resultado de una sustitución
+    for (const sub of substitutions) {
+      if (sub.newUsername && currentUser.includes(sub.newUsername)) {
+        return sub.originalUsername;
+      }
+    }
+    
+    // Si no se encuentra sustitución, el usuario actual podría ser el original
+    for (const sub of substitutions) {
+      if (sub.originalUsername && currentUser.includes(sub.originalUsername)) {
+        return sub.originalUsername;
+      }
+    }
+    
+    return null;
   }
 
   /**
