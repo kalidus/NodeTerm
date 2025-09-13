@@ -7,6 +7,7 @@ import { Divider } from 'primereact/divider';
 import { Message } from 'primereact/message';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
+import { Password } from 'primereact/password';
 import { Card } from 'primereact/card';
 import ImportService from '../services/ImportService';
 
@@ -100,6 +101,7 @@ const ImportDialog = ({
           setUserSubstitutions(result.topUsers.map(user => ({
             originalUsername: user.username,
             newUsername: '',
+            newPassword: '',
             enabled: false
           })));
         } else {
@@ -463,7 +465,8 @@ const ImportDialog = ({
         console.log('🔄 Aplicando sustituciones de usuarios:', activeSubstitutions);
         const substitutions = activeSubstitutions.map(sub => ({
           originalUsername: sub.originalUsername,
-          newUsername: sub.newUsername
+          newUsername: sub.newUsername,
+          newPassword: sub.newPassword || ''
         }));
         
         // Aplicar sustituciones a la estructura
@@ -967,7 +970,7 @@ const ImportDialog = ({
                               
                               {userSubstitutions[index]?.enabled && (
                                 <div style={{ marginLeft: '20px' }}>
-                                  <div className="flex align-items-center" style={{ gap: 6 }}>
+                                  <div className="flex align-items-center" style={{ gap: 6, marginBottom: '4px' }}>
                                     <span style={{ fontSize: '9px', color: 'var(--text-color-secondary)' }}>
                                       Sustituir por:
                                     </span>
@@ -977,6 +980,29 @@ const ImportDialog = ({
                                       placeholder="Nuevo nombre de usuario"
                                       disabled={importing}
                                       style={{ flex: 1, fontSize: '10px', height: '20px', padding: '2px 6px' }}
+                                    />
+                                  </div>
+                                  <div className="flex align-items-center" style={{ gap: 6 }}>
+                                    <span style={{ fontSize: '9px', color: 'var(--text-color-secondary)' }}>
+                                      Password:
+                                    </span>
+                                    <Password
+                                      value={userSubstitutions[index]?.newPassword || ''}
+                                      onChange={(e) => handleUserSubstitutionChange(index, 'newPassword', e.target.value)}
+                                      placeholder="Nueva contraseña (opcional)"
+                                      disabled={importing}
+                                      feedback={false}
+                                      toggleMask
+                                      inputStyle={{ 
+                                        flex: 1, 
+                                        fontSize: '10px', 
+                                        height: '20px', 
+                                        padding: '2px 6px' 
+                                      }}
+                                      panelStyle={{ 
+                                        fontSize: '10px',
+                                        padding: '4px'
+                                      }}
                                     />
                                   </div>
                                   {user.connections.length > 0 && (
