@@ -462,7 +462,6 @@ const ImportDialog = ({
       let finalResult = result;
       const activeSubstitutions = userSubstitutions.filter(sub => sub.enabled && sub.newUsername.trim() !== '');
       if (activeSubstitutions.length > 0) {
-        console.log('🔄 Aplicando sustituciones de usuarios:', activeSubstitutions);
         const substitutions = activeSubstitutions.map(sub => ({
           originalUsername: sub.originalUsername,
           newUsername: sub.newUsername,
