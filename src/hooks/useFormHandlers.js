@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { iconThemes } from '../themes/icon-themes';
 
 /**
  * Hook para manejar todas las operaciones de formularios de la aplicación
@@ -59,6 +60,42 @@ export const useFormHandlers = ({
   /**
    * Crear nueva carpeta
    */
+  // Función para obtener el color por defecto del tema actual
+  const getThemeDefaultColor = (themeName) => {
+    const theme = iconThemes[themeName];
+    if (!theme || !theme.icons || !theme.icons.folder) return '#007ad9';
+    
+    const folderIcon = theme.icons.folder;
+    
+    // Si el SVG tiene fill y no es "none", usar ese color
+    if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
+      return folderIcon.props.fill;
+    }
+    
+    // Si el SVG tiene stroke, usar ese color (para temas como linea que usan stroke)
+    if (folderIcon.props && folderIcon.props.stroke) {
+      return folderIcon.props.stroke;
+    }
+    
+    // Fallback: buscar en los children del SVG
+    if (folderIcon.props && folderIcon.props.children) {
+      const children = Array.isArray(folderIcon.props.children) 
+        ? folderIcon.props.children 
+        : [folderIcon.props.children];
+      
+      for (const child of children) {
+        if (child.props && child.props.fill && child.props.fill !== 'none') {
+          return child.props.fill;
+        }
+        if (child.props && child.props.stroke) {
+          return child.props.stroke;
+        }
+      }
+    }
+    
+    return '#007ad9'; // Fallback por defecto
+  };
+
   const createNewFolder = useCallback(() => {
     if (!folderName.trim()) {
       toast.current.show({
@@ -72,6 +109,12 @@ export const useFormHandlers = ({
     
     try {
       const newKey = generateUniqueKey();
+      // Determinar si el color es personalizado (diferente al del tema)
+      const themeDefaultColor = getThemeDefaultColor(iconTheme);
+      const isCustomColor = folderColor && folderColor !== themeDefaultColor;
+      
+      
+      
       const newFolder = {
         key: newKey,
         label: folderName.trim(),
@@ -80,7 +123,8 @@ export const useFormHandlers = ({
         uid: newKey,
         createdAt: new Date().toISOString(),
         isUserCreated: true,
-        color: folderColor || '#007ad9' // Color por defecto azul
+        color: folderColor || themeDefaultColor,
+        hasCustomColor: isCustomColor // Solo marcar como personalizado si es diferente al tema
       };
       
       const nodesCopy = deepCopy(nodes);
@@ -328,7 +372,15 @@ export const useFormHandlers = ({
     const nodeToEdit = findNodeByKey(nodesCopy, editFolderNode.key);
     if (nodeToEdit) {
       nodeToEdit.label = editFolderName.trim();
-      nodeToEdit.color = editFolderColor || '#007ad9'; // Actualizar color también
+      
+      // Determinar si el color es personalizado (diferente al del tema)
+      const themeDefaultColor = getThemeDefaultColor(iconTheme);
+      const isCustomColor = editFolderColor && editFolderColor !== themeDefaultColor;
+      
+      
+      
+      nodeToEdit.color = editFolderColor || themeDefaultColor;
+      nodeToEdit.hasCustomColor = isCustomColor; // Solo marcar como personalizado si es diferente al tema
     }
     
     setNodes(nodesCopy);
