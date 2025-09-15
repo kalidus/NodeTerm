@@ -1388,6 +1388,9 @@ const App = () => {
         // Referencias
         toast={toast}
         
+        // Temas
+        iconTheme={iconTheme}
+        
         // Estados de diálogos
         showSSHDialog={showSSHDialog}
         setShowSSHDialog={setShowSSHDialog}
