@@ -219,6 +219,15 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       
       items.push({ separator: true });
       items.push({
+        label: 'Duplicar',
+        icon: 'pi pi-copy',
+        command: () => {
+          if (sidebarCallbacksRef.current.duplicateSSH) {
+            sidebarCallbacksRef.current.duplicateSSH(node);
+          }
+        }
+      });
+      items.push({
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
@@ -258,6 +267,15 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
       items.push({ separator: true });
+      items.push({
+        label: 'Duplicar',
+        icon: 'pi pi-copy',
+        command: () => {
+          if (sidebarCallbacksRef.current.duplicateRDP) {
+            sidebarCallbacksRef.current.duplicateRDP(node);
+          }
+        }
+      });
       items.push({
         label: 'Editar',
         icon: 'pi pi-pencil',
@@ -305,6 +323,15 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
       items.push({ separator: true });
+      items.push({
+        label: 'Duplicar Carpeta',
+        icon: 'pi pi-copy',
+        command: () => {
+          if (sidebarCallbacksRef.current.duplicateFolder) {
+            sidebarCallbacksRef.current.duplicateFolder(node);
+          }
+        }
+      });
       items.push({
         label: 'Editar Carpeta',
         icon: 'pi pi-pencil',

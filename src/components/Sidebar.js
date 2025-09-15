@@ -670,6 +670,179 @@ const Sidebar = React.memo(({
           openEditSSHDialog(node);
         },
 
+        duplicateSSH: (node) => {
+          // Duplicar conexión SSH
+          const nodesCopy = deepCopy(nodes);
+          const newKey = `ssh_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+          const duplicatedNode = {
+            ...node,
+            key: newKey,
+            uid: newKey,
+            label: `${node.label} (Copia)`,
+            data: {
+              ...node.data,
+              // Mantener todos los datos originales
+            }
+          };
+          
+          // Encontrar el nodo padre y añadir la copia
+          const findParentAndAdd = (nodes, targetKey, newNode) => {
+            for (let i = 0; i < nodes.length; i++) {
+              if (nodes[i].key === targetKey) {
+                // Si es un nodo raíz, añadir al final
+                nodes.push(newNode);
+                return true;
+              }
+              if (nodes[i].children) {
+                for (let j = 0; j < nodes[i].children.length; j++) {
+                  if (nodes[i].children[j].key === targetKey) {
+                    // Añadir después del nodo original
+                    nodes[i].children.splice(j + 1, 0, newNode);
+                    return true;
+                  }
+                }
+                if (findParentAndAdd(nodes[i].children, targetKey, newNode)) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          };
+          
+          // Buscar el nodo original para encontrar su posición
+          const findNodePosition = (nodes, targetKey) => {
+            for (let i = 0; i < nodes.length; i++) {
+              if (nodes[i].key === targetKey) {
+                return { parentNodes: nodes, index: i, isRoot: true };
+              }
+              if (nodes[i].children) {
+                for (let j = 0; j < nodes[i].children.length; j++) {
+                  if (nodes[i].children[j].key === targetKey) {
+                    return { parentNodes: nodes[i].children, index: j, isRoot: false };
+                  }
+                }
+                const found = findNodePosition(nodes[i].children, targetKey);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          const position = findNodePosition(nodesCopy, node.key);
+          if (position) {
+            position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
+            setNodes(() => logSetNodes('Sidebar-DuplicateSSH', nodesCopy));
+            showToast && showToast({
+              severity: 'success',
+              summary: 'Duplicado',
+              detail: `Conexión SSH "${node.label}" duplicada`,
+              life: 3000
+            });
+          }
+        },
+
+        duplicateRDP: (node) => {
+          // Duplicar conexión RDP
+          const nodesCopy = deepCopy(nodes);
+          const newKey = `rdp_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+          const duplicatedNode = {
+            ...node,
+            key: newKey,
+            uid: newKey,
+            label: `${node.label} (Copia)`,
+            data: {
+              ...node.data,
+              // Mantener todos los datos originales
+            }
+          };
+          
+          // Buscar el nodo original para encontrar su posición
+          const findNodePosition = (nodes, targetKey) => {
+            for (let i = 0; i < nodes.length; i++) {
+              if (nodes[i].key === targetKey) {
+                return { parentNodes: nodes, index: i, isRoot: true };
+              }
+              if (nodes[i].children) {
+                for (let j = 0; j < nodes[i].children.length; j++) {
+                  if (nodes[i].children[j].key === targetKey) {
+                    return { parentNodes: nodes[i].children, index: j, isRoot: false };
+                  }
+                }
+                const found = findNodePosition(nodes[i].children, targetKey);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          const position = findNodePosition(nodesCopy, node.key);
+          if (position) {
+            position.parentNodes.splice(position.index + 1, 0, duplicatedNode);
+            setNodes(() => logSetNodes('Sidebar-DuplicateRDP', nodesCopy));
+            showToast && showToast({
+              severity: 'success',
+              summary: 'Duplicado',
+              detail: `Conexión RDP "${node.label}" duplicada`,
+              life: 3000
+            });
+          }
+        },
+
+        duplicateFolder: (node) => {
+          // Duplicar carpeta con todo su contenido
+          const nodesCopy = deepCopy(nodes);
+          const newKey = `folder_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+          
+          // Función recursiva para duplicar un nodo y todos sus hijos
+          const duplicateNodeRecursive = (originalNode) => {
+            const newNode = {
+              ...originalNode,
+              key: `${originalNode.key}_copy_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+              uid: `${originalNode.uid}_copy_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+              label: originalNode.droppable ? `${originalNode.label} (Copia)` : originalNode.label
+            };
+            
+            if (originalNode.children && originalNode.children.length > 0) {
+              newNode.children = originalNode.children.map(child => duplicateNodeRecursive(child));
+            }
+            
+            return newNode;
+          };
+          
+          const duplicatedFolder = duplicateNodeRecursive(node);
+          
+          // Buscar el nodo original para encontrar su posición
+          const findNodePosition = (nodes, targetKey) => {
+            for (let i = 0; i < nodes.length; i++) {
+              if (nodes[i].key === targetKey) {
+                return { parentNodes: nodes, index: i, isRoot: true };
+              }
+              if (nodes[i].children) {
+                for (let j = 0; j < nodes[i].children.length; j++) {
+                  if (nodes[i].children[j].key === targetKey) {
+                    return { parentNodes: nodes[i].children, index: j, isRoot: false };
+                  }
+                }
+                const found = findNodePosition(nodes[i].children, targetKey);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          const position = findNodePosition(nodesCopy, node.key);
+          if (position) {
+            position.parentNodes.splice(position.index + 1, 0, duplicatedFolder);
+            setNodes(() => logSetNodes('Sidebar-DuplicateFolder', nodesCopy));
+            showToast && showToast({
+              severity: 'success',
+              summary: 'Duplicado',
+              detail: `Carpeta "${node.label}" y su contenido duplicados`,
+              life: 3000
+            });
+          }
+        },
+
         editFolder: (node) => {
           // Cargar datos de la carpeta para editar
           setFolderName(node.label);
