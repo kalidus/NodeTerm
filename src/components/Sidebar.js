@@ -1035,18 +1035,139 @@ const Sidebar = React.memo(({
           'data-debug': 'sidebar-theme-icon'
         });
         
-        // Modificar los colores del SVG recursivamente
+        // Modificar los colores del SVG preservando la identidad del tema
         const modifySVGColors = (element, newColor) => {
           if (!element || !element.props) return element;
           
           const newProps = { ...element.props };
           
-          // Cambiar fill y stroke si existen
+          // Función para convertir hex a HSL
+          const hexToHsl = (hex) => {
+            const r = parseInt(hex.substr(1, 2), 16) / 255;
+            const g = parseInt(hex.substr(3, 2), 16) / 255;
+            const b = parseInt(hex.substr(5, 2), 16) / 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+              h = s = 0;
+            } else {
+              const d = max - min;
+              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+              switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+              }
+              h /= 6;
+            }
+            
+            return [h * 360, s * 100, l * 100];
+          };
+          
+          // Función para convertir HSL a hex
+          const hslToHex = (h, s, l) => {
+            h /= 360;
+            s /= 100;
+            l /= 100;
+            
+            const hue2rgb = (p, q, t) => {
+              if (t < 0) t += 1;
+              if (t > 1) t -= 1;
+              if (t < 1/6) return p + (q - p) * 6 * t;
+              if (t < 1/2) return q;
+              if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+              return p;
+            };
+            
+            let r, g, b;
+            if (s === 0) {
+              r = g = b = l;
+            } else {
+              const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+              const p = 2 * l - q;
+              r = hue2rgb(p, q, h + 1/3);
+              g = hue2rgb(p, q, h);
+              b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            const toHex = (c) => {
+              const hex = Math.round(c * 255).toString(16);
+              return hex.length === 1 ? '0' + hex : hex;
+            };
+            
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+          };
+          
+          // Función para crear un color complementario
+          const getComplementaryColor = (color) => {
+            const [h, s, l] = hexToHsl(color);
+            return hslToHex((h + 180) % 360, s, l);
+          };
+          
+          // Función para crear un color análogo (desplazado en el círculo cromático)
+          const getAnalogousColor = (color, offset = 30) => {
+            const [h, s, l] = hexToHsl(color);
+            return hslToHex((h + offset) % 360, s, l);
+          };
+          
+          // Función para ajustar la saturación
+          const adjustSaturation = (color, factor) => {
+            const [h, s, l] = hexToHsl(color);
+            return hslToHex(h, Math.min(100, s * factor), l);
+          };
+          
+          // Función para ajustar la luminosidad
+          const adjustLightness = (color, factor) => {
+            const [h, s, l] = hexToHsl(color);
+            return hslToHex(h, s, Math.min(100, Math.max(0, l * factor)));
+          };
+          
+          // Mapeo de colores específicos del tema a colores adaptados
+          const colorMapping = {
+            // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> complementario
+            '#ff007c': newColor,
+            '#00d4ff': getComplementaryColor(newColor),
+            
+            // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> análogo claro
+            '#5e81ac': newColor,
+            '#88c0d0': adjustLightness(getAnalogousColor(newColor, 20), 1.3),
+            
+            // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> complementario
+            '#bd93f9': newColor,
+            '#ff79c6': getComplementaryColor(newColor),
+            
+            // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> complementario
+            '#0078d4': newColor,
+            '#50e6ff': getComplementaryColor(newColor),
+            
+            // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> complementario
+            '#b58900': newColor,
+            '#268bd2': getComplementaryColor(newColor),
+            
+            // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> análogo claro
+            '#dcb67a': newColor,
+            '#f5d18a': adjustLightness(getAnalogousColor(newColor, 10), 1.2),
+          };
+          
+          // Cambiar colores de manera inteligente
           if (newProps.fill && newProps.fill !== 'none') {
-            newProps.fill = newColor;
+            if (colorMapping[newProps.fill]) {
+              newProps.fill = colorMapping[newProps.fill];
+            } else {
+              // Para colores no mapeados, usar el color personalizado
+              newProps.fill = newColor;
+            }
           }
+          
           if (newProps.stroke && newProps.stroke !== 'none') {
-            newProps.stroke = newColor;
+            if (colorMapping[newProps.stroke]) {
+              newProps.stroke = colorMapping[newProps.stroke];
+            } else {
+              newProps.stroke = newColor;
+            }
           }
           
           // Procesar children recursivamente
