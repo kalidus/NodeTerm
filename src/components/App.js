@@ -393,12 +393,8 @@ const App = () => {
   };
 
   // Función para manejar la importación completa (estructura + conexiones)
-  console.log('🔍 DEBUG App.js - Definiendo handleImportComplete...');
   const handleImportComplete = async (importResult) => {
-    console.log('🚀 handleImportComplete INICIANDO...');
     try {
-      console.log('🎯 handleImportComplete IN', importResult && typeof importResult, importResult?.structure?.nodes?.length);
-      console.log('🔍 DEBUG handleImportComplete - importResult completo:', importResult);
       if (!importResult) {
         toast.current?.show({
           severity: 'warn',
@@ -462,29 +458,8 @@ const App = () => {
         ? (importResult?.linkedOverwrite === true)
         : (importResult?.overwrite === true);
 
-      console.log('🔍 DEBUG handleImportComplete:', {
-        isLinkedMode,
-        baseTargetKey,
-        finalCreateContainerFolder,
-        finalContainerLabel,
-        finalOverwrite,
-        importResult: {
-          linkFile: importResult?.linkFile,
-          createContainerFolder: importResult?.createContainerFolder,
-          linkedCreateContainerFolder: importResult?.linkedCreateContainerFolder,
-          overwrite: importResult?.overwrite,
-          linkedOverwrite: importResult?.linkedOverwrite
-        }
-      });
 
       const insertIntoTarget = (nodesToInsert) => {
-        console.log('🔍 DEBUG insertIntoTarget:', {
-          baseTargetKey,
-          finalCreateContainerFolder,
-          finalOverwrite,
-          finalContainerLabel,
-          nodesToInsertLength: nodesToInsert?.length
-        });
 
         // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
         const containerize = (children) => ({
@@ -500,25 +475,19 @@ const App = () => {
         });
 
         if (baseTargetKey === ROOT_VALUE) {
-          console.log('🔍 DEBUG: Insertando en raíz');
           setNodes(prev => {
             const nodesCopy = JSON.parse(JSON.stringify(prev || []));
             if (finalCreateContainerFolder) {
-              console.log('🔍 DEBUG: Creando contenedor en raíz');
               if (finalOverwrite) {
-                console.log('🔍 DEBUG: Con overwrite');
                 return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
               } else {
-                console.log('🔍 DEBUG: Sin overwrite');
                 nodesCopy.push(containerize(nodesToInsert));
                 return nodesCopy;
               }
             }
             if (finalOverwrite) {
-              console.log('🔍 DEBUG: Insertando directo en raíz con overwrite');
               return removeConflictsAndAdd(nodesCopy, nodesToInsert);
             } else {
-              console.log('🔍 DEBUG: Insertando directo en raíz sin overwrite');
               nodesCopy.push(...nodesToInsert);
               return nodesCopy;
             }
@@ -626,7 +595,6 @@ const App = () => {
     }
   };
   
-  console.log('🔍 DEBUG App.js - handleImportComplete definida:', typeof handleImportComplete);
   
   // Usar el hook de gestión de pestañas
   const {
@@ -1656,12 +1624,8 @@ const App = () => {
         visible={showImportDialog}
         onHide={() => setShowImportDialog(false)}
         onImportComplete={async (result) => {
-          console.log('🔍 DEBUG App.js - WRAPPER EJECUTÁNDOSE');
-          console.log('🔍 DEBUG App.js - handleImportComplete recibido:', typeof handleImportComplete);
-          console.log('🔍 DEBUG App.js - result recibido:', result);
           try {
             const res = await handleImportComplete(result);
-            console.log('🔍 DEBUG App.js - handleImportComplete completado');
             return res;
           } catch (error) {
             console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);

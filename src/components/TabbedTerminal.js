@@ -77,19 +77,16 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // Detectar distribuciones WSL usando el backend
     useEffect(() => {
-        // console.log('🔍 Iniciando detección de distribuciones WSL...');
         
         const detectWSLDistributions = async () => {
             try {
                 if (window.electron && window.electron.ipcRenderer) {
-                    // console.log('🚀 Invocando detección de distribuciones WSL...');
                     const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
                     // console.log('✅ Distribuciones WSL detectadas:', distributions);
                     
                     // Verificar que recibimos un array válido
                     if (Array.isArray(distributions)) {
                         setWSLDistributions(distributions);
-                        // console.log('🎯 Estado actualizado con', distributions.length, 'distribuciones WSL');
                         // distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.category})`));
                     } else {
                         // console.log('⚠️ Respuesta no es un array, fallback a array vacío');
@@ -111,7 +108,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // LEGACY: Detección frontend temporal (DESACTIVADA - usando solo backend)
     /*
     useEffect(() => {
-        // console.log('🎯 LEGACY: Detección directa de Ubuntu en frontend (DESACTIVADA)');
         // Código legacy comentado para usar solo detección del backend
     }, []);
     */
@@ -338,7 +334,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const terminalOptions = getTerminalOptions();
     
     // Log para depuración
-    // console.log('🎯 Terminal options:', {
     //     wslDistributionsCount: wslDistributions.length,
     //     optionsCount: terminalOptions.length,
     //     options: terminalOptions.map(opt => opt.label),
@@ -433,7 +428,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             terminalType = terminalTypeToUse;
         }
         
-        // console.log('🎯 Nueva pestaña:', { title, terminalType, distroInfo });
         
         // Registrar eventos para la nueva pestaña
         if (window.electron) {

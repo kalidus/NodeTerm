@@ -113,13 +113,11 @@ const MainContentArea = ({
 
   // Función de resize sin colapso automático (para arrastre libre)
   const handleResizeOnly = (e) => {
-    console.log('🔄 onResize (manual):', e.sizes, '- Solo resize, sin auto-colapso');
     // No llamar handleResize durante el arrastre para evitar interferencias
   };
 
   // Función de colapso automático solo al terminar el arrastre
   const handleResizeEndWithAutoCollapse = (e) => {
-    console.log('🏁 onResizeEnd ejecutado:', e.sizes);
     
     // Calcular ancho real del panel en píxeles
     const splitterElement = document.querySelector('.main-splitter');
@@ -132,19 +130,16 @@ const MainContentArea = ({
       const collapseThresholdPx = 80;   // Colapsar antes del límite físico
       const expandThresholdPx = 60;     // Expandir muy fácilmente desde colapsado
       
-      console.log('📊 ResizeEnd:', { sidebarWidthPx, threshold: collapseThresholdPx, collapsed: sidebarCollapsed });
       
       // Guardar el tamaño resultante del arrastre
       setSidebarSizePercent(sidebarPercentage);
       
       // Solo evaluar colapso/expansión al soltar el mouse
       if (!sidebarCollapsed && sidebarWidthPx <= collapseThresholdPx) {
-        console.log('🔄 AUTO-COLAPSANDO por:', sidebarWidthPx);
         requestAnimationFrame(() => {
           setSidebarCollapsed(true);
         });
       } else if (sidebarCollapsed && sidebarWidthPx > expandThresholdPx) {
-        console.log('🔄 AUTO-EXPANDIENDO por:', sidebarWidthPx);
         requestAnimationFrame(() => {
           // Respetar el tamaño arrastrado al expandir
           setSidebarSizePercent(sidebarPercentage);

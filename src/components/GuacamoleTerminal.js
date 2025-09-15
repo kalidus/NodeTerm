@@ -108,13 +108,6 @@ const GuacamoleTerminal = forwardRef(({
 
     // Inicializar conexión Guacamole cuando la librería esté lista
     useEffect(() => {
-        console.log('🔍 GuacamoleTerminal useEffect:', { 
-            isGuacamoleLoaded, 
-            rdpConfig, 
-            connectionState,
-            hasElectron: !!window.electron,
-            hasIPC: !!(window.electron && window.electron.ipcRenderer)
-        });
         
         // Log simplificado de configuración RDP
         if (rdpConfig) {
@@ -182,7 +175,6 @@ const GuacamoleTerminal = forwardRef(({
                  const maxAttempts = 3;
                  
                  // Verificar si estamos en modo mock
-                 console.log('🔍 Verificando modo de operación...');
                  
                  // Obtener estado detallado del servicio
                  const detailedStatus = await window.electron.ipcRenderer.invoke('guacamole:get-status');
@@ -349,7 +341,6 @@ const GuacamoleTerminal = forwardRef(({
 
                  // Crear token de conexión
                  // Log crítico: verificar configuración antes de enviar al backend
-                 console.log('🚀 ENVIANDO AL BACKEND:', rdpConfig);
                  
                  const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
                 console.log('📄 Respuesta del token:', tokenResponse);
@@ -461,7 +452,6 @@ const GuacamoleTerminal = forwardRef(({
                      setTimeout(() => {
                          if (display.onresize) {
                              display.onresize();
-                             console.log('🔄 Display refrescado');
                          }
                      }, 100);
                  } else {
@@ -540,7 +530,6 @@ const GuacamoleTerminal = forwardRef(({
                         5: 'DISCONNECTING'
                     };
                     
-                                         console.log(`🔄 Estado Guacamole: ${state} (${stateNames[state] || 'UNKNOWN'})`);
                      // console.log(`🔍 Comparando: state=${state}, CONNECTED=${window.Guacamole.Client.CONNECTED}`);
                      
                      // Usar constantes directas ya que window.Guacamole.Client.CONNECTED es undefined
@@ -559,11 +548,9 @@ const GuacamoleTerminal = forwardRef(({
                             if (display && display.onresize) {
                                 // Siempre refrescar el display localmente; esto no envía tamaño
                                 display.onresize();
-                                 console.log('🔄 Display refrescado después de conectar');
                              }
                          }, 500);
                          
-                                                 console.log('🔄 Cambiando estado a CONNECTED...');
                         setConnectionState('connected');
                         const nowTsConn = Date.now();
                         setLastActivityTime(nowTsConn); // Registrar actividad inicial
@@ -684,7 +671,6 @@ const GuacamoleTerminal = forwardRef(({
                                      return;
                                  }
                                  
-                                  console.log(`🔄 Intento ${attempt}: Auto-resize inicial ${newWidth}x${newHeight}`);
                                  
                                   try {
                                      // 1) Ajuste local solo para el inicial (no dispara window.resize)
@@ -827,7 +813,6 @@ const GuacamoleTerminal = forwardRef(({
                          
                          // Timeout para detectar si no llegan datos visuales
                          setTimeout(() => {
-                             console.log('🔍 Verificando si el display ha recibido datos...');
                              const displayElement = containerRef.current?.querySelector('canvas');
                              if (displayElement) {
                                  console.log('📺 Canvas encontrado en display');
@@ -935,7 +920,6 @@ const GuacamoleTerminal = forwardRef(({
                                  }
                              } else {
                                  console.log('⚠️ No se encontró canvas - posible problema de datos visuales');
-                                 console.log('🔍 Elementos en el contenedor:', containerRef.current?.children);
                              }
                          }, 5000);
                                           } else if (state === 4) { // DISCONNECTED
@@ -998,7 +982,6 @@ const GuacamoleTerminal = forwardRef(({
                 }, 30000);
 
                 // Conectar
-                console.log('🚀 Iniciando conexión cliente Guacamole...');
                 const connectStartedAt = Date.now();
                 client.connect();
                 
@@ -1280,7 +1263,6 @@ const GuacamoleTerminal = forwardRef(({
             console.log('🗑️ Removiendo listener anterior para crear uno nuevo');
         }
         
-        console.log('🔄 AutoResize: Agregando listener de resize ESTABLE');
         
         let resizeTimeout = null;
         let isResizing = false; // Protección contra resize simultáneo
@@ -1822,7 +1804,6 @@ const GuacamoleTerminal = forwardRef(({
                     setTimeout(() => {
                         if (Date.now() - lastResizeTimeRef.current >= 10000) {
                             consecutiveResizeCountRef.current = 0;
-                            console.log('🔄 Reset contador de resizes consecutivos');
                         }
                     }, 10000);
                     
@@ -1870,7 +1851,6 @@ const GuacamoleTerminal = forwardRef(({
             
             // Solo loggear si hay mucho tiempo sin actividad (para debug)
             if (timeSinceActivity > 1800000) { // Solo loggear después de 30 minutos
-            console.log(`🔍 Vigilante: última actividad hace ${Math.round(timeSinceActivity/1000)}s`);
             }
             
             // Solo considerar congelación si han pasado más de 2 minutos Y el cliente está en estado connected
@@ -1889,7 +1869,6 @@ const GuacamoleTerminal = forwardRef(({
                 
                 // Reiniciar la conexión después de un breve delay
                 setTimeout(() => {
-                    console.log('🔄 Reiniciando conexión tras congelación...');
                     setConnectionState('connecting');
                     setFreezeDetected(false);
                     setLastActivityTime(Date.now());
@@ -2061,9 +2040,7 @@ const GuacamoleTerminal = forwardRef(({
                              icon="pi pi-refresh" 
                              size="small"
                              onClick={() => {
-                                 console.log('🔍 Probando conexión RDP...');
                                  if (guacamoleClientRef.current) {
-                                     console.log('📊 Estado actual del cliente:', guacamoleClientRef.current.currentState);
                                  }
                              }}
                              className="p-button-text p-button-sm"

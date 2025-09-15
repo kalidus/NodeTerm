@@ -75,7 +75,6 @@ const Sidebar = React.memo(({
   rdpNodeData, setRdpNodeData,
   editingRdpNode, setEditingRdpNode
 }) => {
-  console.log('Sidebar renderizado - Versión con menú Archivo actualizada');
   
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
@@ -172,9 +171,7 @@ const Sidebar = React.memo(({
 
   // Función para manejar la importación completa (estructura + conexiones) con deduplicación local
   const handleImportComplete = async (importResult) => {
-    console.log('🚀 Sidebar handleImportComplete INICIANDO...');
     try {
-      console.log('🔍 DEBUG Sidebar handleImportComplete - importResult completo:', importResult);
       if (!importResult) {
         showToast && showToast({
           severity: 'warn',
@@ -237,29 +234,8 @@ const Sidebar = React.memo(({
         ? (importResult?.linkedOverwrite || false)
         : (importResult?.overwrite || false);
 
-      console.log('🔍 DEBUG Sidebar handleImportComplete:', {
-        isLinkedMode,
-        baseTargetKey,
-        finalCreateContainerFolder,
-        finalContainerLabel,
-        finalOverwrite,
-        importResult: {
-          linkFile: importResult?.linkFile,
-          createContainerFolder: importResult?.createContainerFolder,
-          linkedCreateContainerFolder: importResult?.linkedCreateContainerFolder,
-          overwrite: importResult?.overwrite,
-          linkedOverwrite: importResult?.linkedOverwrite
-        }
-      });
 
       const insertIntoTarget = (nodesToInsert) => {
-        console.log('🔍 DEBUG Sidebar insertIntoTarget:', {
-          baseTargetKey,
-          finalCreateContainerFolder,
-          finalOverwrite,
-          finalContainerLabel,
-          nodesToInsertLength: nodesToInsert?.length
-        });
 
         // Inserta un array de nodos en la carpeta destino, con soporte para overwrite y contenedor opcional
         const containerize = (children) => ({
@@ -275,25 +251,19 @@ const Sidebar = React.memo(({
         });
 
         if (baseTargetKey === ROOT_VALUE) {
-          console.log('🔍 DEBUG Sidebar: Insertando en raíz');
           setNodes(prev => {
             const nodesCopy = JSON.parse(JSON.stringify(prev || []));
             if (finalCreateContainerFolder) {
-              console.log('🔍 DEBUG Sidebar: Creando contenedor en raíz');
               if (finalOverwrite) {
-                console.log('🔍 DEBUG Sidebar: Con overwrite');
                 return removeConflictsAndAdd(nodesCopy, [containerize(nodesToInsert)]);
               } else {
-                console.log('🔍 DEBUG Sidebar: Sin overwrite');
                 nodesCopy.push(containerize(nodesToInsert));
                 return nodesCopy;
               }
             }
             if (finalOverwrite) {
-              console.log('🔍 DEBUG Sidebar: Insertando directo en raíz con overwrite');
               return removeConflictsAndAdd(nodesCopy, nodesToInsert);
             } else {
-              console.log('🔍 DEBUG Sidebar: Insertando directo en raíz sin overwrite');
               nodesCopy.push(...nodesToInsert);
               return nodesCopy;
             }
@@ -737,7 +707,6 @@ const Sidebar = React.memo(({
               
               return nodes.filter(node => {
                 if (node.key === targetKey) {
-                  console.log('🎯 Nodo encontrado y eliminado:', node.label);
                   return false; // Eliminar este nodo
                 }
                 // Solo procesar children si existe y es un array
