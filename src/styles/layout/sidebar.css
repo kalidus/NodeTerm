@@ -10,6 +10,19 @@
 /* Contenedor del árbol */
 .tree-container {
   background: var(--ui-sidebar-bg) !important;
+  /* Ocultar scrollbar pero mantener funcionalidad */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  /* Scroll suave */
+  scroll-behavior: smooth;
+  /* Asegurar que el scroll funcione con la rueda del mouse */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Ocultar scrollbar en WebKit (Chrome, Safari, Edge) */
+.tree-container::-webkit-scrollbar {
+  display: none;
 }
 
 /* Árbol de la sidebar */
