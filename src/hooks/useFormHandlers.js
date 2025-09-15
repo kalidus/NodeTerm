@@ -42,8 +42,10 @@ export const useFormHandlers = ({
   
   // Estados de formularios Folder
   folderName, parentNodeKey,
+  folderColor, setFolderColor,
   editFolderNode, setEditFolderNode,
   editFolderName, setEditFolderName,
+  editFolderColor, setEditFolderColor,
   closeFolderDialogWithReset,
   
   // Funciones de gestión de datos
@@ -77,7 +79,8 @@ export const useFormHandlers = ({
         children: [],
         uid: newKey,
         createdAt: new Date().toISOString(),
-        isUserCreated: true
+        isUserCreated: true,
+        color: folderColor || '#007ad9' // Color por defecto azul
       };
       
       const nodesCopy = deepCopy(nodes);
@@ -110,7 +113,7 @@ export const useFormHandlers = ({
         life: 3000
       });
     }
-  }, [folderName, parentNodeKey, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, closeFolderDialogWithReset, toast]);
+  }, [folderName, folderColor, parentNodeKey, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, closeFolderDialogWithReset, toast]);
 
   /**
    * Crear nueva conexión SSH
@@ -325,6 +328,7 @@ export const useFormHandlers = ({
     const nodeToEdit = findNodeByKey(nodesCopy, editFolderNode.key);
     if (nodeToEdit) {
       nodeToEdit.label = editFolderName.trim();
+      nodeToEdit.color = editFolderColor || '#007ad9'; // Actualizar color también
     }
     
     setNodes(nodesCopy);
@@ -338,7 +342,7 @@ export const useFormHandlers = ({
       detail: `Nombre actualizado`,
       life: 3000
     });
-  }, [editFolderName, editFolderNode, nodes, setNodes, findNodeByKey, deepCopy, closeFolderDialogWithReset, setEditFolderNode, setEditFolderName, toast]);
+  }, [editFolderName, editFolderColor, editFolderNode, nodes, setNodes, findNodeByKey, deepCopy, closeFolderDialogWithReset, setEditFolderNode, setEditFolderName, toast]);
 
   // === FUNCIONES DE DIÁLOGOS ===
 

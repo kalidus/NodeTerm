@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 
 export const useNodeTemplate = ({
   // Estados
@@ -57,9 +57,58 @@ export const useNodeTemplate = ({
     } else if (isRDP) {
       icon = iconThemes[iconThemeSidebar]?.icons?.rdp || <span className="pi pi-desktop" style={{ color: '#007ad9' }} />;
     } else if (isFolder) {
-      icon = options.expanded
-        ? (iconThemes[iconThemeSidebar]?.icons?.folderOpen || <span className="pi pi-folder-open" />)
-        : (iconThemes[iconThemeSidebar]?.icons?.folder || <span className="pi pi-folder" />);
+      const folderColor = node.color || '#007ad9'; // Color por defecto azul
+      
+      // DEBUG: Log para entender qué está pasando
+      console.log('🔍 Folder Icon Debug:', {
+        nodeKey: node.key,
+        nodeLabel: node.label,
+        folderColor,
+        iconThemeSidebar,
+        themeIcon: iconThemes[iconThemeSidebar]?.icons?.folder,
+        expanded: options.expanded
+      });
+      
+      // Usar el icono del tema si existe, pero forzar el color
+      const themeIcon = options.expanded 
+        ? iconThemes[iconThemeSidebar]?.icons?.folderOpen 
+        : iconThemes[iconThemeSidebar]?.icons?.folder;
+      
+      if (themeIcon) {
+        console.log('🎨 Using theme icon:', themeIcon);
+        // Si hay un icono del tema, clonarlo y aplicar el color
+        icon = React.cloneElement(themeIcon, {
+          style: { 
+            ...themeIcon.props.style, 
+            color: folderColor,
+            '--icon-color': folderColor
+          },
+          'data-folder-color': folderColor,
+          'data-debug': 'theme-icon'
+        });
+      } else {
+        console.log('🎨 Using fallback icon');
+        // Fallback a iconos PrimeReact con color forzado
+        icon = options.expanded
+          ? <span 
+              className="pi pi-folder-open" 
+              style={{ 
+                color: folderColor,
+                '--icon-color': folderColor
+              }} 
+              data-folder-color={folderColor}
+              data-debug="fallback-open"
+            />
+          : <span 
+              className="pi pi-folder" 
+              style={{ 
+                color: folderColor,
+                '--icon-color': folderColor
+              }} 
+              data-folder-color={folderColor}
+              data-debug="fallback-closed"
+            />;
+      }
     }
 
     // Obtener estado de conexión para sesiones SSH

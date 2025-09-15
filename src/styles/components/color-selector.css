@@ -1,0 +1,129 @@
+/* Color Selector Component Styles */
+
+.color-selector {
+  margin-bottom: 1.5rem;
+}
+
+.color-selector-label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.color-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.color-option {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  overflow: hidden;
+}
+
+.color-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.color-option.selected {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 3px solid #fff;
+}
+
+.color-option.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.color-icon {
+  font-size: 1.2rem;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.color-option:hover .color-icon {
+  opacity: 1;
+}
+
+.color-option.selected .color-icon {
+  opacity: 0;
+}
+
+.selected-color-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.selected-color-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--surface-300);
+  flex-shrink: 0;
+}
+
+.selected-color-text {
+  color: var(--text-color-secondary);
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .color-palette {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .color-option {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .color-icon {
+    font-size: 1rem;
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .selected-color-info {
+  background: var(--surface-800);
+  border-color: var(--surface-700);
+}
+
+[data-theme="dark"] .selected-color-preview {
+  border-color: var(--surface-600);
+}
+
+[data-theme="dark"] .selected-color-text {
+  color: var(--text-color-secondary);
+}
