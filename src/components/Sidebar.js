@@ -101,11 +101,78 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
+  
+  // Función para obtener el color por defecto del tema actual
+  const getThemeDefaultColor = (themeName) => {
+    const theme = iconThemes[themeName];
+    if (!theme || !theme.icons || !theme.icons.folder) return '#007ad9';
+    
+    const folderIcon = theme.icons.folder;
+    
+    // Si el SVG tiene fill y no es "none", usar ese color
+    if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
+      return folderIcon.props.fill;
+    }
+    
+    // Si el SVG tiene stroke, usar ese color (para temas como linea que usan stroke)
+    if (folderIcon.props && folderIcon.props.stroke) {
+      return folderIcon.props.stroke;
+    }
+    
+    // Fallback: buscar en los children del SVG
+    if (folderIcon.props && folderIcon.props.children) {
+      const children = Array.isArray(folderIcon.props.children) 
+        ? folderIcon.props.children 
+        : [folderIcon.props.children];
+      
+      for (const child of children) {
+        if (child.props && child.props.fill && child.props.fill !== 'none') {
+          return child.props.fill;
+        }
+        if (child.props && child.props.stroke) {
+          return child.props.stroke;
+        }
+      }
+    }
+    
+    return '#007ad9'; // Fallback por defecto
+  };
+
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
-  const [folderColor, setFolderColor] = useState('#007ad9');
+  const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
+  
+  // Actualizar color por defecto cuando cambie el tema
+  useEffect(() => {
+    const newDefaultColor = getThemeDefaultColor(iconTheme);
+    setFolderColor(newDefaultColor);
+    
+    // Actualizar colores de todas las carpetas existentes al nuevo color del tema
+    const updateExistingFoldersColor = (nodes, newColor) => {
+      return nodes.map(node => {
+        if (node.droppable) {
+          // Es una carpeta, actualizar su color
+          const updatedNode = { ...node, color: newColor };
+          
+          // Si tiene children, actualizarlos recursivamente
+          if (node.children && node.children.length > 0) {
+            updatedNode.children = updateExistingFoldersColor(node.children, newColor);
+          }
+          
+          return updatedNode;
+        }
+        return node;
+      });
+    };
+    
+    // Actualizar todas las carpetas existentes
+    const updatedNodes = updateExistingFoldersColor(nodes, newDefaultColor);
+    setNodes(updatedNodes);
+    
+    console.log(`🎨 Tema cambiado a "${iconTheme}". Todas las carpetas actualizadas al color: ${newDefaultColor}`);
+  }, [iconTheme, setNodes]);
   
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
@@ -610,7 +677,7 @@ const Sidebar = React.memo(({
     // Limpiar formulario
     setShowFolderDialog(false);
     setFolderName('');
-    setFolderColor('#007ad9');
+    setFolderColor(getThemeDefaultColor(iconTheme));
     setParentNodeKey(null);
     setEditingNode(null);
     
@@ -1036,10 +1103,15 @@ const Sidebar = React.memo(({
         });
         
         // Modificar los colores del SVG preservando la identidad del tema
-        const modifySVGColors = (element, newColor) => {
+        const modifySVGColors = (element, newColor, index = 0) => {
           if (!element || !element.props) return element;
           
           const newProps = { ...element.props };
+          
+          // Añadir key única si no existe
+          if (!newProps.key) {
+            newProps.key = `svg-child-${index}-${Date.now()}`;
+          }
           
           // Función para convertir hex a HSL
           const hexToHsl = (hex) => {
@@ -1174,18 +1246,18 @@ const Sidebar = React.memo(({
           // Procesar children recursivamente
           if (newProps.children) {
             if (Array.isArray(newProps.children)) {
-              newProps.children = newProps.children.map(child => 
-                typeof child === 'object' ? modifySVGColors(child, newColor) : child
+              newProps.children = newProps.children.map((child, index) => 
+                typeof child === 'object' ? modifySVGColors(child, newColor, index) : child
               );
             } else if (typeof newProps.children === 'object') {
-              newProps.children = modifySVGColors(newProps.children, newColor);
+              newProps.children = modifySVGColors(newProps.children, newColor, 0);
             }
           }
           
           return React.cloneElement(element, newProps);
         };
         
-        icon = modifySVGColors(modifiedIcon, folderColor);
+        icon = modifySVGColors(modifiedIcon, folderColor, 0);
       } else {
         console.log('🎨 Sidebar Using fallback icon');
         // Fallback a iconos PrimeReact con color forzado
@@ -1513,7 +1585,7 @@ const Sidebar = React.memo(({
         onHide={() => {
           setShowFolderDialog(false);
           setFolderName('');
-          setFolderColor('#007ad9');
+          setFolderColor(getThemeDefaultColor(iconTheme));
           setEditingNode(null); // Limpiar estado de edición al cerrar
         }}
         mode={editingNode ? "edit" : "new"}
@@ -1522,6 +1594,8 @@ const Sidebar = React.memo(({
         folderColor={folderColor}
         setFolderColor={setFolderColor}
         onConfirm={createNewFolder}
+        themeDefaultColor={getThemeDefaultColor(iconTheme)}
+        themeName={iconThemes[iconTheme]?.name || 'Material'}
       />
       <UnifiedConnectionDialog
         visible={showUnifiedConnectionDialog}
