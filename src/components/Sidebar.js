@@ -138,6 +138,24 @@ const Sidebar = React.memo(({
     return '#007ad9'; // Fallback por defecto
   };
 
+  // Función para verificar si un color es el color por defecto de algún tema
+  const isDefaultThemeColor = (color) => {
+    if (!color) return false;
+    
+    // Lista de colores por defecto de todos los temas
+    const defaultThemeColors = [
+      '#007ad9', // Material
+      '#0078d4', // Fluent
+      '#ff007c', // Synthwave
+      '#5e81ac', // Nord
+      '#bd93f9', // Dracula
+      '#b58900', // Solarized
+      '#dcb67a'  // VS Code
+    ];
+    
+    return defaultThemeColors.includes(color.toLowerCase());
+  };
+
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
@@ -1087,7 +1105,12 @@ const Sidebar = React.memo(({
     } else if (isRDP) {
       icon = themeIcons.rdp || '🖥️'; // Icono RDP o fallback
     } else if (isFolder) {
-      const folderColor = node.color || '#007ad9'; // Color por defecto azul
+      // Lógica inteligente para determinar el color de la carpeta:
+      // 1. Si no tiene color asignado → usar color por defecto del tema actual
+      // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
+      // 3. Si tiene color personalizado → mantener ese color
+      const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
+      const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
       
       
       // Usar el icono del tema si existe, pero forzar el color
@@ -1554,6 +1577,7 @@ const Sidebar = React.memo(({
               </div>
             ) : (
               <Tree
+                key={`tree-${iconTheme}-${explorerFontSize}`} // Forzar re-render cuando cambie el tema
                 value={nodes}
                 selectionMode="single"
                 selectionKeys={selectedNodeKey}
