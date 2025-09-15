@@ -149,12 +149,26 @@ const Sidebar = React.memo(({
     const newDefaultColor = getThemeDefaultColor(iconTheme);
     setFolderColor(newDefaultColor);
     
-    // Actualizar colores de todas las carpetas existentes al nuevo color del tema
+    // Actualizar colores de carpetas existentes SOLO si no tienen color personalizado
     const updateExistingFoldersColor = (nodes, newColor) => {
       return nodes.map(node => {
         if (node.droppable) {
-          // Es una carpeta, actualizar su color
-          const updatedNode = { ...node, color: newColor };
+          // Es una carpeta
+          const updatedNode = { ...node };
+          
+          // Si la carpeta no tiene la propiedad hasCustomColor, determinar si tiene color personalizado
+          // basándose en si su color es diferente al color del tema actual
+          if (node.hasCustomColor === undefined) {
+            const currentThemeColor = getThemeDefaultColor(iconTheme);
+            updatedNode.hasCustomColor = node.color && node.color !== currentThemeColor;
+          }
+          
+          
+          // Solo actualizar el color si la carpeta NO tiene color personalizado
+          // Las carpetas con color personalizado mantienen su color
+          if (!updatedNode.hasCustomColor) {
+            updatedNode.color = newColor;
+          }
           
           // Si tiene children, actualizarlos recursivamente
           if (node.children && node.children.length > 0) {
@@ -167,11 +181,11 @@ const Sidebar = React.memo(({
       });
     };
     
-    // Actualizar todas las carpetas existentes
+    // Actualizar solo las carpetas sin color personalizado
     const updatedNodes = updateExistingFoldersColor(nodes, newDefaultColor);
     setNodes(updatedNodes);
     
-    console.log(`🎨 Tema cambiado a "${iconTheme}". Todas las carpetas actualizadas al color: ${newDefaultColor}`);
+    console.log(`🎨 Tema cambiado a "${iconTheme}". Carpetas sin color personalizado actualizadas al color: ${newDefaultColor}`);
   }, [iconTheme, setNodes]);
   
   // Ref para el contenedor de la sidebar
@@ -1075,21 +1089,11 @@ const Sidebar = React.memo(({
     } else if (isFolder) {
       const folderColor = node.color || '#007ad9'; // Color por defecto azul
       
-      // DEBUG: Log para entender qué está pasando
-      console.log('🔍 Sidebar Folder Icon Debug:', {
-        nodeKey: node.key,
-        nodeLabel: node.label,
-        folderColor,
-        iconTheme,
-        themeIcon: options.expanded ? themeIcons.folderOpen : themeIcons.folder,
-        expanded: options.expanded
-      });
       
       // Usar el icono del tema si existe, pero forzar el color
       const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
       
       if (themeIcon) {
-        console.log('🎨 Sidebar Using theme icon:', themeIcon);
         // Si hay un icono del tema, clonarlo y aplicar el color
         // Para SVG, necesitamos modificar los atributos fill y stroke directamente
         const modifiedIcon = React.cloneElement(themeIcon, {
@@ -1259,7 +1263,6 @@ const Sidebar = React.memo(({
         
         icon = modifySVGColors(modifiedIcon, folderColor, 0);
       } else {
-        console.log('🎨 Sidebar Using fallback icon');
         // Fallback a iconos PrimeReact con color forzado
         icon = options.expanded
           ? <span 
