@@ -78,7 +78,8 @@ export function FolderDialog({
   folderName, setFolderName,
   folderColor, setFolderColor,
   onConfirm,
-  loading = false
+  loading = false,
+  iconTheme = 'material' // Agregar prop para el tema de iconos
 }) {
   const isEdit = mode === 'edit';
   
@@ -125,6 +126,7 @@ export function FolderDialog({
               selectedColor={folderColor}
               onColorChange={setFolderColor}
               label="Color de la carpeta"
+              iconTheme={iconTheme}
             />
           </div>
         </div>

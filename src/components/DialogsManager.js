@@ -253,6 +253,7 @@ const DialogsManager = ({
         folderName={folderName}
         setFolderName={setFolderName}
         onConfirm={createNewFolder}
+        iconTheme={iconTheme}
       />
       
       {/* Diálogo: Editar carpeta */}
@@ -262,6 +263,7 @@ const DialogsManager = ({
         folderName={editFolderName}
         setFolderName={setEditFolderName}
         onConfirm={saveEditFolder}
+        iconTheme={iconTheme}
       />
       
       {/* Diálogo: Editar SSH - Reemplazado por UnifiedConnectionDialog */}
