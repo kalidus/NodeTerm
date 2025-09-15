@@ -1126,30 +1126,31 @@ const Sidebar = React.memo(({
           };
           
           // Mapeo de colores específicos del tema a colores adaptados
+          // REGLA: La parte superior (flap) mantiene el color secundario del tema, solo el cuerpo cambia
           const colorMapping = {
-            // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> complementario
-            '#ff007c': newColor,
-            '#00d4ff': getComplementaryColor(newColor),
+            // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> MANTENER (parte superior)
+            '#ff007c': newColor,   // Aplicar color personalizado al cuerpo
+            '#00d4ff': '#00d4ff', // Mantener cian original en parte superior
             
-            // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> análogo claro
-            '#5e81ac': newColor,
-            '#88c0d0': adjustLightness(getAnalogousColor(newColor, 20), 1.3),
+            // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> MANTENER (parte superior)
+            '#5e81ac': newColor,   // Aplicar color personalizado al cuerpo
+            '#88c0d0': '#88c0d0', // Mantener azul claro original en parte superior
             
-            // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> complementario
-            '#bd93f9': newColor,
-            '#ff79c6': getComplementaryColor(newColor),
+            // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> MANTENER (parte superior)
+            '#bd93f9': newColor,   // Aplicar color personalizado al cuerpo
+            '#ff79c6': '#ff79c6', // Mantener rosa original en parte superior
             
-            // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> complementario
-            '#0078d4': newColor,
-            '#50e6ff': getComplementaryColor(newColor),
+            // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> MANTENER (parte superior)
+            '#0078d4': newColor,   // Aplicar color personalizado al cuerpo
+            '#50e6ff': '#50e6ff', // Mantener cian original en parte superior
             
-            // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> complementario
-            '#b58900': newColor,
-            '#268bd2': getComplementaryColor(newColor),
+            // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> MANTENER (parte superior)
+            '#b58900': newColor,   // Aplicar color personalizado al cuerpo
+            '#268bd2': '#268bd2', // Mantener azul original en parte superior
             
-            // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> análogo claro
-            '#dcb67a': newColor,
-            '#f5d18a': adjustLightness(getAnalogousColor(newColor, 10), 1.2),
+            // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> MANTENER (parte superior)
+            '#dcb67a': newColor,   // Aplicar color personalizado al cuerpo
+            '#f5d18a': '#f5d18a', // Mantener dorado claro original en parte superior
           };
           
           // Cambiar colores de manera inteligente
