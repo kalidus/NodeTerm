@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.5.2-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.5.3-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -111,19 +111,18 @@ npm run build:win
 
 ---
 
-## 🆕 Novedades en v1.5.2
+## 🆕 Novedades en v1.5.3
 
-- 🚀 **Major Performance Optimization** - React Re-render Optimization
-- ⚡ **Memoización de componentes** (TabHeader, TabContentRenderer, Sidebar)
-- 🔧 **Refactor de App.js** - Extracción de MainContentArea
-- 📉 **Reducción de 30-40%** en re-renders innecesarios
-- 🎯 **Optimización de props** con useCallback y useMemo
-- 🏗️ **Mejor arquitectura** de componentes
-- 📏 **App.js reducido** de ~1100 a ~900 líneas
-- 🎨 **Drag & drop más fluido** y responsivo
-- 🔄 **Mejor respuesta** de la interfaz de usuario
-- 🧪 **Preparación para testing** y mantenimiento
-- 📦 **Código más modular** y mantenible
+- 📥 **Sistema de Importación de Sesiones** - Importa conexiones desde archivos XML (mRemoteNG, etc.)
+- 🎨 **Selector de Colores Avanzado** - Personalización completa de temas con paleta de colores
+- 📁 **Sidebar Colapsable Inteligente** - Mejor gestión del espacio y experiencia de usuario
+- 🏗️ **Refactor Completo de Estilos CSS** - Nueva estructura organizada y modular
+- 🔧 **Diálogos Mejorados** - Mejor UX en formularios SSH/RDP con opciones avanzadas
+- 🎯 **Duplicación de Conexiones** - Duplica carpetas y conexiones fácilmente
+- 🔄 **Modo Vinculado** - Importación automática desde archivos externos
+- 🎨 **Temas Mejorados** - Iconos y colores más elegantes
+- 📱 **UI Responsiva** - Mejor adaptación a diferentes tamaños de pantalla
+- 🐛 **Correcciones de Bugs** - Mejoras de estabilidad y rendimiento
 
 ---
 
@@ -171,13 +170,26 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.5.2** | 🚀 Major Performance Optimization + React Re-render Optimization | ✅ Actual |
+| **v1.5.3** | 📥 Sistema de Importación + Sidebar Colapsable + Refactor CSS | ✅ Actual |
+| **v1.5.2** | 🚀 Major Performance Optimization + React Re-render Optimization | ✅ Completado |
 | **v1.6.0** | 🔑 Soporte para llaves SSH | 📋 Planificado |
 | **v1.7.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
 
 ---
 
 ## 📝 Changelog
+
+### v1.5.3
+- 📥 **Sistema de Importación de Sesiones** - Importa conexiones desde archivos XML (mRemoteNG, etc.)
+- 🎨 **Selector de Colores Avanzado** - Personalización completa de temas con paleta de colores
+- 📁 **Sidebar Colapsable Inteligente** - Mejor gestión del espacio y experiencia de usuario
+- 🏗️ **Refactor Completo de Estilos CSS** - Nueva estructura organizada y modular
+- 🔧 **Diálogos Mejorados** - Mejor UX en formularios SSH/RDP con opciones avanzadas
+- 🎯 **Duplicación de Conexiones** - Duplica carpetas y conexiones fácilmente
+- 🔄 **Modo Vinculado** - Importación automática desde archivos externos
+- 🎨 **Temas Mejorados** - Iconos y colores más elegantes
+- 📱 **UI Responsiva** - Mejor adaptación a diferentes tamaños de pantalla
+- 🐛 **Correcciones de Bugs** - Mejoras de estabilidad y rendimiento
 
 ### v1.5.2
 - 🚀 **Major Performance Optimization** - React Re-render Optimization
