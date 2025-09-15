@@ -1,0 +1,260 @@
+/* Folder Dialog Styles */
+
+.folder-dialog .p-dialog {
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.folder-dialog .p-dialog-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0;
+  border: none;
+  border-radius: 16px 16px 0 0;
+}
+
+.folder-dialog-header {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+.header-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.header-icon i {
+  font-size: 1.5rem;
+  color: white;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+}
+
+.header-subtitle {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+}
+
+.folder-dialog-content {
+  padding: 1.5rem;
+  background: var(--surface-card);
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+}
+
+.form-field {
+  margin-bottom: 1.5rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.field-label i {
+  color: var(--primary-color);
+  font-size: 0.9rem;
+}
+
+.folder-name-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--surface-300);
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: var(--surface-0);
+}
+
+.folder-name-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 122, 217, 0.1);
+  outline: none;
+}
+
+.folder-preview {
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.preview-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-folder {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-left: 4px solid #007ad9;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.preview-folder:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.preview-folder i {
+  font-size: 1.25rem;
+  color: #007ad9;
+}
+
+.preview-name {
+  font-weight: 500;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.folder-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: var(--surface-50);
+  border-top: 1px solid var(--surface-200);
+}
+
+.cancel-button {
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.cancel-button:hover {
+  background: var(--surface-200) !important;
+  transform: translateY(-1px);
+}
+
+.create-button {
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+}
+
+.create-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.create-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .folder-dialog-content {
+  background: var(--surface-800);
+}
+
+[data-theme="dark"] .folder-name-input {
+  background: var(--surface-700);
+  border-color: var(--surface-600);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .folder-name-input:focus {
+  border-color: var(--primary-color);
+  background: var(--surface-600);
+}
+
+[data-theme="dark"] .folder-preview {
+  background: var(--surface-700);
+  border-color: var(--surface-600);
+}
+
+[data-theme="dark"] .preview-folder {
+  background: var(--surface-600);
+  border-color: var(--surface-500);
+}
+
+[data-theme="dark"] .folder-dialog-footer {
+  background: var(--surface-700);
+  border-color: var(--surface-600);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .folder-dialog .p-dialog {
+    width: 95vw !important;
+    margin: 1rem !important;
+  }
+  
+  .folder-dialog-header {
+    padding: 1rem;
+  }
+  
+  .header-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .header-icon i {
+    font-size: 1.25rem;
+  }
+  
+  .header-title {
+    font-size: 1.1rem;
+  }
+  
+  .header-subtitle {
+    font-size: 0.85rem;
+  }
+  
+  .folder-dialog-content {
+    padding: 1rem;
+  }
+  
+  .folder-dialog-footer {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+  }
+  
+  .cancel-button,
+  .create-button {
+    width: 100% !important;
+  }
+}

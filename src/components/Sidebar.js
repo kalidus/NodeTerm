@@ -103,6 +103,7 @@ const Sidebar = React.memo(({
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
+  const [folderColor, setFolderColor] = useState('#007ad9');
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
   
@@ -563,18 +564,18 @@ const Sidebar = React.memo(({
     
     if (editingNode) {
       // Modo edición: actualizar carpeta existente
-      const updateNodeInTree = (nodes, targetKey, newLabel) => {
+      const updateNodeInTree = (nodes, targetKey, newLabel, newColor) => {
         return nodes.map(node => {
           if (node.key === targetKey) {
-            return { ...node, label: newLabel };
+            return { ...node, label: newLabel, color: newColor };
           }
           if (node.children) {
-            return { ...node, children: updateNodeInTree(node.children, targetKey, newLabel) };
+            return { ...node, children: updateNodeInTree(node.children, targetKey, newLabel, newColor) };
           }
           return node;
         });
       };
-      const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim());
+      const updatedNodes = updateNodeInTree(nodesCopy, editingNode.key, folderName.trim(), folderColor);
       setNodes(() => logSetNodes('Sidebar', updatedNodes));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" actualizada`, life: 3000 });
     } else {
@@ -587,7 +588,8 @@ const Sidebar = React.memo(({
         children: [],
         uid: newKey,
         createdAt: new Date().toISOString(),
-        isUserCreated: true
+        isUserCreated: true,
+        color: folderColor
       };
       
       if (parentNodeKey === null) {
@@ -608,6 +610,7 @@ const Sidebar = React.memo(({
     // Limpiar formulario
     setShowFolderDialog(false);
     setFolderName('');
+    setFolderColor('#007ad9');
     setParentNodeKey(null);
     setEditingNode(null);
     
@@ -885,6 +888,7 @@ const Sidebar = React.memo(({
         editFolder: (node) => {
           // Cargar datos de la carpeta para editar
           setFolderName(node.label);
+          setFolderColor(node.color || '#007ad9');
           // Encontrar la carpeta padre
           const findParent = (nodes, targetKey, currentParent = null) => {
             for (let n of nodes) {
@@ -1002,7 +1006,87 @@ const Sidebar = React.memo(({
     } else if (isRDP) {
       icon = themeIcons.rdp || '🖥️'; // Icono RDP o fallback
     } else if (isFolder) {
-      icon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+      const folderColor = node.color || '#007ad9'; // Color por defecto azul
+      
+      // DEBUG: Log para entender qué está pasando
+      console.log('🔍 Sidebar Folder Icon Debug:', {
+        nodeKey: node.key,
+        nodeLabel: node.label,
+        folderColor,
+        iconTheme,
+        themeIcon: options.expanded ? themeIcons.folderOpen : themeIcons.folder,
+        expanded: options.expanded
+      });
+      
+      // Usar el icono del tema si existe, pero forzar el color
+      const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+      
+      if (themeIcon) {
+        console.log('🎨 Sidebar Using theme icon:', themeIcon);
+        // Si hay un icono del tema, clonarlo y aplicar el color
+        // Para SVG, necesitamos modificar los atributos fill y stroke directamente
+        const modifiedIcon = React.cloneElement(themeIcon, {
+          style: { 
+            ...themeIcon.props.style, 
+            color: folderColor,
+            '--icon-color': folderColor
+          },
+          'data-folder-color': folderColor,
+          'data-debug': 'sidebar-theme-icon'
+        });
+        
+        // Modificar los colores del SVG recursivamente
+        const modifySVGColors = (element, newColor) => {
+          if (!element || !element.props) return element;
+          
+          const newProps = { ...element.props };
+          
+          // Cambiar fill y stroke si existen
+          if (newProps.fill && newProps.fill !== 'none') {
+            newProps.fill = newColor;
+          }
+          if (newProps.stroke && newProps.stroke !== 'none') {
+            newProps.stroke = newColor;
+          }
+          
+          // Procesar children recursivamente
+          if (newProps.children) {
+            if (Array.isArray(newProps.children)) {
+              newProps.children = newProps.children.map(child => 
+                typeof child === 'object' ? modifySVGColors(child, newColor) : child
+              );
+            } else if (typeof newProps.children === 'object') {
+              newProps.children = modifySVGColors(newProps.children, newColor);
+            }
+          }
+          
+          return React.cloneElement(element, newProps);
+        };
+        
+        icon = modifySVGColors(modifiedIcon, folderColor);
+      } else {
+        console.log('🎨 Sidebar Using fallback icon');
+        // Fallback a iconos PrimeReact con color forzado
+        icon = options.expanded
+          ? <span 
+              className="pi pi-folder-open" 
+              style={{ 
+                color: folderColor,
+                '--icon-color': folderColor
+              }} 
+              data-folder-color={folderColor}
+              data-debug="sidebar-fallback-open"
+            />
+          : <span 
+              className="pi pi-folder" 
+              style={{ 
+                color: folderColor,
+                '--icon-color': folderColor
+              }} 
+              data-folder-color={folderColor}
+              data-debug="sidebar-fallback-closed"
+            />;
+      }
     } else {
       icon = themeIcons.file;
     }
@@ -1306,11 +1390,15 @@ const Sidebar = React.memo(({
         visible={showFolderDialog}
         onHide={() => {
           setShowFolderDialog(false);
+          setFolderName('');
+          setFolderColor('#007ad9');
           setEditingNode(null); // Limpiar estado de edición al cerrar
         }}
         mode={editingNode ? "edit" : "new"}
         folderName={folderName}
         setFolderName={setFolderName}
+        folderColor={folderColor}
+        setFolderColor={setFolderColor}
         onConfirm={createNewFolder}
       />
       <UnifiedConnectionDialog

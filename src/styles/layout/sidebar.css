@@ -355,6 +355,118 @@
 .sidebar-tree .pi-desktop {
   color: #42a5f5 !important; /* Azul fijo para iconos de sesión */
 }
+
+/* FORZAR COLOR PERSONALIZADO DE CARPETAS - MÁXIMA AGRESIVIDAD */
+/* Regla base para todos los iconos de carpeta con color personalizado */
+.sidebar-tree span[data-folder-color] {
+  color: inherit !important;
+}
+
+/* Reglas específicas para cada color */
+.sidebar-tree span[data-folder-color="#28a745"] {
+  color: #28a745 !important;
+}
+
+.sidebar-tree span[data-folder-color="#dc3545"] {
+  color: #dc3545 !important;
+}
+
+.sidebar-tree span[data-folder-color="#fd7e14"] {
+  color: #fd7e14 !important;
+}
+
+.sidebar-tree span[data-folder-color="#ff6b6b"] {
+  color: #ff6b6b !important;
+}
+
+.sidebar-tree span[data-folder-color="#6f42c1"] {
+  color: #6f42c1 !important;
+}
+
+.sidebar-tree span[data-folder-color="#e83e8c"] {
+  color: #e83e8c !important;
+}
+
+.sidebar-tree span[data-folder-color="#ffc107"] {
+  color: #ffc107 !important;
+}
+
+.sidebar-tree span[data-folder-color="#17a2b8"] {
+  color: #17a2b8 !important;
+}
+
+.sidebar-tree span[data-folder-color="#6c757d"] {
+  color: #6c757d !important;
+}
+
+.sidebar-tree span[data-folder-color="#6610f2"] {
+  color: #6610f2 !important;
+}
+
+.sidebar-tree span[data-folder-color="#20c997"] {
+  color: #20c997 !important;
+}
+
+.sidebar-tree span[data-folder-color="#007ad9"] {
+  color: #007ad9 !important;
+}
+
+/* Reglas adicionales con mayor especificidad */
+.sidebar-tree .p-tree span[data-folder-color] {
+  color: inherit !important;
+}
+
+.sidebar-tree .p-tree .p-treenode span[data-folder-color] {
+  color: inherit !important;
+}
+
+.sidebar-tree .p-tree .p-treenode .p-treenode-content span[data-folder-color] {
+  color: inherit !important;
+}
+
+/* Forzar color usando CSS custom properties */
+.sidebar-tree span[style*="--icon-color"] {
+  color: var(--icon-color) !important;
+}
+
+/* DEBUG: CSS extremadamente agresivo para debugging */
+.sidebar-tree span[data-debug] {
+  color: red !important;
+  background: yellow !important;
+  border: 2px solid red !important;
+}
+
+/* Forzar color específico para debugging */
+.sidebar-tree span[data-folder-color="#28a745"] {
+  color: #28a745 !important;
+  background: rgba(40, 167, 69, 0.1) !important;
+}
+
+.sidebar-tree span[data-folder-color="#dc3545"] {
+  color: #dc3545 !important;
+  background: rgba(220, 53, 69, 0.1) !important;
+}
+
+.sidebar-tree span[data-folder-color="#fd7e14"] {
+  color: #fd7e14 !important;
+  background: rgba(253, 126, 20, 0.1) !important;
+}
+
+.sidebar-tree span[data-folder-color="#ff6b6b"] {
+  color: #ff6b6b !important;
+  background: rgba(255, 107, 107, 0.1) !important;
+}
+
+/* CSS con máxima especificidad posible */
+.sidebar-container .sidebar-tree .p-tree .p-treenode .p-treenode-content span[data-folder-color] {
+  color: inherit !important;
+}
+
+/* Forzar todos los iconos de carpeta */
+.sidebar-tree .pi-folder,
+.sidebar-tree .pi-folder-open {
+  color: inherit !important;
+}
 /* Color de toggler (flecha) */
 .sidebar-tree .p-tree-toggler {
   margin-right: 1px !important;

@@ -8,6 +8,7 @@ import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Fieldset } from 'primereact/fieldset';
 import { RadioButton } from 'primereact/radiobutton';
+import { ColorSelector } from './ColorSelector';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
@@ -75,21 +76,83 @@ export function FolderDialog({
   onHide,
   mode = 'new',
   folderName, setFolderName,
+  folderColor, setFolderColor,
   onConfirm,
   loading = false
 }) {
   const isEdit = mode === 'edit';
+  
   return (
-    <Dialog header={isEdit ? 'Editar carpeta' : 'Nueva carpeta'} visible={visible} style={{ width: 350 }} modal onHide={onHide}>
-      <div className="p-fluid">
-        <div className="p-field">
-          <label htmlFor="folderName">Nombre de la carpeta</label>
-          <InputText id="folderName" value={folderName} onChange={e => setFolderName(e.target.value)} autoFocus />
+    <Dialog 
+      header={
+        <div className="folder-dialog-header">
+          <div className="header-icon">
+            <i className={`pi ${isEdit ? 'pi-pencil' : 'pi-folder-plus'}`}></i>
+          </div>
+          <div className="header-content">
+            <h3 className="header-title">{isEdit ? 'Editar carpeta' : 'Nueva carpeta'}</h3>
+            <p className="header-subtitle">
+              {isEdit ? 'Modifica los detalles de tu carpeta' : 'Crea una nueva carpeta organizada'}
+            </p>
+          </div>
+        </div>
+      } 
+      visible={visible} 
+      style={{ width: '420px', borderRadius: '16px' }} 
+      modal 
+      onHide={onHide}
+      className="folder-dialog"
+    >
+      <div className="folder-dialog-content">
+        <div className="form-section">
+          <div className="form-field">
+            <label htmlFor="folderName" className="field-label">
+              <i className="pi pi-tag"></i>
+              Nombre de la carpeta
+            </label>
+            <InputText 
+              id="folderName" 
+              value={folderName} 
+              onChange={e => setFolderName(e.target.value)} 
+              placeholder="Ingresa el nombre de la carpeta"
+              className="folder-name-input"
+              autoFocus 
+            />
+          </div>
+          
+          <div className="form-field">
+            <ColorSelector
+              selectedColor={folderColor}
+              onColorChange={setFolderColor}
+              label="Color de la carpeta"
+            />
+          </div>
+        </div>
+        
+        <div className="folder-preview">
+          <div className="preview-label">Vista previa:</div>
+          <div className="preview-folder" style={{ borderLeftColor: folderColor || '#007ad9' }}>
+            <i className="pi pi-folder" style={{ color: folderColor || '#007ad9' }}></i>
+            <span className="preview-name">{folderName || 'Nombre de la carpeta'}</span>
+          </div>
         </div>
       </div>
-      <div className="p-dialog-footer">
-        <Button label="Cancelar" icon="pi pi-times" className="p-button-text" onClick={onHide} />
-        <Button label={isEdit ? 'Guardar' : 'Crear'} icon="pi pi-check" className="p-button-primary" onClick={onConfirm} autoFocus loading={loading} />
+      
+      <div className="folder-dialog-footer">
+        <Button 
+          label="Cancelar" 
+          icon="pi pi-times" 
+          className="p-button-text cancel-button" 
+          onClick={onHide}
+        />
+        <Button 
+          label={isEdit ? 'Guardar cambios' : 'Crear carpeta'} 
+          icon={isEdit ? 'pi pi-save' : 'pi pi-plus'} 
+          className="p-button-primary create-button" 
+          onClick={onConfirm} 
+          loading={loading}
+          disabled={!folderName?.trim()}
+        />
       </div>
     </Dialog>
   );
