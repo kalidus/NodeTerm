@@ -7,7 +7,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
-import { unblockAllInputs } from '../utils/formDebugger';
+import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
@@ -18,6 +18,28 @@ function logSetNodes(source, nodes) {
   // Log de debug removido para limpiar la consola
       // Log de trace removido para limpiar la consola
   return nodes;
+}
+
+// Helper para desbloquear formularios de forma segura
+function safeUnblockForms(showToast) {
+  try {
+    const blockedInputs = detectBlockedInputs();
+    if (blockedInputs.length > 0) {
+      console.log(`🔓 Desbloqueando ${blockedInputs.length} formularios bloqueados:`, blockedInputs);
+    }
+    unblockAllInputs();
+    
+    if (blockedInputs.length > 0 && showToast) {
+      showToast({
+        severity: 'info',
+        summary: 'Formularios desbloqueados',
+        detail: `Se han desbloqueado ${blockedInputs.length} campos de formulario`,
+        life: 2000
+      });
+    }
+  } catch (error) {
+    console.warn('Error al desbloquear formularios:', error);
+  }
 }
 
 const Sidebar = React.memo(({
@@ -432,7 +454,7 @@ const Sidebar = React.memo(({
       });
       // Desbloquear formularios por si alguna máscara quedó activa
       setTimeout(() => {
-        try { unblockAllInputs(); } catch {}
+        safeUnblockForms(showToast);
       }, 0);
       
       console.log('✅ Sidebar handleImportComplete COMPLETADO EXITOSAMENTE');
@@ -588,6 +610,11 @@ const Sidebar = React.memo(({
     setFolderName('');
     setParentNodeKey(null);
     setEditingNode(null);
+    
+    // Desbloquear formularios por si alguna máscara quedó activa
+    setTimeout(() => {
+      try { unblockAllInputs(); } catch {}
+    }, 0);
   };
 
 
@@ -738,6 +765,10 @@ const Sidebar = React.memo(({
               detail: `Conexión SSH "${node.label}" duplicada`,
               life: 3000
             });
+            // Desbloquear formularios por si alguna máscara quedó activa
+            setTimeout(() => {
+              safeUnblockForms(showToast);
+            }, 0);
           }
         },
 
@@ -785,6 +816,10 @@ const Sidebar = React.memo(({
               detail: `Conexión RDP "${node.label}" duplicada`,
               life: 3000
             });
+            // Desbloquear formularios por si alguna máscara quedó activa
+            setTimeout(() => {
+              safeUnblockForms(showToast);
+            }, 0);
           }
         },
 
@@ -840,6 +875,10 @@ const Sidebar = React.memo(({
               detail: `Carpeta "${node.label}" y su contenido duplicados`,
               life: 3000
             });
+            // Desbloquear formularios por si alguna máscara quedó activa
+            setTimeout(() => {
+              safeUnblockForms(showToast);
+            }, 0);
           }
         },
 
@@ -908,6 +947,11 @@ const Sidebar = React.memo(({
               life: 3000 
             });
               console.log('✅ Toast mostrado');
+              
+              // Desbloquear formularios por si alguna máscara quedó activa
+              setTimeout(() => {
+                try { unblockAllInputs(); } catch {}
+              }, 0);
               
               // Cerrar menú contextual manualmente
               setTimeout(() => {
