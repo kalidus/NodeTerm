@@ -216,7 +216,7 @@
   font-weight: 400;
 }
 .sidebar-tree .pi {
-  font-size: 0.75rem;
+  font-size: var(--icon-size, 0.75rem);
   color: #6c757d;
 }
 .sidebar-tree .p-treenode-children {

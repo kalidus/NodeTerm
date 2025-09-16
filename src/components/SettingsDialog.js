@@ -53,6 +53,8 @@ const SettingsDialog = ({
   setExplorerColorTheme,
   iconThemeSidebar,
   setIconThemeSidebar,
+  iconSize = 16,
+  setIconSize,
   sidebarFont,
   setSidebarFont,
   sidebarFontSize,
@@ -1067,8 +1069,74 @@ const SettingsDialog = ({
                     />
                     <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'center' }}>
                       {iconThemes[iconThemeSidebar] && Object.values(iconThemes[iconThemeSidebar].icons).map((icon, idx) => (
-                        <span key={idx}>{icon}</span>
+                        <span key={idx}>
+                          {React.cloneElement(icon, {
+                            width: iconSize,
+                            height: iconSize,
+                            style: { 
+                              ...icon.props.style,
+                              width: `${iconSize}px`,
+                              height: `${iconSize}px`
+                            }
+                          })}
+                        </span>
                       ))}
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                    <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
+                      Tamaño de Iconos
+                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <label htmlFor="icon-size" style={{
+                        display: 'block',
+                        fontWeight: 'bold',
+                        fontSize: '0.9rem',
+                        minWidth: '80px'
+                      }}>
+                        Tamaño (px)
+                      </label>
+                      <InputNumber
+                        id="icon-size"
+                        value={iconSize || 16}
+                        onValueChange={(e) => setIconSize && setIconSize(e.value)}
+                        min={12}
+                        max={32}
+                        style={{ width: '120px' }}
+                      />
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        marginLeft: '1rem'
+                      }}>
+                        {iconThemes[iconThemeSidebar]?.icons.folder && 
+                          React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                            width: iconSize,
+                            height: iconSize,
+                            style: { 
+                              ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                              width: `${iconSize}px`,
+                              height: `${iconSize}px`
+                            }
+                          })
+                        }
+                        {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                          React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                            width: iconSize,
+                            height: iconSize,
+                            style: { 
+                              ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                              width: `${iconSize}px`,
+                              height: `${iconSize}px`
+                            }
+                          })
+                        }
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                          Vista previa
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>

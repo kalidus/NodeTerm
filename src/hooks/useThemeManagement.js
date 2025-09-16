@@ -110,6 +110,15 @@ export const useThemeManagement = () => {
     }
   });
 
+  const [iconSize, setIconSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('iconSize');
+      return saved ? parseInt(saved, 10) : 16;
+    } catch {
+      return 16;
+    }
+  });
+
   const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
     try {
       return localStorage.getItem('explorerColorTheme') || 'Light';
@@ -195,6 +204,12 @@ export const useThemeManagement = () => {
     } catch {}
   }, [sidebarFontSize]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('iconSize', iconSize.toString());
+    } catch {}
+  }, [iconSize]);
+
   // Initial theme loading effect
   useEffect(() => {
     // Cargar tema UI guardado
@@ -218,6 +233,7 @@ export const useThemeManagement = () => {
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
     const updatedSidebarFont = localStorage.getItem('sidebarFont') || explorerFonts[0];
     const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize');
+    const updatedIconSize = localStorage.getItem('iconSize');
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'material';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'classic';
 
@@ -232,6 +248,7 @@ export const useThemeManagement = () => {
     setExplorerColorTheme(updatedExplorerColorTheme);
     setSidebarFont(updatedSidebarFont);
     if (updatedSidebarFontSize) setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
+    if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
 
@@ -293,6 +310,8 @@ export const useThemeManagement = () => {
     setIconTheme,
     iconThemeSidebar,
     setIconThemeSidebar,
+    iconSize,
+    setIconSize,
     explorerFont,
     setExplorerFont,
     explorerFontSize,
