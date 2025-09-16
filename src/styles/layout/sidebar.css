@@ -54,6 +54,10 @@
   background: transparent !important;
 }
 
+.sidebar-tree .p-treenode-content.p-highlight:hover {
+  background: var(--ui-sidebar-hover) !important;
+}
+
 /* Botones de acción de la sidebar */
 .sidebar-action-button {
   background: var(--ui-sidebar-button-bg, var(--ui-sidebar-bg)) !important;
@@ -208,15 +212,22 @@
   outline: none !important;
   box-shadow: none !important;
 }
-.sidebar-tree .p-treenode-content:hover {
-  background: #f6f9fa;
-  color: #2c3e50;
+.sidebar-tree .p-treenode-content.p-highlight {
+  background: transparent !important;
+  color: var(--ui-sidebar-text);
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
 }
-.sidebar-tree .p-treenode-content.p-highlight {
-  background: transparent !important;
+.sidebar-tree .p-treenode-content:hover {
+  background: var(--ui-sidebar-hover) !important;
+  color: var(--ui-sidebar-text);
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.sidebar-tree .p-treenode-content.p-highlight:hover {
+  background: var(--ui-sidebar-hover) !important;
   color: var(--ui-sidebar-text);
   border: none !important;
   outline: none !important;
