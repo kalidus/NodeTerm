@@ -474,20 +474,43 @@
 }
 /* Color de toggler (flecha) */
 .sidebar-tree .p-tree-toggler {
-  margin-right: 1px !important;
-  padding: 0 !important;
-  width: 0.7rem !important;
-  height: 0.7rem !important;
+  margin-right: 4px !important;
+  padding: 2px !important;
+  width: 16px !important;
+  height: 16px !important;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 2px !important;
+  transition: background-color 0.2s ease !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+}
+.sidebar-tree .p-tree-toggler:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 2px !important;
+}
+.sidebar-tree .p-tree-toggler:focus {
+  background: transparent !important;
+  border-radius: 2px !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.sidebar-tree .p-tree-toggler:focus:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+.sidebar-tree .p-tree-toggler:active {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 2px !important;
 }
 .sidebar-tree .p-tree-toggler-icon {
-  font-size: 0.45rem !important; /* flecha más pequeña */
+  font-size: 0.5rem !important; /* flecha ligeramente más grande */
+  color: var(--ui-sidebar-text, #666) !important;
 }
 
 :root {
-  --tree-indent: 18px; /* ancho flecha+icono más compacto */
+  --tree-indent: 20px; /* ancho flecha+icono ajustado */
 }
 
 /* Alineación: cada nivel mantiene padding y compensa margen */
@@ -497,7 +520,7 @@
 }
 .sidebar-tree .p-treenode-content {
   margin-left: calc(-1 * var(--tree-indent));
-  padding-left: 0.15rem !important;
+  padding-left: 0.1rem !important;
 }
 .sidebar-tree .p-treenode-icon {
   margin: 0 0.1rem 0 0 !important; /* icono más cerca del texto */
@@ -505,8 +528,8 @@
 
 /* Alinear nodos hoja con su carpeta padre */
 .sidebar-tree .p-treenode-leaf > .p-treenode-content {
-  margin-left: calc(-0.5rem); /* compensa padding del ul */
-  padding-left: 0.5rem;       /* mantiene espacio para icono */
+  margin-left: calc(-0.4rem); /* compensa padding del ul */
+  padding-left: 0.4rem;       /* mantiene espacio para icono */
 }
 .p-splitter.p-splitter-resizing .sidebar-container {
   transition: none !important;
