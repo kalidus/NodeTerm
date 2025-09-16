@@ -836,6 +836,8 @@ export const themes = {
 // Fuentes recomendadas para el explorador de sesiones
 export const explorerFonts = [
   'Segoe UI',
+  'SF Pro Display',
+  'Helvetica Neue',
   'Roboto',
   'Fira Sans',
   'Inter',

@@ -181,12 +181,12 @@
 
 /* === PrimeReact Tree Style Matching === */
 .sidebar-tree {
-  font-family: "Public Sans", Arial, sans-serif;
-  font-size: 0.8rem;
+  font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.75rem;
   color: #495057;
   background: #fff;
   border: none;
-  padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.5rem;
 }
 .sidebar-tree .p-treenode {
   margin: 0 !important;
@@ -195,13 +195,13 @@
   transition: background 0.2s;
 }
 .sidebar-tree .p-treenode-content {
-  padding: 0.1rem 0.5rem !important;
-  min-height: 22px !important;
-  line-height: 22px !important;
+  padding: 0.05rem 0.35rem !important;
+  min-height: 18px !important;
+  line-height: 18px !important;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.15rem;
   transition: background 0.2s;
   width: 100%;
 }
@@ -211,16 +211,16 @@
   color: #2c3e50;
 }
 .sidebar-tree .p-treenode-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #495057;
   font-weight: 400;
 }
 .sidebar-tree .pi {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #6c757d;
 }
 .sidebar-tree .p-treenode-children {
-  padding-left: 0.6rem !important;
+  padding-left: 0.5rem !important;
 }
 .sidebar-tree .p-treenode-content {
   margin-left: 0 !important;
@@ -261,8 +261,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.75rem;
-  line-height: 1.2;
+  font-size: 0.7rem;
+  line-height: 1.1;
 }
 .node-action-button .p-button-icon {
   font-size: 0.65rem;
@@ -325,7 +325,7 @@
 
 /* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
 .sidebar-tree .p-treenode {
-  margin-bottom: 1px;
+  margin-bottom: 0px;
   /* Reduce el espacio entre nodos */
 }
 
@@ -339,15 +339,17 @@
 
 /* Evitar huecos: nodos droppoint (espacios de drop) */
 .sidebar-tree .p-treenode-droppoint {
-  height: 1px !important;
-  min-height: 1px !important;
+  height: 2px !important;
+  min-height: 2px !important;
 }
 .sidebar-tree .p-treenode-droppoint::before {
   display: none !important;
 }
 /* Mostrar línea resaltada solo durante dragover */
 .sidebar-tree .p-treenode-droppoint-active {
-  height: 3px !important; /* ligeramente más alto para ver el indicador */
+  height: 4px !important; /* ligeramente más alto para ver el indicador */
+  background-color: var(--ui-sidebar-selected, #007ad9) !important;
+  border-radius: 2px !important;
 }
 
 /* Colores de iconos personalizados */
@@ -482,7 +484,7 @@
 }
 
 :root {
-  --tree-indent: 24px; /* ancho flecha+icono */
+  --tree-indent: 18px; /* ancho flecha+icono más compacto */
 }
 
 /* Alineación: cada nivel mantiene padding y compensa margen */
@@ -492,16 +494,16 @@
 }
 .sidebar-tree .p-treenode-content {
   margin-left: calc(-1 * var(--tree-indent));
-  padding-left: 0.25rem !important;
+  padding-left: 0.15rem !important;
 }
 .sidebar-tree .p-treenode-icon {
-  margin: 0 0.125rem 0 0 !important; /* icono más cerca del texto */
+  margin: 0 0.1rem 0 0 !important; /* icono más cerca del texto */
 }
 
 /* Alinear nodos hoja con su carpeta padre */
 .sidebar-tree .p-treenode-leaf > .p-treenode-content {
-  margin-left: calc(-0.75rem); /* compensa padding del ul */
-  padding-left: 0.75rem;       /* mantiene espacio para icono */
+  margin-left: calc(-0.5rem); /* compensa padding del ul */
+  padding-left: 0.5rem;       /* mantiene espacio para icono */
 }
 .p-splitter.p-splitter-resizing .sidebar-container {
   transition: none !important;
