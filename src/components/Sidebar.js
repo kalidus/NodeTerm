@@ -1354,10 +1354,10 @@ const Sidebar = React.memo(({
             sidebarCallbacksRef.current.connectRDP(node);
           }
         }}
-        style={{ cursor: 'pointer', fontFamily: explorerFont }}
+        style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
         title={title}
       >
-        <span style={{ minWidth: 16 }}>{icon}</span>
+        <span style={{ minWidth: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '20px' }}>{icon}</span>
         <span className="node-label" style={{ flex: 1 }}>{node.label}</span>
         {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
       </div>
