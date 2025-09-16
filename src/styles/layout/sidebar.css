@@ -51,7 +51,7 @@
 }
 
 .sidebar-tree .p-treenode-content.p-highlight {
-  background: var(--ui-sidebar-selected) !important;
+  background: transparent !important;
 }
 
 /* Botones de acción de la sidebar */
@@ -204,11 +204,32 @@
   gap: 0.12rem;
   transition: background 0.2s;
   width: 100%;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
-.sidebar-tree .p-treenode-content:hover,
-.sidebar-tree .p-treenode-content.p-highlight {
+.sidebar-tree .p-treenode-content:hover {
   background: #f6f9fa;
   color: #2c3e50;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.sidebar-tree .p-treenode-content.p-highlight {
+  background: transparent !important;
+  color: var(--ui-sidebar-text);
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Eliminar bordes en todos los estados de los nodos */
+.sidebar-tree .p-treenode-content:focus,
+.sidebar-tree .p-treenode-content:active,
+.sidebar-tree .p-treenode-content:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 .sidebar-tree .p-treenode-label {
   font-size: 0.75rem;
