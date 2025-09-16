@@ -738,3 +738,64 @@
   opacity: 1 !important;
   color: var(--ui-sidebar-button-text, var(--ui-sidebar-text)) !important;
 }
+
+/* === ESTILOS DE SCROLL === */
+
+/* Scroll horizontal más fino e integrado - Aplicado a todas las clases de PrimeReact Tree */
+.p-tree::-webkit-scrollbar,
+.sidebar-tree::-webkit-scrollbar,
+.tree-container::-webkit-scrollbar,
+.p-tree .p-tree-container::-webkit-scrollbar {
+  height: 6px !important;
+  width: 6px !important;
+}
+
+.p-tree::-webkit-scrollbar-track,
+.sidebar-tree::-webkit-scrollbar-track,
+.tree-container::-webkit-scrollbar-track,
+.p-tree .p-tree-container::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 3px !important;
+}
+
+.p-tree::-webkit-scrollbar-thumb,
+.sidebar-tree::-webkit-scrollbar-thumb,
+.tree-container::-webkit-scrollbar-thumb,
+.p-tree .p-tree-container::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-text, #666) !important;
+  opacity: 0.3 !important;
+  border-radius: 3px !important;
+  border: none !important;
+}
+
+.p-tree::-webkit-scrollbar-thumb:hover,
+.sidebar-tree::-webkit-scrollbar-thumb:hover,
+.tree-container::-webkit-scrollbar-thumb:hover,
+.p-tree .p-tree-container::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-sidebar-text, #666) !important;
+  opacity: 0.5 !important;
+}
+
+/* Scroll vertical más fino */
+.p-tree::-webkit-scrollbar:vertical,
+.sidebar-tree::-webkit-scrollbar:vertical,
+.tree-container::-webkit-scrollbar:vertical,
+.p-tree .p-tree-container::-webkit-scrollbar:vertical {
+  width: 6px !important;
+}
+
+.p-tree::-webkit-scrollbar:horizontal,
+.sidebar-tree::-webkit-scrollbar:horizontal,
+.tree-container::-webkit-scrollbar:horizontal,
+.p-tree .p-tree-container::-webkit-scrollbar:horizontal {
+  height: 6px !important;
+}
+
+/* Firefox scrollbar */
+.p-tree,
+.sidebar-tree,
+.tree-container,
+.p-tree .p-tree-container {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--ui-sidebar-text, #666) transparent !important;
+}
