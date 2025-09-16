@@ -147,6 +147,8 @@ const DialogsManager = ({
   setIconTheme,
   iconThemeSidebar,
   setIconThemeSidebar,
+  iconSize,
+  setIconSize,
   explorerFont,
   setExplorerFont,
   explorerFontSize,
@@ -201,6 +203,8 @@ const DialogsManager = ({
         setIconTheme={setIconTheme}
         iconThemeSidebar={iconThemeSidebar}
         setIconThemeSidebar={setIconThemeSidebar}
+        iconSize={iconSize}
+        setIconSize={setIconSize}
         explorerFont={explorerFont}
         setExplorerFont={setExplorerFont}
         explorerFontSize={explorerFontSize}

@@ -635,7 +635,7 @@ const App = () => {
     availableFonts, terminalTheme, setTerminalTheme, statusBarTheme, setStatusBarTheme,
     localPowerShellTheme, setLocalPowerShellTheme, localLinuxTerminalTheme, setLocalLinuxTerminalTheme,
     uiTheme, setUiTheme, availableThemes, iconTheme, setIconTheme,
-    iconThemeSidebar, setIconThemeSidebar, explorerFont, setExplorerFont,
+    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
     updateThemesFromSync
@@ -1184,6 +1184,7 @@ const App = () => {
     setShowCreateGroupDialog,
     setShowSettingsDialog,
     iconTheme: iconThemeSidebar,
+    iconSize: iconSize,
     explorerFont: sidebarFont,
     explorerFontSize: sidebarFontSize,
     uiTheme: terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light',
@@ -1228,7 +1229,7 @@ const App = () => {
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, sidebarFont, sidebarFontSize, terminalTheme,
+    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme,
     toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
@@ -1519,6 +1520,8 @@ const App = () => {
         setIconTheme={setIconTheme}
         iconThemeSidebar={iconThemeSidebar}
         setIconThemeSidebar={setIconThemeSidebar}
+        iconSize={iconSize}
+        setIconSize={setIconSize}
         explorerFont={explorerFont}
         setExplorerFont={setExplorerFont}
         explorerFontSize={explorerFontSize}

@@ -55,6 +55,7 @@ const Sidebar = React.memo(({
   setShowSettingsDialog,
 
   iconTheme,
+  iconSize = 16,
   explorerFont,
   explorerFontSize = 14,
   uiTheme = 'Light',
@@ -1101,9 +1102,27 @@ const Sidebar = React.memo(({
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['material'].icons;
     if (isSSH) {
-      icon = themeIcons.ssh;
+      const sshIcon = themeIcons.ssh;
+      icon = sshIcon ? React.cloneElement(sshIcon, {
+        width: iconSize,
+        height: iconSize,
+        style: { 
+          ...sshIcon.props.style,
+          width: `${iconSize}px`,
+          height: `${iconSize}px`
+        }
+      }) : sshIcon;
     } else if (isRDP) {
-      icon = themeIcons.rdp || '🖥️'; // Icono RDP o fallback
+      const rdpIcon = themeIcons.rdp;
+      icon = rdpIcon ? React.cloneElement(rdpIcon, {
+        width: iconSize,
+        height: iconSize,
+        style: { 
+          ...rdpIcon.props.style,
+          width: `${iconSize}px`,
+          height: `${iconSize}px`
+        }
+      }) : '🖥️'; // Icono RDP o fallback
     } else if (isFolder) {
       // Lógica inteligente para determinar el color de la carpeta:
       // 1. Si no tiene color asignado → usar color por defecto del tema actual
@@ -1117,13 +1136,17 @@ const Sidebar = React.memo(({
       const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
       
       if (themeIcon) {
-        // Si hay un icono del tema, clonarlo y aplicar el color
-        // Para SVG, necesitamos modificar los atributos fill y stroke directamente
+        // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
+        // Para SVG, necesitamos modificar los atributos fill, stroke y tamaño directamente
         const modifiedIcon = React.cloneElement(themeIcon, {
+          width: iconSize,
+          height: iconSize,
           style: { 
             ...themeIcon.props.style, 
             color: folderColor,
-            '--icon-color': folderColor
+            '--icon-color': folderColor,
+            width: `${iconSize}px`,
+            height: `${iconSize}px`
           },
           'data-folder-color': folderColor,
           'data-debug': 'sidebar-theme-icon'
@@ -1581,7 +1604,10 @@ const Sidebar = React.memo(({
                 }}
                 onDragEnd={() => {}}
                 className="sidebar-tree"
-                style={{ fontSize: `${explorerFontSize}px` }}
+                style={{ 
+                  fontSize: `${explorerFontSize}px`,
+                  '--icon-size': `${iconSize}px`
+                }}
                 nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
               />
             )}
