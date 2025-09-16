@@ -659,15 +659,15 @@
 .sidebar-container[style*="width: 44px"] .sidebar-action-button {
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background-color: #333 !important;
-  color: #fff !important;
-  border: 1px solid #555 !important;
+  background-color: var(--ui-sidebar-button-bg, var(--ui-sidebar-bg)) !important;
+  color: var(--ui-sidebar-button-text, var(--ui-sidebar-text)) !important;
+  border: 1px solid var(--ui-sidebar-border) !important;
 }
 
 .sidebar-container[style*="width: 44px"] .sidebar-action-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  background-color: #444 !important;
+  background-color: var(--ui-sidebar-hover) !important;
 }
 
 /* Asegurar que los iconos sean visibles */
@@ -676,5 +676,5 @@
   display: inline-block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  color: #fff !important;
+  color: var(--ui-sidebar-button-text, var(--ui-sidebar-text)) !important;
 }
