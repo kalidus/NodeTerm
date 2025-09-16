@@ -186,7 +186,7 @@
   color: #495057;
   background: #fff;
   border: none;
-  padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.5rem;
 }
 .sidebar-tree .p-treenode {
   margin: 0 !important;
@@ -195,13 +195,13 @@
   transition: background 0.2s;
 }
 .sidebar-tree .p-treenode-content {
-  padding: 0.05rem 0.35rem !important;
-  min-height: 18px !important;
-  line-height: 18px !important;
+  padding: 0.08rem 0.35rem !important;
+  min-height: 20px !important;
+  line-height: 20px !important;
   border-radius: 4px;
   display: flex;
-  align-items: center;
-  gap: 0.15rem;
+  align-items: flex-start;
+  gap: 0.12rem;
   transition: background 0.2s;
   width: 100%;
 }
@@ -262,7 +262,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.7rem;
-  line-height: 1.1;
+  line-height: 1.2;
+  padding-top: 0.02rem;
+  display: flex;
+  align-items: center;
 }
 .node-action-button .p-button-icon {
   font-size: 0.65rem;
@@ -325,7 +328,7 @@
 
 /* Ajuste para evitar exceso de espacio entre grupos en el árbol lateral */
 .sidebar-tree .p-treenode {
-  margin-bottom: 0px;
+  margin-bottom: -1px;
   /* Reduce el espacio entre nodos */
 }
 
