@@ -1577,7 +1577,7 @@ const Sidebar = React.memo(({
               flex: 1, 
               minHeight: 0, 
               overflowY: 'auto', 
-              overflowX: 'hidden',
+              overflowX: 'auto',
               position: 'relative',
               fontSize: `${explorerFontSize}px`
             }}
