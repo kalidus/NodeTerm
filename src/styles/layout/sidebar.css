@@ -762,8 +762,8 @@
 .sidebar-tree::-webkit-scrollbar-thumb,
 .tree-container::-webkit-scrollbar-thumb,
 .p-tree .p-tree-container::-webkit-scrollbar-thumb {
-  background: var(--ui-sidebar-text, #666) !important;
-  opacity: 0.3 !important;
+  background: var(--ui-sidebar-border, #3e3e42) !important;
+  opacity: 0.6 !important;
   border-radius: 3px !important;
   border: none !important;
 }
@@ -772,8 +772,8 @@
 .sidebar-tree::-webkit-scrollbar-thumb:hover,
 .tree-container::-webkit-scrollbar-thumb:hover,
 .p-tree .p-tree-container::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-sidebar-text, #666) !important;
-  opacity: 0.5 !important;
+  background: var(--ui-sidebar-text, #cccccc) !important;
+  opacity: 0.8 !important;
 }
 
 /* Scroll vertical más fino */
@@ -797,5 +797,5 @@
 .tree-container,
 .p-tree .p-tree-container {
   scrollbar-width: thin !important;
-  scrollbar-color: var(--ui-sidebar-text, #666) transparent !important;
+  scrollbar-color: var(--ui-sidebar-border, #3e3e42) transparent !important;
 }
