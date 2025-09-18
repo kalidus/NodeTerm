@@ -84,14 +84,53 @@ export const iconThemes = {
         </svg>
       ),
       rdp: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fd7e14" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="12" rx="2"/>
-          <rect x="5" y="6" width="6" height="4" fill="#fd7e14" fillOpacity="0.2"/>
-          <rect x="13" y="6" width="6" height="4" fill="#fd7e14" fillOpacity="0.2"/>
-          <rect x="5" y="11" width="14" height="3" fill="#fd7e14" fillOpacity="0.2"/>
-          <path d="M7 8h2M14 8h2M7 12h14" stroke="#fd7e14" strokeWidth="1"/>
-          <circle cx="6" cy="7" r="0.5" fill="#fd7e14"/>
-          <circle cx="14" cy="7" r="0.5" fill="#fd7e14"/>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          {/* Definir gradiente para el efecto de resplandor RDP */}
+          <defs>
+            <linearGradient id="rdpGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00bcf2" stopOpacity="0.4"/>
+              <stop offset="100%" stopColor="#00bcf2" stopOpacity="0.1"/>
+            </linearGradient>
+            <pattern id="rdpTexture" patternUnits="userSpaceOnUse" width="3" height="3">
+              <rect width="3" height="3" fill="#1a1a1a"/>
+              <circle cx="1.5" cy="1.5" r="0.4" fill="#2a2a2a" opacity="0.4"/>
+            </pattern>
+          </defs>
+          
+          {/* Ventana exterior (monitor principal) */}
+          <rect x="1" y="2" width="18" height="16" rx="2.5" fill="#2a2a2a" stroke="#666" strokeWidth="0.8"/>
+          
+          {/* Barra de título de la ventana exterior */}
+          <rect x="1" y="2" width="18" height="4" rx="2.5" fill="#3a3a3a" stroke="#666" strokeWidth="0.8"/>
+          
+          {/* Controles de ventana exterior (3 círculos azul claro) */}
+          <circle cx="3.5" cy="4" r="1.3" fill="#00bcf2"/>
+          <circle cx="6.5" cy="4" r="1.3" fill="#00bcf2"/>
+          <circle cx="9.5" cy="4" r="1.3" fill="#00bcf2"/>
+          
+          {/* Ventana interior (escritorio remoto) centrada */}
+          <rect x="4" y="7" width="12" height="9" rx="1.5" fill="#1a1a1a" stroke="#00bcf2" strokeWidth="0.8"/>
+          
+          {/* Barra de título de la ventana interior */}
+          <rect x="4" y="7" width="12" height="2.5" rx="1.5" fill="#2a2a2a" stroke="#00bcf2" strokeWidth="0.8"/>
+          
+          {/* Controles de ventana interior (3 círculos más pequeños) */}
+          <circle cx="5.5" cy="8.2" r="0.8" fill="#00bcf2"/>
+          <circle cx="7" cy="8.2" r="0.8" fill="#00bcf2"/>
+          <circle cx="8.5" cy="8.2" r="0.8" fill="#00bcf2"/>
+          
+          {/* Pantalla del escritorio remoto */}
+          <rect x="4.5" y="9.5" width="11" height="6" rx="1" fill="url(#rdpTexture)"/>
+          
+          {/* Cursor del mouse (flecha) */}
+          <path d="M8 11 L10 11 L9 13 L8.5 12.5 L8 13 Z" fill="#00bcf2" opacity="0.9"/>
+          
+          {/* Botón/etiqueta RDP */}
+          <rect x="11" y="12" width="3.5" height="2" rx="0.5" fill="#00bcf2"/>
+          <text x="12.7" y="13.2" fontSize="1.8" fill="white" fontFamily="monospace" fontWeight="bold" textAnchor="middle">RDP</text>
+          
+          {/* Resplandor sutil en la parte inferior */}
+          <rect x="1" y="17" width="18" height="1" fill="url(#rdpGlow)" rx="0.5"/>
         </svg>
       ),
       file: (
