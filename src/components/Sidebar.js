@@ -56,6 +56,8 @@ const Sidebar = React.memo(({
 
   iconTheme,
   iconSize = 16,
+  folderIconSize = 16,
+  connectionIconSize = 16,
   explorerFont,
   explorerFontSize = 14,
   uiTheme = 'Light',
@@ -99,6 +101,12 @@ const Sidebar = React.memo(({
   editingRdpNode, setEditingRdpNode
 }) => {
   
+  // Debug: Verificar que los props llegan correctamente
+  console.log('🔍 Sidebar props:', {
+    folderIconSize,
+    connectionIconSize,
+    iconSize
+  });
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
@@ -1104,23 +1112,23 @@ const Sidebar = React.memo(({
     if (isSSH) {
       const sshIcon = themeIcons.ssh;
       icon = sshIcon ? React.cloneElement(sshIcon, {
-        width: iconSize,
-        height: iconSize,
+        width: connectionIconSize,
+        height: connectionIconSize,
         style: { 
           ...sshIcon.props.style,
-          width: `${iconSize}px`,
-          height: `${iconSize}px`
+          width: `${connectionIconSize}px`,
+          height: `${connectionIconSize}px`
         }
       }) : sshIcon;
     } else if (isRDP) {
       const rdpIcon = themeIcons.rdp;
       icon = rdpIcon ? React.cloneElement(rdpIcon, {
-        width: iconSize,
-        height: iconSize,
+        width: connectionIconSize,
+        height: connectionIconSize,
         style: { 
           ...rdpIcon.props.style,
-          width: `${iconSize}px`,
-          height: `${iconSize}px`
+          width: `${connectionIconSize}px`,
+          height: `${connectionIconSize}px`
         }
       }) : '🖥️'; // Icono RDP o fallback
     } else if (isFolder) {
@@ -1139,14 +1147,14 @@ const Sidebar = React.memo(({
         // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
         // Para SVG, necesitamos modificar los atributos fill, stroke y tamaño directamente
         const modifiedIcon = React.cloneElement(themeIcon, {
-          width: iconSize,
-          height: iconSize,
+          width: folderIconSize,
+          height: folderIconSize,
           style: { 
             ...themeIcon.props.style, 
             color: folderColor,
             '--icon-color': folderColor,
-            width: `${iconSize}px`,
-            height: `${iconSize}px`
+            width: `${folderIconSize}px`,
+            height: `${folderIconSize}px`
           },
           'data-folder-color': folderColor,
           'data-debug': 'sidebar-theme-icon'

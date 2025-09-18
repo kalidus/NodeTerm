@@ -55,6 +55,10 @@ const SettingsDialog = ({
   setIconThemeSidebar,
   iconSize = 16,
   setIconSize,
+  folderIconSize = 16,
+  setFolderIconSize,
+  connectionIconSize = 16,
+  setConnectionIconSize,
   sidebarFont,
   setSidebarFont,
   sidebarFontSize,
@@ -80,6 +84,14 @@ const SettingsDialog = ({
   sessionManager
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // Debug: Verificar que los props llegan correctamente
+  console.log('🔍 SettingsDialog props:', {
+    folderIconSize,
+    connectionIconSize,
+    setFolderIconSize: !!setFolderIconSize,
+    setConnectionIconSize: !!setConnectionIconSize
+  });
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(() => {
@@ -1084,58 +1096,105 @@ const SettingsDialog = ({
                     </div>
                   </div>
                   
-                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
+                  <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 500 }}>
                     <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
                       Tamaño de Iconos
                     </h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <label htmlFor="icon-size" style={{
-                        display: 'block',
-                        fontWeight: 'bold',
-                        fontSize: '0.9rem',
-                        minWidth: '80px'
-                      }}>
-                        Tamaño (px)
-                      </label>
-                      <InputNumber
-                        id="icon-size"
-                        value={iconSize || 16}
-                        onValueChange={(e) => setIconSize && setIconSize(e.value)}
-                        min={12}
-                        max={32}
-                        style={{ width: '120px' }}
-                      />
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '8px',
-                        marginLeft: '1rem'
-                      }}>
-                        {iconThemes[iconThemeSidebar]?.icons.folder && 
-                          React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                            width: iconSize,
-                            height: iconSize,
-                            style: { 
-                              ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                              width: `${iconSize}px`,
-                              height: `${iconSize}px`
-                            }
-                          })
-                        }
-                        {iconThemes[iconThemeSidebar]?.icons.ssh && 
-                          React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                            width: iconSize,
-                            height: iconSize,
-                            style: { 
-                              ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                              width: `${iconSize}px`,
-                              height: `${iconSize}px`
-                            }
-                          })
-                        }
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
-                          Vista previa
-                        </span>
+                    
+                    {/* Tamaño de iconos de carpetas */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <label htmlFor="folder-icon-size" style={{
+                          display: 'block',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem',
+                          minWidth: '120px'
+                        }}>
+                          Carpetas (px)
+                        </label>
+                        <InputNumber
+                          id="folder-icon-size"
+                          value={folderIconSize || 16}
+                          onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
+                          min={12}
+                          max={32}
+                          style={{ width: '120px' }}
+                        />
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          marginLeft: '1rem'
+                        }}>
+                          {iconThemes[iconThemeSidebar]?.icons.folder && 
+                            React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                              width: folderIconSize,
+                              height: folderIconSize,
+                              style: { 
+                                ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                width: `${folderIconSize}px`,
+                                height: `${folderIconSize}px`
+                              }
+                            })
+                          }
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                            Vista previa
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tamaño de iconos de conexiones */}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <label htmlFor="connection-icon-size" style={{
+                          display: 'block',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem',
+                          minWidth: '120px'
+                        }}>
+                          Conexiones (px)
+                        </label>
+                        <InputNumber
+                          id="connection-icon-size"
+                          value={connectionIconSize || 16}
+                          onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
+                          min={12}
+                          max={32}
+                          style={{ width: '120px' }}
+                        />
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          marginLeft: '1rem'
+                        }}>
+                          {iconThemes[iconThemeSidebar]?.icons.ssh && 
+                            React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                              width: connectionIconSize,
+                              height: connectionIconSize,
+                              style: { 
+                                ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                width: `${connectionIconSize}px`,
+                                height: `${connectionIconSize}px`
+                              }
+                            })
+                          }
+                          {iconThemes[iconThemeSidebar]?.icons.rdp && 
+                            React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
+                              width: connectionIconSize,
+                              height: connectionIconSize,
+                              style: { 
+                                ...iconThemes[iconThemeSidebar].icons.rdp.props.style,
+                                width: `${connectionIconSize}px`,
+                                height: `${connectionIconSize}px`
+                              }
+                            })
+                          }
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+                            Vista previa
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

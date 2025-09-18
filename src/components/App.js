@@ -635,7 +635,9 @@ const App = () => {
     availableFonts, terminalTheme, setTerminalTheme, statusBarTheme, setStatusBarTheme,
     localPowerShellTheme, setLocalPowerShellTheme, localLinuxTerminalTheme, setLocalLinuxTerminalTheme,
     uiTheme, setUiTheme, availableThemes, iconTheme, setIconTheme,
-    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, explorerFont, setExplorerFont,
+    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, 
+    folderIconSize, setFolderIconSize, connectionIconSize, setConnectionIconSize,
+    explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
     updateThemesFromSync
@@ -1185,6 +1187,8 @@ const App = () => {
     setShowSettingsDialog,
     iconTheme: iconThemeSidebar,
     iconSize: iconSize,
+    folderIconSize: folderIconSize,
+    connectionIconSize: connectionIconSize,
     explorerFont: sidebarFont,
     explorerFontSize: sidebarFontSize,
     uiTheme: terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light',
@@ -1390,7 +1394,50 @@ const App = () => {
         toast={toast}
         
         // Temas
+        availableThemes={availableThemes}
+        availableFonts={availableFonts}
+        fontFamily={fontFamily}
+        setFontFamily={setFontFamily}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        localFontFamily={localFontFamily}
+        setLocalFontFamily={setLocalFontFamily}
+        localFontSize={localFontSize}
+        setLocalFontSize={setLocalFontSize}
+        terminalTheme={terminalTheme}
+        setTerminalTheme={setTerminalTheme}
+        statusBarTheme={statusBarTheme}
+        setStatusBarTheme={setStatusBarTheme}
+        localPowerShellTheme={localPowerShellTheme}
+        setLocalPowerShellTheme={setLocalPowerShellTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
+        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+        uiTheme={uiTheme}
+        setUiTheme={setUiTheme}
         iconTheme={iconTheme}
+        setIconTheme={setIconTheme}
+        iconThemeSidebar={iconThemeSidebar}
+        setIconThemeSidebar={setIconThemeSidebar}
+        iconSize={iconSize}
+        setIconSize={setIconSize}
+        folderIconSize={folderIconSize}
+        setFolderIconSize={setFolderIconSize}
+        connectionIconSize={connectionIconSize}
+        setConnectionIconSize={setConnectionIconSize}
+        explorerFont={explorerFont}
+        setExplorerFont={setExplorerFont}
+        explorerFontSize={explorerFontSize}
+        setExplorerFontSize={setExplorerFontSize}
+        explorerColorTheme={explorerColorTheme}
+        setExplorerColorTheme={setExplorerColorTheme}
+        sidebarFont={sidebarFont}
+        setSidebarFont={setSidebarFont}
+        sidebarFontSize={sidebarFontSize}
+        setSidebarFontSize={setSidebarFontSize}
+        statusBarIconTheme={statusBarIconTheme}
+        setStatusBarIconTheme={setStatusBarIconTheme}
+        statusBarPollingInterval={statusBarPollingInterval}
+        setStatusBarPollingInterval={setStatusBarPollingInterval}
         
         // Estados de diálogos
         showSSHDialog={showSSHDialog}
@@ -1522,6 +1569,10 @@ const App = () => {
         setIconThemeSidebar={setIconThemeSidebar}
         iconSize={iconSize}
         setIconSize={setIconSize}
+        folderIconSize={folderIconSize}
+        setFolderIconSize={setFolderIconSize}
+        connectionIconSize={connectionIconSize}
+        setConnectionIconSize={setConnectionIconSize}
         explorerFont={explorerFont}
         setExplorerFont={setExplorerFont}
         explorerFontSize={explorerFontSize}
@@ -1623,7 +1674,11 @@ const App = () => {
         getGeneralTreeContextMenuItems={getGeneralTreeContextMenuItems}
         getTreeContextMenuItems={getTreeContextMenuItems}
         selectedNode={selectedNode}
-                treeContextMenuRef={treeContextMenuRef}
+        treeContextMenuRef={treeContextMenuRef}
+        
+        // Sync settings props
+        updateThemesFromSync={updateThemesFromSync}
+        updateStatusBarFromSync={updateStatusBarFromSync}
       />
       
       <ImportDialog
