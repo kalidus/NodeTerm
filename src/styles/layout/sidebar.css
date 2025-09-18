@@ -364,6 +364,33 @@
   /* Reduce el espacio entre nodos */
 }
 
+/* Compactar espaciado SOLO entre conexiones (SSH y RDP) - MUY COMPACTO */
+/* Selector para nodos que contienen conexiones SSH o RDP */
+.sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="ssh"]),
+.sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="rdp"]) {
+  margin-bottom: -8px; /* Espaciado muy compacto entre conexiones */
+}
+
+/* Alternativa para navegadores que no soportan :has() */
+.sidebar-tree .p-treenode[data-node-type="connection"] {
+  margin-bottom: -8px; /* Espaciado muy compacto entre conexiones */
+}
+
+/* Reducir también el padding interno de las conexiones para mayor compactación */
+.sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="ssh"]) .p-treenode-content,
+.sidebar-tree .p-treenode:has(.p-treenode-content [data-connection-type="rdp"]) .p-treenode-content {
+  padding: 0.02rem 0.25rem !important; /* Padding más pequeño para conexiones */
+  min-height: 16px !important; /* Altura mínima reducida */
+  line-height: 16px !important; /* Line height reducido */
+}
+
+/* Alternativa para navegadores que no soportan :has() */
+.sidebar-tree .p-treenode[data-node-type="connection"] .p-treenode-content {
+  padding: 0.02rem 0.25rem !important; /* Padding más pequeño para conexiones */
+  min-height: 16px !important; /* Altura mínima reducida */
+  line-height: 16px !important; /* Line height reducido */
+}
+
 /* Línea vertical continua para nivel raíz */
 .sidebar-tree .p-tree-container {
   position: relative;

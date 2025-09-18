@@ -1364,6 +1364,8 @@ const Sidebar = React.memo(({
         }}
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
         title={title}
+        data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : null)}
+        data-node-type={isFolder ? 'folder' : 'connection'}
       >
         <span style={{ minWidth: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '20px' }}>{icon}</span>
         <span className="node-label" style={{ flex: 1 }}>{node.label}</span>
