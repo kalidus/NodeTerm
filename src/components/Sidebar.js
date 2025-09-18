@@ -1367,8 +1367,71 @@ const Sidebar = React.memo(({
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : null)}
         data-node-type={isFolder ? 'folder' : 'connection'}
       >
-        <span style={{ minWidth: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '20px' }}>{icon}</span>
-        <span className="node-label" style={{ flex: 1 }}>{node.label}</span>
+        <span style={{ 
+          minWidth: 20, // Hacer el icono más ancho
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          height: '20px',
+          position: 'relative' // Para posicionar el tag SSH
+        }}>
+          {icon}
+             {/* Tag SSH superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
+             {isSSH && iconTheme === 'nodetermBasic' && (
+               <span
+                 className="ssh-connection-tag"
+                 style={{
+                   position: 'absolute',
+                   bottom: '1px', // Mover a la parte inferior
+                   right: '-7px', // Mover un poquito más a la derecha
+                   backgroundColor: '#1a1a1a',
+                   color: '#42a5f5',
+                   fontSize: '5px', // Un poquito más grande
+                   fontWeight: 'bold',
+                   padding: '0.7px 2.5px', // Un poquito más grande
+                   borderRadius: '2px',
+                   border: '0.5px solid #42a5f5', // Borde más fino
+                   lineHeight: 1,
+                   zIndex: 10,
+                   fontFamily: 'monospace',
+                   letterSpacing: '0.3px',
+                   boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                 }}
+               >
+                 SSH
+               </span>
+             )}
+
+             {/* Tag RDP superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
+             {isRDP && iconTheme === 'nodetermBasic' && (
+               <span
+                 className="rdp-connection-tag"
+                 style={{
+                   position: 'absolute',
+                   bottom: '1px', // Mover a la parte inferior
+                   right: '-7px', // Mover un poquito más a la derecha
+                   backgroundColor: '#1a1a1a',
+                   color: '#00ffff', // Color azul turquesa muy chillón
+                   fontSize: '5px', // Un poquito más grande
+                   fontWeight: 'bold',
+                   padding: '0.7px 2.5px', // Un poquito más grande
+                   borderRadius: '2px',
+                   border: '0.5px solid #00ffff', // Borde azul turquesa muy chillón
+                   lineHeight: 1,
+                   zIndex: 10,
+                   fontFamily: 'monospace',
+                   letterSpacing: '0.3px',
+                   boxShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                 }}
+               >
+                 RDP
+               </span>
+             )}
+        </span>
+        <span className="node-label" style={{ 
+          flex: 1,
+          marginLeft: (isSSH || isRDP) && iconTheme === 'nodetermBasic' ? '6px' : '0px' // Espaciado para conexiones SSH y RDP solo en tema Nodeterm Basic
+        }}>{node.label}</span>
         {/* Estrella de favoritos oculta en la lista lateral por solicitud */}
       </div>
     );
@@ -1614,6 +1677,7 @@ const Sidebar = React.memo(({
                 }}
                 onDragEnd={() => {}}
                 className="sidebar-tree"
+                data-icon-theme={iconTheme}
                 style={{ 
                   fontSize: `${explorerFontSize}px`,
                   '--icon-size': `${iconSize}px`

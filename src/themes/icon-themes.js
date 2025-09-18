@@ -607,5 +607,37 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff6b35"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="14" fill="#1a0033"/></svg>
       )
     }
+  },
+
+  nodetermBasic: {
+    name: 'Nodeterm Basic',
+    description: 'Tema básico de NodeTerm con tags SSH y RDP integrados',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#42a5f5"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#64b5f6"/></svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#42a5f5"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#64b5f6"/></svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#42a5f5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <path d="M6 7h12M6 11h8M6 15h6"/>
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00ffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#616161"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="10" y="6" width="4" height="12" fill="#fff"/></svg>
+      )
+    }
   }
 }; 

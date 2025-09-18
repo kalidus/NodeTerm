@@ -391,6 +391,112 @@
   line-height: 16px !important; /* Line height reducido */
 }
 
+/* === TAG SSH PARA CONEXIONES - Solo para tema Nodeterm Basic === */
+.sidebar-tree[data-icon-theme="nodetermBasic"] .ssh-connection-tag {
+  position: absolute !important;
+  bottom: 1px !important; /* Mover a la parte inferior */
+  right: -7px !important; /* Mover un poquito más a la derecha */
+  background-color: #1a1a1a !important;
+  color: #42a5f5 !important;
+  font-size: 5px !important; /* Un poquito más grande */
+  font-weight: bold !important;
+  padding: 0.7px 2.5px !important; /* Un poquito más grande */
+  border-radius: 2px !important;
+  border: 0.5px solid #42a5f5 !important; /* Borde más fino */
+  line-height: 1 !important;
+  z-index: 10 !important;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+  white-space: nowrap !important;
+  pointer-events: none !important; /* Evitar interferencia con clicks */
+  transition: all 0.2s ease !important;
+}
+
+/* Hover effect para el tag SSH - Solo para tema Nodeterm Basic */
+.sidebar-tree[data-icon-theme="nodetermBasic"] .p-treenode-content:hover .ssh-connection-tag {
+  background-color: #2a2a2a !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Espaciado adicional para el texto de conexiones SSH y RDP - Solo para tema Nodeterm Basic */
+.sidebar-tree[data-icon-theme="nodetermBasic"] .p-treenode-content[data-connection-type="ssh"] .node-label,
+.sidebar-tree[data-icon-theme="nodetermBasic"] .p-treenode-content[data-connection-type="rdp"] .node-label {
+  margin-left: 6px !important; /* Espacio para conexiones SSH y RDP */
+}
+
+/* === TAG RDP PARA CONEXIONES - Solo para tema Nodeterm Basic === */
+.sidebar-tree[data-icon-theme="nodetermBasic"] .rdp-connection-tag {
+  position: absolute !important;
+  bottom: 1px !important; /* Mover a la parte inferior */
+  right: -7px !important; /* Mover un poquito más a la derecha */
+  background-color: #1a1a1a !important;
+  color: #00ffff !important; /* Color azul turquesa muy chillón */
+  font-size: 5px !important; /* Un poquito más grande */
+  font-weight: bold !important;
+  padding: 0.7px 2.5px !important; /* Un poquito más grande */
+  border-radius: 2px !important;
+  border: 0.5px solid #00ffff !important; /* Borde azul turquesa muy chillón */
+  line-height: 1 !important;
+  z-index: 10 !important;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  letter-spacing: 0.3px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+  white-space: nowrap !important;
+  pointer-events: none !important; /* Evitar interferencia con clicks */
+  transition: all 0.2s ease !important;
+}
+
+/* Hover effect para el tag RDP - Solo para tema Nodeterm Basic */
+.sidebar-tree[data-icon-theme="nodetermBasic"] .p-treenode-content:hover .rdp-connection-tag {
+  background-color: #2a2a2a !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Ajuste responsivo del tag SSH según el tamaño de fuente - Solo para tema Nodeterm Basic */
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 12px"] .ssh-connection-tag,
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 11px"] .ssh-connection-tag,
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 10px"] .ssh-connection-tag {
+  font-size: 4px !important; /* Un poquito más grande para fuentes medianas */
+  padding: 0.5px 2px !important; /* Mantener proporción del ancho */
+  border-radius: 1px !important;
+  right: -6px !important; /* Ajustar posición para fuentes más pequeñas */
+  border: 0.3px solid #42a5f5 !important; /* Borde más fino */
+}
+
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 9px"] .ssh-connection-tag,
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 8px"] .ssh-connection-tag {
+  font-size: 3px !important; /* Un poquito más grande para fuentes pequeñas */
+  padding: 0.4px 1.5px !important; /* Un poquito más grande */
+  border-radius: 1px !important;
+  letter-spacing: 0.2px !important;
+  right: -5px !important; /* Ajustar posición para fuentes muy pequeñas */
+  border: 0.2px solid #42a5f5 !important; /* Borde muy fino */
+}
+
+/* Ajuste responsivo del tag RDP según el tamaño de fuente - Solo para tema Nodeterm Basic */
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 12px"] .rdp-connection-tag,
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 11px"] .rdp-connection-tag,
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 10px"] .rdp-connection-tag {
+  font-size: 4px !important; /* Un poquito más grande para fuentes medianas */
+  padding: 0.5px 2px !important; /* Mantener proporción del ancho */
+  border-radius: 1px !important;
+  right: -6px !important; /* Ajustar posición para fuentes más pequeñas */
+  border: 0.3px solid #00ffff !important; /* Borde más fino */
+}
+
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 9px"] .rdp-connection-tag,
+.sidebar-tree[data-icon-theme="nodetermBasic"][style*="font-size: 8px"] .rdp-connection-tag {
+  font-size: 3px !important; /* Un poquito más grande para fuentes pequeñas */
+  padding: 0.4px 1.5px !important; /* Un poquito más grande */
+  border-radius: 1px !important;
+  letter-spacing: 0.2px !important;
+  right: -5px !important; /* Ajustar posición para fuentes muy pequeñas */
+  border: 0.2px solid #00ffff !important; /* Borde muy fino */
+}
+
 /* Línea vertical continua para nivel raíz */
 .sidebar-tree .p-tree-container {
   position: relative;
