@@ -41,12 +41,46 @@ export const iconThemes = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#50e6ff"/></svg>
       ),
       ssh: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6c757d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="12" rx="2"/>
-          <rect x="5" y="6" width="14" height="8" fill="#6c757d" fillOpacity="0.1"/>
-          <path d="M7 9h10M7 11h8M7 13h6" stroke="#6c757d" strokeWidth="1.5"/>
-          <circle cx="8" cy="9" r="0.5" fill="#6c757d"/>
-          <text x="12" y="16" fontSize="3" fill="#6c757d" textAnchor="middle">$</text>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          {/* Definir gradiente para el efecto de resplandor */}
+          <defs>
+            <linearGradient id="terminalGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#0078d4" stopOpacity="0.4"/>
+              <stop offset="100%" stopColor="#0078d4" stopOpacity="0.1"/>
+            </linearGradient>
+            <pattern id="terminalTexture" patternUnits="userSpaceOnUse" width="3" height="3">
+              <rect width="3" height="3" fill="#1a1a1a"/>
+              <circle cx="1.5" cy="1.5" r="0.4" fill="#2a2a2a" opacity="0.4"/>
+            </pattern>
+          </defs>
+          
+          {/* Ventana del terminal ocupando más espacio */}
+          <rect x="1" y="2" width="18" height="16" rx="2.5" fill="#2a2a2a" stroke="#666" strokeWidth="0.8"/>
+          
+          {/* Barra de título más proporcionada */}
+          <rect x="1" y="2" width="18" height="4" rx="2.5" fill="#3a3a3a" stroke="#666" strokeWidth="0.8"/>
+          
+          {/* Controles de ventana (3 círculos azules) más grandes */}
+          <circle cx="3.5" cy="4" r="1.3" fill="#0078d4"/>
+          <circle cx="6.5" cy="4" r="1.3" fill="#0078d4"/>
+          <circle cx="9.5" cy="4" r="1.3" fill="#0078d4"/>
+          
+          {/* Pantalla del terminal con textura ocupando más espacio */}
+          <rect x="2" y="6" width="16" height="11" rx="1.5" fill="url(#terminalTexture)"/>
+          
+          {/* Prompt brillante con efecto de resplandor más centrado */}
+          <g>
+            {/* Efecto de resplandor */}
+            <rect x="3" y="12" width="14" height="4" fill="url(#terminalGlow)" rx="1"/>
+            {/* Prompt principal más grande */}
+            <text x="4" y="14.5" fontSize="4" fill="#00a8ff" fontFamily="monospace" fontWeight="bold">&gt;</text>
+            <text x="6" y="14.5" fontSize="4" fill="#00a8ff" fontFamily="monospace">/</text>
+            {/* Cursor parpadeante más visible */}
+            <rect x="7.5" y="13" width="1" height="3" fill="#00a8ff" opacity="0.9"/>
+          </g>
+          
+          {/* Resplandor sutil en la parte inferior más amplio */}
+          <rect x="1" y="17" width="18" height="1" fill="url(#terminalGlow)" rx="0.5"/>
         </svg>
       ),
       rdp: (
