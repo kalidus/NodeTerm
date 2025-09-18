@@ -149,6 +149,10 @@ const DialogsManager = ({
   setIconThemeSidebar,
   iconSize,
   setIconSize,
+  folderIconSize,
+  setFolderIconSize,
+  connectionIconSize,
+  setConnectionIconSize,
   explorerFont,
   setExplorerFont,
   explorerFontSize,
@@ -205,6 +209,10 @@ const DialogsManager = ({
         setIconThemeSidebar={setIconThemeSidebar}
         iconSize={iconSize}
         setIconSize={setIconSize}
+        folderIconSize={folderIconSize}
+        setFolderIconSize={setFolderIconSize}
+        connectionIconSize={connectionIconSize}
+        setConnectionIconSize={setConnectionIconSize}
         explorerFont={explorerFont}
         setExplorerFont={setExplorerFont}
         explorerFontSize={explorerFontSize}

@@ -119,6 +119,24 @@ export const useThemeManagement = () => {
     }
   });
 
+  const [folderIconSize, setFolderIconSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('folderIconSize');
+      return saved ? parseInt(saved, 10) : 16;
+    } catch {
+      return 16;
+    }
+  });
+
+  const [connectionIconSize, setConnectionIconSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('connectionIconSize');
+      return saved ? parseInt(saved, 10) : 16;
+    } catch {
+      return 16;
+    }
+  });
+
   const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
     try {
       return localStorage.getItem('explorerColorTheme') || 'Light';
@@ -173,6 +191,24 @@ export const useThemeManagement = () => {
       localStorage.setItem('iconThemeSidebar', iconThemeSidebar);
     } catch {}
   }, [iconThemeSidebar]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('iconSize', iconSize.toString());
+    } catch {}
+  }, [iconSize]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('folderIconSize', folderIconSize.toString());
+    } catch {}
+  }, [folderIconSize]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('connectionIconSize', connectionIconSize.toString());
+    } catch {}
+  }, [connectionIconSize]);
 
   useEffect(() => {
     try {
@@ -312,6 +348,10 @@ export const useThemeManagement = () => {
     setIconThemeSidebar,
     iconSize,
     setIconSize,
+    folderIconSize,
+    setFolderIconSize,
+    connectionIconSize,
+    setConnectionIconSize,
     explorerFont,
     setExplorerFont,
     explorerFontSize,
