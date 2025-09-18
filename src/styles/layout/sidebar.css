@@ -528,107 +528,108 @@
 
 /* FORZAR COLOR PERSONALIZADO DE CARPETAS - MÁXIMA AGRESIVIDAD */
 /* Regla base para todos los iconos de carpeta con color personalizado */
-.sidebar-tree span[data-folder-color] {
+/* Solo aplicar a iconos que NO sean SVG */
+.sidebar-tree span[data-folder-color]:not(svg) {
   color: inherit !important;
 }
 
-/* Reglas específicas para cada color */
-.sidebar-tree span[data-folder-color="#28a745"] {
+/* Reglas específicas para cada color - Solo para iconos NO SVG */
+.sidebar-tree span[data-folder-color="#28a745"]:not(svg) {
   color: #28a745 !important;
 }
 
-.sidebar-tree span[data-folder-color="#dc3545"] {
+.sidebar-tree span[data-folder-color="#dc3545"]:not(svg) {
   color: #dc3545 !important;
 }
 
-.sidebar-tree span[data-folder-color="#fd7e14"] {
+.sidebar-tree span[data-folder-color="#fd7e14"]:not(svg) {
   color: #fd7e14 !important;
 }
 
-.sidebar-tree span[data-folder-color="#ff6b6b"] {
+.sidebar-tree span[data-folder-color="#ff6b6b"]:not(svg) {
   color: #ff6b6b !important;
 }
 
-.sidebar-tree span[data-folder-color="#6f42c1"] {
+.sidebar-tree span[data-folder-color="#6f42c1"]:not(svg) {
   color: #6f42c1 !important;
 }
 
-.sidebar-tree span[data-folder-color="#e83e8c"] {
+.sidebar-tree span[data-folder-color="#e83e8c"]:not(svg) {
   color: #e83e8c !important;
 }
 
-.sidebar-tree span[data-folder-color="#ffc107"] {
+.sidebar-tree span[data-folder-color="#ffc107"]:not(svg) {
   color: #ffc107 !important;
 }
 
-.sidebar-tree span[data-folder-color="#17a2b8"] {
+.sidebar-tree span[data-folder-color="#17a2b8"]:not(svg) {
   color: #17a2b8 !important;
 }
 
-.sidebar-tree span[data-folder-color="#6c757d"] {
+.sidebar-tree span[data-folder-color="#6c757d"]:not(svg) {
   color: #6c757d !important;
 }
 
-.sidebar-tree span[data-folder-color="#6610f2"] {
+.sidebar-tree span[data-folder-color="#6610f2"]:not(svg) {
   color: #6610f2 !important;
 }
 
-.sidebar-tree span[data-folder-color="#20c997"] {
+.sidebar-tree span[data-folder-color="#20c997"]:not(svg) {
   color: #20c997 !important;
 }
 
-.sidebar-tree span[data-folder-color="#007ad9"] {
+.sidebar-tree span[data-folder-color="#007ad9"]:not(svg) {
   color: #007ad9 !important;
 }
 
-/* Reglas adicionales con mayor especificidad */
-.sidebar-tree .p-tree span[data-folder-color] {
+/* Reglas adicionales con mayor especificidad - Solo para iconos NO SVG */
+.sidebar-tree .p-tree span[data-folder-color]:not(svg) {
   color: inherit !important;
 }
 
-.sidebar-tree .p-tree .p-treenode span[data-folder-color] {
+.sidebar-tree .p-tree .p-treenode span[data-folder-color]:not(svg) {
   color: inherit !important;
 }
 
-.sidebar-tree .p-tree .p-treenode .p-treenode-content span[data-folder-color] {
+.sidebar-tree .p-tree .p-treenode .p-treenode-content span[data-folder-color]:not(svg) {
   color: inherit !important;
 }
 
-/* Forzar color usando CSS custom properties */
-.sidebar-tree span[style*="--icon-color"] {
+/* Forzar color usando CSS custom properties - Solo para iconos NO SVG */
+.sidebar-tree span[style*="--icon-color"]:not(svg) {
   color: var(--icon-color) !important;
 }
 
-/* DEBUG: CSS extremadamente agresivo para debugging */
-.sidebar-tree span[data-debug] {
+/* DEBUG: CSS extremadamente agresivo para debugging - Solo para iconos NO SVG */
+.sidebar-tree span[data-debug]:not(svg) {
   color: red !important;
   background: yellow !important;
   border: 2px solid red !important;
 }
 
-/* Forzar color específico para debugging */
-.sidebar-tree span[data-folder-color="#28a745"] {
+/* Forzar color específico para debugging - Solo para iconos NO SVG */
+.sidebar-tree span[data-folder-color="#28a745"]:not(svg) {
   color: #28a745 !important;
   background: rgba(40, 167, 69, 0.1) !important;
 }
 
-.sidebar-tree span[data-folder-color="#dc3545"] {
+.sidebar-tree span[data-folder-color="#dc3545"]:not(svg) {
   color: #dc3545 !important;
   background: rgba(220, 53, 69, 0.1) !important;
 }
 
-.sidebar-tree span[data-folder-color="#fd7e14"] {
+.sidebar-tree span[data-folder-color="#fd7e14"]:not(svg) {
   color: #fd7e14 !important;
   background: rgba(253, 126, 20, 0.1) !important;
 }
 
-.sidebar-tree span[data-folder-color="#ff6b6b"] {
+.sidebar-tree span[data-folder-color="#ff6b6b"]:not(svg) {
   color: #ff6b6b !important;
   background: rgba(255, 107, 107, 0.1) !important;
 }
 
-/* CSS con máxima especificidad posible */
-.sidebar-container .sidebar-tree .p-tree .p-treenode .p-treenode-content span[data-folder-color] {
+/* CSS con máxima especificidad posible - Solo para iconos NO SVG */
+.sidebar-container .sidebar-tree .p-tree .p-treenode .p-treenode-content span[data-folder-color]:not(svg) {
   color: inherit !important;
 }
 
