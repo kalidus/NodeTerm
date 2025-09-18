@@ -1255,6 +1255,23 @@ const Sidebar = React.memo(({
             return hslToHex(h, s, Math.min(100, Math.max(0, l * factor)));
           };
           
+          // Lista de temas que deben preservar sus colores originales
+          // NOTA: Fluent se excluye intencionalmente para mantener su funcionalidad de colores personalizados
+          const preserveOriginalColorsThemes = [
+            // Temas originales que deben mantener sus colores
+            'monokai', 'onedark', 'gruvbox', 'tokyonight', 'catppuccin', 'palenight', 'minimal', 'highcontrast',
+            // Nuevos temas añadidos
+            'cyberpunk', 'retroGaming', 'corporate', 'nature', 'space', 'ocean', 
+            'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient', 
+            'monochrome', 'rainbow', 'metallic', 'holographic', 'glitch', 
+            'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional'
+          ];
+          
+          // Si es un tema que debe preservar colores originales, no modificar nada
+          if (preserveOriginalColorsThemes.includes(iconTheme)) {
+            return element;
+          }
+          
           // Mapeo de colores específicos del tema a colores adaptados
           // REGLA: La parte superior (flap) mantiene el color secundario del tema, solo el cuerpo cambia
           const colorMapping = {
