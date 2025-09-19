@@ -85,13 +85,6 @@ const SettingsDialog = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   
-  // Debug: Verificar que los props llegan correctamente
-  console.log('🔍 SettingsDialog props:', {
-    folderIconSize,
-    connectionIconSize,
-    setFolderIconSize: !!setFolderIconSize,
-    setConnectionIconSize: !!setConnectionIconSize
-  });
   const [versionInfo, setVersionInfo] = useState({ appVersion: '' });
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(() => {

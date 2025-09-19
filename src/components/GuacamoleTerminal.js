@@ -100,7 +100,6 @@ const GuacamoleTerminal = forwardRef(({
 
     // Inicializar guacamole-common-js con importación local
     useEffect(() => {
-        console.log('✅ guacamole-common-js disponible localmente');
         // Hacer que Guacamole esté disponible globalmente para compatibilidad
         window.Guacamole = Guacamole;
         setIsGuacamoleLoaded(true);
@@ -109,31 +108,13 @@ const GuacamoleTerminal = forwardRef(({
     // Inicializar conexión Guacamole cuando la librería esté lista
     useEffect(() => {
         
-        // Log simplificado de configuración RDP
-        if (rdpConfig) {
-            console.log('📋 RDP Config:', {
-                autoResize: rdpConfig.autoResize,
-                width: rdpConfig.width,
-                height: rdpConfig.height,
-                enableDynamicResize: rdpConfig.enableDynamicResize
-            });
-        }
         
         if (!isGuacamoleLoaded || !rdpConfig || connectionState !== 'disconnected') {
-            console.log('⏸️ Condiciones no cumplidas para inicializar conexión:', {
-                isGuacamoleLoaded,
-                hasRdpConfig: !!rdpConfig,
-                connectionState,
-                rdpConfigAutoResize: rdpConfig?.autoResize,
-                rdpConfigWidth: rdpConfig?.width,
-                rdpConfigHeight: rdpConfig?.height
-            });
             return;
         }
 
         const initializeGuacamoleConnection = async () => {
             try {
-                console.log('🔗 Iniciando conexión con rdpConfig:', rdpConfig);
                 setConnectionState('connecting');
                 setErrorMessage('');
 
@@ -153,7 +134,6 @@ const GuacamoleTerminal = forwardRef(({
                     const freezeMs = Math.max(0, parseInt(localStorage.getItem('rdp_initial_freeze_ms') || '8000', 10));
                     if (rdpConfig && rdpConfig.freezeInitialResize) {
                         freezeResizeUntilRef.current = Date.now() + freezeMs;
-                        console.log(`🧊 Congelando envíos de resize por ${freezeMs}ms`);
                     } else {
                         freezeResizeUntilRef.current = 0;
                     }
@@ -165,11 +145,9 @@ const GuacamoleTerminal = forwardRef(({
                 }
 
                 // Esperar un poco para asegurar que los servicios estén listos
-                console.log('⏳ Esperando a que los servicios estén listos...');
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
                                  // Obtener estado del servicio Guacamole con reintentos
-                 console.log('📞 Consultando estado del servicio Guacamole...');
                  let status = null;
                  let attempts = 0;
                  const maxAttempts = 3;
@@ -178,41 +156,18 @@ const GuacamoleTerminal = forwardRef(({
                  
                  // Obtener estado detallado del servicio
                  const detailedStatus = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-                 console.log('🔧 Estado detallado del servicio:', detailedStatus);
-                 
                  if (detailedStatus && detailedStatus.guacd) {
-                     console.log('🔧 Método guacd:', detailedStatus.guacd.method || 'NO ESPECIFICADO');
-                     console.log('🔧 Puerto guacd:', detailedStatus.guacd.port || 'NO ESPECIFICADO');
-                     console.log('🔧 Host guacd:', detailedStatus.guacd.host || 'NO ESPECIFICADO');
                      
                      // Mostrar información adicional según el método
                      if (detailedStatus.guacd.method === 'docker') {
-                         console.log('🐳 Guacd corriendo en Docker - Conexión RDP real');
                      } else if (detailedStatus.guacd.method === 'native') {
-                         console.log('📦 Guacd corriendo como proceso nativo - Conexión RDP real');
-                     } else if (detailedStatus.guacd.method === 'mock') {
-                         console.log('🧪 Guacd en modo mock - Sin conexión RDP real');
-                     } else {
-                         console.log('❓ Método de guacd desconocido - Verificar configuración');
                      }
                  }
                 
                 while (attempts < maxAttempts && !status) {
                     try {
                         attempts++;
-                        console.log(`📞 Intento ${attempts}/${maxAttempts}...`);
                                                  status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-                         console.log('📋 Estado recibido:', status);
-                         
-                         // Log detallado del estado
-                         if (status) {
-                             console.log('🔧 Detalles del estado:');
-                             console.log('  - guacd:', status.guacd);
-                             console.log('  - server:', status.server);
-                             if (status.guacd && status.guacd.method) {
-                                 console.log('  - Método guacd:', status.guacd.method);
-                             }
-                         }
                         
                         if (status && status.server) {
                             break; // Éxito
@@ -240,7 +195,6 @@ const GuacamoleTerminal = forwardRef(({
                         const sinceReady = Date.now() - readyAt;
                         if (sinceReady < 2000) {
                             const waitMs = 2000 - sinceReady + 200;
-                            console.log(`⏳ Warm-up guacamole-lite reciente (${sinceReady}ms). Esperando ${waitMs}ms...`);
                             await new Promise(resolve => setTimeout(resolve, waitMs));
                         }
                     }
@@ -326,7 +280,6 @@ const GuacamoleTerminal = forwardRef(({
                             rdpConfig.width = w;
                             rdpConfig.height = h;
                             rdpConfig.resolution = `${w}x${h}`;
-                            console.log(`📐 Resolución inicial fijada desde contenedor (estable): ${w}x${h}`);
                         }
                     }
                 } catch {}
@@ -343,7 +296,6 @@ const GuacamoleTerminal = forwardRef(({
                  // Log crítico: verificar configuración antes de enviar al backend
                  
                  const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
-                console.log('📄 Respuesta del token:', tokenResponse);
                 
                 if (!tokenResponse.success) {
                     throw new Error(tokenResponse.error);
@@ -358,8 +310,6 @@ const GuacamoleTerminal = forwardRef(({
 
                                  // Obtener display y elementos de input
                  const display = client.getDisplay();
-                 console.log('📺 Display creado:', display);
-                 console.log('📺 Display element:', display.getElement());
                  
                 const targetElement = display.getElement();
                 try { targetElement.setAttribute('tabindex', '0'); } catch {}
@@ -425,14 +375,12 @@ const GuacamoleTerminal = forwardRef(({
                                  // Configurar display en el contenedor
                  const container = containerRef.current;
                  if (container) {
-                     console.log('🎨 Configurando display en contenedor...');
                      
                      // Limpiar contenedor
                      container.innerHTML = '';
                      
                      // Obtener elemento display
                      const displayElement = display.getElement();
-                     console.log('📺 Elemento display obtenido:', displayElement);
                      
                                            // Configurar estilos del display
                       displayElement.style.width = '100%';
@@ -446,7 +394,6 @@ const GuacamoleTerminal = forwardRef(({
                      
                      // Añadir al contenedor
                      container.appendChild(displayElement);
-                     console.log('✅ Display añadido al contenedor');
                      
                      // Forzar un refresco del display
                      setTimeout(() => {
@@ -534,13 +481,11 @@ const GuacamoleTerminal = forwardRef(({
                      
                      // Usar constantes directas ya que window.Guacamole.Client.CONNECTED es undefined
                      if (state === 3) { // CONNECTED
-                         console.log('✅ Conexión RDP establecida para tab', tabId);
                          
                          // Asegurar que el display esté visible
                          const container = containerRef.current;
                          if (container) {
                              container.style.display = 'block';
-                             console.log('🎨 Contenedor display hecho visible');
                          }
                          
                          // Forzar un refresco del display después de conectar
@@ -557,7 +502,6 @@ const GuacamoleTerminal = forwardRef(({
                         lastActivityTimeRef.current = nowTsConn;
                         wasIdleRef.current = false;
                         syncReadyRef.current = false; // esperar primer onsync
-                        console.log('✅ Estado cambiado a CONNECTED');
                         noFrameReconnectAttemptedRef.current = false;
 
                          // Enviar un "wake-up" suave si no hay actividad en ~1.5s tras conectar
@@ -815,8 +759,6 @@ const GuacamoleTerminal = forwardRef(({
                          setTimeout(() => {
                              const displayElement = containerRef.current?.querySelector('canvas');
                              if (displayElement) {
-                                 console.log('📺 Canvas encontrado en display');
-                                 console.log('📺 Dimensiones del canvas:', displayElement.width, 'x', displayElement.height);
                                  
                                  // Si autoResize está activo, forzar un resize secundario más agresivo
                                  if (false && rdpConfig.autoResize) {
@@ -840,26 +782,12 @@ const GuacamoleTerminal = forwardRef(({
                                  const ctx = displayElement.getContext('2d');
                                  const imageData = ctx.getImageData(0, 0, displayElement.width, displayElement.height);
                                  const hasData = imageData.data.some(pixel => pixel !== 0);
-                                 console.log('📺 Canvas tiene datos visuales:', hasData);
                                  
                                  // Verificar visibilidad del canvas
                                  const rect = displayElement.getBoundingClientRect();
-                                 console.log('📺 Posición del canvas:', {
-                                     top: rect.top,
-                                     left: rect.left,
-                                     width: rect.width,
-                                     height: rect.height,
-                                     visible: rect.width > 0 && rect.height > 0
-                                 });
                                  
                                  // Verificar estilos del canvas
                                  const styles = window.getComputedStyle(displayElement);
-                                 console.log('📺 Estilos del canvas:', {
-                                     display: styles.display,
-                                     visibility: styles.visibility,
-                                     opacity: styles.opacity,
-                                     zIndex: styles.zIndex
-                                 });
                                  
                                  if (!hasData) {
                                      console.warn('⚠️ Canvas está vacío - no hay datos del servidor RDP');
@@ -929,12 +857,9 @@ const GuacamoleTerminal = forwardRef(({
                               lastDimensionsRef.current = { width: 0, height: 0 };
                                lastResizeTimeRef.current = 0;
                           } catch {}
-                         console.log('🔚 Conexión RDP cerrada para tab', tabId);
                      } else if (state === 2) { // WAITING
-                        console.log('⏳ Esperando respuesta del servidor RDP...');
                         setConnectionState('connecting');
                     } else if (state === 1) { // CONNECTING  
-                        console.log('🔌 Estableciendo conexión...');
                         setConnectionState('connecting');
                     }
                 };
@@ -1630,7 +1555,6 @@ const GuacamoleTerminal = forwardRef(({
                         burstCountRef.current = 0;
                     }
                     if (burstCountRef.current >= 3) {
-                        console.log('⏳ Burst limit alcanzado (3/10s), posponiendo 3000ms');
                         if (resizeTimeout) clearTimeout(resizeTimeout);
                         resizeTimeout = setTimeout(() => {
                             handleWindowResize();

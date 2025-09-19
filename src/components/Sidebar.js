@@ -101,12 +101,6 @@ const Sidebar = React.memo(({
   editingRdpNode, setEditingRdpNode
 }) => {
   
-  // Debug: Verificar que los props llegan correctamente
-  console.log('🔍 Sidebar props:', {
-    folderIconSize,
-    connectionIconSize,
-    iconSize
-  });
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
@@ -212,7 +206,6 @@ const Sidebar = React.memo(({
     const updatedNodes = updateExistingFoldersColor(nodes, newDefaultColor);
     setNodes(updatedNodes);
     
-    console.log(`🎨 Tema cambiado a "${iconTheme}". Carpetas sin color personalizado actualizadas al color: ${newDefaultColor}`);
   }, [iconTheme, setNodes]);
   
   // Ref para el contenedor de la sidebar
