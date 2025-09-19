@@ -4,8 +4,9 @@ import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
+import { toggleFavorite, helpers } from '../utils/connectionStore';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material' }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -90,6 +91,36 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     } else if (onOpenSSHConnection) {
       // Fallback para conexiones sin tipo definido
       onOpenSSHConnection(node, allNodes);
+    }
+  };
+
+  const handleToggleFavorite = (node) => {
+    try {
+      // Convertir el nodo a formato de conexión
+      const connection = helpers.fromSidebarNode(node);
+      if (connection) {
+        toggleFavorite(connection);
+        // Opcional: mostrar notificación de éxito
+        console.log('Favorito actualizado:', connection.name);
+      }
+    } catch (error) {
+      console.error('Error al actualizar favorito:', error);
+    }
+  };
+
+  const handleEditConnection = (node) => {
+    setSidebarFilter('');
+    setShowDropdown(false);
+    
+    const isSSH = node.data && node.data.type === 'ssh';
+    const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
+    
+    if (isSSH && openEditSSHDialog) {
+      openEditSSHDialog(node);
+    } else if (isRDP && openEditRdpDialog) {
+      openEditRdpDialog(node);
+    } else {
+      console.warn('No hay función de edición disponible para este tipo de conexión');
     }
   };
 
@@ -637,15 +668,15 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
-        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'block' }} />
-        <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18 }}>NodeTerm</span>
+        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'flex', alignItems: 'center' }} />
+        <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 350, maxWidth: 600, width: '35vw', WebkitAppRegion: 'no-drag' }}>
           {!sidebarFilter && (
-            <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', color: '#888', pointerEvents: 'none', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', color: '#888', pointerEvents: 'none', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
               <FaSearch />
-              <span>Buscar...</span>
+              <span>NodeTerm</span>
             </span>
           )}
           <InputText
@@ -656,16 +687,16 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               minWidth: 350,
               maxWidth: 600,
               width: '100%',
-              paddingLeft: 0,
+              paddingLeft: 12,
               height: 28,
               borderRadius: 6,
               border: '1px solid #bbb',
               fontSize: 13,
-              background: 'rgba(255,255,255,0.85)',
-              color: '#222',
+              background: '#f5f5f5',
+              color: '#333',
               fontWeight: 500,
               outline: 'none',
-              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.08)',
+              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.1)',
               transition: 'border 0.2s',
               zIndex: 1,
               textAlign: 'center',
@@ -675,21 +706,23 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             autoComplete="off"
           />
           {showDropdown && (
-            <div style={{
-              position: 'absolute',
-              top: 36,
-              left: 0,
-              width: '100%',
-              background: '#232629',
-              color: '#fff',
-              borderRadius: 6,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-              zIndex: 9999,
-              maxHeight: 300,
-              overflowY: 'auto',
-              border: '1px solid #444',
-              WebkitAppRegion: 'no-drag',
-            }}>
+            <div 
+              className="search-dropdown"
+              style={{
+                position: 'absolute',
+                top: 36,
+                left: 0,
+                width: '100%',
+                background: '#232629',
+                color: '#fff',
+                borderRadius: 6,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                zIndex: 9999,
+                maxHeight: 300,
+                overflowY: 'auto',
+                border: '1px solid #444',
+                WebkitAppRegion: 'no-drag',
+              }}>
               {filteredConnections.map(node => {
                 const isSSH = node.data && node.data.type === 'ssh';
                 const isRDP = node.data && node.data.type === 'rdp';
@@ -709,8 +742,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   protocolName = 'RDP';
                 }
                 
-                // Verificar si es favorito (esto necesitaría implementarse según tu lógica de favoritos)
-                const isFavorite = false; // TODO: Implementar lógica de favoritos
+                // Verificar si es favorito
+                const connection = helpers.fromSidebarNode(node);
+                const favorites = JSON.parse(localStorage.getItem('nodeterm_favorite_connections') || '[]');
+                const isFavorite = favorites.some(fav => fav.id === connection?.id);
                 
                 return (
                   <div
@@ -804,8 +839,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // TODO: Implementar lógica de favoritos
-                          console.log('Toggle favorito:', node);
+                          handleToggleFavorite(node);
                         }}
                         title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
                       >
@@ -837,8 +871,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // TODO: Implementar lógica para editar
-                          console.log('Editar conexión:', node);
+                          handleEditConnection(node);
                         }}
                         title="Editar conexión"
                       >

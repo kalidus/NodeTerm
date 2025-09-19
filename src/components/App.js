@@ -1320,6 +1320,8 @@ const App = () => {
           } catch {}
           setShowImportDialog(true);
         }}
+        openEditSSHDialog={openEditSSHDialog}
+        openEditRdpDialog={openEditRdpDialog}
         onQuickImportFromSource={async (source) => {
           try {
             if (!source?.filePath) {
