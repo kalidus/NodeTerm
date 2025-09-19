@@ -306,31 +306,6 @@ export const themes = {
       cursor: '#c0caf5'
     }
   },
-  'Catppuccin': {
-    name: 'Catppuccin',
-    theme: {
-      background: '#1e1e2e',
-      foreground: '#cdd6f4',
-      black: '#45475a',
-      brightBlack: '#585b70',
-      red: '#f38ba8',
-      brightRed: '#f38ba8',
-      green: '#a6e3a1',
-      brightGreen: '#a6e3a1',
-      yellow: '#f9e2af',
-      brightYellow: '#f9e2af',
-      blue: '#89b4fa',
-      brightBlue: '#89b4fa',
-      magenta: '#f5c2e7',
-      brightMagenta: '#f5c2e7',
-      cyan: '#94e2d5',
-      brightCyan: '#94e2d5',
-      white: '#bac2de',
-      brightWhite: '#a6adc8',
-      selectionBackground: '#313244',
-      cursor: '#cdd6f4'
-    }
-  },
   'Synthwave 84': {
     name: 'Synthwave 84',
     theme: {
@@ -379,31 +354,6 @@ export const themes = {
       brightWhite: '#ffffff',
       selectionBackground: '#717cb4',
       cursor: '#a6accd'
-    }
-  },
-  'High Contrast': {
-    name: 'High Contrast',
-    theme: {
-      background: '#000000',
-      foreground: '#ffffff',
-      black: '#000000',
-      brightBlack: '#808080',
-      red: '#ff0000',
-      brightRed: '#ff6060',
-      green: '#00ff00',
-      brightGreen: '#60ff60',
-      yellow: '#ffff00',
-      brightYellow: '#ffff60',
-      blue: '#0000ff',
-      brightBlue: '#6060ff',
-      magenta: '#ff00ff',
-      brightMagenta: '#ff60ff',
-      cyan: '#00ffff',
-      brightCyan: '#60ffff',
-      white: '#c0c0c0',
-      brightWhite: '#ffffff',
-      selectionBackground: '#404040',
-      cursor: '#ffffff'
     }
   },
   'Ayu Dark': {

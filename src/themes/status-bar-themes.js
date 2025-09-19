@@ -194,21 +194,6 @@ export const statusBarThemes = {
       sparklineColor: '#7aa2f7'
     }
   },
-  'Catppuccin': {
-    name: 'Catppuccin',
-    colors: {
-      background: '#1e1e2e',
-      text: '#cdd6f4',
-      border: '#45475a',
-      iconColor: '#89b4fa',
-      cpuBarColor: '#89b4fa',
-      memoryBarColor: '#a6e3a1',
-      diskBarColor: '#f9e2af',
-      networkUpColor: '#a6e3a1',
-      networkDownColor: '#94e2d5',
-      sparklineColor: '#89b4fa'
-    }
-  },
   'Synthwave 84': {
     name: 'Synthwave 84',
     colors: {
@@ -237,21 +222,6 @@ export const statusBarThemes = {
       networkUpColor: '#c3e88d',
       networkDownColor: '#89ddff',
       sparklineColor: '#82aaff'
-    }
-  },
-  'High Contrast': {
-    name: 'High Contrast',
-    colors: {
-      background: '#000000',
-      text: '#ffffff',
-      border: '#808080',
-      iconColor: '#00ffff',
-      cpuBarColor: '#00ffff',
-      memoryBarColor: '#00ff00',
-      diskBarColor: '#ffff00',
-      networkUpColor: '#00ff00',
-      networkDownColor: '#0000ff',
-      sparklineColor: '#00ffff'
     }
   },
   'Ayu Dark': {
