@@ -1388,6 +1388,7 @@ const App = () => {
             setShowImportDialog(true);
           }
         }}
+        iconTheme={iconTheme}
       />
       <DialogsManager
         // Referencias

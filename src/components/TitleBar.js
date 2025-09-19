@@ -3,8 +3,9 @@ import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
+import { iconThemes } from '../themes/icon-themes';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material' }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -551,9 +552,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     <div
       className="titlebar"
       style={{
-        height: 32,
-        minHeight: 32,
-        maxHeight: 32,
+        height: 36,
+        minHeight: 36,
+        maxHeight: 36,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -630,20 +631,23 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18 }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
-        <div style={{ position: 'relative', minWidth: 250, maxWidth: 520, width: '22vw', WebkitAppRegion: 'no-drag' }}>
-          <span style={{ position: 'absolute', left: 10, top: 7, color: '#888', pointerEvents: 'none', fontSize: 13 }}>
-            <FaSearch />
-          </span>
+        <div style={{ position: 'relative', minWidth: 350, maxWidth: 600, width: '35vw', WebkitAppRegion: 'no-drag' }}>
+          {!sidebarFilter && (
+            <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', color: '#888', pointerEvents: 'none', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FaSearch />
+              <span>Buscar...</span>
+            </span>
+          )}
           <InputText
             value={sidebarFilter}
             onChange={e => setSidebarFilter(e.target.value)}
-            placeholder="Buscar..."
+            placeholder=""
             style={{
-              minWidth: 250,
-              maxWidth: 520,
+              minWidth: 350,
+              maxWidth: 600,
               width: '100%',
-              paddingLeft: 36,
-              height: 24,
+              paddingLeft: 0,
+              height: 28,
               borderRadius: 6,
               border: '1px solid #bbb',
               fontSize: 13,
@@ -654,6 +658,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               boxShadow: '0 1px 4px 0 rgba(0,0,0,0.08)',
               transition: 'border 0.2s',
               zIndex: 1,
+              textAlign: 'center',
             }}
             onFocus={() => setShowDropdown(filteredConnections.length > 0)}
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
@@ -662,40 +667,179 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           {showDropdown && (
             <div style={{
               position: 'absolute',
-              top: 32,
+              top: 36,
               left: 0,
-              width: 320,
+              width: '100%',
               background: '#232629',
               color: '#fff',
               borderRadius: 6,
               boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
               zIndex: 9999,
-              maxHeight: 260,
+              maxHeight: 300,
               overflowY: 'auto',
               border: '1px solid #444',
               WebkitAppRegion: 'no-drag',
             }}>
-              {filteredConnections.map(node => (
-                <div
-                  key={node.key}
-                  style={{
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontSize: 13,
-                    borderBottom: '1px solid #333',
-                  }}
-                  onMouseDown={e => e.preventDefault()}
-                  onClick={() => handleSelectConnection(node)}
-                >
-                  <i className="pi pi-desktop" style={{ color: '#4fc3f7', fontSize: 15 }} />
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{node.label}</span>
-                </div>
-              ))}
+              {filteredConnections.map(node => {
+                const isSSH = node.data && node.data.type === 'ssh';
+                const isRDP = node.data && node.data.type === 'rdp';
+                const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['material'].icons;
+                
+                let icon = null;
+                let protocolColor = '#4fc3f7';
+                let protocolName = 'Conexión';
+                
+                if (isSSH) {
+                  icon = themeIcons.ssh;
+                  protocolColor = '#28a745';
+                  protocolName = 'SSH';
+                } else if (isRDP) {
+                  icon = themeIcons.rdp;
+                  protocolColor = '#007ad9';
+                  protocolName = 'RDP';
+                }
+                
+                // Verificar si es favorito (esto necesitaría implementarse según tu lógica de favoritos)
+                const isFavorite = false; // TODO: Implementar lógica de favoritos
+                
+                return (
+                  <div
+                    key={node.key}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 13,
+                      borderBottom: '1px solid #333',
+                      position: 'relative',
+                      transition: 'all 0.2s ease',
+                      borderRadius: '4px',
+                      margin: '2px 4px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2a2d31';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => handleSelectConnection(node)}
+                  >
+                    {/* Icono de conexión */}
+                    <div style={{ display: 'flex', alignItems: 'center', minWidth: 20, justifyContent: 'center' }}>
+                      {isSSH ? (
+                        <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>⚡</span>
+                      ) : isRDP ? (
+                        <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>🖥️</span>
+                      ) : (
+                        <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>🔗</span>
+                      )}
+                    </div>
+                    
+                    {/* Nombre y protocolo */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ 
+                        whiteSpace: 'nowrap', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis',
+                        fontWeight: 500,
+                        color: '#fff'
+                      }}>
+                        {node.label}
+                      </span>
+                      <span style={{ 
+                        fontSize: 10, 
+                        color: protocolColor,
+                        fontWeight: 600,
+                        backgroundColor: `${protocolColor}20`,
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        border: `1px solid ${protocolColor}40`,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {protocolName}
+                      </span>
+                    </div>
+                    
+                    {/* Botones de acción */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {/* Botón de favoritos */}
+                      <button
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: isFavorite ? '#ffd700' : '#666',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#ffd700';
+                          e.currentTarget.style.backgroundColor = '#444';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = isFavorite ? '#ffd700' : '#666';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // TODO: Implementar lógica de favoritos
+                          console.log('Toggle favorito:', node);
+                        }}
+                        title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+                      >
+                        <i className="pi pi-star" />
+                      </button>
+                      
+                      {/* Botón de editar */}
+                      <button
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#888',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#fff';
+                          e.currentTarget.style.backgroundColor = '#444';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#888';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // TODO: Implementar lógica para editar
+                          console.log('Editar conexión:', node);
+                        }}
+                        title="Editar conexión"
+                      >
+                        <i className="pi pi-pencil" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
               {filteredConnections.length === 0 && (
-                <div style={{ padding: '8px 12px', color: '#aaa', fontSize: 13 }}>Sin resultados</div>
+                <div style={{ padding: '12px', color: '#aaa', fontSize: 13, textAlign: 'center' }}>Sin resultados</div>
               )}
             </div>
           )}

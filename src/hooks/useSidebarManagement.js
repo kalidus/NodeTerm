@@ -99,7 +99,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   const findAllConnections = useCallback((nodes) => {
     let results = [];
     for (const node of nodes) {
-      if (node.data && node.data.type === 'ssh') {
+      if (node.data && (node.data.type === 'ssh' || node.data.type === 'rdp' || node.data.type === 'rdp-guacamole')) {
         results.push(node);
       }
       if (node.children && node.children.length > 0) {
