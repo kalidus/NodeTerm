@@ -361,10 +361,10 @@ export const iconThemes = {
     name: 'Monokai',
     icons: {
       folder: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#fd971f"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#f92672"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#f92672"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#fd971f"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#fd971f"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#f92672"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#f92672"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#fd971f"/></svg>
       ),
       ssh: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fd971f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -392,10 +392,10 @@ export const iconThemes = {
     name: 'One Dark',
     icons: {
       folder: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#e5c07b"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#d19a66"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#61afef"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#e5c07b"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#e5c07b"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#d19a66"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#61afef"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#e5c07b"/></svg>
       ),
       ssh: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e5c07b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -423,10 +423,10 @@ export const iconThemes = {
     name: 'Gruvbox',
     icons: {
       folder: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#d79921"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#fabd2f"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#b16286"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#fabd2f"/></svg>
       ),
       folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#d79921"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#fabd2f"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#b16286"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#fabd2f"/></svg>
       ),
       ssh: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -498,36 +498,6 @@ export const iconThemes = {
     }
   },
 
-  catppuccin: {
-    name: 'Catppuccin',
-    icons: {
-      folder: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#f5c2e7"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#cba6f7"/></svg>
-      ),
-      folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#f5c2e7"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 7l4-4h6l2 2h8v2" fill="#cba6f7"/></svg>
-      ),
-      ssh: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5c2e7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-          <path d="M6 7h12M6 11h8M6 15h6"/>
-        </svg>
-      ),
-      rdp: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007ad9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-      ),
-      file: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#cdd6f4"><rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8" y="4" width="8" height="14" fill="#1e1e2e"/></svg>
-      )
-    }
-  },
 
   palenight: {
     name: 'Palenight',
@@ -591,45 +561,6 @@ export const iconThemes = {
     }
   },
 
-  highcontrast: {
-    name: 'High Contrast',
-    icons: {
-      folder: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#000" stroke="#fff" strokeWidth="2">
-          <rect x="2" y="7" width="20" height="13" rx="1"/>
-          <path d="M2 7l4-4h6l2 2h8v2" fill="#fff"/>
-        </svg>
-      ),
-      folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#000" stroke="#fff" strokeWidth="2">
-          <rect x="2" y="7" width="20" height="13" rx="1"/>
-          <path d="M2 7l4-4h6l2 2h8v2" fill="#fff"/>
-        </svg>
-      ),
-      ssh: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-          <path d="M6 7h12M6 11h8M6 15h6"/>
-        </svg>
-      ),
-      rdp: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007ad9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-          <circle cx="12" cy="10" r="3"/>
-        </svg>
-      ),
-      file: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#000" stroke="#fff" strokeWidth="2">
-          <rect x="6" y="2" width="12" height="20" rx="2"/>
-          <path d="M14 2v6h6" fill="#fff"/>
-        </svg>
-      )
-    }
-  },
 
   synthwave: {
     name: 'Synthwave',
@@ -1560,57 +1491,6 @@ export const iconThemes = {
     }
   },
 
-  monochrome: {
-    name: 'Monochrome',
-    icons: {
-      folder: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#000000" stroke="#000000" strokeWidth="1">
-          <rect x="2" y="7" width="20" height="13" rx="1"/>
-          <path d="M2 7l4-4h6l2 2h8v2" fill="#333333"/>
-          <rect x="4" y="10" width="16" height="1" fill="#666666"/>
-          <rect x="4" y="12" width="12" height="1" fill="#666666"/>
-          <rect x="4" y="14" width="14" height="1" fill="#666666"/>
-        </svg>
-      ),
-      folderOpen: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#000000" stroke="#000000" strokeWidth="1">
-          <rect x="2" y="7" width="20" height="13" rx="1"/>
-          <path d="M2 7l4-4h6l2 2h8v2" fill="#333333"/>
-          <rect x="4" y="10" width="16" height="1" fill="#666666"/>
-          <rect x="4" y="12" width="12" height="1" fill="#666666"/>
-          <rect x="4" y="14" width="14" height="1" fill="#666666"/>
-        </svg>
-      ),
-      ssh: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="1" ry="1"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-          <path d="M6 7h12M6 11h8M6 15h6"/>
-          <rect x="18" y="4" width="2" height="2" fill="#333333"/>
-        </svg>
-      ),
-      rdp: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="1" ry="1"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-          <circle cx="12" cy="10" r="3"/>
-          <rect x="10" y="8" width="4" height="1" fill="#666666"/>
-        </svg>
-      ),
-      file: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="#333333" stroke="#000000" strokeWidth="1">
-          <rect x="6" y="2" width="12" height="20" rx="1"/>
-          <path d="M14 2v6h6" fill="#000000"/>
-          <rect x="8" y="8" width="8" height="1" fill="#666666"/>
-          <rect x="8" y="10" width="6" height="1" fill="#666666"/>
-          <rect x="8" y="12" width="8" height="1" fill="#666666"/>
-          <rect x="8" y="14" width="4" height="1" fill="#666666"/>
-        </svg>
-      )
-    }
-  },
 
   rainbow: {
     name: 'Rainbow',

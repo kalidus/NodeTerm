@@ -1259,11 +1259,11 @@ const Sidebar = React.memo(({
           // NOTA: Fluent se excluye intencionalmente para mantener su funcionalidad de colores personalizados
           const preserveOriginalColorsThemes = [
             // Temas originales que deben mantener sus colores
-            'monokai', 'onedark', 'gruvbox', 'tokyonight', 'catppuccin', 'palenight', 'minimal', 'highcontrast',
+            'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
             // Nuevos temas añadidos
             'cyberpunk', 'retroGaming', 'corporate', 'nature', 'space', 'ocean', 
             'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient', 
-            'monochrome', 'rainbow', 'metallic', 'holographic', 'glitch', 
+            'rainbow', 'metallic', 'holographic', 'glitch', 
             'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional'
           ];
           
