@@ -1305,6 +1305,7 @@ const App = () => {
         allNodes={nodes}
         findAllConnections={findAllConnections}
         onOpenSSHConnection={onOpenSSHConnection}
+        onOpenRdpConnection={onOpenRdpConnection}
         onShowImportDialog={setShowImportDialog}
         onOpenImportWithSource={(source) => {
           try {

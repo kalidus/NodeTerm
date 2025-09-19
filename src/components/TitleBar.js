@@ -5,7 +5,7 @@ import { FaSearch } from 'react-icons/fa';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material' }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material' }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -78,9 +78,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
-          if (onOpenSSHConnection) {
-        onOpenSSHConnection(node, allNodes);
-      }
+    
+    // Detectar el tipo de conexión y llamar a la función apropiada
+    const isSSH = node.data && node.data.type === 'ssh';
+    const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
+    
+    if (isSSH && onOpenSSHConnection) {
+      onOpenSSHConnection(node, allNodes);
+    } else if (isRDP && onOpenRdpConnection) {
+      onOpenRdpConnection(node, allNodes);
+    } else if (onOpenSSHConnection) {
+      // Fallback para conexiones sin tipo definido
+      onOpenSSHConnection(node, allNodes);
+    }
   };
 
   const handleMinimize = () => {

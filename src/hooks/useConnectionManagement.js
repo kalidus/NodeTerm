@@ -105,25 +105,41 @@ export const useConnectionManagement = ({
       originalKey: nodeOrConn?.id || `manual_${Date.now()}`
     };
 
-    // Si viene desde Favoritos/Recientes (sin .data), intentar localizar el nodo original para recuperar password y flags
+    // Si viene desde Favoritos/Recientes (sin .data), usar la información guardada como primera opción
     let matchedSidebarNode = null;
     if (!isSidebarNode && conn && conn.host && conn.username) {
-      const matchesConn = (node) => {
-        if (!node || !node.data || node.data.type !== 'ssh') return false;
-        const hostMatches = (node.data.host === conn.host) || (node.data.targetServer === conn.host) || (node.data.hostname === conn.host);
-        const userMatches = (node.data.user === conn.username) || (node.data.username === conn.username);
-        const portMatches = (node.data.port || 22) === (conn.port || 22);
-        return hostMatches && userMatches && portMatches;
+      // Para conexiones de favoritos, usar la información guardada directamente
+      const favoriteData = {
+        password: nodeOrConn.password || '',
+        useBastionWallix: nodeOrConn.useBastionWallix || false,
+        bastionHost: nodeOrConn.bastionHost || '',
+        bastionUser: nodeOrConn.bastionUser || '',
+        targetServer: nodeOrConn.targetServer || '',
+        remoteFolder: nodeOrConn.remoteFolder || ''
       };
-      const dfs = (list) => {
-        if (!Array.isArray(list)) return;
-        for (const n of list) {
-          if (matchesConn(n)) { matchedSidebarNode = n; return; }
-          if (n.children && n.children.length > 0) dfs(n.children);
-          if (matchedSidebarNode) return;
-        }
-      };
-      dfs(nodes);
+      
+      // Solo si no hay información completa guardada, buscar en la sidebar como fallback
+      if (!favoriteData.password && !favoriteData.useBastionWallix) {
+        const matchesConn = (node) => {
+          if (!node || !node.data || node.data.type !== 'ssh') return false;
+          const hostMatches = (node.data.host === conn.host) || (node.data.targetServer === conn.host) || (node.data.hostname === conn.host);
+          const userMatches = (node.data.user === conn.username) || (node.data.username === conn.username);
+          const portMatches = (node.data.port || 22) === (conn.port || 22);
+          return hostMatches && userMatches && portMatches;
+        };
+        const dfs = (list) => {
+          if (!Array.isArray(list)) return;
+          for (const n of list) {
+            if (matchesConn(n)) { 
+              matchedSidebarNode = n; 
+              return; 
+            }
+            if (n.children && n.children.length > 0) dfs(n.children);
+            if (matchedSidebarNode) return;
+          }
+        };
+        dfs(nodes);
+      }
     }
 
     // Si es un favorito de tipo Explorer, abrir explorador en lugar de terminal
@@ -162,12 +178,14 @@ export const useConnectionManagement = ({
       const sshConfig = {
         host: conn.host,
         username: conn.username,
-        password: isSidebarNode ? nodeOrConn.data.password : (matchedSidebarNode?.data?.password || ''),
+        password: isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || ''),
         port: conn.port,
         originalKey: conn.originalKey,
-        useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (matchedSidebarNode?.data?.useBastionWallix || false),
-        bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (matchedSidebarNode?.data?.bastionHost || ''),
-        bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (matchedSidebarNode?.data?.bastionUser || '')
+        useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
+        bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
+        bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
+        targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
+        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || '')
       };
       const newTab = {
         key: tabId,
@@ -204,32 +222,104 @@ export const useConnectionManagement = ({
     // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
     const nodeData = node.data || node; // Fallback para ConnectionHistory
 
-    // Si viene desde Favoritos/Recientes (sin .data), intentar localizar el nodo original para recuperar password y ajustes
-    let matchedRdpNode = null;
+    // Si viene desde Favoritos/Recientes (sin .data), usar la información guardada como primera opción
+    let baseRdp = nodeData;
     if (!node.data) {
-      const matchesRdp = (n) => {
-        if (!n || !n.data) return false;
-        const isRdp = n.data.type === 'rdp' || n.data.type === 'rdp-guacamole';
-        if (!isRdp) return false;
-        const hostA = (n.data.server || n.data.host || n.data.hostname || '').toLowerCase();
-        const hostB = (nodeData.server || nodeData.host || nodeData.hostname || '').toLowerCase();
-        const userA = (n.data.username || n.data.user || '').toLowerCase();
-        const userB = (nodeData.username || nodeData.user || '').toLowerCase();
-        const portA = n.data.port || 3389;
-        const portB = nodeData.port || 3389;
-        return hostA === hostB && userA === userB && portA === portB;
+      // Para conexiones de favoritos, usar la información guardada directamente
+      const hostValue = node.host || node.hostname || '';
+      baseRdp = {
+        server: hostValue,
+        host: hostValue,
+        hostname: hostValue,
+        username: node.username,
+        user: node.username,
+        password: node.password || '',
+        port: node.port || 3389,
+        clientType: node.clientType || 'guacamole',
+        type: node.type || 'rdp-guacamole',
+        domain: node.domain || '',
+        resolution: node.resolution || '1024x768',
+        colors: node.colors || '32',
+        // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
+        guacEnableWallpaper: node.guacEnableWallpaper || node.enableWallpaper || false,
+        guacEnableDesktopComposition: node.guacEnableDesktopComposition || node.enableDesktopComposition || false,
+        guacEnableFontSmoothing: node.guacEnableFontSmoothing || node.enableFontSmoothing || false,
+        guacEnableTheming: node.guacEnableTheming || node.enableTheming || false,
+        guacEnableFullWindowDrag: node.guacEnableFullWindowDrag || node.enableFullWindowDrag || false,
+        guacEnableMenuAnimations: node.guacEnableMenuAnimations || node.enableMenuAnimations || false,
+        guacEnableGfx: node.guacEnableGfx || node.enableGfx || false,
+        guacDisableGlyphCaching: node.guacDisableGlyphCaching || node.disableGlyphCaching || false,
+        guacDisableOffscreenCaching: node.guacDisableOffscreenCaching || node.disableOffscreenCaching || false,
+        guacDisableBitmapCaching: node.guacDisableBitmapCaching || node.disableBitmapCaching || false,
+        guacDisableCopyRect: node.guacDisableCopyRect || node.disableCopyRect || false,
+        autoResize: node.autoResize || false,
+        guacDpi: node.guacDpi || 96,
+        guacSecurity: node.guacSecurity || 'any',
+        redirectFolders: node.redirectFolders !== false,
+        redirectClipboard: node.redirectClipboard !== false,
+        redirectPrinters: node.redirectPrinters || false,
+        redirectAudio: node.redirectAudio !== false,
+        fullscreen: node.fullscreen || false,
+        smartSizing: node.smartSizing !== false,
+        span: node.span || false,
+        admin: node.admin || false
       };
-      const dfs = (list) => {
-        if (!Array.isArray(list)) return;
-        for (const n of list) {
-          if (matchesRdp(n)) { matchedRdpNode = n; return; }
-          if (n.children && n.children.length > 0) dfs(n.children);
-          if (matchedRdpNode) return;
-        }
-      };
-      dfs(nodes);
+      
+      // Solo si no hay password guardado, intentar buscar en la sidebar como fallback
+      if (!baseRdp.password) {
+        const matchesRdp = (n) => {
+          if (!n || !n.data) return false;
+          const isRdp = n.data.type === 'rdp' || n.data.type === 'rdp-guacamole';
+          if (!isRdp) return false;
+          const hostA = (n.data.server || n.data.host || n.data.hostname || '').toLowerCase();
+          const hostB = (baseRdp.server || baseRdp.host || baseRdp.hostname || '').toLowerCase();
+          const userA = (n.data.username || n.data.user || '').toLowerCase();
+          const userB = (baseRdp.username || baseRdp.user || '').toLowerCase();
+          const portA = n.data.port || 3389;
+          const portB = baseRdp.port || 3389;
+          return hostA === hostB && userA === userB && portA === portB;
+        };
+        const dfs = (list) => {
+          if (!Array.isArray(list)) return;
+          for (const n of list) {
+            if (matchesRdp(n)) { 
+              // Usar la información de la sidebar para completar los campos faltantes
+              baseRdp.password = n.data.password || baseRdp.password;
+              baseRdp.clientType = n.data.clientType || baseRdp.clientType;
+              baseRdp.domain = n.data.domain || baseRdp.domain;
+              baseRdp.resolution = n.data.resolution || baseRdp.resolution;
+              baseRdp.colors = n.data.colors || baseRdp.colors;
+              // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
+              baseRdp.guacEnableWallpaper = n.data.guacEnableWallpaper !== undefined ? n.data.guacEnableWallpaper : (n.data.enableWallpaper !== undefined ? n.data.enableWallpaper : baseRdp.guacEnableWallpaper);
+              baseRdp.guacEnableDesktopComposition = n.data.guacEnableDesktopComposition !== undefined ? n.data.guacEnableDesktopComposition : (n.data.enableDesktopComposition !== undefined ? n.data.enableDesktopComposition : baseRdp.guacEnableDesktopComposition);
+              baseRdp.guacEnableFontSmoothing = n.data.guacEnableFontSmoothing !== undefined ? n.data.guacEnableFontSmoothing : (n.data.enableFontSmoothing !== undefined ? n.data.enableFontSmoothing : baseRdp.guacEnableFontSmoothing);
+              baseRdp.guacEnableTheming = n.data.guacEnableTheming !== undefined ? n.data.guacEnableTheming : (n.data.enableTheming !== undefined ? n.data.enableTheming : baseRdp.guacEnableTheming);
+              baseRdp.guacEnableFullWindowDrag = n.data.guacEnableFullWindowDrag !== undefined ? n.data.guacEnableFullWindowDrag : (n.data.enableFullWindowDrag !== undefined ? n.data.enableFullWindowDrag : baseRdp.guacEnableFullWindowDrag);
+              baseRdp.guacEnableMenuAnimations = n.data.guacEnableMenuAnimations !== undefined ? n.data.guacEnableMenuAnimations : (n.data.enableMenuAnimations !== undefined ? n.data.enableMenuAnimations : baseRdp.guacEnableMenuAnimations);
+              baseRdp.guacEnableGfx = n.data.guacEnableGfx !== undefined ? n.data.guacEnableGfx : (n.data.enableGfx !== undefined ? n.data.enableGfx : baseRdp.guacEnableGfx);
+              baseRdp.guacDisableGlyphCaching = n.data.guacDisableGlyphCaching !== undefined ? n.data.guacDisableGlyphCaching : (n.data.disableGlyphCaching !== undefined ? n.data.disableGlyphCaching : baseRdp.guacDisableGlyphCaching);
+              baseRdp.guacDisableOffscreenCaching = n.data.guacDisableOffscreenCaching !== undefined ? n.data.guacDisableOffscreenCaching : (n.data.disableOffscreenCaching !== undefined ? n.data.disableOffscreenCaching : baseRdp.guacDisableOffscreenCaching);
+              baseRdp.guacDisableBitmapCaching = n.data.guacDisableBitmapCaching !== undefined ? n.data.guacDisableBitmapCaching : (n.data.disableBitmapCaching !== undefined ? n.data.disableBitmapCaching : baseRdp.guacDisableBitmapCaching);
+              baseRdp.guacDisableCopyRect = n.data.guacDisableCopyRect !== undefined ? n.data.guacDisableCopyRect : (n.data.disableCopyRect !== undefined ? n.data.disableCopyRect : baseRdp.guacDisableCopyRect);
+              baseRdp.autoResize = n.data.autoResize !== undefined ? n.data.autoResize : baseRdp.autoResize;
+              baseRdp.guacDpi = n.data.guacDpi || baseRdp.guacDpi;
+              baseRdp.guacSecurity = n.data.guacSecurity || baseRdp.guacSecurity;
+              baseRdp.redirectFolders = n.data.redirectFolders !== undefined ? n.data.redirectFolders : baseRdp.redirectFolders;
+              baseRdp.redirectClipboard = n.data.redirectClipboard !== undefined ? n.data.redirectClipboard : baseRdp.redirectClipboard;
+              baseRdp.redirectPrinters = n.data.redirectPrinters !== undefined ? n.data.redirectPrinters : baseRdp.redirectPrinters;
+              baseRdp.redirectAudio = n.data.redirectAudio !== undefined ? n.data.redirectAudio : baseRdp.redirectAudio;
+              baseRdp.fullscreen = n.data.fullscreen !== undefined ? n.data.fullscreen : baseRdp.fullscreen;
+              baseRdp.smartSizing = n.data.smartSizing !== undefined ? n.data.smartSizing : baseRdp.smartSizing;
+              baseRdp.span = n.data.span !== undefined ? n.data.span : baseRdp.span;
+              baseRdp.admin = n.data.admin !== undefined ? n.data.admin : baseRdp.admin;
+              return; 
+            }
+            if (n.children && n.children.length > 0) dfs(n.children);
+          }
+        };
+        dfs(nodes);
+      }
     }
-    const baseRdp = matchedRdpNode?.data || nodeData;
     const isGuacamoleRDP = baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
     
     // Registrar como reciente (RDP)
@@ -293,8 +383,8 @@ export const useConnectionManagement = ({
       // Crear pestaña RDP-Guacamole igual que SSH
       setRdpTabs(prevTabs => {
         const tabId = `${node.key || node.id || 'rdp'}_${Date.now()}`;
-        const connectionName = node.label || node.name || matchedRdpNode?.label || 'RDP Connection';
-        const originalKey = matchedRdpNode?.key || node.key || node.id || tabId;
+        const connectionName = node.label || node.name || 'RDP Connection';
+        const originalKey = node.key || node.id || tabId;
         
         const newTab = {
           key: tabId,
