@@ -40,7 +40,7 @@ import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import ImportDialog from './ImportDialog';
 import ImportService from '../services/ImportService';
-import { unblockAllInputs } from '../utils/formDebugger';
+import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
@@ -297,7 +297,7 @@ const App = () => {
       }
 
       toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones y ${addedFolders} carpetas`, life: 5000 });
-      setTimeout(() => { try { unblockAllInputs(); } catch {} }, 0);
+      setTimeout(() => { try { resolveFormBlocking(toast.current); } catch {} }, 0);
       return;
     }
 
@@ -389,7 +389,7 @@ const App = () => {
     }
 
     toast.current?.show({ severity: 'success', summary: 'Importación exitosa', detail: `Añadidas ${addedConnections} conexiones`, life: 5000 });
-    setTimeout(() => { try { unblockAllInputs(); } catch {} }, 0);
+    setTimeout(() => { try { resolveFormBlocking(toast.current); } catch {} }, 0);
   };
 
   // Función para manejar la importación completa (estructura + conexiones)
@@ -820,7 +820,8 @@ const App = () => {
     showOverflowMenuAt, hideOverflowMenu,
     // Funciones de tree context menu
     onNodeContextMenu: onNodeContextMenuHook,
-    onTreeAreaContextMenu: onTreeAreaContextMenuHook
+    onTreeAreaContextMenu: onTreeAreaContextMenuHook,
+    hideContextMenu
   } = useContextMenuManagement();
 
   // Window management hook
@@ -1196,6 +1197,7 @@ const App = () => {
     onOpenSSHConnection,
     onNodeContextMenu,
     onTreeAreaContextMenu,
+    hideContextMenu,
     sidebarCallbacksRef,
     selectedNodeKey,
     setSelectedNodeKey,
@@ -1234,7 +1236,7 @@ const App = () => {
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
     iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme,
-    toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu,
+    toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
     // Dependencias para conexiones
@@ -1718,5 +1720,31 @@ const App = () => {
     </div>
   );
 };
+
+// Función global para desbloquear formularios en casos de emergencia
+// Se puede llamar desde la consola del navegador: window.unblockForms()
+if (typeof window !== 'undefined') {
+  window.unblockForms = () => {
+    try {
+      resolveFormBlocking(null);
+      console.log('✅ Función de desbloqueo ejecutada desde consola');
+    } catch (error) {
+      console.error('❌ Error al desbloquear formularios:', error);
+    }
+  };
+  
+  // Función de emergencia ultra-agresiva
+  window.emergencyUnblock = () => {
+    try {
+      emergencyUnblockForms();
+      console.log('🚨 DESBLOQUEO DE EMERGENCIA EJECUTADO DESDE CONSOLA');
+    } catch (error) {
+      console.error('❌ Error en desbloqueo de emergencia:', error);
+    }
+  };
+  
+  // Hacer disponible confirmDialog globalmente
+  window.confirmDialog = confirmDialog;
+}
 
 export default App;

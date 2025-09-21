@@ -96,6 +96,17 @@ export const useContextMenuManagement = () => {
     }
   }, []);
 
+  // Función para cerrar el menú contextual del árbol
+  const hideContextMenu = useCallback(() => {
+    try {
+      if (treeContextMenuRef.current && treeContextMenuRef.current.hide) {
+        treeContextMenuRef.current.hide();
+      }
+    } catch (error) {
+      console.error('Error cerrando menú contextual:', error);
+    }
+  }, []);
+
   return {
     // Estados de menús contextuales
     terminalContextMenu,
@@ -118,6 +129,7 @@ export const useContextMenuManagement = () => {
     
     // Funciones de tree context menu
     onNodeContextMenu,
-    onTreeAreaContextMenu
+    onTreeAreaContextMenu,
+    hideContextMenu
   };
 };

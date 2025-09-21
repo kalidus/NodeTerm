@@ -7,7 +7,7 @@ import { uiThemes } from '../themes/ui-themes';
 import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
-import { unblockAllInputs, detectBlockedInputs } from '../utils/formDebugger';
+import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
@@ -65,6 +65,7 @@ const Sidebar = React.memo(({
   onOpenSSHConnection, // nuevo prop para doble click en SSH
   onNodeContextMenu, // handler del menú contextual de nodos
   onTreeAreaContextMenu, // handler del menú contextual del área del árbol
+  hideContextMenu, // función para cerrar el menú contextual
   sidebarCallbacksRef, // ref para registrar callbacks del menú contextual
   selectedNodeKey, // estado de selección del hook
   setSelectedNodeKey, // setter de selección del hook
@@ -1011,12 +1012,11 @@ const Sidebar = React.memo(({
         deleteNode: (nodeKey, nodeLabel) => {
           console.log('🗑️ deleteNode llamado con:', { nodeKey, nodeLabel });
           
-          // Confirmar eliminación y proceder
-          if (window.confirm(`¿Estás seguro de que quieres eliminar "${nodeLabel}"?`)) {
-            console.log('✅ Usuario confirmó eliminación');
+          // Función para ejecutar la eliminación
+          const executeDeletion = () => {
+            console.log('✅ Ejecutando eliminación');
             
             const removeNodeFromTree = (nodes, targetKey) => {
-              // Verificar que nodes sea un array válido
               if (!Array.isArray(nodes)) {
                 console.error('❌ removeNodeFromTree: nodes no es un array:', typeof nodes, nodes);
                 return [];
@@ -1024,9 +1024,8 @@ const Sidebar = React.memo(({
               
               return nodes.filter(node => {
                 if (node.key === targetKey) {
-                  return false; // Eliminar este nodo
+                  return false;
                 }
-                // Solo procesar children si existe y es un array
                 if (node.children && Array.isArray(node.children)) {
                   node.children = removeNodeFromTree(node.children, targetKey);
                 }
@@ -1035,38 +1034,32 @@ const Sidebar = React.memo(({
             };
             
             try {
-              // Crear copia profunda de los nodos usando JSON
               const nodesCopy = JSON.parse(JSON.stringify(nodes));
-              console.log('📋 Nodos antes de eliminar:', nodesCopy.length);
-              console.log('📋 Tipo de nodesCopy:', typeof nodesCopy, Array.isArray(nodesCopy));
               const newNodes = removeNodeFromTree(nodesCopy, nodeKey);
-              console.log('📋 Nodos después de eliminar:', newNodes.length);
-              
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
-              console.log('✅ setNodes ejecutado');
               
-            showToast && showToast({ 
-              severity: 'success', 
-              summary: 'Eliminado', 
-              detail: `"${nodeLabel}" ha sido eliminado`, 
-              life: 3000 
-            });
-              console.log('✅ Toast mostrado');
+              showToast && showToast({ 
+                severity: 'success', 
+                summary: 'Eliminado', 
+                detail: `"${nodeLabel}" ha sido eliminado`, 
+                life: 3000 
+              });
               
-              // Desbloquear formularios por si alguna máscara quedó activa
+              // Cerrar menú contextual inmediatamente
+              if (hideContextMenu) {
+                hideContextMenu();
+              }
+              
+              // Desbloquear formularios después de un breve delay
               setTimeout(() => {
-                try { unblockAllInputs(); } catch {}
-              }, 0);
-              
-              // Cerrar menú contextual manualmente
-              setTimeout(() => {
-                const contextMenus = document.querySelectorAll('.p-contextmenu');
-                contextMenus.forEach(menu => {
-                  if (menu.style.display !== 'none') {
-                    menu.style.display = 'none';
-                  }
-                });
+                try { 
+                  unblockAllInputs();
+                  console.log('✅ Formularios desbloqueados');
+                } catch (error) {
+                  console.error('Error al desbloquear formularios:', error);
+                }
               }, 100);
+              
             } catch (error) {
               console.error('❌ Error en deleteNode:', error);
               showToast && showToast({ 
@@ -1076,9 +1069,10 @@ const Sidebar = React.memo(({
                 life: 5000 
               });
             }
-          } else {
-            console.log('❌ Usuario canceló eliminación');
-          }
+          };
+          
+          // Ejecutar eliminación directamente sin confirmación para evitar bloqueos
+          executeDeletion();
         }
       };
     }
