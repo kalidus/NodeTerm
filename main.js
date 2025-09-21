@@ -16,6 +16,11 @@ const { alternativePtyConfig } = require('./src/main/config/terminalConfig');
 // Importar clase SafeWindowsTerminal
 const SafeWindowsTerminal = require('./src/main/utils/safeWindowsTerminal');
 
+// Importar utilidades
+const { parseLsOutput, parseDfOutput, parseNetDev } = require('./src/main/utils/parseUtils');
+const { safeStatSync, hashFileSync } = require('./src/main/utils/fileUtils');
+const { getGuacdPrefPath, loadPreferredGuacdMethod, savePreferredGuacdMethod } = require('./src/main/utils/guacdUtils');
+
 // Importar WindowManager
 const WindowManager = require('./src/main/window/windowManager');
 
@@ -48,25 +53,26 @@ const GuacdService = require('./src/services/GuacdService');
 const GuacamoleLite = require('guacamole-lite');
 
 // Parser simple para 'ls -la'
-function parseLsOutput(output) {
-  const lines = output.split('\n').filter(line => line.trim() !== '' && !line.startsWith('total'));
-  return lines.map(line => {
-    // Ejemplo: -rw-r--r-- 1 user group 4096 Jan 1 12:00 filename
-    const parts = line.split(/\s+/);
-    if (parts.length < 9) return null;
-    const [permissions, , owner, group, size, month, day, timeOrYear, ...nameParts] = parts;
-    const name = nameParts.join(' ');
-    return {
-      name,
-      permissions,
-      owner,
-      group,
-      size: parseInt(size, 10) || 0,
-      modified: `${month} ${day} ${timeOrYear}`,
-      type: permissions[0] === 'd' ? 'directory' : 'file',
-    };
-  }).filter(Boolean);
-}
+// parseLsOutput movido a src/main/utils/parseUtils.js
+// function parseLsOutput(output) {
+//   const lines = output.split('\n').filter(line => line.trim() !== '' && !line.startsWith('total'));
+//   return lines.map(line => {
+//     // Ejemplo: -rw-r--r-- 1 user group 4096 Jan 1 12:00 filename
+//     const parts = line.split(/\s+/);
+//     if (parts.length < 9) return null;
+//     const [permissions, , owner, group, size, month, day, timeOrYear, ...nameParts] = parts;
+//     const name = nameParts.join(' ');
+//     return {
+//       name,
+//       permissions,
+//       owner,
+//       group,
+//       size: parseInt(size, 10) || 0,
+//       modified: `${month} ${day} ${timeOrYear}`,
+//       type: permissions[0] === 'd' ? 'directory' : 'file',
+//     };
+//   }).filter(Boolean);
+// }
 
 // ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
 //   try {
@@ -378,48 +384,50 @@ setInterval(() => {
   }
 }, 60000); // Cambiar a 60 segundos para dar más tiempo
 
+// parseDfOutput movido a src/main/utils/parseUtils.js
 // Helper function to parse 'df -P' command output
-function parseDfOutput(dfOutput) {
-    const lines = dfOutput.trim().split('\n');
-    lines.shift(); // Remove header line
-    return lines.map(line => {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 6) {
-            const use = parseInt(parts[parts.length - 2], 10);
-            const name = parts[parts.length - 1];
-            // Filter out unwanted mount points
-            if (name && name.startsWith('/') && !isNaN(use) && 
-                !name.startsWith('/sys') && 
-                !name.startsWith('/opt') && 
-                !name.startsWith('/run') && 
-                name !== '/boot/efi' && 
-                !name.startsWith('/dev') &&
-                !name.startsWith('/var')) {
-                return { fs: name, use };
-            }
-        }
-        return null;
-    }).filter(Boolean); // Filter out null entries
-}
+// function parseDfOutput(dfOutput) {
+//     const lines = dfOutput.trim().split('\n');
+//     lines.shift(); // Remove header line
+//     return lines.map(line => {
+//         const parts = line.trim().split(/\s+/);
+//         if (parts.length >= 6) {
+//             const use = parseInt(parts[parts.length - 2], 10);
+//             const name = parts[parts.length - 1];
+//             // Filter out unwanted mount points
+//             if (name && name.startsWith('/') && !isNaN(use) && 
+//                 !name.startsWith('/sys') && 
+//                 !name.startsWith('/opt') && 
+//                 !name.startsWith('/run') && 
+//                 name !== '/boot/efi' && 
+//                 !name.startsWith('/dev') &&
+//                 !name.startsWith('/var')) {
+//                 return { fs: name, use };
+//             }
+//         }
+//         return null;
+//     }).filter(Boolean); // Filter out null entries
+// }
 
-function parseNetDev(netDevOutput) {
-    const lines = netDevOutput.trim().split('\n');
-    let totalRx = 0;
-    let totalTx = 0;
+// parseNetDev movido a src/main/utils/parseUtils.js
+// function parseNetDev(netDevOutput) {
+//     const lines = netDevOutput.trim().split('\n');
+//     let totalRx = 0;
+//     let totalTx = 0;
 
-    lines.slice(2).forEach(line => {
-        const parts = line.trim().split(/\s+/);
-        const iface = parts[0];
-        if (iface && iface !== 'lo:' && parts.length >= 10) {
-            const rx = parseInt(parts[1], 10);
-            const tx = parseInt(parts[9], 10);
-            if (!isNaN(rx)) totalRx += rx;
-            if (!isNaN(tx)) totalTx += tx;
-        }
-    });
+//     lines.slice(2).forEach(line => {
+//         const parts = line.trim().split(/\s+/);
+//         const iface = parts[0];
+//         if (iface && iface !== 'lo:' && parts.length >= 10) {
+//             const rx = parseInt(parts[1], 10);
+//             const tx = parseInt(parts[9], 10);
+//             if (!isNaN(rx)) totalRx += rx;
+//             if (!isNaN(tx)) totalTx += tx;
+//         }
+//     });
 
-    return { totalRx, totalTx };
-}
+//     return { totalRx, totalTx };
+// }
 
 /**
  * Inicializa servicios de Guacamole de forma asíncrona
@@ -551,38 +559,39 @@ async function initializeGuacamoleServices() {
 }
 
 // === Preferencias Guacd (persistencia en userData) ===
-function getGuacdPrefPath() {
-  try {
-    return path.join(app.getPath('userData'), 'guacd-preferences.json');
-  } catch {
-    return null;
-  }
-}
+// getGuacdPrefPath, loadPreferredGuacdMethod, savePreferredGuacdMethod movidos a src/main/utils/guacdUtils.js
+// function getGuacdPrefPath() {
+//   try {
+//     return path.join(app.getPath('userData'), 'guacd-preferences.json');
+//   } catch {
+//     return null;
+//   }
+// }
 
-async function loadPreferredGuacdMethod() {
-  const fs = require('fs');
-  const prefPath = getGuacdPrefPath();
-  if (!prefPath) return null;
-  try {
-    if (!fs.existsSync(prefPath)) return null;
-    const raw = fs.readFileSync(prefPath, 'utf8');
-    const json = JSON.parse(raw || '{}');
-    const m = String(json.preferredMethod || '').toLowerCase();
-    return (m === 'docker' || m === 'wsl' || m === 'mock') ? m : null;
-  } catch { return null; }
-}
+// async function loadPreferredGuacdMethod() {
+//   const fs = require('fs');
+//   const prefPath = getGuacdPrefPath();
+//   if (!prefPath) return null;
+//   try {
+//     if (!fs.existsSync(prefPath)) return null;
+//     const raw = fs.readFileSync(prefPath, 'utf8');
+//     const json = JSON.parse(raw || '{}');
+//     const m = String(json.preferredMethod || '').toLowerCase();
+//     return (m === 'docker' || m === 'wsl' || m === 'mock') ? m : null;
+//   } catch { return null; }
+// }
 
-async function savePreferredGuacdMethod(method) {
-  const fs = require('fs');
-  const prefPath = getGuacdPrefPath();
-  if (!prefPath) return false;
-  try {
-    const dir = path.dirname(prefPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(prefPath, JSON.stringify({ preferredMethod: method }, null, 2), 'utf8');
-    return true;
-  } catch { return false; }
-}
+// async function savePreferredGuacdMethod(method) {
+//   const fs = require('fs');
+//   const prefPath = getGuacdPrefPath();
+//   if (!prefPath) return false;
+//   try {
+//     const dir = path.dirname(prefPath);
+//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+//     fs.writeFileSync(prefPath, JSON.stringify({ preferredMethod: method }, null, 2), 'utf8');
+//     return true;
+//   } catch { return false; }
+// }
 
 // IPC para configurar el watchdog de guacd desde la UI
 ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
@@ -1952,15 +1961,16 @@ ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
 
 // IMPORT: utilidades mínimas para lectura de mtime y hash
 const crypto = require('crypto');
-function safeStatSync(path) { try { return fs.statSync(path); } catch { return null; } }
-function hashFileSync(path) {
-  try {
-    const data = fs.readFileSync(path);
-    return crypto.createHash('sha256').update(data).digest('hex');
-  } catch {
-    return null;
-  }
-}
+// safeStatSync y hashFileSync movidos a src/main/utils/fileUtils.js
+// function safeStatSync(path) { try { return fs.statSync(path); } catch { return null; } }
+// function hashFileSync(path) {
+//   try {
+//     const data = fs.readFileSync(path);
+//     return crypto.createHash('sha256').update(data).digest('hex');
+//   } catch {
+//     return null;
+//   }
+// }
 ipcMain.handle('import:get-file-info', async (event, filePath) => {
   const stat = safeStatSync(filePath);
   if (!stat) return { ok: false };
