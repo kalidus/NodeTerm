@@ -11,12 +11,41 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
 
+  // Función para extraer y truncar el usuario correctamente
+  const getDisplayUser = (node) => {
+    if (!node.data) return null;
+    
+    // SSH usa 'user', RDP usa 'username'
+    const user = node.data.user || node.data.username;
+    if (!user) return null;
+    
+    // Para formatos Wallix largos, extraer solo el usuario final
+    // Formato: usuario@dominio@servidor:protocolo:usuario_destino
+    const wallixPattern = /^(.+)@(.+)@(.+):(.+):(.+)$/;
+    const match = user.match(wallixPattern);
+    
+    if (match) {
+      // Si es formato Wallix, mostrar el usuario destino (último elemento)
+      const targetUser = match[5];
+      return targetUser.length > 25 ? targetUser.substring(0, 22) + '...' : targetUser;
+    }
+    
+    // Para usuarios normales, truncar si es muy largo
+    return user.length > 25 ? user.substring(0, 22) + '...' : user;
+  };
+
   useEffect(() => {
     if (sidebarFilter.trim()) {
       const allConnections = findAllConnections(allNodes);
-      const filtered = allConnections.filter(node =>
-        node.label.toLowerCase().includes(sidebarFilter.toLowerCase())
-      );
+      const filtered = allConnections.filter(node => {
+        const labelMatch = node.label.toLowerCase().includes(sidebarFilter.toLowerCase());
+        // Buscar tanto en username como en user (SSH usa 'user', RDP usa 'username')
+        const usernameMatch = node.data && (
+          (node.data.username && node.data.username.toLowerCase().includes(sidebarFilter.toLowerCase())) ||
+          (node.data.user && node.data.user.toLowerCase().includes(sidebarFilter.toLowerCase()))
+        );
+        return labelMatch || usernameMatch;
+      });
       setFilteredConnections(filtered);
       setShowDropdown(filtered.length > 0);
     } else {
@@ -811,6 +840,33 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         {protocolName}
                       </span>
                     </div>
+                    
+                    {/* Usuario con mismo formato que protocolo */}
+                    {getDisplayUser(node) && (
+                      <div style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginRight: 8
+                      }}>
+                        <span style={{ 
+                          fontSize: 11, 
+                          color: '#ff9800',
+                          fontWeight: 600,
+                          backgroundColor: '#ff980020',
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          border: '1px solid #ff980040',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}>
+                          <span style={{ fontSize: 10 }}>👤</span>
+                          <span>{getDisplayUser(node)}</span>
+                        </span>
+                      </div>
+                    )}
                     
                     {/* Botones de acción */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
