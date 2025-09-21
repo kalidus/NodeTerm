@@ -237,8 +237,48 @@ class SSHHandlers {
    * Verifica si un directorio existe
    */
   async checkDirectory(tabId, path, sshConfig) {
-    // Implementación pendiente - se moverá desde main.js
-    return { success: false, error: 'Not implemented yet' };
+    try {
+      if (sshConfig.useBastionWallix) {
+        // Buscar la conexión existente para bastion
+        const existingConn = await this.findSSHConnection(tabId, sshConfig);
+        if (!existingConn || !existingConn.ssh || !existingConn.stream) {
+          return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
+        }
+        const stream = existingConn.stream;
+        const command = `[ -d "${path}" ] && echo exists || echo notfound\n`;
+        let output = '';
+        const onData = (data) => {
+          output += data.toString('utf-8');
+        };
+        stream.on('data', onData);
+        stream.write(command);
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        stream.removeListener('data', onData);
+        // Limpiar la salida: quitar el comando enviado y posibles prompts
+        let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
+        // Eliminar códigos ANSI
+        cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
+        // Buscar si existe
+        if (cleanOutput.includes('exists')) {
+          return { success: true, exists: true };
+        } else {
+          return { success: true, exists: false };
+        }
+      } else {
+        // SSH directo
+        const ssh = new SSH2Promise(sshConfig);
+        await ssh.connect();
+        const result = await ssh.exec(`[ -d "${path}" ] && echo exists || echo notfound`);
+        await ssh.close();
+        if (result.includes('exists')) {
+          return { success: true, exists: true };
+        } else {
+          return { success: true, exists: false };
+        }
+      }
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
   }
 
   /**
@@ -277,32 +317,175 @@ class SSHHandlers {
    * Descarga un archivo del servidor SSH
    */
   async downloadFile(event, tabId, remotePath, localPath, sshConfig) {
-    // Implementación pendiente - se moverá desde main.js
-    return { success: false, error: 'Not implemented yet' };
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      if (sshConfig.useBastionWallix) {
+        // Para bastiones, usar SFTP
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        
+        // Asegurar que el directorio local existe
+        const localDir = path.dirname(localPath);
+        if (!fs.existsSync(localDir)) {
+          fs.mkdirSync(localDir, { recursive: true });
+        }
+        
+        await sftp.fastGet(remotePath, localPath);
+        await sftp.end();
+        return { success: true };
+      } else {
+        // SSH directo
+        const ssh = new SSH2Promise(sshConfig);
+        await ssh.connect();
+        
+        // Asegurar que el directorio local existe
+        const localDir = path.dirname(localPath);
+        if (!fs.existsSync(localDir)) {
+          fs.mkdirSync(localDir, { recursive: true });
+        }
+        
+        await ssh.getFile(localPath, remotePath);
+        await ssh.close();
+        return { success: true };
+      }
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
   }
 
   /**
    * Sube un archivo al servidor SSH
    */
   async uploadFile(event, tabId, localPath, remotePath, sshConfig) {
-    // Implementación pendiente - se moverá desde main.js
-    return { success: false, error: 'Not implemented yet' };
+    try {
+      const fs = require('fs');
+      
+      if (sshConfig.useBastionWallix) {
+        // Para bastiones, usar SFTP
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        
+        // Verificar que el archivo local existe
+        if (!fs.existsSync(localPath)) {
+          await sftp.end();
+          return { success: false, error: 'Archivo local no encontrado' };
+        }
+        
+        await sftp.fastPut(localPath, remotePath);
+        await sftp.end();
+        return { success: true };
+      } else {
+        // SSH directo
+        const ssh = new SSH2Promise(sshConfig);
+        await ssh.connect();
+        
+        // Verificar que el archivo local existe
+        if (!fs.existsSync(localPath)) {
+          await ssh.close();
+          return { success: false, error: 'Archivo local no encontrado' };
+        }
+        
+        await ssh.putFile(localPath, remotePath);
+        await ssh.close();
+        return { success: true };
+      }
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
   }
 
   /**
    * Elimina un archivo o directorio del servidor SSH
    */
   async deleteFile(event, tabId, remotePath, isDirectory, sshConfig) {
-    // Implementación pendiente - se moverá desde main.js
-    return { success: false, error: 'Not implemented yet' };
+    try {
+      if (sshConfig.useBastionWallix) {
+        // Para bastiones, usar SFTP
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        
+        if (isDirectory) {
+          await sftp.rmdir(remotePath, true); // true = recursive
+        } else {
+          await sftp.delete(remotePath);
+        }
+        
+        await sftp.end();
+        return { success: true };
+      } else {
+        // SSH directo
+        const ssh = new SSH2Promise(sshConfig);
+        await ssh.connect();
+        
+        if (isDirectory) {
+          await ssh.exec(`rm -rf "${remotePath}"`);
+        } else {
+          await ssh.exec(`rm "${remotePath}"`);
+        }
+        
+        await ssh.close();
+        return { success: true };
+      }
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
   }
 
   /**
    * Crea un directorio en el servidor SSH
    */
   async createDirectory(event, tabId, remotePath, sshConfig) {
-    // Implementación pendiente - se moverá desde main.js
-    return { success: false, error: 'Not implemented yet' };
+    try {
+      if (sshConfig.useBastionWallix) {
+        // Para bastiones, usar SFTP
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.bastionHost,
+          port: sshConfig.port || 22,
+          username: sshConfig.bastionUser,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        
+        await sftp.mkdir(remotePath, true); // true = recursive
+        await sftp.end();
+        return { success: true };
+      } else {
+        // SSH directo
+        const ssh = new SSH2Promise(sshConfig);
+        await ssh.connect();
+        
+        await ssh.exec(`mkdir -p "${remotePath}"`);
+        await ssh.close();
+        return { success: true };
+      }
+    } catch (err) {
+      return { success: false, error: err.message || err };
+    }
   }
 
   /**

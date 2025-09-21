@@ -1,87 +1,6 @@
-// Configuraciones alternativas para node-pty
-const alternativePtyConfig = {
-  conservative: {
-    name: 'xterm',
-    cols: 80,
-    rows: 24,
-    windowsHide: false,
-    useConpty: false,
-    conptyLegacy: false,
-    experimentalUseConpty: false
-  },
-  minimal: {
-    name: 'xterm',
-    cols: 80,
-    rows: 24,
-    windowsHide: false
-  },
-  winpty: {
-    name: 'xterm-256color',
-    cols: 120,
-    rows: 30,
-    windowsHide: false,
-    backend: 'winpty',
-    useConpty: false
-  }
-};
+// alternativePtyConfig movido a src/main/config/terminalConfig.js
 
-// Terminal alternativo para casos extremos
-class SafeWindowsTerminal {
-  constructor(shell, args, options) {
-    this.shell = shell;
-    this.args = args;
-    this.options = options;
-    this.process = null;
-    this.dataCallbacks = [];
-    this.exitCallbacks = [];
-    this.isDestroyed = false;
-  }
-
-  spawn() {
-    if (this.isDestroyed) throw new Error('Terminal already destroyed');
-    
-    this.process = require('child_process').spawn(this.shell, this.args, {
-      cwd: this.options.cwd || require('os').homedir(),
-      env: this.options.env || process.env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: this.options.windowsHide || false
-    });
-
-    this.process.stdout.on('data', (data) => {
-      this.dataCallbacks.forEach(callback => callback(data));
-    });
-
-    this.process.stderr.on('data', (data) => {
-      this.dataCallbacks.forEach(callback => callback(data));
-    });
-
-    this.process.on('exit', (code, signal) => {
-      console.log(`SafeWindowsTerminal exit - code:`, code, 'signal:', signal, 'type:', typeof code);
-      // Asegurar que code sea un número válido
-      let exitCode = 0;
-      if (typeof code === 'number') {
-        exitCode = code;
-      } else if (typeof code === 'string') {
-        exitCode = parseInt(code, 10) || 0;
-      } else if (code && typeof code === 'object' && code.exitCode !== undefined) {
-        exitCode = code.exitCode;
-      } else {
-        exitCode = 0;
-      }
-      //console.log(`SafeWindowsTerminal actual exit code:`, exitCode);
-      this.exitCallbacks.forEach(callback => callback(exitCode, signal));
-    });
-
-    return this;
-  }
-
-  onData(callback) { this.dataCallbacks.push(callback); }
-  onExit(callback) { this.exitCallbacks.push(callback); }
-  write(data) { if (this.process?.stdin && !this.process.stdin.destroyed) this.process.stdin.write(data); }
-  kill() { if (this.process && !this.process.killed) this.process.kill(); }
-  destroy() { this.isDestroyed = true; this.kill(); this.dataCallbacks = []; this.exitCallbacks = []; }
-  resize() { /* console.log('Resize not supported in fallback mode'); */ }
-}
+// SafeWindowsTerminal movido a src/main/utils/safeWindowsTerminal.js
 
 try {
   require('electron-reloader')(module);
@@ -90,6 +9,26 @@ try {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu } = require('electron');
 const path = require('path');
 const url = require('url');
+
+// Importar configuraciones de terminal
+const { alternativePtyConfig } = require('./src/main/config/terminalConfig');
+
+// Importar clase SafeWindowsTerminal
+const SafeWindowsTerminal = require('./src/main/utils/safeWindowsTerminal');
+
+// Importar WindowManager
+const WindowManager = require('./src/main/window/windowManager');
+
+// Importar SSHHandlers
+const SSHHandlers = require('./src/main/handlers/sshHandlers');
+
+// Importar RdpHandlers
+const RdpHandlers = require('./src/main/handlers/rdpHandlers');
+
+// Instanciar clases
+const windowManager = new WindowManager();
+const sshHandlers = new SSHHandlers();
+const rdpHandlers = new RdpHandlers();
 
 // ============================================
 // 🚨 VERIFICACIÓN CRÍTICA DE CAMBIOS APLICADOS
@@ -281,6 +220,7 @@ function parseLsOutput(output) {
 //   }
 // });
 
+// ssh:check-directory movido a SSHHandlers
 // ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
 //   try {
 //     if (sshConfig.useBastionWallix) {
@@ -687,29 +627,7 @@ ipcMain.handle('guacamole:get-guacd-timeout-ms', async () => {
 });
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 1000,
-    minWidth: 1400,
-    minHeight: 600,
-    title: 'NodeTerm',
-    frame: false, // Oculta la barra de título nativa para usar una personalizada
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
-
-  mainWindow.loadURL(
-    process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3000'
-      : url.format({
-          pathname: path.join(__dirname, 'dist', 'index.html'),
-          protocol: 'file:',
-          slashes: true
-        })
-  );
+  mainWindow = windowManager.createWindow();
 
   // Open the DevTools in development mode
   if (process.env.NODE_ENV === 'development') {
@@ -2103,145 +2021,149 @@ ipcMain.handle('import:find-latest-xml-download', async (event, { sinceMs } = {}
 
 // Handler para descargar archivos por SSH
 
-ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
-  try {
-    if (sshConfig.useBastionWallix) {
-      // Construir string de conexión Wallix para SFTP
-      // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
-      // En la mayoría de los casos, bastionUser ya tiene el formato correcto
-      const sftp = new SftpClient();
-      const connectConfig = {
-        host: sshConfig.bastionHost,
-        port: sshConfig.port || 22,
-        username: sshConfig.bastionUser, // Wallix espera el string especial aquí
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-      await sftp.connect(connectConfig);
-      await sftp.fastGet(remotePath, localPath);
-      await sftp.end();
-      return { success: true };
-    } else {
-      // SSH directo
-      const ssh = new SSH2Promise(sshConfig);
-      await ssh.connect();
-      const sftp = await ssh.sftp();
-      await new Promise((resolve, reject) => {
-        const writeStream = require('fs').createWriteStream(localPath);
-        const readStream = sftp.createReadStream(remotePath);
-        readStream.pipe(writeStream);
-        readStream.on('error', reject);
-        writeStream.on('error', reject);
-        writeStream.on('finish', resolve);
-      });
-      await ssh.close();
-      return { success: true };
-    }
-  } catch (err) {
-    return { success: false, error: err.message || err };
-  }
-});
+// ssh:download-file movido a SSHHandlers
+// ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig }) => {
+//   try {
+//     if (sshConfig.useBastionWallix) {
+//       // Construir string de conexión Wallix para SFTP
+//       // Formato: <USER>@<BASTION>::<TARGET>@<DEVICE>::<SERVICE>
+//       // En la mayoría de los casos, bastionUser ya tiene el formato correcto
+//       const sftp = new SftpClient();
+//       const connectConfig = {
+//         host: sshConfig.bastionHost,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.bastionUser, // Wallix espera el string especial aquí
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//       await sftp.connect(connectConfig);
+//       await sftp.fastGet(remotePath, localPath);
+//       await sftp.end();
+//       return { success: true };
+//     } else {
+//       // SSH directo
+//       const ssh = new SSH2Promise(sshConfig);
+//       await ssh.connect();
+//       const sftp = await ssh.sftp();
+//       await new Promise((resolve, reject) => {
+//         const writeStream = require('fs').createWriteStream(localPath);
+//         const readStream = sftp.createReadStream(remotePath);
+//         readStream.pipe(writeStream);
+//         readStream.on('error', reject);
+//         writeStream.on('error', reject);
+//         writeStream.on('finish', resolve);
+//       });
+//       await ssh.close();
+//       return { success: true };
+//     }
+//   } catch (err) {
+//     return { success: false, error: err.message || err };
+//   }
+// });
 
-ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
-  try {
-    const SftpClient = require('ssh2-sftp-client');
-    const sftp = new SftpClient();
-    let connectConfig;
-    if (sshConfig.useBastionWallix) {
-      // Bastion: usar string Wallix
-      connectConfig = {
-        host: sshConfig.bastionHost,
-        port: sshConfig.port || 22,
-        username: sshConfig.bastionUser,
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-    } else {
-      // SSH directo
-      connectConfig = {
-        host: sshConfig.host,
-        port: sshConfig.port || 22,
-        username: sshConfig.username,
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-    }
-    await sftp.connect(connectConfig);
-    await sftp.fastPut(localPath, remotePath);
-    await sftp.end();
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message || err };
-  }
-});
+// ssh:upload-file movido a SSHHandlers
+// ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig }) => {
+//   try {
+//     const SftpClient = require('ssh2-sftp-client');
+//     const sftp = new SftpClient();
+//     let connectConfig;
+//     if (sshConfig.useBastionWallix) {
+//       // Bastion: usar string Wallix
+//       connectConfig = {
+//         host: sshConfig.bastionHost,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.bastionUser,
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//     } else {
+//       // SSH directo
+//       connectConfig = {
+//         host: sshConfig.host,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.username,
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//     }
+//     await sftp.connect(connectConfig);
+//     await sftp.fastPut(localPath, remotePath);
+//     await sftp.end();
+//     return { success: true };
+//   } catch (err) {
+//     return { success: false, error: err.message || err };
+//   }
+// });
 
-ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
-  try {
-    const SftpClient = require('ssh2-sftp-client');
-    const sftp = new SftpClient();
-    let connectConfig;
-    if (sshConfig.useBastionWallix) {
-      connectConfig = {
-        host: sshConfig.bastionHost,
-        port: sshConfig.port || 22,
-        username: sshConfig.bastionUser,
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-    } else {
-      connectConfig = {
-        host: sshConfig.host,
-        port: sshConfig.port || 22,
-        username: sshConfig.username,
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-    }
-    await sftp.connect(connectConfig);
-    if (isDirectory) {
-      // Eliminar directorio recursivamente
-      await sftp.rmdir(remotePath, true);
-    } else {
-      // Eliminar archivo
-      await sftp.delete(remotePath);
-    }
-    await sftp.end();
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message || err };
-  }
-});
+// ssh:delete-file movido a SSHHandlers
+// ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
+//   try {
+//     const SftpClient = require('ssh2-sftp-client');
+//     const sftp = new SftpClient();
+//     let connectConfig;
+//     if (sshConfig.useBastionWallix) {
+//       connectConfig = {
+//         host: sshConfig.bastionHost,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.bastionUser,
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//     } else {
+//       connectConfig = {
+//         host: sshConfig.host,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.username,
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//     }
+//     await sftp.connect(connectConfig);
+//     if (isDirectory) {
+//       // Eliminar directorio recursivamente
+//       await sftp.rmdir(remotePath, true);
+//     } else {
+//       // Eliminar archivo
+//       await sftp.delete(remotePath);
+//     }
+//     await sftp.end();
+//     return { success: true };
+//   } catch (err) {
+//     return { success: false, error: err.message || err };
+//   }
+// });
 
-ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
-  try {
-    const SftpClient = require('ssh2-sftp-client');
-    const sftp = new SftpClient();
-    let connectConfig;
-    if (sshConfig.useBastionWallix) {
-      connectConfig = {
-        host: sshConfig.bastionHost,
-        port: sshConfig.port || 22,
-        username: sshConfig.bastionUser,
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-    } else {
-      connectConfig = {
-        host: sshConfig.host,
-        port: sshConfig.port || 22,
-        username: sshConfig.username,
-        password: sshConfig.password,
-        readyTimeout: 20000,
-      };
-    }
-    await sftp.connect(connectConfig);
-    await sftp.mkdir(remotePath, true); // true = recursive
-    await sftp.end();
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err.message || err };
-  }
-});
+// ssh:create-directory movido a SSHHandlers
+// ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
+//   try {
+//     const SftpClient = require('ssh2-sftp-client');
+//     const sftp = new SftpClient();
+//     let connectConfig;
+//     if (sshConfig.useBastionWallix) {
+//       connectConfig = {
+//         host: sshConfig.bastionHost,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.bastionUser,
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//     } else {
+//       connectConfig = {
+//         host: sshConfig.host,
+//         port: sshConfig.port || 22,
+//         username: sshConfig.username,
+//         password: sshConfig.password,
+//         readyTimeout: 20000,
+//       };
+//     }
+//     await sftp.connect(connectConfig);
+//     await sftp.mkdir(remotePath, true); // true = recursive
+//     await sftp.end();
+//     return { success: true };
+//   } catch (err) {
+//     return { success: false, error: err.message || err };
+//   }
+// });
 
 // Function to safely send to mainWindow
 function sendToRenderer(sender, eventName, ...args) {
@@ -2509,77 +2431,84 @@ ipcMain.on('window:focus-changed', (event, isFocused) => {
   }
 });
 
-ipcMain.handle('window:minimize', () => {
-  if (mainWindow) mainWindow.minimize();
-});
-ipcMain.handle('window:maximize', () => {
-  if (mainWindow) mainWindow.maximize();
-});
-ipcMain.handle('window:unmaximize', () => {
-  if (mainWindow) mainWindow.unmaximize();
-});
-ipcMain.handle('window:isMaximized', () => {
-  if (mainWindow) return mainWindow.isMaximized();
-  return false;
-});
-ipcMain.handle('window:close', () => {
-  if (mainWindow) mainWindow.close();
-});
+// window:minimize y window:maximize movidos a WindowManager
+// ipcMain.handle('window:minimize', () => {
+//   if (mainWindow) mainWindow.minimize();
+// });
+// ipcMain.handle('window:maximize', () => {
+//   if (mainWindow) mainWindow.maximize();
+// });
+// window:unmaximize, window:isMaximized y window:close movidos a WindowManager
+// ipcMain.handle('window:unmaximize', () => {
+//   if (mainWindow) mainWindow.unmaximize();
+// });
+// ipcMain.handle('window:isMaximized', () => {
+//   if (mainWindow) return mainWindow.isMaximized();
+//   return false;
+// });
+// ipcMain.handle('window:close', () => {
+//   if (mainWindow) mainWindow.close();
+// });
 
 // === RDP Support ===
 // IPC handlers for RDP connections
-ipcMain.handle('rdp:connect', async (event, config) => {
-  try {
-    const connectionId = await rdpManager.connect(config);
-    
-    // Setup process handlers for events
-    const connection = rdpManager.activeConnections.get(connectionId);
-    if (connection) {
-      rdpManager.setupProcessHandlers(
-        connection.process,
-        connectionId,
-        (connectionId) => {
-          // On connect
-          sendToRenderer(event.sender, 'rdp:connected', { connectionId });
-        },
-        (connectionId, exitInfo) => {
-          // On disconnect
-          sendToRenderer(event.sender, 'rdp:disconnected', { connectionId, exitInfo });
-        },
-        (connectionId, error) => {
-          // On error
-          sendToRenderer(event.sender, 'rdp:error', { connectionId, error: error.message });
-        }
-      );
-    }
-    
-    return {
-      success: true,
-      connectionId: connectionId
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
+// rdp:connect movido a RdpHandlers
+// ipcMain.handle('rdp:connect', async (event, config) => {
+//   try {
+//     const connectionId = await rdpManager.connect(config);
+//     
+//     // Setup process handlers for events
+//     const connection = rdpManager.activeConnections.get(connectionId);
+//     if (connection) {
+//       rdpManager.setupProcessHandlers(
+//         connection.process,
+//         connectionId,
+//         (connectionId) => {
+//           // On connect
+//           sendToRenderer(event.sender, 'rdp:connected', { connectionId });
+//         },
+//         (connectionId, exitInfo) => {
+//           // On disconnect
+//           sendToRenderer(event.sender, 'rdp:disconnected', { connectionId, exitInfo });
+//         },
+//         (connectionId, error) => {
+//           // On error
+//           sendToRenderer(event.sender, 'rdp:error', { connectionId, error: error.message });
+//         }
+//       );
+//     }
+//     
+//     return {
+//       success: true,
+//       connectionId: connectionId
+//     };
+//   } catch (error) {
+//     return {
+//       success: false,
+//       error: error.message
+//     };
+//   }
+// });
 
-ipcMain.handle('rdp:disconnect', async (event, connectionId) => {
-  return rdpManager.disconnect(connectionId);
-});
+// rdp:disconnect movido a RdpHandlers
+// ipcMain.handle('rdp:disconnect', async (event, connectionId) => {
+//   return rdpManager.disconnect(connectionId);
+// });
 
-ipcMain.handle('rdp:disconnect-all', async (event) => {
-  return rdpManager.disconnectAll();
-});
+// rdp:disconnect-all movido a RdpHandlers
+// ipcMain.handle('rdp:disconnect-all', async (event) => {
+//   return rdpManager.disconnectAll();
+// });
 
-ipcMain.handle('rdp:get-active-connections', async (event) => {
-  return rdpManager.getActiveConnections();
-});
+// rdp:get-active-connections movido a RdpHandlers
+// ipcMain.handle('rdp:get-active-connections', async (event) => {
+//   return rdpManager.getActiveConnections();
+// });
 
-ipcMain.handle('rdp:get-presets', async (event) => {
-  return rdpManager.getPresets();
-});
+// rdp:get-presets movido a RdpHandlers
+// ipcMain.handle('rdp:get-presets', async (event) => {
+//   return rdpManager.getPresets();
+// });
 
 // Handler para crear pestañas de Guacamole
 ipcMain.on('guacamole:create-tab', (event, data) => {
@@ -2588,126 +2517,128 @@ ipcMain.on('guacamole:create-tab', (event, data) => {
 });
 
 // Handler para mostrar ventana RDP si está minimizada
-ipcMain.handle('rdp:show-window', async (event, { server }) => {
-  try {
-    const { exec } = require('child_process');
-    const util = require('util');
-    const execAsync = util.promisify(exec);
-    
-    // En Windows, buscar ventanas de mstsc.exe
-    if (process.platform === 'win32') {
-      try {
-        // Probar primero con un comando simple para verificar si hay procesos mstsc
-        const { stdout: tasklistOutput } = await execAsync('tasklist /FI "IMAGENAME eq mstsc.exe" /FO CSV /NH');
-        
-        if (!tasklistOutput.includes('mstsc.exe')) {
-          return { success: false, message: 'No se encontraron procesos mstsc.exe activos' };
-        }
-        
-        // Crear un script PowerShell temporal
-        const fs = require('fs');
-        const path = require('path');
-        const tempDir = require('os').tmpdir();
-        const scriptPath = path.join(tempDir, 'restore_rdp.ps1');
-        
-        const scriptContent = `
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-
-public class Win32 {
-  [DllImport("user32.dll")]
-  [return: MarshalAs(UnmanagedType.Bool)]
-  public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-  
-  [DllImport("user32.dll")]
-  public static extern bool SetForegroundWindow(IntPtr hWnd);
-}
-"@
-
-try {
-  $processes = Get-Process mstsc -ErrorAction SilentlyContinue
-  Write-Host "Procesos encontrados: $($processes.Count)"
-  
-  if ($processes.Count -eq 0) {
-    Write-Host "ERROR: No se encontraron procesos mstsc.exe"
-    exit 1
-  }
-  
-  foreach ($process in $processes) {
-    Write-Host "Proceso ID: $($process.Id), Ventana: $($process.MainWindowHandle)"
-    
-    if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
-      [Win32]::ShowWindow($process.MainWindowHandle, 9)
-      [Win32]::SetForegroundWindow($process.MainWindowHandle)
-      Write-Host "SUCCESS: Ventana restaurada para proceso $($process.Id)"
-      break
-    } else {
-      Write-Host "ERROR: Proceso $($process.Id) no tiene ventana válida"
-    }
-  }
-} catch {
-  Write-Host "ERROR: $($_.Exception.Message)"
-}
-        `;
-        
-        fs.writeFileSync(scriptPath, scriptContent);
-        
-        const { stdout: psOutput, stderr: psError } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
-        
-        // Limpiar el archivo temporal
-        try {
-          fs.unlinkSync(scriptPath);
-        } catch (e) {
-          // Ignorar errores de limpieza
-        }
-        
-
-        
-        if (psOutput.includes('SUCCESS:')) {
-          return { success: true, message: 'Ventana RDP restaurada' };
-        } else {
-          return { success: false, message: `No se pudo restaurar la ventana RDP. Output: ${psOutput}` };
-        }
-      } catch (error) {
-        console.log('Error ejecutando PowerShell:', error);
-        return { success: false, error: error.message };
-      }
-    } else {
-      return { success: false, message: 'Función solo disponible en Windows' };
-    }
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
+// rdp:show-window movido a RdpHandlers
+// ipcMain.handle('rdp:show-window', async (event, { server }) => {
+//   try {
+//     const { exec } = require('child_process');
+//     const util = require('util');
+//     const execAsync = util.promisify(exec);
+//     
+//     // En Windows, buscar ventanas de mstsc.exe
+//     if (process.platform === 'win32') {
+//       try {
+//         // Probar primero con un comando simple para verificar si hay procesos mstsc
+//         const { stdout: tasklistOutput } = await execAsync('tasklist /FI "IMAGENAME eq mstsc.exe" /FO CSV /NH');
+//         
+//         if (!tasklistOutput.includes('mstsc.exe')) {
+//           return { success: false, message: 'No se encontraron procesos mstsc.exe activos' };
+//         }
+//         
+//         // Crear un script PowerShell temporal
+//         const fs = require('fs');
+//         const path = require('path');
+//         const tempDir = require('os').tmpdir();
+//         const scriptPath = path.join(tempDir, 'restore_rdp.ps1');
+//         
+//         const scriptContent = `
+// Add-Type -TypeDefinition @"
+// using System;
+// using System.Runtime.InteropServices;
+//
+// public class Win32 {
+//   [DllImport("user32.dll")]
+//   [return: MarshalAs(UnmanagedType.Bool)]
+//   public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+//   
+//   [DllImport("user32.dll")]
+//   public static extern bool SetForegroundWindow(IntPtr hWnd);
+// }
+// "@
+//
+// try {
+//   $processes = Get-Process mstsc -ErrorAction SilentlyContinue
+//   Write-Host "Procesos encontrados: $($processes.Count)"
+//   
+//   if ($processes.Count -eq 0) {
+//     Write-Host "ERROR: No se encontraron procesos mstsc.exe"
+//     exit 1
+//   }
+//   
+//   foreach ($process in $processes) {
+//     Write-Host "Proceso ID: $($process.Id), Ventana: $($process.MainWindowHandle)"
+//     
+//     if ($process.MainWindowHandle -ne [IntPtr]::Zero) {
+//       [Win32]::ShowWindow($process.MainWindowHandle, 9)
+//       [Win32]::SetForegroundWindow($process.MainWindowHandle)
+//       Write-Host "SUCCESS: Ventana restaurada para proceso $($process.Id)"
+//       break
+//     } else {
+//       Write-Host "ERROR: Proceso $($process.Id) no tiene ventana válida"
+//     }
+//   }
+// } catch {
+//   Write-Host "ERROR: $($_.Exception.Message)"
+// }
+//         `;
+//         
+//         fs.writeFileSync(scriptPath, scriptContent);
+//         
+//         const { stdout: psOutput, stderr: psError } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+//         
+//         // Limpiar el archivo temporal
+//         try {
+//           fs.unlinkSync(scriptPath);
+//         } catch (e) {
+//           // Ignorar errores de limpieza
+//         }
+//         
+//
+//         
+//         if (psOutput.includes('SUCCESS:')) {
+//           return { success: true, message: 'Ventana RDP restaurada' };
+//         } else {
+//           return { success: false, message: `No se pudo restaurar la ventana RDP. Output: ${psOutput}` };
+//         }
+//       } catch (error) {
+//         console.log('Error ejecutando PowerShell:', error);
+//         return { success: false, error: error.message };
+//       }
+//     } else {
+//       return { success: false, message: 'Función solo disponible en Windows' };
+//     }
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// });
 
 // Handler para desconectar sesión RDP específica
-ipcMain.handle('rdp:disconnect-session', async (event, { server }) => {
-  try {
-    // Buscar y terminar procesos mstsc.exe que coincidan con el servidor
-    if (process.platform === 'win32') {
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execAsync = util.promisify(exec);
-      
-      try {
-        // Terminar todos los procesos mstsc.exe
-        await execAsync('taskkill /F /IM mstsc.exe');
-        return { success: true, message: 'Sesiones RDP terminadas' };
-      } catch (error) {
-        // Si no hay procesos para terminar, no es un error
-        if (error.message.includes('not found')) {
-          return { success: true, message: 'No hay sesiones RDP activas' };
-        }
-        return { success: false, error: error.message };
-      }
-    } else {
-      return { success: false, message: 'Función solo disponible en Windows' };
-    }
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
+// rdp:disconnect-session movido a RdpHandlers
+// ipcMain.handle('rdp:disconnect-session', async (event, { server }) => {
+//   try {
+//     // Buscar y terminar procesos mstsc.exe que coincidan con el servidor
+//     if (process.platform === 'win32') {
+//       const { exec } = require('child_process');
+//       const util = require('util');
+//       const execAsync = util.promisify(exec);
+//       
+//       try {
+//         // Terminar todos los procesos mstsc.exe
+//         await execAsync('taskkill /F /IM mstsc.exe');
+//         return { success: true, message: 'Sesiones RDP terminadas' };
+//       } catch (error) {
+//         // Si no hay procesos para terminar, no es un error
+//         if (error.message.includes('not found')) {
+//           return { success: true, message: 'No hay sesiones RDP activas' };
+//         }
+//         return { success: false, error: error.message };
+//       }
+//     } else {
+//       return { success: false, message: 'Función solo disponible en Windows' };
+//     }
+//   } catch (error) {
+//     return { success: false, error: error.message };
+//   }
+// });
 
 // Cleanup RDP connections on app quit
 app.on('before-quit', () => {

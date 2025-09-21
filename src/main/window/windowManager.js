@@ -55,6 +55,8 @@ class WindowManager {
 
     this.mainWindow.removeMenu();
     this.setupApplicationMenu();
+    
+    return this.mainWindow;
   }
 
   /**
