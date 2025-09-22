@@ -234,9 +234,9 @@ const SplitLayout = ({
       left: 0,
       width: '100%',
       height: '8px',
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+      backgroundColor: splitterColor || 'rgba(255, 255, 255, 0.1)',
+      borderTop: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
+      borderBottom: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
       cursor: 'row-resize',
       zIndex: 1000,
       userSelect: 'none',
@@ -411,7 +411,7 @@ const SplitLayout = ({
           style={{
             width: '6px',
             height: '100%',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: splitterColor || 'rgba(255, 255, 255, 0.1)',
             cursor: 'col-resize',
             flexShrink: 0,
             position: 'relative',
@@ -420,8 +420,8 @@ const SplitLayout = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+            borderLeft: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
+            borderRight: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`
           }}
           onMouseDown={handleMouseDown}
           onMouseEnter={(e) => {
