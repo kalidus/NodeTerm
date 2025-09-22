@@ -35,7 +35,6 @@ function parseLsOutput(output) {
  * @param {Object} dependencies - Dependencias necesarias para los handlers
  */
 function registerSSHHandlers(dependencies) {
-  console.log('[SSH HANDLERS] Registrando handlers SSH...');
   const { findSSHConnection } = dependencies;
 
   // SSH: Obtener directorio home
@@ -303,7 +302,6 @@ function registerSSHHandlers(dependencies) {
   });
 
   // SSH: Eliminar archivo o directorio
-  console.log('[SSH HANDLERS] Registrando handler ssh:delete-file');
   ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
     console.log('🔥🔥🔥 [SSH DELETE] HANDLER LLAMADO - INICIO INMEDIATO 🔥🔥🔥');
     console.log('🔥🔥🔥 [SSH DELETE] Parámetros recibidos:', { tabId, remotePath, isDirectory });
@@ -387,7 +385,7 @@ function registerSSHHandlers(dependencies) {
     }
   });
 
-  console.log('[SSH HANDLERS] Todos los handlers SSH registrados exitosamente');
+  // Todos los handlers SSH registrados exitosamente
 }
 
 module.exports = registerSSHHandlers;

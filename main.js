@@ -1,23 +1,15 @@
-console.log('[MAIN] === INICIANDO MAIN.JS ===');
-
 // Declarar variables
 let alternativePtyConfig, SafeWindowsTerminal, registerSSHHandlers;
 
 try {
   // Importar configuraciones de terminal desde archivo externo
-  console.log('[MAIN] Importando configuraciones...');
   ({ alternativePtyConfig } = require('./main/config/terminal-configs'));
-  console.log('[MAIN] Configuraciones importadas');
 
   // Importar clase SafeWindowsTerminal desde archivo externo
-  console.log('[MAIN] Importando SafeWindowsTerminal...');
   SafeWindowsTerminal = require('./main/classes/SafeWindowsTerminal');
-  console.log('[MAIN] SafeWindowsTerminal importado');
 
   // Importar manejadores 
-  console.log('[MAIN] Importando SSH handlers...');
   registerSSHHandlers = require('./main/handlers/ssh-handlers');
-  console.log('[MAIN] SSH handlers importados exitosamente');
 } catch (err) {
   console.error('[MAIN] ERROR EN IMPORTACIONES:', err);
   console.error('[MAIN] Stack trace:', err.stack);
@@ -217,7 +209,6 @@ async function initializeGuacamoleServices() {
       const pref = await loadPreferredGuacdMethod();
       if (pref) {
         guacdService.setPreferredMethod(pref);
-        console.log('🔧 Método preferido cargado:', pref);
       }
     } catch {}
     
@@ -267,16 +258,13 @@ async function initializeGuacamoleServices() {
         guacdInactivityTimeoutMs = parsed;
       }
     }
-    console.log('⏱️  Timeout de inactividad guacd (ms):', guacdInactivityTimeoutMs);
-
     // Crear servidor Guacamole-lite
     guacamoleServer = new GuacamoleLite(websocketOptions, guacdOptions, clientOptions);
-    console.log('🛡️  Watchdogs de inactividad desactivados (WS y guacd)');
     
     // Configurar eventos del servidor
     guacamoleServer.on('open', (clientConnection) => {
       try {
-        console.log('🔗 Nueva conexión Guacamole abierta:', clientConnection.connectionId);
+        // Nueva conexión Guacamole abierta
         activeGuacamoleConnections.add(clientConnection);
 
         // Parche en runtime del watchdog de guacd (reemplaza el de 10s por uno configurable o lo desactiva)
@@ -297,9 +285,9 @@ async function initializeGuacamoleServices() {
                   // Si ocurre un error al cerrar, evitar que detenga el loop
                 }
               }, 1000);
-              console.log(`⏱️  Watchdog guacd aplicado para conexión ${clientConnection.connectionId}: ${guacdInactivityTimeoutMs}ms`);
+              // Watchdog guacd aplicado
             } else {
-              console.log(`⏱️  Watchdog guacd desactivado para conexión ${clientConnection.connectionId}`);
+              // Watchdog guacd desactivado
             }
           } else {
             console.warn('⚠️  No se encontró guacdClient para aplicar watchdog');
@@ -1911,10 +1899,8 @@ async function findSSHConnection(tabId, sshConfig = null) {
 }
 
 // Registrar manejadores SSH después de definir findSSHConnection
-console.log('[MAIN] Iniciando registro de SSH handlers...');
 try {
   registerSSHHandlers({ findSSHConnection });
-  console.log('[MAIN] SSH handlers registrados desde main.js');
   
   // Enviar confirmación al renderer para que aparezca en DevTools
   setTimeout(() => {
@@ -2372,7 +2358,7 @@ async function disconnectAllGuacamoleConnections() {
         activeGuacamoleConnections.delete(conn);
       }
     }
-    console.log('✅ Conexiones Guacamole cerradas');
+    // Conexiones Guacamole cerradas
   } catch (e) {
     console.warn('⚠️ Error cerrando conexiones Guacamole:', e?.message || e);
   }
@@ -3225,7 +3211,7 @@ const ubuntuProcesses = {};
 function detectUbuntuAvailability() {
   return new Promise((resolve) => {
     const platform = os.platform();
-    console.log('🔍 Detectando Ubuntu, plataforma:', platform);
+    // Detectando Ubuntu
     
     if (platform !== 'win32') {
       // En sistemas no Windows, verificar si bash está disponible
@@ -3251,7 +3237,7 @@ function detectUbuntuAvailability() {
     } else {
       // En Windows, verificar si ubuntu está disponible
       const { spawn } = require('child_process');
-      console.log('🔍 Verificando ubuntu en Windows...');
+      // Verificando ubuntu en Windows
       
       const ubuntuCheck = spawn('ubuntu', ['--help'], { 
         stdio: 'pipe',
@@ -3267,7 +3253,7 @@ function detectUbuntuAvailability() {
         // Ubuntu devuelve código 0 cuando está disponible
         // También puede devolver null o undefined en algunos casos válidos
         const isAvailable = (code === 0 || code === null || code === undefined);
-        console.log('🔍 Ubuntu detectado como disponible:', isAvailable);
+        // Ubuntu detectado
           resolve(isAvailable);
         }
       });
@@ -3286,7 +3272,7 @@ function detectUbuntuAvailability() {
           resolved = true;
           console.log('🚪 Ubuntu exit with code:', code, 'signal:', signal);
           const isAvailable = (code === 0 || code === null || code === undefined);
-          console.log('🔍 Ubuntu detectado como disponible (exit):', isAvailable);
+          // Ubuntu detectado (exit)
           resolve(isAvailable);
         }
       });
@@ -3783,7 +3769,7 @@ function handleUbuntuStop(tabId) {
 function detectUbuntuSimple() {
   return new Promise((resolve) => {
     const platform = os.platform();
-    console.log('🔧 Función de detección simple iniciada, plataforma:', platform);
+    // Función de detección simple iniciada
     
     if (platform !== 'win32') {
       // En sistemas no Windows, asumir que bash está disponible
@@ -3796,14 +3782,8 @@ function detectUbuntuSimple() {
         timeout: 3000,
         windowsHide: true 
       }, (error, stdout, stderr) => {
-        console.log('🔧 Exec ubuntu result:');
-        console.log('   Error:', error?.code || 'none');
-        console.log('   Stdout length:', stdout?.length || 0);
-        console.log('   Stderr length:', stderr?.length || 0);
-        
         // Si no hay error ENOENT, significa que ubuntu existe
         const isAvailable = !error || error.code !== 'ENOENT';
-        console.log('🔧 Ubuntu detectado (simple):', isAvailable);
         resolve(isAvailable);
       });
     }
