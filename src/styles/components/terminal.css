@@ -29,29 +29,67 @@
   background: var(--ui-button-hover, #ddd) !important;
 }
 
-/* --- Terminal Splitter con PrimeReact (basado en el sidebar que funciona perfecto) --- */
+/* --- Terminal Splitter con PrimeReact (específico para terminales) --- */
 .terminal-splitter {
   height: 100% !important;
   width: 100% !important;
+  border: none !important;
 }
 
 .terminal-splitter .p-splitter-gutter {
-  transition: none !important; /* Clave: sin transición como el sidebar */
-  cursor: col-resize;
+  width: 8px !important;
+  margin: 0 -4px !important;
+  cursor: col-resize !important;
+  transition: none !important;
+  position: relative;
+  background: transparent !important;
+  border: none !important;
+  z-index: 10;
 }
 
 .terminal-splitter .p-splitter-gutter:hover {
-  background: var(--ui-button-hover, #555) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.terminal-splitter .p-splitter-gutter:focus,
+.terminal-splitter .p-splitter-gutter:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Área invisible adicional para mejor detección del gutter */
+.terminal-splitter .p-splitter-gutter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  right: -4px;
+  bottom: 0;
+  cursor: col-resize;
+  z-index: 1;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
 }
 
 .terminal-splitter .p-splitter-panel {
   overflow: hidden;
+  min-width: 200px !important;
+  max-width: none !important;
 }
 
-/* Optimizaciones durante resize (igual que el sidebar) */
+/* Optimizaciones durante resize */
 .terminal-splitter.p-splitter-resizing .p-splitter-panel {
   will-change: width, min-width, max-width !important;
   transition: none !important;
+}
+
+/* Asegurar que los terminales se rendericen correctamente */
+.terminal-splitter .p-splitter-panel .terminal-outer-padding {
+  height: 100% !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
 }
 
 /* Padding externo opcional para el terminal */
