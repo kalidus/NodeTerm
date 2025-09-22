@@ -35,6 +35,7 @@ function parseLsOutput(output) {
  * @param {Object} dependencies - Dependencias necesarias para los handlers
  */
 function registerSSHHandlers(dependencies) {
+  console.log('[SSH HANDLERS] Registrando handlers SSH...');
   const { findSSHConnection } = dependencies;
 
   // SSH: Obtener directorio home
@@ -249,19 +250,18 @@ function registerSSHHandlers(dependencies) {
         await sftp.end();
         return { success: true };
       } else {
-        // SSH directo
-        const ssh = new SSH2Promise(sshConfig);
-        await ssh.connect();
-        const sftp = await ssh.sftp();
-        await new Promise((resolve, reject) => {
-          const writeStream = fs.createWriteStream(localPath);
-          const readStream = sftp.createReadStream(remotePath);
-          readStream.pipe(writeStream);
-          readStream.on('error', reject);
-          writeStream.on('error', reject);
-          writeStream.on('finish', resolve);
-        });
-        await ssh.close();
+        // SSH directo - usar SftpClient para consistencia
+        const sftp = new SftpClient();
+        const connectConfig = {
+          host: sshConfig.host,
+          port: sshConfig.port || 22,
+          username: sshConfig.username,
+          password: sshConfig.password,
+          readyTimeout: 20000,
+        };
+        await sftp.connect(connectConfig);
+        await sftp.fastGet(remotePath, localPath);
+        await sftp.end();
         return { success: true };
       }
     } catch (err) {
@@ -303,8 +303,13 @@ function registerSSHHandlers(dependencies) {
   });
 
   // SSH: Eliminar archivo o directorio
+  console.log('[SSH HANDLERS] Registrando handler ssh:delete-file');
   ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
+    console.log('🔥🔥🔥 [SSH DELETE] HANDLER LLAMADO - INICIO INMEDIATO 🔥🔥🔥');
+    console.log('🔥🔥🔥 [SSH DELETE] Parámetros recibidos:', { tabId, remotePath, isDirectory });
     try {
+      console.log(`[SSH DELETE] Iniciando eliminación - Path: ${remotePath}, isDirectory: ${isDirectory}`);
+      
       const sftp = new SftpClient();
       let connectConfig;
       if (sshConfig.useBastionWallix) {
@@ -324,17 +329,29 @@ function registerSSHHandlers(dependencies) {
           readyTimeout: 20000,
         };
       }
+      
       await sftp.connect(connectConfig);
+      console.log(`[SSH DELETE] Conectado exitosamente`);
+      
       if (isDirectory) {
-        // Eliminar directorio recursivamente
-        await sftp.rmdir(remotePath, true);
+        console.log(`[SSH DELETE] Eliminando directorio: ${remotePath}`);
+        // Probar diferentes métodos para directorios
+        try {
+          await sftp.rmdir(remotePath, true);
+        } catch (rmdirErr) {
+          console.log(`[SSH DELETE] rmdir(path, true) falló, intentando sin parámetro recursivo:`, rmdirErr.message);
+          await sftp.rmdir(remotePath);
+        }
       } else {
-        // Eliminar archivo
+        console.log(`[SSH DELETE] Eliminando archivo: ${remotePath}`);
         await sftp.delete(remotePath);
       }
+      
       await sftp.end();
+      console.log(`[SSH DELETE] Operación completada exitosamente`);
       return { success: true };
     } catch (err) {
+      console.error(`[SSH DELETE] Error en eliminación:`, err);
       return { success: false, error: err.message || err };
     }
   });
@@ -369,6 +386,8 @@ function registerSSHHandlers(dependencies) {
       return { success: false, error: err.message || err };
     }
   });
+
+  console.log('[SSH HANDLERS] Todos los handlers SSH registrados exitosamente');
 }
 
 module.exports = registerSSHHandlers;

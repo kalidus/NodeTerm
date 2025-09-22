@@ -381,20 +381,29 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
     };
 
     const handleDeleteFiles = (filesToDelete) => {
+        console.log('🔥🔥🔥 [FRONTEND] handleDeleteFiles llamado con:', filesToDelete);
         const filesTarget = filesToDelete || selectedFiles;
-        if (filesTarget.length === 0) return;
+        console.log('🔥🔥🔥 [FRONTEND] filesTarget:', filesTarget);
+        if (filesTarget.length === 0) {
+            console.log('🔥🔥🔥 [FRONTEND] No hay archivos para eliminar');
+            return;
+        }
         const fileNames = filesTarget.map(f => f.name).join(', ');
+        console.log('🔥🔥🔥 [FRONTEND] Mostrando confirmDialog para:', fileNames);
         confirmDialog({
             message: `¿Estás seguro de eliminar ${filesTarget.length} archivo(s)? Esta acción no se puede deshacer.\n\nArchivos: ${fileNames}`,
             header: 'Confirmar eliminación',
             icon: 'pi pi-exclamation-triangle',
             accept: async () => {
+                console.log('🔥🔥🔥 [FRONTEND] Usuario confirmó eliminación, iniciando proceso...');
                 setTransferProgress({ type: 'delete', current: 0, total: filesTarget.length });
                 for (let i = 0; i < filesTarget.length; i++) {
                     const file = filesTarget[i];
                     const remotePath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
+                    console.log('🔥🔥🔥 [FRONTEND] Llamando deleteFile con:', { tabId, remotePath, isDirectory: file.type === 'directory' });
                     try {
                         const deleteResult = await window.electron.fileExplorer.deleteFile(tabId, remotePath, file.type === 'directory', sshConfig);
+                        console.log('🔥🔥🔥 [FRONTEND] Resultado deleteFile:', deleteResult);
                         if (deleteResult.success) {
                             toast.current?.show({
                                 severity: 'success',
@@ -784,6 +793,9 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
             
             {/* Toast para notificaciones */}
             <Toast ref={toast} />
+            
+            {/* ConfirmDialog para confirmaciones */}
+            <ConfirmDialog />
         </div>
     );
 };

@@ -1,11 +1,28 @@
-// Importar configuraciones de terminal desde archivo externo
-const { alternativePtyConfig } = require('./main/config/terminal-configs');
+console.log('[MAIN] === INICIANDO MAIN.JS ===');
 
-// Importar clase SafeWindowsTerminal desde archivo externo
-const SafeWindowsTerminal = require('./main/classes/SafeWindowsTerminal');
+// Declarar variables
+let alternativePtyConfig, SafeWindowsTerminal, registerSSHHandlers;
 
-// Importar manejadores 
-const registerSSHHandlers = require('./main/handlers/ssh-handlers');
+try {
+  // Importar configuraciones de terminal desde archivo externo
+  console.log('[MAIN] Importando configuraciones...');
+  ({ alternativePtyConfig } = require('./main/config/terminal-configs'));
+  console.log('[MAIN] Configuraciones importadas');
+
+  // Importar clase SafeWindowsTerminal desde archivo externo
+  console.log('[MAIN] Importando SafeWindowsTerminal...');
+  SafeWindowsTerminal = require('./main/classes/SafeWindowsTerminal');
+  console.log('[MAIN] SafeWindowsTerminal importado');
+
+  // Importar manejadores 
+  console.log('[MAIN] Importando SSH handlers...');
+  registerSSHHandlers = require('./main/handlers/ssh-handlers');
+  console.log('[MAIN] SSH handlers importados exitosamente');
+} catch (err) {
+  console.error('[MAIN] ERROR EN IMPORTACIONES:', err);
+  console.error('[MAIN] Stack trace:', err.stack);
+  process.exit(1);
+}
 
 try {
   require('electron-reloader')(module);
@@ -35,8 +52,7 @@ const GuacamoleLite = require('guacamole-lite');
 let mainWindow;
 let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
 
-// Registrar manejadores IPC SSH
-registerSSHHandlers({ findSSHConnection });
+// Los handlers SSH se registrarán después de definir findSSHConnection
 
 // Manejador global para errores no capturados relacionados con ConPTY
 process.on('uncaughtException', (error) => {
@@ -1892,6 +1908,25 @@ async function findSSHConnection(tabId, sshConfig = null) {
   }
   // Si no se encuentra, retornar null
   return null;
+}
+
+// Registrar manejadores SSH después de definir findSSHConnection
+console.log('[MAIN] Iniciando registro de SSH handlers...');
+try {
+  registerSSHHandlers({ findSSHConnection });
+  console.log('[MAIN] SSH handlers registrados desde main.js');
+  
+  // Enviar confirmación al renderer para que aparezca en DevTools
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.executeJavaScript(`
+        console.log('[MAIN-TO-RENDERER] SSH handlers registrados exitosamente desde main.js');
+        console.log('[MAIN-TO-RENDERER] Eliminación de archivos debería funcionar ahora');
+      `);
+    }
+  }, 1000);
+} catch (err) {
+  console.error('[MAIN] Error registrando SSH handlers:', err);
 }
 
 // --- INICIO BLOQUE RESTAURACIÓN STATS ---
