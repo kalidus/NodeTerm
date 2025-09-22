@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import SessionManager from '../services/SessionManager';
-import { createTerminalActionWrapper, hideContextMenu, handleUnblockForms } from '../utils/tabEventHandlers';
+import { createTerminalActionWrapper, handleUnblockForms } from '../utils/tabEventHandlers';
 import { EVENT_NAMES, CONNECTION_STATUS } from '../utils/constants';
 
 export const useSessionManagement = (toast, {
   sshTabs = [],
   setTabDistros,
-  resizeTimeoutRef
+  resizeTimeoutRef,
+  hideContextMenu
 } = {}) => {
   // Referencias para terminales
   const terminalRefs = useRef({});
@@ -326,10 +327,10 @@ export const useSessionManagement = (toast, {
   }, [sessionManager]);
 
   // === FUNCIONES WRAPPER DE TERMINAL ===
-  const handleCopyFromTerminalWrapper = createTerminalActionWrapper(handleCopyFromTerminal, () => hideContextMenu());
-  const handlePasteToTerminalWrapper = createTerminalActionWrapper(handlePasteToTerminal, () => hideContextMenu());
-  const handleSelectAllTerminalWrapper = createTerminalActionWrapper(handleSelectAllTerminal, () => hideContextMenu());
-  const handleClearTerminalWrapper = createTerminalActionWrapper(handleClearTerminal, () => hideContextMenu());
+  const handleCopyFromTerminalWrapper = createTerminalActionWrapper(handleCopyFromTerminal, hideContextMenu);
+  const handlePasteToTerminalWrapper = createTerminalActionWrapper(handlePasteToTerminal, hideContextMenu);
+  const handleSelectAllTerminalWrapper = createTerminalActionWrapper(handleSelectAllTerminal, hideContextMenu);
+  const handleClearTerminalWrapper = createTerminalActionWrapper(handleClearTerminal, hideContextMenu);
 
   // === FUNCIÓN WRAPPER PARA DESBLOQUEAR FORMULARIOS ===
   const handleUnblockFormsWrapper = useCallback(() => handleUnblockForms(toast), [toast]);

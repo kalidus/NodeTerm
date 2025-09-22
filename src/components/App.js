@@ -668,7 +668,8 @@ const App = () => {
   } = useSessionManagement(toast, {
     sshTabs,
     setTabDistros,
-    resizeTimeoutRef
+    resizeTimeoutRef,
+    hideContextMenu
   });
 
   // Split management hook
