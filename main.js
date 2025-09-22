@@ -1,6 +1,9 @@
 // Declarar variables
 let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers;
 
+// Importar utilidades centralizadas (fuera del try-catch para acceso global)
+const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./main/utils');
+
 try {
   // Importar configuraciones de terminal desde archivo externo
   ({ alternativePtyConfig } = require('./main/config/terminal-configs'));
@@ -156,47 +159,7 @@ setInterval(() => {
 }, 60000); // Cambiar a 60 segundos para dar más tiempo
 
 // Helper function to parse 'df -P' command output
-function parseDfOutput(dfOutput) {
-    const lines = dfOutput.trim().split('\n');
-    lines.shift(); // Remove header line
-    return lines.map(line => {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 6) {
-            const use = parseInt(parts[parts.length - 2], 10);
-            const name = parts[parts.length - 1];
-            // Filter out unwanted mount points
-            if (name && name.startsWith('/') && !isNaN(use) && 
-                !name.startsWith('/sys') && 
-                !name.startsWith('/opt') && 
-                !name.startsWith('/run') && 
-                name !== '/boot/efi' && 
-                !name.startsWith('/dev') &&
-                !name.startsWith('/var')) {
-                return { fs: name, use };
-            }
-        }
-        return null;
-    }).filter(Boolean); // Filter out null entries
-}
-
-function parseNetDev(netDevOutput) {
-    const lines = netDevOutput.trim().split('\n');
-    let totalRx = 0;
-    let totalTx = 0;
-
-    lines.slice(2).forEach(line => {
-        const parts = line.trim().split(/\s+/);
-        const iface = parts[0];
-        if (iface && iface !== 'lo:' && parts.length >= 10) {
-            const rx = parseInt(parts[1], 10);
-            const tx = parseInt(parts[9], 10);
-            if (!isNaN(rx)) totalRx += rx;
-            if (!isNaN(tx)) totalTx += tx;
-        }
-    });
-
-    return { totalRx, totalTx };
-}
+// Funciones de parsing movidas a main/utils/parsing-utils.js
 
 /**
  * Inicializa servicios de Guacamole de forma asíncrona
@@ -324,13 +287,7 @@ async function initializeGuacamoleServices() {
 }
 
 // === Preferencias Guacd (persistencia en userData) ===
-function getGuacdPrefPath() {
-  try {
-    return path.join(app.getPath('userData'), 'guacd-preferences.json');
-  } catch {
-    return null;
-  }
-}
+// Función getGuacdPrefPath movida a main/utils/file-utils.js
 
 async function loadPreferredGuacdMethod() {
   const fs = require('fs');
@@ -1696,52 +1653,10 @@ app.on('before-quit', () => {
 
 
 // Function to safely send to mainWindow
-function sendToRenderer(sender, eventName, ...args) {
-  try {
-    if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
-      // Solo logear eventos SSH para debugging
-      if (eventName.startsWith('ssh-connection-')) {
-        // console.log('📡 Enviando evento SSH:', eventName, 'con args:', args);
-      }
-      sender.send(eventName, ...args);
-    } else {
-      // console.error('Sender no válido o destruido para evento:', eventName);
-    }
-  } catch (error) {
-    // console.error('Error sending to renderer:', eventName, error);
-  }
-}
-
-// Función para limpiar conexiones huérfanas del pool cada 10 minutos
-function cleanupOrphanedConnections() {
-  Object.keys(sshConnectionPool).forEach(cacheKey => {
-    const poolConnection = sshConnectionPool[cacheKey];
-    // Verificar si hay alguna conexión activa usando esta conexión del pool
-    const hasActiveConnections = Object.values(sshConnections).some(conn => conn.cacheKey === cacheKey);
-    
-    if (!hasActiveConnections) {
-      // console.log(`Limpiando conexión SSH huérfana: ${cacheKey}`);
-      try {
-        // Limpiar listeners antes de cerrar
-        poolConnection.removeAllListeners('error');
-        poolConnection.removeAllListeners('close');
-        poolConnection.removeAllListeners('end');
-        if (poolConnection.ssh) {
-          poolConnection.ssh.removeAllListeners('error');
-          poolConnection.ssh.removeAllListeners('close');
-          poolConnection.ssh.removeAllListeners('end');
-        }
-        poolConnection.close();
-      } catch (e) {
-        // Ignorar errores de cierre
-      }
-      delete sshConnectionPool[cacheKey];
-    }
-  });
-}
+// Funciones sendToRenderer y cleanupOrphanedConnections movidas a main/utils/connection-utils.js
 
 // Ejecutar limpieza cada 10 minutos
-setInterval(cleanupOrphanedConnections, 10 * 60 * 1000);
+setInterval(() => cleanupOrphanedConnections(sshConnectionPool, sshConnections), 10 * 60 * 1000);
 
 // Helper function to find SSH connection by host/username or by tabId
 async function findSSHConnection(tabId, sshConfig = null) {
