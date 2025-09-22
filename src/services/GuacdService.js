@@ -356,8 +356,6 @@ class GuacdService {
    * Intenta Docker primero, luego fallback a binarios nativos
    */
   async initialize() {
-    console.log('🔧 Inicializando GuacdService...');
-    
     try {
       // Primero verificar si guacd ya está corriendo
       const portAvailable = await this.isPortAvailable(this.port);
@@ -381,8 +379,6 @@ class GuacdService {
           return true;
         }
       }
-      
-      console.log('❌ guacd NO está corriendo, iniciando...');
 
       // Orden dinámico según preferencia y SO
       const isWindows = this.platform === 'win32';
@@ -394,20 +390,16 @@ class GuacdService {
       for (const method of orderedMethods) {
         try {
           if (method === 'docker') {
-            console.log('🐳 Intentando iniciar guacd con Docker...');
             if (await this.startWithDocker()) { this.detectedMethod = 'docker'; console.log('🔌 Conectado con DOCKER'); return true; }
           } else if (method === 'wsl') {
-            console.log('🐧 Intentando iniciar guacd dentro de WSL...');
             if (await this.startWithWSL()) { this.detectedMethod = 'wsl'; console.log('🔌 Conectado con WSL'); return true; }
           } else if (method === 'native') {
-            console.log('📦 Intentando iniciar guacd con binarios nativos...');
             if (await this.startWithNative()) { this.detectedMethod = 'native'; console.log('🔌 Conectado con NATIVE'); return true; }
           } else if (method === 'mock') {
-            console.log('🧪 Usando modo mock para testing...');
             if (await this.startMockMode()) { this.detectedMethod = 'mock'; console.log('🔌 Conectado con MOCK'); return true; }
           }
         } catch (e) {
-          console.warn(`⚠️  Error intentando método ${method}:`, e?.message || e);
+          // Error intentando método
         }
       }
 
@@ -438,18 +430,15 @@ class GuacdService {
           'docker.exe' : 
           'docker';
       
-      console.log('🔍 Verificando Docker con comando:', dockerCommand);
-      console.log('🔍 PATH actual:', process.env.PATH);
+      // Verificando Docker
       
       exec(`${dockerCommand} --version`, (error) => {
         if (error) {
           console.log('❌ Docker no está disponible:', error.message);
           // Intentar con docker sin ruta completa
           if (dockerCommand !== 'docker') {
-            console.log('🔄 Intentando con comando "docker" genérico...');
             exec('docker --version', (error2) => {
               if (error2) {
-                console.log('❌ Docker tampoco está disponible con comando genérico:', error2.message);
                 resolve(false);
                 return;
               }
@@ -469,20 +458,14 @@ class GuacdService {
 
   _checkDockerRunning(resolve, dockerCommand = 'docker') {
     // Verificar si Docker Desktop está corriendo
-    exec(`${dockerCommand} ps`, (dockerError) => {
-      if (dockerError) {
-        console.log('❌ Docker Desktop no está corriendo.');
-        console.log('💡 Para usar RDP Guacamole:');
-        console.log('   1. Abre Docker Desktop desde el menú de inicio');
-        console.log('   2. Espera a que aparezca "Docker Desktop is running"');
-        console.log('   3. Reinicia NodeTerm');
-        console.log('💡 Alternativa: Instala guacd manualmente desde https://github.com/apache/guacamole-server');
-        resolve(false);
-        return;
-      }
+      exec(`${dockerCommand} ps`, (dockerError) => {
+        if (dockerError) {
+          console.log('❌ Docker Desktop no está corriendo');
+          resolve(false);
+          return;
+        }
 
       // Intentar iniciar contenedor guacd
-      console.log('Iniciando contenedor guacamole/guacd...');
       const dockerArgs = [
         'run',
         '--name', 'nodeterm-guacd',
@@ -498,11 +481,11 @@ class GuacdService {
       this.guacdProcess = spawn(dockerCommand, dockerArgs);
 
       this.guacdProcess.stdout.on('data', (data) => {
-        console.log('🐳 Docker stdout:', data.toString());
+        // Docker stdout
       });
 
       this.guacdProcess.stderr.on('data', (data) => {
-        console.log('🐳 Docker stderr:', data.toString());
+        // Docker stderr
       });
 
       this.guacdProcess.on('error', (error) => {
@@ -511,7 +494,7 @@ class GuacdService {
       });
 
       this.guacdProcess.on('close', (code) => {
-        console.log(`🐳 Docker proceso cerrado con código: ${code}`);
+        // Docker proceso cerrado
       });
 
       // Esperar un momento y verificar si el contenedor está corriendo
@@ -521,14 +504,11 @@ class GuacdService {
           const available = await this.isPortAvailable(this.port);
           if (!available) {
             this.isRunning = true;
-            console.log('✅ Docker guacd iniciado exitosamente');
             resolve(true);
           } else {
-            console.log('❌ Docker guacd no se pudo iniciar');
             resolve(false);
           }
         } catch (error) {
-          console.log('❌ Error verificando Docker guacd:', error);
           resolve(false);
         }
       }, 3000);
@@ -694,7 +674,6 @@ class GuacdService {
         for (const name of preferred) { if (distros.includes(name)) { selected = name; break; } }
         if (!selected) selected = distros[0];
         this.wslDistro = selected;
-        console.log('🐧 Usando WSL distro:', selected);
 
         const wslExec = (args, cb) => execFile('wsl.exe', ['-d', selected, '-u', 'root', '--', ...args], { encoding: 'utf8' }, cb);
 
@@ -727,7 +706,6 @@ class GuacdService {
             return;
           }
           const pidStr = (startOut || '').toString().trim();
-          console.log('🚀 guacd lanzado en WSL con PID:', pidStr);
 
           // Esperar a que el puerto esté escuchando dentro de WSL
           // Comprobar sólo por puerto (independiente de IP)
@@ -747,18 +725,11 @@ class GuacdService {
               if (!available) {
                 this.isRunning = true;
                 this.guacdProcess = null;
-                console.log('✅ guacd en WSL accesible desde Windows');
                 resolve(true);
               } else {
-                console.log('❌ Puerto sigue disponible tras iniciar en WSL');
-                // Volcar últimas líneas de log para diagnóstico
-                wslExec(['sh', '-lc', 'tail -n 80 /var/log/guacd-wsl.log 2>/dev/null || true'], (e, out) => {
-                  if (out) console.log('📝 [WSL] guacd log:\n' + out);
-                });
                 resolve(false);
               }
             } catch (e) {
-              console.log('❌ Error verificando puerto tras WSL:', e);
               resolve(false);
             }
           }, 3000);
@@ -772,7 +743,6 @@ class GuacdService {
    */
   async startMockMode() {
     return new Promise((resolve) => {
-      console.log('🧪 Iniciando modo mock - simulando guacd corriendo');
       // Simular que guacd está corriendo
       this.isRunning = true;
       this.detectedMethod = 'mock';
@@ -780,7 +750,6 @@ class GuacdService {
       // Simular un proceso que se puede detener
       this.guacdProcess = {
         kill: () => {
-          console.log('🧪 Mock guacd detenido');
           this.isRunning = false;
         }
       };
@@ -800,22 +769,17 @@ class GuacdService {
       
       socket.on('connect', () => {
         socket.destroy();
-        console.log(`🔍 Puerto ${port} está OCUPADO (guacd corriendo)`);
         resolve(false); // Puerto ocupado (guacd corriendo)
       });
       
       socket.on('timeout', () => {
         socket.destroy();
-        console.log(`🔍 Puerto ${port} está DISPONIBLE (timeout)`);
         resolve(true); // Puerto disponible
       });
       
       socket.on('error', (error) => {
-        console.log(`🔍 Puerto ${port} está DISPONIBLE (error: ${error.code})`);
         resolve(true); // Puerto disponible
       });
-      
-      console.log(`🔍 Verificando puerto ${port} en ${this.host}...`);
       socket.connect(port, this.host);
     });
   }
@@ -828,7 +792,7 @@ class GuacdService {
       return;
     }
 
-    console.log('🛑 Deteniendo GuacdService...');
+    // Deteniendo GuacdService
 
     try {
       if (this.detectedMethod === 'docker') {
@@ -847,29 +811,20 @@ class GuacdService {
               exec('docker stop nodeterm-guacd', (error2) => {
                 if (error2) {
                   console.error('Error deteniendo contenedor Docker (genérico):', error2);
-                } else {
-                  console.log('✅ Contenedor Docker detenido (genérico)');
-                }
+            }
               });
             }
-          } else {
-            console.log('✅ Contenedor Docker detenido');
           }
         });
       } else if (this.detectedMethod === 'wsl') {
         // Intentar detener guacd dentro de WSL
         const args = this.wslDistro ? ['-d', this.wslDistro, '--', 'sh', '-lc', 'pkill -f guacd || true'] : ['--', 'sh', '-lc', 'pkill -f guacd || true'];
         execFile('wsl.exe', args, (error) => {
-          if (error) {
-            console.warn('⚠️  No se pudo detener guacd en WSL (puede no estar corriendo).');
-          } else {
-            console.log('✅ guacd detenido en WSL');
-          }
+          // guacd detenido en WSL
         });
       } else if (this.guacdProcess) {
         // Detener proceso nativo
         this.guacdProcess.kill('SIGTERM');
-        console.log('✅ Proceso guacd nativo detenido');
       }
     } catch (error) {
       console.error('Error deteniendo guacd:', error);
@@ -928,7 +883,7 @@ class GuacdService {
         if (dockerCommand !== 'docker') {
           exec('docker ps --filter "name=nodeterm-guacd" --format "{{.Names}}"', (dockerErr2, dockerOut2) => {
             if (!dockerErr2 && dockerOut2.trim() === 'nodeterm-guacd') {
-              console.log('🐳 Detectado: guacd corriendo en Docker (comando genérico)');
+              console.log('🐳 Detectado: guacd corriendo en Docker');
               this.detectedMethod = 'docker';
               resolve();
               return;
@@ -961,7 +916,7 @@ class GuacdService {
                     this.host = ip;
                   }
                   this.detectedMethod = 'wsl';
-                  console.log('🐧 Detectado: guacd escuchando en WSL', d, 'IP', this.host || '(desconocida)');
+                  console.log('🐧 Detectado: guacd escuchando en WSL');
                   r('done');
                 });
               } else { r(); }
@@ -976,7 +931,6 @@ class GuacdService {
             this.detectedMethod = 'native';
             resolve();
           } else {
-            console.log('❓ No se pudo detectar el método de guacd');
             this.detectedMethod = 'unknown';
             resolve();
           }
@@ -999,7 +953,6 @@ class GuacdService {
       host: this.host || '127.0.0.1',
       port: this.port
     };
-    console.log('🔧 [GuacdService] Opciones para guacamole-lite:', options);
     return options;
   }
 
