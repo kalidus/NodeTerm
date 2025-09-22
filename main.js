@@ -317,47 +317,7 @@ async function savePreferredGuacdMethod(method) {
   } catch { return false; }
 }
 
-// IPC para configurar el watchdog de guacd desde la UI
-ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
-  try {
-    const parsed = parseInt(timeoutMs, 10);
-    if (Number.isNaN(parsed) || parsed < 0) {
-      throw new Error('Valor inválido para timeoutMs');
-    }
-    guacdInactivityTimeoutMs = parsed;
-    console.log('🛠️ Actualizado GUACD_INACTIVITY_TIMEOUT_MS a', guacdInactivityTimeoutMs);
-
-    // Aplicar en caliente a conexiones activas
-    try {
-      for (const clientConnection of Array.from(activeGuacamoleConnections)) {
-        const guacdClient = clientConnection && clientConnection.guacdClient ? clientConnection.guacdClient : null;
-        if (!guacdClient) continue;
-        if (guacdClient.activityCheckInterval) {
-          clearInterval(guacdClient.activityCheckInterval);
-          guacdClient.activityCheckInterval = null;
-        }
-        if (guacdInactivityTimeoutMs > 0) {
-          guacdClient.activityCheckInterval = setInterval(() => {
-            try {
-              if (Date.now() > (guacdClient.lastActivity + guacdInactivityTimeoutMs)) {
-                guacdClient.close(new Error('guacd was inactive for too long'));
-              }
-            } catch {}
-          }, 1000);
-        }
-      }
-    } catch (e) {
-      console.warn('⚠️ No se pudo aplicar el nuevo watchdog a todas las conexiones activas:', e?.message || e);
-    }
-    return { success: true, value: guacdInactivityTimeoutMs };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('guacamole:get-guacd-timeout-ms', async () => {
-  return { success: true, value: guacdInactivityTimeoutMs };
-});
+// Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -438,7 +398,15 @@ function createWindow() {
     registerAllHandlers({ 
       mainWindow, 
       findSSHConnection,
-      disconnectAllGuacamoleConnections 
+      disconnectAllGuacamoleConnections,
+      guacdService,
+      guacamoleServer,
+      sendToRenderer,
+      guacdInactivityTimeoutMs,
+      packageJson,
+      sshConnections,
+      cleanupOrphanedConnections,
+      isAppQuitting
     });
     
         // Handlers registrados exitosamente
@@ -492,17 +460,7 @@ app.on('activate', () => {
   }
 });
 
-// IPC handler para obtener información de versión
-ipcMain.handle('get-version-info', () => {
-  return {
-    appVersion: packageJson.version,
-    appName: packageJson.name,
-    electronVersion: process.versions.electron,
-    nodeVersion: process.versions.node,
-    chromeVersion: process.versions.chrome,
-    buildDate: new Date().toLocaleDateString()
-  };
-});
+// Handler get-version-info movido a src/main/handlers/application-handlers.js
 
 // IPC handlers para funciones de View
 // Handlers de aplicación movidos a main/handlers/app-handlers.js
@@ -1381,64 +1339,7 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
   }
 });
 
-// Permite cerrar la app desde el renderer (React) usando ipcRenderer
-ipcMain.on('app-quit', () => {
-  isAppQuitting = true;
-  
-  // Close all SSH connections and clear timeouts before quitting
-  Object.values(sshConnections).forEach(conn => {
-    if (conn.statsTimeout) {
-      clearTimeout(conn.statsTimeout);
-    }
-    if (conn.stream) {
-      try {
-        conn.stream.removeAllListeners();
-        if (!conn.stream.destroyed) {
-          conn.stream.destroy();
-        }
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-    if (conn.ssh) {
-      try {
-        if (conn.ssh.ssh) {
-          // Limpiar listeners específicos en lugar de todos en app-quit
-          conn.ssh.ssh.removeAllListeners('error');
-          conn.ssh.ssh.removeAllListeners('close');
-          conn.ssh.ssh.removeAllListeners('end');
-        }
-        // Limpiar listeners del SSH2Promise también
-        conn.ssh.removeAllListeners('error');
-        conn.ssh.removeAllListeners('close');
-        conn.ssh.removeAllListeners('end');
-        conn.ssh.close();
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-  });
-  
-  // Limpiar también el pool de conexiones con mejor limpieza
-  Object.values(sshConnectionPool).forEach(poolConn => {
-    try {
-      // Limpiar listeners del pool también
-      poolConn.removeAllListeners('error');
-      poolConn.removeAllListeners('close');
-      poolConn.removeAllListeners('end');
-      if (poolConn.ssh) {
-        poolConn.ssh.removeAllListeners('error');
-        poolConn.ssh.removeAllListeners('close');
-        poolConn.ssh.removeAllListeners('end');
-      }
-      poolConn.close();
-    } catch (e) {
-      // Ignorar errores
-    }
-  });
-  
-  app.quit();
-});
+// Handler app-quit movido a src/main/handlers/application-handlers.js
 
 // Limpieza robusta también en before-quit
 app.on('before-quit', () => {
@@ -1800,11 +1701,7 @@ ipcMain.handle('rdp:get-presets', async (event) => {
   return rdpManager.getPresets();
 });
 
-// Handler para crear pestañas de Guacamole
-ipcMain.on('guacamole:create-tab', (event, data) => {
-  // Reenviar el evento al renderer para crear la pestaña
-  sendToRenderer(event.sender, 'guacamole:create-tab', data);
-});
+// Handler para crear pestañas de Guacamole movido a src/main/handlers/guacamole-handlers.js
 
 // Handler para mostrar ventana RDP si está minimizada
 ipcMain.handle('rdp:show-window', async (event, { server }) => {
@@ -1941,31 +1838,9 @@ app.on('before-quit', () => {
 });
 
 // === Guacamole Support ===
-// IPC handlers for Guacamole RDP connections
-ipcMain.handle('guacamole:get-status', async (event) => {
-  return {
-    guacd: guacdService.getStatus(),
-    server: guacamoleServer ? {
-      isRunning: true,
-      port: 8081,
-      readyAt: guacamoleServerReadyAt
-    } : {
-      isRunning: false
-    }
-  };
-});
+// Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
-// Permitir establecer el método preferido desde la UI (docker|wsl|mock)
-ipcMain.handle('guacamole:set-preferred-method', async (event, method) => {
-  try {
-    if (guacdService && typeof guacdService.setPreferredMethod === 'function') {
-      guacdService.setPreferredMethod(method);
-      await savePreferredGuacdMethod(method);
-      return { success: true };
-    }
-  } catch {}
-  return { success: false };
-});
+// Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
 // Helper to disconnect all active guacamole connections
 async function disconnectAllGuacamoleConnections() {
@@ -1991,10 +1866,7 @@ async function disconnectAllGuacamoleConnections() {
   }
 }
 
-ipcMain.handle('guacamole:disconnect-all', async () => {
-  await disconnectAllGuacamoleConnections();
-  return { success: true };
-});
+// Handler guacamole:disconnect-all movido a src/main/handlers/guacamole-handlers.js
 
 ipcMain.handle('guacamole:create-token', async (event, config) => {
   try {
