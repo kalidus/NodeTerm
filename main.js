@@ -2434,78 +2434,13 @@ ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
 // Using only tab-specific PowerShell handlers for better control
 
 // Funciones de manejo para PowerShell
-function handlePowerShellStart(tabId, { cols, rows }) {
-  startPowerShellSession(tabId, { cols, rows });
-}
+// Función handlePowerShellStart movida a src/main/services/PowerShellService.js
 
-function handlePowerShellData(tabId, data) {
-  if (powershellProcesses[tabId]) {
-    try {
-      powershellProcesses[tabId].write(data);
-    } catch (error) {
-      console.error(`Error writing to PowerShell ${tabId}:`, error);
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`powershell:error:${tabId}`, `Write error: ${error.message}`);
-      }
-    }
-  } else {
-    console.warn(`No PowerShell process found for ${tabId}`);
-  }
-}
+// Función handlePowerShellData movida a src/main/services/PowerShellService.js
 
-function handlePowerShellResize(tabId, { cols, rows }) {
-  if (powershellProcesses[tabId]) {
-    try {
-      powershellProcesses[tabId].resize(cols, rows);
-    } catch (error) {
-      console.error(`Error resizing PowerShell ${tabId}:`, error);
-    }
-  }
-}
+// Función handlePowerShellResize movida a src/main/services/PowerShellService.js
 
-function handlePowerShellStop(tabId) {
-  if (powershellProcesses[tabId]) {
-    try {
-      console.log(`Stopping PowerShell process for tab ${tabId}`);
-      const process = powershellProcesses[tabId];
-      
-      // Remover listeners antes de terminar el proceso
-      process.removeAllListeners();
-      
-      // En Windows, usar destroy() para forzar terminación
-      if (os.platform() === 'win32') {
-        try {
-          process.kill(); // Intento graceful primero
-        } catch (e) {
-          // Si kill() falla, usar destroy()
-          try {
-            process.destroy();
-          } catch (destroyError) {
-            console.warn(`Error con destroy() en PowerShell ${tabId}:`, destroyError.message);
-          }
-        }
-      } else {
-        // En sistemas POSIX, usar SIGTERM
-        process.kill('SIGTERM');
-        
-        // Dar tiempo para que termine graciosamente
-        setTimeout(() => {
-          if (powershellProcesses[tabId]) {
-            try {
-              powershellProcesses[tabId].kill('SIGKILL');
-            } catch (e) {
-              // Ignorar errores de terminación forzada
-            }
-          }
-        }, 1000);
-      }
-      
-      delete powershellProcesses[tabId];
-    } catch (error) {
-      console.error(`Error stopping PowerShell ${tabId}:`, error);
-    }
-  }
-}
+// Función handlePowerShellStop movida a src/main/services/PowerShellService.js
 
 // === WSL Terminal Support ===
 
@@ -2534,9 +2469,7 @@ ipcMain.on('wsl:stop', () => {
 });
 
 // Funciones de manejo para WSL
-function handleWSLStart(tabId, { cols, rows }) {
-  startWSLSession(tabId, { cols, rows });
-}
+// Función handleWSLStart movida a src/main/services/WSLService.js
 
 function startWSLSession(tabId, { cols, rows }) {
   // No iniciar nuevos procesos si la app está cerrando
@@ -2719,72 +2652,11 @@ function startWSLSession(tabId, { cols, rows }) {
   }
 }
 
-function handleWSLData(tabId, data) {
-  if (wslProcesses[tabId]) {
-    try {
-      wslProcesses[tabId].write(data);
-    } catch (error) {
-      console.error(`Error writing to WSL ${tabId}:`, error);
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`wsl:error:${tabId}`, `Write error: ${error.message}`);
-      }
-    }
-  }
-}
+// Función handleWSLData movida a src/main/services/WSLService.js
 
-function handleWSLResize(tabId, { cols, rows }) {
-  if (wslProcesses[tabId]) {
-    try {
-      wslProcesses[tabId].resize(cols, rows);
-    } catch (error) {
-      console.error(`Error resizing WSL ${tabId}:`, error);
-    }
-  }
-}
+// Función handleWSLResize movida a src/main/services/WSLService.js
 
-function handleWSLStop(tabId) {
-  if (wslProcesses[tabId]) {
-    try {
-      // console.log(`Deteniendo proceso WSL para tab ${tabId}`); // Eliminado por limpieza de logs
-      const process = wslProcesses[tabId];
-      
-      // Remover listeners antes de terminar el proceso
-      process.removeAllListeners();
-      
-      // En Windows, usar destroy() para forzar terminación
-      if (os.platform() === 'win32') {
-        try {
-          process.kill(); // Intento graceful primero
-        } catch (e) {
-          // Si kill() falla, usar destroy()
-          try {
-            process.destroy();
-          } catch (destroyError) {
-            console.warn(`Error con destroy() en WSL ${tabId}:`, destroyError.message);
-          }
-        }
-      } else {
-        // En sistemas POSIX, usar SIGTERM
-        process.kill('SIGTERM');
-        
-        // Dar tiempo para que termine graciosamente
-        setTimeout(() => {
-          if (wslProcesses[tabId]) {
-            try {
-              wslProcesses[tabId].kill('SIGKILL');
-            } catch (e) {
-              // Ignorar errores de terminación forzada
-            }
-          }
-        }, 1000);
-      }
-      
-      delete wslProcesses[tabId];
-    } catch (error) {
-      console.error(`Error stopping WSL ${tabId}:`, error);
-    }
-  }
-}
+// Función handleWSLStop movida a src/main/services/WSLService.js
 
 // === WSL Distributions Terminal Support ===
 
@@ -2892,20 +2764,10 @@ function detectUbuntuAvailability() {
 }
 
 // Funciones de manejo para distribuciones WSL (genéricas)
-function handleWSLDistroStart(tabId, { cols, rows, distroInfo }) {
-    startWSLDistroSession(tabId, { cols, rows, distroInfo });
-}
+// Función handleWSLDistroStart movida a src/main/services/WSLService.js
 
 // Funciones de manejo para Ubuntu (compatibilidad)
-function handleUbuntuStart(tabId, { cols, rows, ubuntuInfo }) {
-    // Convertir ubuntuInfo a distroInfo para usar la función genérica
-    const distroInfo = ubuntuInfo ? {
-        ...ubuntuInfo,
-        category: 'ubuntu'
-    } : null;
-    
-    startWSLDistroSession(tabId, { cols, rows, distroInfo });
-}
+// Función handleUbuntuStart movida a src/main/services/WSLService.js
 
 // Función genérica para iniciar cualquier distribución WSL
 function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
@@ -3434,7 +3296,7 @@ function registerTabEvents(tabId) {
   ipcMain.removeAllListeners(`ubuntu:stop:${tabId}`);
   
   ipcMain.on(`ubuntu:start:${tabId}`, (event, data) => {
-    handleUbuntuStart(tabId, data);
+    startUbuntuSession(tabId, data);
   });
   
   ipcMain.on(`ubuntu:data:${tabId}`, (event, data) => {
@@ -3456,7 +3318,7 @@ function registerTabEvents(tabId) {
   ipcMain.removeAllListeners(`wsl-distro:stop:${tabId}`);
   
   ipcMain.on(`wsl-distro:start:${tabId}`, (event, data) => {
-    handleWSLDistroStart(tabId, data);
+    startWSLDistroSession(tabId, data);
   });
   
   ipcMain.on(`wsl-distro:data:${tabId}`, (event, data) => {
