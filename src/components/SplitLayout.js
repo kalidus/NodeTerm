@@ -230,14 +230,20 @@ const SplitLayout = ({
     // Estilo del handle horizontal
     const horizontalHandleStyle = {
       position: 'absolute',
-      bottom: '-3px',
+      bottom: '-4px',
       left: 0,
       width: '100%',
-      height: '6px',
-      backgroundColor: splitterColor || '#ddd',
+      height: '8px',
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
       cursor: 'row-resize',
       zIndex: 1000,
-      userSelect: 'none'
+      userSelect: 'none',
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
     };
 
     return (
@@ -269,7 +275,27 @@ const SplitLayout = ({
           <div 
             style={horizontalHandleStyle}
             onMouseDown={handleMouseDown}
-          />
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.borderTopColor = 'rgba(255, 255, 255, 0.4)';
+              e.target.style.borderBottomColor = 'rgba(255, 255, 255, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+              e.target.style.borderTopColor = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.borderBottomColor = 'rgba(255, 255, 255, 0.2)';
+            }}
+            title="Arrastra para redimensionar"
+          >
+            {/* Indicador visual horizontal */}
+            <div style={{
+              width: '40px',
+              height: '2px',
+              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              borderRadius: '1px',
+              opacity: 0.8
+            }} />
+          </div>
         </div>
         
         <div style={finalSecondaryPaneStyle}>
@@ -383,9 +409,9 @@ const SplitLayout = ({
         {/* Gutter */}
         <div 
           style={{
-            width: '6px',
+            width: '8px',
             height: '100%',
-            backgroundColor: 'transparent',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
             cursor: 'col-resize',
             flexShrink: 0,
             position: 'relative',
@@ -394,29 +420,29 @@ const SplitLayout = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRight: '1px solid rgba(255, 255, 255, 0.1)'
+            borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.2)'
           }}
           onMouseDown={handleMouseDown}
           onMouseEnter={(e) => {
-            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.4)';
+            e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
             e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.2)';
             e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.2)';
           }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = 'transparent';
-            e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.1)';
-            e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.1)';
-          }}
           title="Arrastra para redimensionar"
         >
-          {/* Indicador visual sutil del gutter */}
+          {/* Indicador visual del gutter */}
           <div style={{
-            width: '1px',
-            height: '30px',
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
-            borderRadius: '0.5px',
-            opacity: 0.6
+            width: '2px',
+            height: '40px',
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            borderRadius: '1px',
+            opacity: 0.8
           }} />
         </div>
         

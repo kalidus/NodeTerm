@@ -92,6 +92,24 @@
   min-width: 0 !important;
 }
 
+/* Scroll fino para terminales en split */
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
 /* Padding externo opcional para el terminal */
 .terminal-outer-padding .xterm-viewport,
 .terminal-outer-padding .xterm {
