@@ -322,7 +322,7 @@ const UbuntuTerminal = forwardRef(({
                 window.electron.ipcRenderer.send(`${channelPrefix}:start:${tabId}`, dataToSend);
                 
                 const distroLabel = ubuntuInfo?.label || 'WSL Distribution';
-                console.log(`Starting ${distroLabel} terminal session`);
+                // Starting terminal session
             }, delay);
 
             // Handle keyboard events for copy/paste
@@ -378,7 +378,7 @@ const UbuntuTerminal = forwardRef(({
             // Listen for WSL distribution ready event
             const readyListener = () => {
                 setIsConnected(true);
-                console.log(`Terminal ${tabId} ready and connected`);
+                // Terminal ready and connected
             };
             const onReadyUnsubscribe = window.electron.ipcRenderer.on(`${channelPrefix}:ready:${tabId}`, readyListener);
 
