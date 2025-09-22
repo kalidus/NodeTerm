@@ -303,11 +303,7 @@ function registerSSHHandlers(dependencies) {
 
   // SSH: Eliminar archivo o directorio
   ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
-    console.log('🔥🔥🔥 [SSH DELETE] HANDLER LLAMADO - INICIO INMEDIATO 🔥🔥🔥');
-    console.log('🔥🔥🔥 [SSH DELETE] Parámetros recibidos:', { tabId, remotePath, isDirectory });
     try {
-      console.log(`[SSH DELETE] Iniciando eliminación - Path: ${remotePath}, isDirectory: ${isDirectory}`);
-      
       const sftp = new SftpClient();
       let connectConfig;
       if (sshConfig.useBastionWallix) {
@@ -329,24 +325,19 @@ function registerSSHHandlers(dependencies) {
       }
       
       await sftp.connect(connectConfig);
-      console.log(`[SSH DELETE] Conectado exitosamente`);
       
       if (isDirectory) {
-        console.log(`[SSH DELETE] Eliminando directorio: ${remotePath}`);
         // Probar diferentes métodos para directorios
         try {
           await sftp.rmdir(remotePath, true);
         } catch (rmdirErr) {
-          console.log(`[SSH DELETE] rmdir(path, true) falló, intentando sin parámetro recursivo:`, rmdirErr.message);
           await sftp.rmdir(remotePath);
         }
       } else {
-        console.log(`[SSH DELETE] Eliminando archivo: ${remotePath}`);
         await sftp.delete(remotePath);
       }
       
       await sftp.end();
-      console.log(`[SSH DELETE] Operación completada exitosamente`);
       return { success: true };
     } catch (err) {
       console.error(`[SSH DELETE] Error en eliminación:`, err);
