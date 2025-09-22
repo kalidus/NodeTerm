@@ -313,7 +313,9 @@ const SplitLayout = ({
     
     const handleMouseMove = (e) => {
       if (!isDragging) return;
-      const container = e.currentTarget.closest('.split-container');
+      
+      // Buscar el contenedor split
+      const container = document.querySelector('.split-container');
       if (!container) return;
       
       const rect = container.getBoundingClientRect();
@@ -381,14 +383,42 @@ const SplitLayout = ({
         {/* Gutter */}
         <div 
           style={{
-            width: '4px',
+            width: '6px',
             height: '100%',
-            backgroundColor: splitterColor || '#555',
+            backgroundColor: 'transparent',
             cursor: 'col-resize',
-            flexShrink: 0
+            flexShrink: 0,
+            position: 'relative',
+            zIndex: 10,
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.1)'
           }}
           onMouseDown={handleMouseDown}
-        />
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.2)';
+            e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = 'transparent';
+            e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.1)';
+            e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.1)';
+          }}
+          title="Arrastra para redimensionar"
+        >
+          {/* Indicador visual sutil del gutter */}
+          <div style={{
+            width: '1px',
+            height: '30px',
+            backgroundColor: 'rgba(255, 255, 255, 0.3)',
+            borderRadius: '0.5px',
+            opacity: 0.6
+          }} />
+        </div>
         
         {/* Panel derecho */}
         <div style={{
