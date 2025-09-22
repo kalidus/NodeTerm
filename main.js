@@ -1,5 +1,5 @@
 // Declarar variables
-let alternativePtyConfig, SafeWindowsTerminal, registerSSHHandlers;
+let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers;
 
 try {
   // Importar configuraciones de terminal desde archivo externo
@@ -8,8 +8,8 @@ try {
   // Importar clase SafeWindowsTerminal desde archivo externo
   SafeWindowsTerminal = require('./main/classes/SafeWindowsTerminal');
 
-  // Importar manejadores 
-  registerSSHHandlers = require('./main/handlers/ssh-handlers');
+  // Importar manejadores centralizados
+  ({ registerAllHandlers } = require('./main/handlers'));
 } catch (err) {
   console.error('[MAIN] ERROR EN IMPORTACIONES:', err);
   console.error('[MAIN] Stack trace:', err.stack);
@@ -459,6 +459,27 @@ function createWindow() {
   ];
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+
+  // Registrar todos los handlers después de crear la ventana
+  try {
+    registerAllHandlers({ 
+      mainWindow, 
+      findSSHConnection,
+      disconnectAllGuacamoleConnections 
+    });
+    
+    // Enviar confirmación al renderer para que aparezca en DevTools
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.executeJavaScript(`
+          console.log('[MAIN-TO-RENDERER] Todos los handlers registrados exitosamente desde main.js');
+          console.log('[MAIN-TO-RENDERER] Eliminación de archivos debería funcionar ahora');
+        `);
+      }
+    }, 1000);
+  } catch (err) {
+    console.error('[MAIN] Error registrando handlers:', err);
+  }
 }
 
 // Función para detectar todas las distribuciones WSL disponibles
@@ -677,58 +698,7 @@ ipcMain.handle('get-version-info', () => {
 });
 
 // IPC handlers para funciones de View
-ipcMain.handle('app:reload', () => {
-  if (mainWindow) {
-    mainWindow.reload();
-  }
-});
-
-ipcMain.handle('app:force-reload', () => {
-  if (mainWindow) {
-    // Intentar cerrar conexiones Guacamole antes de recargar el renderer
-    try {
-      // Not awaited on purpose; quick cleanup then reload
-      disconnectAllGuacamoleConnections();
-    } catch {}
-    mainWindow.webContents.reloadIgnoringCache();
-  }
-});
-
-ipcMain.handle('app:toggle-dev-tools', () => {
-  if (mainWindow) {
-    if (mainWindow.webContents.isDevToolsOpened()) {
-      mainWindow.webContents.closeDevTools();
-    } else {
-      mainWindow.webContents.openDevTools();
-    }
-  }
-});
-
-ipcMain.handle('app:zoom-in', () => {
-  if (mainWindow) {
-    const currentZoom = mainWindow.webContents.getZoomLevel();
-    mainWindow.webContents.setZoomLevel(Math.min(currentZoom + 0.5, 3));
-  }
-});
-
-ipcMain.handle('app:zoom-out', () => {
-  if (mainWindow) {
-    const currentZoom = mainWindow.webContents.getZoomLevel();
-    mainWindow.webContents.setZoomLevel(Math.max(currentZoom - 0.5, -3));
-  }
-});
-
-ipcMain.handle('app:actual-size', () => {
-  if (mainWindow) {
-    mainWindow.webContents.setZoomLevel(0);
-  }
-});
-
-ipcMain.handle('app:toggle-fullscreen', () => {
-  if (mainWindow) {
-    mainWindow.setFullScreen(!mainWindow.isFullScreen());
-  }
-});
+// Handlers de aplicación movidos a main/handlers/app-handlers.js
 
 // IPC handlers para clipboard - Ya están definidos más adelante en el archivo
 
@@ -1719,100 +1689,7 @@ app.on('before-quit', () => {
   });
 });
 
-// Clipboard IPC Handlers
-ipcMain.handle('clipboard:readText', () => {
-  return clipboard.readText();
-});
-
-ipcMain.handle('clipboard:writeText', (event, text) => {
-  clipboard.writeText(text);
-});
-
-// Handler para mostrar el diálogo de guardado
-ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
-  const win = BrowserWindow.getFocusedWindow();
-  return await dialog.showSaveDialog(win, options);
-});
-
-// Handler para mostrar el diálogo de selección (abrir carpeta/archivo)
-ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
-  const win = BrowserWindow.getFocusedWindow();
-  // Asegurar propiedades por defecto si no vienen
-  const safeOptions = {
-    properties: ['openDirectory'],
-    ...options
-  };
-  return await dialog.showOpenDialog(win, safeOptions);
-});
-
-// IMPORT: utilidades mínimas para lectura de mtime y hash
-const crypto = require('crypto');
-function safeStatSync(path) { try { return fs.statSync(path); } catch { return null; } }
-function hashFileSync(path) {
-  try {
-    const data = fs.readFileSync(path);
-    return crypto.createHash('sha256').update(data).digest('hex');
-  } catch {
-    return null;
-  }
-}
-ipcMain.handle('import:get-file-info', async (event, filePath) => {
-  const stat = safeStatSync(filePath);
-  if (!stat) return { ok: false };
-  return { ok: true, mtimeMs: stat.mtimeMs, size: stat.size };
-});
-ipcMain.handle('import:get-file-hash', async (event, filePath) => {
-  const hash = hashFileSync(filePath);
-  if (!hash) return { ok: false };
-  return { ok: true, hash };
-});
-ipcMain.handle('import:read-file', async (event, filePath) => {
-  try {
-    const data = fs.readFileSync(filePath, 'utf-8');
-    return { ok: true, content: data };
-  } catch (e) {
-    return { ok: false, error: e?.message };
-  }
-});
-
-// Utilidades adicionales para importación vinculada vía navegador/descargas
-ipcMain.handle('import:get-downloads-path', async () => {
-  try {
-    return { ok: true, path: app.getPath('downloads') };
-  } catch (e) {
-    return { ok: false, error: e?.message };
-  }
-});
-
-ipcMain.handle('import:open-external', async (event, url) => {
-  try {
-    const { shell } = require('electron');
-    await shell.openExternal(url);
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e?.message };
-  }
-});
-
-ipcMain.handle('import:find-latest-xml-download', async (event, { sinceMs } = {}) => {
-  try {
-    const downloadsDir = app.getPath('downloads');
-    const entries = fs.readdirSync(downloadsDir).filter(name => name.toLowerCase().endsWith('.xml'));
-    let latest = null;
-    for (const name of entries) {
-      const fullPath = require('path').join(downloadsDir, name);
-      const stat = safeStatSync(fullPath);
-      if (!stat) continue;
-      if (sinceMs && stat.mtimeMs < sinceMs) continue;
-      if (!latest || stat.mtimeMs > latest.mtimeMs) {
-        latest = { path: fullPath, fileName: name, mtimeMs: stat.mtimeMs, size: stat.size };
-      }
-    }
-    return { ok: true, latest };
-  } catch (e) {
-    return { ok: false, error: e?.message };
-  }
-});
+// Handlers del sistema (clipboard, dialog, import) movidos a main/handlers/system-handlers.js
 
 
 
@@ -1898,22 +1775,7 @@ async function findSSHConnection(tabId, sshConfig = null) {
   return null;
 }
 
-// Registrar manejadores SSH después de definir findSSHConnection
-try {
-  registerSSHHandlers({ findSSHConnection });
-  
-  // Enviar confirmación al renderer para que aparezca en DevTools
-  setTimeout(() => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.executeJavaScript(`
-        console.log('[MAIN-TO-RENDERER] SSH handlers registrados exitosamente desde main.js');
-        console.log('[MAIN-TO-RENDERER] Eliminación de archivos debería funcionar ahora');
-      `);
-    }
-  }, 1000);
-} catch (err) {
-  console.error('[MAIN] Error registrando SSH handlers:', err);
-}
+// Los handlers se registrarán después de crear la ventana principal
 
 // --- INICIO BLOQUE RESTAURACIÓN STATS ---
 // Función de statsLoop para conexiones directas (SSH2Promise)
