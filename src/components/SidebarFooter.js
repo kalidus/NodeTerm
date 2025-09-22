@@ -30,7 +30,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
     );
   }
   const handleAppMenuClick = (event) => {
-    console.log('handleAppMenuClick SidebarFooter ejecutado - menú unificado');
+    // Handle app menu click
     // Usar el menú unificado
     const menuStructure = createAppMenu(onShowImportDialog);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');

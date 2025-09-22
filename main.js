@@ -441,15 +441,7 @@ function createWindow() {
       disconnectAllGuacamoleConnections 
     });
     
-    // Enviar confirmación al renderer para que aparezca en DevTools
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.executeJavaScript(`
-          console.log('[MAIN-TO-RENDERER] Todos los handlers registrados exitosamente desde main.js');
-          console.log('[MAIN-TO-RENDERER] Eliminación de archivos debería funcionar ahora');
-        `);
-      }
-    }, 1000);
+        // Handlers registrados exitosamente
   } catch (err) {
     console.error('[MAIN] Error registrando handlers:', err);
   }
@@ -2176,52 +2168,12 @@ const pty = require('node-pty');
 let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
 let wslProcesses = {}; // Cambiar a objeto para múltiples procesos
 
-// Function to detect the best available Linux shell
-function getLinuxShell() {
-  const shells = [
-    '/usr/bin/zsh',      // Zsh - modern shell with great features
-    '/bin/zsh',
-    '/usr/bin/fish',     // Fish - user-friendly shell
-    '/bin/fish',
-    '/usr/bin/bash',     // Bash - most common default
-    '/bin/bash',
-    '/usr/bin/dash',     // Dash - lightweight
-    '/bin/dash',
-    '/bin/sh'            // POSIX shell - always available fallback
-  ];
-
-  // Check user's default shell first
-  try {
-    const userShell = process.env.SHELL;
-    if (userShell && fs.existsSync(userShell)) {
-      console.log(`Using user's default shell: ${userShell}`);
-      return userShell;
-    }
-  } catch (e) {
-    console.warn('Could not detect user shell:', e.message);
-  }
-
-  // Check available shells in order of preference
-  for (const shell of shells) {
-    try {
-      if (fs.existsSync(shell)) {
-        console.log(`Detected Linux shell: ${shell}`);
-        return shell;
-      }
-    } catch (e) {
-      // Continue to next shell
-    }
-  }
-
-  // Ultimate fallback
-  console.warn('No common shells found, falling back to /bin/sh');
-  return '/bin/sh';
-}
+// Función getLinuxShell movida a src/main/services/WSLService.js
 
 // Start PowerShell session
 ipcMain.on('powershell:start', (event, { cols, rows }) => {
   const tabId = 'default'; // Fallback para compatibilidad
-  startPowerShellSession(tabId, { cols, rows });
+  PowerShell.PowerShellHandlers.start(tabId, { cols, rows });
 });
 
 // Start terminal session with tab ID (PowerShell on Windows, native shell on Linux/macOS)
@@ -2476,7 +2428,7 @@ ipcMain.on(/^powershell:start:(.+)$/, (event, { cols, rows }) => {
     registerTabEvents(tabId);
   }
   
-  startPowerShellSession(tabId, { cols, rows });
+  PowerShell.PowerShellHandlers.start(tabId, { cols, rows });
 });
 
 // Using only tab-specific PowerShell handlers for better control
@@ -2560,25 +2512,25 @@ function handlePowerShellStop(tabId) {
 // Start WSL session
 ipcMain.on('wsl:start', (event, { cols, rows }) => {
   const tabId = 'default';
-  handleWSLStart(tabId, { cols, rows });
+  WSL.WSLHandlers.start(tabId, { cols, rows });
 });
 
 // Send data to WSL
 ipcMain.on('wsl:data', (event, data) => {
   const tabId = 'default';
-  handleWSLData(tabId, data);
+  WSL.WSLHandlers.data(tabId, data);
 });
 
 // Resize WSL terminal
 ipcMain.on('wsl:resize', (event, { cols, rows }) => {
   const tabId = 'default';
-  handleWSLResize(tabId, { cols, rows });
+  WSL.WSLHandlers.resize(tabId, { cols, rows });
 });
 
 // Stop WSL session
 ipcMain.on('wsl:stop', () => {
   const tabId = 'default';
-  handleWSLStop(tabId);
+  WSL.WSLHandlers.stop(tabId);
 });
 
 // Funciones de manejo para WSL
@@ -3438,19 +3390,19 @@ function registerTabEvents(tabId) {
   ipcMain.removeAllListeners(`powershell:stop:${tabId}`);
   
   ipcMain.on(`powershell:start:${tabId}`, (event, data) => {
-    handlePowerShellStart(tabId, data);
+    PowerShell.PowerShellHandlers.start(tabId, data);
   });
   
   ipcMain.on(`powershell:data:${tabId}`, (event, data) => {
-    handlePowerShellData(tabId, data);
+    PowerShell.PowerShellHandlers.data(tabId, data);
   });
   
   ipcMain.on(`powershell:resize:${tabId}`, (event, data) => {
-    handlePowerShellResize(tabId, data);
+    PowerShell.PowerShellHandlers.resize(tabId, data);
   });
   
   ipcMain.on(`powershell:stop:${tabId}`, (event) => {
-    handlePowerShellStop(tabId);
+    PowerShell.PowerShellHandlers.stop(tabId);
   });
   
   // WSL events
@@ -3460,19 +3412,19 @@ function registerTabEvents(tabId) {
   ipcMain.removeAllListeners(`wsl:stop:${tabId}`);
   
   ipcMain.on(`wsl:start:${tabId}`, (event, data) => {
-    handleWSLStart(tabId, data);
+    WSL.WSLHandlers.start(tabId, data);
   });
   
   ipcMain.on(`wsl:data:${tabId}`, (event, data) => {
-    handleWSLData(tabId, data);
+    WSL.WSLHandlers.data(tabId, data);
   });
   
   ipcMain.on(`wsl:resize:${tabId}`, (event, data) => {
-    handleWSLResize(tabId, data);
+    WSL.WSLHandlers.resize(tabId, data);
   });
   
   ipcMain.on(`wsl:stop:${tabId}`, (event) => {
-    handleWSLStop(tabId);
+    WSL.WSLHandlers.stop(tabId);
   });
   
   // Ubuntu events
