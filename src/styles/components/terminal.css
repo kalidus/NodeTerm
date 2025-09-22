@@ -37,8 +37,8 @@
 }
 
 .terminal-splitter .p-splitter-gutter {
-  width: 8px !important;
-  margin: 0 -4px !important;
+  width: 6px !important;
+  margin: 0 -3px !important;
   cursor: col-resize !important;
   transition: none !important;
   position: relative;
@@ -94,7 +94,7 @@
 
 /* Scroll fino para terminales en split */
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar {
-  width: 6px !important;
+  width: 4px !important;
 }
 
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-track {
