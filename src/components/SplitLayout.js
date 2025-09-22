@@ -115,7 +115,7 @@ const SplitLayout = ({
     transition: 'none',
     background: 'transparent',
     borderColor: 'transparent',
-    width: orientation === 'vertical' ? '8px' : '100%',
+    width: orientation === 'vertical' ? '6px' : '100%',
     height: orientation === 'horizontal' ? '8px' : '100%',
     cursor: orientation === 'vertical' ? 'col-resize' : 'row-resize',
     margin: orientation === 'vertical' ? '0 -4px' : '0',
@@ -409,7 +409,7 @@ const SplitLayout = ({
         {/* Gutter */}
         <div 
           style={{
-            width: '8px',
+            width: '6px',
             height: '100%',
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
             cursor: 'col-resize',
