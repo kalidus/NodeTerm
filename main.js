@@ -94,6 +94,9 @@ let guacamoleServerReadyAt = 0; // timestamp when guacamole-lite websocket serve
 const activeGuacamoleConnections = new Set();
 // Watchdog configurable para inactividad de guacd (ms). 0 = desactivado. Por defecto 1h
 let guacdInactivityTimeoutMs = 3600000;
+// Flag para evitar inicialización múltiple
+let guacamoleInitializing = false;
+let guacamoleInitialized = false;
 
 // Sistema de throttling para conexiones SSH
 const connectionThrottle = {
@@ -168,6 +171,13 @@ setInterval(() => {
  * Inicializa servicios de Guacamole de forma asíncrona
  */
 async function initializeGuacamoleServices() {
+  // Evitar inicialización múltiple
+  if (guacamoleInitializing || guacamoleInitialized) {
+    return;
+  }
+  
+  guacamoleInitializing = true;
+  
   try {
     console.log('🚀 Inicializando servicios Guacamole...');
     // Cargar método preferido persistido antes de inicializar
@@ -280,12 +290,14 @@ async function initializeGuacamoleServices() {
     });
 
     guacamoleServerReadyAt = Date.now();
+    guacamoleInitialized = true;
     console.log('✅ Servicios Guacamole inicializados correctamente');
     console.log(`🌐 Servidor WebSocket: localhost:${websocketOptions.port}`);
     console.log(`🔧 GuacD: ${guacdOptions.host}:${guacdOptions.port}`);
     
   } catch (error) {
     console.error('❌ Error inicializando servicios Guacamole:', error);
+    guacamoleInitializing = false; // Reset flag en caso de error
   }
 }
 
@@ -355,9 +367,6 @@ function createWindow() {
 
   mainWindow.removeMenu();
 
-  // Inicializar servicios de Guacamole asíncronamente
-  initializeGuacamoleServices();
-
   // Menú de desarrollo para abrir DevTools
   const isMac = process.platform === 'darwin';
   const template = [
@@ -401,15 +410,24 @@ function createWindow() {
       disconnectAllGuacamoleConnections,
       guacdService,
       guacamoleServer,
+      guacamoleServerReadyAt,
       sendToRenderer,
       guacdInactivityTimeoutMs,
       packageJson,
       sshConnections,
       cleanupOrphanedConnections,
-      isAppQuitting
+      isAppQuitting,
+      getGuacamoleServer: () => guacamoleServer,
+      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt
     });
     
-        // Handlers registrados exitosamente
+    // Handlers registrados exitosamente
+    
+    // Inicializar servicios de Guacamole después de registrar los handlers
+    initializeGuacamoleServices().catch((error) => {
+      console.error('❌ Error en inicialización de Guacamole:', error);
+    });
+    
   } catch (err) {
     console.error('[MAIN] Error registrando handlers:', err);
   }
@@ -1868,171 +1886,172 @@ async function disconnectAllGuacamoleConnections() {
 
 // Handler guacamole:disconnect-all movido a src/main/handlers/guacamole-handlers.js
 
-ipcMain.handle('guacamole:create-token', async (event, config) => {
-  try {
-    console.log('📋 [MAIN] CONFIG COMPLETO RECIBIDO:', config);
-    // Si guacd está en modo mock, informar al usuario y rechazar
-    try {
-      if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
-        const message = 'RDP requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar RDP con Guacamole.';
-        console.warn('⚠️  [MAIN] Intento de crear token con guacd en modo mock. ' + message);
-        return { success: false, error: message };
-      }
-    } catch {}
+// Handler guacamole:create-token movido a src/main/handlers/guacamole-handlers.js
+// ipcMain.handle('guacamole:create-token', async (event, config) => {
+  // try {
+  //   console.log('📋 [MAIN] CONFIG COMPLETO RECIBIDO:', config);
+    // // Si guacd está en modo mock, informar al usuario y rechazar
+    // try {
+    //   if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
+    //     const message = 'RDP requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar RDP con Guacamole.';
+    //     console.warn('⚠️  [MAIN] Intento de crear token con guacd en modo mock. ' + message);
+    //     return { success: false, error: message };
+    //   }
+    // } catch {}
     
-    // Calcular resolución final: priorizar width/height, luego parsear resolution
-    let finalWidth = config.width || 1024;
-    let finalHeight = config.height || 768;
+    // // Calcular resolución final: priorizar width/height, luego parsear resolution
+    // let finalWidth = config.width || 1024;
+    // let finalHeight = config.height || 768;
     
-    // Si no hay width/height específicos pero sí resolution, parsearla
-    if (!config.width && !config.height && config.resolution) {
-      const [width, height] = config.resolution.split('x');
-      if (width && height) {
-        finalWidth = parseInt(width);
-        finalHeight = parseInt(height);
-        console.log(`🔄 [MAIN] Parseando resolution "${config.resolution}" → ${finalWidth}x${finalHeight}`);
-      }
-    }
+    // // Si no hay width/height específicos pero sí resolution, parsearla
+    // if (!config.width && !config.height && config.resolution) {
+    //   const [width, height] = config.resolution.split('x');
+    //   if (width && height) {
+    //     finalWidth = parseInt(width);
+    //     finalHeight = parseInt(height);
+    //     console.log(`🔄 [MAIN] Parseando resolution "${config.resolution}" → ${finalWidth}x${finalHeight}`);
+    //   }
+    // }
 
-    // Normalizar profundidad de color
-    let normalizedColorDepth = 32;
-    try {
-      const candidateDepth = parseInt(config.colorDepth, 10);
-      const allowedDepths = [8, 16, 24, 32];
-      if (allowedDepths.includes(candidateDepth)) {
-        normalizedColorDepth = candidateDepth;
-      }
-    } catch {}
+    // // Normalizar profundidad de color
+    // let normalizedColorDepth = 32;
+    // try {
+    //   const candidateDepth = parseInt(config.colorDepth, 10);
+    //   const allowedDepths = [8, 16, 24, 32];
+    //   if (allowedDepths.includes(candidateDepth)) {
+    //     normalizedColorDepth = candidateDepth;
+    //   }
+    // } catch {}
 
-    console.log('🔐 [MAIN] Creando token para configuración RDP:', {
-      hostname: config.hostname,
-      username: config.username,
-      password: config.password ? '***OCULTA***' : 'NO DEFINIDA',
-      port: config.port,
-      width: finalWidth,     // ← Mostrar resolución final calculada
-      height: finalHeight,   // ← Mostrar resolución final calculada
-      dpi: config.dpi,
-      colorDepth: normalizedColorDepth,
-      enableDrive: config.enableDrive,
-      enableWallpaper: config.enableWallpaper,
-      redirectClipboard: config.redirectClipboard,
-      security: config.security,
-      resolution: config.resolution, // ← Mostrar resolution original si existe
-      autoResize: config.autoResize  // ← Mostrar autoResize si existe
-    });
+    // console.log('🔐 [MAIN] Creando token para configuración RDP:', {
+    //   hostname: config.hostname,
+    //   username: config.username,
+    //   password: config.password ? '***OCULTA***' : 'NO DEFINIDA',
+    //   port: config.port,
+    //   width: finalWidth,     // ← Mostrar resolución final calculada
+    //   height: finalHeight,   // ← Mostrar resolución final calculada
+    //   dpi: config.dpi,
+    //   colorDepth: normalizedColorDepth,
+    //   enableDrive: config.enableDrive,
+    //   enableWallpaper: config.enableWallpaper,
+    //   redirectClipboard: config.redirectClipboard,
+    //   security: config.security,
+    //   resolution: config.resolution, // ← Mostrar resolution original si existe
+    //   autoResize: config.autoResize  // ← Mostrar autoResize si existe
+    // });
     
-    if (!guacamoleServer) {
-      throw new Error('Servidor Guacamole no está inicializado');
-    }
+    // if (!guacamoleServer) {
+    //   throw new Error('Servidor Guacamole no está inicializado');
+    // }
 
-    const crypto = require('crypto');
-    const CIPHER = 'AES-256-CBC';
-    // La clave debe ser exactamente 32 bytes para AES-256-CBC
-    const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
-    const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
+    // const crypto = require('crypto');
+    // const CIPHER = 'AES-256-CBC';
+    // // La clave debe ser exactamente 32 bytes para AES-256-CBC
+    // const SECRET_KEY_RAW = 'NodeTermGuacamoleSecretKey2024!';
+    // const SECRET_KEY = crypto.createHash('sha256').update(SECRET_KEY_RAW).digest(); // 32 bytes exactos
 
-    // Preparar campos de drive si el usuario lo activó
-    let driveSettings = {};
-    try {
-      if (config.enableDrive) {
-        // Si llega una carpeta de host desde UI, resolverla según método actual
-        let resolvedDrivePath = null;
-        if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
-          resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
-        } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
-          resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
-        }
-        const drivePath = resolvedDrivePath;
-        const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
-        if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
-          driveSettings = {
-            'enable-drive': true,
-            'drive-path': drivePath,
-            'drive-name': driveName,
-            'create-drive-path': true
-          };
-        } else {
-          // fallback: solo activar drive sin ruta explícita
-          driveSettings = {
-            'enable-drive': true,
-            'create-drive-path': true
-          };
-        }
-      }
-    } catch (e) {
-      // Si algo falla, no bloquear la conexión, sólo loguear
-      console.warn('⚠️  [MAIN] No se pudo calcular drive-path para Guacamole:', e?.message || e);
-    }
+    // // Preparar campos de drive si el usuario lo activó
+    // let driveSettings = {};
+    // try {
+    //   if (config.enableDrive) {
+        // // Si llega una carpeta de host desde UI, resolverla según método actual
+        // let resolvedDrivePath = null;
+        // if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
+        //   resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
+        // } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
+        //   resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
+        // }
+        // const drivePath = resolvedDrivePath;
+        // const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
+        // if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
+        //   driveSettings = {
+        //     'enable-drive': true,
+        //     'drive-path': drivePath,
+        //     'drive-name': driveName,
+        //     'create-drive-path': true
+        //   };
+        // } else {
+        //   // fallback: solo activar drive sin ruta explícita
+        //   driveSettings = {
+        //     'enable-drive': true,
+        //     'create-drive-path': true
+        //   };
+        // }
+      // }
+    // } catch (e) {
+      // // Si algo falla, no bloquear la conexión, sólo loguear
+      // console.warn('⚠️  [MAIN] No se pudo calcular drive-path para Guacamole:', e?.message || e);
+    // }
 
-    const tokenObject = {
-      connection: {
-        type: "rdp",
-        settings: {
-          hostname: config.hostname,
-          username: config.username,
-          password: config.password,
-          port: config.port || 3389,
-          security: config.security || "any",
-          "ignore-cert": true,
-          // Drive redirection
-          ...driveSettings,
-          "enable-wallpaper": config.enableWallpaper || false,
-          width: finalWidth,
-          height: finalHeight,
-          dpi: config.dpi || 96,
-          "color-depth": normalizedColorDepth,
-          // Características visuales opcionales (solo si están activadas)
-          "enable-desktop-composition": config.enableDesktopComposition === true ? true : undefined,
-          "enable-font-smoothing": config.enableFontSmoothing === true ? true : undefined,
-          "enable-theming": config.enableTheming === true ? true : undefined,
-          "enable-full-window-drag": config.enableFullWindowDrag === true ? true : undefined,
-          "enable-menu-animations": config.enableMenuAnimations === true ? true : undefined,
-          // Configuración específica para resize dinámico
-          "resize-method": config.autoResize ? "display-update" : "reconnect",
-          "enable-desktop-composition": config.autoResize ? true : false,
-          "enable-full-window-drag": config.autoResize ? true : false,
-          // Portapapeles: desactivar solo si el usuario lo deshabilitó
-          "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
-          // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
-          "enable-gfx": (config.enableGfx === true) ? true : undefined,
-          // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
-          "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
-          "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
-          "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
-          "disable-copy-rect": config.disableCopyRect === true ? true : undefined
-        }
-      }
-    };
+    // const tokenObject = {
+    //   connection: {
+    //     type: "rdp",
+    //     settings: {
+    //       hostname: config.hostname,
+    //       username: config.username,
+    //       password: config.password,
+    //       port: config.port || 3389,
+    //       security: config.security || "any",
+    //       "ignore-cert": true,
+    //       // Drive redirection
+    //       ...driveSettings,
+    //       "enable-wallpaper": config.enableWallpaper || false,
+    //       width: finalWidth,
+    //       height: finalHeight,
+    //       dpi: config.dpi || 96,
+    //       "color-depth": normalizedColorDepth,
+          // // Características visuales opcionales (solo si están activadas)
+          // "enable-desktop-composition": config.enableDesktopComposition === true ? true : undefined,
+          // "enable-font-smoothing": config.enableFontSmoothing === true ? true : undefined,
+          // "enable-theming": config.enableTheming === true ? true : undefined,
+          // "enable-full-window-drag": config.enableFullWindowDrag === true ? true : undefined,
+          // "enable-menu-animations": config.enableMenuAnimations === true ? true : undefined,
+          // // Configuración específica para resize dinámico
+          // "resize-method": config.autoResize ? "display-update" : "reconnect",
+          // "enable-desktop-composition": config.autoResize ? true : false,
+          // "enable-full-window-drag": config.autoResize ? true : false,
+          // // Portapapeles: desactivar solo si el usuario lo deshabilitó
+          // "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
+          // // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
+          // "enable-gfx": (config.enableGfx === true) ? true : undefined,
+          // // Flags de prueba (enviar solo el activo si es true). Guacamole ignora claves con undefined.
+          // "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
+          // "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
+          // "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
+          // "disable-copy-rect": config.disableCopyRect === true ? true : undefined
+        // }
+      // }
+    // };
     
-    console.log('📄 [MAIN] Token objeto final:', {
-      type: tokenObject.connection.type,
-      settings: {
-        ...tokenObject.connection.settings,
-        password: tokenObject.connection.settings.password ? '***OCULTA***' : 'NO DEFINIDA'
-      }
-    });
+    // console.log('📄 [MAIN] Token objeto final:', {
+    //   type: tokenObject.connection.type,
+    //   settings: {
+    //     ...tokenObject.connection.settings,
+    //     password: tokenObject.connection.settings.password ? '***OCULTA***' : 'NO DEFINIDA'
+    //   }
+    // });
 
-    // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
-    const Crypt = require('guacamole-lite/lib/Crypt.js');
-    const crypt = new Crypt(CIPHER, SECRET_KEY);
-    const token = crypt.encrypt(tokenObject);
-    // Añadir '&' al final para asegurar separación si el cliente añade más parámetros
-    const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}&`;
+    // // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
+    // const Crypt = require('guacamole-lite/lib/Crypt.js');
+    // const crypt = new Crypt(CIPHER, SECRET_KEY);
+    // const token = crypt.encrypt(tokenObject);
+    // // Añadir '&' al final para asegurar separación si el cliente añade más parámetros
+    // const websocketUrl = `ws://localhost:8081/?token=${encodeURIComponent(token)}&`;
     
-    console.log('🌐 [MAIN] URL WebSocket generada:', websocketUrl.substring(0, 50) + '...');
+    // console.log('🌐 [MAIN] URL WebSocket generada:', websocketUrl.substring(0, 50) + '...');
     
-    return {
-      success: true,
-      token: token,
-      websocketUrl: websocketUrl
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-});
+    // return {
+    //   success: true,
+    //   token: token,
+    //   websocketUrl: websocketUrl
+    // };
+  // } catch (error) {
+    // return {
+    //   success: false,
+    //   error: error.message
+    // };
+  // }
+// });
 
 // === Terminal Support ===
 const pty = require('node-pty');

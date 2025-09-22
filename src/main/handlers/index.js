@@ -17,8 +17,11 @@ const registerSSHHandlers = require('./ssh-handlers');
  * @param {Function} dependencies.disconnectAllGuacamoleConnections - Función para desconectar conexiones Guacamole
  * @param {Object} dependencies.guacdService - Servicio de guacd
  * @param {Object} dependencies.guacamoleServer - Servidor Guacamole
+ * @param {Number} dependencies.guacamoleServerReadyAt - Timestamp de inicialización del servidor
  * @param {Function} dependencies.sendToRenderer - Función para enviar datos al renderer
  * @param {Object} dependencies.guacdInactivityTimeoutMs - Variable de timeout
+ * @param {Function} dependencies.getGuacamoleServer - Función getter para obtener el servidor actual
+ * @param {Function} dependencies.getGuacamoleServerReadyAt - Función getter para obtener el timestamp actual
  * @param {Object} dependencies.packageJson - Información del package.json
  * @param {Object} dependencies.sshConnections - Conexiones SSH activas
  * @param {Function} dependencies.cleanupOrphanedConnections - Función para limpiar conexiones
