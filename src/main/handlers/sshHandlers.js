@@ -24,6 +24,53 @@ class SSHHandlers {
   }
 
   /**
+   * Envía datos al renderer de forma segura
+   */
+  sendToRenderer(sender, eventName, ...args) {
+    try {
+      if (sender && !sender.isDestroyed()) {
+        sender.send(eventName, ...args);
+      }
+    } catch (error) {
+      console.error('Error sending to renderer:', error);
+    }
+  }
+
+  /**
+   * Bucle de estadísticas para conexiones bastión
+   */
+  wallixStatsLoop(tabId) {
+    const connObj = this.sshConnections[tabId];
+    if (this.activeStatsTabId !== tabId) {
+      if (connObj) {
+        connObj.statsTimeout = null;
+        connObj.statsLoopRunning = false;
+      }
+      return;
+    }
+
+    if (!connObj || !connObj.stream || connObj.statsLoopRunning) {
+      return;
+    }
+
+    connObj.statsLoopRunning = true;
+
+    try {
+      // Implementar lógica de estadísticas aquí
+      // Por ahora solo un placeholder
+      connObj.statsTimeout = setTimeout(() => {
+        connObj.statsLoopRunning = false;
+        if (this.activeStatsTabId === tabId) {
+          this.wallixStatsLoop(tabId);
+        }
+      }, 2000);
+    } catch (error) {
+      console.error('Error in wallixStatsLoop:', error);
+      connObj.statsLoopRunning = false;
+    }
+  }
+
+  /**
    * Configura todos los manejadores SSH
    */
   setupHandlers() {
@@ -285,32 +332,243 @@ class SSHHandlers {
    * Conecta a un servidor SSH
    */
   async connectSSH(event, tabId, config) {
-    // Implementación pendiente - se moverá desde main.js
-    console.log('SSH Connect - Not implemented yet');
+    try {
+      // Para bastiones: usar cacheKey único por destino (permite reutilización)
+      // Para SSH directo: usar pooling normal para eficiencia
+      const cacheKey = config.useBastionWallix 
+        ? `bastion-${config.bastionUser}@${config.bastionHost}->${config.username}@${config.host}:${config.port || 22}`
+        : `${config.username}@${config.host}:${config.port || 22}`;
+      
+      // Aplicar throttling solo para SSH directo (bastiones son únicos)
+      if (!config.useBastionWallix) {
+        const lastAttempt = this.connectionThrottle.lastAttempt.get(cacheKey) || 0;
+        const now = Date.now();
+        const timeSinceLastAttempt = now - lastAttempt;
+        
+        if (timeSinceLastAttempt < this.connectionThrottle.minInterval) {
+          const waitTime = this.connectionThrottle.minInterval - timeSinceLastAttempt;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.connectionThrottle.lastAttempt.set(cacheKey, Date.now());
+      }
+      
+      // Para bastiones: cada terminal tiene su propia conexión independiente (no pooling)
+      // Para SSH directo: usar pooling normal para eficiencia
+      let ssh;
+      let isReusedConnection = false;
+
+      if (config.useBastionWallix) {
+        // BASTIÓN: Usar ssh2 puro para crear una conexión y shell independientes
+        const bastionConfig = {
+          bastionHost: config.bastionHost,
+          port: 22,
+          bastionUser: config.bastionUser,
+          password: config.password
+        };
+        
+        const { conn } = createBastionShell(
+          bastionConfig,
+          (data) => {
+            this.sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+          },
+          () => {
+            this.sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+            if (this.sshConnections[tabId] && this.sshConnections[tabId].statsTimeout) {
+              clearTimeout(this.sshConnections[tabId].statsTimeout);
+            }
+            this.sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+              originalKey: config.originalKey || tabId,
+              tabId: tabId
+            });
+            // Limpiar estado persistente de bastión al cerrar la pestaña
+            delete this.bastionStatsState[tabId];
+            delete this.sshConnections[tabId];
+          },
+          (err) => {
+            this.sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+          },
+          (stream) => {
+            if (this.sshConnections[tabId]) {
+              this.sshConnections[tabId].stream = stream;
+              // Si hay un resize pendiente, aplicarlo ahora
+              const pending = this.sshConnections[tabId]._pendingResize;
+              if (pending && stream && !stream.destroyed && typeof stream.setWindow === 'function') {
+                const safeRows = Math.max(1, Math.min(300, pending.rows || 24));
+                const safeCols = Math.max(1, Math.min(500, pending.cols || 80));
+                stream.setWindow(safeRows, safeCols);
+                this.sshConnections[tabId]._pendingResize = null;
+              }
+              // Lanzar bucle de stats SOLO cuando el stream está listo
+              // Solo iniciar stats si esta pestaña está activa
+              if (this.activeStatsTabId === tabId) {
+                this.wallixStatsLoop(tabId);
+              }
+            }
+          }
+        );
+        
+        // Guardar la conexión para gestión posterior (stream se asigna en onShellReady)
+        this.sshConnections[tabId] = {
+          ssh: conn,
+          stream: undefined,
+          config,
+          cacheKey,
+          originalKey: config.originalKey || tabId,
+          previousCpu: null,
+          statsTimeout: null,
+          previousNet: null,
+          previousTime: null,
+          statsLoopRunning: false
+        };
+        
+        ssh = conn;
+      } else {
+        // SSH DIRECTO: Usar pooling para eficiencia
+        if (this.sshConnectionPool[cacheKey]) {
+          ssh = this.sshConnectionPool[cacheKey];
+          isReusedConnection = true;
+        } else {
+          ssh = new SSH2Promise(config);
+          await ssh.connect();
+          this.sshConnectionPool[cacheKey] = ssh;
+        }
+        
+        // Crear shell interactivo
+        const shell = await ssh.shell({
+          term: 'xterm-256color',
+          cols: config.cols || 80,
+          rows: config.rows || 24
+        });
+        
+        // Guardar la conexión
+        this.sshConnections[tabId] = {
+          ssh,
+          shell,
+          config,
+          cacheKey,
+          originalKey: config.originalKey || tabId
+        };
+        
+        // Configurar eventos del shell
+        shell.on('data', (data) => {
+          this.sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+        });
+        
+        shell.on('close', () => {
+          this.sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
+          this.sendToRenderer(event.sender, 'ssh-connection-disconnected', {
+            originalKey: config.originalKey || tabId,
+            tabId: tabId
+          });
+          delete this.sshConnections[tabId];
+        });
+        
+        shell.on('error', (err) => {
+          this.sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
+        });
+      }
+      
+      // Notificar conexión exitosa
+      this.sendToRenderer(event.sender, 'ssh-connection-established', {
+        tabId,
+        originalKey: config.originalKey || tabId,
+        isReusedConnection
+      });
+      
+    } catch (error) {
+      console.error('Error connecting SSH:', error);
+      this.sendToRenderer(event.sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${error.message}\r\n`);
+    }
   }
 
   /**
    * Envía datos a la conexión SSH
    */
   sendSSHData(event, tabId, data) {
-    // Implementación pendiente - se moverá desde main.js
-    console.log('SSH Data - Not implemented yet');
+    const connection = this.sshConnections[tabId];
+    if (!connection) {
+      console.warn(`No SSH connection found for tabId: ${tabId}`);
+      return;
+    }
+
+    try {
+      if (connection.stream) {
+        // Bastión: usar stream directo
+        connection.stream.write(data);
+      } else if (connection.shell) {
+        // SSH directo: usar shell
+        connection.shell.write(data);
+      }
+    } catch (error) {
+      console.error('Error sending SSH data:', error);
+    }
   }
 
   /**
    * Redimensiona el terminal SSH
    */
   resizeSSH(event, tabId, rows, cols) {
-    // Implementación pendiente - se moverá desde main.js
-    console.log('SSH Resize - Not implemented yet');
+    const connection = this.sshConnections[tabId];
+    if (!connection) {
+      console.warn(`No SSH connection found for tabId: ${tabId}`);
+      return;
+    }
+
+    const safeRows = Math.max(1, Math.min(300, rows || 24));
+    const safeCols = Math.max(1, Math.min(500, cols || 80));
+
+    try {
+      if (connection.stream && typeof connection.stream.setWindow === 'function') {
+        // Bastión: usar setWindow
+        connection.stream.setWindow(safeRows, safeCols);
+      } else if (connection.shell && typeof connection.shell.setWindow === 'function') {
+        // SSH directo: usar setWindow del shell
+        connection.shell.setWindow(safeRows, safeCols);
+      } else if (connection.stream) {
+        // Si el stream no está listo, guardar para aplicar después
+        connection._pendingResize = { rows: safeRows, cols: safeCols };
+      }
+    } catch (error) {
+      console.error('Error resizing SSH terminal:', error);
+    }
   }
 
   /**
    * Desconecta la conexión SSH
    */
   disconnectSSH(event, tabId) {
-    // Implementación pendiente - se moverá desde main.js
-    console.log('SSH Disconnect - Not implemented yet');
+    const connection = this.sshConnections[tabId];
+    if (!connection) {
+      console.warn(`No SSH connection found for tabId: ${tabId}`);
+      return;
+    }
+
+    try {
+      // Limpiar timeouts de stats
+      if (connection.statsTimeout) {
+        clearTimeout(connection.statsTimeout);
+      }
+
+      // Cerrar conexión según el tipo
+      if (connection.stream) {
+        // Bastión: cerrar stream
+        if (!connection.stream.destroyed) {
+          connection.stream.end();
+        }
+      } else if (connection.shell) {
+        // SSH directo: cerrar shell
+        connection.shell.end();
+      }
+
+      // Limpiar estado
+      delete this.sshConnections[tabId];
+      delete this.bastionStatsState[tabId];
+
+      console.log(`SSH connection disconnected for tabId: ${tabId}`);
+    } catch (error) {
+      console.error('Error disconnecting SSH:', error);
+    }
   }
 
   /**
