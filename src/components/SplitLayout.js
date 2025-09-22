@@ -17,7 +17,7 @@ function adjustColorBrightness(hex, percent) {
 const SplitLayout = ({ 
   leftTerminal, 
   rightTerminal, 
-  fontFamily, 
+  fontFamily,
   fontSize, 
   theme, 
   onContextMenu, 
@@ -84,13 +84,43 @@ const SplitLayout = ({
     };
   }, []);
 
-  // Configuración del gutter igual que el sidebar que funciona perfecto
+  // Forzar fit de los terminales después de que se monten
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (leftTerminalRef.current?.fit) {
+        leftTerminalRef.current.fit();
+      }
+      if (rightTerminalRef.current?.fit) {
+        rightTerminalRef.current.fit();
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, [leftTerminal.key, rightTerminal.key]);
+
+  // Asegurar que los terminales se inicialicen correctamente
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Forzar focus en el terminal izquierdo para asegurar que se inicialice
+      if (leftTerminalRef.current?.focus) {
+        leftTerminalRef.current.focus();
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [leftTerminal.key]);
+
+  // Configuración del gutter específica para terminales
   const gutterStyle = {
-    transition: 'none', // Clave: sin transición como el sidebar
-    background: splitterColor || 'var(--ui-sidebar-gutter-bg, #dee2e6)',
-    borderColor: 'var(--ui-sidebar-border, #e0e0e0)',
-    width: orientation === 'vertical' ? '2px' : '100%', // 2px como el sidebar
-    height: orientation === 'horizontal' ? '2px' : '100%'
+    transition: 'none',
+    background: 'transparent',
+    borderColor: 'transparent',
+    width: orientation === 'vertical' ? '8px' : '100%',
+    height: orientation === 'horizontal' ? '8px' : '100%',
+    cursor: orientation === 'vertical' ? 'col-resize' : 'row-resize',
+    margin: orientation === 'vertical' ? '0 -4px' : '0',
+    position: 'relative',
+    zIndex: 10
   };
 
   // Usar PrimeReact solo para vertical, sistema original para horizontal
@@ -223,13 +253,13 @@ const SplitLayout = ({
               }}
               key={leftTerminal.key}
               tabId={leftTerminal.key}
-              sshConfig={leftTerminal.sshConfig}
+              sshConfig={leftTerminal.sshConfig || {}}
               fontFamily={fontFamily}
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId[leftTerminal.key]}
+              stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
             />
@@ -253,13 +283,13 @@ const SplitLayout = ({
               }}
               key={rightTerminal.key}
               tabId={rightTerminal.key}
-              sshConfig={rightTerminal.sshConfig}
+              sshConfig={rightTerminal.sshConfig || {}}
               fontFamily={fontFamily}
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId[rightTerminal.key]}
+              stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
             />
@@ -269,126 +299,63 @@ const SplitLayout = ({
     );
   }
 
-  // PrimeReact Splitter solo para orientación vertical
-  return (
-    <Splitter
-      style={{ height: '100%', width: '100%' }}
-      layout={orientation}
-      onResize={handleResize}
-      className="terminal-splitter"
-      pt={{
-        gutter: {
-          style: gutterStyle
-        }
-      }}
-    >
-      <SplitterPanel
-        size={(enableCollapse && isCollapsed) ? collapsedSize : defaultSize}
-        minSize={(enableCollapse && isCollapsed) ? collapsedSize : 10}
-        maxSize={(enableCollapse && isCollapsed) ? collapsedSize : 90}
-        style={{
+  // Implementación simple sin PrimeReact para vertical
+  if (orientation === 'vertical') {
+    const [leftSize, setLeftSize] = useState(50);
+    const [isDragging, setIsDragging] = useState(false);
+    
+    const handleMouseDown = (e) => {
+      e.preventDefault();
+      setIsDragging(true);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    };
+    
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      const container = e.currentTarget.closest('.split-container');
+      if (!container) return;
+      
+      const rect = container.getBoundingClientRect();
+      const newLeftSize = ((e.clientX - rect.left) / rect.width) * 100;
+      setLeftSize(Math.max(20, Math.min(80, newLeftSize)));
+    };
+    
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    
+    useEffect(() => {
+      if (isDragging) {
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }
+    }, [isDragging]);
+    
+    return (
+      <div className="split-container" style={{ 
+        height: '100%', 
+        width: '100%', 
+        display: 'flex',
+        flexDirection: 'row',
+        overflow: 'hidden'
+      }}>
+        {/* Panel izquierdo */}
+        <div style={{
+          width: `${leftSize}%`,
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          padding: 0,
-          transition: 'all 0.2s ease'
-        }}
-      >
-        {/* Header del panel izquierdo con funcionalidad de colapso */}
-        {(onCloseLeft || enableCollapse) && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: (enableCollapse && isCollapsed) ? 'center' : 'space-between',
-            padding: (enableCollapse && isCollapsed) ? '4px 2px' : '4px 8px',
-            background: theme?.background || '#1e1e1e',
-            borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
-            fontSize: '12px',
-            color: theme?.foreground || '#fff',
-            minHeight: '24px'
-          }}>
-            {(enableCollapse && isCollapsed) ? (
-              // Botón para expandir cuando está colapsado
-              <button
-                onClick={handleToggleCollapse}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme?.foreground || '#fff',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  fontSize: '16px',
-                  opacity: 0.7,
-                  borderRadius: '3px'
-                }}
-                onMouseEnter={e => e.target.style.opacity = '1'}
-                onMouseLeave={e => e.target.style.opacity = '0.7'}
-                title="Expandir panel"
-              >
-                ▶
-              </button>
-            ) : (
-              <>
-                <span style={{ 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  whiteSpace: 'nowrap',
-                  flex: 1
-                }}>
-                  {leftTerminal.label || leftTerminal.key}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {enableCollapse && (
-                    <button
-                      onClick={handleToggleCollapse}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: theme?.foreground || '#fff',
-                        cursor: 'pointer',
-                        padding: '2px 4px',
-                        fontSize: '12px',
-                        opacity: 0.7
-                      }}
-                      onMouseEnter={e => e.target.style.opacity = '1'}
-                      onMouseLeave={e => e.target.style.opacity = '0.7'}
-                      title="Colapsar panel"
-                    >
-                      ◀
-                    </button>
-                  )}
-                  {onCloseLeft && (
-                    <button
-                      onClick={() => onCloseLeft(leftTerminal.key)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: theme?.foreground || '#fff',
-                        cursor: 'pointer',
-                        padding: '2px 4px',
-                        fontSize: '14px',
-                        opacity: 0.7
-                      }}
-                      onMouseEnter={e => e.target.style.opacity = '1'}
-                      onMouseLeave={e => e.target.style.opacity = '0.7'}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        
-        {/* Contenido del panel izquierdo */}
-        <div style={{ 
-          flex: 1, 
-          minHeight: 0, 
-          display: (enableCollapse && isCollapsed) ? 'none' : 'flex', 
-          flexDirection: 'column' 
+          overflow: 'hidden',
+          minWidth: '200px'
         }}>
-          {!(enableCollapse && isCollapsed) && (leftTerminal.content ? (
+          {leftTerminal.content ? (
             leftTerminal.content
           ) : (
             <TerminalComponent
@@ -398,70 +365,40 @@ const SplitLayout = ({
               }}
               key={leftTerminal.key}
               tabId={leftTerminal.key}
-              sshConfig={leftTerminal.sshConfig}
+              sshConfig={leftTerminal.sshConfig || {}}
               fontFamily={fontFamily}
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId[leftTerminal.key]}
+              stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
             />
-          ))}
+          )}
         </div>
-      </SplitterPanel>
-      
-      <SplitterPanel style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: 0,
-        background: theme?.background || undefined
-      }}>
-        {/* Header del panel derecho */}
-        {onCloseRight && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '4px 8px',
-            background: theme?.background || '#1e1e1e',
-            borderBottom: `1px solid ${theme?.foreground || '#666'}33`,
-            fontSize: '12px',
-            color: theme?.foreground || '#fff',
-            minHeight: '24px'
-          }}>
-            <span style={{ 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
-              flex: 1
-            }}>
-              {rightTerminal.label || rightTerminal.key}
-            </span>
-            <button
-              onClick={() => onCloseRight(rightTerminal.key)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: theme?.foreground || '#fff',
-                cursor: 'pointer',
-                padding: '2px 4px',
-                fontSize: '14px',
-                marginLeft: '8px',
-                opacity: 0.7
-              }}
-              onMouseEnter={e => e.target.style.opacity = '1'}
-              onMouseLeave={e => e.target.style.opacity = '0.7'}
-            >
-              ×
-            </button>
-          </div>
-        )}
         
-        {/* Contenido del panel derecho */}
-        <div style={{ flex: 1, minHeight: 0 }}>
+        {/* Gutter */}
+        <div 
+          style={{
+            width: '4px',
+            height: '100%',
+            backgroundColor: splitterColor || '#555',
+            cursor: 'col-resize',
+            flexShrink: 0
+          }}
+          onMouseDown={handleMouseDown}
+        />
+        
+        {/* Panel derecho */}
+        <div style={{
+          width: `${100 - leftSize}%`,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          minWidth: '200px'
+        }}>
           {rightTerminal.content ? (
             rightTerminal.content
           ) : (
@@ -472,13 +409,147 @@ const SplitLayout = ({
               }}
               key={rightTerminal.key}
               tabId={rightTerminal.key}
-              sshConfig={rightTerminal.sshConfig}
+              sshConfig={rightTerminal.sshConfig || {}}
               fontFamily={fontFamily}
               fontSize={fontSize}
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId[rightTerminal.key]}
+              stats={sshStatsByTabId?.[rightTerminal.key] || {}}
+              hideStatusBar={true}
+              statusBarIconTheme={statusBarIconTheme}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // PrimeReact Splitter para horizontal (mantener como estaba)
+  return (
+    <Splitter
+      style={{ height: '100%', width: '100%', border: 'none' }}
+      layout={orientation}
+      onResize={handleResize}
+      className="terminal-splitter"
+      pt={{
+        gutter: {
+          style: gutterStyle
+        },
+        root: {
+          style: {
+            border: 'none',
+            height: '100%',
+            width: '100%'
+          }
+        }
+      }}
+    >
+      <SplitterPanel
+        size={(enableCollapse && isCollapsed) ? collapsedSize : defaultSize}
+        minSize={(enableCollapse && isCollapsed) ? collapsedSize : 200}
+        maxSize={(enableCollapse && isCollapsed) ? collapsedSize : 90}
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+          transition: 'all 0.2s ease',
+          minWidth: '200px',
+          overflow: 'hidden'
+        }}
+        pt={{
+          root: {
+            style: {
+              height: '100%',
+              minWidth: '200px',
+              overflow: 'hidden'
+            }
+          }
+        }}
+      >
+        {/* Contenido del panel izquierdo para horizontal */}
+        <div style={{ 
+          flex: 1, 
+          minHeight: 0, 
+          display: 'flex', 
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          overflow: 'hidden'
+        }}>
+          {leftTerminal.content ? (
+            leftTerminal.content
+          ) : (
+            <TerminalComponent
+              ref={el => {
+                leftTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[leftTerminal.key] = el;
+              }}
+              key={leftTerminal.key}
+              tabId={leftTerminal.key}
+              sshConfig={leftTerminal.sshConfig || {}}
+              fontFamily={fontFamily}
+              fontSize={fontSize}
+              theme={theme}
+              onContextMenu={onContextMenu}
+              active={true}
+              stats={sshStatsByTabId?.[leftTerminal.key] || {}}
+              hideStatusBar={true}
+              statusBarIconTheme={statusBarIconTheme}
+            />
+          )}
+        </div>
+      </SplitterPanel>
+      
+      <SplitterPanel 
+        minSize={200}
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+          background: theme?.background || undefined,
+          minWidth: '200px',
+          overflow: 'hidden'
+        }}
+        pt={{
+          root: {
+            style: {
+              height: '100%',
+              minWidth: '200px',
+              overflow: 'hidden'
+            }
+          }
+        }}
+      >
+        {/* Contenido del panel derecho para horizontal */}
+        <div style={{ 
+          flex: 1, 
+          minHeight: 0,
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          {rightTerminal.content ? (
+            rightTerminal.content
+          ) : (
+            <TerminalComponent
+              ref={el => {
+                rightTerminalRef.current = el;
+                if (terminalRefs) terminalRefs.current[rightTerminal.key] = el;
+              }}
+              key={rightTerminal.key}
+              tabId={rightTerminal.key}
+              sshConfig={rightTerminal.sshConfig || {}}
+              fontFamily={fontFamily}
+              fontSize={fontSize}
+              theme={theme}
+              onContextMenu={onContextMenu}
+              active={true}
+              stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
             />

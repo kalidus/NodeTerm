@@ -48,11 +48,20 @@ export const useSplitManagement = ({
     setSshTabs(prevTabs => {
       const updatedTabs = prevTabs.map(tab => {
         if (tab.key === existingTab.key) {
+          // Crear el terminal izquierdo limpiamente
+          const leftTerminal = {
+            key: tab.key,
+            label: tab.label,
+            originalKey: tab.originalKey,
+            sshConfig: tab.sshConfig,
+            type: 'terminal'
+          };
+          
           return {
             ...tab,
             type: 'split',
             orientation: orientation, // Guardar la orientación
-            leftTerminal: { ...tab, type: 'terminal' }, // Terminal izquierdo (existente)
+            leftTerminal: leftTerminal, // Terminal izquierdo (existente)
             rightTerminal: newTerminal, // Terminal derecho (nuevo)
             label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label.split(' (')[0]} | ${sshNode.label}`
           };
