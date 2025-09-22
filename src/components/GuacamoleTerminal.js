@@ -167,7 +167,7 @@ const GuacamoleTerminal = forwardRef(({
                 while (attempts < maxAttempts && !status) {
                     try {
                         attempts++;
-                                                 status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+                        status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
                         
                         if (status && status.server) {
                             break; // Éxito
