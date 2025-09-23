@@ -2057,7 +2057,7 @@ async function disconnectAllGuacamoleConnections() {
 const pty = require('node-pty');
 
 let powershellProcesses = {}; // Cambiar a objeto para múltiples procesos
-let wslProcesses = {}; // Cambiar a objeto para múltiples procesos
+// wslProcesses ahora se maneja en WSLService.js
 
 // Función getLinuxShell movida a src/main/services/WSLService.js
 
@@ -2362,186 +2362,7 @@ ipcMain.on('wsl:stop', () => {
 // Funciones de manejo para WSL
 // Función handleWSLStart movida a src/main/services/WSLService.js
 
-function startWSLSession(tabId, { cols, rows }) {
-  // No iniciar nuevos procesos si la app está cerrando
-  if (isAppQuitting) {
-    console.log(`Evitando iniciar WSL para ${tabId} - aplicación cerrando`);
-    return;
-  }
-  
-  try {
-    // Kill existing process if any
-    if (wslProcesses[tabId]) {
-      try {
-        wslProcesses[tabId].kill();
-      } catch (e) {
-        console.error(`Error killing existing WSL process for tab ${tabId}:`, e);
-      }
-    }
-
-    // Determine shell and arguments for WSL
-    let shell, args;
-    const platform = os.platform();
-    
-    if (platform === 'win32') {
-      // Use WSL on Windows
-      shell = 'wsl.exe';
-      args = ['--cd', '~']; // Start in home directory
-    } else {
-      // For non-Windows platforms, use bash directly
-      shell = '/bin/bash';
-      args = ['--login'];
-    }
-
-    // Múltiples configuraciones para WSL genérico
-    const wslConfigurations = [
-      // Configuración 1: ConPTY deshabilitado con WinPTY
-      {
-        name: 'xterm-256color',
-        cols: cols || 120,
-        rows: rows || 30,
-        cwd: os.homedir(),
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor'
-        },
-        windowsHide: false,
-        useConpty: false,
-        conptyLegacy: false,
-        experimentalUseConpty: false,
-        backend: 'winpty'
-      },
-      // Configuración 2: Conservativa básica
-      {
-        name: 'xterm',
-        cols: cols || 80,
-        rows: rows || 24,
-        cwd: os.homedir(),
-        env: process.env,
-        windowsHide: false,
-        useConpty: false
-      },
-      // Configuración 3: Mínima
-      {
-        name: 'xterm',
-        cols: cols || 80,
-        rows: rows || 24,
-        windowsHide: false
-      }
-    ];
-
-    let spawnSuccess = false;
-    let lastError = null;
-
-    // Intentar cada configuración hasta que una funcione
-    for (let i = 0; i < wslConfigurations.length && !spawnSuccess; i++) {
-      try {
-        // console.log(`Intentando configuración ${i + 1}/${wslConfigurations.length} para WSL genérico ${tabId}...`); // Eliminado por limpieza de logs
-        wslProcesses[tabId] = pty.spawn(shell, args, wslConfigurations[i]);
-        // console.log(`Configuración ${i + 1} exitosa para WSL genérico ${tabId}`); // Eliminado por limpieza de logs
-        spawnSuccess = true;
-      } catch (spawnError) {
-        console.warn(`Configuración ${i + 1} falló para WSL genérico ${tabId}:`, spawnError.message);
-        lastError = spawnError;
-        
-        // Limpiar proceso fallido si existe
-        if (wslProcesses[tabId]) {
-          try {
-            wslProcesses[tabId].kill();
-          } catch (e) {
-            // Ignorar errores de limpieza
-          }
-          delete wslProcesses[tabId];
-        }
-      }
-    }
-
-    if (!spawnSuccess) {
-      throw new Error(`No se pudo iniciar WSL genérico para ${tabId} después de probar todas las configuraciones: ${lastError?.message || 'Error desconocido'}`);
-    }
-
-    // Handle WSL output
-    wslProcesses[tabId].onData((data) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`wsl:data:${tabId}`, data);
-      }
-    });
-
-    // Handle WSL exit
-    wslProcesses[tabId].onExit((exitCode, signal) => {
-      // console.log(`WSL process for tab ${tabId} exited with code:`, exitCode, 'signal:', signal, 'type:', typeof exitCode); // Eliminado por limpieza de logs
-      // Extraer el código de salida real
-      let actualExitCode = exitCode;
-      if (typeof exitCode === 'object' && exitCode !== null) {
-        // Si es un objeto con propiedad exitCode, usar ese valor
-        if (exitCode.exitCode !== undefined) {
-          actualExitCode = exitCode.exitCode;
-        } else {
-          // Si es otro tipo de objeto, intentar convertirlo
-          actualExitCode = parseInt(JSON.stringify(exitCode), 10) || 0;
-        }
-      } else if (typeof exitCode === 'string') {
-        // Si es string, intentar parsearlo
-        actualExitCode = parseInt(exitCode, 10) || 0;
-      } else if (typeof exitCode === 'number') {
-        actualExitCode = exitCode;
-      } else {
-        actualExitCode = 0;
-      }
-      
-      //console.log(`WSL ${tabId} actual exit code:`, actualExitCode);
-      
-      // Limpiar el proceso actual
-      delete wslProcesses[tabId];
-      
-      // Determinar si necesita reinicio automático (solo para errores específicos de ConPTY)
-      const needsRestart = actualExitCode === -1073741510; // Error específico de ConPTY
-      const isNormalExit = actualExitCode === 0 || actualExitCode === 1;
-      
-      if (needsRestart) {
-        // console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`); // Eliminado por limpieza de logs
-        setTimeout(() => {
-          if (!isAppQuitting && mainWindow && !mainWindow.isDestroyed()) {
-            // console.log(`Reiniciando WSL ${tabId} después de error de ConPTY...`); // Eliminado por limpieza de logs
-            startWSLSession(tabId, { cols: cols || 120, rows: rows || 30 });
-          }
-        }, 2000);
-      } else if (isNormalExit) {
-        // Para terminaciones normales, reiniciar automáticamente después de un delay corto
-        // console.log(`WSL ${tabId} terminó normalmente, reiniciando en 1 segundo...`); // Eliminado por limpieza de logs
-        setTimeout(() => {
-          if (!isAppQuitting && mainWindow && mainWindow.webContents) {
-            // console.log(`Reiniciando WSL ${tabId}...`); // Eliminado por limpieza de logs
-            // Usar las dimensiones originales o por defecto
-            const originalCols = cols || 120;
-            const originalRows = rows || 30;
-            startWSLSession(tabId, { cols: originalCols, rows: originalRows });
-          }
-        }, 1000);
-      } else {
-        // Solo reportar como error si no es una terminación normal
-        if (mainWindow && mainWindow.webContents) {
-          const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
-          mainWindow.webContents.send(`wsl:error:${tabId}`, `WSL process exited with code ${exitCodeStr}`);
-        }
-      }
-    });
-
-    // Send ready signal
-    // setTimeout(() => {
-    //   if (mainWindow && mainWindow.webContents) {
-    //     mainWindow.webContents.send(`wsl:ready:${tabId}`);
-    //   }
-    // }, 500);
-
-  } catch (error) {
-    console.error(`Error starting WSL for tab ${tabId}:`, error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`wsl:error:${tabId}`, `Failed to start WSL: ${error.message}`);
-    }
-  }
-}
+// Función startWSLSession movida a src/main/services/WSLService.js
 
 // Función handleWSLData movida a src/main/services/WSLService.js
 
@@ -2551,108 +2372,13 @@ function startWSLSession(tabId, { cols, rows }) {
 
 // === WSL Distributions Terminal Support ===
 
-// Store active WSL distribution processes
+// Store active WSL distribution processes (specific distributions)
 const wslDistroProcesses = {};
 
 // Store active Ubuntu processes (for backward compatibility)
 const ubuntuProcesses = {};
 
-// Función para detectar si Ubuntu está disponible
-function detectUbuntuAvailability() {
-  return new Promise((resolve) => {
-    const platform = os.platform();
-    // Detectando Ubuntu
-    
-    if (platform !== 'win32') {
-      // En sistemas no Windows, verificar si bash está disponible
-      const { spawn } = require('child_process');
-      const bashCheck = spawn('bash', ['--version'], { stdio: 'pipe' });
-      
-      bashCheck.on('close', (code) => {
-        console.log('🐧 Bash check completed with code:', code);
-        resolve(code === 0);
-      });
-      
-      bashCheck.on('error', (error) => {
-        console.log('❌ Bash check error:', error.message);
-        resolve(false);
-      });
-      
-      // Timeout de 2 segundos
-      setTimeout(() => {
-        console.log('⏰ Bash check timeout');
-        bashCheck.kill();
-        resolve(false);
-      }, 2000);
-    } else {
-      // En Windows, verificar si ubuntu está disponible
-      const { spawn } = require('child_process');
-      // Verificando ubuntu en Windows
-      
-      const ubuntuCheck = spawn('ubuntu', ['--help'], { 
-        stdio: 'pipe',
-        windowsHide: true 
-      });
-      
-      let resolved = false;
-      
-      ubuntuCheck.on('close', (code) => {
-        if (!resolved) {
-          resolved = true;
-                  console.log('🟢 Ubuntu check completed with code:', code);
-        // Ubuntu devuelve código 0 cuando está disponible
-        // También puede devolver null o undefined en algunos casos válidos
-        const isAvailable = (code === 0 || code === null || code === undefined);
-        // Ubuntu detectado
-          resolve(isAvailable);
-        }
-      });
-      
-      ubuntuCheck.on('error', (error) => {
-        if (!resolved) {
-          resolved = true;
-                  console.log('❌ Ubuntu check error:', error.message);
-        // Si ubuntu no existe, devolverá ENOENT
-          resolve(false);
-        }
-      });
-      
-      ubuntuCheck.on('exit', (code, signal) => {
-        if (!resolved) {
-          resolved = true;
-          console.log('🚪 Ubuntu exit with code:', code, 'signal:', signal);
-          const isAvailable = (code === 0 || code === null || code === undefined);
-          // Ubuntu detectado (exit)
-          resolve(isAvailable);
-        }
-      });
-      
-      // Capturar stdout/stderr para debug
-      let output = '';
-      let errorOutput = '';
-      
-      ubuntuCheck.stdout?.on('data', (data) => {
-        output += data.toString();
-      });
-      
-      ubuntuCheck.stderr?.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-      
-      // Timeout de 5 segundos (más tiempo para Windows)
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          console.log('⏰ Ubuntu check timeout');
-          console.log('📝 Output:', output.substring(0, 200));
-          console.log('📝 Error output:', errorOutput.substring(0, 200));
-          ubuntuCheck.kill();
-          resolve(false);
-        }
-      }, 5000);
-    }
-  });
-}
+// Función detectUbuntuAvailability movida a src/main/services/WSLService.js
 
 // Funciones de manejo para distribuciones WSL (genéricas)
 // Función handleWSLDistroStart movida a src/main/services/WSLService.js
@@ -2689,7 +2415,12 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
             console.log('⚠️ Sin info específica, usando wsl.exe genérico');
         }
         
-        args = []; // Las distribuciones WSL funcionan mejor sin argumentos específicos
+        // Configurar argumentos para iniciar en el directorio home de WSL
+        if (shell === 'wsl.exe' || (distroInfo && distroInfo.executable && distroInfo.executable.includes('wsl'))) {
+            args = ['--cd', '~']; // Iniciar en el directorio home de WSL
+        } else {
+            args = []; // Para otros shells, no usar argumentos específicos
+        }
 
         // Environment variables
         const env = {
@@ -3277,43 +3008,7 @@ app.on('before-quit', (event) => {
     }
   });
   
-  // Cleanup all WSL processes
-  Object.keys(wslProcesses).forEach(tabId => {
-    try {
-      const process = wslProcesses[tabId];
-      if (process) {
-        process.removeAllListeners();
-        
-        // En Windows, usar destroy() para forzar terminación
-        if (os.platform() === 'win32') {
-          try {
-            process.kill(); // Intento graceful primero
-          } catch (e) {
-            // Si kill() falla, usar destroy()
-            try {
-              process.destroy();
-            } catch (destroyError) {
-              console.warn(`Error con destroy() en WSL ${tabId} on quit:`, destroyError.message);
-            }
-          }
-        } else {
-          process.kill('SIGTERM');
-          // Terminación forzada después de 500ms en sistemas POSIX
-          setTimeout(() => {
-            if (wslProcesses[tabId]) {
-              try {
-                wslProcesses[tabId].kill('SIGKILL');
-              } catch (e) {
-                // Ignorar errores
-              }
-            }
-          }, 500);
-        }
-      }
-    } catch (error) {
-      console.error(`Error cleaning up WSL ${tabId} on quit:`, error);
-    }
-  });
+  // WSL processes cleanup is now handled by WSLService.js
   
   // Cleanup all Ubuntu processes
   Object.keys(ubuntuProcesses).forEach(tabId => {
