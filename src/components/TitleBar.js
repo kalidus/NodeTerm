@@ -186,7 +186,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             label: 'Importar',
             icon: 'pi pi-file-excel',
             command: () => {
-              console.log('Abriendo ImportDialog desde TitleBar...');
               onShowImportDialog && onShowImportDialog(true);
             }
           }

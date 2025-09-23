@@ -759,7 +759,6 @@ class ImportService {
       return nodes;
     }
     
-    console.log('🔄 Aplicando sustituciones de usuarios:', substitutions);
     
     // Crear mapas de sustituciones para acceso rápido
     const usernameSubstitutionMap = new Map();
@@ -781,9 +780,6 @@ class ImportService {
       }
     });
     
-    console.log('📋 Mapas de sustituciones creados:');
-    console.log('   Username map:', Object.fromEntries(usernameSubstitutionMap));
-    console.log('   Password map:', Object.fromEntries(passwordSubstitutionMap));
     
     if (usernameSubstitutionMap.size === 0 && passwordSubstitutionMap.size === 0) {
       return nodes;
@@ -843,7 +839,6 @@ class ImportService {
         if (matchingUserForPassword) {
           node.data.password = passwordSubstitutionMap.get(matchingUserForPassword);
           substitutionsApplied++;
-          console.log(`🔑 Password sustituido en SSH "${connectionName}": ${currentUser} → ${matchingUserForPassword}`);
         }
         
         // SEGUNDO: Aplicar sustitución de username
@@ -853,7 +848,6 @@ class ImportService {
           const newUsername = usernameSubstitutionMap.get(matchingUserForUsername);
           node.data.user = replaceUserInString(oldUser, matchingUserForUsername, newUsername);
           substitutionsApplied++;
-          console.log(`👤 Username sustituido en SSH "${connectionName}": ${oldUser} → ${node.data.user}`);
         }
       }
       // Si es un nodo de conexión RDP (tanto rdp como rdp-guacamole)
@@ -867,7 +861,6 @@ class ImportService {
         if (matchingUserForPassword) {
           node.data.password = passwordSubstitutionMap.get(matchingUserForPassword);
           substitutionsApplied++;
-          console.log(`🔑 Password sustituido en RDP "${connectionName}": ${currentUsername} → ${matchingUserForPassword}`);
         }
         
         // SEGUNDO: Aplicar sustitución de username
@@ -877,7 +870,6 @@ class ImportService {
           const newUsername = usernameSubstitutionMap.get(matchingUserForUsername);
           node.data.username = replaceUserInString(oldUsername, matchingUserForUsername, newUsername);
           substitutionsApplied++;
-          console.log(`👤 Username sustituido en RDP "${connectionName}": ${oldUsername} → ${node.data.username}`);
         }
       }
       
@@ -891,16 +883,7 @@ class ImportService {
     
     const result = nodes.map(applySubstitutionsToNode);
     
-    console.log(`✅ Sustituciones completadas: ${substitutionsApplied} sustituciones aplicadas en ${connectionsProcessed} conexiones`);
     
-    // TEST: Probar con el ejemplo específico del usuario
-    if (substitutions.length > 0) {
-      const testString = "rtcambiame@default@Fortigate_JC:APP:RED_FIREWALLS:rtcambiame@default";
-      const testOriginalUser = "rtcambiame";
-      const testNewUser = "rt01119";
-      const testResult = replaceUserInString(testString, testOriginalUser, testNewUser);
-      console.log(`🧪 TEST - Reemplazo de ejemplo: "${testString}" → "${testResult}"`);
-    }
     
     return result;
   }

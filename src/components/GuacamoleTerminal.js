@@ -437,7 +437,6 @@ const GuacamoleTerminal = forwardRef(({
 
                                                                  // Eventos del teclado
                 keyboard.onkeydown = (keysym) => {
-                    console.log('⌨️ Tecla presionada:', keysym);
                     client.sendKeyEvent(1, keysym);
                     const nowTs = Date.now();
                     setLastActivityTime(nowTs); // Registrar actividad
@@ -445,7 +444,6 @@ const GuacamoleTerminal = forwardRef(({
                     wasIdleRef.current = false;
                 };
                 keyboard.onkeyup = (keysym) => {
-                    console.log('⌨️ Tecla liberada:', keysym);
                     client.sendKeyEvent(0, keysym);
                     const nowTs = Date.now();
                     setLastActivityTime(nowTs); // Registrar actividad

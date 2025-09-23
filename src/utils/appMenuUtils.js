@@ -13,7 +13,6 @@ export const createAppMenu = (onShowImportDialog) => {
           label: 'Importar',
           icon: 'pi pi-file-excel',
           command: () => {
-            console.log('Abriendo ImportDialog desde menú unificado...');
             onShowImportDialog && onShowImportDialog(true);
           }
         }
