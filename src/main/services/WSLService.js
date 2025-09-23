@@ -270,12 +270,19 @@ function getLinuxShell() {
 function startWSLSession(tabId, { cols, rows }) {
   try {
     const shell = getLinuxShell();
+    const platform = os.platform();
     
-    wslProcesses[tabId] = pty.spawn(shell, [], {
+    // Determinar argumentos según la plataforma
+    let args = [];
+    if (platform === 'win32' && shell === 'wsl.exe') {
+      args = ['--cd', '~']; // Iniciar en el directorio home de WSL
+    }
+    
+    wslProcesses[tabId] = pty.spawn(shell, args, {
       name: 'xterm-color',
       cols: cols || 80,
       rows: rows || 24,
-      cwd: process.env.HOME || process.env.USERPROFILE,
+      cwd: undefined, // Dejar que WSL use su propio directorio home
       env: process.env
     });
 
