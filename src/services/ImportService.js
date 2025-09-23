@@ -753,6 +753,8 @@ class ImportService {
       return nodes;
     }
     
+    console.log('🔄 Aplicando sustituciones de usuarios:', substitutions);
+    
     // Crear mapas de sustituciones para acceso rápido
     const usernameSubstitutionMap = new Map();
     const passwordSubstitutionMap = new Map();
@@ -773,36 +775,103 @@ class ImportService {
       }
     });
     
+    console.log('📋 Mapas de sustituciones creados:');
+    console.log('   Username map:', Object.fromEntries(usernameSubstitutionMap));
+    console.log('   Password map:', Object.fromEntries(passwordSubstitutionMap));
+    
     if (usernameSubstitutionMap.size === 0 && passwordSubstitutionMap.size === 0) {
       return nodes;
     }
     
+    // Función helper para reemplazar usuarios en una cadena compleja
+    const replaceUserInString = (originalString, originalUser, newUser) => {
+      if (!originalString || !originalUser || !newUser) return originalString;
+      
+      // Reemplazar todas las instancias del usuario original por el nuevo
+      // Usar una expresión regular con word boundaries para evitar reemplazos parciales incorrectos
+      const regex = new RegExp(`\\b${originalUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+      return originalString.replace(regex, newUser);
+    };
+
+    // Función helper para encontrar coincidencias flexibles de usuario
+    const findMatchingOriginalUser = (currentUser, substitutionMap) => {
+      if (!currentUser) return null;
+      
+      // 1. Coincidencia exacta
+      if (substitutionMap.has(currentUser)) {
+        return currentUser;
+      }
+      
+      // 2. Coincidencia flexible: extraer usuarios del string actual y buscar coincidencias
+      const extractedUsers = this.extractUsersFromString(currentUser);
+      for (const extractedUser of extractedUsers) {
+        if (substitutionMap.has(extractedUser)) {
+          return extractedUser;
+        }
+      }
+      
+      // 3. Coincidencia parcial: buscar si el usuario actual contiene alguno de los usuarios originales
+      for (const [originalUser] of substitutionMap) {
+        if (currentUser.includes(originalUser)) {
+          return originalUser;
+        }
+      }
+      
+      return null;
+    };
+
+    // Contador para estadísticas
+    let substitutionsApplied = 0;
+    let connectionsProcessed = 0;
+
     // Aplicar sustituciones recursivamente a la estructura de nodos
     const applySubstitutionsToNode = (node) => {
       // Si es un nodo de conexión SSH
       if (node.data && node.data.type === 'ssh') {
-        if (node.data.user && usernameSubstitutionMap.size > 0) {
-          node.data.user = this.applySubstitutionsToString(node.data.user, usernameSubstitutionMap);
+        connectionsProcessed++;
+        const currentUser = node.data.user;
+        const connectionName = node.label || node.data.name || 'SSH Connection';
+        
+        // PRIMERO: Aplicar sustitución de password basándose en el usuario ORIGINAL
+        const matchingUserForPassword = findMatchingOriginalUser(currentUser, passwordSubstitutionMap);
+        if (matchingUserForPassword) {
+          node.data.password = passwordSubstitutionMap.get(matchingUserForPassword);
+          substitutionsApplied++;
+          console.log(`🔑 Password sustituido en SSH "${connectionName}": ${currentUser} → ${matchingUserForPassword}`);
         }
-        if (node.data.password && passwordSubstitutionMap.size > 0) {
-          // Para SSH, aplicar sustitución de password si el usuario original coincide
-          const originalUser = this.findOriginalUserInNode(node, substitutions);
-          if (originalUser && passwordSubstitutionMap.has(originalUser)) {
-            node.data.password = passwordSubstitutionMap.get(originalUser);
-          }
+        
+        // SEGUNDO: Aplicar sustitución de username
+        const matchingUserForUsername = findMatchingOriginalUser(currentUser, usernameSubstitutionMap);
+        if (matchingUserForUsername) {
+          const oldUser = node.data.user;
+          const newUsername = usernameSubstitutionMap.get(matchingUserForUsername);
+          node.data.user = replaceUserInString(oldUser, matchingUserForUsername, newUsername);
+          substitutionsApplied++;
+          console.log(`👤 Username sustituido en SSH "${connectionName}": ${oldUser} → ${node.data.user}`);
         }
       }
-      // Si es un nodo de conexión RDP
-      else if (node.data && node.data.type === 'rdp') {
-        if (node.data.username && usernameSubstitutionMap.size > 0) {
-          node.data.username = this.applySubstitutionsToString(node.data.username, usernameSubstitutionMap);
+      // Si es un nodo de conexión RDP (tanto rdp como rdp-guacamole)
+      else if (node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole')) {
+        connectionsProcessed++;
+        const currentUsername = node.data.username;
+        const connectionName = node.label || node.data.name || 'RDP Connection';
+        
+        // PRIMERO: Aplicar sustitución de password basándose en el usuario ORIGINAL
+        const matchingUserForPassword = findMatchingOriginalUser(currentUsername, passwordSubstitutionMap);
+        if (matchingUserForPassword) {
+          node.data.password = passwordSubstitutionMap.get(matchingUserForPassword);
+          substitutionsApplied++;
+          console.log(`🔑 Password sustituido en RDP "${connectionName}": ${currentUsername} → ${matchingUserForPassword}`);
         }
-        if (node.data.password && passwordSubstitutionMap.size > 0) {
-          // Para RDP, aplicar sustitución de password si el usuario original coincide
-          const originalUser = this.findOriginalUserInNode(node, substitutions);
-          if (originalUser && passwordSubstitutionMap.has(originalUser)) {
-            node.data.password = passwordSubstitutionMap.get(originalUser);
-          }
+        
+        // SEGUNDO: Aplicar sustitución de username
+        const matchingUserForUsername = findMatchingOriginalUser(currentUsername, usernameSubstitutionMap);
+        if (matchingUserForUsername) {
+          const oldUsername = node.data.username;
+          const newUsername = usernameSubstitutionMap.get(matchingUserForUsername);
+          node.data.username = replaceUserInString(oldUsername, matchingUserForUsername, newUsername);
+          substitutionsApplied++;
+          console.log(`👤 Username sustituido en RDP "${connectionName}": ${oldUsername} → ${node.data.username}`);
         }
       }
       
@@ -814,37 +883,22 @@ class ImportService {
       return node;
     };
     
-    return nodes.map(applySubstitutionsToNode);
+    const result = nodes.map(applySubstitutionsToNode);
+    
+    console.log(`✅ Sustituciones completadas: ${substitutionsApplied} sustituciones aplicadas en ${connectionsProcessed} conexiones`);
+    
+    // TEST: Probar con el ejemplo específico del usuario
+    if (substitutions.length > 0) {
+      const testString = "rtcambiame@default@Fortigate_JC:APP:RED_FIREWALLS:rtcambiame@default";
+      const testOriginalUser = "rtcambiame";
+      const testNewUser = "rt01119";
+      const testResult = replaceUserInString(testString, testOriginalUser, testNewUser);
+      console.log(`🧪 TEST - Reemplazo de ejemplo: "${testString}" → "${testResult}"`);
+    }
+    
+    return result;
   }
 
-  /**
-   * Encuentra el usuario original en un nodo basándose en las sustituciones
-   * @param {Object} node - Nodo de conexión
-   * @param {Array} substitutions - Array de sustituciones
-   * @returns {string|null} Usuario original o null si no se encuentra
-   */
-  static findOriginalUserInNode(node, substitutions) {
-    if (!node.data) return null;
-    
-    const currentUser = node.data.user || node.data.username;
-    if (!currentUser) return null;
-    
-    // Buscar en las sustituciones si el usuario actual es el resultado de una sustitución
-    for (const sub of substitutions) {
-      if (sub.newUsername && currentUser.includes(sub.newUsername)) {
-        return sub.originalUsername;
-      }
-    }
-    
-    // Si no se encuentra sustitución, el usuario actual podría ser el original
-    for (const sub of substitutions) {
-      if (sub.originalUsername && currentUser.includes(sub.originalUsername)) {
-        return sub.originalUsername;
-      }
-    }
-    
-    return null;
-  }
 
   /**
    * Agrupa conexiones por carpetas si el XML incluye estructura de carpetas
