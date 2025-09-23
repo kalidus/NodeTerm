@@ -314,7 +314,7 @@ export function UnifiedConnectionDialog({
     redirectFolders: true,
     redirectClipboard: true,
     redirectPrinters: false,
-    redirectAudio: true,
+    redirectAudio: false, // Desactivar audio por defecto
     fullscreen: false,
     smartSizing: true,
     span: false,
@@ -324,7 +324,7 @@ export function UnifiedConnectionDialog({
     autoResize: true,
     guacDpi: 96,
     guacSecurity: 'any',
-    guacEnableWallpaper: false,
+    guacEnableWallpaper: true, // Activar mostrar fondo por defecto
     guacEnableDrive: false,
     guacDriveHostDir: '',
     guacEnableGfx: false,

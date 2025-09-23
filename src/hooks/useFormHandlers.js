@@ -255,12 +255,16 @@ export const useFormHandlers = ({
         redirectFolders: true,
         redirectClipboard: true,
         redirectPrinters: false,
-        redirectAudio: true,
+        redirectAudio: false, // Desactivar audio por defecto
         fullscreen: false,
         span: false,
         admin: false,
         public: false,
-        type: 'rdp'
+        type: 'rdp',
+        // Activar ajuste automático por defecto para evitar reconexiones
+        autoResize: true,
+        // Activar mostrar fondo por defecto
+        guacEnableWallpaper: true
       },
       draggable: true,
       droppable: false,
