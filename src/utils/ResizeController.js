@@ -64,7 +64,6 @@ export default class ResizeController {
     document.addEventListener('touchend', this._onMouseUp, { passive: true });
 
     this._started = true;
-    this.onLog('🧭 ResizeController: start()');
   }
 
   stop() {
@@ -80,7 +79,6 @@ export default class ResizeController {
     document.removeEventListener('pointerup', this._onMouseUp);
     document.removeEventListener('touchend', this._onMouseUp);
     this._started = false;
-    this.onLog('🧭 ResizeController: stop()');
   }
 
   notify() {
@@ -142,7 +140,6 @@ export default class ResizeController {
     // el quiet y el debounce garantizan coalescing al final.
     if (now < this._quietUntil) {
       const remaining = this._quietUntil - now;
-      this.onLog(`⏸️ ResizeController: quiet ${remaining}ms`);
       if (this._debounceTimer) clearTimeout(this._debounceTimer);
       this._debounceTimer = setTimeout(() => this._trySend(), Math.max(remaining, 50));
       return;
@@ -151,7 +148,6 @@ export default class ResizeController {
       const deadline = this.getAckDeadline ? Number(this.getAckDeadline()) : 0;
       if (deadline && now < deadline) {
         // Aún esperando ACK. Mantener pendiente y salir
-        this.onLog('⏸️ ResizeController: esperando ACK, envío aplazado');
         return;
       }
       // Deadline vencido, liberar gate
@@ -170,7 +166,6 @@ export default class ResizeController {
       this.sendSize(width, height);
       this.setLastDims && this.setLastDims({ width, height });
       this.setAwaitingAck && this.setAwaitingAck(true, now + this.ackTimeoutMs);
-      this.onLog(`📡 ResizeController: sendSize ${width}x${height}`);
       // Ventana de silencio post-envío para evitar ráfagas (coalesce)
       const dx = Math.abs((last?.width || 0) - width);
       const dy = Math.abs((last?.height || 0) - height);

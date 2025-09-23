@@ -127,14 +127,12 @@ const ImportDialog = ({
   };
 
   const handleChooseFile = () => {
-    console.log('Intentando abrir selector de archivos (input nativo)...');
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.xml';
     input.onchange = (e) => {
       const file = e.target.files && e.target.files[0];
       if (file) {
-        console.log('Archivo seleccionado:', file.name);
         handleFileSelect({ files: [file] });
       }
     };
@@ -456,7 +454,6 @@ const ImportDialog = ({
       setImportProgress(10);
 
       const result = await ImportService.importFromMRemoteNG(manualSelectedFile);
-      console.log('📋 Resultado de ImportService (manual):', result);
       
       // Aplicar sustituciones de usuarios si las hay
       let finalResult = result;
@@ -486,7 +483,6 @@ const ImportDialog = ({
       }
 
       if (onImportComplete) {
-        console.log('📞 Llamando a onImportComplete (manual)...');
         try {
           await onImportComplete({
             ...finalResult,
@@ -506,7 +502,6 @@ const ImportDialog = ({
             linkedContainerFolderName: '',
             linkedOverwrite: false
           });
-          console.log('✅ onImportComplete (manual) ejecutado');
         } catch (error) {
           console.error('❌ Error en onImportComplete (manual):', error);
           throw error;
@@ -600,7 +595,6 @@ const ImportDialog = ({
       }
 
       const result = await ImportService.importFromMRemoteNG(fileToImport);
-      console.log('📋 Resultado de ImportService (vinculado):', result);
       setImportProgress(80);
 
       if (!result.success) {
@@ -608,7 +602,6 @@ const ImportDialog = ({
       }
 
       if (onImportComplete) {
-        console.log('📞 Llamando a onImportComplete (vinculado)...');
         try {
           await onImportComplete({
             ...result,
@@ -628,7 +621,6 @@ const ImportDialog = ({
             linkedContainerFolderName: linkedContainerFolderName,
             linkedOverwrite: !!linkedOverwrite
           });
-          console.log('✅ onImportComplete (vinculado) ejecutado');
         } catch (error) {
           console.error('❌ Error en onImportComplete (vinculado):', error);
           throw error;

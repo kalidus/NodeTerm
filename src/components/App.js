@@ -1195,6 +1195,7 @@ const App = () => {
     explorerFontSize: sidebarFontSize,
     uiTheme: terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light',
     showToast: toast.current && toast.current.show ? toast.current.show : undefined,
+    confirmDialog: confirmDialog,
     onOpenSSHConnection,
     onNodeContextMenu,
     onTreeAreaContextMenu,
@@ -1237,7 +1238,7 @@ const App = () => {
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
     iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, terminalTheme,
-    toast, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
+    toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey,
     
     // Dependencias para conexiones
@@ -1718,6 +1719,9 @@ const App = () => {
         })()}
         defaultTargetFolderKey={null}
       />
+      
+      {/* ConfirmDialog para confirmaciones globales */}
+      <ConfirmDialog />
     </div>
   );
 };

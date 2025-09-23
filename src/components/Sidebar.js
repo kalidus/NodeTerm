@@ -62,6 +62,7 @@ const Sidebar = React.memo(({
   explorerFontSize = 14,
   uiTheme = 'Light',
   showToast, // callback opcional para mostrar toast global
+  confirmDialog, // callback para mostrar diálogo de confirmación
   onOpenSSHConnection, // nuevo prop para doble click en SSH
   onNodeContextMenu, // handler del menú contextual de nodos
   onTreeAreaContextMenu, // handler del menú contextual del área del árbol
@@ -437,7 +438,6 @@ const Sidebar = React.memo(({
 
       // Si tenemos estructura con carpetas
       if (importResult.structure && Array.isArray(importResult.structure.nodes) && importResult.structure.nodes.length > 0) {
-        console.log('📁 Sidebar: Importando estructura con carpetas:', importResult.structure.folderCount, 'folders');
         let toAdd = (importResult.structure.nodes || []).map((n, idx) => ({
           ...n,
           key: n.key || `folder_${Date.now()}_${idx}_${Math.floor(Math.random()*1e6)}`,
@@ -1010,11 +1010,26 @@ const Sidebar = React.memo(({
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
-          console.log('🗑️ deleteNode llamado con:', { nodeKey, nodeLabel });
+          
+          // Buscar el nodo para determinar si tiene hijos
+          const findNodeByKey = (nodes, targetKey) => {
+            for (const node of nodes) {
+              if (node.key === targetKey) {
+                return node;
+              }
+              if (node.children && Array.isArray(node.children)) {
+                const found = findNodeByKey(node.children, targetKey);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+          
+          const targetNode = findNodeByKey(nodes, nodeKey);
+          const hasChildren = targetNode && targetNode.children && targetNode.children.length > 0;
           
           // Función para ejecutar la eliminación
           const executeDeletion = () => {
-            console.log('✅ Ejecutando eliminación');
             
             const removeNodeFromTree = (nodes, targetKey) => {
               if (!Array.isArray(nodes)) {
@@ -1054,7 +1069,6 @@ const Sidebar = React.memo(({
               setTimeout(() => {
                 try { 
                   unblockAllInputs();
-                  console.log('✅ Formularios desbloqueados');
                 } catch (error) {
                   console.error('Error al desbloquear formularios:', error);
                 }
@@ -1071,12 +1085,32 @@ const Sidebar = React.memo(({
             }
           };
           
-          // Ejecutar eliminación directamente sin confirmación para evitar bloqueos
-          executeDeletion();
+          // Mostrar diálogo de confirmación antes de eliminar
+          const dialogToUse = confirmDialog || window.confirmDialog;
+          
+          if (dialogToUse) {
+            const message = hasChildren
+              ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeLabel}" y todo su contenido? Esta acción no se puede deshacer.`
+              : `¿Estás seguro de que deseas eliminar "${nodeLabel}"? Esta acción no se puede deshacer.`;
+            
+            dialogToUse({
+              message: message,
+              header: 'Confirmar eliminación',
+              icon: 'pi pi-exclamation-triangle',
+              acceptClassName: 'p-button-danger',
+              accept: executeDeletion,
+              reject: () => {
+                // Usuario canceló la eliminación
+              }
+            });
+          } else {
+            // Fallback si no hay confirmDialog disponible
+            executeDeletion();
+          }
         }
       };
     }
-  }, [nodes, setShowFolderDialog, deepCopy, findNodeByKey, showToast, 
+  }, [nodes, setShowFolderDialog, deepCopy, findNodeByKey, showToast, confirmDialog,
       setEditingNode, setFolderName, setParentNodeKey, setNodes, openEditSSHDialog]);
 
 

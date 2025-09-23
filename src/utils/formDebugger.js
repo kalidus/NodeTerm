@@ -175,7 +175,6 @@ export const unblockAllInputs = () => {
     }
   });
 
-  console.log(`🔓 Desbloqueados ${inputs.length} inputs`);
   
   // Verificación adicional para inputs problemáticos
   setTimeout(() => {
