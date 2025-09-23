@@ -167,6 +167,7 @@ function registerGuacamoleHandlers({
         dpi: config.dpi,
         colorDepth: normalizedColorDepth,
         enableDrive: config.enableDrive,
+        driveHostDir: config.driveHostDir,
         enableWallpaper: config.enableWallpaper,
         redirectClipboard: config.redirectClipboard,
         security: config.security,
@@ -191,12 +192,21 @@ function registerGuacamoleHandlers({
       let driveSettings = {};
       try {
         if (config.enableDrive) {
+          console.log('🔍 [DEBUG] Drive config:', {
+            enableDrive: config.enableDrive,
+            driveHostDir: config.driveHostDir,
+            hasDriveHostDir: !!config.driveHostDir,
+            driveHostDirLength: config.driveHostDir?.length || 0
+          });
+          
           // Si llega una carpeta de host desde UI, resolverla según método actual
           let resolvedDrivePath = null;
           if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
             resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
+            console.log('🔍 [DEBUG] Resolved drive path:', resolvedDrivePath);
           } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
             resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
+            console.log('🔍 [DEBUG] Default drive path:', resolvedDrivePath);
           }
           const drivePath = resolvedDrivePath;
           const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
@@ -207,12 +217,14 @@ function registerGuacamoleHandlers({
               'drive-name': driveName,
               'create-drive-path': true
             };
+            console.log('🔍 [DEBUG] Final drive settings:', driveSettings);
           } else {
             // fallback: solo activar drive sin ruta explícita
             driveSettings = {
               'enable-drive': true,
               'create-drive-path': true
             };
+            console.log('🔍 [DEBUG] Fallback drive settings:', driveSettings);
           }
         }
       } catch (e) {
