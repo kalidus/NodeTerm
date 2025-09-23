@@ -904,7 +904,7 @@ const GuacamoleTerminal = forwardRef(({
                     if (client) {
                         client.disconnect();
                     }
-                }, 30000);
+                }, 60000); // Aumentar a 60 segundos
 
                 // Conectar
                 const connectStartedAt = Date.now();
@@ -1023,9 +1023,9 @@ const GuacamoleTerminal = forwardRef(({
                 try {
                     const client = guacamoleClientRef.current;
                     if (!client) return;
-                    // Enviar keep-alive solo si llevamos >20s sin actividad
+                    // Enviar keep-alive solo si llevamos >60s sin actividad
                     const idleMs = Date.now() - (lastActivityTimeRef.current || 0);
-                    if (idleMs < 20000) return;
+                    if (idleMs < 60000) return;
                     // Pequeño nudge de ratón y SHIFT, sin clics
                     const disp = client.getDisplay?.();
                     const el = disp?.getElement?.();
@@ -1756,9 +1756,9 @@ const GuacamoleTerminal = forwardRef(({
 
     // 🔍 VIGILANTE: Detectar congelaciones y reconectar automáticamente
     useEffect(() => {
-        // Leer umbral de congelación configurable (fallback 1h)
-        const configuredFreezeMs = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '3600000', 10);
-        const FREEZE_TIMEOUT = isNaN(configuredFreezeMs) ? 3600000 : Math.max(30000, configuredFreezeMs);
+        // Leer umbral de congelación configurable (fallback 2h)
+        const configuredFreezeMs = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '7200000', 10);
+        const FREEZE_TIMEOUT = isNaN(configuredFreezeMs) ? 7200000 : Math.max(300000, configuredFreezeMs); // Mínimo 5 minutos
         const CHECK_INTERVAL = Math.max(15000, Math.min(300000, Math.floor(FREEZE_TIMEOUT / 12)));
 
         if (connectionState !== 'connected') return;
@@ -1777,7 +1777,8 @@ const GuacamoleTerminal = forwardRef(({
             if (timeSinceActivity > 1800000) { // Solo loggear después de 30 minutos
             }
             
-            // Solo considerar congelación si han pasado más de 2 minutos Y el cliente está en estado connected
+            // Solo considerar congelación si han pasado más tiempo Y el cliente está en estado connected
+            // Además, verificar que realmente no hay actividad del servidor (no solo del cliente)
             if (timeSinceActivity > FREEZE_TIMEOUT && !freezeDetected && connectionState === 'connected') {
                 console.warn('🚨 CONGELACIÓN DETECTADA! Iniciando reconexión automática...');
                 setFreezeDetected(true);
@@ -1847,6 +1848,23 @@ const GuacamoleTerminal = forwardRef(({
             updateActivity();
             if (originalOnStateChange) originalOnStateChange.apply(client, args);
         };
+        
+        // Monitorear también eventos de teclado y ratón para detectar actividad del usuario
+        if (client.onkeydown) {
+            const originalOnKeyDown = client.onkeydown;
+            client.onkeydown = (...args) => {
+                updateActivity();
+                if (originalOnKeyDown) originalOnKeyDown.apply(client, args);
+            };
+        }
+        
+        if (client.onmousedown) {
+            const originalOnMouseDown = client.onmousedown;
+            client.onmousedown = (...args) => {
+                updateActivity();
+                if (originalOnMouseDown) originalOnMouseDown.apply(client, args);
+            };
+        }
         
         return () => {
             // Restaurar handlers originales

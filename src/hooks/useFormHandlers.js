@@ -485,7 +485,7 @@ export const useFormHandlers = ({
             admin: rdpData.admin === true,
             public: rdpData.public === true,
             // Campos específicos de Guacamole
-            autoResize: rdpData.autoResize === true,
+            autoResize: rdpData.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
             guacDpi: rdpData.guacDpi || 96,
             guacSecurity: rdpData.guacSecurity || 'any',
             guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
@@ -532,7 +532,7 @@ export const useFormHandlers = ({
           admin: rdpData.admin === true,
           public: rdpData.public === true,
           // Campos específicos de Guacamole
-          autoResize: rdpData.autoResize === true,
+          autoResize: rdpData.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
           guacDpi: rdpData.guacDpi || 96,
           guacSecurity: rdpData.guacSecurity || 'any',
           guacEnableWallpaper: rdpData.guacEnableWallpaper === true,
@@ -592,7 +592,7 @@ export const useFormHandlers = ({
                 admin: rdpData.admin === true,
                 public: rdpData.public === true,
                 // Campos específicos de Guacamole
-                autoResize: rdpData.autoResize === true,
+                autoResize: rdpData.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
                 guacDpi: rdpData.guacDpi || 96,
                 guacSecurity: rdpData.guacSecurity || 'any',
                 guacEnableWallpaper: rdpData.guacEnableWallpaper === true,

@@ -105,7 +105,7 @@ const SettingsDialog = ({
     return Math.max(1, Math.floor(v / 60000));
   });
   const [rdpSessionActivityMinutes, setRdpSessionActivityMinutes] = useState(() => {
-    const v = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '3600000', 10);
+    const v = parseInt(localStorage.getItem('rdp_freeze_timeout_ms') || '7200000', 10); // 2 horas por defecto
     return Math.max(1, Math.floor(v / 60000));
   });
   const [rdpResizeDebounceMs, setRdpResizeDebounceMs] = useState(() => {

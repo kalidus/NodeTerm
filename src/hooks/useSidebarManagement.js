@@ -285,7 +285,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               guacDisableOffscreenCaching: node.data?.guacDisableOffscreenCaching || node.data?.disableOffscreenCaching || false,
               guacDisableBitmapCaching: node.data?.guacDisableBitmapCaching || node.data?.disableBitmapCaching || false,
               guacDisableCopyRect: node.data?.guacDisableCopyRect || node.data?.disableCopyRect || false,
-              autoResize: node.data?.autoResize || false,
+              autoResize: node.data?.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
               guacDpi: node.data?.guacDpi || 96,
               guacSecurity: node.data?.guacSecurity || 'any',
               redirectFolders: node.data?.redirectFolders !== false,
