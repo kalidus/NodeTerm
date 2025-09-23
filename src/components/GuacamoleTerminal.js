@@ -26,7 +26,7 @@ const GuacamoleTerminal = forwardRef(({
     const isActiveRef = useRef(isActive);
     const [errorMessage, setErrorMessage] = useState('');
     const [isGuacamoleLoaded, setIsGuacamoleLoaded] = useState(false);
-    const [autoResize, setAutoResize] = useState(false);
+    const [autoResize, setAutoResize] = useState(true); // Por defecto true para evitar reconexiones
     const [lastActivityTime, setLastActivityTime] = useState(Date.now());
     const [freezeDetected, setFreezeDetected] = useState(false);
     
