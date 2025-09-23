@@ -302,32 +302,8 @@ async function initializeGuacamoleServices() {
 }
 
 // === Preferencias Guacd (persistencia en userData) ===
-// Función getGuacdPrefPath movida a main/utils/file-utils.js
-
-async function loadPreferredGuacdMethod() {
-  const fs = require('fs');
-  const prefPath = getGuacdPrefPath();
-  if (!prefPath) return null;
-  try {
-    if (!fs.existsSync(prefPath)) return null;
-    const raw = fs.readFileSync(prefPath, 'utf8');
-    const json = JSON.parse(raw || '{}');
-    const m = String(json.preferredMethod || '').toLowerCase();
-    return (m === 'docker' || m === 'wsl' || m === 'mock') ? m : null;
-  } catch { return null; }
-}
-
-async function savePreferredGuacdMethod(method) {
-  const fs = require('fs');
-  const prefPath = getGuacdPrefPath();
-  if (!prefPath) return false;
-  try {
-    const dir = path.dirname(prefPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(prefPath, JSON.stringify({ preferredMethod: method }, null, 2), 'utf8');
-    return true;
-  } catch { return false; }
-}
+// Funciones movidas a src/main/utils/file-utils.js
+const { loadPreferredGuacdMethod, savePreferredGuacdMethod } = require('./src/main/utils/file-utils');
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
