@@ -277,7 +277,8 @@ function registerGuacamoleHandlers({
             "enable-full-window-drag": config.enableFullWindowDrag === true ? true : undefined,
             "enable-menu-animations": config.enableMenuAnimations === true ? true : undefined,
             // Configuración específica para resize dinámico
-            "resize-method": config.autoResize ? "display-update" : "reconnect",
+            // Usar display-update siempre para evitar reconexiones, incluso con resolución fija
+            "resize-method": "display-update",
             "enable-desktop-composition": config.autoResize ? true : false,
             "enable-full-window-drag": config.autoResize ? true : false,
             // Portapapeles: desactivar solo si el usuario lo deshabilitó

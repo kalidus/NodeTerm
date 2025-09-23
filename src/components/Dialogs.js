@@ -415,7 +415,7 @@ export function UnifiedConnectionDialog({
           admin: data.admin || false,
           public: data.public || false,
           // Campos específicos para Guacamole
-          autoResize: data.autoResize || false,
+          autoResize: data.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
           guacDpi: data.guacDpi || 96,
           guacSecurity: data.guacSecurity || 'any',
           guacEnableWallpaper: data.guacEnableWallpaper || false,
