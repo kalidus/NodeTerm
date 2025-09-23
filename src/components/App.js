@@ -1115,6 +1115,22 @@ const App = () => {
     window.__DEBUG_NODES__ = () => nodes;
   }, [nodes]);
 
+  // Escuchar eventos de expansión de nodos desde el buscador
+  useEffect(() => {
+    const handleExpandNodePath = (event) => {
+      const { expandedKeys: newExpandedKeys } = event.detail;
+      if (newExpandedKeys) {
+        setExpandedKeys(newExpandedKeys);
+      }
+    };
+
+    window.addEventListener('expand-node-path', handleExpandNodePath);
+    
+    return () => {
+      window.removeEventListener('expand-node-path', handleExpandNodePath);
+    };
+  }, [setExpandedKeys]);
+
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
     // Asegurar que el ref esté inicializado
@@ -1396,6 +1412,7 @@ const App = () => {
           }
         }}
         iconTheme={iconTheme}
+        expandedKeys={expandedKeys}
       />
       <DialogsManager
         // Referencias
@@ -1549,56 +1566,6 @@ const App = () => {
         closeRdpDialog={closeRdpDialog}
         getAllFolders={getAllFolders}
         nodes={nodes}
-        
-        // Theme management props
-        availableThemes={availableThemes}
-        availableFonts={availableFonts}
-        fontFamily={fontFamily}
-        setFontFamily={setFontFamily}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
-        localFontFamily={localFontFamily}
-        setLocalFontFamily={setLocalFontFamily}
-        localFontSize={localFontSize}
-        setLocalFontSize={setLocalFontSize}
-        terminalTheme={terminalTheme}
-        setTerminalTheme={setTerminalTheme}
-        statusBarTheme={statusBarTheme}
-        setStatusBarTheme={setStatusBarTheme}
-        localPowerShellTheme={localPowerShellTheme}
-        setLocalPowerShellTheme={setLocalPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
-        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
-        uiTheme={uiTheme}
-        setUiTheme={setUiTheme}
-        iconTheme={iconTheme}
-        setIconTheme={setIconTheme}
-        iconThemeSidebar={iconThemeSidebar}
-        setIconThemeSidebar={setIconThemeSidebar}
-        iconSize={iconSize}
-        setIconSize={setIconSize}
-        folderIconSize={folderIconSize}
-        setFolderIconSize={setFolderIconSize}
-        connectionIconSize={connectionIconSize}
-        setConnectionIconSize={setConnectionIconSize}
-        explorerFont={explorerFont}
-        setExplorerFont={setExplorerFont}
-        explorerFontSize={explorerFontSize}
-        setExplorerFontSize={setExplorerFontSize}
-        explorerColorTheme={explorerColorTheme}
-        setExplorerColorTheme={setExplorerColorTheme}
-        sidebarFont={sidebarFont}
-        setSidebarFont={setSidebarFont}
-        sidebarFontSize={sidebarFontSize}
-        setSidebarFontSize={setSidebarFontSize}
-        statusBarIconTheme={statusBarIconTheme}
-        setStatusBarIconTheme={setStatusBarIconTheme}
-        statusBarPollingInterval={statusBarPollingInterval}
-        setStatusBarPollingInterval={setStatusBarPollingInterval}
-        
-        // Sync settings props
-        updateThemesFromSync={updateThemesFromSync}
-        updateStatusBarFromSync={updateStatusBarFromSync}
       />
 
       {/* Menú contextual del árbol de la sidebar */}
