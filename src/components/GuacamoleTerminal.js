@@ -391,6 +391,10 @@ const GuacamoleTerminal = forwardRef(({
                       displayElement.style.zIndex = '1';
                       displayElement.style.visibility = 'visible';
                       displayElement.style.opacity = '1';
+                      
+                      // Agregar clase CSS para eliminar borde de foco
+                      displayElement.classList.add('guacamole-display');
+                      displayElement.setAttribute('data-guacamole-display', 'true');
                      
                      // Añadir al contenedor
                      container.appendChild(displayElement);

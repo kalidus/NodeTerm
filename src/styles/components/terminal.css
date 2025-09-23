@@ -123,3 +123,26 @@
   border: none !important;
   box-shadow: none !important; /* Asegura que no haya ninguna sombra de foco */
 }
+
+/* Elimina el borde de foco naranja en elementos de Guacamole RDP */
+.guacamole-display,
+.guacamole-display:focus,
+.guacamole-display:focus-within,
+.guacamole-display:focus-visible,
+div[data-guacamole-display],
+div[data-guacamole-display]:focus,
+div[data-guacamole-display]:focus-within,
+div[data-guacamole-display]:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Estilos adicionales para elementos canvas de Guacamole */
+canvas:focus,
+canvas:focus-within,
+canvas:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
