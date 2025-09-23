@@ -105,8 +105,29 @@ function registerGuacamoleHandlers({
   ipcMain.handle('guacamole:set-preferred-method', async (event, method) => {
     try {
       if (guacdService && typeof guacdService.setPreferredMethod === 'function') {
+        // Establecer la nueva preferencia
         guacdService.setPreferredMethod(method);
-        return { success: true, method };
+        
+        // Guardar la preferencia de forma persistente
+        try {
+          const { savePreferredGuacdMethod } = require('../../main/utils/file-utils');
+          await savePreferredGuacdMethod(method);
+          console.log(`💾 Preferencia de método Guacd guardada: ${method}`);
+        } catch (saveError) {
+          console.warn('⚠️ No se pudo guardar la preferencia de método Guacd:', saveError.message);
+        }
+        
+        // Reiniciar el servicio para aplicar la nueva preferencia
+        console.log(`🔄 Aplicando nueva preferencia de método Guacd: ${method}`);
+        const restartSuccess = await guacdService.restart();
+        
+        if (restartSuccess) {
+          console.log(`✅ GuacdService reiniciado exitosamente con método: ${method}`);
+          return { success: true, method, restarted: true };
+        } else {
+          console.warn(`⚠️ GuacdService no se pudo reiniciar con método: ${method}`);
+          return { success: false, error: 'Failed to restart GuacdService with new method' };
+        }
       } else {
         return { success: false, error: 'GuacdService not available' };
       }

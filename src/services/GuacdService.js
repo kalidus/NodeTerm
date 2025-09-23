@@ -418,6 +418,30 @@ class GuacdService {
   }
 
   /**
+   * Reinicia el servicio guacd con la preferencia actual
+   */
+  async restart() {
+    try {
+      console.log('🔄 Reiniciando GuacdService con preferencia:', this.preferredMethod);
+      
+      // Detener el servicio actual si está corriendo
+      if (this.isRunning) {
+        await this.stop();
+      }
+      
+      // Limpiar estado
+      this.isRunning = false;
+      this.detectedMethod = null;
+      
+      // Reinicializar con la nueva preferencia
+      return await this.initialize();
+    } catch (error) {
+      console.error('❌ Error reiniciando GuacdService:', error);
+      return false;
+    }
+  }
+
+  /**
    * Intenta iniciar guacd usando Docker
    */
   async startWithDocker() {
