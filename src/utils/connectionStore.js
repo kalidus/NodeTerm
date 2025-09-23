@@ -133,6 +133,8 @@ function fromSidebarNode(node, typeOverride = null) {
     colors: node.data?.colors || '32',
     // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
     guacEnableWallpaper: node.data?.guacEnableWallpaper || node.data?.enableWallpaper || false,
+    guacEnableDrive: node.data?.guacEnableDrive || false,
+    guacDriveHostDir: node.data?.guacDriveHostDir || '',
     guacEnableDesktopComposition: node.data?.guacEnableDesktopComposition || node.data?.enableDesktopComposition || false,
     guacEnableFontSmoothing: node.data?.guacEnableFontSmoothing || node.data?.enableFontSmoothing || false,
     guacEnableTheming: node.data?.guacEnableTheming || node.data?.enableTheming || false,

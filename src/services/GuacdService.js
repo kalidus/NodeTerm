@@ -695,6 +695,9 @@ class GuacdService {
         // Asegurar instalación de guacd
         await new Promise((r) => wslExec(['sh', '-lc', 'command -v guacd >/dev/null 2>&1 || (export DEBIAN_FRONTEND=noninteractive; apt-get update -y && apt-get install -y guacd)'], () => r()));
 
+        // Crear directorio por defecto NodeTermDrive en el home del usuario WSL
+        await new Promise((r) => wslExec(['sh', '-lc', 'mkdir -p /home/kalidus/NodeTermDrive && chown kalidus:kalidus /home/kalidus/NodeTermDrive'], () => r()));
+
         // Lanzar guacd en background dentro de WSL (bind a 127.0.0.1 y log a archivo)
         // Escuchar en todas las interfaces dentro de WSL para permitir acceso desde Windows
         const bindIp = '0.0.0.0';
@@ -974,7 +977,7 @@ class GuacdService {
    * Devuelve la ruta que debe enviarse en el token RDP como "drive-path",
    * dependiendo del método con el que corre guacd.
    * - docker: la ruta montada dentro del contenedor (/guacdrive)
-   * - wsl: la ruta equivalente en WSL (e.g., /mnt/c/Users/...)
+   * - wsl: ruta nativa de Linux (/home/kalidus/NodeTermDrive) para evitar problemas de permisos
    * - native: ruta Windows del host
    * - mock/unknown: intenta usar /guacdrive por compatibilidad
    */
@@ -984,7 +987,9 @@ class GuacdService {
       return '/guacdrive';
     }
     if (method === 'wsl') {
-      return toWslPath(this.driveHostDir);
+      // Para WSL, usar una ruta nativa de Linux en lugar de una ruta montada
+      // Esto evita problemas de permisos con rutas montadas de Windows
+      return '/home/kalidus/NodeTermDrive';
     }
     if (method === 'native') {
       return this.driveHostDir;
@@ -996,7 +1001,7 @@ class GuacdService {
   /**
    * Resuelve el drive-path a partir de un directorio del host especificado.
    * Para docker, siempre devuelve '/guacdrive' (requiere que el contenedor monte hostDir previamente).
-   * Para wsl, convierte hostDir a /mnt/...
+   * Para wsl, si el usuario especifica una ruta personalizada, la convierte a WSL; si no, usa ruta nativa de Linux.
    * Para nativo, devuelve hostDir.
    */
   resolveDrivePath(hostDir) {
@@ -1009,7 +1014,15 @@ class GuacdService {
       return '/guacdrive';
     }
     if (method === 'wsl') {
-      return toWslPath(dir);
+      // Para WSL, si el usuario especificó una ruta, convertirla a WSL
+      // Si no, usar la ruta por defecto
+      if (dir && hostDir && typeof hostDir === 'string' && hostDir.trim().length > 0) {
+        // El usuario especificó una ruta personalizada, convertirla a WSL
+        return toWslPath(dir);
+      } else {
+        // Usar la ruta por defecto nativa de Linux
+        return '/home/kalidus/NodeTermDrive';
+      }
     }
     if (method === 'native') {
       return dir;

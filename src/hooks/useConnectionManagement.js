@@ -345,6 +345,14 @@ export const useConnectionManagement = ({
         dynamicHeight = Math.floor(window.innerHeight * 0.7);
       }
       
+      // Debug: verificar qué campos tiene baseRdp
+      console.log('🔍 [DEBUG] baseRdp fields:', {
+        guacEnableDrive: baseRdp.guacEnableDrive,
+        guacDriveHostDir: baseRdp.guacDriveHostDir,
+        hasDriveHostDir: !!baseRdp.guacDriveHostDir,
+        driveHostDirLength: baseRdp.guacDriveHostDir?.length || 0
+      });
+
       const rdpConfig = {
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
