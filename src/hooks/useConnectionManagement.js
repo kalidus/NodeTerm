@@ -252,7 +252,7 @@ export const useConnectionManagement = ({
         guacDisableOffscreenCaching: node.guacDisableOffscreenCaching || node.disableOffscreenCaching || false,
         guacDisableBitmapCaching: node.guacDisableBitmapCaching || node.disableBitmapCaching || false,
         guacDisableCopyRect: node.guacDisableCopyRect || node.disableCopyRect || false,
-        autoResize: node.autoResize || false,
+        autoResize: node.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
         guacDpi: node.guacDpi || 96,
         guacSecurity: node.guacSecurity || 'any',
         redirectFolders: node.redirectFolders !== false,

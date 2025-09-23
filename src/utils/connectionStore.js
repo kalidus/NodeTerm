@@ -90,7 +90,7 @@ function toSerializable(connection) {
     guacDisableOffscreenCaching: connection.guacDisableOffscreenCaching || connection.disableOffscreenCaching || false,
     guacDisableBitmapCaching: connection.guacDisableBitmapCaching || connection.disableBitmapCaching || false,
     guacDisableCopyRect: connection.guacDisableCopyRect || connection.disableCopyRect || false,
-    autoResize: connection.autoResize || false,
+    autoResize: connection.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
     guacDpi: connection.guacDpi || 96,
     guacSecurity: connection.guacSecurity || 'any',
     redirectFolders: connection.redirectFolders !== false,
@@ -145,7 +145,7 @@ function fromSidebarNode(node, typeOverride = null) {
     guacDisableOffscreenCaching: node.data?.guacDisableOffscreenCaching || node.data?.disableOffscreenCaching || false,
     guacDisableBitmapCaching: node.data?.guacDisableBitmapCaching || node.data?.disableBitmapCaching || false,
     guacDisableCopyRect: node.data?.guacDisableCopyRect || node.data?.disableCopyRect || false,
-    autoResize: node.data?.autoResize || false,
+    autoResize: node.data?.autoResize !== false, // Por defecto true, solo false si explícitamente se establece
     guacDpi: node.data?.guacDpi || 96,
     guacSecurity: node.data?.guacSecurity || 'any',
     redirectFolders: node.data?.redirectFolders !== false,
