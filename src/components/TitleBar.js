@@ -6,7 +6,7 @@ import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
@@ -105,9 +105,66 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   };
 
+  // Función para encontrar la ruta de una conexión en el árbol
+  const findNodePath = (nodes, targetNode) => {
+    const findPath = (nodeList, target, currentPath = []) => {
+      for (const node of nodeList) {
+        const newPath = [...currentPath, node.key];
+        
+        // Si encontramos el nodo objetivo, retornar la ruta
+        if (node.key === target.key) {
+          return newPath;
+        }
+        
+        // Si tiene hijos, buscar recursivamente
+        if (node.children && node.children.length > 0) {
+          const foundPath = findPath(node.children, target, newPath);
+          if (foundPath) {
+            return foundPath;
+          }
+        }
+      }
+      return null;
+    };
+    
+    return findPath(nodes, targetNode);
+  };
+
+  // Función para expandir carpetas en la ruta de una conexión
+  const expandNodePath = (nodePath, currentExpandedKeys) => {
+    if (!nodePath || nodePath.length === 0) return currentExpandedKeys;
+    
+    // Crear una copia de las claves expandidas actuales para preservar el estado existente
+    const newExpandedKeys = { ...currentExpandedKeys };
+    
+    // Solo expandir las carpetas en la ruta que no estén ya expandidas
+    for (let i = 0; i < nodePath.length - 1; i++) {
+      const folderKey = nodePath[i];
+      // Solo expandir si no está ya expandida
+      if (!newExpandedKeys[folderKey]) {
+        newExpandedKeys[folderKey] = true;
+      }
+    }
+    
+    return newExpandedKeys;
+  };
+
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
+    
+    // Encontrar la ruta de la conexión y expandir las carpetas padre
+    const nodePath = findNodePath(allNodes, node);
+    if (nodePath && nodePath.length > 1) {
+      // Expandir las carpetas en la ruta, preservando las que ya están expandidas
+      const newExpandedKeys = expandNodePath(nodePath, expandedKeys || {});
+      
+      // Disparar evento personalizado para que el componente padre actualice expandedKeys
+      const expandEvent = new CustomEvent('expand-node-path', { 
+        detail: { expandedKeys: newExpandedKeys } 
+      });
+      window.dispatchEvent(expandEvent);
+    }
     
     // Detectar el tipo de conexión y llamar a la función apropiada
     const isSSH = node.data && node.data.type === 'ssh';
