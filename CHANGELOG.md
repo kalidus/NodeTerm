@@ -5,6 +5,31 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2024-12-20
+
+### 🚀 Optimizaciones de Rendimiento
+- **Optimización del main.js**: Refactorización completa del archivo principal de Electron
+- **Mejor Gestión de Memoria**: Optimización de la gestión de recursos del sistema
+- **Reducción de Tiempo de Inicio**: Mejoras en el tiempo de arranque de la aplicación
+- **Optimización de IPC**: Mejor comunicación entre procesos principal y renderer
+
+### 🔧 Mejoras Técnicas
+- **Código Más Limpio**: Refactorización de funciones y mejor organización del código
+- **Mejor Manejo de Errores**: Mejores mensajes de error y logging
+- **Optimización de Dependencias**: Mejor gestión de módulos nativos
+- **Preparación para Escalabilidad**: Arquitectura más robusta para futuras funcionalidades
+
+### 🐛 Correcciones de Bugs
+- **Corrección de Memory Leaks**: Eliminación de fugas de memoria en el proceso principal
+- **Mejor Estabilidad**: Corrección de crashes ocasionales durante el inicio
+- **Fix de Reconexión**: Mejor manejo de reconexiones automáticas
+- **Corrección de Timeouts**: Mejor gestión de timeouts en conexiones SSH
+
+### 📁 Cambios en Estructura
+- **Reorganización de main.js**: Mejor estructura y modularidad
+- **Optimización de Handlers**: Mejor organización de manejadores de eventos
+- **Mejor Separación de Responsabilidades**: Código más mantenible
+
 ## [1.5.3] - 2024-12-19
 
 ### ✨ Nuevas Características
