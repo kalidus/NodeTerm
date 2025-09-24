@@ -20,9 +20,7 @@
     "files": [
       "dist/",
       "binaries/**",
-      "src/components/",
-      "src/utils/",
-      "src/services/",
+      "src/**",
       "node_modules/",
       "main.js",
       "preload.js",
@@ -117,7 +115,6 @@
     "@babel/core": "^7.23.6",
     "@babel/preset-env": "^7.23.6",
     "@babel/preset-react": "^7.23.3",
-    "@electron/rebuild": "^3.7.2",
     "babel-loader": "^9.1.3",
     "buffer": "^6.0.3",
     "concurrently": "^8.2.2",
