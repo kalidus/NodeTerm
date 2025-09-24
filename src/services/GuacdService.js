@@ -99,6 +99,26 @@ function toWslPath(winPath) {
   }
 }
 
+/**
+ * Convierte una ruta local a una ruta accesible por el servidor RDP remoto.
+ * - Windows: convierte a ruta WSL (/mnt/c/...)
+ * - macOS/Linux: devuelve la ruta tal cual (asumiendo que el servidor remoto puede acceder)
+ */
+function toRemoteAccessiblePath(localPath) {
+  try {
+    if (process.platform === 'win32') {
+      // En Windows, convertir a ruta WSL para que el servidor RDP remoto pueda acceder
+      return toWslPath(localPath);
+    } else {
+      // En macOS/Linux, devolver la ruta tal cual
+      // Asumimos que el servidor RDP remoto puede acceder a rutas locales
+      return localPath;
+    }
+  } catch (_) {
+    return localPath;
+  }
+}
+
 function resolveGuacdZipCandidates() {
   const unique = new Set();
   const pushIfExists = (p) => { if (fileExistsSync(p)) unique.add(p); };
@@ -537,6 +557,50 @@ class GuacdService {
         }
       }, 3000);
     });
+  }
+
+  /**
+   * Fuerza la recreación del contenedor Docker con la nueva carpeta
+   */
+  async _forceDockerContainerRecreation() {
+    try {
+      console.log('[GuacdService] Deteniendo contenedor Docker existente...');
+      
+      // Detener y eliminar el contenedor existente
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execAsync = util.promisify(exec);
+      
+      try {
+        await execAsync('docker stop nodeterm-guacd');
+        console.log('[GuacdService] Contenedor detenido exitosamente');
+      } catch (error) {
+        console.log('[GuacdService] Contenedor no estaba corriendo o ya fue eliminado');
+      }
+      
+      try {
+        await execAsync('docker rm nodeterm-guacd');
+        console.log('[GuacdService] Contenedor eliminado exitosamente');
+      } catch (error) {
+        console.log('[GuacdService] Contenedor no existía o ya fue eliminado');
+      }
+      
+      // Reiniciar guacd con la nueva configuración
+      console.log('[GuacdService] Reiniciando guacd con nueva carpeta:', this.driveHostDir);
+      this.isRunning = false;
+      await this.startWithDocker();
+      
+    } catch (error) {
+      console.error('[GuacdService] Error recreando contenedor Docker:', error);
+    }
+  }
+
+  /**
+   * Método público para forzar la recreación del contenedor Docker
+   */
+  async forceDockerRecreation() {
+    console.log('[GuacdService] Forzando recreación del contenedor Docker...');
+    await this._forceDockerContainerRecreation();
   }
 
   /**
@@ -1008,7 +1072,9 @@ class GuacdService {
   getDrivePathForCurrentMethod() {
     const method = this.detectedMethod || this.preferredMethod || '';
     if (method === 'docker') {
-      return '/guacdrive';
+      // Para Docker, convertir la ruta local a ruta accesible por el servidor RDP remoto
+      // Esto permite que el servidor RDP remoto acceda a los archivos
+      return toRemoteAccessiblePath(this.driveHostDir);
     }
     if (method === 'wsl') {
       // Para WSL, usar una ruta nativa de Linux en lugar de una ruta montada
@@ -1031,11 +1097,26 @@ class GuacdService {
   resolveDrivePath(hostDir) {
     const method = this.detectedMethod || this.preferredMethod || '';
     const dir = typeof hostDir === 'string' && hostDir.trim().length > 0 ? hostDir.trim() : this.driveHostDir;
+    
+    console.log('[GuacdService] resolveDrivePath llamado con:', { hostDir, dir, currentDriveHostDir: this.driveHostDir, method });
+    
     if (method === 'docker') {
       if (dir && this.driveHostDir && path.resolve(dir) !== path.resolve(this.driveHostDir)) {
         console.warn('[GuacdService] Advertencia: método docker activo; el volumen está montado en', this.driveHostDir, 'y no puede cambiarse sin reiniciar guacd.');
+        console.log('[GuacdService] Nueva carpeta solicitada:', dir);
+        console.log('[GuacdService] Actualizando driveHostDir y forzando recreación del contenedor...');
+        
+        // Actualizar la carpeta del host
+        this.driveHostDir = dir;
+        
+        // Forzar recreación del contenedor Docker con la nueva carpeta
+        this._forceDockerContainerRecreation();
+      } else {
+        console.log('[GuacdService] No se detectó cambio de carpeta o ya está actualizada');
       }
-      return '/guacdrive';
+      // Para Docker, convertir la ruta local a ruta accesible por el servidor RDP remoto
+      // Esto permite que el servidor RDP remoto acceda a los archivos
+      return toRemoteAccessiblePath(this.driveHostDir);
     }
     if (method === 'wsl') {
       // Para WSL, si el usuario especificó una ruta, convertirla a WSL
