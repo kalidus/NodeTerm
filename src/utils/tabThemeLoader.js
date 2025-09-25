@@ -1,4 +1,4 @@
-htopimage.png// Utilidad para cargar y aplicar el tema de pestañas al iniciar la aplicación
+// Utilidad para cargar y aplicar el tema de pestañas al iniciar la aplicación
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 
@@ -514,6 +514,126 @@ const tabThemes = {
       '--tab-padding': '8px 12px',
       '--tab-min-width': '120px',
       '--tab-max-width': '240px'
+    }
+  },
+
+  dracula: {
+    name: 'Dracula Style',
+    description: 'Pestañas estilo Dracula con púrpura oscuro',
+    styles: {
+      '--ui-tab-bg': '#282a36',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #bd93f9 0%, #8b5cf6 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #44475a 0%, #6272a4 100%)',
+      '--ui-tab-text': '#f8f8f2',
+      '--ui-tab-active-text': '#282a36',
+      '--ui-tab-border': '#ff79c6',
+      '--ui-tab-close-hover': '#ff5555',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 20px rgba(189, 147, 249, 0.5)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  nord: {
+    name: 'Nord Style',
+    description: 'Pestañas estilo Nord frías y minimalistas',
+    styles: {
+      '--ui-tab-bg': '#2e3440',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #88c0d0 0%, #5e81ac 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #3b4252 0%, #434c5e 100%)',
+      '--ui-tab-text': '#d8dee9',
+      '--ui-tab-active-text': '#2e3440',
+      '--ui-tab-border': '#81a1c1',
+      '--ui-tab-close-hover': '#bf616a',
+      '--tab-border-radius': '6px 6px 0 0',
+      '--tab-box-shadow': '0 2px 8px rgba(136, 192, 208, 0.3)',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  synthwave: {
+    name: 'Synthwave Style',
+    description: 'Pestañas estilo Synthwave 84 retro neón',
+    styles: {
+      '--ui-tab-bg': '#0d0221',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #1a0b2e 0%, #16213e 100%)',
+      '--ui-tab-text': '#ff006e',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#ff006e',
+      '--ui-tab-close-hover': '#ffbe0b',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 25px rgba(255, 0, 110, 0.6), inset 0 0 15px rgba(131, 56, 236, 0.3)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  cyberpunk: {
+    name: 'Cyberpunk Style',
+    description: 'Pestañas estilo Cyberpunk futuristas',
+    styles: {
+      '--ui-tab-bg': '#0a0a0a',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #00f5ff 0%, #ff0080 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+      '--ui-tab-text': '#00f5ff',
+      '--ui-tab-active-text': '#000000',
+      '--ui-tab-border': '#00f5ff',
+      '--ui-tab-close-hover': '#ff0080',
+      '--tab-border-radius': '0',
+      '--tab-box-shadow': '0 0 30px rgba(0, 245, 255, 0.8), inset 0 0 20px rgba(255, 0, 128, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  matrix: {
+    name: 'Matrix Style',
+    description: 'Pestañas estilo Matrix verde hacker',
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #00ff41 0%, #00cc33 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #001100 0%, #002200 100%)',
+      '--ui-tab-text': '#00ff41',
+      '--ui-tab-active-text': '#000000',
+      '--ui-tab-border': '#00ff41',
+      '--ui-tab-close-hover': '#ff0040',
+      '--tab-border-radius': '2px 2px 0 0',
+      '--tab-box-shadow': '0 0 20px rgba(0, 255, 65, 0.7), inset 0 0 10px rgba(0, 255, 65, 0.1)',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  hologram: {
+    name: 'Hologram Style',
+    description: 'Pestañas estilo holográfico translúcido',
+    styles: {
+      '--ui-tab-bg': 'rgba(0, 0, 0, 0.8)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, rgba(0, 255, 255, 0.8) 0%, rgba(255, 0, 255, 0.8) 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, rgba(0, 255, 255, 0.3) 0%, rgba(255, 0, 255, 0.3) 100%)',
+      '--ui-tab-text': '#00ffff',
+      '--ui-tab-active-text': '#000000',
+      '--ui-tab-border': 'rgba(0, 255, 255, 0.6)',
+      '--ui-tab-close-hover': '#ff00ff',
+      '--tab-border-radius': '12px 12px 0 0',
+      '--tab-box-shadow': '0 0 25px rgba(0, 255, 255, 0.5), inset 0 0 15px rgba(255, 0, 255, 0.2)',
+      '--tab-transition': 'all 0.3s ease',
+      '--tab-backdrop-filter': 'blur(10px)'
+    }
+  },
+
+  plasma: {
+    name: 'Plasma Style',
+    description: 'Pestañas estilo plasma energético',
+    styles: {
+      '--ui-tab-bg': '#1a1a2e',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #16213e 0%, #0f3460 100%)',
+      '--ui-tab-text': '#ff6b6b',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#ff6b6b',
+      '--ui-tab-close-hover': '#4ecdc4',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 35px rgba(255, 107, 107, 0.6), 0 0 20px rgba(78, 205, 196, 0.4)',
+      '--tab-transition': 'all 0.3s ease'
     }
   }
 };
