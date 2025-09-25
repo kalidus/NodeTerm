@@ -1,4 +1,4 @@
-// Utilidad para cargar y aplicar el tema de pestañas al iniciar la aplicación
+htopimage.png// Utilidad para cargar y aplicar el tema de pestañas al iniciar la aplicación
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 
