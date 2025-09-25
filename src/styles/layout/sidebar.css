@@ -11,8 +11,8 @@
 .tree-container {
   background: var(--ui-sidebar-bg) !important;
   /* Ocultar scrollbar pero mantener funcionalidad */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
   /* Scroll suave */
   scroll-behavior: smooth;
   /* Asegurar que el scroll funcione con la rueda del mouse */
@@ -22,7 +22,7 @@
 
 /* Ocultar scrollbar en WebKit (Chrome, Safari, Edge) */
 .tree-container::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }
 
 /* Árbol de la sidebar */
@@ -875,61 +875,19 @@
 
 /* === ESTILOS DE SCROLL === */
 
-/* Scroll horizontal más fino e integrado - Aplicado a todas las clases de PrimeReact Tree */
+/* Ocultar completamente el scrollbar en WebKit (Chrome, Safari, Edge) */
 .p-tree::-webkit-scrollbar,
 .sidebar-tree::-webkit-scrollbar,
 .tree-container::-webkit-scrollbar,
 .p-tree .p-tree-container::-webkit-scrollbar {
-  height: 6px !important;
-  width: 6px !important;
+  display: none !important;
 }
 
-.p-tree::-webkit-scrollbar-track,
-.sidebar-tree::-webkit-scrollbar-track,
-.tree-container::-webkit-scrollbar-track,
-.p-tree .p-tree-container::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 3px !important;
-}
-
-.p-tree::-webkit-scrollbar-thumb,
-.sidebar-tree::-webkit-scrollbar-thumb,
-.tree-container::-webkit-scrollbar-thumb,
-.p-tree .p-tree-container::-webkit-scrollbar-thumb {
-  background: var(--ui-sidebar-border, #3e3e42) !important;
-  opacity: 0.6 !important;
-  border-radius: 3px !important;
-  border: none !important;
-}
-
-.p-tree::-webkit-scrollbar-thumb:hover,
-.sidebar-tree::-webkit-scrollbar-thumb:hover,
-.tree-container::-webkit-scrollbar-thumb:hover,
-.p-tree .p-tree-container::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-sidebar-text, #cccccc) !important;
-  opacity: 0.8 !important;
-}
-
-/* Scroll vertical más fino */
-.p-tree::-webkit-scrollbar:vertical,
-.sidebar-tree::-webkit-scrollbar:vertical,
-.tree-container::-webkit-scrollbar:vertical,
-.p-tree .p-tree-container::-webkit-scrollbar:vertical {
-  width: 6px !important;
-}
-
-.p-tree::-webkit-scrollbar:horizontal,
-.sidebar-tree::-webkit-scrollbar:horizontal,
-.tree-container::-webkit-scrollbar:horizontal,
-.p-tree .p-tree-container::-webkit-scrollbar:horizontal {
-  height: 6px !important;
-}
-
-/* Firefox scrollbar */
+/* Firefox scrollbar - completamente invisible */
 .p-tree,
 .sidebar-tree,
 .tree-container,
 .p-tree .p-tree-container {
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ui-sidebar-border, #3e3e42) transparent !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
