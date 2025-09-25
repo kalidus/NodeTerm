@@ -4,6 +4,7 @@ import { useConnectionManagement } from '../hooks/useConnectionManagement';
 import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
@@ -80,6 +81,11 @@ const App = () => {
   const toast = useRef(null);
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
+
+  // Cargar tema de pestañas al inicializar la aplicación
+  useEffect(() => {
+    loadSavedTabTheme();
+  }, []);
   
   // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas
   const unifiedHandleImportComplete = async (importResult) => {
