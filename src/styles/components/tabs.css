@@ -14,7 +14,7 @@
   margin-bottom: 0;
   padding-bottom: 0;
   background: var(--ui-content-bg) !important;
-  border-bottom: 1px solid var(--ui-tab-border) !important;
+  border-bottom: none !important;
 }
 
 .p-tabview .p-tabview-nav li {
@@ -39,7 +39,7 @@
 
 /* Barra de tinta para la pestaña activa */
 .p-tabview .p-tabview-nav .p-tabview-ink-bar {
-  display: block !important;
+  display: none !important;
   position: absolute;
   left: 0;
   right: 0;

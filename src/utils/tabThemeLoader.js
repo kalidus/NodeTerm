@@ -455,7 +455,8 @@ const tabThemes = {
       '--ui-tab-close-hover': '#ff5722',
       '--tab-border-radius': '4px 4px 0 0',
       '--tab-box-shadow': 'inset 0 0 20px rgba(0, 188, 212, 0.3), 0 0 15px rgba(0, 188, 212, 0.5)',
-      '--tab-transition': 'all 0.3s ease'
+      '--tab-transition': 'all 0.3s ease',
+      '--tab-active-border-bottom': 'none'
     }
   },
 
@@ -490,6 +491,29 @@ const tabThemes = {
       '--tab-border-radius': '0 20px 0 0',
       '--tab-box-shadow': '0 0 20px rgba(0, 188, 212, 0.4), inset 2px 2px 10px rgba(0, 188, 212, 0.2)',
       '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  vscode: {
+    name: 'VS Code Style',
+    description: 'Pestañas estilo Visual Studio Code',
+    styles: {
+      '--ui-tab-bg': '#2d2d30',
+      '--ui-tab-active-bg': '#1e1e1e',
+      '--ui-tab-hover-bg': '#3e3e42',
+      '--ui-tab-text': '#cccccc',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#3e3e42',
+      '--ui-tab-close-hover': '#f48771',
+      '--tab-border-radius': '0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease',
+      '--tab-font-family': 'Segoe UI, system-ui, sans-serif',
+      '--tab-font-size': '13px',
+      '--tab-font-weight': '400',
+      '--tab-padding': '8px 12px',
+      '--tab-min-width': '120px',
+      '--tab-max-width': '240px'
     }
   }
 };

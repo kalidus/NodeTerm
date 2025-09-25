@@ -595,7 +595,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             {/* Barra de pestañas */}
             <div style={{
                 background: tabBarBg,
-                borderBottom: '1px solid #2a4a6b',
+                borderBottom: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 minHeight: '40px',
@@ -625,7 +625,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     color: '#ffffff',
                                     borderTop: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderRight: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                                    borderBottom: tab.active ? 'none' : '1px solid transparent',
+                                    borderBottom: 'none',
                                     // Use individual border properties instead of shorthand
                                     borderLeftColor: dragOverTabIndex === index ? 'var(--primary-color)' : (tab.active ? 'rgba(255,255,255,0.1)' : 'transparent'),
                                     borderLeftWidth: dragOverTabIndex === index ? '3px' : '1px',
