@@ -92,22 +92,52 @@
   min-width: 0 !important;
 }
 
-/* Scroll fino para terminales en split */
+/* === ESTILOS DE SCROLL PARA TERMINALES === */
+
+/* Scroll fino para terminales - Aplicado a todos los terminales (normales y split) */
+.xterm-viewport::-webkit-scrollbar,
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar {
+  height: 4px !important;
   width: 4px !important;
 }
 
+.xterm-viewport::-webkit-scrollbar-track,
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-track {
   background: transparent !important;
-}
-
-.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3) !important;
   border-radius: 3px !important;
 }
 
+.xterm-viewport::-webkit-scrollbar-thumb,
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-border, #3e3e42) !important;
+  opacity: 0.6 !important;
+  border-radius: 3px !important;
+  border: none !important;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover,
 .split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5) !important;
+  background: var(--ui-sidebar-text, #cccccc) !important;
+  opacity: 0.8 !important;
+}
+
+/* Scroll vertical más fino */
+.xterm-viewport::-webkit-scrollbar:vertical,
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar:vertical {
+  width: 4px !important;
+}
+
+/* Scroll horizontal más fino */
+.xterm-viewport::-webkit-scrollbar:horizontal,
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar:horizontal {
+  height: 4px !important;
+}
+
+/* Firefox scrollbar para terminales */
+.xterm-viewport,
+.split-container .terminal-outer-padding .xterm-viewport {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--ui-sidebar-border, #3e3e42) transparent !important;
 }
 
 /* Padding externo opcional para el terminal */
