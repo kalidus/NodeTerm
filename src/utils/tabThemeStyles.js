@@ -538,10 +538,33 @@ export const generateAdvancedCSS = (themeName, styles) => {
     `,
 
     steamBlue: `
+      /* Eliminar completamente la barra inferior de PrimeReact */
       .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
         animation: steam-glow-blue 2s ease-in-out infinite alternate !important;
+        border-bottom: none !important;
+        border-bottom-width: 0 !important;
+        border-bottom-style: none !important;
+        border-bottom-color: transparent !important;
+        box-shadow: inset 0 0 20px rgba(0, 188, 212, 0.3), 0 0 15px rgba(0, 188, 212, 0.5) !important;
       }
       
+      /* Eliminar la barra inferior del contenedor de pestañas */
+      .p-tabview .p-tabview-nav {
+        border-bottom: none !important;
+      }
+      
+      /* Eliminar cualquier pseudo-elemento que cree bordes */
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link::after,
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link::before {
+        border-bottom: none !important;
+      }
+      
+      /* Eliminar la línea inferior del panel de contenido */
+      .p-tabview .p-tabview-panels {
+        border-top: none !important;
+      }
+      
+      /* Efecto de vapor steampunk */
       .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
         content: '';
         position: absolute;
@@ -552,6 +575,7 @@ export const generateAdvancedCSS = (themeName, styles) => {
         background: radial-gradient(circle at 50% 100%, rgba(0, 188, 212, 0.2) 0%, transparent 50%);
         animation: steam-rise-blue 4s ease-in-out infinite;
         pointer-events: none;
+        z-index: 1;
       }
       
       @keyframes steam-glow-blue {
@@ -624,6 +648,105 @@ export const generateAdvancedCSS = (themeName, styles) => {
       @keyframes stars-drift {
         from { background-position: 0 0; }
         to { background-position: 100px 80px; }
+      }
+    `,
+
+    vscode: `
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+        font-family: var(--tab-font-family, 'Segoe UI, system-ui, sans-serif') !important;
+        font-size: var(--tab-font-size, 13px) !important;
+        font-weight: var(--tab-font-weight, 400) !important;
+        padding: var(--tab-padding, 8px 12px) !important;
+        min-width: var(--tab-min-width, 120px) !important;
+        max-width: var(--tab-max-width, 240px) !important;
+        border-bottom: 1px solid var(--ui-tab-border) !important;
+        position: relative !important;
+      }
+      
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+        border-bottom: 1px solid var(--ui-tab-active-bg) !important;
+        background: var(--ui-tab-active-bg) !important;
+        color: var(--ui-tab-active-text) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+        background: var(--ui-tab-hover-bg) !important;
+        color: var(--ui-tab-active-text) !important;
+      }
+      
+      /* Iconos de archivo estilo VS Code */
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-icon {
+        margin-right: 6px !important;
+        font-size: 14px !important;
+      }
+      
+      /* Colores de iconos específicos para tipos de archivo */
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link[data-file-type="json"] .p-tabview-nav-link-icon {
+        color: #fdd835 !important; /* Amarillo para JSON */
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link[data-file-type="js"] .p-tabview-nav-link-icon {
+        color: #4caf50 !important; /* Verde para JavaScript */
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link[data-file-type="webpack"] .p-tabview-nav-link-icon {
+        color: #2196f3 !important; /* Azul para Webpack */
+      }
+      
+      /* Indicador de archivo modificado (U) */
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link::after {
+        content: '';
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #fdd835;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link[data-modified="true"]::after {
+        opacity: 1;
+      }
+      
+      /* Botón de cerrar estilo VS Code */
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-close {
+        position: absolute !important;
+        right: 8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 16px !important;
+        height: 16px !important;
+        border-radius: 2px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 0 !important;
+        transition: all 0.2s ease !important;
+        color: var(--ui-tab-text) !important;
+        font-size: 12px !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover .p-tabview-nav-link-close {
+        opacity: 1 !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-close:hover {
+        background: var(--ui-tab-close-hover) !important;
+        color: white !important;
+      }
+      
+      /* Separador entre pestañas */
+      .p-tabview .p-tabview-nav li:not(:last-child) .p-tabview-nav-link {
+        border-right: 1px solid var(--ui-tab-border) !important;
+      }
+      
+      /* Efecto de hover suave */
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+        transition: all 0.2s ease !important;
       }
     `
   };
