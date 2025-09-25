@@ -14,6 +14,7 @@ import { Checkbox } from 'primereact/checkbox';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
+import TabThemeSelector from './TabThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import { themes } from '../themes';
 import { getVersionInfo } from '../version-info';
@@ -1375,6 +1376,9 @@ const SettingsDialog = ({
                     </div>
                   </div>
                 </div>
+              </TabPanel>
+              <TabPanel header={<span><i className="pi pi-palette" style={{ marginRight: 8 }}></i>Pestañas</span>}>
+                <TabThemeSelector />
               </TabPanel>
             </TabView>
           </div>
