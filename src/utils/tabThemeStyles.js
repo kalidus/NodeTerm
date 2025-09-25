@@ -11,6 +11,38 @@ export const generateAdvancedCSS = (themeName, styles) => {
       position: relative !important;
       overflow: hidden !important;
     }
+    
+    /* Estilos para el botón de cerrar en pestañas */
+    .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+      background: transparent !important;
+      border: none !important;
+      color: var(--ui-tab-text, rgba(255, 255, 255, 0.7)) !important;
+      padding: 2px !important;
+      min-width: 16px !important;
+      width: 16px !important;
+      height: 16px !important;
+      margin-left: 4px !important;
+      border-radius: 2px !important;
+      transition: all 0.2s ease !important;
+      opacity: 0.7 !important;
+    }
+    
+    .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+      background: var(--ui-tab-close-hover, rgba(255, 255, 255, 0.1)) !important;
+      color: var(--ui-tab-active-text, #ffffff) !important;
+      opacity: 1 !important;
+      transform: scale(1.1) !important;
+    }
+    
+    .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:active {
+      transform: scale(0.95) !important;
+    }
+    
+    /* Icono del botón de cerrar */
+    .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm .p-button-icon {
+      font-size: 10px !important;
+      color: inherit !important;
+    }
   `;
 
   const themeSpecificCSS = {
@@ -767,6 +799,19 @@ export const generateAdvancedCSS = (themeName, styles) => {
         pointer-events: none;
       }
       
+      /* Botón de cerrar estilo Dracula */
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+        color: #ff79c6 !important;
+        border: 1px solid rgba(255, 121, 198, 0.3) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+        background: linear-gradient(135deg, rgba(255, 121, 198, 0.2) 0%, rgba(189, 147, 249, 0.2) 100%) !important;
+        color: #bd93f9 !important;
+        border-color: #bd93f9 !important;
+        box-shadow: 0 0 10px rgba(255, 121, 198, 0.5) !important;
+      }
+      
       @keyframes dracula-glow {
         from { box-shadow: 0 0 20px rgba(189, 147, 249, 0.5); }
         to { box-shadow: 0 0 30px rgba(189, 147, 249, 0.8), 0 0 40px rgba(255, 121, 198, 0.3); }
@@ -823,6 +868,21 @@ export const generateAdvancedCSS = (themeName, styles) => {
         pointer-events: none;
       }
       
+      /* Botón de cerrar estilo Synthwave */
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+        color: #ff006e !important;
+        border: 1px solid rgba(255, 0, 110, 0.5) !important;
+        background: linear-gradient(135deg, rgba(255, 0, 110, 0.1) 0%, rgba(131, 56, 236, 0.1) 100%) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+        background: linear-gradient(135deg, rgba(255, 0, 110, 0.3) 0%, rgba(131, 56, 236, 0.3) 50%, rgba(58, 134, 255, 0.3) 100%) !important;
+        color: #ffffff !important;
+        border-color: #ff006e !important;
+        box-shadow: 0 0 15px rgba(255, 0, 110, 0.7), 0 0 10px rgba(131, 56, 236, 0.5) !important;
+        transform: scale(1.1) !important;
+      }
+      
       @keyframes synthwave-neon {
         from { 
           box-shadow: 0 0 25px rgba(255, 0, 110, 0.6), inset 0 0 15px rgba(131, 56, 236, 0.3);
@@ -858,6 +918,21 @@ export const generateAdvancedCSS = (themeName, styles) => {
         pointer-events: none;
       }
       
+      /* Botón de cerrar estilo Cyberpunk */
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+        color: #00f5ff !important;
+        border: 1px solid rgba(0, 245, 255, 0.4) !important;
+        background: linear-gradient(135deg, rgba(0, 245, 255, 0.1) 0%, rgba(255, 0, 128, 0.1) 100%) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+        background: linear-gradient(135deg, rgba(0, 245, 255, 0.3) 0%, rgba(255, 0, 128, 0.3) 100%) !important;
+        color: #ffffff !important;
+        border-color: #00f5ff !important;
+        box-shadow: 0 0 12px rgba(0, 245, 255, 0.6), 0 0 8px rgba(255, 0, 128, 0.4) !important;
+        transform: scale(1.15) !important;
+      }
+      
       @keyframes cyberpunk-energy {
         from { 
           box-shadow: 0 0 30px rgba(0, 245, 255, 0.8), inset 0 0 20px rgba(255, 0, 128, 0.2);
@@ -890,6 +965,21 @@ export const generateAdvancedCSS = (themeName, styles) => {
         background: linear-gradient(0deg, rgba(0, 255, 65, 0.1) 0%, transparent 50%, rgba(0, 255, 65, 0.1) 100%);
         animation: matrix-rain 1.5s linear infinite;
         pointer-events: none;
+      }
+      
+      /* Botón de cerrar estilo Matrix */
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+        color: #00ff41 !important;
+        border: 1px solid rgba(0, 255, 65, 0.3) !important;
+        text-shadow: 0 0 3px rgba(0, 255, 65, 0.5) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+        background: rgba(0, 255, 65, 0.1) !important;
+        color: #00ff41 !important;
+        border-color: #00ff41 !important;
+        box-shadow: 0 0 8px rgba(0, 255, 65, 0.6) !important;
+        text-shadow: 0 0 6px rgba(0, 255, 65, 0.8) !important;
       }
       
       @keyframes matrix-code {
@@ -928,6 +1018,23 @@ export const generateAdvancedCSS = (themeName, styles) => {
         pointer-events: none;
       }
       
+      /* Botón de cerrar estilo Hologram */
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+        color: #00ffff !important;
+        border: 1px solid rgba(0, 255, 255, 0.4) !important;
+        background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 255, 0.1) 100%) !important;
+        backdrop-filter: blur(5px) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+        background: linear-gradient(135deg, rgba(0, 255, 255, 0.3) 0%, rgba(255, 0, 255, 0.3) 100%) !important;
+        color: #ffffff !important;
+        border-color: #00ffff !important;
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.6), 0 0 8px rgba(255, 0, 255, 0.4) !important;
+        transform: scale(1.1) !important;
+        backdrop-filter: blur(8px) !important;
+      }
+      
       @keyframes hologram-flicker {
         from { 
           box-shadow: 0 0 25px rgba(0, 255, 255, 0.5), inset 0 0 15px rgba(255, 0, 255, 0.2);
@@ -960,6 +1067,21 @@ export const generateAdvancedCSS = (themeName, styles) => {
         background: radial-gradient(circle at 30% 30%, rgba(255, 107, 107, 0.3) 0%, rgba(78, 205, 196, 0.3) 50%, rgba(69, 183, 209, 0.3) 100%);
         animation: plasma-swirl 4s ease-in-out infinite;
         pointer-events: none;
+      }
+      
+      /* Botón de cerrar estilo Plasma */
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm {
+        color: #ff6b6b !important;
+        border: 1px solid rgba(255, 107, 107, 0.4) !important;
+        background: radial-gradient(circle at 30% 30%, rgba(255, 107, 107, 0.1) 0%, rgba(78, 205, 196, 0.1) 50%, rgba(69, 183, 209, 0.1) 100%) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-button.p-button-text.p-button-sm:hover {
+        background: radial-gradient(circle at 30% 30%, rgba(255, 107, 107, 0.3) 0%, rgba(78, 205, 196, 0.3) 50%, rgba(69, 183, 209, 0.3) 100%) !important;
+        color: #ffffff !important;
+        border-color: #ff6b6b !important;
+        box-shadow: 0 0 15px rgba(255, 107, 107, 0.6), 0 0 10px rgba(78, 205, 196, 0.4) !important;
+        transform: scale(1.1) rotate(5deg) !important;
       }
       
       @keyframes plasma-dance {
