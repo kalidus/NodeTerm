@@ -1,39 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from 'primereact/card';
-import { Button } from 'primereact/button';
-import { uiThemes } from '../themes/ui-themes';
-import { themeManager } from '../utils/themeManager';
-import { generateAdvancedCSS } from '../utils/tabThemeStyles';
-import { applyTabTheme } from '../utils/tabThemeLoader';
+// Utilidad para cargar y aplicar el tema de pestañas al iniciar la aplicación
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 
-// Definición de estilos de pestañas
+// Definición de estilos de pestañas (copiada del TabThemeSelector)
 const tabThemes = {
   default: {
     name: 'Por Defecto',
     description: 'Respeta el tema de la interfaz seleccionado',
-    preview: {
-      backgroundColor: 'var(--ui-tab-bg)',
-      borderRadius: '4px 4px 0 0',
-      border: '1px solid var(--ui-tab-border)',
-      transition: 'all 0.2s ease'
-    },
     styles: {} // Se aplican dinámicamente desde el tema UI
   },
   
   futuristic: {
     name: 'Futurista',
     description: 'Pestañas con efectos cyber y neón',
-    preview: {
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-      borderRadius: '8px 8px 0 0',
-      border: '1px solid #00d4ff',
-      boxShadow: '0 0 10px rgba(0, 212, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      position: 'relative',
-      overflow: 'hidden'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #0f3460 0%, #16213e 50%, #1a1a2e 100%)',
@@ -41,122 +20,86 @@ const tabThemes = {
       '--ui-tab-text': '#00d4ff',
       '--ui-tab-active-text': '#ffffff',
       '--ui-tab-border': '#00d4ff',
-      '--ui-tab-close-hover': '#ff073a',
+      '--ui-tab-close-hover': '#ff4757',
       '--tab-border-radius': '8px 8px 0 0',
       '--tab-box-shadow': '0 0 10px rgba(0, 212, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
-      '--tab-transition': 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      '--tab-transition': 'all 0.3s ease'
     }
   },
-  
+
   minimalist: {
     name: 'Minimalista',
-    description: 'Diseño limpio y simple',
-    preview: {
-      backgroundColor: '#fafafa',
-      borderRadius: '0',
-      border: 'none',
-      borderBottom: '2px solid transparent',
-      transition: 'border-bottom-color 0.2s ease'
-    },
+    description: 'Líneas limpias y elegantes',
     styles: {
-      '--ui-tab-bg': 'transparent',
-      '--ui-tab-active-bg': '#ffffff',
-      '--ui-tab-hover-bg': 'rgba(0,0,0,0.02)',
-      '--ui-tab-text': '#666666',
-      '--ui-tab-active-text': '#2196f3',
-      '--ui-tab-border': 'transparent',
-      '--ui-tab-close-hover': '#f44336',
+      '--ui-tab-bg': '#ffffff',
+      '--ui-tab-active-bg': '#f8f9fa',
+      '--ui-tab-hover-bg': '#f1f3f4',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#212529',
+      '--ui-tab-border': '#dee2e6',
+      '--ui-tab-close-hover': '#dc3545',
       '--tab-border-radius': '0',
       '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  retro80s: {
+    name: 'Retro 80s',
+    description: 'Nostálgico con colores neón',
+    styles: {
+      '--ui-tab-bg': 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+      '--ui-tab-active-bg': 'linear-gradient(45deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+      '--ui-tab-text': '#ff6b9d',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#ff006e',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '12px 12px 0 0',
+      '--tab-box-shadow': '0 0 15px rgba(255, 0, 110, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  material: {
+    name: 'Material Design',
+    description: 'Moderno con elevación y sombras',
+    styles: {
+      '--ui-tab-bg': '#ffffff',
+      '--ui-tab-active-bg': '#e3f2fd',
+      '--ui-tab-hover-bg': '#f5f5f5',
+      '--ui-tab-text': '#424242',
+      '--ui-tab-active-text': '#1976d2',
+      '--ui-tab-border': '#e0e0e0',
+      '--ui-tab-close-hover': '#d32f2f',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 2px 4px rgba(0,0,0,0.1)',
       '--tab-transition': 'all 0.2s ease',
       '--tab-border-bottom': '2px solid transparent',
       '--tab-active-border-bottom': '2px solid #2196f3'
     }
   },
-  
-  
-  retro80s: {
-    name: 'Retro 80s',
-    description: 'Nostálgico con colores neón',
-    preview: {
-      background: 'linear-gradient(45deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%)',
-      borderRadius: '4px 4px 0 0',
-      border: '1px solid #ff006e',
-      boxShadow: '0 0 15px rgba(255, 0, 110, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-      transition: 'all 0.3s ease'
-    },
-    styles: {
-      '--ui-tab-bg': 'linear-gradient(45deg, #2d1b69 0%, #0c0c0c 50%, #2d1b69 100%)',
-      '--ui-tab-active-bg': 'linear-gradient(45deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%)',
-      '--ui-tab-hover-bg': 'linear-gradient(45deg, #ff006e 0%, #2d1b69 50%, #3a86ff 100%)',
-      '--ui-tab-text': '#ff006e',
-      '--ui-tab-active-text': '#ffffff',
-      '--ui-tab-border': '#ff006e',
-      '--ui-tab-close-hover': '#ffbe0b',
-      '--tab-border-radius': '4px 4px 0 0',
-      '--tab-box-shadow': '0 0 15px rgba(255, 0, 110, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-      '--tab-transition': 'all 0.3s ease'
-    }
-  },
-  
-  material: {
-    name: 'Material Design',
-    description: 'Diseño moderno con elevación',
-    preview: {
-      backgroundColor: '#ffffff',
-      borderRadius: '4px 4px 0 0',
-      border: 'none',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.24)',
-      transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
-    },
-    styles: {
-      '--ui-tab-bg': '#f5f5f5',
-      '--ui-tab-active-bg': '#ffffff',
-      '--ui-tab-hover-bg': '#eeeeee',
-      '--ui-tab-text': '#424242',
-      '--ui-tab-active-text': '#1976d2',
-      '--ui-tab-border': 'transparent',
-      '--ui-tab-close-hover': '#f44336',
-      '--tab-border-radius': '4px 4px 0 0',
-      '--tab-box-shadow': '0 2px 4px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.24)',
-      '--tab-transition': 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-      '--tab-active-elevation': '0 4px 8px rgba(0,0,0,0.16), 0 2px 6px rgba(0,0,0,0.26)'
-    }
-  },
-  
+
   nord: {
     name: 'Nord',
-    description: 'Colores fríos del ártico',
-    preview: {
-      backgroundColor: '#3b4252',
-      borderRadius: '6px 6px 0 0',
-      border: '1px solid #434c5e',
-      transition: 'all 0.2s ease'
-    },
+    description: 'Colores árticos fríos y minimalistas',
     styles: {
-      '--ui-tab-bg': '#3b4252',
-      '--ui-tab-active-bg': '#2e3440',
+      '--ui-tab-bg': '#2e3440',
+      '--ui-tab-active-bg': '#3b4252',
       '--ui-tab-hover-bg': '#434c5e',
       '--ui-tab-text': '#d8dee9',
       '--ui-tab-active-text': '#88c0d0',
-      '--ui-tab-border': '#434c5e',
+      '--ui-tab-border': '#4c566a',
       '--ui-tab-close-hover': '#bf616a',
       '--tab-border-radius': '6px 6px 0 0',
-      '--tab-box-shadow': 'none',
-      '--tab-transition': 'all 0.2s ease'
+      '--tab-box-shadow': '0 2px 8px rgba(0,0,0,0.2)',
+      '--tab-transition': 'all 0.3s ease'
     }
   },
-  
+
   glass: {
     name: 'Glass',
     description: 'Efecto de cristal transparente',
-    preview: {
-      background: 'rgba(255, 255, 255, 0.15)',
-      borderRadius: '12px 12px 0 0',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      backdropFilter: 'blur(10px)',
-      transition: 'all 0.3s ease'
-    },
     styles: {
       '--ui-tab-bg': 'rgba(255, 255, 255, 0.08)',
       '--ui-tab-active-bg': 'rgba(255, 255, 255, 0.15)',
@@ -172,17 +115,9 @@ const tabThemes = {
     }
   },
 
-
   diamond: {
     name: 'Diamond',
     description: 'Pestañas en forma de diamante brillante',
-    preview: {
-      background: 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)',
-      transform: 'rotate(45deg) scale(0.7)',
-      borderRadius: '4px',
-      border: '2px solid #ff6b9d',
-      transition: 'all 0.3s ease'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(45deg, #2c2c2c 0%, #1a1a1a 100%)',
       '--ui-tab-active-bg': 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)',
@@ -197,17 +132,9 @@ const tabThemes = {
     }
   },
 
-
   neonCity: {
     name: 'Neon City',
     description: 'Luces de neón de ciudad nocturna',
-    preview: {
-      background: 'linear-gradient(135deg, #0c0c0c 0%, #1a0033 50%, #000000 100%)',
-      borderRadius: '2px 2px 0 0',
-      border: '1px solid #ff0080',
-      boxShadow: '0 0 20px #ff0080, inset 0 0 20px rgba(255, 0, 128, 0.1)',
-      transition: 'all 0.3s ease'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #0c0c0c 0%, #1a0033 50%, #000000 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #ff0080 0%, #7928ca 50%, #ff0080 100%)',
@@ -225,13 +152,6 @@ const tabThemes = {
   galaxy: {
     name: 'Galaxy',
     description: 'Colores galácticos con estrellas',
-    preview: {
-      background: 'radial-gradient(ellipse at center, #3b4371 0%, #1e2751 50%, #0f1419 100%)',
-      borderRadius: '25px 25px 0 0',
-      border: '1px solid #6c5ce7',
-      boxShadow: '0 0 30px rgba(108, 92, 231, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-      transition: 'all 0.4s ease'
-    },
     styles: {
       '--ui-tab-bg': 'radial-gradient(ellipse at center, #2d3561 0%, #1e2751 50%, #0f1419 100%)',
       '--ui-tab-active-bg': 'radial-gradient(ellipse at center, #6c5ce7 0%, #a29bfe 50%, #6c5ce7 100%)',
@@ -246,17 +166,9 @@ const tabThemes = {
     }
   },
 
-
   holographic: {
     name: 'Holographic',
     description: 'Efecto holográfico iridiscente',
-    preview: {
-      background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffa726)',
-      borderRadius: '8px 8px 0 0',
-      border: '1px solid transparent',
-      backgroundSize: '400% 400%',
-      animation: 'holographic 3s ease infinite'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(45deg, #2c2c2c 0%, #1a1a1a 100%)',
       '--ui-tab-active-bg': 'linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffa726)',
@@ -275,13 +187,6 @@ const tabThemes = {
   vhs: {
     name: 'VHS Retro',
     description: 'Estilo VHS con scanlines y glitch',
-    preview: {
-      background: 'linear-gradient(90deg, #000000 0%, #1a1a1a 50%, #000000 100%)',
-      borderRadius: '0',
-      border: '2px solid #ff0040',
-      position: 'relative',
-      overflow: 'hidden'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(90deg, #000000 0%, #0a0a0a 50%, #000000 100%)',
       '--ui-tab-active-bg': 'linear-gradient(90deg, #ff0040 0%, #00ffff 50%, #ff0040 100%)',
@@ -296,16 +201,9 @@ const tabThemes = {
     }
   },
 
-
   carbon: {
     name: 'Carbon Fiber',
     description: 'Textura de fibra de carbono',
-    preview: {
-      background: 'repeating-linear-gradient(45deg, #1a1a1a 0px, #1a1a1a 2px, #2a2a2a 2px, #2a2a2a 4px)',
-      borderRadius: '6px 6px 0 0',
-      border: '1px solid #444444',
-      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.3)'
-    },
     styles: {
       '--ui-tab-bg': 'repeating-linear-gradient(45deg, #1a1a1a 0px, #1a1a1a 2px, #2a2a2a 2px, #2a2a2a 4px)',
       '--ui-tab-active-bg': 'repeating-linear-gradient(45deg, #333333 0px, #333333 2px, #444444 2px, #444444 4px)',
@@ -323,12 +221,6 @@ const tabThemes = {
   lavaLamp: {
     name: 'Lava Lamp',
     description: 'Burbujas de lava en movimiento',
-    preview: {
-      background: 'radial-gradient(circle at 30% 30%, #ff6b35 0%, #f7931e 25%, #ff6b35 50%, #f7931e 75%, #ff6b35 100%)',
-      borderRadius: '20px 20px 0 0',
-      border: 'none',
-      animation: 'lava-bubble 4s ease-in-out infinite'
-    },
     styles: {
       '--ui-tab-bg': 'radial-gradient(circle at 50% 50%, #2c1810 0%, #1a0f08 50%, #0f0804 100%)',
       '--ui-tab-active-bg': 'radial-gradient(circle at 30% 30%, #ff6b35 0%, #f7931e 25%, #ff6b35 50%, #f7931e 75%, #ff6b35 100%)',
@@ -346,13 +238,6 @@ const tabThemes = {
   crystal: {
     name: 'Crystal',
     description: 'Cristales multifacéticos brillantes',
-    preview: {
-      background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%), linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-      borderRadius: '0',
-      border: '2px solid #2196f3',
-      clipPath: 'polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)',
-      boxShadow: '0 0 20px rgba(33, 150, 243, 0.5), inset 0 0 20px rgba(255,255,255,0.2)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #263238 0%, #37474f 100%)',
       '--ui-tab-active-bg': 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%), linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
@@ -371,13 +256,6 @@ const tabThemes = {
   cyberpunk2077: {
     name: 'Cyberpunk 2077',
     description: 'Estilo del videojuego Cyberpunk 2077',
-    preview: {
-      background: 'linear-gradient(135deg, #fcee21 0%, #ff0080 50%, #7928ca 100%)',
-      borderRadius: '0',
-      border: '2px solid #fcee21',
-      clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))',
-      boxShadow: '0 0 15px #fcee21, inset 0 0 15px rgba(252, 238, 33, 0.2)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #fcee21 0%, #ff0080 50%, #7928ca 100%)',
@@ -396,12 +274,6 @@ const tabThemes = {
   discord: {
     name: 'Discord Style',
     description: 'Estilo similar a Discord',
-    preview: {
-      background: '#5865f2',
-      borderRadius: '8px 8px 0 0',
-      border: 'none',
-      transition: 'all 0.2s ease'
-    },
     styles: {
       '--ui-tab-bg': '#2f3136',
       '--ui-tab-active-bg': '#5865f2',
@@ -419,13 +291,6 @@ const tabThemes = {
   rainbow: {
     name: 'Rainbow',
     description: 'Arcoíris animado brillante',
-    preview: {
-      background: 'linear-gradient(45deg, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff0080)',
-      borderRadius: '12px 12px 0 0',
-      border: 'none',
-      backgroundSize: '200% 200%',
-      animation: 'rainbow-shift 3s ease infinite'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(45deg, #1a1a1a 0%, #2a2a2a 100%)',
       '--ui-tab-active-bg': 'linear-gradient(45deg, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff0080)',
@@ -444,13 +309,6 @@ const tabThemes = {
   terminal: {
     name: 'Terminal Hacker',
     description: 'Estilo de terminal de hacker',
-    preview: {
-      background: '#000000',
-      borderRadius: '0',
-      border: '1px solid #00ff00',
-      fontFamily: 'monospace',
-      color: '#00ff00'
-    },
     styles: {
       '--ui-tab-bg': '#000000',
       '--ui-tab-active-bg': '#001100',
@@ -468,13 +326,6 @@ const tabThemes = {
   terminalBlue: {
     name: 'Terminal Azul Neón',
     description: 'Terminal hacker en azul neón',
-    preview: {
-      background: '#000000',
-      borderRadius: '0',
-      border: '1px solid #00bfff',
-      fontFamily: 'monospace',
-      color: '#00bfff'
-    },
     styles: {
       '--ui-tab-bg': '#000000',
       '--ui-tab-active-bg': '#000f1a',
@@ -492,13 +343,6 @@ const tabThemes = {
   terminalOrange: {
     name: 'Terminal Naranja Neón',
     description: 'Terminal hacker en naranja neón',
-    preview: {
-      background: '#000000',
-      borderRadius: '0',
-      border: '1px solid #ff8c00',
-      fontFamily: 'monospace',
-      color: '#ff8c00'
-    },
     styles: {
       '--ui-tab-bg': '#000000',
       '--ui-tab-active-bg': '#1a0f00',
@@ -516,12 +360,6 @@ const tabThemes = {
   neonPink: {
     name: 'Neon Pink',
     description: 'Rosa neón vibrante',
-    preview: {
-      background: 'linear-gradient(135deg, #ff0080 0%, #ff4da6 50%, #ff80cc 100%)',
-      borderRadius: '15px 15px 0 0',
-      border: '2px solid #ff0080',
-      boxShadow: '0 0 25px #ff0080, inset 0 0 25px rgba(255, 0, 128, 0.2)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #1a0011 0%, #330022 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #ff0080 0%, #ff4da6 50%, #ff80cc 100%)',
@@ -539,12 +377,6 @@ const tabThemes = {
   vintage: {
     name: 'Vintage Paper',
     description: 'Papel vintage envejecido',
-    preview: {
-      background: 'linear-gradient(135deg, #f4f1de 0%, #e9edc9 100%)',
-      borderRadius: '8px 8px 0 0',
-      border: '2px solid #b7b7a4',
-      boxShadow: '2px 2px 10px rgba(139, 69, 19, 0.3), inset 0 0 20px rgba(139, 69, 19, 0.1)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #d4a574 0%, #c9ada7 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #f4f1de 0%, #e9edc9 100%)',
@@ -562,12 +394,6 @@ const tabThemes = {
   ocean: {
     name: 'Ocean Depths',
     description: 'Profundidades del océano',
-    preview: {
-      background: 'radial-gradient(ellipse at center, #006994 0%, #004d6b 50%, #002635 100%)',
-      borderRadius: '20px 20px 0 0',
-      border: '1px solid #4fc3f7',
-      boxShadow: '0 0 20px rgba(79, 195, 247, 0.4), inset 0 0 20px rgba(79, 195, 247, 0.1)'
-    },
     styles: {
       '--ui-tab-bg': 'radial-gradient(ellipse at center, #002635 0%, #001a23 50%, #000d11 100%)',
       '--ui-tab-active-bg': 'radial-gradient(ellipse at center, #006994 0%, #004d6b 50%, #002635 100%)',
@@ -585,12 +411,6 @@ const tabThemes = {
   fire: {
     name: 'Fire Element',
     description: 'Elemento fuego ardiente',
-    preview: {
-      background: 'linear-gradient(45deg, #ff4500 0%, #ff6347 25%, #ff8c00 50%, #ffa500 75%, #ff4500 100%)',
-      borderRadius: '12px 12px 0 0',
-      border: '2px solid #ff4500',
-      boxShadow: '0 0 30px #ff4500, inset 0 0 30px rgba(255, 69, 0, 0.3)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(45deg, #2d1810 0%, #1a0f08 50%, #0f0804 100%)',
       '--ui-tab-active-bg': 'linear-gradient(45deg, #ff4500 0%, #ff6347 25%, #ff8c00 50%, #ffa500 75%, #ff4500 100%)',
@@ -605,16 +425,9 @@ const tabThemes = {
     }
   },
 
-
   steam: {
     name: 'Steam Punk',
     description: 'Estilo steampunk industrial',
-    preview: {
-      background: 'linear-gradient(135deg, #8d6e63 0%, #6d4c41 50%, #5d4037 100%)',
-      borderRadius: '4px 4px 0 0',
-      border: '3px solid #bf9000',
-      boxShadow: 'inset 0 0 20px rgba(191, 144, 0, 0.3), 0 0 15px rgba(191, 144, 0, 0.5)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #3e2723 0%, #2e1a15 50%, #1e1108 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #8d6e63 0%, #6d4c41 50%, #5d4037 100%)',
@@ -632,12 +445,6 @@ const tabThemes = {
   steamBlue: {
     name: 'Steam Punk Azul',
     description: 'Steampunk industrial en azul metálico',
-    preview: {
-      background: 'linear-gradient(135deg, #546e7a 0%, #455a64 50%, #37474f 100%)',
-      borderRadius: '4px 4px 0 0',
-      border: '3px solid #00bcd4',
-      boxShadow: 'inset 0 0 20px rgba(0, 188, 212, 0.3), 0 0 15px rgba(0, 188, 212, 0.5)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #263238 0%, #1a2332 50%, #0d1117 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #546e7a 0%, #455a64 50%, #37474f 100%)',
@@ -655,12 +462,6 @@ const tabThemes = {
   steamGreen: {
     name: 'Steam Punk Verde',
     description: 'Steampunk industrial en verde metálico',
-    preview: {
-      background: 'linear-gradient(135deg, #558b2f 0%, #33691e 50%, #1b5e20 100%)',
-      borderRadius: '4px 4px 0 0',
-      border: '3px solid #4caf50',
-      boxShadow: 'inset 0 0 20px rgba(76, 175, 80, 0.3), 0 0 15px rgba(76, 175, 80, 0.5)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #1b5e20 0%, #0d3e0d 50%, #051f05 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #558b2f 0%, #33691e 50%, #1b5e20 100%)',
@@ -678,12 +479,6 @@ const tabThemes = {
   space: {
     name: 'Space Station',
     description: 'Estación espacial futurista',
-    preview: {
-      background: 'linear-gradient(135deg, #37474f 0%, #263238 50%, #102027 100%)',
-      borderRadius: '0 20px 0 0',
-      border: '2px solid #00bcd4',
-      boxShadow: '0 0 20px rgba(0, 188, 212, 0.4), inset 2px 2px 10px rgba(0, 188, 212, 0.2)'
-    },
     styles: {
       '--ui-tab-bg': 'linear-gradient(135deg, #102027 0%, #0d1117 50%, #000000 100%)',
       '--ui-tab-active-bg': 'linear-gradient(135deg, #37474f 0%, #263238 50%, #102027 100%)',
@@ -699,267 +494,94 @@ const tabThemes = {
   }
 };
 
-const TabThemeSelector = () => {
-  const [selectedTheme, setSelectedTheme] = useState('default');
-  const [currentUITheme, setCurrentUITheme] = useState('Light');
+// Función para aplicar el tema de pestañas
+export const applyTabTheme = (themeName) => {
+  const theme = tabThemes[themeName];
+  if (!theme) return;
 
-  useEffect(() => {
-    // Cargar tema guardado al inicializar
-    const savedTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
-    setSelectedTheme(savedTheme);
-    
-    // Aplicar tema inicial
-    applyTabThemeWithAnimations(savedTheme);
-    
-    // Obtener tema UI actual
-    const currentTheme = themeManager.getCurrentTheme();
-    if (currentTheme) {
-      setCurrentUITheme(currentTheme.name);
-    }
-  }, []); // Solo ejecutar al montar el componente
+  // Buscar o crear el elemento de estilo para las pestañas
+  let tabStyleElement = document.getElementById('tab-theme-styles');
+  if (!tabStyleElement) {
+    tabStyleElement = document.createElement('style');
+    tabStyleElement.id = 'tab-theme-styles';
+    document.head.appendChild(tabStyleElement);
+  }
 
-  useEffect(() => {
-    // Escuchar cambios en el tema UI
-    const handleThemeChange = () => {
-      const currentTheme = themeManager.getCurrentTheme();
-      if (currentTheme) {
-        setCurrentUITheme(currentTheme.name);
-        // Re-aplicar tema de pestañas si es default
-        if (selectedTheme === 'default') {
-          applyTabThemeWithAnimations('default');
-        }
+  let css = '';
+
+  if (themeName === 'default') {
+    // Para el tema default, no agregar CSS personalizado
+    // Las variables CSS del tema UI se aplicarán automáticamente
+    css = `
+      /* Tema default - usa variables del tema UI */
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+        border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
+        box-shadow: var(--tab-box-shadow, none) !important;
+        transition: var(--tab-transition, all 0.2s ease) !important;
+        backdrop-filter: var(--tab-backdrop-filter, none) !important;
       }
-    };
+    `;
+  } else {
+    // Para temas personalizados, aplicar estilos específicos
+    const styles = theme.styles;
     
-    window.addEventListener('theme-changed', handleThemeChange);
-    
-    return () => {
-      window.removeEventListener('theme-changed', handleThemeChange);
-    };
-  }, [selectedTheme]); // Dependencia solo para el listener
-
-  const applyTabThemeWithAnimations = (themeName) => {
-    // Usar la función del loader para aplicar el tema base
-    applyTabTheme(themeName);
-    
-    // Añadir animaciones específicas si no es default
-    if (themeName !== 'default') {
-      const theme = tabThemes[themeName];
-      if (theme) {
-        let tabStyleElement = document.getElementById('tab-theme-styles');
-        if (tabStyleElement) {
-          // Añadir animaciones específicas al CSS existente
-          const animationsCSS = generateAdvancedCSS(themeName, theme.styles);
-          tabStyleElement.textContent += animationsCSS;
-        }
+    // Crear CSS personalizado
+    css = `
+      :root {
+        ${Object.entries(styles).map(([key, value]) => `${key}: ${value};`).join('\n        ')}
       }
-    }
-  };
-
-  const handleThemeSelect = (themeName) => {
-    setSelectedTheme(themeName);
-    localStorage.setItem(TAB_THEME_STORAGE_KEY, themeName);
-    applyTabThemeWithAnimations(themeName);
-  };
-
-  const TabPreview = ({ theme, isSelected, onClick }) => {
-    const previewStyle = {
-      ...theme.preview,
-      width: '100%',
-      height: '60px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      cursor: 'pointer',
-      border: isSelected ? '2px solid var(--primary-color)' : theme.preview.border || '1px solid #ddd',
-      marginBottom: '8px'
-    };
-
-    return (
-      <div style={previewStyle} onClick={onClick}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '0 12px'
-        }}>
-          <i className="pi pi-desktop" style={{ 
-            fontSize: '14px',
-            color: theme.styles?.['--ui-tab-text'] || '#666'
-          }} />
-          <span style={{ 
-            fontSize: '12px',
-            color: theme.styles?.['--ui-tab-text'] || '#666',
-            fontWeight: '500'
-          }}>
-            Terminal
-          </span>
-          <i className="pi pi-times" style={{ 
-            fontSize: '10px',
-            color: theme.styles?.['--ui-tab-text'] || '#666',
-            opacity: 0.7
-          }} />
-        </div>
-        
-        {isSelected && (
-          <div style={{
-            position: 'absolute',
-            top: '-2px',
-            right: '-2px',
-            width: '16px',
-            height: '16px',
-            backgroundColor: 'var(--primary-color)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <i className="pi pi-check" style={{ 
-              fontSize: '8px',
-              color: 'white'
-            }} />
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div style={{
-      padding: '1rem 0',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '50vh',
-      width: '100%'
-    }}>
-      <h3 style={{ 
-        margin: '0 0 1rem 0', 
-        color: 'var(--text-color)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-      }}>
-        <i className="pi pi-palette" style={{ color: 'var(--primary-color)' }}></i>
-        Estilos de Pestañas
-      </h3>
       
-      <p style={{
-        marginBottom: '2rem',
-        color: 'var(--text-color-secondary)',
-        fontSize: '0.9rem',
-        textAlign: 'center',
-        maxWidth: '600px'
-      }}>
-        Personaliza el aspecto de las pestañas con diferentes estilos. Los cambios se aplican inmediatamente.
-      </p>
+      .p-tabview .p-tabview-nav {
+        background: var(--ui-tab-bg) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+        background: var(--ui-tab-bg) !important;
+        color: var(--ui-tab-text) !important;
+        border: 1px solid var(--ui-tab-border) !important;
+        border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
+        box-shadow: var(--tab-box-shadow, none) !important;
+        transition: var(--tab-transition, all 0.2s ease) !important;
+        backdrop-filter: var(--tab-backdrop-filter, none) !important;
+        border-bottom: var(--tab-border-bottom, 1px solid var(--ui-tab-border)) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+        background: var(--ui-tab-hover-bg) !important;
+        ${styles['--tab-active-elevation'] ? 'box-shadow: var(--tab-active-elevation) !important;' : ''}
+      }
+      
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+        background: var(--ui-tab-active-bg) !important;
+        color: var(--ui-tab-active-text) !important;
+        border-bottom: var(--tab-active-border-bottom, none) !important;
+        ${styles['--tab-active-elevation'] ? 'box-shadow: var(--tab-active-elevation) !important;' : ''}
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-icon {
+        color: var(--ui-tab-text) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link .p-tabview-nav-link-icon {
+        color: var(--ui-tab-active-text) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-close {
+        color: var(--ui-tab-text) !important;
+      }
+      
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-close:hover {
+        color: var(--ui-tab-close-hover) !important;
+      }
+    `;
+  }
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '1.5rem',
-        width: '100%',
-        maxWidth: '1200px',
-        padding: '0 1rem'
-      }}>
-        {Object.entries(tabThemes).map(([key, theme]) => (
-          <Card
-            key={key}
-            style={{
-              background: 'var(--surface-card)',
-              border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)',
-              borderRadius: '8px',
-              padding: '0',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              transform: selectedTheme === key ? 'translateY(-2px)' : 'none',
-              boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-            onClick={() => handleThemeSelect(key)}
-          >
-            <div style={{ padding: '1rem' }}>
-              <TabPreview 
-                theme={theme} 
-                isSelected={selectedTheme === key}
-                onClick={() => handleThemeSelect(key)}
-              />
-              
-              <h4 style={{
-                margin: '0 0 0.5rem 0',
-                color: 'var(--text-color)',
-                fontSize: '1rem',
-                fontWeight: '600'
-              }}>
-                {theme.name}
-              </h4>
-              
-              <p style={{
-                margin: '0',
-                color: 'var(--text-color-secondary)',
-                fontSize: '0.85rem',
-                lineHeight: '1.4'
-              }}>
-                {theme.description}
-              </p>
-              
-              {selectedTheme === key && (
-                <div style={{
-                  marginTop: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  color: 'var(--primary-color)',
-                  fontSize: '0.8rem',
-                  fontWeight: '500'
-                }}>
-                  <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                  Tema activo
-                </div>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <div style={{
-        marginTop: '2rem',
-        padding: '1rem',
-        background: 'var(--surface-100)',
-        borderRadius: '8px',
-        maxWidth: '600px',
-        width: '100%'
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.5rem'
-        }}>
-          <i className="pi pi-info-circle" style={{ 
-            color: 'var(--primary-color)',
-            fontSize: '0.9rem'
-          }} />
-          <strong style={{ 
-            color: 'var(--text-color)',
-            fontSize: '0.9rem'
-          }}>
-            Información
-          </strong>
-        </div>
-        <p style={{
-          margin: '0',
-          color: 'var(--text-color-secondary)',
-          fontSize: '0.8rem',
-          lineHeight: '1.4'
-        }}>
-          El tema "Por Defecto" adapta automáticamente el estilo de las pestañas al tema de interfaz seleccionado. 
-          Los demás temas son independientes y conservan su apariencia sin importar el tema de la interfaz.
-        </p>
-      </div>
-    </div>
-  );
+  tabStyleElement.textContent = css;
 };
 
-export default TabThemeSelector;
+// Función para cargar el tema guardado al iniciar la aplicación
+export const loadSavedTabTheme = () => {
+  const savedTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
+  applyTabTheme(savedTheme);
+  return savedTheme;
+};
