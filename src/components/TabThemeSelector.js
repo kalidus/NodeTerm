@@ -892,6 +892,356 @@ const tabThemes = {
       '--tab-box-shadow': '0 0 35px rgba(255, 107, 107, 0.6), 0 0 20px rgba(78, 205, 196, 0.4)',
       '--tab-transition': 'all 0.3s ease'
     }
+  },
+
+  // NUEVOS ESTILOS ÚNICOS Y CREATIVOS
+  
+  origami: {
+    name: 'Origami Style',
+    description: 'Papel doblado con sombras geométricas',
+    preview: {
+      background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%)',
+      clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%)',
+      border: 'none',
+      position: 'relative',
+      boxShadow: '2px 2px 6px rgba(0,0,0,0.1)'
+    },
+    styles: {
+      '--ui-tab-bg': 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #fff 0%, #f8f9fa 50%, #e9ecef 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #e9ecef 0%, #dee2e6 50%, #ced4da 100%)',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#212529',
+      '--ui-tab-border': 'transparent',
+      '--ui-tab-close-hover': '#dc3545',
+      '--tab-border-radius': '0',
+      '--tab-clip-path': 'polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%)',
+      '--tab-box-shadow': '2px 2px 6px rgba(0,0,0,0.1)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  liquidMetal: {
+    name: 'Liquid Metal',
+    description: 'Efecto de metal líquido con reflexiones',
+    preview: {
+      background: 'linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 25%, #d3d3d3 50%, #silver 75%, #b8b8b8 100%)',
+      borderRadius: '20px',
+      border: '1px solid #999',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    styles: {
+      '--ui-tab-bg': 'linear-gradient(135deg, #a0a0a0 0%, #888 25%, #b3b3b3 50%, #999 75%, #989898 100%)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 25%, #d3d3d3 50%, #silver 75%, #b8b8b8 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #b0b0b0 0%, #989898 25%, #c3c3c3 50%, #aaa 75%, #a8a8a8 100%)',
+      '--ui-tab-text': '#333',
+      '--ui-tab-active-text': '#000',
+      '--ui-tab-border': '#999',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '20px',
+      '--tab-box-shadow': '0 4px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)',
+      '--tab-transition': 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+    }
+  },
+
+  paperStack: {
+    name: 'Paper Stack',
+    description: 'Pestañas apiladas como hojas de papel',
+    preview: {
+      background: '#fff',
+      border: '1px solid #ddd',
+      borderRadius: '4px 4px 0 0',
+      position: 'relative',
+      boxShadow: '2px 0 0 #f8f9fa, 4px 0 0 #f1f3f4, 0 2px 4px rgba(0,0,0,0.1)'
+    },
+    styles: {
+      '--ui-tab-bg': '#fff',
+      '--ui-tab-active-bg': '#fff',
+      '--ui-tab-hover-bg': '#f8f9fa',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#212529',
+      '--ui-tab-border': '#ddd',
+      '--ui-tab-close-hover': '#dc3545',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '2px 0 0 #f8f9fa, 4px 0 0 #f1f3f4, 0 2px 4px rgba(0,0,0,0.1)',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  crystal: {
+    name: 'Crystal Style',
+    description: 'Cristales translúcidos con refracciones',
+    preview: {
+      background: 'linear-gradient(135deg, rgba(255,255,255,.9) 0%, rgba(240,248,255,.7) 50%, rgba(255,255,255,.9) 100%)',
+      clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+      border: '1px solid rgba(255,255,255,.3)',
+      backdropFilter: 'blur(8px)',
+      boxShadow: '0 4px 12px rgba(135,206,250,0.3)'
+    },
+    styles: {
+      '--ui-tab-bg': 'linear-gradient(135deg, rgba(240,240,240,.8) 0%, rgba(220,235,255,.6) 50%, rgba(240,240,240,.8) 100%)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, rgba(135,206,250,.9) 0%, rgba(173,216,230,.7) 50%, rgba(135,206,250,.9) 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, rgba(200,220,255,.8) 0%, rgba(180,200,255,.6) 50%, rgba(200,220,255,.8) 100%)',
+      '--ui-tab-text': '#0066cc',
+      '--ui-tab-active-text': '#003d7a',
+      '--ui-tab-border': 'rgba(255,255,255,.3)',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '0',
+      '--tab-clip-path': 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+      '--tab-box-shadow': '0 4px 12px rgba(135,206,250,0.3)',
+      '--tab-backdrop-filter': 'blur(8px)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  inkDrop: {
+    name: 'Ink Drop',
+    description: 'Efecto de gota de tinta expandiéndose',
+    preview: {
+      background: 'transparent',
+      borderRadius: '50px',
+      border: 'none',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    styles: {
+      '--ui-tab-bg': 'transparent',
+      '--ui-tab-active-bg': 'radial-gradient(circle, var(--primary-color, #007bff) 0%, rgba(0,123,255,.2) 70%, transparent 100%)',
+      '--ui-tab-hover-bg': 'radial-gradient(circle, rgba(0,123,255,.1) 0%, rgba(0,123,255,.05) 70%, transparent 100%)',
+      '--ui-tab-text': 'var(--text-color, #333)',
+      '--ui-tab-active-text': 'var(--primary-color, #007bff)',
+      '--ui-tab-border': 'transparent',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '50px',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+    }
+  },
+
+  fabric: {
+    name: 'Fabric Style',
+    description: 'Textura de tela con costuras',
+    preview: {
+      background: 'radial-gradient(circle at 2px 2px, rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, #f8f9fa 0%, #fff 50%, #f8f9fa 100%)',
+      backgroundSize: '10px 10px, 100% 100%',
+      border: '2px dashed #dee2e6',
+      borderRadius: '8px'
+    },
+    styles: {
+      '--ui-tab-bg': 'radial-gradient(circle at 2px 2px, rgba(0,0,0,.1) 1px, transparent 1px), linear-gradient(90deg, #f8f9fa 0%, #fff 50%, #f8f9fa 100%)',
+      '--ui-tab-active-bg': 'radial-gradient(circle at 2px 2px, rgba(0,123,255,.1) 1px, transparent 1px), linear-gradient(90deg, #e3f2fd 0%, #bbdefb 50%, #e3f2fd 100%)',
+      '--ui-tab-hover-bg': 'radial-gradient(circle at 2px 2px, rgba(0,0,0,.15) 1px, transparent 1px), linear-gradient(90deg, #e9ecef 0%, #f8f9fa 50%, #e9ecef 100%)',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#1565c0',
+      '--ui-tab-border': '#dee2e6',
+      '--ui-tab-close-hover': '#dc3545',
+      '--tab-border-radius': '8px',
+      '--tab-border-style': 'dashed',
+      '--tab-background-size': '10px 10px, 100% 100%',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  vintageFilm: {
+    name: 'Vintage Film',
+    description: 'Estilo película antigua con grain',
+    preview: {
+      background: 'radial-gradient(circle at 20% 20%, rgba(139,69,19,.1) 1px, transparent 1px), radial-gradient(circle at 80% 80%, rgba(160,82,45,.1) 1px, transparent 1px), linear-gradient(45deg, #f4f1e8 0%, #e8dcc6 100%)',
+      backgroundSize: '15px 15px, 12px 12px, 100% 100%',
+      border: '1px solid #8b4513',
+      borderRadius: '4px',
+      filter: 'sepia(.3) contrast(1.1)'
+    },
+    styles: {
+      '--ui-tab-bg': 'radial-gradient(circle at 20% 20%, rgba(139,69,19,.1) 1px, transparent 1px), radial-gradient(circle at 80% 80%, rgba(160,82,45,.1) 1px, transparent 1px), linear-gradient(45deg, #f4f1e8 0%, #e8dcc6 100%)',
+      '--ui-tab-active-bg': 'radial-gradient(circle at 20% 20%, rgba(139,69,19,.15) 1px, transparent 1px), radial-gradient(circle at 80% 80%, rgba(160,82,45,.15) 1px, transparent 1px), linear-gradient(45deg, #fff8e1 0%, #f3e5ab 100%)',
+      '--ui-tab-hover-bg': 'radial-gradient(circle at 20% 20%, rgba(139,69,19,.12) 1px, transparent 1px), radial-gradient(circle at 80% 80%, rgba(160,82,45,.12) 1px, transparent 1px), linear-gradient(45deg, #f9f6f0 0%, #ede0c8 100%)',
+      '--ui-tab-text': '#8b4513',
+      '--ui-tab-active-text': '#5d2f04',
+      '--ui-tab-border': '#8b4513',
+      '--ui-tab-close-hover': '#d2691e',
+      '--tab-border-radius': '4px',
+      '--tab-background-size': '15px 15px, 12px 12px, 100% 100%',
+      '--tab-filter': 'sepia(.3) contrast(1.1)',
+      '--tab-box-shadow': 'inset 0 0 10px rgba(139,69,19,.1)',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  magnetic: {
+    name: 'Magnetic Style',
+    description: 'Pestañas que se "atraen" magnéticamente',
+    preview: {
+      background: 'linear-gradient(135deg, #333 0%, #555 50%, #333 100%)',
+      border: '2px solid #666',
+      borderRadius: '6px',
+      color: '#fff',
+      transform: 'translateY(-2px) scale(1.02)',
+      boxShadow: '0 6px 12px rgba(0,0,0,.3)'
+    },
+    styles: {
+      '--ui-tab-bg': 'linear-gradient(135deg, #333 0%, #555 50%, #333 100%)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #444 0%, #666 50%, #444 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #3a3a3a 0%, #5c5c5c 50%, #3a3a3a 100%)',
+      '--ui-tab-text': '#fff',
+      '--ui-tab-active-text': '#fff',
+      '--ui-tab-border': '#666',
+      '--ui-tab-close-hover': '#ff6b6b',
+      '--tab-border-radius': '6px',
+      '--tab-box-shadow': '0 6px 12px rgba(0,0,0,.3)',
+      '--tab-transform': 'translateY(-2px) scale(1.02)',
+      '--tab-transition': 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+    }
+  },
+
+  watercolor: {
+    name: 'Watercolor Style',
+    description: 'Efecto acuarela con manchas de color',
+    preview: {
+      background: 'radial-gradient(ellipse at top left, rgba(255,182,193,.3) 0%, transparent 50%), radial-gradient(ellipse at top right, rgba(173,216,230,.3) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(221,160,221,.3) 0%, transparent 50%), #fff',
+      borderRadius: '20px',
+      border: 'none',
+      filter: 'blur(0.3px)'
+    },
+    styles: {
+      '--ui-tab-bg': 'radial-gradient(ellipse at top left, rgba(255,182,193,.2) 0%, transparent 50%), radial-gradient(ellipse at top right, rgba(173,216,230,.2) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(221,160,221,.2) 0%, transparent 50%), #fff',
+      '--ui-tab-active-bg': 'radial-gradient(ellipse at top left, rgba(255,182,193,.4) 0%, transparent 50%), radial-gradient(ellipse at top right, rgba(173,216,230,.4) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(221,160,221,.4) 0%, transparent 50%), #fff',
+      '--ui-tab-hover-bg': 'radial-gradient(ellipse at top left, rgba(255,182,193,.3) 0%, transparent 50%), radial-gradient(ellipse at top right, rgba(173,216,230,.3) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(221,160,221,.3) 0%, transparent 50%), #fff',
+      '--ui-tab-text': '#8e44ad',
+      '--ui-tab-active-text': '#6c3483',
+      '--ui-tab-border': 'transparent',
+      '--ui-tab-close-hover': '#e74c3c',
+      '--tab-border-radius': '20px',
+      '--tab-filter': 'blur(0.3px)',
+      '--tab-box-shadow': '0 4px 15px rgba(0,0,0,.1)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  mechanical: {
+    name: 'Mechanical Style',
+    description: 'Estilo industrial con tornillos y metal',
+    preview: {
+      background: 'radial-gradient(circle at 8px 8px, #666 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) 8px, #666 2px, transparent 2px), linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 50%, #a0a0a0 100%)',
+      border: '2px solid #999',
+      borderRadius: '0',
+      boxShadow: 'inset 0 2px 4px rgba(0,0,0,.1)'
+    },
+    styles: {
+      '--ui-tab-bg': 'radial-gradient(circle at 8px 8px, #666 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) 8px, #666 2px, transparent 2px), radial-gradient(circle at 8px calc(100% - 8px), #666 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), #666 2px, transparent 2px), linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 50%, #a0a0a0 100%)',
+      '--ui-tab-active-bg': 'radial-gradient(circle at 8px 8px, #555 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) 8px, #555 2px, transparent 2px), radial-gradient(circle at 8px calc(100% - 8px), #555 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), #555 2px, transparent 2px), linear-gradient(135deg, #f0f0f0 0%, #d0d0d0 50%, #b0b0b0 100%)',
+      '--ui-tab-hover-bg': 'radial-gradient(circle at 8px 8px, #777 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) 8px, #777 2px, transparent 2px), radial-gradient(circle at 8px calc(100% - 8px), #777 2px, transparent 2px), radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), #777 2px, transparent 2px), linear-gradient(135deg, #d0d0d0 0%, #b0b0b0 50%, #909090 100%)',
+      '--ui-tab-text': '#333',
+      '--ui-tab-active-text': '#000',
+      '--ui-tab-border': '#999',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '0',
+      '--tab-box-shadow': 'inset 0 2px 4px rgba(0,0,0,.1)',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  // ESTILOS EXPERIMENTALES AVANZADOS
+
+  particleSystem: {
+    name: 'Particle System',
+    description: 'Partículas que orbitan alrededor',
+    preview: {
+      background: 'rgba(0,0,0,.9)',
+      border: '1px solid #333',
+      borderRadius: '8px',
+      color: '#00d4ff',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    styles: {
+      '--ui-tab-bg': 'rgba(0,0,0,.9)',
+      '--ui-tab-active-bg': 'rgba(0,20,40,.9)',
+      '--ui-tab-hover-bg': 'rgba(10,10,20,.9)',
+      '--ui-tab-text': '#00d4ff',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#333',
+      '--ui-tab-close-hover': '#ff073a',
+      '--tab-border-radius': '8px',
+      '--tab-box-shadow': '0 0 20px rgba(0, 212, 255, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  morphing: {
+    name: 'Morphing Style',
+    description: 'Las pestañas cambian de forma',
+    preview: {
+      background: '#f8f9fa',
+      border: '2px solid #dee2e6',
+      clipPath: 'polygon(10% 0, 90% 0, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0 75%, 0 25%)',
+      borderRadius: '0'
+    },
+    styles: {
+      '--ui-tab-bg': '#f8f9fa',
+      '--ui-tab-active-bg': '#007bff',
+      '--ui-tab-hover-bg': '#e9ecef',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#fff',
+      '--ui-tab-border': '#dee2e6',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '0',
+      '--tab-clip-path': 'polygon(10% 0, 90% 0, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0 75%, 0 25%)',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    }
+  },
+
+  soundWave: {
+    name: 'Sound Wave',
+    description: 'Visualización de ondas de sonido',
+    preview: {
+      background: '#1a1a1a',
+      border: 'none',
+      borderRadius: '8px',
+      color: '#00ff88',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    styles: {
+      '--ui-tab-bg': '#1a1a1a',
+      '--ui-tab-active-bg': '#0d1f0d',
+      '--ui-tab-hover-bg': '#2d2d2d',
+      '--ui-tab-text': '#00ff88',
+      '--ui-tab-active-text': '#00ff88',
+      '--ui-tab-border': 'transparent',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '8px',
+      '--tab-box-shadow': '0 0 15px rgba(0, 255, 136, 0.3)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  dnaHelix: {
+    name: 'DNA Helix',
+    description: 'Doble hélice animada',
+    preview: {
+      background: 'linear-gradient(135deg, #001122 0%, #003366 100%)',
+      border: '1px solid #0066cc',
+      borderRadius: '12px',
+      color: '#00ccff',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    styles: {
+      '--ui-tab-bg': 'linear-gradient(135deg, #001122 0%, #003366 100%)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #003366 0%, #0066cc 100%)',
+      '--ui-tab-hover-bg': 'linear-gradient(135deg, #002244 0%, #004488 100%)',
+      '--ui-tab-text': '#00ccff',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#0066cc',
+      '--ui-tab-close-hover': '#ff4757',
+      '--tab-border-radius': '12px',
+      '--tab-box-shadow': '0 0 25px rgba(0, 204, 255, 0.4)',
+      '--tab-transition': 'all 0.3s ease'
+    }
   }
 };
 
