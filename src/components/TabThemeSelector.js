@@ -176,29 +176,6 @@ const tabThemes = {
   },
 
 
-  diamond: {
-    name: 'Diamond',
-    description: 'Pestañas en forma de diamante brillante',
-    preview: {
-      background: 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)',
-      transform: 'rotate(45deg) scale(0.7)',
-      borderRadius: '4px',
-      border: '2px solid #ff6b9d',
-      transition: 'all 0.3s ease'
-    },
-    styles: {
-      '--ui-tab-bg': 'linear-gradient(45deg, #2c2c2c 0%, #1a1a1a 100%)',
-      '--ui-tab-active-bg': 'linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)',
-      '--ui-tab-hover-bg': 'linear-gradient(45deg, #3c3c3c 0%, #2a2a2a 100%)',
-      '--ui-tab-text': '#ff6b9d',
-      '--ui-tab-active-text': '#1a1a1a',
-      '--ui-tab-border': '#ff6b9d',
-      '--ui-tab-close-hover': '#c44569',
-      '--tab-border-radius': '4px',
-      '--tab-box-shadow': '0 0 20px rgba(255, 107, 157, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.1)',
-      '--tab-transition': 'all 0.3s ease'
-    }
-  },
 
 
   neonCity: {
@@ -1250,8 +1227,11 @@ const tabThemes = {
 
 // Categorías propuestas y claves de nuevos temas
 const NEW_FUTURISTIC_KEYS = [
-  'neonAurora', 'quantumFlux', 'laserWave', 'prismTrail', 'hyperdrive', 'ionStorm',
-  'neonOrbit', 'cyberGrid', 'pulseMagenta', 'neonLime', 'scanlineBlue', 'tronBlue'
+  'scanlineBlue', 'tronBlue', 'ionStorm',
+  'terminal', 'terminalBlue', 'terminalOrange',
+  'neonAurora', 'quantumFlux', 'laserWave', 'prismTrail', 'hyperdrive',
+  'neonOrbit', 'cyberGrid', 'pulseMagenta', 'neonLime',
+  'ocean', 'steam', 'steamBlue', 'steamGreen', 'vscode'
 ];
 
 const NEW_PRO_KEYS = [
@@ -1260,11 +1240,18 @@ const NEW_PRO_KEYS = [
 ];
 
 const NEW_MINIMAL_KEYS = [
-  'borderless', 'softTouch', 'roundedPill', 'macTabs', 'flatPills', 'pastelCandy'
+  'borderless', 'softTouch', 'roundedPill', 'macTabs', 'flatPills', 'pastelCandy',
+  'material', 'paperStack', 'fabric', 'watercolor',
+  'vintageFilm', 'mechanical', 'morphing', 'minimalist', 'vintage'
 ];
 
 const NEW_ANIMATED_KEYS = [
-  'auroraFlow', 'circuitFlow', 'meteorShower', 'parallaxGrid', 'rippleInk', 'hueShift'
+  'auroraFlow', 'circuitFlow', 'meteorShower', 'parallaxGrid', 'rippleInk', 'hueShift',
+  'synthwave', 'cyberpunk', 'matrix', 'neonCity', 'galaxy'
+];
+
+const NEW_OTHERS_KEYS = [
+  'fire'
 ];
 
 // Temas nuevos: Futuristas Neón
@@ -2235,7 +2222,7 @@ const TabThemeSelector = () => {
       {/* Categorías en pestañas */}
       <div style={{ width: '100%', maxWidth: '1200px', padding: '0 1rem' }}>
         <TabView>
-          <TabPanel header="Futuristas Neón">
+          <TabPanel header="Futuristas">
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
@@ -2275,7 +2262,7 @@ const TabThemeSelector = () => {
               })}
             </div>
           </TabPanel>
-          <TabPanel header="Profesionales y Modernos">
+          <TabPanel header="Modernos">
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
@@ -2302,7 +2289,7 @@ const TabThemeSelector = () => {
               })}
             </div>
           </TabPanel>
-          <TabPanel header="Minimal y estilizados">
+          <TabPanel header="Minimal">
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
@@ -2329,7 +2316,7 @@ const TabThemeSelector = () => {
               })}
             </div>
           </TabPanel>
-          <TabPanel header="Animados Especiales">
+          <TabPanel header="Animados">
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
@@ -2356,7 +2343,34 @@ const TabThemeSelector = () => {
               })}
             </div>
           </TabPanel>
-          <TabPanel header="Otros clásicos">
+          <TabPanel header="Otros">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {NEW_OTHERS_KEYS.filter((key) => tabThemes[key]).map((key) => {
+                const theme = tabThemes[key];
+                return (
+                  <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
+                    <div style={{ padding: '1rem' }}>
+                      <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
+                      <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
+                      {selectedTheme === key && (
+                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
+                          <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
+                          Tema activo
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabPanel>
+          <TabPanel header="Clásicos">
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
@@ -2364,7 +2378,7 @@ const TabThemeSelector = () => {
               width: '100%'
             }}>
               {Object.keys(tabThemes)
-                .filter(k => ![...NEW_FUTURISTIC_KEYS, ...NEW_PRO_KEYS, ...NEW_MINIMAL_KEYS, ...NEW_ANIMATED_KEYS].includes(k))
+                .filter(k => ![...NEW_FUTURISTIC_KEYS, ...NEW_PRO_KEYS, ...NEW_MINIMAL_KEYS, ...NEW_ANIMATED_KEYS, ...NEW_OTHERS_KEYS].includes(k))
                 .map((key) => {
                   const theme = tabThemes[key];
                   return (
