@@ -43,6 +43,13 @@ export const generateAdvancedCSS = (themeName, styles) => {
       font-size: 10px !important;
       color: inherit !important;
     }
+    
+    /* Reduced motion toggle (solo temas de pestañas) */
+    :root[data-tab-reduced-motion="true"] .p-tabview .p-tabview-nav li .p-tabview-nav-link,
+    :root[data-tab-reduced-motion="true"] .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
+      animation: none !important;
+      transition: none !important;
+    }
   `;
 
   const themeSpecificCSS = {
@@ -1100,6 +1107,128 @@ export const generateAdvancedCSS = (themeName, styles) => {
         25% { transform: rotate(90deg) scale(1.1); opacity: 0.6; }
         50% { transform: rotate(180deg) scale(1); opacity: 0.8; }
         75% { transform: rotate(270deg) scale(1.1); opacity: 0.6; }
+      }
+    `
+    ,
+
+    /* --- Animaciones nuevas --- */
+    auroraFlow: `
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+        animation: aurora-flow 6s ease-in-out infinite alternate !important;
+      }
+
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08) 0%, transparent 60%);
+        animation: aurora-sheen 4s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes aurora-flow {
+        0% { background-position: 0% 50%; filter: saturate(1); }
+        100% { background-position: 100% 50%; filter: saturate(1.1); }
+      }
+
+      @keyframes aurora-sheen {
+        0%, 100% { transform: translateX(-10%) translateY(-5%); opacity: 0.35; }
+        50% { transform: translateX(10%) translateY(5%); opacity: 0.6; }
+      }
+    `,
+
+    circuitFlow: `
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+        animation: circuit-glow 2.2s ease-in-out infinite alternate !important;
+      }
+
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          repeating-linear-gradient(90deg, rgba(0, 225, 255, 0.0) 0px, rgba(0, 225, 255, 0.0) 6px, rgba(0, 225, 255, 0.15) 7px, rgba(0, 225, 255, 0.15) 8px),
+          repeating-linear-gradient(0deg, rgba(0, 255, 194, 0.0) 0px, rgba(0, 255, 194, 0.0) 6px, rgba(0, 255, 194, 0.12) 7px, rgba(0, 255, 194, 0.12) 8px);
+        background-size: 200% 100%, 100% 200%;
+        animation: circuit-flow-x 6s linear infinite, circuit-flow-y 8s linear infinite;
+        pointer-events: none;
+      }
+
+      @keyframes circuit-glow {
+        from { box-shadow: 0 0 16px rgba(0, 225, 255, 0.35), inset 0 0 12px rgba(0, 255, 194, 0.18); }
+        to   { box-shadow: 0 0 24px rgba(0, 225, 255, 0.55), inset 0 0 18px rgba(0, 255, 194, 0.28); }
+      }
+      @keyframes circuit-flow-x { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+      @keyframes circuit-flow-y { 0% { background-position: 0 0%; } 100% { background-position: 0 200%; } }
+    `,
+
+    meteorShower: `
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          radial-gradient(2px 2px at 10% 10%, rgba(121, 184, 255, 0.7), transparent),
+          radial-gradient(2px 2px at 40% 30%, rgba(200, 220, 255, 0.6), transparent),
+          linear-gradient(45deg, rgba(121, 184, 255, 0.25) 0%, rgba(121, 184, 255, 0) 60%);
+        background-repeat: no-repeat;
+        background-size: 2px 2px, 2px 2px, 200% 200%;
+        animation: meteor-fall 5s linear infinite;
+        pointer-events: none;
+      }
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link { filter: brightness(1.05); }
+      @keyframes meteor-fall {
+        0%   { background-position: 10% 10%, 40% 30%, -50% -50%; }
+        100% { background-position: 110% 110%, 140% 130%, 150% 150%; }
+      }
+    `,
+
+    parallaxGrid: `
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(transparent 95%, rgba(90, 240, 255, 0.15) 95%),
+          linear-gradient(90deg, transparent 95%, rgba(90, 240, 255, 0.15) 95%);
+        background-size: 18px 18px, 18px 18px;
+        background-position: 0 0, 0 0;
+        animation: grid-parallax 10s linear infinite;
+        pointer-events: none;
+      }
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link { box-shadow: 0 0 16px rgba(90, 240, 255, 0.35) !important; }
+      @keyframes grid-parallax { from { background-position: 0 0, 0 0; } to { background-position: 36px 18px, 18px 36px; } }
+    `,
+
+    rippleInk: `
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
+        content: '';
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 30%; height: 30%;
+        transform: translate(-50%, -50%) scale(0.6);
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(85, 209, 255, 0.35) 0%, rgba(85, 209, 255, 0) 60%);
+        opacity: 0;
+        animation: ripple-expand 2.6s ease-out infinite;
+        pointer-events: none;
+      }
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link { box-shadow: 0 0 16px rgba(85, 209, 255, 0.35) !important; }
+      @keyframes ripple-expand {
+        0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.0; }
+        30% { opacity: 0.45; }
+        100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
+      }
+    `,
+
+    hueShift: `
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+        animation: hue-shift 5s linear infinite !important;
+      }
+      @keyframes hue-shift {
+        0% { filter: hue-rotate(0deg) saturate(1.05); }
+        50% { filter: hue-rotate(25deg) saturate(1.15); }
+        100% { filter: hue-rotate(0deg) saturate(1.05); }
       }
     `
   };

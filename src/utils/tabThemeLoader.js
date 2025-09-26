@@ -890,6 +890,132 @@ const tabThemes = {
   }
 };
 
+// Nuevos temas añadidos en TabThemeSelector.js (solo styles aquí)
+Object.assign(tabThemes, {
+  // Futuristas neón
+  neonAurora: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #091b2a 0%, #0a2a43 50%, #102b3f 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #00ffd5 0%, #00aaff 50%, #7c4dff 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #0c2436 0%, #0d3351 50%, #143b4b 100%)',
+    '--ui-tab-text': '#4ef0ff', '--ui-tab-active-text': '#0b1220', '--ui-tab-border': '#4ef0ff', '--ui-tab-close-hover': '#ff579a', '--tab-border-radius': '12px 12px 0 0', '--tab-box-shadow': '0 0 20px rgba(78, 240, 255, 0.35)', '--tab-transition': 'all 0.3s ease' } },
+  quantumFlux: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0b0f2b 0%, #121242 50%, #1a0f3d 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #00e5ff 0%, #7b61ff 50%, #ff00e5 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #0f1436 0%, #181a55 50%, #20124a 100%)',
+    '--ui-tab-text': '#99aaff', '--ui-tab-active-text': '#000', '--ui-tab-border': '#7b61ff', '--ui-tab-close-hover': '#ff5ec4', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 0 18px rgba(123, 97, 255, 0.35)', '--tab-transition': 'all 0.3s ease' } },
+  laserWave: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0b0b16 0%, #0f0f27 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #ff00b8 0%, #00f5ff 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #161633 0%, #11112b 100%)',
+    '--ui-tab-text': '#00f5ff', '--ui-tab-active-text': '#001016', '--ui-tab-border': '#00f5ff', '--ui-tab-close-hover': '#ff00b8', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': '0 0 22px rgba(0, 245, 255, 0.45)', '--tab-transition': 'all 0.25s ease' } },
+  prismTrail: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0b1020 0%, #151a2e 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #ff6ec7 0%, #7b61ff 50%, #00e5ff 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #121734 0%, #1a203e 100%)',
+    '--ui-tab-text': '#d7c7ff', '--ui-tab-active-text': '#0a0a0a', '--ui-tab-border': '#ff6ec7', '--ui-tab-close-hover': '#00e5ff', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 0 18px rgba(255, 110, 199, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  hyperdrive: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #07131f 0%, #0a1b2b 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #2de2e6 0%, #0ff 50%, #00a3ff 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #0b1f33 0%, #0f2842 100%)',
+    '--ui-tab-text': '#9beef3', '--ui-tab-active-text': '#00141d', '--ui-tab-border': '#2de2e6', '--ui-tab-close-hover': '#ff2079', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': '0 0 16px rgba(45, 226, 230, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  ionStorm: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #071a1a 0%, #0f2a2a 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #29ffc6 0%, #20e3b2 50%, #0cebeb 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #0b2424 0%, #123333 100%)',
+    '--ui-tab-text': '#86fff0', '--ui-tab-active-text': '#002221', '--ui-tab-border': '#29ffc6', '--ui-tab-close-hover': '#ff6b6b', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 0 18px rgba(41, 255, 198, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  neonOrbit: { styles: {
+    '--ui-tab-bg': 'radial-gradient(circle at 30% 50%, #0f1a2e 0%, #0a1020 60%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #8d85ff 0%, #00eaff 100%)',
+    '--ui-tab-hover-bg': 'radial-gradient(circle at 30% 50%, #14223b 0%, #0d172c 60%)',
+    '--ui-tab-text': '#b6b3ff', '--ui-tab-active-text': '#041018', '--ui-tab-border': '#8d85ff', '--ui-tab-close-hover': '#00eaff', '--tab-border-radius': '14px 14px 0 0', '--tab-box-shadow': '0 0 16px rgba(141, 133, 255, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  cyberGrid: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0a0a0f 0%, #141425 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #00ffd1 0%, #00b3ff 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #121226 0%, #1b1b36 100%)',
+    '--ui-tab-text': '#7efce5', '--ui-tab-active-text': '#001313', '--ui-tab-border': '#00ffd1', '--ui-tab-close-hover': '#00b3ff', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': '0 0 18px rgba(0, 255, 209, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  pulseMagenta: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #1b0a16 0%, #2a0f21 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #ff3fa4 0%, #ff7acb 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #2a0f21 0%, #37152b 100%)',
+    '--ui-tab-text': '#ff93cf', '--ui-tab-active-text': '#250018', '--ui-tab-border': '#ff3fa4', '--ui-tab-close-hover': '#ffa0dc', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 0 20px rgba(255, 63, 164, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  neonLime: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0a0f0a 0%, #0f1a0f 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #a8ff60 0%, #72ff8f 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #101710 0%, #152215 100%)',
+    '--ui-tab-text': '#cfff98', '--ui-tab-active-text': '#0b1109', '--ui-tab-border': '#a8ff60', '--ui-tab-close-hover': '#72ff8f', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': '0 0 16px rgba(168, 255, 96, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  scanlineBlue: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0a0f1f 0%, #0f1b33 100%)',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #00bfff 0%, #3cc8ff 100%)',
+    '--ui-tab-hover-bg': 'linear-gradient(135deg, #0f1b33 0%, #152540 100%)',
+    '--ui-tab-text': '#9ee1ff', '--ui-tab-active-text': '#031018', '--ui-tab-border': '#00bfff', '--ui-tab-close-hover': '#3cc8ff', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 0 16px rgba(0, 191, 255, 0.35)', '--tab-transition': 'all 0.25s ease' } },
+  tronBlue: { styles: {
+    '--ui-tab-bg': '#0a0e14',
+    '--ui-tab-active-bg': 'linear-gradient(135deg, #15f3ff 0%, #00bcd4 100%)',
+    '--ui-tab-hover-bg': '#0e141c',
+    '--ui-tab-text': '#8deaff', '--ui-tab-active-text': '#071115', '--ui-tab-border': '#15f3ff', '--ui-tab-close-hover': '#00bcd4', '--tab-border-radius': '4px 4px 0 0', '--tab-box-shadow': '0 0 14px rgba(21, 243, 255, 0.45)', '--tab-transition': 'all 0.22s ease' } },
+
+  // Profesionales y modernos
+  proSlate: { styles: {
+    '--ui-tab-bg': '#2d3138', '--ui-tab-active-bg': '#1f2329', '--ui-tab-hover-bg': '#343a42', '--ui-tab-text': '#d6d8db', '--ui-tab-active-text': '#ffffff', '--ui-tab-border': '#434a54', '--ui-tab-close-hover': '#e74c3c', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.2s ease' } },
+  proOcean: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0f3354 0%, #0b2236 100%)', '--ui-tab-active-bg': '#114a7a', '--ui-tab-hover-bg': '#0e2b46', '--ui-tab-text': '#b7cde3', '--ui-tab-active-text': '#ffffff', '--ui-tab-border': '#2a72b5', '--ui-tab-close-hover': '#ff6b6b', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': '0 2px 8px rgba(0,0,0,0.2)', '--tab-transition': 'all 0.2s ease' } },
+  proForest: { styles: {
+    '--ui-tab-bg': '#10271a', '--ui-tab-active-bg': '#1b5e20', '--ui-tab-hover-bg': '#153321', '--ui-tab-text': '#c9e7d3', '--ui-tab-active-text': '#ffffff', '--ui-tab-border': '#2e7d32', '--ui-tab-close-hover': '#ff7043', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': '0 2px 8px rgba(0,0,0,0.2)', '--tab-transition': 'all 0.2s ease' } },
+  proIndigo: { styles: {
+    '--ui-tab-bg': '#263266', '--ui-tab-active-bg': '#3f51b5', '--ui-tab-hover-bg': '#2b3a73', '--ui-tab-text': '#e3e6ff', '--ui-tab-active-text': '#ffffff', '--ui-tab-border': '#3f51b5', '--ui-tab-close-hover': '#f44336', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.2s ease' } },
+  graphite: { styles: {
+    '--ui-tab-bg': '#2a2a2a', '--ui-tab-active-bg': '#1e1e1e', '--ui-tab-hover-bg': '#333', '--ui-tab-text': '#ddd', '--ui-tab-active-text': '#fff', '--ui-tab-border': '#444', '--ui-tab-close-hover': '#ff6b6b', '--tab-border-radius': '4px 4px 0 0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.18s ease' } },
+  obsidianGlass: { styles: {
+    '--ui-tab-bg': 'rgba(255,255,255,0.06)', '--ui-tab-active-bg': 'rgba(255,255,255,0.12)', '--ui-tab-hover-bg': 'rgba(255,255,255,0.09)', '--ui-tab-text': '#e6e6e6', '--ui-tab-active-text': '#fff', '--ui-tab-border': 'rgba(255,255,255,0.18)', '--ui-tab-close-hover': '#ff6161', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 8px 24px rgba(0,0,0,0.18)', '--tab-transition': 'all 0.25s ease', '--tab-backdrop-filter': 'blur(10px)' } },
+  azureGlass: { styles: {
+    '--ui-tab-bg': 'rgba(0, 123, 255, 0.12)', '--ui-tab-active-bg': 'rgba(0, 123, 255, 0.22)', '--ui-tab-hover-bg': 'rgba(0, 123, 255, 0.18)', '--ui-tab-text': '#d8ecff', '--ui-tab-active-text': '#fff', '--ui-tab-border': 'rgba(0, 123, 255, 0.35)', '--ui-tab-close-hover': '#ffa000', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 8px 24px rgba(0, 123, 255, 0.18)', '--tab-transition': 'all 0.22s ease' } },
+  slateGlass: { styles: {
+    '--ui-tab-bg': 'rgba(255,255,255,0.08)', '--ui-tab-active-bg': 'rgba(255,255,255,0.16)', '--ui-tab-hover-bg': 'rgba(255,255,255,0.11)', '--ui-tab-text': '#e8e8e8', '--ui-tab-active-text': '#fff', '--ui-tab-border': 'rgba(255,255,255,0.14)', '--ui-tab-close-hover': '#e74c3c', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 8px 22px rgba(0,0,0,0.16)', '--tab-transition': 'all 0.22s ease' } },
+  sandstone: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #e9d5b7 0%, #dcc4a3 100%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #fff1db 0%, #ead7bc 100%)', '--ui-tab-hover-bg': 'linear-gradient(135deg, #eadcc2 0%, #dfcaae 100%)', '--ui-tab-text': '#6b4f3a', '--ui-tab-active-text': '#4a382b', '--ui-tab-border': '#c6a98d', '--ui-tab-close-hover': '#a0522d', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 2px 10px rgba(106, 74, 52, 0.15)', '--tab-transition': 'all 0.22s ease' } },
+  midnightBlue: { styles: {
+    '--ui-tab-bg': '#0f1730', '--ui-tab-active-bg': '#1f2e5f', '--ui-tab-hover-bg': '#172244', '--ui-tab-text': '#c9d4ff', '--ui-tab-active-text': '#ffffff', '--ui-tab-border': '#1f2e5f', '--ui-tab-close-hover': '#ff6b6b', '--tab-border-radius': '6px 6px 0 0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.2s ease' } },
+  elegantTaupe: { styles: {
+    '--ui-tab-bg': '#b7a69e', '--ui-tab-active-bg': '#cbbdb6', '--ui-tab-hover-bg': '#c0b2aa', '--ui-tab-text': '#3b302b', '--ui-tab-active-text': '#2a221e', '--ui-tab-border': '#9b8b83', '--ui-tab-close-hover': '#a0522d', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 3px 10px rgba(155, 139, 131, 0.35)', '--tab-transition': 'all 0.2s ease' } },
+  mutedTeal: { styles: {
+    '--ui-tab-bg': '#396e6e', '--ui-tab-active-bg': '#2d5a5a', '--ui-tab-hover-bg': '#3f7b7b', '--ui-tab-text': '#e2f4f4', '--ui-tab-active-text': '#ffffff', '--ui-tab-border': '#2d5a5a', '--ui-tab-close-hover': '#ff7043', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 2px 8px rgba(0,0,0,0.18)', '--tab-transition': 'all 0.2s ease' } },
+
+  // Minimal y estilizados
+  borderless: { styles: {
+    '--ui-tab-bg': 'transparent', '--ui-tab-active-bg': 'rgba(0,0,0,0.04)', '--ui-tab-hover-bg': 'rgba(0,0,0,0.02)', '--ui-tab-text': 'var(--text-color, #666)', '--ui-tab-active-text': 'var(--text-color, #222)', '--ui-tab-border': 'transparent', '--ui-tab-close-hover': '#ff6b6b', '--tab-border-radius': '0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.15s ease', '--tab-border-bottom': '2px solid transparent', '--tab-active-border-bottom': '2px solid var(--primary-color, #2196f3)'
+  } },
+  softTouch: { styles: {
+    '--ui-tab-bg': '#f6f7f9', '--ui-tab-active-bg': '#ffffff', '--ui-tab-hover-bg': '#eff1f5', '--ui-tab-text': '#5c6670', '--ui-tab-active-text': '#2f3540', '--ui-tab-border': '#e6e8ec', '--ui-tab-close-hover': '#d9534f', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 2px 8px rgba(0,0,0,0.08)', '--tab-transition': 'all 0.18s ease' } },
+  roundedPill: { styles: {
+    '--ui-tab-bg': '#e7eefb', '--ui-tab-active-bg': '#cfe0ff', '--ui-tab-hover-bg': '#dbe7ff', '--ui-tab-text': '#294a9b', '--ui-tab-active-text': '#1a2f6f', '--ui-tab-border': '#b5c8f5', '--ui-tab-close-hover': '#e74c3c', '--tab-border-radius': '999px 999px 0 0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.18s ease' } },
+  macTabs: { styles: {
+    '--ui-tab-bg': '#ededed', '--ui-tab-active-bg': '#ffffff', '--ui-tab-hover-bg': '#f6f6f6', '--ui-tab-text': '#333', '--ui-tab-active-text': '#111', '--ui-tab-border': '#d7d7d7', '--ui-tab-close-hover': '#ff6b6b', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 1px 0 rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.7)', '--tab-transition': 'all 0.18s ease' } },
+  flatPills: { styles: {
+    '--ui-tab-bg': '#f2f2f2', '--ui-tab-active-bg': '#ffffff', '--ui-tab-hover-bg': '#ebebeb', '--ui-tab-text': '#555', '--ui-tab-active-text': '#222', '--ui-tab-border': '#e0e0e0', '--ui-tab-close-hover': '#e57373', '--tab-border-radius': '16px 16px 0 0', '--tab-box-shadow': 'none', '--tab-transition': 'all 0.16s ease' } },
+  pastelCandy: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #ffe4ec 0%, #e8f4ff 100%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #ffd1e0 0%, #d6ecff 100%)', '--ui-tab-hover-bg': 'linear-gradient(135deg, #ffe8f0 0%, #eef6ff 100%)', '--ui-tab-text': '#7a4f6a', '--ui-tab-active-text': '#5b3a4f', '--ui-tab-border': '#ffd1e0', '--ui-tab-close-hover': '#e74c3c', '--tab-border-radius': '12px 12px 0 0', '--tab-box-shadow': '0 2px 8px rgba(255, 171, 192, 0.25)', '--tab-transition': 'all 0.18s ease' } },
+
+  // Animados especiales
+  auroraFlow: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0a0f1f 0%, #10223f 100%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #66ffe3 0%, #6a7cff 50%, #ff85d8 100%)', '--ui-tab-hover-bg': 'linear-gradient(135deg, #0f1a33 0%, #162b4f 100%)', '--ui-tab-text': '#bdfcf1', '--ui-tab-active-text': '#051015', '--ui-tab-border': '#66ffe3', '--ui-tab-close-hover': '#ff85d8', '--tab-border-radius': '12px 12px 0 0', '--tab-box-shadow': '0 0 18px rgba(102, 255, 227, 0.35)', '--tab-transition': 'all 0.25s ease', '--tab-background-size': '300% 300%'
+  } },
+  circuitFlow: { styles: {
+    '--ui-tab-bg': '#0a0f14', '--ui-tab-active-bg': 'linear-gradient(135deg, #001821 0%, #002a3a 100%)', '--ui-tab-hover-bg': '#0f161c', '--ui-tab-text': '#9aefff', '--ui-tab-active-text': '#001116', '--ui-tab-border': '#00e1ff', '--ui-tab-close-hover': '#00ffc2', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 0 16px rgba(0, 225, 255, 0.35)', '--tab-transition': 'all 0.25s ease'
+  } },
+  meteorShower: { styles: {
+    '--ui-tab-bg': 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #79b8ff 0%, #4f9dff 60%, #7a6cff 100%)', '--ui-tab-hover-bg': 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)', '--ui-tab-text': '#cfe6ff', '--ui-tab-active-text': '#08101d', '--ui-tab-border': '#79b8ff', '--ui-tab-close-hover': '#7a6cff', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 0 16px rgba(121, 184, 255, 0.35)', '--tab-transition': 'all 0.25s ease'
+  } },
+  parallaxGrid: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #0a0a0f 0%, #151526 100%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #5af0ff 0%, #7b61ff 100%)', '--ui-tab-hover-bg': 'linear-gradient(135deg, #121226 0%, #1a1a36 100%)', '--ui-tab-text': '#c7faff', '--ui-tab-active-text': '#041016', '--ui-tab-border': '#5af0ff', '--ui-tab-close-hover': '#7b61ff', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 0 16px rgba(90, 240, 255, 0.35)', '--tab-transition': 'all 0.25s ease'
+  } },
+  rippleInk: { styles: {
+    '--ui-tab-bg': '#0b0b0f', '--ui-tab-active-bg': 'linear-gradient(135deg, #09111a 0%, #0e1c2b 100%)', '--ui-tab-hover-bg': '#101019', '--ui-tab-text': '#bfeaff', '--ui-tab-active-text': '#0a131f', '--ui-tab-border': '#55d1ff', '--ui-tab-close-hover': '#00bcd4', '--tab-border-radius': '10px 10px 0 0', '--tab-box-shadow': '0 0 16px rgba(85, 209, 255, 0.35)', '--tab-transition': 'all 0.25s ease'
+  } },
+  hueShift: { styles: {
+    '--ui-tab-bg': 'linear-gradient(135deg, #141414 0%, #1f1f1f 100%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #ff9aff 0%, #7ab8ff 50%, #79ffdf 100%)', '--ui-tab-hover-bg': 'linear-gradient(135deg, #1a1a1a 0%, #262626 100%)', '--ui-tab-text': '#e2e2e2', '--ui-tab-active-text': '#0b0b0b', '--ui-tab-border': '#a8bfff', '--ui-tab-close-hover': '#79ffdf', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 0 18px rgba(168, 191, 255, 0.35)', '--tab-transition': 'all 0.25s ease'
+  } }
+});
+
 // Función para aplicar el tema de pestañas
 export const applyTabTheme = (themeName) => {
   const theme = tabThemes[themeName];
