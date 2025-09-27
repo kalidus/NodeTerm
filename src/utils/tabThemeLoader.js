@@ -887,6 +887,58 @@ const tabThemes = {
       '--tab-box-shadow': '0 0 25px rgba(0, 204, 255, 0.4)',
       '--tab-transition': 'all 0.3s ease'
     }
+  },
+
+  // Versiones estáticas de los temas terminales para la categoría Futuristas
+  terminalStatic: {
+    name: 'Terminal Hacker Verde',
+    description: 'Estilo de terminal de hacker verde (estático)',
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#002200',
+      '--ui-tab-hover-bg': '#003300',
+      '--ui-tab-text': '#00ff00',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#00ff00',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 15px #00ff00, inset 0 0 15px rgba(0, 255, 0, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  terminalBlueStatic: {
+    name: 'Terminal Hacker Azul',
+    description: 'Terminal hacker en azul neón (estático)',
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#00152e',
+      '--ui-tab-hover-bg': '#002a4d',
+      '--ui-tab-text': '#00bfff',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#00bfff',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 15px #00bfff, inset 0 0 15px rgba(0, 191, 255, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  terminalOrangeStatic: {
+    name: 'Terminal Hacker Naranja',
+    description: 'Terminal hacker en naranja neón (estático)',
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#2e1500',
+      '--ui-tab-hover-bg': '#4d2200',
+      '--ui-tab-text': '#ff8c00',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#ff8c00',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 15px #ff8c00, inset 0 0 15px rgba(255, 140, 0, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
   }
 };
 
