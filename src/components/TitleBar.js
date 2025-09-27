@@ -799,14 +799,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 top: 36,
                 left: 0,
                 width: '100%',
-                background: '#232629',
-                color: '#fff',
+                background: 'var(--ui-dialog-bg, #232629)',
+                color: 'var(--ui-dialog-text, #fff)',
                 borderRadius: 6,
                 boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
                 zIndex: 9999,
                 maxHeight: 300,
                 overflowY: 'auto',
-                border: '1px solid #444',
+                border: '1px solid var(--ui-dialog-border, #444)',
                 WebkitAppRegion: 'no-drag',
               }}>
               {filteredConnections.map(node => {
@@ -843,14 +843,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       alignItems: 'center',
                       gap: 8,
                       fontSize: 13,
-                      borderBottom: '1px solid #333',
+                      borderBottom: '1px solid var(--ui-dialog-border, #333)',
                       position: 'relative',
                       transition: 'all 0.2s ease',
                       borderRadius: '4px',
                       margin: '2px 4px',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#2a2d31';
+                      e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #2a2d31)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
                     }}
@@ -880,7 +880,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         overflow: 'hidden', 
                         textOverflow: 'ellipsis',
                         fontWeight: 500,
-                        color: '#fff'
+                        color: 'var(--ui-dialog-text, #fff)'
                       }}>
                         {node.label}
                       </span>
@@ -908,12 +908,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       }}>
                         <span style={{ 
                           fontSize: 11, 
-                          color: '#ff9800',
+                          color: 'var(--ui-primary-color, #ff9800)',
                           fontWeight: 600,
-                          backgroundColor: '#ff980020',
+                          backgroundColor: 'var(--ui-primary-color, #ff9800)20',
                           padding: '2px 6px',
                           borderRadius: '10px',
-                          border: '1px solid #ff980040',
+                          border: '1px solid var(--ui-primary-color, #ff9800)40',
                           whiteSpace: 'nowrap',
                           display: 'flex',
                           alignItems: 'center',
@@ -932,7 +932,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: isFavorite ? '#ffd700' : '#666',
+                          color: isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)',
                           cursor: 'pointer',
                           padding: '4px',
                           borderRadius: '4px',
@@ -943,11 +943,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                           transition: 'all 0.2s ease',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#ffd700';
-                          e.currentTarget.style.backgroundColor = '#444';
+                          e.currentTarget.style.color = 'var(--ui-primary-color, #ffd700)';
+                          e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = isFavorite ? '#ffd700' : '#666';
+                          e.currentTarget.style.color = isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)';
                           e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                         onClick={(e) => {
@@ -964,7 +964,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#888',
+                          color: 'var(--ui-dialog-text, #888)',
                           cursor: 'pointer',
                           padding: '4px',
                           borderRadius: '4px',
@@ -975,11 +975,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                           transition: 'all 0.2s ease',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#fff';
-                          e.currentTarget.style.backgroundColor = '#444';
+                          e.currentTarget.style.color = 'var(--ui-dialog-text, #fff)';
+                          e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#888';
+                          e.currentTarget.style.color = 'var(--ui-dialog-text, #888)';
                           e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                         onClick={(e) => {
@@ -995,7 +995,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 );
               })}
               {filteredConnections.length === 0 && (
-                <div style={{ padding: '12px', color: '#aaa', fontSize: 13, textAlign: 'center' }}>Sin resultados</div>
+                <div style={{ padding: '12px', color: 'var(--ui-dialog-text, #aaa)', fontSize: 13, textAlign: 'center' }}>Sin resultados</div>
               )}
             </div>
           )}
