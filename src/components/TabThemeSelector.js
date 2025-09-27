@@ -323,30 +323,6 @@ const tabThemes = {
     }
   },
 
-  crystal: {
-    name: 'Crystal',
-    description: 'Cristales multifacéticos brillantes',
-    preview: {
-      background: 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%), linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-      borderRadius: '0',
-      border: '2px solid #2196f3',
-      clipPath: 'polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)',
-      boxShadow: '0 0 20px rgba(33, 150, 243, 0.5), inset 0 0 20px rgba(255,255,255,0.2)'
-    },
-    styles: {
-      '--ui-tab-bg': 'linear-gradient(135deg, #263238 0%, #37474f 100%)',
-      '--ui-tab-active-bg': 'linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%), linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-      '--ui-tab-hover-bg': 'linear-gradient(135deg, #37474f 0%, #455a64 100%)',
-      '--ui-tab-text': '#90caf9',
-      '--ui-tab-active-text': '#0d47a1',
-      '--ui-tab-border': '#2196f3',
-      '--ui-tab-close-hover': '#f44336',
-      '--tab-border-radius': '0',
-      '--tab-clip-path': 'polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%)',
-      '--tab-box-shadow': '0 0 20px rgba(33, 150, 243, 0.5), inset 0 0 20px rgba(255,255,255,0.2)',
-      '--tab-transition': 'all 0.4s ease'
-    }
-  },
 
   cyberpunk2077: {
     name: 'Cyberpunk 2077',
@@ -1227,6 +1203,352 @@ const tabThemes = {
       '--tab-box-shadow': '0 0 15px #ff8c00, inset 0 0 15px rgba(255, 140, 0, 0.2)',
       '--tab-transition': 'all 0.3s ease'
     }
+  },
+
+  // Nuevos temas basados en temas de interfaz
+  uiLight: {
+    name: 'UI Light',
+    description: 'Basado en el tema Light de la interfaz',
+    preview: {
+      background: '#ffffff',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #e0e0e0',
+      color: '#495057'
+    },
+    styles: {
+      '--ui-tab-bg': '#ffffff',
+      '--ui-tab-active-bg': '#e3f2fd',
+      '--ui-tab-hover-bg': '#f5f5f5',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#1976d2',
+      '--ui-tab-border': '#e0e0e0',
+      '--ui-tab-close-hover': '#f44336',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiDark: {
+    name: 'UI Dark',
+    description: 'Basado en el tema Dark de la interfaz',
+    preview: {
+      background: '#2d2d30',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #3e3e42',
+      color: '#cccccc'
+    },
+    styles: {
+      '--ui-tab-bg': '#2d2d30',
+      '--ui-tab-active-bg': '#1e1e1e',
+      '--ui-tab-hover-bg': '#3e3e42',
+      '--ui-tab-text': '#cccccc',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#3e3e42',
+      '--ui-tab-close-hover': '#f48771',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiDracula: {
+    name: 'UI Dracula',
+    description: 'Basado en el tema Dracula de la interfaz',
+    preview: {
+      background: '#282a36',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #44475a',
+      color: '#f8f8f2'
+    },
+    styles: {
+      '--ui-tab-bg': '#282a36',
+      '--ui-tab-active-bg': '#44475a',
+      '--ui-tab-hover-bg': '#44475a',
+      '--ui-tab-text': '#f8f8f2',
+      '--ui-tab-active-text': '#50fa7b',
+      '--ui-tab-border': '#44475a',
+      '--ui-tab-close-hover': '#ff5555',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiNord: {
+    name: 'UI Nord',
+    description: 'Basado en el tema Nord de la interfaz',
+    preview: {
+      background: '#2e3440',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #3b4252',
+      color: '#d8dee9'
+    },
+    styles: {
+      '--ui-tab-bg': '#2e3440',
+      '--ui-tab-active-bg': '#3b4252',
+      '--ui-tab-hover-bg': '#434c5e',
+      '--ui-tab-text': '#d8dee9',
+      '--ui-tab-active-text': '#88c0d0',
+      '--ui-tab-border': '#3b4252',
+      '--ui-tab-close-hover': '#bf616a',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiCyberpunk: {
+    name: 'UI Cyberpunk',
+    description: 'Basado en el tema Cyberpunk de la interfaz',
+    preview: {
+      background: '#0a0a0a',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #ff0080',
+      color: '#00ff00'
+    },
+    styles: {
+      '--ui-tab-bg': '#0a0a0a',
+      '--ui-tab-active-bg': '#1a1a1a',
+      '--ui-tab-hover-bg': '#2a2a2a',
+      '--ui-tab-text': '#00ff00',
+      '--ui-tab-active-text': '#ffff00',
+      '--ui-tab-border': '#ff0080',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 10px #ff0080',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  uiMatrix: {
+    name: 'UI Matrix',
+    description: 'Basado en el tema Matrix de la interfaz',
+    preview: {
+      background: '#000000',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #00ff00',
+      color: '#00ff00'
+    },
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#001100',
+      '--ui-tab-hover-bg': '#002200',
+      '--ui-tab-text': '#00ff00',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#00ff00',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 5px #00ff00',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiSolarizedLight: {
+    name: 'UI Solarized Light',
+    description: 'Basado en el tema Solarized Light de la interfaz',
+    preview: {
+      background: '#fdf6e3',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #93a1a1',
+      color: '#586e75'
+    },
+    styles: {
+      '--ui-tab-bg': '#fdf6e3',
+      '--ui-tab-active-bg': '#eee8d5',
+      '--ui-tab-hover-bg': '#f4f1e8',
+      '--ui-tab-text': '#586e75',
+      '--ui-tab-active-text': '#268bd2',
+      '--ui-tab-border': '#93a1a1',
+      '--ui-tab-close-hover': '#dc322f',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiSolarizedDark: {
+    name: 'UI Solarized Dark',
+    description: 'Basado en el tema Solarized Dark de la interfaz',
+    preview: {
+      background: '#002b36',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #586e75',
+      color: '#839496'
+    },
+    styles: {
+      '--ui-tab-bg': '#002b36',
+      '--ui-tab-active-bg': '#073642',
+      '--ui-tab-hover-bg': '#0a4b5a',
+      '--ui-tab-text': '#839496',
+      '--ui-tab-active-text': '#2aa198',
+      '--ui-tab-border': '#586e75',
+      '--ui-tab-close-hover': '#dc322f',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiTokyoNight: {
+    name: 'UI Tokyo Night',
+    description: 'Basado en el tema Tokyo Night de la interfaz',
+    preview: {
+      background: '#1a1b26',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #414868',
+      color: '#a9b1d6'
+    },
+    styles: {
+      '--ui-tab-bg': '#1a1b26',
+      '--ui-tab-active-bg': '#24283b',
+      '--ui-tab-hover-bg': '#2d3142',
+      '--ui-tab-text': '#a9b1d6',
+      '--ui-tab-active-text': '#7aa2f7',
+      '--ui-tab-border': '#414868',
+      '--ui-tab-close-hover': '#f7768e',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiSynthwave84: {
+    name: 'UI Synthwave 84',
+    description: 'Basado en el tema Synthwave 84 de la interfaz',
+    preview: {
+      background: '#241b2f',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #ff00ff',
+      color: '#ff00ff'
+    },
+    styles: {
+      '--ui-tab-bg': '#241b2f',
+      '--ui-tab-active-bg': '#2d1b3d',
+      '--ui-tab-hover-bg': '#3d1b4d',
+      '--ui-tab-text': '#ff00ff',
+      '--ui-tab-active-text': '#00ffff',
+      '--ui-tab-border': '#ff00ff',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 8px #ff00ff',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  uiPalenight: {
+    name: 'UI Palenight',
+    description: 'Basado en el tema Palenight de la interfaz',
+    preview: {
+      background: '#292d3e',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #434758',
+      color: '#a6accd'
+    },
+    styles: {
+      '--ui-tab-bg': '#292d3e',
+      '--ui-tab-active-bg': '#32374d',
+      '--ui-tab-hover-bg': '#3c4252',
+      '--ui-tab-text': '#a6accd',
+      '--ui-tab-active-text': '#89ddff',
+      '--ui-tab-border': '#434758',
+      '--ui-tab-close-hover': '#f07178',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiAyuDark: {
+    name: 'UI Ayu Dark',
+    description: 'Basado en el tema Ayu Dark de la interfaz',
+    preview: {
+      background: '#0f1419',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #3e4b59',
+      color: '#e6e1cf'
+    },
+    styles: {
+      '--ui-tab-bg': '#0f1419',
+      '--ui-tab-active-bg': '#1a1f2e',
+      '--ui-tab-hover-bg': '#252a3a',
+      '--ui-tab-text': '#e6e1cf',
+      '--ui-tab-active-text': '#aadba4',
+      '--ui-tab-border': '#3e4b59',
+      '--ui-tab-close-hover': '#f07178',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiZenburn: {
+    name: 'UI Zenburn',
+    description: 'Basado en el tema Zenburn de la interfaz',
+    preview: {
+      background: '#3f3f3f',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #5f5f5f',
+      color: '#dcdccc'
+    },
+    styles: {
+      '--ui-tab-bg': '#3f3f3f',
+      '--ui-tab-active-bg': '#4f4f4f',
+      '--ui-tab-hover-bg': '#5f5f5f',
+      '--ui-tab-text': '#dcdccc',
+      '--ui-tab-active-text': '#8fb28f',
+      '--ui-tab-border': '#5f5f5f',
+      '--ui-tab-close-hover': '#cc9393',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiTomorrowNight: {
+    name: 'UI Tomorrow Night',
+    description: 'Basado en el tema Tomorrow Night de la interfaz',
+    preview: {
+      background: '#1d1f21',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #373b41',
+      color: '#c5c8c6'
+    },
+    styles: {
+      '--ui-tab-bg': '#1d1f21',
+      '--ui-tab-active-bg': '#282a2e',
+      '--ui-tab-hover-bg': '#373b41',
+      '--ui-tab-text': '#c5c8c6',
+      '--ui-tab-active-text': '#81a2be',
+      '--ui-tab-border': '#373b41',
+      '--ui-tab-close-hover': '#cc6666',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiOceanicNext: {
+    name: 'UI Oceanic Next',
+    description: 'Basado en el tema Oceanic Next de la interfaz',
+    preview: {
+      background: '#1b2b34',
+      borderRadius: '4px 4px 0 0',
+      border: '1px solid #4f5b66',
+      color: '#d8dee9'
+    },
+    styles: {
+      '--ui-tab-bg': '#1b2b34',
+      '--ui-tab-active-bg': '#24323d',
+      '--ui-tab-hover-bg': '#2d3a46',
+      '--ui-tab-text': '#d8dee9',
+      '--ui-tab-active-text': '#5fb3b3',
+      '--ui-tab-border': '#4f5b66',
+      '--ui-tab-close-hover': '#ec5f67',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
   }
 };
 
@@ -1248,7 +1570,8 @@ const NEW_PRO_KEYS = [
 const NEW_MINIMAL_KEYS = [
   'borderless', 'softTouch', 'roundedPill', 'macTabs', 'pastelCandy',
   'material', 'paperStack', 'fabric', 'watercolor',
-  'vintageFilm', 'mechanical', 'minimalist', 'vintage'
+  'vintageFilm', 'mechanical', 'minimalist', 'vintage',
+  'origami'
 ];
 
 const NEW_ANIMATED_KEYS = [
@@ -1261,7 +1584,8 @@ const NEW_ANIMATED_KEYS = [
 
 const NEW_OTHERS_KEYS = [
   'fire',
-  'retro80s', 'vhs', 'lavaLamp', 'neonPink'
+  'retro80s', 'vhs', 'lavaLamp', 'neonPink',
+  'magnetic', 'liquidMetal'
 ];
 
 // Temas nuevos: Futuristas Neón
@@ -2191,6 +2515,35 @@ const TabThemeSelector = () => {
       {/* Categorías en pestañas */}
       <div style={{ width: '100%', maxWidth: '1200px', padding: '0 1rem' }}>
         <TabView>
+          <TabPanel header="Clásicos">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {Object.keys(tabThemes)
+                .filter(k => ![...NEW_FUTURISTIC_KEYS, ...NEW_PRO_KEYS, ...NEW_MINIMAL_KEYS, ...NEW_ANIMATED_KEYS, ...NEW_OTHERS_KEYS].includes(k))
+                .map((key) => {
+                  const theme = tabThemes[key];
+                  return (
+                    <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
+                      <div style={{ padding: '1rem' }}>
+                        <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
+                        <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
+                        {selectedTheme === key && (
+                          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
+                            <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
+                            Tema activo
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+            </div>
+          </TabPanel>
           <TabPanel header="Futuristas">
             <div style={{ 
               display: 'grid', 
@@ -2337,35 +2690,6 @@ const TabThemeSelector = () => {
                   </Card>
                 );
               })}
-            </div>
-          </TabPanel>
-          <TabPanel header="Clásicos">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '1.5rem',
-              width: '100%'
-            }}>
-              {Object.keys(tabThemes)
-                .filter(k => ![...NEW_FUTURISTIC_KEYS, ...NEW_PRO_KEYS, ...NEW_MINIMAL_KEYS, ...NEW_ANIMATED_KEYS, ...NEW_OTHERS_KEYS].includes(k))
-                .map((key) => {
-                  const theme = tabThemes[key];
-                  return (
-                    <Card key={key} style={{ background: 'var(--surface-card)', border: selectedTheme === key ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)', borderRadius: '8px', padding: '0', cursor: 'pointer', transition: 'all 0.2s ease', transform: selectedTheme === key ? 'translateY(-2px)' : 'none', boxShadow: selectedTheme === key ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 4px rgba(0,0,0,0.1)' }} onClick={() => handleThemeSelect(key)}>
-                      <div style={{ padding: '1rem' }}>
-                        <TabPreview theme={theme} isSelected={selectedTheme === key} onClick={() => handleThemeSelect(key)} />
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)', fontSize: '1rem', fontWeight: '600' }}>{theme.name}</h4>
-                        <p style={{ margin: '0', color: 'var(--text-color-secondary)', fontSize: '0.85rem', lineHeight: '1.4' }}>{theme.description}</p>
-                        {selectedTheme === key && (
-                          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary-color)', fontSize: '0.8rem', fontWeight: '500' }}>
-                            <i className="pi pi-check-circle" style={{ fontSize: '0.8rem' }} />
-                            Tema activo
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
             </div>
           </TabPanel>
         </TabView>

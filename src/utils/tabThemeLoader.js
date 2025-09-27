@@ -939,6 +939,262 @@ const tabThemes = {
       '--tab-box-shadow': '0 0 15px #ff8c00, inset 0 0 15px rgba(255, 140, 0, 0.2)',
       '--tab-transition': 'all 0.3s ease'
     }
+  },
+
+  // Nuevos temas basados en temas de interfaz
+  uiLight: {
+    name: 'UI Light',
+    description: 'Basado en el tema Light de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#ffffff',
+      '--ui-tab-active-bg': '#e3f2fd',
+      '--ui-tab-hover-bg': '#f5f5f5',
+      '--ui-tab-text': '#495057',
+      '--ui-tab-active-text': '#1976d2',
+      '--ui-tab-border': '#e0e0e0',
+      '--ui-tab-close-hover': '#f44336',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiDark: {
+    name: 'UI Dark',
+    description: 'Basado en el tema Dark de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#2d2d30',
+      '--ui-tab-active-bg': '#1e1e1e',
+      '--ui-tab-hover-bg': '#3e3e42',
+      '--ui-tab-text': '#cccccc',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#3e3e42',
+      '--ui-tab-close-hover': '#f48771',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiDracula: {
+    name: 'UI Dracula',
+    description: 'Basado en el tema Dracula de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#282a36',
+      '--ui-tab-active-bg': '#44475a',
+      '--ui-tab-hover-bg': '#44475a',
+      '--ui-tab-text': '#f8f8f2',
+      '--ui-tab-active-text': '#50fa7b',
+      '--ui-tab-border': '#44475a',
+      '--ui-tab-close-hover': '#ff5555',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiNord: {
+    name: 'UI Nord',
+    description: 'Basado en el tema Nord de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#2e3440',
+      '--ui-tab-active-bg': '#3b4252',
+      '--ui-tab-hover-bg': '#434c5e',
+      '--ui-tab-text': '#d8dee9',
+      '--ui-tab-active-text': '#88c0d0',
+      '--ui-tab-border': '#3b4252',
+      '--ui-tab-close-hover': '#bf616a',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiCyberpunk: {
+    name: 'UI Cyberpunk',
+    description: 'Basado en el tema Cyberpunk de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#0a0a0a',
+      '--ui-tab-active-bg': '#1a1a1a',
+      '--ui-tab-hover-bg': '#2a2a2a',
+      '--ui-tab-text': '#00ff00',
+      '--ui-tab-active-text': '#ffff00',
+      '--ui-tab-border': '#ff0080',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 10px #ff0080',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  uiMatrix: {
+    name: 'UI Matrix',
+    description: 'Basado en el tema Matrix de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#001100',
+      '--ui-tab-hover-bg': '#002200',
+      '--ui-tab-text': '#00ff00',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#00ff00',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 5px #00ff00',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiSolarizedLight: {
+    name: 'UI Solarized Light',
+    description: 'Basado en el tema Solarized Light de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#fdf6e3',
+      '--ui-tab-active-bg': '#eee8d5',
+      '--ui-tab-hover-bg': '#f4f1e8',
+      '--ui-tab-text': '#586e75',
+      '--ui-tab-active-text': '#268bd2',
+      '--ui-tab-border': '#93a1a1',
+      '--ui-tab-close-hover': '#dc322f',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiSolarizedDark: {
+    name: 'UI Solarized Dark',
+    description: 'Basado en el tema Solarized Dark de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#002b36',
+      '--ui-tab-active-bg': '#073642',
+      '--ui-tab-hover-bg': '#0a4b5a',
+      '--ui-tab-text': '#839496',
+      '--ui-tab-active-text': '#2aa198',
+      '--ui-tab-border': '#586e75',
+      '--ui-tab-close-hover': '#dc322f',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiTokyoNight: {
+    name: 'UI Tokyo Night',
+    description: 'Basado en el tema Tokyo Night de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#1a1b26',
+      '--ui-tab-active-bg': '#24283b',
+      '--ui-tab-hover-bg': '#2d3142',
+      '--ui-tab-text': '#a9b1d6',
+      '--ui-tab-active-text': '#7aa2f7',
+      '--ui-tab-border': '#414868',
+      '--ui-tab-close-hover': '#f7768e',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiSynthwave84: {
+    name: 'UI Synthwave 84',
+    description: 'Basado en el tema Synthwave 84 de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#241b2f',
+      '--ui-tab-active-bg': '#2d1b3d',
+      '--ui-tab-hover-bg': '#3d1b4d',
+      '--ui-tab-text': '#ff00ff',
+      '--ui-tab-active-text': '#00ffff',
+      '--ui-tab-border': '#ff00ff',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 8px #ff00ff',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  uiPalenight: {
+    name: 'UI Palenight',
+    description: 'Basado en el tema Palenight de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#292d3e',
+      '--ui-tab-active-bg': '#32374d',
+      '--ui-tab-hover-bg': '#3c4252',
+      '--ui-tab-text': '#a6accd',
+      '--ui-tab-active-text': '#89ddff',
+      '--ui-tab-border': '#434758',
+      '--ui-tab-close-hover': '#f07178',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiAyuDark: {
+    name: 'UI Ayu Dark',
+    description: 'Basado en el tema Ayu Dark de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#0f1419',
+      '--ui-tab-active-bg': '#1a1f2e',
+      '--ui-tab-hover-bg': '#252a3a',
+      '--ui-tab-text': '#e6e1cf',
+      '--ui-tab-active-text': '#aadba4',
+      '--ui-tab-border': '#3e4b59',
+      '--ui-tab-close-hover': '#f07178',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiZenburn: {
+    name: 'UI Zenburn',
+    description: 'Basado en el tema Zenburn de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#3f3f3f',
+      '--ui-tab-active-bg': '#4f4f4f',
+      '--ui-tab-hover-bg': '#5f5f5f',
+      '--ui-tab-text': '#dcdccc',
+      '--ui-tab-active-text': '#8fb28f',
+      '--ui-tab-border': '#5f5f5f',
+      '--ui-tab-close-hover': '#cc9393',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiTomorrowNight: {
+    name: 'UI Tomorrow Night',
+    description: 'Basado en el tema Tomorrow Night de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#1d1f21',
+      '--ui-tab-active-bg': '#282a2e',
+      '--ui-tab-hover-bg': '#373b41',
+      '--ui-tab-text': '#c5c8c6',
+      '--ui-tab-active-text': '#81a2be',
+      '--ui-tab-border': '#373b41',
+      '--ui-tab-close-hover': '#cc6666',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
+  },
+
+  uiOceanicNext: {
+    name: 'UI Oceanic Next',
+    description: 'Basado en el tema Oceanic Next de la interfaz',
+    styles: {
+      '--ui-tab-bg': '#1b2b34',
+      '--ui-tab-active-bg': '#24323d',
+      '--ui-tab-hover-bg': '#2d3a46',
+      '--ui-tab-text': '#d8dee9',
+      '--ui-tab-active-text': '#5fb3b3',
+      '--ui-tab-border': '#4f5b66',
+      '--ui-tab-close-hover': '#ec5f67',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': 'none',
+      '--tab-transition': 'all 0.2s ease'
+    }
   }
 };
 
