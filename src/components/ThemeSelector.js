@@ -3,17 +3,23 @@ import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { Checkbox } from 'primereact/checkbox';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
   const [previewMode, setPreviewMode] = useState(false);
+  const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
 
   useEffect(() => {
     // Cargar el tema actual
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
     setCurrentTheme(savedTheme);
+    
+    // Cargar la preferencia de colores primarios para titlebar
+    const savedTitlebarPreference = localStorage.getItem('use_primary_colors_titlebar') === 'true';
+    setUsePrimaryColorsForTitlebar(savedTitlebarPreference);
   }, []);
 
   const handleThemeChange = (themeName) => {
@@ -37,6 +43,14 @@ const ThemeSelector = ({ showPreview = false }) => {
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
+  };
+
+  const handleTitlebarColorPreferenceChange = (usePrimary) => {
+    setUsePrimaryColorsForTitlebar(usePrimary);
+    localStorage.setItem('use_primary_colors_titlebar', usePrimary.toString());
+    
+    // Reaplicar el tema actual para que se actualice la titlebar
+    themeManager.applyTheme(currentTheme);
   };
 
   const ThemeCard = ({ theme, isActive, onClick }) => {
@@ -306,6 +320,46 @@ const ThemeSelector = ({ showPreview = false }) => {
             onClick={togglePreviewMode}
           />
         )}
+      </div>
+
+      {/* Opción para colores de titlebar */}
+      <div style={{ 
+        marginBottom: '20px',
+        padding: '15px',
+        background: 'var(--ui-content-bg)',
+        border: '1px solid var(--ui-content-border)',
+        borderRadius: '8px'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '10px',
+          marginBottom: '8px'
+        }}>
+          <Checkbox
+            inputId="titlebar-colors"
+            checked={usePrimaryColorsForTitlebar}
+            onChange={(e) => handleTitlebarColorPreferenceChange(e.checked)}
+          />
+          <label htmlFor="titlebar-colors" style={{ 
+            color: 'var(--ui-dialog-text)',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer'
+          }}>
+            Usar colores primarios del tema en la titlebar
+          </label>
+        </div>
+        <p style={{ 
+          margin: '0',
+          color: 'var(--ui-dialog-text)',
+          fontSize: '12px',
+          opacity: 0.8,
+          marginLeft: '30px'
+        }}>
+          Cuando está activado, la titlebar usará los colores principales del tema (como en el preview). 
+          Cuando está desactivado, mantendrá los colores actuales.
+        </p>
       </div>
 
       {/* Categorías en pestañas */}

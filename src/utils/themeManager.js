@@ -83,6 +83,9 @@ class ThemeManager {
     const sidebarBgIsLight = isColorLight(colors.sidebarBackground);
     const sidebarButtonText = colors.sidebarText;
     const palette = theme.statusBarPalette || {};
+    
+    // Verificar si se debe usar colores primarios para titlebar
+    const usePrimaryColorsForTitlebar = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     const css = `
       :root {
         --statusbar-bg: ${palette.fondo || colors.statusBarBackground};
@@ -150,8 +153,8 @@ class ThemeManager {
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
-        --ui-titlebar-accent: ${adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2'};
-        --ui-titlebar-text: ${colors['--ui-titlebar-text'] || '#fff'};
+        --ui-titlebar-accent: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-accent'] || colors.buttonPrimary || '#1976d2') : (colors.buttonPrimary || '#1976d2')};
+        --ui-titlebar-text: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-text'] || '#fff') : (colors.buttonPrimaryText || '#fff')};
       }
 
       /* === SIDEBAR STYLES === */
