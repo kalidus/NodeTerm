@@ -949,55 +949,7 @@ const tabThemes = {
     }
   },
 
-  crystal: {
-    name: 'Crystal Style',
-    description: 'Cristales translúcidos con refracciones',
-    preview: {
-      background: 'linear-gradient(135deg, rgba(255,255,255,.9) 0%, rgba(240,248,255,.7) 50%, rgba(255,255,255,.9) 100%)',
-      clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
-      border: '1px solid rgba(255,255,255,.3)',
-      backdropFilter: 'blur(8px)',
-      boxShadow: '0 4px 12px rgba(135,206,250,0.3)'
-    },
-    styles: {
-      '--ui-tab-bg': 'linear-gradient(135deg, rgba(240,240,240,.8) 0%, rgba(220,235,255,.6) 50%, rgba(240,240,240,.8) 100%)',
-      '--ui-tab-active-bg': 'linear-gradient(135deg, rgba(135,206,250,.9) 0%, rgba(173,216,230,.7) 50%, rgba(135,206,250,.9) 100%)',
-      '--ui-tab-hover-bg': 'linear-gradient(135deg, rgba(200,220,255,.8) 0%, rgba(180,200,255,.6) 50%, rgba(200,220,255,.8) 100%)',
-      '--ui-tab-text': '#0066cc',
-      '--ui-tab-active-text': '#003d7a',
-      '--ui-tab-border': 'rgba(255,255,255,.3)',
-      '--ui-tab-close-hover': '#ff4757',
-      '--tab-border-radius': '0',
-      '--tab-clip-path': 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
-      '--tab-box-shadow': '0 4px 12px rgba(135,206,250,0.3)',
-      '--tab-backdrop-filter': 'blur(8px)',
-      '--tab-transition': 'all 0.3s ease'
-    }
-  },
 
-  inkDrop: {
-    name: 'Ink Drop',
-    description: 'Efecto de gota de tinta expandiéndose',
-    preview: {
-      background: 'transparent',
-      borderRadius: '50px',
-      border: 'none',
-      position: 'relative',
-      overflow: 'hidden'
-    },
-    styles: {
-      '--ui-tab-bg': 'transparent',
-      '--ui-tab-active-bg': 'radial-gradient(circle, var(--primary-color, #007bff) 0%, rgba(0,123,255,.2) 70%, transparent 100%)',
-      '--ui-tab-hover-bg': 'radial-gradient(circle, rgba(0,123,255,.1) 0%, rgba(0,123,255,.05) 70%, transparent 100%)',
-      '--ui-tab-text': 'var(--text-color, #333)',
-      '--ui-tab-active-text': 'var(--primary-color, #007bff)',
-      '--ui-tab-border': 'transparent',
-      '--ui-tab-close-hover': '#ff4757',
-      '--tab-border-radius': '50px',
-      '--tab-box-shadow': 'none',
-      '--tab-transition': 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-    }
-  },
 
   fabric: {
     name: 'Fabric Style',
@@ -1150,29 +1102,6 @@ const tabThemes = {
     }
   },
 
-  morphing: {
-    name: 'Morphing Style',
-    description: 'Las pestañas cambian de forma',
-    preview: {
-      background: '#f8f9fa',
-      border: '2px solid #dee2e6',
-      clipPath: 'polygon(10% 0, 90% 0, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0 75%, 0 25%)',
-      borderRadius: '0'
-    },
-    styles: {
-      '--ui-tab-bg': '#f8f9fa',
-      '--ui-tab-active-bg': '#007bff',
-      '--ui-tab-hover-bg': '#e9ecef',
-      '--ui-tab-text': '#495057',
-      '--ui-tab-active-text': '#fff',
-      '--ui-tab-border': '#dee2e6',
-      '--ui-tab-close-hover': '#ff4757',
-      '--tab-border-radius': '0',
-      '--tab-clip-path': 'polygon(10% 0, 90% 0, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0 75%, 0 25%)',
-      '--tab-box-shadow': 'none',
-      '--tab-transition': 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-    }
-  },
 
   soundWave: {
     name: 'Sound Wave',
@@ -1222,16 +1151,93 @@ const tabThemes = {
       '--tab-box-shadow': '0 0 25px rgba(0, 204, 255, 0.4)',
       '--tab-transition': 'all 0.3s ease'
     }
+  },
+
+  // Versiones estáticas de los temas terminales para la categoría Futuristas
+  terminalStatic: {
+    name: 'Terminal Hacker Verde',
+    description: 'Estilo de terminal de hacker verde (estático)',
+    preview: {
+      background: '#000000',
+      borderRadius: '4px 4px 0 0',
+      border: '2px solid #00ff00',
+      fontFamily: 'monospace',
+      color: '#00ff00',
+      boxShadow: '0 0 15px #00ff00'
+    },
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#002200',
+      '--ui-tab-hover-bg': '#003300',
+      '--ui-tab-text': '#00ff00',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#00ff00',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 15px #00ff00, inset 0 0 15px rgba(0, 255, 0, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  terminalBlueStatic: {
+    name: 'Terminal Hacker Azul',
+    description: 'Terminal hacker en azul neón (estático)',
+    preview: {
+      background: '#000000',
+      borderRadius: '4px 4px 0 0',
+      border: '2px solid #00bfff',
+      fontFamily: 'monospace',
+      color: '#00bfff',
+      boxShadow: '0 0 15px #00bfff'
+    },
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#00152e',
+      '--ui-tab-hover-bg': '#002a4d',
+      '--ui-tab-text': '#00bfff',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#00bfff',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 15px #00bfff, inset 0 0 15px rgba(0, 191, 255, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
+  },
+
+  terminalOrangeStatic: {
+    name: 'Terminal Hacker Naranja',
+    description: 'Terminal hacker en naranja neón (estático)',
+    preview: {
+      background: '#000000',
+      borderRadius: '4px 4px 0 0',
+      border: '2px solid #ff8c00',
+      fontFamily: 'monospace',
+      color: '#ff8c00',
+      boxShadow: '0 0 15px #ff8c00'
+    },
+    styles: {
+      '--ui-tab-bg': '#000000',
+      '--ui-tab-active-bg': '#2e1500',
+      '--ui-tab-hover-bg': '#4d2200',
+      '--ui-tab-text': '#ff8c00',
+      '--ui-tab-active-text': '#ffffff',
+      '--ui-tab-border': '#ff8c00',
+      '--ui-tab-close-hover': '#ff0000',
+      '--tab-border-radius': '4px 4px 0 0',
+      '--tab-box-shadow': '0 0 15px #ff8c00, inset 0 0 15px rgba(255, 140, 0, 0.2)',
+      '--tab-transition': 'all 0.3s ease'
+    }
   }
 };
 
 // Categorías propuestas y claves de nuevos temas
 const NEW_FUTURISTIC_KEYS = [
   'scanlineBlue', 'tronBlue', 'ionStorm',
-  'terminal', 'terminalBlue', 'terminalOrange',
+  'terminalStatic', 'terminalBlueStatic', 'terminalOrangeStatic',
   'neonAurora', 'quantumFlux', 'laserWave', 'prismTrail', 'hyperdrive',
   'neonOrbit', 'cyberGrid', 'pulseMagenta', 'neonLime',
-  'ocean', 'steam', 'steamBlue', 'steamGreen', 'vscode'
+  'steam', 'steamBlue', 'steamGreen',
+  'futuristic', 'hologram', 'particleSystem', 'soundWave', 'dnaHelix'
 ];
 
 const NEW_PRO_KEYS = [
@@ -1240,18 +1246,22 @@ const NEW_PRO_KEYS = [
 ];
 
 const NEW_MINIMAL_KEYS = [
-  'borderless', 'softTouch', 'roundedPill', 'macTabs', 'flatPills', 'pastelCandy',
+  'borderless', 'softTouch', 'roundedPill', 'macTabs', 'pastelCandy',
   'material', 'paperStack', 'fabric', 'watercolor',
-  'vintageFilm', 'mechanical', 'morphing', 'minimalist', 'vintage'
+  'vintageFilm', 'mechanical', 'minimalist', 'vintage'
 ];
 
 const NEW_ANIMATED_KEYS = [
-  'auroraFlow', 'circuitFlow', 'meteorShower', 'parallaxGrid', 'rippleInk', 'hueShift',
-  'synthwave', 'cyberpunk', 'matrix', 'neonCity', 'galaxy'
+  'auroraFlow', 'circuitFlow', 'meteorShower', 'parallaxGrid', 'rippleInk',
+  'synthwave', 'cyberpunk', 'matrix', 'neonCity', 'galaxy',
+  'cyberpunk2077', 'space', 'holographic',
+  'terminal', 'terminalBlue', 'terminalOrange',
+  'ocean', 'rainbow', 'plasma'
 ];
 
 const NEW_OTHERS_KEYS = [
-  'fire'
+  'fire',
+  'retro80s', 'vhs', 'lavaLamp', 'neonPink'
 ];
 
 // Temas nuevos: Futuristas Neón
@@ -1833,27 +1843,6 @@ Object.assign(tabThemes, {
       '--tab-transition': 'all 0.18s ease'
     }
   },
-  flatPills: {
-    name: 'Flat Pills',
-    description: 'Píldoras planas compactas',
-    preview: {
-      background: '#f2f2f2',
-      borderRadius: '16px 16px 0 0',
-      border: '1px solid #e0e0e0'
-    },
-    styles: {
-      '--ui-tab-bg': '#f2f2f2',
-      '--ui-tab-active-bg': '#ffffff',
-      '--ui-tab-hover-bg': '#ebebeb',
-      '--ui-tab-text': '#555',
-      '--ui-tab-active-text': '#222',
-      '--ui-tab-border': '#e0e0e0',
-      '--ui-tab-close-hover': '#e57373',
-      '--tab-border-radius': '16px 16px 0 0',
-      '--tab-box-shadow': 'none',
-      '--tab-transition': 'all 0.16s ease'
-    }
-  },
   pastelCandy: {
     name: 'Pastel Candy',
     description: 'Pasteles suaves con contraste',
@@ -1979,26 +1968,6 @@ Object.assign(tabThemes, {
       '--tab-transition': 'all 0.25s ease'
     }
   },
-  hueShift: {
-    name: 'Hue Shift',
-    description: 'Desplazamiento de tono cromático',
-    preview: {
-      background: 'linear-gradient(135deg, #141414 0%, #1f1f1f 100%)',
-      border: '1px solid #a8bfff'
-    },
-    styles: {
-      '--ui-tab-bg': 'linear-gradient(135deg, #141414 0%, #1f1f1f 100%)',
-      '--ui-tab-active-bg': 'linear-gradient(135deg, #ff9aff 0%, #7ab8ff 50%, #79ffdf 100%)',
-      '--ui-tab-hover-bg': 'linear-gradient(135deg, #1a1a1a 0%, #262626 100%)',
-      '--ui-tab-text': '#e2e2e2',
-      '--ui-tab-active-text': '#0b0b0b',
-      '--ui-tab-border': '#a8bfff',
-      '--ui-tab-close-hover': '#79ffdf',
-      '--tab-border-radius': '8px 8px 0 0',
-      '--tab-box-shadow': '0 0 18px rgba(168, 191, 255, 0.35)',
-      '--tab-transition': 'all 0.25s ease'
-    }
-  }
 });
 
 const TabThemeSelector = () => {
