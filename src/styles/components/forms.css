@@ -24,6 +24,15 @@ select:focus {
   outline-offset: 2px !important;
 }
 
+/* Eliminar el outline de foco del buscador principal */
+.search-input:focus,
+.search-input:focus-visible,
+.p-inputtext.search-input:focus,
+.p-inputtext.search-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Prevenir que los diálogos bloqueen los inputs */
 .p-dialog .p-dialog-content input,
 .p-dialog .p-dialog-content textarea,

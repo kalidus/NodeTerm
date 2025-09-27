@@ -768,6 +768,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             value={sidebarFilter}
             onChange={e => setSidebarFilter(e.target.value)}
             placeholder=""
+            className="search-input"
             style={{
               minWidth: 350,
               maxWidth: 600,
