@@ -153,8 +153,8 @@ class ThemeManager {
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
-        --ui-titlebar-accent: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-accent'] || colors.buttonPrimary || '#1976d2') : (colors.buttonPrimary || '#1976d2')};
-        --ui-titlebar-text: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-text'] || '#fff') : (colors.buttonPrimaryText || '#fff')};
+        --ui-titlebar-accent: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-accent'] || colors.buttonPrimary || '#1976d2') : (adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2')};
+        --ui-titlebar-text: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-text'] || '#fff') : (colors.buttonPrimary || '#fff')};
       }
 
       /* === SIDEBAR STYLES === */
