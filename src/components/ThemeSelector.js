@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
+import { TabView, TabPanel } from 'primereact/tabview';
 import { themeManager } from '../utils/themeManager';
-import { uiThemes } from '../themes/ui-themes';
+import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
@@ -307,24 +308,50 @@ const ThemeSelector = ({ showPreview = false }) => {
         )}
       </div>
 
-      {/* Grid de temas */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: previewMode 
-          ? 'repeat(auto-fit, minmax(280px, 1fr))'
-          : 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '20px',
-        justifyItems: 'center',
-        width: '100%'
-      }}>
-        {Object.values(uiThemes).map((theme) => (
-          <ThemeCard
-            key={theme.name}
-            theme={theme}
-            isActive={currentTheme === theme.name}
-            onClick={() => handleThemeChange(theme.name)}
-          />
-        ))}
+      {/* Categorías en pestañas */}
+      <div style={{ width: '100%', maxWidth: '1200px', padding: '0 1rem' }}>
+        <TabView>
+          <TabPanel header="Clásicos">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {CLASSIC_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
+                const theme = uiThemes[key];
+                return (
+                  <ThemeCard
+                    key={key}
+                    theme={theme}
+                    isActive={currentTheme === theme.name}
+                    onClick={() => handleThemeChange(theme.name)}
+                  />
+                );
+              })}
+            </div>
+          </TabPanel>
+          <TabPanel header="Futuristas">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {FUTURISTIC_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
+                const theme = uiThemes[key];
+                return (
+                  <ThemeCard
+                    key={key}
+                    theme={theme}
+                    isActive={currentTheme === theme.name}
+                    onClick={() => handleThemeChange(theme.name)}
+                  />
+                );
+              })}
+            </div>
+          </TabPanel>
+        </TabView>
       </div>
 
       {/* Información adicional */}
