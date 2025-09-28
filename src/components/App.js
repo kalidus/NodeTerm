@@ -1215,7 +1215,7 @@ const App = () => {
     connectionIconSize: connectionIconSize,
     explorerFont: sidebarFont,
     explorerFontSize: sidebarFontSize,
-    uiTheme: terminalTheme && terminalTheme.name ? terminalTheme.name : 'Light',
+    uiTheme: uiTheme || 'Light',
     showToast: toast.current && toast.current.show ? toast.current.show : undefined,
     confirmDialog: confirmDialog,
     onOpenSSHConnection,

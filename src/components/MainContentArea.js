@@ -244,7 +244,6 @@ const MainContentArea = ({
             }}>
               {/* Barra de grupos como TabView scrollable */}
               {renderGroupTabs()}
-              <div style={{ height: '0.5px', background: 'var(--ui-tabgroup-border, #444)', opacity: 0.6 }} />
               
               <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                 {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
@@ -268,6 +267,14 @@ const MainContentArea = ({
                     renderActiveOnly={false}
                     scrollable={false}
                     className="main-tab-view"
+                    pt={{
+                      navContainer: {
+                        style: {
+                          borderBottom: '0.5px solid var(--ui-tabgroup-border, #444)',
+                          opacity: 0.6
+                        }
+                      }
+                    }}
                   >
                     {filteredTabs.map((tab, idx) => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
@@ -319,6 +326,7 @@ const MainContentArea = ({
                     })}
                   </TabView>
                 )}
+                
                 
                 {/* Menús contextuales refactorizados */}
                 <TabContextMenu

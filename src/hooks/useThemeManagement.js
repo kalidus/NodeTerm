@@ -76,6 +76,21 @@ export const useThemeManagement = () => {
     localStorage.getItem('ui_theme') || 'Light'
   );
 
+  // Escuchar cambios en el tema de interfaz
+  useEffect(() => {
+    const handleThemeChange = () => {
+      const currentTheme = localStorage.getItem('ui_theme') || 'Light';
+      setUiTheme(currentTheme);
+    };
+
+    // Escuchar el evento global de cambio de tema
+    window.addEventListener('theme-changed', handleThemeChange);
+    
+    return () => {
+      window.removeEventListener('theme-changed', handleThemeChange);
+    };
+  }, []);
+
   // Icon and explorer theme states
   const [iconTheme, setIconTheme] = useState(() => {
     try {

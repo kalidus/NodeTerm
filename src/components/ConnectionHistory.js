@@ -134,57 +134,85 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	const TypeChips = ({ value, onChange }) => (
-		<div style={{ display: 'flex', gap: 6 }}>
-			{[
-				{ key: 'all', label: 'Todos' },
-				{ key: 'ssh', label: 'SSH' },
-				{ key: 'rdp-guacamole', label: 'RDP' },
-				{ key: 'explorer', label: 'SFTP' },
-				{ key: 'group', label: 'Grupos' }
-			].map(opt => (
-				<button
-					key={opt.key}
-					onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
-					style={{
-						padding: '2px 8px',
-						borderRadius: 999,
-						border: '1px solid rgba(255,255,255,0.14)',
-						background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
-						color: 'var(--text-color)',
-						fontSize: 11,
-						cursor: 'pointer',
-						backdropFilter: 'blur(8px) saturate(130%)'
-					}}
-				>{opt.label}</button>
-			))}
-		</div>
+		<>
+			<div style={{ display: 'flex', gap: 6 }}>
+				{[
+					{ key: 'all', label: 'Todos' },
+					{ key: 'ssh', label: 'SSH' },
+					{ key: 'rdp-guacamole', label: 'RDP' },
+					{ key: 'explorer', label: 'SFTP' },
+					{ key: 'group', label: 'Grupos' }
+				].map(opt => (
+					<button
+						key={opt.key}
+						onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
+						style={{
+							padding: '2px 8px',
+							borderRadius: 999,
+							border: '1px solid rgba(255,255,255,0.14)',
+							background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+							color: 'var(--text-color)',
+							fontSize: 11,
+							cursor: 'pointer',
+							backdropFilter: 'blur(8px) saturate(130%)'
+						}}
+					>{opt.label}</button>
+				))}
+			</div>
+			{/* Línea separadora debajo de los botones de filtro */}
+			<div style={{ 
+				height: '0.5px', 
+				background: 'var(--ui-tabgroup-border, #444)', 
+				opacity: 0.6,
+				width: '100%',
+				margin: '8px 0 0 0',
+				padding: 0,
+				boxSizing: 'border-box',
+				border: 'none',
+				outline: 'none'
+			}} />
+		</>
 	);
 
 	// TypeChips específico para recientes (sin grupos)
 	const RecentsTypeChips = ({ value, onChange }) => (
-		<div style={{ display: 'flex', gap: 6 }}>
-			{[
-				{ key: 'all', label: 'Todos' },
-				{ key: 'ssh', label: 'SSH' },
-				{ key: 'rdp-guacamole', label: 'RDP' },
-				{ key: 'explorer', label: 'SFTP' }
-			].map(opt => (
-				<button
-					key={opt.key}
-					onClick={() => { onChange(opt.key); }}
-					style={{
-						padding: '2px 8px',
-						borderRadius: 999,
-						border: '1px solid rgba(255,255,255,0.14)',
-						background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
-						color: 'var(--text-color)',
-						fontSize: 11,
-						cursor: 'pointer',
-						backdropFilter: 'blur(8px) saturate(130%)'
-					}}
-				>{opt.label}</button>
-			))}
-		</div>
+		<>
+			<div style={{ display: 'flex', gap: 6 }}>
+				{[
+					{ key: 'all', label: 'Todos' },
+					{ key: 'ssh', label: 'SSH' },
+					{ key: 'rdp-guacamole', label: 'RDP' },
+					{ key: 'explorer', label: 'SFTP' }
+				].map(opt => (
+					<button
+						key={opt.key}
+						onClick={() => { onChange(opt.key); }}
+						style={{
+							padding: '2px 8px',
+							borderRadius: 999,
+							border: '1px solid rgba(255,255,255,0.14)',
+							background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+							color: 'var(--text-color)',
+							fontSize: 11,
+							cursor: 'pointer',
+							backdropFilter: 'blur(8px) saturate(130%)'
+						}}
+					>{opt.label}</button>
+				))}
+			</div>
+			{/* Línea separadora debajo de los botones de filtro */}
+			<div style={{ 
+				height: '0.5px', 
+				background: 'var(--ui-tabgroup-border, #444)', 
+				opacity: 0.6,
+				width: '100%',
+				margin: '8px 0 0 0',
+				padding: 0,
+				boxSizing: 'border-box',
+				border: 'none',
+				outline: 'none'
+			}} />
+		</>
 	);
 
 	const applyTypeFilter = (items, type) => {
