@@ -685,7 +685,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         alignItems: 'center',
         justifyContent: 'space-between',
         background: 'var(--ui-titlebar-accent, #1976d2)',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        boxShadow: '0 0.5px 2px rgba(0,0,0,0.06)',
         padding: '0 6px',
         userSelect: 'none',
         WebkitAppRegion: 'drag',
