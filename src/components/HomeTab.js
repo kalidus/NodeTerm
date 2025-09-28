@@ -136,7 +136,7 @@ const HomeTab = ({
       visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
-      <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+      <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
         <ConnectionHistory 
           onConnectToHistory={handleConnectToHistory}
           layout="two-columns"
