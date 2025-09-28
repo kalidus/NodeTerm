@@ -1648,6 +1648,7 @@ const Sidebar = React.memo(({
       ) : (
         // Sidebar completa
         <>
+          <hr style={{ margin: 0, border: 'none', height: '1px', backgroundColor: 'var(--ui-sidebar-text, #4a9eff)', opacity: 0.6 }} />
           <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
             <Button 
               icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
