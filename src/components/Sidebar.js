@@ -3,7 +3,7 @@ import { Button } from 'primereact/button';
 import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
 import SidebarFooter from './SidebarFooter';
-import { uiThemes } from '../themes/ui-themes';
+import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
@@ -1648,7 +1648,19 @@ const Sidebar = React.memo(({
       ) : (
         // Sidebar completa
         <>
-          <hr style={{ margin: 0, border: 'none', height: '0.5px', backgroundColor: 'var(--ui-sidebar-text, #4a9eff)', opacity: 0.4 }} />
+          {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+            <div style={{ 
+              width: '100%', 
+              height: '0.5px', 
+              backgroundColor: 'var(--ui-sidebar-border)', 
+              opacity: 0.6,
+              margin: 0,
+              padding: 0,
+              boxSizing: 'border-box',
+              border: 'none',
+              outline: 'none'
+            }} />
+          )}
           <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
             <Button 
               icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
