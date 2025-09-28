@@ -1420,6 +1420,20 @@ const App = () => {
         iconTheme={iconTheme}
         expandedKeys={expandedKeys}
       />
+      
+      {/* Línea separadora debajo de la titlebar */}
+      <div style={{ 
+        height: '0.5px', 
+        background: 'var(--ui-tabgroup-border, #444)', 
+        opacity: 0.6,
+        width: '100%',
+        margin: 0,
+        padding: 0,
+        boxSizing: 'border-box',
+        border: 'none',
+        outline: 'none'
+      }} />
+      
       <DialogsManager
         // Referencias
         toast={toast}
