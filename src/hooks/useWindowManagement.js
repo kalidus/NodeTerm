@@ -65,31 +65,26 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
   // ============ FUNCIONES DE EXPANSIÓN ============
   
-  // Función para expandir o plegar todas las carpetas
+  // Función para expandir o plegar solo las carpetas de primer nivel
   const toggleExpandAll = useCallback(() => {
     if (allExpanded) {
       setExpandedKeys({});
       setAllExpanded(false);
     } else {
-      // Recorrer todos los nodos y marcar los folders como expandidos
+      // Solo expandir carpetas de primer nivel
       const newExpandedKeys = {};
       
-      const traverseNodes = (nodeList) => {
-        for (const node of nodeList) {
-          if (node.droppable || node.children) {
-            newExpandedKeys[node.key] = true;
-          }
-          if (node.children && node.children.length > 0) {
-            traverseNodes(node.children);
-          }
+      // Solo recorrer los nodos de primer nivel (no recursivo)
+      for (const node of nodes || []) {
+        if (node.droppable || node.children) {
+          newExpandedKeys[node.key] = true;
         }
-      };
+      }
       
-      traverseNodes(nodes || []);
       setExpandedKeys(newExpandedKeys);
       setAllExpanded(true);
     }
-  }, [allExpanded, nodes, expandedKeys]);
+  }, [allExpanded, nodes]);
 
   // expandAllFolders ya no es necesaria como función separada
 
