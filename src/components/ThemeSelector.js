@@ -5,7 +5,7 @@ import { Badge } from 'primereact/badge';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Checkbox } from 'primereact/checkbox';
 import { themeManager } from '../utils/themeManager';
-import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
+import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS } from '../themes/ui-themes';
 
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
@@ -393,6 +393,26 @@ const ThemeSelector = ({ showPreview = false }) => {
               width: '100%'
             }}>
               {FUTURISTIC_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
+                const theme = uiThemes[key];
+                return (
+                  <ThemeCard
+                    key={key}
+                    theme={theme}
+                    isActive={currentTheme === theme.name}
+                    onClick={() => handleThemeChange(theme.name)}
+                  />
+                );
+              })}
+            </div>
+          </TabPanel>
+          <TabPanel header="Modernos">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {MODERN_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
                 const theme = uiThemes[key];
                 return (
                   <ThemeCard
