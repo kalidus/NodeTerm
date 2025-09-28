@@ -244,7 +244,7 @@ const MainContentArea = ({
             }}>
               {/* Barra de grupos como TabView scrollable */}
               {renderGroupTabs()}
-              <div style={{ height: '1px', background: 'var(--ui-tabgroup-border, #444)' }} />
+              <div style={{ height: '0.5px', background: 'var(--ui-tabgroup-border, #444)', opacity: 0.6 }} />
               
               <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                 {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
