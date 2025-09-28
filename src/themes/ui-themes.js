@@ -4,7 +4,7 @@ const CLASSIC_UI_KEYS = [
   'Tokyo Night', 'Synthwave 84', 'Palenight', 'Ayu Dark', 'Zenburn', 
   'Tomorrow Night', 'Oceanic Next', 'Atom One Light', 'Breeze', 'Spacemacs', 
   'Night Owl', 'Silver', 'Minimal Gray', 'Paper', 'Soft Gray', 'Arctic', 
-  'Neon Blue', 'Cyberpunk', 'Matrix', 'Hologram', 'Plasma', 'Default Dark'
+  'Neon Blue', 'Cyberpunk', 'Matrix', 'Hologram', 'Plasma'
 ];
 
 const FUTURISTIC_UI_KEYS = [
@@ -13,7 +13,7 @@ const FUTURISTIC_UI_KEYS = [
   'Quantum Flux UI', 'Laser Wave UI', 'Prism Trail UI', 'Hyperdrive UI', 
   'Neon Orbit UI', 'Cyber Grid UI', 'Pulse Magenta UI', 'Neon Lime UI', 
   'Steam UI', 'Steam Blue UI', 'Steam Green UI', 'Futuristic UI', 'Hologram UI', 
-  'Particle System UI', 'Sound Wave UI', 'DNA Helix UI'
+  'Particle System UI', 'Sound Wave UI', 'DNA Helix UI', 'Matrix Green', 'Neon Cyber'
 ];
 
 export const uiThemes = {
@@ -1841,83 +1841,6 @@ export const uiThemes = {
       iconos: '#2196f3'
     }
   },
-  'Default Dark': {
-    name: 'Default Dark',
-    colors: {
-      // Sidebar
-      sidebarBackground: '#252526',
-      sidebarBorder: '#3e3e42',
-      sidebarText: '#cccccc',
-      sidebarHover: '#2a2d2e',
-      sidebarSelected: '#094771',
-      sidebarGutter: '#323236',
-      
-      // Menu Bar (top)
-      menuBarBackground: '#2d2d30',
-      menuBarText: '#cccccc',
-      menuBarBorder: '#3e3e42',
-      menuBarHover: '#3e3e42',
-      
-      // Status Bar (bottom)
-      statusBarBackground: '#007acc',
-      statusBarText: '#ffffff',
-      statusBarBorder: '#3e3e42',
-      
-      // Tabs
-      tabBackground: '#2d2d30',
-      tabActiveBackground: '#1e1e1e',
-      tabHoverBackground: '#3e3e42',
-      tabText: '#cccccc',
-      tabActiveText: '#ffffff',
-      tabBorder: '#3e3e42',
-      tabCloseHover: '#f48771',
-      
-      // Tab Groups
-      tabGroupBackground: '#383838',
-      tabGroupText: '#cccccc',
-      tabGroupBorder: '#3e3e42',
-      
-      // Content Area
-      contentBackground: '#1e1e1e',
-      contentBorder: '#3e3e42',
-      
-      // Dialogs
-      dialogBackground: '#2d2d30',
-      dialogText: '#cccccc',
-      dialogBorder: '#3e3e42',
-      dialogShadow: 'rgba(0, 0, 0, 0.4)',
-      
-      // Buttons
-      buttonPrimary: '#0e639c',
-      buttonPrimaryText: '#ffffff',
-      buttonSecondary: '#3c3c3c',
-      buttonSecondaryText: '#cccccc',
-      buttonHover: '#1177bb',
-      
-      // Terminal Backgrounds
-      powershellTerminalBackground: '#282c34',  // Background principal
-      linuxTerminalBackground: '#21252b',       // Ligeramente más oscuro
-      
-      // Context Menus
-      contextMenuBackground: '#2d2d30',
-      contextMenuText: '#cccccc',
-      contextMenuHover: '#3e3e42',
-      contextMenuBorder: '#3e3e42',
-      contextMenuShadow: 'rgba(0, 0, 0, 0.4)',
-      '--ui-titlebar-accent': '#232a36',
-      '--ui-titlebar-text': '#222'
-    },
-    statusBarPalette: {
-      fondo: '#007acc',
-      texto: '#ffffff',
-      disco: '#ffb300',
-      redUp: '#00e676',
-      redDown: '#2196f3',
-      cpu: '#2196f3',
-      memoria: '#00e676',
-      iconos: '#2196f3'
-    }
-  },
 
   // === SECCIÓN FUTURISTAS ===
   'Scanline Blue UI': {
@@ -3714,6 +3637,162 @@ export const uiThemes = {
     }
   },
 
+  'Matrix Green': {
+    name: 'Matrix Green',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#001100',
+      sidebarBorder: '#00ff00',
+      sidebarText: '#00ff00',
+      sidebarHover: '#002200',
+      sidebarSelected: '#00ff00',
+      sidebarGutter: '#00ff00',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#000000',
+      menuBarText: '#00ff00',
+      menuBarBorder: '#00ff00',
+      menuBarHover: '#002200',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#00ff00',
+      statusBarText: '#000000',
+      statusBarBorder: '#00ff00',
+      
+      // Tabs
+      tabBackground: '#001100',
+      tabActiveBackground: '#00ff00',
+      tabHoverBackground: '#002200',
+      tabText: '#00ff00',
+      tabActiveText: '#000000',
+      tabBorder: '#00ff00',
+      tabCloseHover: '#ff0000',
+      
+      // Tab Groups
+      tabGroupBackground: '#002200',
+      tabGroupText: '#00ff00',
+      tabGroupBorder: '#00ff00',
+      
+      // Content Area
+      contentBackground: '#000000',
+      contentBorder: '#00ff00',
+      
+      // Dialogs
+      dialogBackground: '#001100',
+      dialogText: '#00ff00',
+      dialogBorder: '#00ff00',
+      dialogShadow: '0 0 20px rgba(0, 255, 0, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#00ff00',
+      buttonPrimaryText: '#000000',
+      buttonSecondary: '#00cc00',
+      buttonSecondaryText: '#000000',
+      buttonHover: '#00cc00',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#000000',
+      linuxTerminalBackground: '#001100',
+      
+      // Context Menus
+      contextMenuBackground: '#001100',
+      contextMenuText: '#00ff00',
+      contextMenuHover: '#002200',
+      contextMenuBorder: '#00ff00',
+      contextMenuShadow: '0 0 20px rgba(0, 255, 0, 0.5)',
+      '--ui-titlebar-accent': '#00ff00',
+      '--ui-titlebar-text': '#00ff00'
+    },
+    statusBarPalette: {
+      fondo: '#00ff00',
+      texto: '#000000',
+      disco: '#ffaa00',
+      redUp: '#00ff00',
+      redDown: '#00ff00',
+      cpu: '#00ff00',
+      memoria: '#00ff00',
+      iconos: '#00ff00'
+    }
+  },
+
+  'Neon Cyber': {
+    name: 'Neon Cyber',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#0a0a0a',
+      sidebarBorder: '#00ff88',
+      sidebarText: '#00ff88',
+      sidebarHover: '#001a0d',
+      sidebarSelected: '#00ff88',
+      sidebarGutter: '#00ff88',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#000000',
+      menuBarText: '#00ff88',
+      menuBarBorder: '#00ff88',
+      menuBarHover: '#001a0d',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#00ff88',
+      statusBarText: '#000000',
+      statusBarBorder: '#00ff88',
+      
+      // Tabs
+      tabBackground: '#0a0a0a',
+      tabActiveBackground: '#00ff88',
+      tabHoverBackground: '#001a0d',
+      tabText: '#00ff88',
+      tabActiveText: '#000000',
+      tabBorder: '#00ff88',
+      tabCloseHover: '#ff0044',
+      
+      // Tab Groups
+      tabGroupBackground: '#001a0d',
+      tabGroupText: '#00ff88',
+      tabGroupBorder: '#00ff88',
+      
+      // Content Area
+      contentBackground: '#000000',
+      contentBorder: '#00ff88',
+      
+      // Dialogs
+      dialogBackground: '#0a0a0a',
+      dialogText: '#00ff88',
+      dialogBorder: '#00ff88',
+      dialogShadow: '0 0 20px rgba(0, 255, 136, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#00ff88',
+      buttonPrimaryText: '#000000',
+      buttonSecondary: '#ff0044',
+      buttonSecondaryText: '#ffffff',
+      buttonHover: '#00cc6a',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#000000',
+      linuxTerminalBackground: '#0a0a0a',
+      
+      // Context Menus
+      contextMenuBackground: '#0a0a0a',
+      contextMenuText: '#00ff88',
+      contextMenuHover: '#001a0d',
+      contextMenuBorder: '#00ff88',
+      contextMenuShadow: '0 0 20px rgba(0, 255, 136, 0.3)',
+      '--ui-titlebar-accent': '#00ff88',
+      '--ui-titlebar-text': '#00ff88'
+    },
+    statusBarPalette: {
+      fondo: '#00ff88',
+      texto: '#000000',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#00ff88',
+      cpu: '#00ff88',
+      memoria: '#00ff88',
+      iconos: '#00ff88'
+    }
+  },
+
   // === SECCIÓN MODERNOS ===
   'Pro Slate': {
     name: 'Pro Slate',
@@ -4651,13 +4730,174 @@ export const uiThemes = {
     }
   },
 
+
+
+  'Arctic Frost': {
+    name: 'Arctic Frost',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#e8f4fd',
+      sidebarBorder: '#b3d9ff',
+      sidebarText: '#1a365d',
+      sidebarHover: '#d1ecf1',
+      sidebarSelected: '#b3d9ff',
+      sidebarGutter: '#b3d9ff',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#ffffff',
+      menuBarText: '#1a365d',
+      menuBarBorder: '#b3d9ff',
+      menuBarHover: '#d1ecf1',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#b3d9ff',
+      statusBarText: '#1a365d',
+      statusBarBorder: '#87ceeb',
+      
+      // Tabs
+      tabBackground: '#e8f4fd',
+      tabActiveBackground: '#b3d9ff',
+      tabHoverBackground: '#d1ecf1',
+      tabText: '#1a365d',
+      tabActiveText: '#1a365d',
+      tabBorder: '#b3d9ff',
+      tabCloseHover: '#ff6b6b',
+      
+      // Tab Groups
+      tabGroupBackground: '#d1ecf1',
+      tabGroupText: '#1a365d',
+      tabGroupBorder: '#b3d9ff',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#b3d9ff',
+      
+      // Dialogs
+      dialogBackground: '#e8f4fd',
+      dialogText: '#1a365d',
+      dialogBorder: '#b3d9ff',
+      dialogShadow: '0 4px 20px rgba(179, 217, 255, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#4a90e2',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#87ceeb',
+      buttonSecondaryText: '#1a365d',
+      buttonHover: '#357abd',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#e8f4fd',
+      
+      // Context Menus
+      contextMenuBackground: '#e8f4fd',
+      contextMenuText: '#1a365d',
+      contextMenuHover: '#d1ecf1',
+      contextMenuBorder: '#b3d9ff',
+      contextMenuShadow: '0 4px 20px rgba(179, 217, 255, 0.3)',
+      '--ui-titlebar-accent': '#4a90e2',
+      '--ui-titlebar-text': '#1a365d'
+    },
+    statusBarPalette: {
+      fondo: '#b3d9ff',
+      texto: '#1a365d',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#4a90e2',
+      cpu: '#4a90e2',
+      memoria: '#00ff88',
+      iconos: '#4a90e2'
+    }
+  },
+
+  'Purple Haze': {
+    name: 'Purple Haze',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#2d1b69',
+      sidebarBorder: '#8b5cf6',
+      sidebarText: '#e0e7ff',
+      sidebarHover: '#4c1d95',
+      sidebarSelected: '#8b5cf6',
+      sidebarGutter: '#8b5cf6',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#1e1b4b',
+      menuBarText: '#e0e7ff',
+      menuBarBorder: '#8b5cf6',
+      menuBarHover: '#4c1d95',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#8b5cf6',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#6d28d9',
+      
+      // Tabs
+      tabBackground: '#2d1b69',
+      tabActiveBackground: '#8b5cf6',
+      tabHoverBackground: '#4c1d95',
+      tabText: '#e0e7ff',
+      tabActiveText: '#ffffff',
+      tabBorder: '#8b5cf6',
+      tabCloseHover: '#ef4444',
+      
+      // Tab Groups
+      tabGroupBackground: '#4c1d95',
+      tabGroupText: '#e0e7ff',
+      tabGroupBorder: '#8b5cf6',
+      
+      // Content Area
+      contentBackground: '#1e1b4b',
+      contentBorder: '#8b5cf6',
+      
+      // Dialogs
+      dialogBackground: '#2d1b69',
+      dialogText: '#e0e7ff',
+      dialogBorder: '#8b5cf6',
+      dialogShadow: '0 8px 32px rgba(139, 92, 246, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#8b5cf6',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#6d28d9',
+      buttonSecondaryText: '#ffffff',
+      buttonHover: '#7c3aed',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#1e1b4b',
+      linuxTerminalBackground: '#2d1b69',
+      
+      // Context Menus
+      contextMenuBackground: '#2d1b69',
+      contextMenuText: '#e0e7ff',
+      contextMenuHover: '#4c1d95',
+      contextMenuBorder: '#8b5cf6',
+      contextMenuShadow: '0 8px 32px rgba(139, 92, 246, 0.3)',
+      '--ui-titlebar-accent': '#8b5cf6',
+      '--ui-titlebar-text': '#e0e7ff'
+    },
+    statusBarPalette: {
+      fondo: '#8b5cf6',
+      texto: '#ffffff',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#8b5cf6',
+      cpu: '#8b5cf6',
+      memoria: '#00ff88',
+      iconos: '#8b5cf6'
+    }
+  },
+
+
+
+
 };
 
 // Categoría de temas modernos (correlacionados con los temas de pestañas Modernos)
 const MODERN_UI_KEYS = [
   'Pro Slate', 'Pro Ocean', 'Pro Forest', 'Pro Indigo', 'Graphite', 
   'Modern Steel', 'Modern Copper', 'Modern Sage', 'Sandstone', 'Midnight Blue',
-  'Elegant Taupe', 'Muted Teal'
+  'Elegant Taupe', 'Muted Teal', 'Arctic Frost', 'Purple Haze'
 ];
 
 // Exportar las categorías para uso en el ThemeSelector
