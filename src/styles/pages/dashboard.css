@@ -453,3 +453,33 @@
   font-size: 0.85rem;
   padding: 0.5rem 0.75rem;
 }
+
+/* === SCROLLBAR PARA PÁGINA DE INICIO === */
+/* Scrollbar personalizado para la página de inicio usando colores del tema */
+.home-page-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.home-page-scroll::-webkit-scrollbar-track {
+  background: var(--ui-sidebar-bg, #1e1e1e);
+  border-radius: 3px;
+}
+
+.home-page-scroll::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-border, #3e3e42);
+  border-radius: 3px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.home-page-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-sidebar-text, #cccccc);
+  opacity: 0.8;
+}
+
+/* Firefox scrollbar para página de inicio */
+.home-page-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e);
+}
