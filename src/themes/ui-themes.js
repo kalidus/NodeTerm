@@ -4888,8 +4888,473 @@ export const uiThemes = {
     }
   },
 
+  'Soft Lavender': {
+    name: 'Soft Lavender',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#f8f6ff',
+      sidebarBorder: '#e6e0f7',
+      sidebarText: '#5a4a6a',
+      sidebarHover: '#f0ecff',
+      sidebarSelected: '#e6e0f7',
+      sidebarGutter: '#e6e0f7',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#f0ecff',
+      menuBarText: '#5a4a6a',
+      menuBarBorder: '#e6e0f7',
+      menuBarHover: '#f8f6ff',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#e6e0f7',
+      statusBarText: '#5a4a6a',
+      statusBarBorder: '#d4c7e8',
+      
+      // Tabs
+      tabBackground: '#f8f6ff',
+      tabActiveBackground: '#e6e0f7',
+      tabHoverBackground: '#f0ecff',
+      tabText: '#5a4a6a',
+      tabActiveText: '#5a4a6a',
+      tabBorder: '#e6e0f7',
+      tabCloseHover: '#d4a5a5',
+      
+      // Tab Groups
+      tabGroupBackground: '#f0ecff',
+      tabGroupText: '#5a4a6a',
+      tabGroupBorder: '#e6e0f7',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#e6e0f7',
+      
+      // Dialogs
+      dialogBackground: '#f8f6ff',
+      dialogText: '#5a4a6a',
+      dialogBorder: '#e6e0f7',
+      dialogShadow: '0 4px 20px rgba(230, 224, 247, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#9c88b8',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#d4c7e8',
+      buttonSecondaryText: '#5a4a6a',
+      buttonHover: '#8a7ba5',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#f8f6ff',
+      
+      // Context Menus
+      contextMenuBackground: '#f8f6ff',
+      contextMenuText: '#5a4a6a',
+      contextMenuHover: '#f0ecff',
+      contextMenuBorder: '#e6e0f7',
+      contextMenuShadow: '0 4px 20px rgba(230, 224, 247, 0.3)',
+      '--ui-titlebar-accent': '#9c88b8',
+      '--ui-titlebar-text': '#5a4a6a'
+    },
+    statusBarPalette: {
+      fondo: '#e6e0f7',
+      texto: '#5a4a6a',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#9c88b8',
+      cpu: '#9c88b8',
+      memoria: '#00ff88',
+      iconos: '#9c88b8'
+    }
+  },
 
+  'Warm Beige': {
+    name: 'Warm Beige',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#f7f5f3',
+      sidebarBorder: '#e8e2dc',
+      sidebarText: '#6b5b47',
+      sidebarHover: '#f0ebe5',
+      sidebarSelected: '#e8e2dc',
+      sidebarGutter: '#e8e2dc',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#f0ebe5',
+      menuBarText: '#6b5b47',
+      menuBarBorder: '#e8e2dc',
+      menuBarHover: '#f7f5f3',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#e8e2dc',
+      statusBarText: '#6b5b47',
+      statusBarBorder: '#ddd4cc',
+      
+      // Tabs
+      tabBackground: '#f7f5f3',
+      tabActiveBackground: '#e8e2dc',
+      tabHoverBackground: '#f0ebe5',
+      tabText: '#6b5b47',
+      tabActiveText: '#6b5b47',
+      tabBorder: '#e8e2dc',
+      tabCloseHover: '#c4a484',
+      
+      // Tab Groups
+      tabGroupBackground: '#f0ebe5',
+      tabGroupText: '#6b5b47',
+      tabGroupBorder: '#e8e2dc',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#e8e2dc',
+      
+      // Dialogs
+      dialogBackground: '#f7f5f3',
+      dialogText: '#6b5b47',
+      dialogBorder: '#e8e2dc',
+      dialogShadow: '0 4px 20px rgba(232, 226, 220, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#b8a082',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#ddd4cc',
+      buttonSecondaryText: '#6b5b47',
+      buttonHover: '#a68f6f',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#f7f5f3',
+      
+      // Context Menus
+      contextMenuBackground: '#f7f5f3',
+      contextMenuText: '#6b5b47',
+      contextMenuHover: '#f0ebe5',
+      contextMenuBorder: '#e8e2dc',
+      contextMenuShadow: '0 4px 20px rgba(232, 226, 220, 0.3)',
+      '--ui-titlebar-accent': '#b8a082',
+      '--ui-titlebar-text': '#6b5b47'
+    },
+    statusBarPalette: {
+      fondo: '#e8e2dc',
+      texto: '#6b5b47',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#b8a082',
+      cpu: '#b8a082',
+      memoria: '#00ff88',
+      iconos: '#b8a082'
+    }
+  },
 
+  'Muted Sage': {
+    name: 'Muted Sage',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#f2f5f0',
+      sidebarBorder: '#dde5d8',
+      sidebarText: '#5a6b4a',
+      sidebarHover: '#e8f0e3',
+      sidebarSelected: '#dde5d8',
+      sidebarGutter: '#dde5d8',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#e8f0e3',
+      menuBarText: '#5a6b4a',
+      menuBarBorder: '#dde5d8',
+      menuBarHover: '#f2f5f0',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#dde5d8',
+      statusBarText: '#5a6b4a',
+      statusBarBorder: '#d1dcc7',
+      
+      // Tabs
+      tabBackground: '#f2f5f0',
+      tabActiveBackground: '#dde5d8',
+      tabHoverBackground: '#e8f0e3',
+      tabText: '#5a6b4a',
+      tabActiveText: '#5a6b4a',
+      tabBorder: '#dde5d8',
+      tabCloseHover: '#a8b896',
+      
+      // Tab Groups
+      tabGroupBackground: '#e8f0e3',
+      tabGroupText: '#5a6b4a',
+      tabGroupBorder: '#dde5d8',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#dde5d8',
+      
+      // Dialogs
+      dialogBackground: '#f2f5f0',
+      dialogText: '#5a6b4a',
+      dialogBorder: '#dde5d8',
+      dialogShadow: '0 4px 20px rgba(221, 229, 216, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#8fa67f',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#d1dcc7',
+      buttonSecondaryText: '#5a6b4a',
+      buttonHover: '#7d8f6c',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#f2f5f0',
+      
+      // Context Menus
+      contextMenuBackground: '#f2f5f0',
+      contextMenuText: '#5a6b4a',
+      contextMenuHover: '#e8f0e3',
+      contextMenuBorder: '#dde5d8',
+      contextMenuShadow: '0 4px 20px rgba(221, 229, 216, 0.3)',
+      '--ui-titlebar-accent': '#8fa67f',
+      '--ui-titlebar-text': '#5a6b4a'
+    },
+    statusBarPalette: {
+      fondo: '#dde5d8',
+      texto: '#5a6b4a',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#8fa67f',
+      cpu: '#8fa67f',
+      memoria: '#00ff88',
+      iconos: '#8fa67f'
+    }
+  },
+
+  'Dusty Rose': {
+    name: 'Dusty Rose',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#faf7f7',
+      sidebarBorder: '#f0e6e6',
+      sidebarText: '#6b4a4a',
+      sidebarHover: '#f5ecec',
+      sidebarSelected: '#f0e6e6',
+      sidebarGutter: '#f0e6e6',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#f5ecec',
+      menuBarText: '#6b4a4a',
+      menuBarBorder: '#f0e6e6',
+      menuBarHover: '#faf7f7',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#f0e6e6',
+      statusBarText: '#6b4a4a',
+      statusBarBorder: '#e6d6d6',
+      
+      // Tabs
+      tabBackground: '#faf7f7',
+      tabActiveBackground: '#f0e6e6',
+      tabHoverBackground: '#f5ecec',
+      tabText: '#6b4a4a',
+      tabActiveText: '#6b4a4a',
+      tabBorder: '#f0e6e6',
+      tabCloseHover: '#c4a4a4',
+      
+      // Tab Groups
+      tabGroupBackground: '#f5ecec',
+      tabGroupText: '#6b4a4a',
+      tabGroupBorder: '#f0e6e6',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#f0e6e6',
+      
+      // Dialogs
+      dialogBackground: '#faf7f7',
+      dialogText: '#6b4a4a',
+      dialogBorder: '#f0e6e6',
+      dialogShadow: '0 4px 20px rgba(240, 230, 230, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#b8a0a0',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#e6d6d6',
+      buttonSecondaryText: '#6b4a4a',
+      buttonHover: '#a68f8f',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#faf7f7',
+      
+      // Context Menus
+      contextMenuBackground: '#faf7f7',
+      contextMenuText: '#6b4a4a',
+      contextMenuHover: '#f5ecec',
+      contextMenuBorder: '#f0e6e6',
+      contextMenuShadow: '0 4px 20px rgba(240, 230, 230, 0.3)',
+      '--ui-titlebar-accent': '#b8a0a0',
+      '--ui-titlebar-text': '#6b4a4a'
+    },
+    statusBarPalette: {
+      fondo: '#f0e6e6',
+      texto: '#6b4a4a',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#b8a0a0',
+      cpu: '#b8a0a0',
+      memoria: '#00ff88',
+      iconos: '#b8a0a0'
+    }
+  },
+
+  'Soft Mint': {
+    name: 'Soft Mint',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#f0f8f5',
+      sidebarBorder: '#ddeee6',
+      sidebarText: '#4a6b5a',
+      sidebarHover: '#e8f3ed',
+      sidebarSelected: '#ddeee6',
+      sidebarGutter: '#ddeee6',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#e8f3ed',
+      menuBarText: '#4a6b5a',
+      menuBarBorder: '#ddeee6',
+      menuBarHover: '#f0f8f5',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#ddeee6',
+      statusBarText: '#4a6b5a',
+      statusBarBorder: '#d1e6d8',
+      
+      // Tabs
+      tabBackground: '#f0f8f5',
+      tabActiveBackground: '#ddeee6',
+      tabHoverBackground: '#e8f3ed',
+      tabText: '#4a6b5a',
+      tabActiveText: '#4a6b5a',
+      tabBorder: '#ddeee6',
+      tabCloseHover: '#a8c4a8',
+      
+      // Tab Groups
+      tabGroupBackground: '#e8f3ed',
+      tabGroupText: '#4a6b5a',
+      tabGroupBorder: '#ddeee6',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#ddeee6',
+      
+      // Dialogs
+      dialogBackground: '#f0f8f5',
+      dialogText: '#4a6b5a',
+      dialogBorder: '#ddeee6',
+      dialogShadow: '0 4px 20px rgba(221, 238, 230, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#8fb8a0',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#d1e6d8',
+      buttonSecondaryText: '#4a6b5a',
+      buttonHover: '#7da68f',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#f0f8f5',
+      
+      // Context Menus
+      contextMenuBackground: '#f0f8f5',
+      contextMenuText: '#4a6b5a',
+      contextMenuHover: '#e8f3ed',
+      contextMenuBorder: '#ddeee6',
+      contextMenuShadow: '0 4px 20px rgba(221, 238, 230, 0.3)',
+      '--ui-titlebar-accent': '#8fb8a0',
+      '--ui-titlebar-text': '#4a6b5a'
+    },
+    statusBarPalette: {
+      fondo: '#ddeee6',
+      texto: '#4a6b5a',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#8fb8a0',
+      cpu: '#8fb8a0',
+      memoria: '#00ff88',
+      iconos: '#8fb8a0'
+    }
+  },
+
+  'Warm Gray': {
+    name: 'Warm Gray',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#f5f4f2',
+      sidebarBorder: '#e8e6e3',
+      sidebarText: '#5a5752',
+      sidebarHover: '#f0ede8',
+      sidebarSelected: '#e8e6e3',
+      sidebarGutter: '#e8e6e3',
+      
+      // Menu Bar (top)
+      menuBarBackground: '#f0ede8',
+      menuBarText: '#5a5752',
+      menuBarBorder: '#e8e6e3',
+      menuBarHover: '#f5f4f2',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#e8e6e3',
+      statusBarText: '#5a5752',
+      statusBarBorder: '#ddd9d4',
+      
+      // Tabs
+      tabBackground: '#f5f4f2',
+      tabActiveBackground: '#e8e6e3',
+      tabHoverBackground: '#f0ede8',
+      tabText: '#5a5752',
+      tabActiveText: '#5a5752',
+      tabBorder: '#e8e6e3',
+      tabCloseHover: '#b8b4a8',
+      
+      // Tab Groups
+      tabGroupBackground: '#f0ede8',
+      tabGroupText: '#5a5752',
+      tabGroupBorder: '#e8e6e3',
+      
+      // Content Area
+      contentBackground: '#ffffff',
+      contentBorder: '#e8e6e3',
+      
+      // Dialogs
+      dialogBackground: '#f5f4f2',
+      dialogText: '#5a5752',
+      dialogBorder: '#e8e6e3',
+      dialogShadow: '0 4px 20px rgba(232, 230, 227, 0.3)',
+      
+      // Buttons
+      buttonPrimary: '#a8a49c',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#ddd9d4',
+      buttonSecondaryText: '#5a5752',
+      buttonHover: '#96928a',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: '#ffffff',
+      linuxTerminalBackground: '#f5f4f2',
+      
+      // Context Menus
+      contextMenuBackground: '#f5f4f2',
+      contextMenuText: '#5a5752',
+      contextMenuHover: '#f0ede8',
+      contextMenuBorder: '#e8e6e3',
+      contextMenuShadow: '0 4px 20px rgba(232, 230, 227, 0.3)',
+      '--ui-titlebar-accent': '#a8a49c',
+      '--ui-titlebar-text': '#5a5752'
+    },
+    statusBarPalette: {
+      fondo: '#e8e6e3',
+      texto: '#5a5752',
+      disco: '#ffaa00',
+      redUp: '#00ff88',
+      redDown: '#a8a49c',
+      cpu: '#a8a49c',
+      memoria: '#00ff88',
+      iconos: '#a8a49c'
+    }
+  }
 
 };
 
@@ -4897,7 +5362,8 @@ export const uiThemes = {
 const MODERN_UI_KEYS = [
   'Pro Slate', 'Pro Ocean', 'Pro Forest', 'Pro Indigo', 'Graphite', 
   'Modern Steel', 'Modern Copper', 'Modern Sage', 'Sandstone', 'Midnight Blue',
-  'Elegant Taupe', 'Muted Teal', 'Arctic Frost', 'Purple Haze'
+  'Elegant Taupe', 'Muted Teal', 'Arctic Frost', 'Purple Haze',
+  'Soft Lavender', 'Warm Beige', 'Muted Sage', 'Dusty Rose', 'Soft Mint', 'Warm Gray'
 ];
 
 // Exportar las categorías para uso en el ThemeSelector
