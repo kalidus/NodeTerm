@@ -454,10 +454,22 @@ class ThemeManager {
         titleBar.setAttribute('data-animation', animationType);
       }
       
-      // Aplicar animación al buscador
-      const searchInput = document.querySelector('.search-input');
-      if (searchInput) {
-        searchInput.setAttribute('data-animation', animationType);
+      // Aplicar animación al buscador - múltiples selectores para mayor compatibilidad
+      const searchSelectors = [
+        '.search-input',
+        '.p-inputtext.search-input',
+        'input.search-input',
+        '.title-bar input[type="text"]',
+        '.title-bar .p-inputtext'
+      ];
+      
+      let searchInput = null;
+      for (const selector of searchSelectors) {
+        searchInput = document.querySelector(selector);
+        if (searchInput) {
+          searchInput.setAttribute('data-animation', animationType);
+          break;
+        }
       }
       
       // Aplicar animación a la sidebar

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
@@ -35,8 +36,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   };
 
   useEffect(() => {
+    console.log('[BUSCADOR] sidebarFilter:', sidebarFilter);
+    console.log('[BUSCADOR] allNodes:', allNodes);
+    
     if (sidebarFilter.trim()) {
       const allConnections = findAllConnections(allNodes);
+      console.log('[BUSCADOR] allConnections encontradas:', allConnections.length);
+      
       const filtered = allConnections.filter(node => {
         const labelMatch = node.label.toLowerCase().includes(sidebarFilter.toLowerCase());
         // Buscar tanto en username como en user (SSH usa 'user', RDP usa 'username')
@@ -46,13 +52,35 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         );
         return labelMatch || usernameMatch;
       });
+      
+      console.log('[BUSCADOR] conexiones filtradas:', filtered.length);
+      console.log('[BUSCADOR] resultados:', filtered.map(f => f.label));
+      
       setFilteredConnections(filtered);
-      setShowDropdown(filtered.length > 0);
+      // Mostrar dropdown automáticamente si hay resultados
+      if (filtered.length > 0) {
+        console.log('[BUSCADOR] Mostrando dropdown automáticamente');
+        setShowDropdown(true);
+        console.log('[BUSCADOR] showDropdown establecido a true');
+      } else {
+        setShowDropdown(false);
+        console.log('[BUSCADOR] showDropdown establecido a false');
+      }
     } else {
       setFilteredConnections([]);
       setShowDropdown(false);
     }
   }, [sidebarFilter, allNodes, findAllConnections]);
+
+  // Función para manejar el focus del input
+  const handleInputFocus = () => {
+    console.log('[BUSCADOR] handleInputFocus - sidebarFilter:', sidebarFilter);
+    console.log('[BUSCADOR] handleInputFocus - filteredConnections.length:', filteredConnections.length);
+    console.log('[BUSCADOR] handleInputFocus - showDropdown:', showDropdown);
+    
+    // El dropdown se muestra automáticamente en el useEffect
+    // Solo logueamos para debug
+  };
 
   // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
   const [importBanner, setImportBanner] = useState(null);
@@ -759,7 +787,20 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 350, maxWidth: 600, width: '35vw', WebkitAppRegion: 'no-drag' }}>
           {!sidebarFilter && (
-            <span style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', color: '#888', pointerEvents: 'none', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ 
+              position: 'absolute', 
+              left: '50%', 
+              top: '50%', 
+              transform: 'translate(-50%, -50%)', 
+              color: 'var(--ui-titlebar-text, #fff)', 
+              pointerEvents: 'none', 
+              fontSize: 13, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8,
+              opacity: 1,
+              zIndex: 2
+            }}>
               <FaSearch />
               <span>NodeTerm</span>
             </span>
@@ -769,6 +810,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             onChange={e => setSidebarFilter(e.target.value)}
             placeholder=""
             className="search-input"
+            data-animation=""
             style={{
               minWidth: 350,
               maxWidth: 600,
@@ -787,28 +829,48 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               zIndex: 1,
               textAlign: 'center',
             }}
-            onFocus={() => setShowDropdown(filteredConnections.length > 0)}
-            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            onFocus={handleInputFocus}
+            onBlur={() => {
+              console.log('[BUSCADOR] onBlur disparado');
+              // Solo ocultar el dropdown si no hay texto en el filtro
+              if (!sidebarFilter.trim()) {
+                setTimeout(() => {
+                  console.log('[BUSCADOR] onBlur timeout ejecutado - ocultando dropdown');
+                  setShowDropdown(false);
+                }, 150);
+              } else {
+                console.log('[BUSCADOR] onBlur - manteniendo dropdown visible porque hay texto');
+              }
+            }}
             autoComplete="off"
           />
-          {showDropdown && (
+          {showDropdown && ReactDOM.createPortal(
             <div 
               className="search-dropdown"
               style={{
-                position: 'absolute',
+                position: 'fixed',
                 top: 36,
-                left: 0,
-                width: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                minWidth: 350,
+                maxWidth: 600,
+                width: '35vw',
+                maxHeight: 300,
                 background: 'var(--ui-dialog-bg, #232629)',
                 color: 'var(--ui-dialog-text, #fff)',
                 borderRadius: 6,
                 boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
                 zIndex: 9999,
-                maxHeight: 300,
                 overflowY: 'auto',
                 border: '1px solid var(--ui-dialog-border, #444)',
                 WebkitAppRegion: 'no-drag',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                fontWeight: '500',
+                margin: 0,
+                padding: 0,
               }}>
+              {console.log('[BUSCADOR] Renderizando dropdown con', filteredConnections.length, 'conexiones')}
               {filteredConnections.map(node => {
                 const isSSH = node.data && node.data.type === 'ssh';
                 const isRDP = node.data && node.data.type === 'rdp';
@@ -880,7 +942,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                         overflow: 'hidden', 
                         textOverflow: 'ellipsis',
                         fontWeight: 500,
-                        color: 'var(--ui-dialog-text, #fff)'
+                        color: 'var(--ui-dialog-text, #fff)',
+                        fontSize: '13px'
                       }}>
                         {node.label}
                       </span>
@@ -908,12 +971,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       }}>
                         <span style={{ 
                           fontSize: 11, 
-                          color: 'var(--ui-primary-color, #ff9800)',
+                          color: 'var(--ui-dialog-text, #fff)',
                           fontWeight: 600,
-                          backgroundColor: 'var(--ui-primary-color, #ff9800)20',
+                          backgroundColor: 'var(--ui-sidebar-hover, #2a2d31)',
                           padding: '2px 6px',
                           borderRadius: '10px',
-                          border: '1px solid var(--ui-primary-color, #ff9800)40',
+                          border: '1px solid var(--ui-dialog-border, #444)',
                           whiteSpace: 'nowrap',
                           display: 'flex',
                           alignItems: 'center',
@@ -995,9 +1058,16 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 );
               })}
               {filteredConnections.length === 0 && (
-                <div style={{ padding: '12px', color: 'var(--ui-dialog-text, #aaa)', fontSize: 13, textAlign: 'center' }}>Sin resultados</div>
+                <div style={{ 
+                  padding: '12px', 
+                  color: 'var(--ui-dialog-text, #aaa)', 
+                  fontSize: 13, 
+                  textAlign: 'center',
+                  fontFamily: 'inherit'
+                }}>Sin resultados</div>
               )}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
