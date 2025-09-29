@@ -63,20 +63,56 @@ const initializeGlobalThemes = () => {
     const hasUITheme = localStorage.getItem('ui_theme');
     const hasStatusBarTheme = localStorage.getItem('basicapp_statusbar_theme');
     const hasTabTheme = localStorage.getItem('nodeterm_tab_theme');
+    const hasTerminalTheme = localStorage.getItem('basicapp_terminal_theme');
+    const hasIconTheme = localStorage.getItem('iconTheme');
+    const hasIconThemeSidebar = localStorage.getItem('iconThemeSidebar');
+    const hasPowerShellTheme = localStorage.getItem('localPowerShellTheme');
+    const hasPowerShellStatusBarTheme = localStorage.getItem('localPowerShellStatusBarTheme');
+    const hasLinuxTerminalTheme = localStorage.getItem('localLinuxTerminalTheme');
     
     if (!hasUITheme) {
       console.log('[THEME] Aplicando tema UI por defecto...');
-      localStorage.setItem('ui_theme', 'Light');
+      localStorage.setItem('ui_theme', 'Nord');
     }
     
     if (!hasStatusBarTheme) {
       console.log('[THEME] Aplicando tema status bar por defecto...');
-      localStorage.setItem('basicapp_statusbar_theme', 'Default Dark');
+      localStorage.setItem('basicapp_statusbar_theme', 'Night Owl');
     }
     
     if (!hasTabTheme) {
       console.log('[THEME] Aplicando tema tabs por defecto...');
-      localStorage.setItem('nodeterm_tab_theme', 'default');
+      localStorage.setItem('nodeterm_tab_theme', 'nord');
+    }
+    
+    if (!hasTerminalTheme) {
+      console.log('[THEME] Aplicando tema terminal por defecto...');
+      localStorage.setItem('basicapp_terminal_theme', 'Night Owl');
+    }
+    
+    if (!hasIconTheme) {
+      console.log('[THEME] Aplicando tema iconos por defecto...');
+      localStorage.setItem('iconTheme', 'nord');
+    }
+    
+    if (!hasIconThemeSidebar) {
+      console.log('[THEME] Aplicando tema iconos sidebar por defecto...');
+      localStorage.setItem('iconThemeSidebar', 'nord');
+    }
+    
+    if (!hasPowerShellTheme) {
+      console.log('[THEME] Aplicando tema PowerShell por defecto...');
+      localStorage.setItem('localPowerShellTheme', 'Night Owl');
+    }
+    
+    if (!hasPowerShellStatusBarTheme) {
+      console.log('[THEME] Aplicando tema PowerShell Status Bar por defecto...');
+      localStorage.setItem('localPowerShellStatusBarTheme', 'Night Owl');
+    }
+    
+    if (!hasLinuxTerminalTheme) {
+      console.log('[THEME] Aplicando tema Linux Terminal por defecto...');
+      localStorage.setItem('localLinuxTerminalTheme', 'Night Owl');
     }
     
   } catch (error) {

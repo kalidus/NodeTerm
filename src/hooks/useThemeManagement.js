@@ -94,19 +94,45 @@ export const useThemeManagement = () => {
   // Icon and explorer theme states
   const [iconTheme, setIconTheme] = useState(() => {
     try {
-      return localStorage.getItem('iconTheme') || 'material';
+      return localStorage.getItem('iconTheme') || 'nord';
     } catch {
-      return 'material';
+      return 'nord';
     }
   });
 
   const [iconThemeSidebar, setIconThemeSidebar] = useState(() => {
     try {
-      return localStorage.getItem('iconThemeSidebar') || 'material';
+      return localStorage.getItem('iconThemeSidebar') || 'nord';
     } catch {
-      return 'material';
+      return 'nord';
     }
   });
+
+  // Forzar actualización de temas de iconos después de la inicialización global
+  useEffect(() => {
+    const checkAndUpdateIconThemes = () => {
+      const storedIconTheme = localStorage.getItem('iconTheme');
+      const storedIconThemeSidebar = localStorage.getItem('iconThemeSidebar');
+      
+      if (storedIconTheme && storedIconTheme !== iconTheme) {
+        console.log('[THEME] Actualizando iconTheme desde localStorage:', storedIconTheme);
+        setIconTheme(storedIconTheme);
+      }
+      
+      if (storedIconThemeSidebar && storedIconThemeSidebar !== iconThemeSidebar) {
+        console.log('[THEME] Actualizando iconThemeSidebar desde localStorage:', storedIconThemeSidebar);
+        setIconThemeSidebar(storedIconThemeSidebar);
+      }
+    };
+
+    // Verificar inmediatamente
+    checkAndUpdateIconThemes();
+    
+    // Verificar después de un pequeño delay para asegurar que initializeGlobalThemes se haya ejecutado
+    const timeoutId = setTimeout(checkAndUpdateIconThemes, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const [explorerFont, setExplorerFont] = useState(() => {
     try {
@@ -128,27 +154,27 @@ export const useThemeManagement = () => {
   const [iconSize, setIconSize] = useState(() => {
     try {
       const saved = localStorage.getItem('iconSize');
-      return saved ? parseInt(saved, 10) : 16;
+      return saved ? parseInt(saved, 10) : 20;
     } catch {
-      return 16;
+      return 20;
     }
   });
 
   const [folderIconSize, setFolderIconSize] = useState(() => {
     try {
       const saved = localStorage.getItem('folderIconSize');
-      return saved ? parseInt(saved, 10) : 16;
+      return saved ? parseInt(saved, 10) : 20;
     } catch {
-      return 16;
+      return 20;
     }
   });
 
   const [connectionIconSize, setConnectionIconSize] = useState(() => {
     try {
       const saved = localStorage.getItem('connectionIconSize');
-      return saved ? parseInt(saved, 10) : 16;
+      return saved ? parseInt(saved, 10) : 20;
     } catch {
-      return 16;
+      return 20;
     }
   });
 
@@ -288,8 +314,8 @@ export const useThemeManagement = () => {
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
               !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
             console.log('[THEME] Forzando aplicación de temas por defecto...');
-            themeManager.applyTheme('Light');
-            statusBarThemeManager.applyTheme('Default Dark');
+            themeManager.applyTheme('Nord');
+            statusBarThemeManager.applyTheme('Night Owl');
           }
         }, 100);
         
@@ -317,8 +343,8 @@ export const useThemeManagement = () => {
     const updatedSidebarFont = localStorage.getItem('sidebarFont') || explorerFonts[0];
     const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize');
     const updatedIconSize = localStorage.getItem('iconSize');
-    const updatedIconTheme = localStorage.getItem('iconTheme') || 'material';
-    const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'classic';
+    const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
+    const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
 
     // Actualizar estados
     setStatusBarTheme(updatedStatusBarTheme);

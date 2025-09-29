@@ -115,8 +115,8 @@ const App = () => {
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
               !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
             console.log('[THEME] Re-aplicando temas por defecto...');
-            themeManager.applyTheme('Light'); // Forzar tema Light por defecto
-            statusBarThemeManager.applyTheme('Default Dark'); // Forzar status bar por defecto
+            themeManager.applyTheme('Nord'); // Forzar tema Nord por defecto
+            statusBarThemeManager.applyTheme('Night Owl'); // Forzar status bar por defecto
           }
         }, 200);
         

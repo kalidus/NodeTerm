@@ -63,7 +63,7 @@ export const useFormHandlers = ({
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
     const theme = iconThemes[themeName];
-    if (!theme || !theme.icons || !theme.icons.folder) return '#007ad9';
+    if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac'; // Nord color por defecto
     
     const folderIcon = theme.icons.folder;
     
@@ -93,7 +93,7 @@ export const useFormHandlers = ({
       }
     }
     
-    return '#007ad9'; // Fallback por defecto
+    return '#5e81ac'; // Nord color por defecto
   };
 
   const createNewFolder = useCallback(() => {

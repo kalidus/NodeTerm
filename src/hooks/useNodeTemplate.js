@@ -57,7 +57,43 @@ export const useNodeTemplate = ({
     } else if (isRDP) {
       icon = iconThemes[iconThemeSidebar]?.icons?.rdp || <span className="pi pi-desktop" style={{ color: '#007ad9' }} />;
     } else if (isFolder) {
-      const folderColor = node.color || '#007ad9'; // Color por defecto azul
+      // Usar el color del tema por defecto si no hay color personalizado
+      const getThemeDefaultColor = (themeName) => {
+        const theme = iconThemes[themeName];
+        if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac'; // Nord color por defecto
+        
+        const folderIcon = theme.icons.folder;
+        
+        // Si el SVG tiene fill y no es "none", usar ese color
+        if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
+          return folderIcon.props.fill;
+        }
+        
+        // Si el SVG tiene stroke, usar ese color
+        if (folderIcon.props && folderIcon.props.stroke) {
+          return folderIcon.props.stroke;
+        }
+        
+        // Fallback: buscar en los children del SVG
+        if (folderIcon.props && folderIcon.props.children) {
+          const children = Array.isArray(folderIcon.props.children) 
+            ? folderIcon.props.children 
+            : [folderIcon.props.children];
+          
+          for (const child of children) {
+            if (child.props && child.props.fill && child.props.fill !== 'none') {
+              return child.props.fill;
+            }
+            if (child.props && child.props.stroke) {
+              return child.props.stroke;
+            }
+          }
+        }
+        
+        return '#5e81ac'; // Nord color por defecto
+      };
+      
+      const folderColor = node.color || getThemeDefaultColor(iconThemeSidebar);
       
       // DEBUG: Log para entender qué está pasando
       console.log('🔍 Folder Icon Debug:', {

@@ -253,7 +253,7 @@ const FileExplorer = ({ sshConfig, tabId, iconTheme = 'material', explorerFont =
 
     const getFileIcon = (file) => {
         // Asegurar que tenemos el tema correcto y que existe
-        const theme = (iconThemes && iconThemes[iconTheme]) ? iconThemes[iconTheme] : iconThemes['material'];
+        const theme = (iconThemes && iconThemes[iconTheme]) ? iconThemes[iconTheme] : iconThemes['nord'];
         
         if (file.type === 'directory') {
             return file.name === '..'
