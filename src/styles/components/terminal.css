@@ -176,3 +176,47 @@ canvas:focus-visible {
   border: none !important;
   box-shadow: none !important;
 }
+
+/* === OCULTAR SCROLLBAR DE PESTAÑAS === */
+/* Clase para ocultar completamente el scrollbar del contenedor de pestañas */
+.hide-scrollbar {
+  /* Firefox */
+  scrollbar-width: none !important;
+  /* IE/Edge */
+  -ms-overflow-style: none !important;
+  /* Para navegadores WebKit (Chrome, Safari, Edge) */
+  overflow: -moz-scrollbars-none !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Estilos adicionales para asegurar que no aparezca el scrollbar */
+.hide-scrollbar {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}

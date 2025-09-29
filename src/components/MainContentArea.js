@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Card } from 'primereact/card';
 import { ContextMenu } from 'primereact/contextmenu';
+import { Button } from 'primereact/button';
 import Sidebar from './Sidebar';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
@@ -87,6 +88,88 @@ const MainContentArea = ({
   selectedNode,
   treeContextMenuRef
 }) => {
+  // Estados para las flechas de navegación de pestañas
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const tabsContainerRef = useRef(null);
+  
+  // Funciones para controlar el scroll de pestañas
+  const checkScrollButtons = () => {
+    if (!tabsContainerRef.current) return;
+    
+    const container = tabsContainerRef.current;
+    const scrollLeft = container.scrollLeft;
+    const scrollWidth = container.scrollWidth;
+    const clientWidth = container.clientWidth;
+    
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1);
+  };
+  
+  const scrollTabs = (direction) => {
+    if (!tabsContainerRef.current) return;
+    
+    const container = tabsContainerRef.current;
+    const scrollAmount = 200; // Píxeles a desplazar
+    const newScrollLeft = direction === 'left' 
+      ? Math.max(0, container.scrollLeft - scrollAmount)
+      : Math.min(container.scrollWidth - container.clientWidth, container.scrollLeft + scrollAmount);
+    
+    container.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth'
+    });
+  };
+  
+  // Efectos para verificar botones de scroll
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkScrollButtons();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [filteredTabs]);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setTimeout(checkScrollButtons, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Efecto para agregar event listener al contenedor de pestañas
+  useEffect(() => {
+    // Buscar el elemento de navegación de PrimeReact
+    const findTabNav = () => {
+      const tabNav = document.querySelector('.main-tab-view .p-tabview-nav');
+      if (tabNav) {
+        tabsContainerRef.current = tabNav;
+        tabNav.addEventListener('scroll', checkScrollButtons);
+        checkScrollButtons(); // Verificar estado inicial
+        return true;
+      }
+      return false;
+    };
+    
+    // Intentar encontrar el elemento con un pequeño delay
+    const timer = setTimeout(() => {
+      if (!findTabNav()) {
+        // Si no se encuentra, intentar de nuevo
+        const retryTimer = setTimeout(findTabNav, 500);
+        return () => clearTimeout(retryTimer);
+      }
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+      if (tabsContainerRef.current) {
+        tabsContainerRef.current.removeEventListener('scroll', checkScrollButtons);
+      }
+    };
+  }, [filteredTabs]);
+  
   // Ancho fijo para restauración del botón (ancho inicial de la app)
   const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
   // Estado de tamaño actual del sidebar (en %), usado cuando está expandido
@@ -248,34 +331,36 @@ const MainContentArea = ({
               <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                 {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
                 {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (
-                  <TabView 
-                    activeIndex={activeTabIndex} 
-                    onTabChange={(e) => {
-                      if (activatingNowRef.current) return; // bloquear cambios durante activación forzada
-                      setActiveTabIndex(e.index);
-                      // Solo guardar el nuevo índice si el grupo actual tiene pestañas
-                      const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
-                      const currentTabs = getTabsInGroup(activeGroupId);
-                      
-                      if (currentTabs.length > 0) {
-                        setGroupActiveIndices(prev => ({
-                          ...prev,
-                          [currentGroupKey]: e.index
-                        }));
-                      }
-                    }}
-                    renderActiveOnly={false}
-                    scrollable={false}
-                    className="main-tab-view"
-                    pt={{
-                      navContainer: {
-                        style: {
-                          borderBottom: '0.5px solid var(--ui-tabgroup-border, #444)',
-                          opacity: 1.0
+                  <div style={{ position: 'relative' }}>
+                    <TabView 
+                      activeIndex={activeTabIndex} 
+                      onTabChange={(e) => {
+                        if (activatingNowRef.current) return; // bloquear cambios durante activación forzada
+                        setActiveTabIndex(e.index);
+                        // Solo guardar el nuevo índice si el grupo actual tiene pestañas
+                        const currentGroupKey = activeGroupId || GROUP_KEYS.DEFAULT;
+                        const currentTabs = getTabsInGroup(activeGroupId);
+                        
+                        if (currentTabs.length > 0) {
+                          setGroupActiveIndices(prev => ({
+                            ...prev,
+                            [currentGroupKey]: e.index
+                          }));
                         }
-                      }
-                    }}
-                  >
+                      }}
+                      renderActiveOnly={false}
+                      scrollable={true}
+                      className="main-tab-view"
+                      pt={{
+                        navContainer: {
+                          ref: tabsContainerRef,
+                          style: {
+                            borderBottom: '0.5px solid var(--ui-tabgroup-border, #444)',
+                            opacity: 1.0
+                          }
+                        }
+                      }}
+                    >
                     {filteredTabs.map((tab, idx) => {
                       // Con las pestañas híbridas, todas las pestañas visibles están en el contexto home, SSH o explorer
                       // OJO: como reordenamos virtualmente (pin a índice 1), no podemos fiarnos de idx
@@ -324,7 +409,106 @@ const MainContentArea = ({
                         />
                       );
                     })}
-                  </TabView>
+                    </TabView>
+                    
+                    {/* Flecha izquierda */}
+                    {canScrollLeft && (
+                      <Button
+                        icon="pi pi-chevron-left"
+                        className="p-button-text p-button-sm tab-nav-arrow"
+                        style={{
+                          position: 'absolute',
+                          left: '4px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          zIndex: 1000,
+                          color: 'var(--ui-tab-text) !important',
+                          padding: '2px',
+                          minWidth: '16px',
+                          width: '16px',
+                          height: '16px',
+                          fontSize: '8px',
+                          background: 'rgba(0, 0, 0, 0.3) !important',
+                          border: 'none !important',
+                          borderRadius: '2px',
+                          opacity: 0.9,
+                          transition: 'opacity 0.2s ease'
+                        }}
+                        pt={{
+                          root: {
+                            style: {
+                              color: 'var(--ui-tab-text) !important',
+                              background: 'rgba(0, 0, 0, 0.3) !important',
+                              border: 'none !important'
+                            }
+                          },
+                          icon: {
+                            style: {
+                              color: 'var(--ui-tab-text) !important'
+                            }
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.opacity = '0.9';
+                        }}
+                        onClick={() => scrollTabs('left')}
+                        aria-label="Desplazar pestañas a la izquierda"
+                        title="Desplazar pestañas a la izquierda"
+                      />
+                    )}
+                    
+                    {/* Flecha derecha */}
+                    {canScrollRight && (
+                      <Button
+                        icon="pi pi-chevron-right"
+                        className="p-button-text p-button-sm tab-nav-arrow"
+                        style={{
+                          position: 'absolute',
+                          right: '4px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          zIndex: 1000,
+                          color: 'var(--ui-tab-text) !important',
+                          padding: '2px',
+                          minWidth: '16px',
+                          width: '16px',
+                          height: '16px',
+                          fontSize: '8px',
+                          background: 'rgba(0, 0, 0, 0.3) !important',
+                          border: 'none !important',
+                          borderRadius: '2px',
+                          opacity: 0.9,
+                          transition: 'opacity 0.2s ease'
+                        }}
+                        pt={{
+                          root: {
+                            style: {
+                              color: 'var(--ui-tab-text) !important',
+                              background: 'rgba(0, 0, 0, 0.3) !important',
+                              border: 'none !important'
+                            }
+                          },
+                          icon: {
+                            style: {
+                              color: 'var(--ui-tab-text) !important'
+                            }
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.opacity = '0.9';
+                        }}
+                        onClick={() => scrollTabs('right')}
+                        aria-label="Desplazar pestañas a la derecha"
+                        title="Desplazar pestañas a la derecha"
+                      />
+                    )}
+                  </div>
                 )}
                 
                 
