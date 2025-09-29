@@ -558,6 +558,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             localBg = themes[localPowerShellTheme]?.theme?.background || '#222';
         } else if (activeTab.type === 'wsl' || activeTab.type === 'ubuntu' || activeTab.type === 'wsl-distro') {
             localBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
+        } else if (activeTab.type === 'home') {
+            // Para la pestaña de inicio, usar el color de fondo del tema UI
+            const currentUITheme = themeManager.getCurrentTheme() || uiThemes['Light'];
+            localBg = currentUITheme.colors?.contentBackground || '#fafafa';
         }
         // Determinar si el fondo es claro u oscuro
         const isDark = (() => {
