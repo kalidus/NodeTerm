@@ -5,12 +5,17 @@ import { Badge } from 'primereact/badge';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Checkbox } from 'primereact/checkbox';
 import { themeManager } from '../utils/themeManager';
-import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS } from '../themes/ui-themes';
+import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS } from '../themes/ui-themes';
+
+const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed'; // 'slow' | 'normal' | 'fast' | 'turbo'
+const REDUCED_MOTION_KEY = 'nodeterm_ui_reduced_motion';
 
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
   const [previewMode, setPreviewMode] = useState(false);
   const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
+  const [animSpeed, setAnimSpeed] = useState('normal');
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     // Cargar el tema actual
@@ -20,6 +25,22 @@ const ThemeSelector = ({ showPreview = false }) => {
     // Cargar la preferencia de colores primarios para titlebar
     const savedTitlebarPreference = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     setUsePrimaryColorsForTitlebar(savedTitlebarPreference);
+    
+    // Cargar preferencias de animación
+    const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
+    setAnimSpeed(savedSpeed);
+    document.documentElement.setAttribute('data-ui-anim-speed', savedSpeed);
+    
+    // Reduced motion inicial
+    const savedReduced = localStorage.getItem(REDUCED_MOTION_KEY);
+    let initialReduced = false;
+    if (savedReduced === 'true' || savedReduced === 'false') {
+      initialReduced = savedReduced === 'true';
+    } else if (window.matchMedia) {
+      initialReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    setReducedMotion(initialReduced);
+    document.documentElement.setAttribute('data-ui-reduced-motion', initialReduced ? 'true' : 'false');
   }, []);
 
   const handleThemeChange = (themeName) => {
@@ -51,6 +72,20 @@ const ThemeSelector = ({ showPreview = false }) => {
     
     // Reaplicar el tema actual para que se actualice la titlebar
     themeManager.applyTheme(currentTheme);
+  };
+
+  const handleAnimSpeedChange = (e) => {
+    const speed = e.target.value;
+    setAnimSpeed(speed);
+    localStorage.setItem(ANIM_SPEED_KEY, speed);
+    document.documentElement.setAttribute('data-ui-anim-speed', speed);
+  };
+
+  const handleReducedMotionToggle = (e) => {
+    const reduced = e.target.checked;
+    setReducedMotion(reduced);
+    localStorage.setItem(REDUCED_MOTION_KEY, reduced.toString());
+    document.documentElement.setAttribute('data-ui-reduced-motion', reduced ? 'true' : 'false');
   };
 
   const ThemeCard = ({ theme, isActive, onClick }) => {
@@ -362,6 +397,92 @@ const ThemeSelector = ({ showPreview = false }) => {
         </p>
       </div>
 
+      {/* Controles de animación para temas animados */}
+      <div style={{ 
+        marginBottom: '20px',
+        padding: '15px',
+        background: 'var(--ui-content-bg)',
+        border: '1px solid var(--ui-content-border)',
+        borderRadius: '8px'
+      }}>
+        <h4 style={{ 
+          margin: '0 0 15px 0',
+          color: 'var(--ui-dialog-text)',
+          fontSize: '16px',
+          fontWeight: '600'
+        }}>
+          Configuración de Animaciones
+        </h4>
+        
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px'
+          }}>
+            <Checkbox
+              inputId="reduced-motion"
+              checked={reducedMotion}
+              onChange={handleReducedMotionToggle}
+            />
+            <label htmlFor="reduced-motion" style={{ 
+              color: 'var(--ui-dialog-text)',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}>
+              Reducir animaciones
+            </label>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px'
+          }}>
+            <label style={{ 
+              color: 'var(--ui-dialog-text)',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}>
+              Velocidad:
+            </label>
+            <select 
+              value={animSpeed} 
+              onChange={handleAnimSpeedChange}
+              style={{
+                background: 'var(--ui-content-bg)',
+                color: 'var(--ui-dialog-text)',
+                border: '1px solid var(--ui-content-border)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="slow">Lento</option>
+              <option value="normal">Normal</option>
+              <option value="fast">Rápido</option>
+              <option value="turbo">Turbo</option>
+            </select>
+          </div>
+        </div>
+        
+        <p style={{ 
+          margin: '10px 0 0 0',
+          color: 'var(--ui-dialog-text)',
+          fontSize: '12px',
+          opacity: 0.8
+        }}>
+          Estas configuraciones solo afectan a los temas animados. La opción "Reducir animaciones" respeta las preferencias del sistema.
+        </p>
+      </div>
+
       {/* Categorías en pestañas */}
       <div style={{ width: '100%', maxWidth: '1200px', padding: '0 1rem' }}>
         <TabView>
@@ -413,6 +534,26 @@ const ThemeSelector = ({ showPreview = false }) => {
               width: '100%'
             }}>
               {MODERN_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
+                const theme = uiThemes[key];
+                return (
+                  <ThemeCard
+                    key={key}
+                    theme={theme}
+                    isActive={currentTheme === theme.name}
+                    onClick={() => handleThemeChange(theme.name)}
+                  />
+                );
+              })}
+            </div>
+          </TabPanel>
+          <TabPanel header="Animados">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {ANIMATED_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
                 const theme = uiThemes[key];
                 return (
                   <ThemeCard
