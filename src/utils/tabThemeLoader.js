@@ -1418,7 +1418,7 @@ export const applyTabTheme = (themeName) => {
 // Función para cargar el tema guardado al iniciar la aplicación
 export const loadSavedTabTheme = () => {
   try {
-    console.log('[TAB-THEME] Inicializando tema de tabs...');
+    // Inicializando tema de tabs
     const savedTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
     applyTabTheme(savedTheme);
     

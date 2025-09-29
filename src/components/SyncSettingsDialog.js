@@ -199,7 +199,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
           if (exportTreeToJson) {
             treeJson = exportTreeToJson();
             await syncManager.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
-            console.log('[SYNC] Exportando árbol nodeterm-tree.json:', treeJson);
+            // Árbol exportado a la nube
             // Listar archivos tras la subida
             const files = await syncManager.nextcloudService.listFiles();
             // Log de debug removido para limpiar la consola
@@ -224,15 +224,12 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
                 syncManager.nextcloudService.downloadFile('nodeterm-tree.json'),
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout descargando nodeterm-tree.json')), 5000))
               ]);
-              console.log('[SYNC] Árbol descargado desde la nube');
             } catch (err) {
               console.error('[SYNC] Error descargando árbol:', err);
             }
             if (treeJson) {
               const ok = importTreeFromJson(treeJson);
-              console.log('[SYNC] Árbol importado correctamente');
             } else {
-              console.warn('[SYNC] No se encontró árbol en la nube');
               setMessage({ severity: 'warn', summary: 'Sin datos', detail: 'No se encontró árbol remoto en la nube.' });
             }
           }

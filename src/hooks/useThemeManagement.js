@@ -3,6 +3,7 @@ import { themes } from '../themes';
 import { explorerFonts } from '../themes';
 import { themeManager } from '../utils/themeManager';
 import { statusBarThemeManager } from '../utils/statusBarThemeManager';
+import { STORAGE_KEYS } from '../utils/constants';
 
 export const useThemeManagement = () => {
   // Storage keys
@@ -12,6 +13,7 @@ export const useThemeManagement = () => {
   const STATUSBAR_THEME_STORAGE_KEY = 'basicapp_statusbar_theme';
   const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
   const LOCAL_FONT_SIZE_STORAGE_KEY = 'basicapp_local_terminal_font_size';
+  const LOCAL_TERMINAL_THEME_STORAGE_KEY = 'basicapp_local_terminal_theme';
   const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'localPowerShellTheme';
   const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
 
@@ -292,7 +294,7 @@ export const useThemeManagement = () => {
     // Función para inicializar temas de forma robusta
     const initializeThemes = () => {
       try {
-        console.log('[THEME] Inicializando temas desde useThemeManagement...');
+        // Inicializando temas
         
         // Cargar tema UI guardado
         themeManager.loadSavedTheme();
@@ -306,14 +308,9 @@ export const useThemeManagement = () => {
           const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
           const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
           
-          console.log('[THEME] Verificación en useThemeManagement:');
-          console.log('  - Dialog BG:', dialogBg);
-          console.log('  - Sidebar BG:', sidebarBg);
-          
           // Si los temas no se aplicaron, forzar aplicación
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
               !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
-            console.log('[THEME] Forzando aplicación de temas por defecto...');
             themeManager.applyTheme('Nord');
             statusBarThemeManager.applyTheme('Night Owl');
           }
@@ -370,15 +367,12 @@ export const useThemeManagement = () => {
   useEffect(() => {
     const handleSettingsUpdate = (event) => {
       if (event.detail?.source === 'sync') {
-        console.log('[SYNC] Actualizando estados React tras sincronización...');
+        // Actualizando estados React tras sincronización
         
         // Actualizar temas desde sincronización usando el hook
         updateThemesFromSync();
         
-        // Debug
-        const currentUIThemeInLocalStorage = localStorage.getItem(STORAGE_KEYS.UI_THEME);
-        console.log('[SYNC] [APP] Tema UI en localStorage después de sync:', currentUIThemeInLocalStorage);
-        console.log('[SYNC] ✓ Estados React actualizados');
+        // Estados React actualizados
       }
     };
 
