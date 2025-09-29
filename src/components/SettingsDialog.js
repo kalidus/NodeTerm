@@ -54,11 +54,11 @@ const SettingsDialog = ({
   setExplorerColorTheme,
   iconThemeSidebar,
   setIconThemeSidebar,
-  iconSize = 16,
+  iconSize = 20,
   setIconSize,
-  folderIconSize = 16,
+  folderIconSize = 20,
   setFolderIconSize,
-  connectionIconSize = 16,
+  connectionIconSize = 20,
   setConnectionIconSize,
   sidebarFont,
   setSidebarFont,
@@ -1108,7 +1108,7 @@ const SettingsDialog = ({
                         </label>
                         <InputNumber
                           id="folder-icon-size"
-                          value={folderIconSize || 16}
+                          value={folderIconSize || 20}
                           onValueChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
                           min={12}
                           max={32}
@@ -1151,7 +1151,7 @@ const SettingsDialog = ({
                         </label>
                         <InputNumber
                           id="connection-icon-size"
-                          value={connectionIconSize || 16}
+                          value={connectionIconSize || 20}
                           onValueChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
                           min={12}
                           max={32}

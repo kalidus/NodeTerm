@@ -55,9 +55,9 @@ const Sidebar = React.memo(({
   setShowSettingsDialog,
 
   iconTheme,
-  iconSize = 16,
-  folderIconSize = 16,
-  connectionIconSize = 16,
+  iconSize = 20,
+  folderIconSize = 20,
+  connectionIconSize = 20,
   explorerFont,
   explorerFontSize = 14,
   uiTheme = 'Light',
@@ -110,7 +110,7 @@ const Sidebar = React.memo(({
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
     const theme = iconThemes[themeName];
-    if (!theme || !theme.icons || !theme.icons.folder) return '#007ad9';
+    if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac'; // Nord color por defecto
     
     const folderIcon = theme.icons.folder;
     
@@ -140,7 +140,7 @@ const Sidebar = React.memo(({
       }
     }
     
-    return '#007ad9'; // Fallback por defecto
+    return '#5e81ac'; // Nord color por defecto
   };
 
   // Función para verificar si un color es el color por defecto de algún tema
@@ -186,7 +186,6 @@ const Sidebar = React.memo(({
             updatedNode.hasCustomColor = node.color && node.color !== currentThemeColor;
           }
           
-          
           // Solo actualizar el color si la carpeta NO tiene color personalizado
           // Las carpetas con color personalizado mantienen su color
           if (!updatedNode.hasCustomColor) {
@@ -207,6 +206,17 @@ const Sidebar = React.memo(({
     // Actualizar solo las carpetas sin color personalizado
     const updatedNodes = updateExistingFoldersColor(nodes, newDefaultColor);
     setNodes(updatedNodes);
+    
+    // Forzar re-render del árbol para aplicar los nuevos colores
+    setTimeout(() => {
+      const treeElement = document.querySelector('.sidebar-tree');
+      if (treeElement) {
+        treeElement.style.display = 'none';
+        setTimeout(() => {
+          treeElement.style.display = '';
+        }, 10);
+      }
+    }, 100);
     
   }, [iconTheme, setNodes]);
   
@@ -990,7 +1000,7 @@ const Sidebar = React.memo(({
         editFolder: (node) => {
           // Cargar datos de la carpeta para editar
           setFolderName(node.label);
-          setFolderColor(node.color || '#007ad9');
+          setFolderColor(node.color || '#5e81ac');
           // Encontrar la carpeta padre
           const findParent = (nodes, targetKey, currentParent = null) => {
             for (let n of nodes) {
@@ -1129,7 +1139,7 @@ const Sidebar = React.memo(({
     const isRDP = node.data && node.data.type === 'rdp';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
-    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['material'].icons;
+    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
     if (isSSH) {
       const sshIcon = themeIcons.ssh;
       icon = sshIcon ? React.cloneElement(sshIcon, {

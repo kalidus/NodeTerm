@@ -582,6 +582,10 @@
   color: #007ad9 !important;
 }
 
+.sidebar-tree span[data-folder-color="#5e81ac"]:not(svg) {
+  color: #5e81ac !important;
+}
+
 /* Reglas adicionales con mayor especificidad - Solo para iconos NO SVG */
 .sidebar-tree .p-tree span[data-folder-color]:not(svg) {
   color: inherit !important;

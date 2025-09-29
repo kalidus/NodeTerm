@@ -812,7 +812,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               {filteredConnections.map(node => {
                 const isSSH = node.data && node.data.type === 'ssh';
                 const isRDP = node.data && node.data.type === 'rdp';
-                const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['material'].icons;
+                const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
                 
                 let icon = null;
                 let protocolColor = '#4fc3f7';

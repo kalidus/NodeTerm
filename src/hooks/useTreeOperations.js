@@ -15,27 +15,8 @@ export const useTreeOperations = ({
     return `node_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
   }, []);
 
-  // Default tree data
-  const getDefaultNodes = useCallback(() => [
-    {
-      key: generateUniqueKey(),
-      label: 'Carpeta 1',
-      droppable: true,
-      children: [],
-      uid: generateUniqueKey(),
-      createdAt: new Date().toISOString(),
-      isUserCreated: true
-    },
-    {
-      key: generateUniqueKey(),
-      label: 'Carpeta 2',
-      droppable: true,
-      children: [],
-      uid: generateUniqueKey(),
-      createdAt: new Date().toISOString(),
-      isUserCreated: true
-    }
-  ], [generateUniqueKey]);
+  // Default tree data - Empty sidebar by default
+  const getDefaultNodes = useCallback(() => [], []);
 
   // Function to regenerate keys for the entire tree
   const regenerateKeys = useCallback((nodes, parentKey = null) => {
