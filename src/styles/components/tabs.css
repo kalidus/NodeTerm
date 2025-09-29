@@ -15,6 +15,28 @@
   padding-bottom: 0;
   background: var(--ui-content-bg) !important;
   border-bottom: none !important;
+  /* Ocultar scrollbar */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+}
+
+/* Ocultar scrollbar en navegadores WebKit */
+.p-tabview .p-tabview-nav::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.p-tabview .p-tabview-nav::-webkit-scrollbar-track {
+  display: none !important;
+}
+
+.p-tabview .p-tabview-nav::-webkit-scrollbar-thumb {
+  display: none !important;
+}
+
+.p-tabview .p-tabview-nav::-webkit-scrollbar-corner {
+  display: none !important;
 }
 
 .p-tabview .p-tabview-nav li {
@@ -296,4 +318,41 @@
   background: var(--ui-tab-active-bg) !important;
   color: var(--ui-tab-active-text) !important;
   border-color: var(--ui-tab-border) !important;
+}
+
+/* === ESTILOS PARA FLECHAS DE NAVEGACIÓN DE PESTAÑAS === */
+/* Forzar el color correcto de las flechas de navegación */
+.tab-nav-arrow {
+  color: var(--ui-tab-text) !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: none !important;
+  backdrop-filter: blur(2px);
+}
+
+.tab-nav-arrow:hover {
+  color: var(--ui-tab-text) !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+.tab-nav-arrow:active,
+.tab-nav-arrow:focus {
+  color: var(--ui-tab-text) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  box-shadow: none !important;
+}
+
+.tab-nav-arrow .p-button-icon {
+  color: var(--ui-tab-text) !important;
+}
+
+.tab-nav-arrow.p-button:not(:disabled):hover {
+  color: var(--ui-tab-text) !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-color: transparent !important;
+}
+
+.tab-nav-arrow.p-button:not(:disabled):active {
+  color: var(--ui-tab-text) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  border-color: transparent !important;
 }

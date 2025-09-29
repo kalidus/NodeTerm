@@ -22,6 +22,41 @@ function adjustColorBrightness(hex, percent) {
 }
 
 const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme }, ref) => {
+    // Referencias para control de scroll de pestañas
+    const tabsContainerRef = useRef(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+    
+    // Funciones para controlar el scroll de pestañas
+    const checkScrollButtons = () => {
+        if (!tabsContainerRef.current) return;
+        
+        const container = tabsContainerRef.current;
+        const scrollLeft = container.scrollLeft;
+        const scrollWidth = container.scrollWidth;
+        const clientWidth = container.clientWidth;
+        
+        console.log('Scroll check:', { scrollLeft, scrollWidth, clientWidth, canScroll: scrollWidth > clientWidth });
+        
+        setCanScrollLeft(scrollLeft > 0);
+        setCanScrollRight(scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1); // Solo mostrar si hay overflow
+    };
+    
+    const scrollTabs = (direction) => {
+        if (!tabsContainerRef.current) return;
+        
+        const container = tabsContainerRef.current;
+        const scrollAmount = 200; // Píxeles a desplazar
+        const newScrollLeft = direction === 'left' 
+            ? Math.max(0, container.scrollLeft - scrollAmount)
+            : Math.min(container.scrollWidth - container.clientWidth, container.scrollLeft + scrollAmount);
+        
+        container.scrollTo({
+            left: newScrollLeft,
+            behavior: 'smooth'
+        });
+    };
+    
     // Determinar la pestaña inicial según el SO
     const getInitialTab = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -232,6 +267,35 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         setDraggedTabIndex(null);
         setDragOverTabIndex(null);
     };
+    
+    // Efecto para verificar botones de scroll cuando cambian las pestañas
+    useEffect(() => {
+        // Pequeño delay para asegurar que el DOM se haya actualizado
+        const timer = setTimeout(() => {
+            checkScrollButtons();
+        }, 100);
+        
+        return () => clearTimeout(timer);
+    }, [tabs]);
+    
+    // Efecto para verificar botones de scroll cuando se redimensiona la ventana
+    useEffect(() => {
+        const handleResize = () => {
+            setTimeout(checkScrollButtons, 100); // Pequeño delay para asegurar que el DOM se haya actualizado
+        };
+        
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+    
+    // Efecto para verificar scroll cuando el componente se monta
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            checkScrollButtons();
+        }, 200);
+        
+        return () => clearTimeout(timer);
+    }, []);
     
     // Efecto para redimensionar terminales cuando cambian las pestañas
     useEffect(() => {
@@ -609,16 +673,49 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     display: 'flex',
                     alignItems: 'center',
                     flex: 1,
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    minWidth: 0 // Permite que se contraiga
                 }}>
+                    {/* Flecha izquierda */}
+                    {(canScrollLeft || tabs.length > 3) && (
+                        <Button
+                            icon="pi pi-chevron-left"
+                            className="p-button-text p-button-sm"
+                            style={{
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                padding: '4px 6px',
+                                minWidth: '24px',
+                                height: '24px',
+                                fontSize: '10px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '3px',
+                                marginRight: '4px'
+                            }}
+                            onClick={() => scrollTabs('left')}
+                            aria-label="Desplazar pestañas a la izquierda"
+                            title="Desplazar pestañas a la izquierda"
+                        />
+                    )}
+                    
                     {/* Pestañas */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        overflow: 'auto',
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none'
-                    }}>
+                    <div 
+                        ref={tabsContainerRef}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            overflow: 'auto',
+                            scrollbarWidth: 'none', // Firefox
+                            msOverflowStyle: 'none', // IE/Edge
+                            WebkitScrollbar: { display: 'none' }, // Webkit browsers
+                            width: '500px', // Ancho fijo en píxeles para forzar overflow
+                            minWidth: '500px',
+                            maxWidth: '500px',
+                            height: '40px'
+                        }}
+                        className="hide-scrollbar"
+                        onScroll={checkScrollButtons}
+                    >
                         {tabs.map((tab, index) => (
                             <div
                                 key={tab.id}
@@ -637,8 +734,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     padding: '6px 12px',
                                     cursor: draggedTabIndex === index ? 'grabbing' : 'grab',
                                     position: 'relative',
-                                    minWidth: '120px',
+                                    minWidth: '150px',
                                     maxWidth: '200px',
+                                    flexShrink: 0, // Evita que las pestañas se contraigan
                                     borderTopLeftRadius: '4px',
                                     borderTopRightRadius: '4px',
                                     transition: 'all 0.2s ease',
@@ -712,6 +810,30 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 )}
                             </div>
                         ))}
+                    </div>
+                    
+                    {/* Flecha derecha */}
+                    {(canScrollRight || tabs.length > 3) && (
+                        <Button
+                            icon="pi pi-chevron-right"
+                            className="p-button-text p-button-sm"
+                            style={{
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                padding: '4px 6px',
+                                minWidth: '24px',
+                                height: '24px',
+                                fontSize: '10px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRadius: '3px',
+                                marginLeft: '4px',
+                                marginRight: '4px'
+                            }}
+                            onClick={() => scrollTabs('right')}
+                            aria-label="Desplazar pestañas a la derecha"
+                            title="Desplazar pestañas a la derecha"
+                        />
+                    )}
                         
                         {/* Botones estilo PowerShell al lado de las pestañas */}
                         <div style={{ display: 'flex', alignItems: 'center', marginLeft: '4px' }}>
@@ -827,15 +949,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         </div>
                     </div>
-                </div>
-
-                {/* Controles del lado derecho - Solo botones de control de ventana */}
-                <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    padding: '0 16px' 
-                }}>
+                    
+                    {/* Controles del lado derecho - Solo botones de control de ventana */}
+                    <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        padding: '0 16px' 
+                    }}>
                     {/* Botones de control de ventana - EXACTAMENTE como la imagen */}
                     <div style={{ display: 'flex', gap: '8px', marginLeft: '8px' }}>
                         {/* Botón Minimizar */}
