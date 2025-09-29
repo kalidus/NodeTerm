@@ -174,7 +174,7 @@ class SyncManager {
       }
     });
 
-    console.log('[SYNC] Datos a sincronizar:', Object.keys(data).filter(k => k !== 'syncTimestamp' && k !== 'version').length, 'elementos');
+    // Datos sincronizados
     return data;
   }
 
@@ -187,23 +187,12 @@ class SyncManager {
     }
 
     const applied = [];
-    // --- LOG: Mostrar el valor de uiTheme recibido ---
-    if (data.uiTheme) {
-      console.log('[SYNC][applyRemoteData] Valor de uiTheme recibido del JSON:', data.uiTheme);
-    } else {
-      console.log('[SYNC][applyRemoteData] No se recibió uiTheme en el JSON, se usará "Light" por defecto.');
-    }
-    // --- FIN LOG ---
-
-    // --- Asegurar que ui_theme en localStorage se sobrescriba antes de recargar temas ---
+    // Asegurar que ui_theme en localStorage se sobrescriba antes de recargar temas
     if (data.uiTheme) {
       localStorage.setItem('ui_theme', data.uiTheme);
-      console.log('[SYNC][applyRemoteData] localStorage["ui_theme"] actualizado a:', data.uiTheme);
     } else {
       localStorage.setItem('ui_theme', 'Light');
-      console.log('[SYNC][applyRemoteData] localStorage["ui_theme"] actualizado a valor por defecto: Light');
     }
-    // --- FIN ---
 
     Object.keys(data).forEach(key => {
       if (key === 'syncTimestamp' || key === 'version' || key === 'uiTheme') return; // Skip metadata y uiTheme (ya lo pusimos)
@@ -224,39 +213,21 @@ class SyncManager {
    */
   reloadThemesFromStorage() {
     try {
-      console.log('[SYNC] Aplicando temas desde configuración descargada...');
+      // Aplicando temas desde configuración descargada
       
       // Debug completo del estado de localStorage
           // Logs de debug removidos para limpiar la consola
       
       // Recargar tema UI
-      const uiTheme = localStorage.getItem('ui_theme');  // Cambiar de 'basicapp_ui_theme' a 'ui_theme'
+      const uiTheme = localStorage.getItem('ui_theme');
       if (uiTheme && themeManager) {
-        console.log('[SYNC] [TEST] Aplicando tema UI:', uiTheme);
-        console.log('[SYNC] [TEST] themeManager antes:', themeManager.getCurrentTheme());
-        
-        // Verificar si el tema existe
-        const availableThemes = themeManager.getAvailableThemes();
-            // Logs de debug removidos para limpiar la consola
-        
         themeManager.applyTheme(uiTheme);
-        
-        console.log('[SYNC] [TEST] themeManager después:', themeManager.getCurrentTheme());
-        
-        // Verificar si se aplicaron las variables CSS
-        const rootStyles = getComputedStyle(document.documentElement);
-            // Logs de debug removidos para limpiar la consola
-        
-        console.log('[SYNC] ✓ Tema UI:', uiTheme);
-      } else {
-        // Log de debug removido para limpiar la consola
       }
 
       // Recargar tema de status bar
       const statusBarTheme = localStorage.getItem('basicapp_statusbar_theme');
       if (statusBarTheme && statusBarThemeManager) {
         statusBarThemeManager.applyTheme(statusBarTheme);
-        console.log('[SYNC] ✓ Tema status bar:', statusBarTheme);
       }
 
       // Disparar evento global para notificar cambios de configuración
@@ -264,7 +235,6 @@ class SyncManager {
         window.dispatchEvent(new CustomEvent('settings-updated', {
           detail: { source: 'sync', timestamp: new Date().toISOString() }
         }));
-        console.log('[SYNC] ✓ Evento global de actualización disparado');
       }
 
     } catch (error) {
@@ -292,7 +262,7 @@ class SyncManager {
         const localTree = localStorage.getItem('basicapp2_tree_data');
         if (localTree) {
           treeJson = localTree;
-          console.log('[SYNC][AUTO] treeJson obtenido de localStorage:', treeJson);
+          // treeJson obtenido de localStorage
         } else {
           console.warn('[SYNC][AUTO] No se encontró treeJson en localStorage, se subirá árbol vacío.');
           treeJson = '[]';
@@ -300,19 +270,17 @@ class SyncManager {
       }
       // Subir árbol visual
       const uploadTreeResult = await this.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
-      console.log('[SYNC] Resultado upload nodeterm-tree.json:', uploadTreeResult);
+      // Árbol subido a la nube
       // Obtener datos locales
       const localData = this.getAllLocalData();
-      console.log('[SYNC] Exportando localData:', localData);
+      // Exportando datos locales
       // Convertir a JSON
       const jsonData = JSON.stringify(localData, null, 2);
       
-      // Log específico para ver qué tema se está subiendo
-      console.log('[SYNC] [CRITICAL] Tema UI que se está subiendo:', localData.uiTheme);
-      console.log('[SYNC] [CRITICAL] localStorage.getItem("ui_theme") EN ESTE MOMENTO:', localStorage.getItem('ui_theme'));
+      // Verificando tema UI
       // Subir configuración general a Nextcloud
       const uploadResult = await this.nextcloudService.uploadFile('nodeterm-settings.json', jsonData);
-      console.log('[SYNC] Resultado upload nodeterm-settings.json:', uploadResult);
+      // Configuración subida a la nube
       
       // Sincronizar sesiones cifradas si hay clave maestra
       let sessionsResult = null;
@@ -323,10 +291,10 @@ class SyncManager {
             const masterKey = await this.secureStorage.getMasterKey();
             if (masterKey) {
               const encryptedSessions = await sessionManager.exportAllDataForSync(masterKey);
-              console.log('[SYNC] Exportando encryptedSessions:', encryptedSessions);
+              // Exportando sesiones cifradas
               const sessionsJson = JSON.stringify(encryptedSessions, null, 2);
               const uploadSessionsResult = await this.nextcloudService.uploadFile('nodeterm-sessions.enc', sessionsJson);
-              console.log('[SYNC] Resultado upload nodeterm-sessions.enc:', uploadSessionsResult);
+              // Sesiones cifradas subidas a la nube
               sessionsResult = {
                 success: true,
                 count: sessionManager.getAllSessions().length
@@ -403,10 +371,10 @@ class SyncManager {
               const sessionsData = await this.nextcloudService.downloadFile('nodeterm-sessions.enc');
               if (sessionsData) {
                 const encryptedSessions = JSON.parse(sessionsData);
-                console.log('[SYNC] Restaurando sesiones: encryptedSessions=', encryptedSessions, 'masterKey:', masterKey);
+                // Restaurando sesiones cifradas
                 try {
                   const importResult = await sessionManager.importAllDataFromSync(encryptedSessions, masterKey);
-                  console.log('[SYNC] Resultado de importAllDataFromSync:', importResult);
+                  // Sesiones importadas correctamente
                   sessionsResult = {
                     success: true,
                     sessionsImported: importResult.sessionsImported,

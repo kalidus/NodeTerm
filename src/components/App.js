@@ -88,7 +88,7 @@ const App = () => {
     // Función para inicializar todos los temas de forma robusta
     const initializeAllThemes = async () => {
       try {
-        console.log('[THEME] Inicializando temas...');
+        // Inicializando temas
         
         // 1. Cargar tema de tabs
         loadSavedTabTheme();
@@ -107,16 +107,11 @@ const App = () => {
           const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
           const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
           
-          console.log('[THEME] Verificación de temas aplicados:');
-          console.log('  - Dialog BG:', dialogBg);
-          console.log('  - Sidebar BG:', sidebarBg);
-          
           // Si los temas no se aplicaron correctamente, forzar re-aplicación
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
               !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
-            console.log('[THEME] Re-aplicando temas por defecto...');
-            themeManager.applyTheme('Nord'); // Forzar tema Nord por defecto
-            statusBarThemeManager.applyTheme('Night Owl'); // Forzar status bar por defecto
+            themeManager.applyTheme('Nord');
+            statusBarThemeManager.applyTheme('Night Owl');
           }
         }, 200);
         
@@ -1210,6 +1205,73 @@ const App = () => {
     }
   }, [rdpTabs, onCreateActivateTabKey, lastOpenedTabKey, openTabOrder]);
 
+  // === FUNCIONES DE SINCRONIZACIÓN ===
+  // Función para exportar el árbol de sesiones a JSON
+  const exportTreeToJson = useCallback(() => {
+    try {
+      const treeData = {
+        nodes: nodes,
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+      };
+      return JSON.stringify(treeData, null, 2);
+    } catch (error) {
+      console.error('[SYNC] Error exportando árbol:', error);
+      throw new Error(`Error exportando árbol: ${error.message}`);
+    }
+  }, [nodes]);
+
+  // Función para importar el árbol de sesiones desde JSON
+  const importTreeFromJson = useCallback((treeJson) => {
+    try {
+      if (!treeJson || typeof treeJson !== 'string') {
+        throw new Error('JSON del árbol inválido');
+      }
+
+      const treeData = JSON.parse(treeJson);
+      let nodes = null;
+      
+      // Manejar diferentes formatos de estructura
+      if (Array.isArray(treeData)) {
+        // Formato directo: array de nodos
+        nodes = treeData;
+      } else if (treeData.nodes && Array.isArray(treeData.nodes)) {
+        // Formato con wrapper: { nodes: [...] }
+        nodes = treeData.nodes;
+      } else {
+        throw new Error('Estructura del árbol inválida');
+      }
+
+      // Migrar nodos si es necesario
+      const migrateNodes = (nodes) => {
+        return nodes.map(node => {
+          const migratedNode = { ...node };
+          if (node.data && node.data.type === 'ssh') {
+            migratedNode.droppable = false;
+          }
+          if (node.children && node.children.length > 0) {
+            migratedNode.children = migrateNodes(node.children);
+          }
+          return migratedNode;
+        });
+      };
+
+      const migratedNodes = migrateNodes(nodes);
+      
+      // Actualizar el estado de los nodos
+      setNodes(migratedNodes);
+      
+      // Guardar en localStorage
+      localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(migratedNodes));
+      
+      // Árbol importado correctamente
+      return true;
+    } catch (error) {
+      console.error('[SYNC] Error importando árbol:', error);
+      throw new Error(`Error importando árbol: ${error.message}`);
+    }
+  }, [setNodes]);
+
   // === FUNCIONES MEMOIZADAS PARA OPTIMIZAR RENDERS ===
   // Estas funciones se crean una sola vez y no cambian entre renders
   const memoizedTabHandlers = useCallback(() => ({
@@ -1630,6 +1692,11 @@ const App = () => {
         closeRdpDialog={closeRdpDialog}
         getAllFolders={getAllFolders}
         nodes={nodes}
+        
+        // Funciones de sincronización
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJson}
+        sessionManager={sessionManager}
       />
 
       {/* Menú contextual del árbol de la sidebar */}
@@ -1718,6 +1785,9 @@ const App = () => {
         // Sync settings props
         updateThemesFromSync={updateThemesFromSync}
         updateStatusBarFromSync={updateStatusBarFromSync}
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJson}
+        sessionManager={sessionManager}
       />
       
       <ImportDialog

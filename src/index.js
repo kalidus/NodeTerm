@@ -54,7 +54,7 @@ PrimeReact.ripple = true;
 // Función para inicializar temas globalmente antes de renderizar la app
 const initializeGlobalThemes = () => {
   try {
-    console.log('[THEME] Inicialización global de temas...');
+    // Inicialización global de temas
     
     // Asegurar que las variables CSS básicas estén definidas
     const root = document.documentElement;

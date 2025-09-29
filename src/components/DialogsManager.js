@@ -170,7 +170,12 @@ const DialogsManager = ({
   
   // Sync settings props
   updateThemesFromSync,
-  updateStatusBarFromSync
+  updateStatusBarFromSync,
+  
+  // Tree sync functions
+  exportTreeToJson,
+  importTreeFromJson,
+  sessionManager
 }) => {
   return (
     <>
@@ -227,6 +232,9 @@ const DialogsManager = ({
         setStatusBarIconTheme={setStatusBarIconTheme}
         statusBarPollingInterval={statusBarPollingInterval}
         setStatusBarPollingInterval={setStatusBarPollingInterval}
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJson}
+        sessionManager={sessionManager}
       />
       
       {/* Sync Settings Dialog */}
@@ -235,6 +243,9 @@ const DialogsManager = ({
         onHide={() => setShowSyncDialog(false)}
         updateThemesFromSync={updateThemesFromSync}
         updateStatusBarFromSync={updateStatusBarFromSync}
+        exportTreeToJson={exportTreeToJson}
+        importTreeFromJson={importTreeFromJson}
+        sessionManager={sessionManager}
       />
 
       {/* Diálogo: Nueva conexión SSH */}
