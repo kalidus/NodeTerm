@@ -271,7 +271,7 @@ const MainContentArea = ({
                       navContainer: {
                         style: {
                           borderBottom: '0.5px solid var(--ui-tabgroup-border, #444)',
-                          opacity: 0.6
+                          opacity: 1.0
                         }
                       }
                     }}

@@ -220,7 +220,7 @@ class ThemeManager {
 
       /* === TAB STYLES === */
       .p-tabview .p-tabview-nav {
-        background: var(--ui-tab-bg) !important;
+        background: var(--ui-content-bg) !important;
         border-bottom: 1px solid var(--ui-tab-border) !important;
       }
 
