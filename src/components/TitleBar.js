@@ -72,6 +72,20 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   }, [sidebarFilter, allNodes, findAllConnections]);
 
+  // Efecto para ocultar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && !event.target.closest('.search-dropdown') && !event.target.closest('.search-input')) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDropdown]);
+
   // Función para manejar el focus del input
   const handleInputFocus = () => {
     console.log('[BUSCADOR] handleInputFocus - sidebarFilter:', sidebarFilter);
@@ -847,6 +861,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           {showDropdown && ReactDOM.createPortal(
             <div 
               className="search-dropdown"
+              onClick={(e) => e.stopPropagation()}
               style={{
                 position: 'fixed',
                 top: 36,
@@ -869,6 +884,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 fontWeight: '500',
                 margin: 0,
                 padding: 0,
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'var(--ui-sidebar-selected, #00bfff) var(--ui-dialog-bg, #232629)',
               }}>
               {console.log('[BUSCADOR] Renderizando dropdown con', filteredConnections.length, 'conexiones')}
               {filteredConnections.map(node => {
