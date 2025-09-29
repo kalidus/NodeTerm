@@ -85,7 +85,48 @@ const App = () => {
 
   // Cargar tema de pestañas al inicializar la aplicación
   useEffect(() => {
-    loadSavedTabTheme();
+    // Función para inicializar todos los temas de forma robusta
+    const initializeAllThemes = async () => {
+      try {
+        console.log('[THEME] Inicializando temas...');
+        
+        // 1. Cargar tema de tabs
+        loadSavedTabTheme();
+        
+        // 2. Importar y aplicar temas UI y status bar
+        const { themeManager } = await import('../utils/themeManager');
+        const { statusBarThemeManager } = await import('../utils/statusBarThemeManager');
+        
+        // 3. Aplicar temas con verificación
+        themeManager.loadSavedTheme();
+        statusBarThemeManager.loadSavedTheme();
+        
+        // 4. Verificar que los temas se aplicaron correctamente
+        setTimeout(() => {
+          const rootStyles = getComputedStyle(document.documentElement);
+          const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
+          const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
+          
+          console.log('[THEME] Verificación de temas aplicados:');
+          console.log('  - Dialog BG:', dialogBg);
+          console.log('  - Sidebar BG:', sidebarBg);
+          
+          // Si los temas no se aplicaron correctamente, forzar re-aplicación
+          if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
+              !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+            console.log('[THEME] Re-aplicando temas por defecto...');
+            themeManager.applyTheme('Light'); // Forzar tema Light por defecto
+            statusBarThemeManager.applyTheme('Default Dark'); // Forzar status bar por defecto
+          }
+        }, 200);
+        
+      } catch (error) {
+        console.error('[THEME] Error inicializando temas:', error);
+      }
+    };
+    
+    // Ejecutar inicialización
+    initializeAllThemes();
   }, []);
   
   // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas

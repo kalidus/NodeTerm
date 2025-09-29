@@ -263,11 +263,43 @@ export const useThemeManagement = () => {
 
   // Initial theme loading effect
   useEffect(() => {
-    // Cargar tema UI guardado
-    themeManager.loadSavedTheme();
+    // Función para inicializar temas de forma robusta
+    const initializeThemes = () => {
+      try {
+        console.log('[THEME] Inicializando temas desde useThemeManagement...');
+        
+        // Cargar tema UI guardado
+        themeManager.loadSavedTheme();
+        
+        // Cargar tema de status bar guardado
+        statusBarThemeManager.loadSavedTheme();
+        
+        // Verificar que los temas se aplicaron correctamente
+        setTimeout(() => {
+          const rootStyles = getComputedStyle(document.documentElement);
+          const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
+          const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
+          
+          console.log('[THEME] Verificación en useThemeManagement:');
+          console.log('  - Dialog BG:', dialogBg);
+          console.log('  - Sidebar BG:', sidebarBg);
+          
+          // Si los temas no se aplicaron, forzar aplicación
+          if (!dialogBg || dialogBg === 'initial' || dialogBg === '' || 
+              !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+            console.log('[THEME] Forzando aplicación de temas por defecto...');
+            themeManager.applyTheme('Light');
+            statusBarThemeManager.applyTheme('Default Dark');
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('[THEME] Error en useThemeManagement:', error);
+      }
+    };
     
-    // Cargar tema de status bar guardado
-    statusBarThemeManager.loadSavedTheme();
+    // Ejecutar inicialización
+    initializeThemes();
   }, []);
 
   // Función para actualizar temas desde sincronización

@@ -1416,7 +1416,25 @@ export const applyTabTheme = (themeName) => {
 
 // Función para cargar el tema guardado al iniciar la aplicación
 export const loadSavedTabTheme = () => {
-  const savedTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
-  applyTabTheme(savedTheme);
-  return savedTheme;
+  try {
+    console.log('[TAB-THEME] Inicializando tema de tabs...');
+    const savedTheme = localStorage.getItem(TAB_THEME_STORAGE_KEY) || 'default';
+    applyTabTheme(savedTheme);
+    
+    // Verificar que el tema se aplicó correctamente
+    setTimeout(() => {
+      const tabStyleElement = document.getElementById('tab-theme-styles');
+      if (!tabStyleElement || !tabStyleElement.textContent) {
+        console.log('[TAB-THEME] Re-aplicando tema de tabs...');
+        applyTabTheme(savedTheme);
+      }
+    }, 50);
+    
+    return savedTheme;
+  } catch (error) {
+    console.error('[TAB-THEME] Error cargando tema de tabs:', error);
+    // Aplicar tema por defecto en caso de error
+    applyTabTheme('default');
+    return 'default';
+  }
 };
