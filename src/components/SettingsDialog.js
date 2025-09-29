@@ -90,7 +90,7 @@ const SettingsDialog = ({
   const [syncDialogVisible, setSyncDialogVisible] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(() => {
     const saved = localStorage.getItem(STATUSBAR_HEIGHT_STORAGE_KEY);
-    return saved ? parseInt(saved, 10) : 24;
+    return saved ? parseInt(saved, 10) : 40;
   });
 
   // Configuración para bloquear el botón de inicio
@@ -1008,12 +1008,12 @@ const SettingsDialog = ({
                       value={statusBarHeight}
                       onChange={e => setStatusBarHeight(e.value)}
                       min={20}
-                      max={40}
+                      max={64}
                       step={1}
                       style={{ width: '100%' }}
                     />
                     <div style={{ fontSize: '0.85rem', color: '#888', marginTop: 4 }}>
-                      {statusBarHeight} px (mínimo 20, máximo 40)
+                      {statusBarHeight} px (mínimo 20, máximo 64)
                     </div>
                   </div>
                   <div style={{ marginTop: 24, width: 320 }}>
