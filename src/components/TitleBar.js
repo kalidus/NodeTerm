@@ -676,7 +676,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   return (
     <div
-      className="titlebar"
+      className="title-bar"
       style={{
         height: 36,
         minHeight: 36,

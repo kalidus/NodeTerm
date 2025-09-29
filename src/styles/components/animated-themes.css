@@ -1,0 +1,702 @@
+/* --- Component: Animated Themes --- */
+
+/* Animaciones para la barra del menú superior en temas animados */
+
+/* Animación Space Station con estrellas cayendo */
+@keyframes spaceStationPulse {
+  0%, 100% {
+    background: linear-gradient(90deg, #0f1b33 0%, #152540 50%, #0f1b33 100%);
+    box-shadow: 0 0 20px rgba(0, 188, 212, 0.3);
+  }
+  50% {
+    background: linear-gradient(90deg, #152540 0%, #1a2a4a 50%, #152540 100%);
+    box-shadow: 0 0 30px rgba(0, 188, 212, 0.5);
+  }
+}
+
+@keyframes fallingStars {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes twinklingStars {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Animación Terminal Hacker con caracteres cayendo */
+@keyframes terminalHackerFlicker {
+  0%, 100% {
+    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
+    box-shadow: 0 0 10px #00ff00;
+  }
+  25% {
+    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
+    box-shadow: 0 0 15px #00ff00;
+  }
+  50% {
+    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
+    box-shadow: 0 0 5px #00ff00;
+  }
+  75% {
+    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
+    box-shadow: 0 0 20px #00ff00;
+  }
+}
+
+@keyframes matrixRain {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes glitchEffect {
+  0%, 100% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(90deg);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+    filter: hue-rotate(180deg);
+  }
+  60% {
+    transform: translate(2px, 2px);
+    filter: hue-rotate(270deg);
+  }
+  80% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* Animación Cyberpunk 2077 con efectos de neón */
+@keyframes cyberpunkGlow {
+  0%, 100% {
+    background: linear-gradient(90deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+    box-shadow: 0 0 15px #fcee21;
+  }
+  33% {
+    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+    box-shadow: 0 0 25px #ff0080;
+  }
+  66% {
+    background: linear-gradient(90deg, #2a2a2a 0%, #1a1a1a 50%, #0f0f0f 100%);
+    box-shadow: 0 0 20px #7928ca;
+  }
+}
+
+@keyframes neonPulse {
+  0%, 100% {
+    text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+    filter: brightness(1);
+  }
+  50% {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    filter: brightness(1.5);
+  }
+}
+
+@keyframes holographicShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-10px) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+/* Animación Matrix */
+@keyframes matrixRain {
+  0%, 100% {
+    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
+    box-shadow: 0 0 10px #00ff41;
+  }
+  25% {
+    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
+    box-shadow: 0 0 15px #00ff41;
+  }
+  50% {
+    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
+    box-shadow: 0 0 5px #00ff41;
+  }
+  75% {
+    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
+    box-shadow: 0 0 20px #00ff41;
+  }
+}
+
+/* Animación Quantum Flux */
+@keyframes quantumFlux {
+  0%, 100% {
+    background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    box-shadow: 0 0 20px #8b5cf6;
+  }
+  25% {
+    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+    box-shadow: 0 0 30px #a78bfa;
+  }
+  50% {
+    background: linear-gradient(90deg, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    box-shadow: 0 0 25px #8b5cf6;
+  }
+  75% {
+    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+    box-shadow: 0 0 35px #a78bfa;
+  }
+}
+
+/* Animación Holographic */
+@keyframes holographicShimmer {
+  0%, 100% {
+    background: linear-gradient(90deg, #0f0f23 0%, #1a1a3a 50%, #0f0f23 100%);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+  }
+  50% {
+    background: linear-gradient(90deg, #1a1a3a 0%, #2a2a4a 50%, #1a1a3a 100%);
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+  }
+}
+
+/* Animación Cyber Grid */
+@keyframes cyberGridPulse {
+  0%, 100% {
+    background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    box-shadow: 0 0 15px #00ff88;
+  }
+  50% {
+    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
+    box-shadow: 0 0 25px #00ff88;
+  }
+}
+
+/* Animación Neon Aurora */
+@keyframes neonAurora {
+  0%, 100% {
+    background: linear-gradient(90deg, #0a0f1f 0%, #1a1f3f 50%, #0a0f1f 100%);
+    box-shadow: 0 0 20px #ff6b9d;
+  }
+  25% {
+    background: linear-gradient(90deg, #1a1f3f 0%, #2a2f4f 50%, #1a1f3f 100%);
+    box-shadow: 0 0 30px #ff8bb3;
+  }
+  50% {
+    background: linear-gradient(90deg, #2a2f4f 0%, #1a1f3f 50%, #0a0f1f 100%);
+    box-shadow: 0 0 25px #ff6b9d;
+  }
+  75% {
+    background: linear-gradient(90deg, #1a1f3f 0%, #2a2f4f 50%, #1a1f3f 100%);
+    box-shadow: 0 0 35px #ff8bb3;
+  }
+}
+
+/* Animación Plasma */
+@keyframes plasmaFlow {
+  0%, 100% {
+    background: linear-gradient(90deg, #1a0a2e 0%, #2a1a3e 50%, #1a0a2e 100%);
+    box-shadow: 0 0 20px #ff0080;
+  }
+  33% {
+    background: linear-gradient(90deg, #2a1a3e 0%, #3a2a4e 50%, #2a1a3e 100%);
+    box-shadow: 0 0 30px #ff3399;
+  }
+  66% {
+    background: linear-gradient(90deg, #3a2a4e 0%, #2a1a3e 50%, #1a0a2e 100%);
+    box-shadow: 0 0 25px #ff0080;
+  }
+}
+
+/* Aplicar animaciones a la barra del menú superior */
+.title-bar[data-animation="space-station"] {
+  animation: spaceStationPulse 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="space-station"]::before {
+  content: '✦';
+  position: absolute;
+  top: -20px;
+  left: 10%;
+  color: #00bcd4;
+  font-size: 12px;
+  animation: fallingStars 4s linear infinite;
+}
+
+.title-bar[data-animation="space-station"]::after {
+  content: '✦';
+  position: absolute;
+  top: -20px;
+  left: 30%;
+  color: #00bcd4;
+  font-size: 10px;
+  animation: fallingStars 6s linear infinite 1s;
+}
+
+.title-bar[data-animation="terminal-hacker"] {
+  animation: terminalHackerFlicker 2s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="terminal-hacker"]::before {
+  content: '0';
+  position: absolute;
+  top: -20px;
+  left: 15%;
+  color: #00ff00;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  animation: matrixRain 3s linear infinite;
+}
+
+.title-bar[data-animation="terminal-hacker"]::after {
+  content: '1';
+  position: absolute;
+  top: -20px;
+  left: 70%;
+  color: #00ff00;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  animation: matrixRain 4s linear infinite 0.5s;
+}
+
+.title-bar[data-animation="cyberpunk"] {
+  animation: cyberpunkGlow 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="cyberpunk"]::before {
+  content: '⚡';
+  position: absolute;
+  top: -20px;
+  left: 20%;
+  color: #fcee21;
+  font-size: 16px;
+  animation: particleFloat 3s ease-in-out infinite;
+}
+
+.title-bar[data-animation="cyberpunk"]::after {
+  content: '◆';
+  position: absolute;
+  top: -20px;
+  left: 60%;
+  color: #ff0080;
+  font-size: 14px;
+  animation: particleFloat 4s ease-in-out infinite 1s;
+}
+
+.title-bar[data-animation="matrix"] {
+  animation: matrixRain 2.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="matrix"]::before {
+  content: '1';
+  position: absolute;
+  top: -20px;
+  left: 25%;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  animation: matrixRain 2.8s linear infinite;
+}
+
+.title-bar[data-animation="matrix"]::after {
+  content: '0';
+  position: absolute;
+  top: -20px;
+  left: 75%;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  animation: matrixRain 3.2s linear infinite 0.8s;
+}
+
+.title-bar[data-animation="quantum-flux"] {
+  animation: quantumFlux 3.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="quantum-flux"]::before {
+  content: '◊';
+  position: absolute;
+  top: -20px;
+  left: 30%;
+  color: #8b5cf6;
+  font-size: 15px;
+  animation: particleFloat 3.5s ease-in-out infinite;
+}
+
+.title-bar[data-animation="quantum-flux"]::after {
+  content: '◈';
+  position: absolute;
+  top: -20px;
+  left: 70%;
+  color: #a78bfa;
+  font-size: 13px;
+  animation: particleFloat 4s ease-in-out infinite 1.5s;
+}
+
+.title-bar[data-animation="holographic"] {
+  animation: holographicShimmer 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="holographic"]::before {
+  content: '◐';
+  position: absolute;
+  top: -20px;
+  left: 20%;
+  color: #00d4ff;
+  font-size: 14px;
+  animation: twinklingStars 2s ease-in-out infinite;
+}
+
+.title-bar[data-animation="holographic"]::after {
+  content: '◑';
+  position: absolute;
+  top: -20px;
+  left: 80%;
+  color: #33d9ff;
+  font-size: 12px;
+  animation: twinklingStars 2.5s ease-in-out infinite 1s;
+}
+
+.title-bar[data-animation="cyber-grid"] {
+  animation: cyberGridPulse 3s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="cyber-grid"]::before {
+  content: '▢';
+  position: absolute;
+  top: -20px;
+  left: 25%;
+  color: #00ff88;
+  font-size: 12px;
+  animation: fallingStars 3.5s linear infinite;
+}
+
+.title-bar[data-animation="cyber-grid"]::after {
+  content: '▣';
+  position: absolute;
+  top: -20px;
+  left: 75%;
+  color: #33ffaa;
+  font-size: 10px;
+  animation: fallingStars 4s linear infinite 1.2s;
+}
+
+.title-bar[data-animation="neon-aurora"] {
+  animation: neonAurora 3.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="neon-aurora"]::before {
+  content: '✦';
+  position: absolute;
+  top: -20px;
+  left: 35%;
+  color: #ff6b9d;
+  font-size: 16px;
+  animation: twinklingStars 2.2s ease-in-out infinite;
+}
+
+.title-bar[data-animation="neon-aurora"]::after {
+  content: '✧';
+  position: absolute;
+  top: -20px;
+  left: 65%;
+  color: #ff8bb3;
+  font-size: 14px;
+  animation: twinklingStars 2.8s ease-in-out infinite 1.1s;
+}
+
+.title-bar[data-animation="plasma"] {
+  animation: plasmaFlow 4s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="plasma"]::before {
+  content: '◉';
+  position: absolute;
+  top: -20px;
+  left: 40%;
+  color: #ff0080;
+  font-size: 15px;
+  animation: particleFloat 3.8s ease-in-out infinite;
+}
+
+.title-bar[data-animation="plasma"]::after {
+  content: '◯';
+  position: absolute;
+  top: -20px;
+  left: 60%;
+  color: #ff3399;
+  font-size: 13px;
+  animation: particleFloat 4.2s ease-in-out infinite 1.8s;
+}
+
+/* Efectos adicionales para el buscador en temas animados */
+.search-input[data-animation="space-station"] {
+  border-color: #00bcd4 !important;
+  box-shadow: 0 0 10px rgba(0, 188, 212, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="terminal-hacker"] {
+  border-color: #00ff00 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.search-input[data-animation="cyberpunk"] {
+  border-color: #fcee21 !important;
+  box-shadow: 0 0 15px rgba(252, 238, 33, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="matrix"] {
+  border-color: #00ff41 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.search-input[data-animation="quantum-flux"] {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="holographic"] {
+  border-color: #00d4ff !important;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="cyber-grid"] {
+  border-color: #00ff88 !important;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="neon-aurora"] {
+  border-color: #ff6b9d !important;
+  box-shadow: 0 0 20px rgba(255, 107, 157, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="plasma"] {
+  border-color: #ff0080 !important;
+  box-shadow: 0 0 20px rgba(255, 0, 128, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Efectos de hover para el buscador */
+.search-input[data-animation]:focus {
+  transform: scale(1.02) !important;
+  box-shadow: 0 0 25px currentColor !important;
+}
+
+/* Animaciones para elementos de la interfaz en temas animados */
+.sidebar-container[data-animation] {
+  transition: all 0.3s ease !important;
+}
+
+.status-bar[data-animation] {
+  transition: all 0.3s ease !important;
+}
+
+/* Efectos de partículas para temas específicos */
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-10px) rotate(180deg);
+    opacity: 1;
+  }
+}
+
+.particle-effect {
+  position: absolute;
+  pointer-events: none;
+  animation: particleFloat 4s ease-in-out infinite;
+}
+
+/* Efectos de scanline para temas terminal */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.scanline-effect {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  animation: scanline 3s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Efectos de glitch para temas cyberpunk */
+@keyframes glitch {
+  0%, 100% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(90deg);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+    filter: hue-rotate(180deg);
+  }
+  60% {
+    transform: translate(2px, 2px);
+    filter: hue-rotate(270deg);
+  }
+  80% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(360deg);
+  }
+}
+
+.glitch-effect {
+  animation: glitch 0.3s ease-in-out infinite;
+}
+
+/* Velocidades de animación */
+[data-ui-anim-speed="slow"] .title-bar[data-animation] {
+  animation-duration: 6s !important;
+}
+
+[data-ui-anim-speed="slow"] .title-bar[data-animation]::before,
+[data-ui-anim-speed="slow"] .title-bar[data-animation]::after {
+  animation-duration: 8s !important;
+}
+
+[data-ui-anim-speed="normal"] .title-bar[data-animation] {
+  animation-duration: 3s !important;
+}
+
+[data-ui-anim-speed="normal"] .title-bar[data-animation]::before,
+[data-ui-anim-speed="normal"] .title-bar[data-animation]::after {
+  animation-duration: 4s !important;
+}
+
+[data-ui-anim-speed="fast"] .title-bar[data-animation] {
+  animation-duration: 1.5s !important;
+}
+
+[data-ui-anim-speed="fast"] .title-bar[data-animation]::before,
+[data-ui-anim-speed="fast"] .title-bar[data-animation]::after {
+  animation-duration: 2s !important;
+}
+
+[data-ui-anim-speed="turbo"] .title-bar[data-animation] {
+  animation-duration: 0.8s !important;
+}
+
+[data-ui-anim-speed="turbo"] .title-bar[data-animation]::before,
+[data-ui-anim-speed="turbo"] .title-bar[data-animation]::after {
+  animation-duration: 1s !important;
+}
+
+/* Reducir animaciones cuando está activado */
+[data-ui-reduced-motion="true"] .title-bar[data-animation],
+[data-ui-reduced-motion="true"] .search-input[data-animation],
+[data-ui-reduced-motion="true"] .particle-effect,
+[data-ui-reduced-motion="true"] .scanline-effect,
+[data-ui-reduced-motion="true"] .glitch-effect {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Responsive animations - reducir animaciones en dispositivos con preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .title-bar[data-animation],
+  .search-input[data-animation],
+  .particle-effect,
+  .scanline-effect,
+  .glitch-effect {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Optimizaciones de rendimiento */
+.title-bar[data-animation] {
+  will-change: background, box-shadow;
+  transform: translateZ(0);
+}
+
+.search-input[data-animation] {
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+}

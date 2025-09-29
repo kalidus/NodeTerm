@@ -58,6 +58,9 @@ class ThemeManager {
     this.currentTheme = theme;
     this.generateCSS(theme);
     
+    // Aplicar animaciones si es un tema animado
+    this.applyAnimations(theme);
+    
     // Guardar el tema seleccionado
     localStorage.setItem('ui_theme', themeName);
     
@@ -438,6 +441,48 @@ class ThemeManager {
       const rootStyles = getComputedStyle(document.documentElement);
       // Log de debug removido para limpiar la consola
     }, 100);
+  }
+
+  applyAnimations(theme) {
+    // Verificar si el tema tiene animaciones
+    if (theme.colors && theme.colors.animationType) {
+      const animationType = theme.colors.animationType;
+      
+      // Aplicar animación a la barra del menú superior
+      const titleBar = document.querySelector('.title-bar');
+      if (titleBar) {
+        titleBar.setAttribute('data-animation', animationType);
+      }
+      
+      // Aplicar animación al buscador
+      const searchInput = document.querySelector('.search-input');
+      if (searchInput) {
+        searchInput.setAttribute('data-animation', animationType);
+      }
+      
+      // Aplicar animación a la sidebar
+      const sidebar = document.querySelector('.sidebar-container');
+      if (sidebar) {
+        sidebar.setAttribute('data-animation', animationType);
+      }
+      
+      // Aplicar animación a la status bar
+      const statusBar = document.querySelector('.status-bar');
+      if (statusBar) {
+        statusBar.setAttribute('data-animation', animationType);
+      }
+    } else {
+      // Remover animaciones si no es un tema animado
+      this.removeAnimations();
+    }
+  }
+
+  removeAnimations() {
+    // Remover atributos de animación de todos los elementos
+    const elements = document.querySelectorAll('[data-animation]');
+    elements.forEach(element => {
+      element.removeAttribute('data-animation');
+    });
   }
 
   getCurrentTheme() {
