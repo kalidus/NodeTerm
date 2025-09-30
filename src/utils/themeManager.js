@@ -1,4 +1,5 @@
 import { uiThemes } from '../themes/ui-themes';
+import { initSimpleMatrixAnimation, cleanupMatrixAnimation } from './simpleMatrixAnimation';
 
 // Convierte un color hex a rgba con opacidad
 function hexToRgba(hex, alpha) {
@@ -459,6 +460,13 @@ class ThemeManager {
         } else {
           this.removeSpaceStationStars(titleBar);
         }
+        
+        // Para Matrix Animated, agregar animación JavaScript simple
+        if (animationType === 'matrix') {
+          initSimpleMatrixAnimation();
+        } else {
+          cleanupMatrixAnimation();
+        }
       }
       
       // Aplicar animación al buscador - múltiples selectores para mayor compatibilidad
@@ -611,6 +619,9 @@ class ThemeManager {
       this.animationSpeedObserver.disconnect();
       this.animationSpeedObserver = null;
     }
+    
+    // Remover animación Matrix si existe
+    cleanupMatrixAnimation();
     
     // Remover atributos de animación de todos los elementos
     const elements = document.querySelectorAll('[data-animation]');
