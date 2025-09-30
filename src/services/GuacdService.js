@@ -102,16 +102,19 @@ function toWslPath(winPath) {
 /**
  * Convierte una ruta local a una ruta accesible por el servidor RDP remoto.
  * - Windows: convierte a ruta WSL (/mnt/c/...)
- * - macOS/Linux: devuelve la ruta tal cual (asumiendo que el servidor remoto puede acceder)
+ * - macOS/Linux con Docker: devuelve /guacdrive (ruta dentro del contenedor)
+ * - macOS/Linux nativo: devuelve la ruta tal cual
  */
-function toRemoteAccessiblePath(localPath) {
+function toRemoteAccessiblePath(localPath, method = '') {
   try {
     if (process.platform === 'win32') {
       // En Windows, convertir a ruta WSL para que el servidor RDP remoto pueda acceder
       return toWslPath(localPath);
+    } else if (method === 'docker') {
+      // Para Docker en macOS/Linux, devolver la ruta dentro del contenedor
+      return '/guacdrive';
     } else {
-      // En macOS/Linux, devolver la ruta tal cual
-      // Asumimos que el servidor RDP remoto puede acceder a rutas locales
+      // Para método nativo en macOS/Linux, devolver la ruta tal cual
       return localPath;
     }
   } catch (_) {
@@ -1074,7 +1077,7 @@ class GuacdService {
     if (method === 'docker') {
       // Para Docker, convertir la ruta local a ruta accesible por el servidor RDP remoto
       // Esto permite que el servidor RDP remoto acceda a los archivos
-      return toRemoteAccessiblePath(this.driveHostDir);
+      return toRemoteAccessiblePath(this.driveHostDir, 'docker');
     }
     if (method === 'wsl') {
       // Para WSL, usar una ruta nativa de Linux en lugar de una ruta montada
@@ -1116,7 +1119,7 @@ class GuacdService {
       }
       // Para Docker, convertir la ruta local a ruta accesible por el servidor RDP remoto
       // Esto permite que el servidor RDP remoto acceda a los archivos
-      return toRemoteAccessiblePath(this.driveHostDir);
+      return toRemoteAccessiblePath(this.driveHostDir, 'docker');
     }
     if (method === 'wsl') {
       // Para WSL, si el usuario especificó una ruta, convertirla a WSL
