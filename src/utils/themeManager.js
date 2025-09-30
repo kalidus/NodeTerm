@@ -452,6 +452,13 @@ class ThemeManager {
       const titleBar = document.querySelector('.title-bar');
       if (titleBar) {
         titleBar.setAttribute('data-animation', animationType);
+        
+        // Para Space Station Animated, agregar estrellas adicionales
+        if (animationType === 'space-station') {
+          this.addSpaceStationStars(titleBar);
+        } else {
+          this.removeSpaceStationStars(titleBar);
+        }
       }
       
       // Aplicar animación al buscador - múltiples selectores para mayor compatibilidad
@@ -483,17 +490,134 @@ class ThemeManager {
       if (statusBar) {
         statusBar.setAttribute('data-animation', animationType);
       }
+      
+      // Escuchar cambios en la velocidad de animación para actualizar las estrellas
+      this.setupAnimationSpeedListener();
     } else {
       // Remover animaciones si no es un tema animado
       this.removeAnimations();
     }
   }
 
+  addSpaceStationStars(titleBar) {
+    // Remover estrellas existentes primero
+    this.removeSpaceStationStars(titleBar);
+    
+    // Obtener la velocidad de animación actual
+    const animSpeed = document.documentElement.getAttribute('data-tab-anim-speed') || 'normal';
+    
+    // Multiplicadores de velocidad basados en el selector
+    const speedMultipliers = {
+      'slow': 3.0,    // 3x más lento
+      'normal': 2.0,  // 2x más lento
+      'fast': 1.5,    // 1.5x más lento
+      'turbo': 1.0    // Velocidad base
+    };
+    
+    const speedMultiplier = speedMultipliers[animSpeed] || 2.0;
+    
+    // Crear muchas más estrellas para mayor densidad con velocidad MUY reducida
+    const starPositions = [
+      // Primera fila de estrellas (velocidad MUY lenta)
+      { left: '5%', size: '6px', delay: '0.5s', duration: `${Math.round(80 * speedMultiplier)}s` },
+      { left: '12%', size: '8px', delay: '1s', duration: `${Math.round(90 * speedMultiplier)}s` },
+      { left: '20%', size: '7px', delay: '1.5s', duration: `${Math.round(100 * speedMultiplier)}s` },
+      { left: '28%', size: '9px', delay: '2s', duration: `${Math.round(110 * speedMultiplier)}s` },
+      { left: '35%', size: '6px', delay: '2.5s', duration: `${Math.round(85 * speedMultiplier)}s` },
+      { left: '42%', size: '10px', delay: '3s', duration: `${Math.round(120 * speedMultiplier)}s` },
+      { left: '50%', size: '8px', delay: '3.5s', duration: `${Math.round(95 * speedMultiplier)}s` },
+      { left: '58%', size: '7px', delay: '4s', duration: `${Math.round(105 * speedMultiplier)}s` },
+      { left: '65%', size: '9px', delay: '4.5s', duration: `${Math.round(115 * speedMultiplier)}s` },
+      { left: '72%', size: '11px', delay: '5s', duration: `${Math.round(125 * speedMultiplier)}s` },
+      { left: '80%', size: '8px', delay: '5.5s', duration: `${Math.round(90 * speedMultiplier)}s` },
+      { left: '88%', size: '6px', delay: '6s', duration: `${Math.round(80 * speedMultiplier)}s` },
+      { left: '95%', size: '9px', delay: '6.5s', duration: `${Math.round(110 * speedMultiplier)}s` },
+      
+      // Segunda fila de estrellas (más pequeñas pero también MUY lentas)
+      { left: '8%', size: '4px', delay: '7s', duration: `${Math.round(70 * speedMultiplier)}s` },
+      { left: '18%', size: '5px', delay: '7.5s', duration: `${Math.round(75 * speedMultiplier)}s` },
+      { left: '30%', size: '4px', delay: '8s', duration: `${Math.round(65 * speedMultiplier)}s` },
+      { left: '45%', size: '6px', delay: '8.5s', duration: `${Math.round(80 * speedMultiplier)}s` },
+      { left: '55%', size: '5px', delay: '9s', duration: `${Math.round(70 * speedMultiplier)}s` },
+      { left: '68%', size: '4px', delay: '9.5s', duration: `${Math.round(60 * speedMultiplier)}s` },
+      { left: '78%', size: '6px', delay: '10s', duration: `${Math.round(85 * speedMultiplier)}s` },
+      { left: '90%', size: '5px', delay: '10.5s', duration: `${Math.round(75 * speedMultiplier)}s` },
+      
+      // Tercera fila de estrellas (variedad de tamaños, velocidad MUY lenta)
+      { left: '3%', size: '12px', delay: '11s', duration: `${Math.round(140 * speedMultiplier)}s` },
+      { left: '15%', size: '9px', delay: '11.5s', duration: `${Math.round(115 * speedMultiplier)}s` },
+      { left: '25%', size: '11px', delay: '12s', duration: `${Math.round(130 * speedMultiplier)}s` },
+      { left: '38%', size: '8px', delay: '12.5s', duration: `${Math.round(100 * speedMultiplier)}s` },
+      { left: '48%', size: '13px', delay: '13s', duration: `${Math.round(150 * speedMultiplier)}s` },
+      { left: '62%', size: '10px', delay: '13.5s', duration: `${Math.round(120 * speedMultiplier)}s` },
+      { left: '75%', size: '7px', delay: '14s', duration: `${Math.round(85 * speedMultiplier)}s` },
+      { left: '85%', size: '12px', delay: '14.5s', duration: `${Math.round(135 * speedMultiplier)}s` },
+      { left: '92%', size: '9px', delay: '15s', duration: `${Math.round(110 * speedMultiplier)}s` }
+    ];
+    
+    starPositions.forEach((star, index) => {
+      const starElement = document.createElement('div');
+      starElement.className = `star-${index + 1}`;
+      starElement.textContent = '✦';
+      starElement.style.cssText = `
+        position: absolute;
+        top: -20px;
+        left: ${star.left};
+        color: #00bcd4;
+        font-size: ${star.size};
+        animation: fallingStars ${star.duration} linear infinite ${star.delay};
+        pointer-events: none;
+        z-index: 1000;
+      `;
+      titleBar.appendChild(starElement);
+    });
+  }
+
+  removeSpaceStationStars(titleBar) {
+    // Remover todas las estrellas adicionales
+    const existingStars = titleBar.querySelectorAll('[class^="star-"]');
+    existingStars.forEach(star => star.remove());
+  }
+
+  setupAnimationSpeedListener() {
+    // Remover listener anterior si existe
+    if (this.animationSpeedObserver) {
+      this.animationSpeedObserver.disconnect();
+    }
+    
+    // Crear un observer para detectar cambios en el atributo data-tab-anim-speed
+    this.animationSpeedObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-tab-anim-speed') {
+          // Si el tema actual es space-station, actualizar las estrellas
+          const titleBar = document.querySelector('.title-bar');
+          if (titleBar && titleBar.getAttribute('data-animation') === 'space-station') {
+            this.addSpaceStationStars(titleBar);
+          }
+        }
+      });
+    });
+    
+    // Observar cambios en el documentElement
+    this.animationSpeedObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-tab-anim-speed']
+    });
+  }
+
   removeAnimations() {
+    // Remover observer si existe
+    if (this.animationSpeedObserver) {
+      this.animationSpeedObserver.disconnect();
+      this.animationSpeedObserver = null;
+    }
+    
     // Remover atributos de animación de todos los elementos
     const elements = document.querySelectorAll('[data-animation]');
     elements.forEach(element => {
       element.removeAttribute('data-animation');
+      // También remover estrellas si existen
+      this.removeSpaceStationStars(element);
     });
   }
 

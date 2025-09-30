@@ -19,10 +19,10 @@
     transform: translateY(-100vh) rotate(0deg);
     opacity: 0;
   }
-  10% {
+  15% {
     opacity: 1;
   }
-  90% {
+  85% {
     opacity: 1;
   }
   100% {
@@ -274,6 +274,16 @@
   color: #00bcd4;
   font-size: 10px;
   animation: fallingStars 32s linear infinite 4s;
+}
+
+/* Estrellas adicionales para mayor densidad - ahora son elementos HTML reales */
+.title-bar[data-animation="space-station"] [class^="star-"] {
+  position: absolute;
+  top: -20px;
+  color: #00bcd4;
+  pointer-events: none;
+  z-index: 1000;
+  animation: fallingStars linear infinite;
 }
 
 .title-bar[data-animation="terminal-hacker"] {
