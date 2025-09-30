@@ -586,17 +586,26 @@
     radial-gradient(1px 1px at 60% 10%, rgba(121, 184, 255, 0.7), transparent);
   background-repeat: no-repeat;
   background-size: 1px 1px, 2px 2px, 1px 1px;
-  animation: meteor-fall 7s linear infinite 1s;
+  animation: meteor-fall-delayed 7s linear infinite 1s;
   pointer-events: none;
   z-index: 1000;
 }
 
 @keyframes meteor-fall {
   0% {
-    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, -50% -50%;
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
   }
   100% {
-    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 150% 150%;
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes meteor-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
   }
 }
 
