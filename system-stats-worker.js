@@ -70,6 +70,7 @@ async function getSystemStats() {
     if (Array.isArray(diskData) && diskData.length > 0) {
       // Detectar unidades de red en Windows de forma asíncrona
       const isWindows = process.platform === 'win32';
+      const isMacOS = process.platform === 'darwin';
       let networkLetters = new Set();
       
       if (isWindows) {
@@ -116,7 +117,7 @@ async function getSystemStats() {
 
       // Solo actualizar discos si obtenemos datos válidos y completos
       if (diskData && diskData.length > 0) {
-        stats.disks = diskData.map(disk => {
+        let processedDisks = diskData.map(disk => {
           const size = Number(disk.size || 0);
           const used = Number(disk.used || 0);
           const percentage = size > 0 ? Math.round((used / size) * 100) : 0;
@@ -143,6 +144,21 @@ async function getSystemStats() {
             isNetwork
           };
         });
+
+        // En macOS, mostrar solo volúmenes principales con nombres amigables
+        if (isMacOS) {
+          // REEMPLAZAR completamente la lista de discos con solo Macintosh HD
+          processedDisks = [{
+            name: 'Macintosh HD',
+            mount: '/',
+            used: processedDisks.find(d => d.mount === '/')?.used || 0,
+            total: processedDisks.find(d => d.mount === '/')?.total || 0,
+            percentage: processedDisks.find(d => d.mount === '/')?.percentage || 0,
+            isNetwork: false
+          }];
+        }
+
+        stats.disks = processedDisks;
       }
       // Si falla o no hay datos, mantener la lista anterior de discos
     }
