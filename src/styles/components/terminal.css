@@ -220,3 +220,51 @@ canvas:focus-visible {
   -webkit-appearance: none !important;
   appearance: none !important;
 }
+
+/* === SOLUCIÓN PARA CURSOR DOBLE EN macOS CON GUACAMOLE RDP === */
+
+/* Ocultar cursor del sistema cuando hay una sesión RDP activa */
+.rdp-session-active {
+  cursor: none !important;
+}
+
+/* Aplicar a todos los elementos dentro de una sesión RDP activa */
+.rdp-session-active * {
+  cursor: none !important;
+}
+
+/* Estilos específicos para el display de Guacamole */
+.guacamole-display.rdp-active,
+div[data-guacamole-display].rdp-active {
+  cursor: none !important;
+}
+
+/* Canvas de Guacamole en sesión RDP activa */
+.rdp-session-active canvas {
+  cursor: none !important;
+}
+
+/* Contenedor de pestaña RDP activa */
+.tab-content.rdp-active {
+  cursor: none !important;
+}
+
+/* Asegurar que el cursor se oculte en toda el área de la sesión RDP */
+.rdp-session-active .guacamole-display,
+.rdp-session-active div[data-guacamole-display],
+.rdp-session-active .tab-content {
+  cursor: none !important;
+}
+
+/* Restaurar cursor normal para elementos de UI que no sean la sesión RDP */
+.rdp-session-active .sidebar,
+.rdp-session-active .status-bar,
+.rdp-session-active .tab-header,
+.rdp-session-active .p-splitter-gutter {
+  cursor: auto !important;
+}
+
+/* Cursor específico para gutter de splitter durante sesión RDP */
+.rdp-session-active .p-splitter-gutter {
+  cursor: col-resize !important;
+}

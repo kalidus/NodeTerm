@@ -29,6 +29,7 @@ const GuacamoleTerminal = forwardRef(({
     const [autoResize, setAutoResize] = useState(true); // Por defecto true para evitar reconexiones
     const [lastActivityTime, setLastActivityTime] = useState(Date.now());
     const [freezeDetected, setFreezeDetected] = useState(false);
+    const [isRdpSessionActive, setIsRdpSessionActive] = useState(false);
     
     // Variables persistentes para rate limiting (fuera de useEffect)
     const lastResizeTimeRef = useRef(0);
@@ -499,6 +500,7 @@ const GuacamoleTerminal = forwardRef(({
                          }, 500);
                          
                         setConnectionState('connected');
+                        setIsRdpSessionActive(true); // Marcar sesión RDP como activa
                         const nowTsConn = Date.now();
                         setLastActivityTime(nowTsConn); // Registrar actividad inicial
                         lastActivityTimeRef.current = nowTsConn;
@@ -854,6 +856,7 @@ const GuacamoleTerminal = forwardRef(({
                          }, 5000);
                                           } else if (state === 4) { // DISCONNECTED
                          setConnectionState('disconnected');
+                         setIsRdpSessionActive(false); // Desactivar sesión RDP
                           // Resetear timers/refs críticos al desconectar para que próxima conexión tenga estado limpio
                           try {
                               lastDimensionsRef.current = { width: 0, height: 0 };
@@ -2000,6 +2003,7 @@ const GuacamoleTerminal = forwardRef(({
 
     return (
         <div 
+            className={isRdpSessionActive ? 'rdp-session-active' : ''}
             style={{
                 width: '100%',
                 height: '100%',

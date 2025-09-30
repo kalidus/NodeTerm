@@ -289,7 +289,11 @@ function registerGuacamoleHandlers({
             "disable-glyph-caching": config.disableGlyphCaching === true ? true : undefined,
             "disable-offscreen-caching": config.disableOffscreenCaching === true ? true : undefined,
             "disable-bitmap-caching": config.disableBitmapCaching === true ? true : undefined,
-            "disable-copy-rect": config.disableCopyRect === true ? true : undefined
+            "disable-copy-rect": config.disableCopyRect === true ? true : undefined,
+            // Configuración de mouse para mejorar sincronización de cursor en macOS
+            "mouse-mode": "absolute", // Usar modo absoluto para mejor sincronización
+            "enable-mouse": true, // Asegurar que el mouse esté habilitado
+            "mouse-autoselect": true // Auto-selección de mouse para mejor experiencia
           }
         }
       };
