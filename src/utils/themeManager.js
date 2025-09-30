@@ -466,6 +466,9 @@ class ThemeManager {
           initSimpleMatrixAnimation();
         } else if (animationType === 'matrix-blue') {
           initSimpleMatrixBlueAnimation();
+        } else if (animationType === 'meteor-shower') {
+          // La animación meteor-shower se maneja solo con CSS
+          cleanupMatrixAnimation();
         } else {
           cleanupMatrixAnimation();
         }

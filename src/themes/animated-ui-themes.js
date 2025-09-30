@@ -2,7 +2,7 @@
 // Categorías de temas de interfaz animados
 const ANIMATED_UI_KEYS = [
   'Space Station Animated', 'Terminal Hacker Animated', 'Cyberpunk 2077 Animated',
-  'Neon Matrix Animated', 'Neon Matrix Blue Animated', 'Quantum Flux Animated', 'Holographic Animated',
+  'Neon Matrix Animated', 'Neon Matrix Blue Animated', 'Meteor Shower Animated', 'Quantum Flux Animated', 'Holographic Animated',
   'Cyber Grid Animated', 'Neon Aurora Animated', 'Plasma Animated'
 ];
 
@@ -394,6 +394,75 @@ export const animatedUiThemes = {
       // Animaciones específicas
       animationType: 'matrix-blue',
       animationSpeed: 'fast'
+    }
+  },
+
+  'Meteor Shower Animated': {
+    name: 'Meteor Shower Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      sidebarBorder: '#79b8ff',
+      sidebarText: '#cfe6ff',
+      sidebarHover: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      sidebarSelected: '#79b8ff',
+      sidebarGutter: '#79b8ff',
+      
+      // Menu Bar (top) - Con animación meteor shower
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      menuBarText: '#cfe6ff',
+      menuBarBorder: '#79b8ff',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#79b8ff',
+      statusBarText: '#08101d',
+      statusBarBorder: '#79b8ff',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #79b8ff 0%, #4f9dff 60%, #7a6cff 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      tabText: '#cfe6ff',
+      tabActiveText: '#08101d',
+      tabBorder: '#79b8ff',
+      tabCloseHover: '#7a6cff',
+      
+      // Tab Groups
+      tabGroupBackground: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      tabGroupText: '#cfe6ff',
+      tabGroupBorder: '#79b8ff',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      contentBorder: '#79b8ff',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      dialogText: '#cfe6ff',
+      dialogBorder: '#79b8ff',
+      dialogShadow: 'rgba(121, 184, 255, 0.35)',
+      
+      // Buttons
+      buttonPrimary: '#79b8ff',
+      buttonPrimaryText: '#08101d',
+      buttonPrimaryHover: '#4f9dff',
+      buttonSecondary: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      buttonSecondaryText: '#cfe6ff',
+      buttonSecondaryHover: 'radial-gradient(circle at 20% 20%, #1e2a47 0%, #0f1729 70%)',
+      buttonDanger: '#ff0000',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#ff3333',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      inputText: '#cfe6ff',
+      inputBorder: '#79b8ff',
+      inputFocus: '#4f9dff',
+      
+      // Animaciones específicas
+      animationType: 'meteor-shower',
+      animationSpeed: 'normal'
     }
   },
 

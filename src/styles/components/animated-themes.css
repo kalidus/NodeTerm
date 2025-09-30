@@ -553,6 +553,53 @@
   z-index: 1000;
 }
 
+/* === METEOR SHOWER ANIMATION === */
+.title-bar[data-animation="meteor-shower"] {
+  position: relative;
+  overflow: hidden;
+}
+
+.title-bar[data-animation="meteor-shower"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(121, 184, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(200, 220, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(121, 184, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(200, 220, 255, 0.5), transparent),
+    linear-gradient(45deg, rgba(121, 184, 255, 0.25) 0%, rgba(121, 184, 255, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: meteor-fall 5s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="meteor-shower"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(121, 184, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(200, 220, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(121, 184, 255, 0.7), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: meteor-fall 7s linear infinite 1s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes meteor-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, -50% -50%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 150% 150%;
+  }
+}
+
 .title-bar[data-animation="quantum-flux"] {
   animation: quantumFlux 18s ease-in-out infinite;
   position: relative;
