@@ -1,5 +1,5 @@
 import { uiThemes } from '../themes/ui-themes';
-import { initSimpleMatrixAnimation, cleanupMatrixAnimation } from './simpleMatrixAnimation';
+import { initSimpleMatrixAnimation, initSimpleMatrixBlueAnimation, cleanupMatrixAnimation } from './simpleMatrixAnimation';
 
 // Convierte un color hex a rgba con opacidad
 function hexToRgba(hex, alpha) {
@@ -464,6 +464,8 @@ class ThemeManager {
         // Para Matrix Animated, agregar animación JavaScript simple
         if (animationType === 'matrix') {
           initSimpleMatrixAnimation();
+        } else if (animationType === 'matrix-blue') {
+          initSimpleMatrixBlueAnimation();
         } else {
           cleanupMatrixAnimation();
         }

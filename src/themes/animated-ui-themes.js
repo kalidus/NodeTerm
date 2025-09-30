@@ -2,7 +2,7 @@
 // Categorías de temas de interfaz animados
 const ANIMATED_UI_KEYS = [
   'Space Station Animated', 'Terminal Hacker Animated', 'Cyberpunk 2077 Animated',
-  'Neon Matrix Animated', 'Quantum Flux Animated', 'Holographic Animated',
+  'Neon Matrix Animated', 'Neon Matrix Blue Animated', 'Quantum Flux Animated', 'Holographic Animated',
   'Cyber Grid Animated', 'Neon Aurora Animated', 'Plasma Animated'
 ];
 
@@ -324,6 +324,75 @@ export const animatedUiThemes = {
       
       // Animaciones específicas
       animationType: 'matrix',
+      animationSpeed: 'fast'
+    }
+  },
+
+  'Neon Matrix Blue Animated': {
+    name: 'Neon Matrix Blue Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: '#000000',
+      sidebarBorder: '#0080ff',
+      sidebarText: '#0080ff',
+      sidebarHover: '#000011',
+      sidebarSelected: '#0080ff',
+      sidebarGutter: '#0080ff',
+      
+      // Menu Bar (top) - Con animación matrix azul
+      menuBarBackground: 'linear-gradient(90deg, #000000 0%, #000022 25%, #000044 50%, #000022 75%, #000000 100%)',
+      menuBarText: '#0080ff',
+      menuBarBorder: '#0080ff',
+      menuBarHover: '#000022',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#0080ff',
+      statusBarText: '#000000',
+      statusBarBorder: '#0080ff',
+      
+      // Tabs
+      tabBackground: '#000000',
+      tabActiveBackground: '#000011',
+      tabHoverBackground: '#000022',
+      tabText: '#0080ff',
+      tabActiveText: '#0080ff',
+      tabBorder: '#0080ff',
+      tabCloseHover: '#ff0000',
+      
+      // Tab Groups
+      tabGroupBackground: '#000011',
+      tabGroupText: '#0080ff',
+      tabGroupBorder: '#0080ff',
+      
+      // Content Area
+      contentBackground: '#000000',
+      contentBorder: '#0080ff',
+      
+      // Dialogs
+      dialogBackground: '#000000',
+      dialogText: '#0080ff',
+      dialogBorder: '#0080ff',
+      dialogShadow: 'rgba(0, 128, 255, 0.35)',
+      
+      // Buttons
+      buttonPrimary: '#0080ff',
+      buttonPrimaryText: '#000000',
+      buttonPrimaryHover: '#0099ff',
+      buttonSecondary: '#000011',
+      buttonSecondaryText: '#0080ff',
+      buttonSecondaryHover: '#000022',
+      buttonDanger: '#ff0000',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#ff3333',
+      
+      // Form Elements
+      inputBackground: '#000000',
+      inputText: '#0080ff',
+      inputBorder: '#0080ff',
+      inputFocus: '#33aaff',
+      
+      // Animaciones específicas
+      animationType: 'matrix-blue',
       animationSpeed: 'fast'
     }
   },
