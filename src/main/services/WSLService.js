@@ -252,8 +252,18 @@ function getLinuxShell() {
     // En Windows, usar WSL
     return 'wsl.exe';
   } else if (platform === 'darwin') {
-    // En macOS, usar bash
-    return 'bash';
+    // En macOS, detectar la shell por defecto del sistema
+    try {
+      const { execSync } = require('child_process');
+      const defaultShell = execSync('echo $SHELL', { encoding: 'utf8' }).trim();
+      // Extraer solo el nombre del shell sin la ruta completa
+      const shellName = defaultShell.split('/').pop();
+      console.log(`Shell por defecto detectada en macOS: ${shellName}`);
+      return shellName;
+    } catch (error) {
+      console.warn('No se pudo detectar la shell por defecto, usando zsh como fallback:', error.message);
+      return 'zsh'; // zsh es la shell por defecto en macOS moderno
+    }
   } else {
     // En Linux, usar bash
     return 'bash';
