@@ -557,6 +557,7 @@
 .title-bar[data-animation="meteor-shower"] {
   position: relative;
   overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%) !important;
 }
 
 .title-bar[data-animation="meteor-shower"]::before {

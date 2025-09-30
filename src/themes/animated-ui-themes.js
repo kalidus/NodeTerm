@@ -401,11 +401,11 @@ export const animatedUiThemes = {
     name: 'Meteor Shower Animated',
     colors: {
       // Sidebar
-      sidebarBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      sidebarBackground: 'transparent',
       sidebarBorder: '#79b8ff',
       sidebarText: '#cfe6ff',
-      sidebarHover: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
-      sidebarSelected: '#79b8ff',
+      sidebarHover: 'rgba(121, 184, 255, 0.1)',
+      sidebarSelected: 'rgba(121, 184, 255, 0.2)',
       sidebarGutter: '#79b8ff',
       
       // Menu Bar (top) - Con animación meteor shower
@@ -429,7 +429,7 @@ export const animatedUiThemes = {
       tabCloseHover: '#7a6cff',
       
       // Tab Groups
-      tabGroupBackground: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      tabGroupBackground: 'transparent',
       tabGroupText: '#cfe6ff',
       tabGroupBorder: '#79b8ff',
       
@@ -447,9 +447,9 @@ export const animatedUiThemes = {
       buttonPrimary: '#79b8ff',
       buttonPrimaryText: '#08101d',
       buttonPrimaryHover: '#4f9dff',
-      buttonSecondary: 'radial-gradient(circle at 20% 20%, #1c2740 0%, #0d1526 70%)',
+      buttonSecondary: 'transparent',
       buttonSecondaryText: '#cfe6ff',
-      buttonSecondaryHover: 'radial-gradient(circle at 20% 20%, #1e2a47 0%, #0f1729 70%)',
+      buttonSecondaryHover: 'rgba(121, 184, 255, 0.1)',
       buttonDanger: '#ff0000',
       buttonDangerText: '#ffffff',
       buttonDangerHover: '#ff3333',
