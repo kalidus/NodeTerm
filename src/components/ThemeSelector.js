@@ -5,7 +5,7 @@ import { Badge } from 'primereact/badge';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Checkbox } from 'primereact/checkbox';
 import { themeManager } from '../utils/themeManager';
-import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS } from '../themes/ui-themes';
+import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 
 const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed'; // 'slow' | 'normal' | 'fast' | 'turbo'
 const REDUCED_MOTION_KEY = 'nodeterm_ui_reduced_motion';
@@ -554,6 +554,26 @@ const ThemeSelector = ({ showPreview = false }) => {
               width: '100%'
             }}>
               {ANIMATED_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
+                const theme = uiThemes[key];
+                return (
+                  <ThemeCard
+                    key={key}
+                    theme={theme}
+                    isActive={currentTheme === theme.name}
+                    onClick={() => handleThemeChange(theme.name)}
+                  />
+                );
+              })}
+            </div>
+          </TabPanel>
+          <TabPanel header="Naturaleza">
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '1.5rem',
+              width: '100%'
+            }}>
+              {NATURE_UI_KEYS.filter(key => uiThemes[key]).map((key) => {
                 const theme = uiThemes[key];
                 return (
                   <ThemeCard

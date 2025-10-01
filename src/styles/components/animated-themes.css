@@ -2343,3 +2343,2131 @@
   box-shadow: 0 0 15px rgba(210, 180, 140, 0.5) !important;
   transition: all 0.3s ease !important;
 }
+/* === 12. FIREFLIES - Luciérnagas brillantes === */
+.title-bar[data-animation="fireflies"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0d1f0d 0%, #040a04 70%) !important;
+}
+
+/* Luciérnagas usando pseudo-elementos */
+.title-bar[data-animation="fireflies"]::before {
+  content: '•';
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  color: #ffeb3b;
+  font-size: 8px;
+  text-shadow: 
+    0 0 8px rgba(255, 235, 59, 1),
+    0 0 16px rgba(255, 235, 59, 0.8),
+    0 0 24px rgba(139, 195, 74, 0.6);
+  animation: firefly-glow-1 4s ease-in-out infinite, firefly-move-1 12s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+  border-radius: 50%;
+}
+
+.title-bar[data-animation="fireflies"]::after {
+  content: '•';
+  position: absolute;
+  top: 60%;
+  left: 70%;
+  color: #8bc34a;
+  font-size: 6px;
+  text-shadow: 
+    0 0 6px rgba(139, 195, 74, 1),
+    0 0 12px rgba(139, 195, 74, 0.8),
+    0 0 18px rgba(76, 175, 80, 0.6);
+  animation: firefly-glow-2 3.5s ease-in-out infinite, firefly-move-2 15s ease-in-out infinite 2s;
+  pointer-events: none;
+  z-index: 1000;
+  border-radius: 50%;
+}
+
+/* Luciérnagas adicionales usando clases */
+.title-bar[data-animation="fireflies"] .firefly-1,
+.title-bar[data-animation="fireflies"] .firefly-2,
+.title-bar[data-animation="fireflies"] .firefly-3,
+.title-bar[data-animation="fireflies"] .firefly-4,
+.title-bar[data-animation="fireflies"] .firefly-5,
+.title-bar[data-animation="fireflies"] .firefly-6,
+.title-bar[data-animation="fireflies"] .firefly-7,
+.title-bar[data-animation="fireflies"] .firefly-8,
+.title-bar[data-animation="fireflies"] .firefly-9,
+.title-bar[data-animation="fireflies"] .firefly-10 {
+  position: absolute;
+  color: #ffeb3b;
+  pointer-events: none;
+  z-index: 1000;
+  font-family: Arial, sans-serif;
+  border-radius: 50%;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-1 {
+  top: 30%;
+  left: 25%;
+  font-size: 7px;
+  text-shadow: 0 0 7px rgba(255, 235, 59, 1), 0 0 14px rgba(255, 235, 59, 0.8);
+  animation: firefly-glow-1 3.8s ease-in-out infinite, firefly-move-3 10s ease-in-out infinite 1s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-2 {
+  top: 70%;
+  left: 45%;
+  font-size: 5px;
+  color: #8bc34a;
+  text-shadow: 0 0 5px rgba(139, 195, 74, 1), 0 0 10px rgba(139, 195, 74, 0.8);
+  animation: firefly-glow-2 4.2s ease-in-out infinite, firefly-move-4 14s ease-in-out infinite 3s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-3 {
+  top: 15%;
+  left: 60%;
+  font-size: 6px;
+  text-shadow: 0 0 6px rgba(255, 235, 59, 1), 0 0 12px rgba(255, 235, 59, 0.8);
+  animation: firefly-glow-1 3.5s ease-in-out infinite, firefly-move-5 11s ease-in-out infinite 2.5s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-4 {
+  top: 50%;
+  left: 85%;
+  font-size: 7px;
+  color: #8bc34a;
+  text-shadow: 0 0 7px rgba(139, 195, 74, 1), 0 0 14px rgba(139, 195, 74, 0.8);
+  animation: firefly-glow-2 4.5s ease-in-out infinite, firefly-move-6 13s ease-in-out infinite 4s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-5 {
+  top: 40%;
+  left: 15%;
+  font-size: 6px;
+  text-shadow: 0 0 6px rgba(255, 235, 59, 1), 0 0 12px rgba(255, 235, 59, 0.8);
+  animation: firefly-glow-1 3.9s ease-in-out infinite, firefly-move-7 12.5s ease-in-out infinite 1.5s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-6 {
+  top: 25%;
+  left: 50%;
+  font-size: 5px;
+  color: #8bc34a;
+  text-shadow: 0 0 5px rgba(139, 195, 74, 1), 0 0 10px rgba(139, 195, 74, 0.8);
+  animation: firefly-glow-2 4.1s ease-in-out infinite, firefly-move-8 14.5s ease-in-out infinite 3.5s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-7 {
+  top: 65%;
+  left: 30%;
+  font-size: 7px;
+  text-shadow: 0 0 7px rgba(255, 235, 59, 1), 0 0 14px rgba(255, 235, 59, 0.8);
+  animation: firefly-glow-1 3.6s ease-in-out infinite, firefly-move-9 11.5s ease-in-out infinite 2s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-8 {
+  top: 35%;
+  left: 75%;
+  font-size: 6px;
+  color: #8bc34a;
+  text-shadow: 0 0 6px rgba(139, 195, 74, 1), 0 0 12px rgba(139, 195, 74, 0.8);
+  animation: firefly-glow-2 4.3s ease-in-out infinite, firefly-move-10 13.5s ease-in-out infinite 4.5s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-9 {
+  top: 55%;
+  left: 55%;
+  font-size: 5px;
+  text-shadow: 0 0 5px rgba(255, 235, 59, 1), 0 0 10px rgba(255, 235, 59, 0.8);
+  animation: firefly-glow-1 3.7s ease-in-out infinite, firefly-move-11 12s ease-in-out infinite 3s;
+}
+
+.title-bar[data-animation="fireflies"] .firefly-10 {
+  top: 45%;
+  left: 90%;
+  font-size: 6px;
+  color: #8bc34a;
+  text-shadow: 0 0 6px rgba(139, 195, 74, 1), 0 0 12px rgba(139, 195, 74, 0.8);
+  animation: firefly-glow-2 4.4s ease-in-out infinite, firefly-move-12 14s ease-in-out infinite 5s;
+}
+
+/* Animaciones de parpadeo para luciérnagas */
+@keyframes firefly-glow-1 {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  40% {
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  80% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes firefly-glow-2 {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.7);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  50% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Animaciones de movimiento para luciérnagas */
+@keyframes firefly-move-1 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(20px, -10px);
+  }
+  50% {
+    transform: translate(10px, 15px);
+  }
+  75% {
+    transform: translate(-15px, -5px);
+  }
+}
+
+@keyframes firefly-move-2 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-15px, 12px);
+  }
+  50% {
+    transform: translate(18px, -8px);
+  }
+  75% {
+    transform: translate(-10px, 10px);
+  }
+}
+
+@keyframes firefly-move-3 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(25px, 8px);
+  }
+  50% {
+    transform: translate(-20px, -12px);
+  }
+  75% {
+    transform: translate(15px, 10px);
+  }
+}
+
+@keyframes firefly-move-4 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-20px, -15px);
+  }
+  50% {
+    transform: translate(15px, 10px);
+  }
+  75% {
+    transform: translate(-10px, -8px);
+  }
+}
+
+@keyframes firefly-move-5 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(18px, -12px);
+  }
+  50% {
+    transform: translate(-22px, 15px);
+  }
+  75% {
+    transform: translate(12px, -10px);
+  }
+}
+
+@keyframes firefly-move-6 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-18px, 10px);
+  }
+  50% {
+    transform: translate(20px, -15px);
+  }
+  75% {
+    transform: translate(-15px, 12px);
+  }
+}
+
+@keyframes firefly-move-7 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(15px, 12px);
+  }
+  50% {
+    transform: translate(-18px, -10px);
+  }
+  75% {
+    transform: translate(20px, 8px);
+  }
+}
+
+@keyframes firefly-move-8 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-12px, -8px);
+  }
+  50% {
+    transform: translate(18px, 12px);
+  }
+  75% {
+    transform: translate(-20px, -10px);
+  }
+}
+
+@keyframes firefly-move-9 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(22px, 10px);
+  }
+  50% {
+    transform: translate(-15px, -15px);
+  }
+  75% {
+    transform: translate(18px, 12px);
+  }
+}
+
+@keyframes firefly-move-10 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-20px, 15px);
+  }
+  50% {
+    transform: translate(15px, -12px);
+  }
+  75% {
+    transform: translate(-18px, 10px);
+  }
+}
+
+@keyframes firefly-move-11 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(12px, -10px);
+  }
+  50% {
+    transform: translate(-15px, 12px);
+  }
+  75% {
+    transform: translate(20px, -8px);
+  }
+}
+
+@keyframes firefly-move-12 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-18px, -12px);
+  }
+  50% {
+    transform: translate(22px, 10px);
+  }
+  75% {
+    transform: translate(-12px, 15px);
+  }
+}
+
+.search-input[data-animation="fireflies"] {
+  border-color: #4caf50 !important;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* === TEMAS DE NATURALEZA - ANIMACIONES === */
+
+/* === 13. AUTUMN LEAVES - Hojas de otoño cayendo === */
+.title-bar[data-animation="autumn-leaves"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1a0a 0%, #0d0a04 70%) !important;
+}
+
+/* Hojas de otoño usando pseudo-elementos */
+.title-bar[data-animation="autumn-leaves"]::before {
+  content: '🍂';
+  position: absolute;
+  top: -10px;
+  left: 10%;
+  font-size: 12px;
+  animation: autumn-leaf-fall-1 8s ease-in-out infinite, autumn-leaf-rotate-1 3s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"]::after {
+  content: '🍁';
+  position: absolute;
+  top: -15px;
+  left: 60%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-2 10s ease-in-out infinite, autumn-leaf-rotate-2 4s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de caída de hojas */
+@keyframes autumn-leaf-fall-1 {
+  0% { transform: translateY(-20px) translateX(0px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(50px); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-2 {
+  0% { transform: translateY(-30px) translateX(0px); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-30px); opacity: 0; }
+}
+
+@keyframes autumn-leaf-rotate-1 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes autumn-leaf-rotate-2 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+/* === 14. CHERRY BLOSSOMS - Pétalos de cerezo flotando === */
+.title-bar[data-animation="cherry-blossoms"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1a2a 0%, #0d0a0d 70%) !important;
+}
+
+/* Pétalos de cerezo usando pseudo-elementos */
+.title-bar[data-animation="cherry-blossoms"]::before {
+  content: '🌸';
+  position: absolute;
+  top: -5px;
+  left: 15%;
+  font-size: 8px;
+  animation: cherry-petal-float-1 12s ease-in-out infinite, cherry-petal-gentle-1 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"]::after {
+  content: '🌺';
+  position: absolute;
+  top: -10px;
+  left: 70%;
+  font-size: 6px;
+  animation: cherry-petal-float-2 15s ease-in-out infinite, cherry-petal-gentle-2 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de flotación de pétalos */
+@keyframes cherry-petal-float-1 {
+  0% { transform: translateY(-10px) translateX(0px); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(100vh) translateX(30px); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-2 {
+  0% { transform: translateY(-15px) translateX(0px); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  100% { transform: translateY(100vh) translateX(-20px); opacity: 0; }
+}
+
+@keyframes cherry-petal-gentle-1 {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.1) rotate(5deg); }
+}
+
+@keyframes cherry-petal-gentle-2 {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(0.9) rotate(-3deg); }
+}
+
+/* === 15. OCEAN WAVES - Ondas de mar moviéndose === */
+.title-bar[data-animation="ocean-waves"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0a1a2a 0%, #040a0d 70%) !important;
+}
+
+/* Ondas oceánicas usando pseudo-elementos */
+.title-bar[data-animation="ocean-waves"]::before {
+  content: '🌊';
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  font-size: 16px;
+  animation: ocean-wave-flow-1 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="ocean-waves"]::after {
+  content: '🌊';
+  position: absolute;
+  top: 60%;
+  left: 0%;
+  font-size: 14px;
+  animation: ocean-wave-flow-2 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de ondas oceánicas */
+@keyframes ocean-wave-flow-1 {
+  0% { transform: translateX(-100px) translateY(0px); opacity: 0.7; }
+  50% { transform: translateX(50vw) translateY(-5px); opacity: 1; }
+  100% { transform: translateX(100vw) translateY(0px); opacity: 0.7; }
+}
+
+@keyframes ocean-wave-flow-2 {
+  0% { transform: translateX(-120px) translateY(0px); opacity: 0.5; }
+  50% { transform: translateX(50vw) translateY(3px); opacity: 0.8; }
+  100% { transform: translateX(100vw) translateY(0px); opacity: 0.5; }
+}
+
+/* === 16. FOREST MIST - Niebla verde flotando === */
+.title-bar[data-animation="forest-mist"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0d1f0d 0%, #040a04 70%) !important;
+}
+
+/* Niebla forestal usando pseudo-elementos */
+.title-bar[data-animation="forest-mist"]::before {
+  content: '🌫️';
+  position: absolute;
+  top: 30%;
+  left: 10%;
+  font-size: 20px;
+  animation: forest-mist-drift-1 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.6;
+}
+
+.title-bar[data-animation="forest-mist"]::after {
+  content: '🌫️';
+  position: absolute;
+  top: 50%;
+  left: 60%;
+  font-size: 18px;
+  animation: forest-mist-drift-2 25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+/* Animaciones de niebla forestal */
+@keyframes forest-mist-drift-1 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.6; }
+  25% { transform: translateX(20px) translateY(-10px) scale(1.1); opacity: 0.8; }
+  50% { transform: translateX(40px) translateY(0px) scale(1); opacity: 0.6; }
+  75% { transform: translateX(20px) translateY(10px) scale(0.9); opacity: 0.4; }
+  100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.6; }
+}
+
+@keyframes forest-mist-drift-2 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.4; }
+  30% { transform: translateX(-15px) translateY(-5px) scale(1.2); opacity: 0.6; }
+  60% { transform: translateX(-30px) translateY(0px) scale(1); opacity: 0.4; }
+  90% { transform: translateX(-15px) translateY(5px) scale(0.8); opacity: 0.2; }
+  100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.4; }
+}
+
+/* === 17. SUNSET CLOUDS - Nubes doradas flotando === */
+.title-bar[data-animation="sunset-clouds"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1a0a 0%, #0d0a04 70%) !important;
+}
+
+/* Nubes al atardecer usando pseudo-elementos */
+.title-bar[data-animation="sunset-clouds"]::before {
+  content: '☁️';
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  font-size: 14px;
+  animation: sunset-cloud-drift-1 15s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="sunset-clouds"]::after {
+  content: '☁️';
+  position: absolute;
+  top: 40%;
+  left: 70%;
+  font-size: 12px;
+  animation: sunset-cloud-drift-2 18s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de nubes al atardecer */
+@keyframes sunset-cloud-drift-1 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.8; }
+  25% { transform: translateX(30px) translateY(-5px) scale(1.1); opacity: 1; }
+  50% { transform: translateX(60px) translateY(0px) scale(1); opacity: 0.8; }
+  75% { transform: translateX(30px) translateY(5px) scale(0.9); opacity: 0.6; }
+  100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.8; }
+}
+
+@keyframes sunset-cloud-drift-2 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.6; }
+  30% { transform: translateX(-25px) translateY(-3px) scale(1.2); opacity: 0.8; }
+  60% { transform: translateX(-50px) translateY(0px) scale(1); opacity: 0.6; }
+  90% { transform: translateX(-25px) translateY(3px) scale(0.8); opacity: 0.4; }
+  100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.6; }
+}
+/* === TEMAS DE NATURALEZA - ANIMACIONES CORREGIDAS === */
+
+/* === 13. AUTUMN LEAVES - Hojas de otoño cayendo (CORREGIDO) === */
+.title-bar[data-animation="autumn-leaves"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1a0a 0%, #0d0a04 70%) !important;
+}
+
+/* Múltiples hojas de otoño distribuidas por toda la barra */
+.title-bar[data-animation="autumn-leaves"]::before {
+  content: '🍂';
+  position: absolute;
+  top: -10px;
+  left: 5%;
+  font-size: 14px;
+  animation: autumn-leaf-fall-1 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"]::after {
+  content: '🍁';
+  position: absolute;
+  top: -15px;
+  left: 25%;
+  font-size: 12px;
+  animation: autumn-leaf-fall-2 8s ease-in-out infinite 1s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Hojas adicionales usando clases CSS */
+.title-bar[data-animation="autumn-leaves"] .leaf-1 {
+  content: '🍂';
+  position: absolute;
+  top: -8px;
+  left: 45%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-3 7s ease-in-out infinite 2s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-2 {
+  content: '🍁';
+  position: absolute;
+  top: -12px;
+  left: 65%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-4 9s ease-in-out infinite 3s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-3 {
+  content: '🍂';
+  position: absolute;
+  top: -6px;
+  left: 85%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-5 5s ease-in-out infinite 4s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de caída de hojas mejoradas */
+@keyframes autumn-leaf-fall-1 {
+  0% { transform: translateY(-20px) translateX(0px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(80px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-2 {
+  0% { transform: translateY(-25px) translateX(0px) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-60px) rotate(-360deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-3 {
+  0% { transform: translateY(-18px) translateX(0px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(40px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-4 {
+  0% { transform: translateY(-22px) translateX(0px) rotate(0deg); opacity: 0; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-40px) rotate(-180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-5 {
+  0% { transform: translateY(-16px) translateX(0px) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(60px) rotate(270deg); opacity: 0; }
+}
+
+/* === 14. CHERRY BLOSSOMS - Pétalos de cerezo flotando (CORREGIDO) === */
+.title-bar[data-animation="cherry-blossoms"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1a2a 0%, #0d0a0d 70%) !important;
+}
+
+/* Múltiples pétalos de cerezo distribuidos */
+.title-bar[data-animation="cherry-blossoms"]::before {
+  content: '🌸';
+  position: absolute;
+  top: -5px;
+  left: 8%;
+  font-size: 10px;
+  animation: cherry-petal-float-1 10s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"]::after {
+  content: '🌺';
+  position: absolute;
+  top: -8px;
+  left: 35%;
+  font-size: 8px;
+  animation: cherry-petal-float-2 12s ease-in-out infinite 1.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Pétalos adicionales */
+.title-bar[data-animation="cherry-blossoms"] .petal-1 {
+  content: '🌸';
+  position: absolute;
+  top: -6px;
+  left: 55%;
+  font-size: 9px;
+  animation: cherry-petal-float-3 11s ease-in-out infinite 3s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"] .petal-2 {
+  content: '🌺';
+  position: absolute;
+  top: -4px;
+  left: 75%;
+  font-size: 7px;
+  animation: cherry-petal-float-4 13s ease-in-out infinite 4.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de flotación de pétalos mejoradas */
+@keyframes cherry-petal-float-1 {
+  0% { transform: translateY(-10px) translateX(0px) scale(1); opacity: 0; }
+  10% { opacity: 0.9; }
+  90% { opacity: 0.9; }
+  100% { transform: translateY(100vh) translateX(30px) scale(0.8); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-2 {
+  0% { transform: translateY(-15px) translateX(0px) scale(1); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.7; }
+  100% { transform: translateY(100vh) translateX(-25px) scale(1.1); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-3 {
+  0% { transform: translateY(-12px) translateX(0px) scale(1); opacity: 0; }
+  20% { opacity: 0.8; }
+  80% { opacity: 0.8; }
+  100% { transform: translateY(100vh) translateX(20px) scale(0.9); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-4 {
+  0% { transform: translateY(-8px) translateX(0px) scale(1); opacity: 0; }
+  25% { opacity: 0.6; }
+  75% { opacity: 0.6; }
+  100% { transform: translateY(100vh) translateX(-15px) scale(1.2); opacity: 0; }
+}
+
+/* === 15. OCEAN WAVES - Ondas de mar moviéndose (MEJORADO) === */
+.title-bar[data-animation="ocean-waves"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0a1a2a 0%, #040a0d 70%) !important;
+}
+
+/* Ondas oceánicas mejoradas con diferentes formas */
+.title-bar[data-animation="ocean-waves"]::before {
+  content: '🌊';
+  position: absolute;
+  top: 40%;
+  left: -10%;
+  font-size: 18px;
+  animation: ocean-wave-flow-1 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="ocean-waves"]::after {
+  content: '🌊';
+  position: absolute;
+  top: 60%;
+  left: -15%;
+  font-size: 16px;
+  animation: ocean-wave-flow-2 6s ease-in-out infinite 1s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Ondas adicionales con diferentes patrones */
+.title-bar[data-animation="ocean-waves"] .wave-1 {
+  content: '🌊';
+  position: absolute;
+  top: 50%;
+  left: -20%;
+  font-size: 14px;
+  animation: ocean-wave-flow-3 5s ease-in-out infinite 2s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="ocean-waves"] .wave-2 {
+  content: '🌊';
+  position: absolute;
+  top: 70%;
+  left: -25%;
+  font-size: 12px;
+  animation: ocean-wave-flow-4 7s ease-in-out infinite 3s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de ondas oceánicas mejoradas */
+@keyframes ocean-wave-flow-1 {
+  0% { transform: translateX(-50px) translateY(0px) scale(1); opacity: 0.8; }
+  25% { transform: translateX(25vw) translateY(-8px) scale(1.1); opacity: 1; }
+  50% { transform: translateX(50vw) translateY(0px) scale(1); opacity: 0.8; }
+  75% { transform: translateX(75vw) translateY(5px) scale(0.9); opacity: 0.6; }
+  100% { transform: translateX(100vw) translateY(0px) scale(1); opacity: 0.4; }
+}
+
+@keyframes ocean-wave-flow-2 {
+  0% { transform: translateX(-60px) translateY(0px) scale(1); opacity: 0.6; }
+  30% { transform: translateX(30vw) translateY(6px) scale(1.2); opacity: 0.9; }
+  60% { transform: translateX(60vw) translateY(0px) scale(1); opacity: 0.6; }
+  90% { transform: translateX(90vw) translateY(-4px) scale(0.8); opacity: 0.3; }
+  100% { transform: translateX(110vw) translateY(0px) scale(1); opacity: 0.2; }
+}
+
+@keyframes ocean-wave-flow-3 {
+  0% { transform: translateX(-70px) translateY(0px) scale(1); opacity: 0.7; }
+  35% { transform: translateX(35vw) translateY(-5px) scale(1.3); opacity: 1; }
+  70% { transform: translateX(70vw) translateY(0px) scale(1); opacity: 0.7; }
+  100% { transform: translateX(105vw) translateY(3px) scale(0.7); opacity: 0.3; }
+}
+
+@keyframes ocean-wave-flow-4 {
+  0% { transform: translateX(-80px) translateY(0px) scale(1); opacity: 0.5; }
+  40% { transform: translateX(40vw) translateY(7px) scale(1.1); opacity: 0.8; }
+  80% { transform: translateX(80vw) translateY(0px) scale(1); opacity: 0.5; }
+  100% { transform: translateX(120vw) translateY(-2px) scale(0.6); opacity: 0.2; }
+}
+
+/* === 16. FOREST MIST - Niebla verde flotando (CORREGIDO) === */
+.title-bar[data-animation="forest-mist"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0d1f0d 0%, #040a04 70%) !important;
+}
+
+/* Niebla forestal real usando gradientes y blur */
+.title-bar[data-animation="forest-mist"]::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  width: 200px;
+  height: 60px;
+  background: radial-gradient(ellipse, rgba(76, 175, 80, 0.3) 0%, rgba(139, 195, 74, 0.1) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(8px);
+  animation: forest-mist-drift-1 25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="forest-mist"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 60%;
+  width: 150px;
+  height: 45px;
+  background: radial-gradient(ellipse, rgba(139, 195, 74, 0.2) 0%, rgba(76, 175, 80, 0.05) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(12px);
+  animation: forest-mist-drift-2 30s ease-in-out infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Niebla adicional */
+.title-bar[data-animation="forest-mist"] .mist-1 {
+  content: '';
+  position: absolute;
+  top: 30%;
+  left: 40%;
+  width: 120px;
+  height: 35px;
+  background: radial-gradient(ellipse, rgba(76, 175, 80, 0.25) 0%, rgba(139, 195, 74, 0.08) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(10px);
+  animation: forest-mist-drift-3 28s ease-in-out infinite 10s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="forest-mist"] .mist-2 {
+  content: '';
+  position: absolute;
+  top: 70%;
+  left: 20%;
+  width: 100px;
+  height: 30px;
+  background: radial-gradient(ellipse, rgba(139, 195, 74, 0.15) 0%, rgba(76, 175, 80, 0.03) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(15px);
+  animation: forest-mist-drift-4 32s ease-in-out infinite 15s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de niebla forestal mejoradas */
+@keyframes forest-mist-drift-1 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.3; }
+  25% { transform: translateX(30px) translateY(-15px) scale(1.2) rotate(5deg); opacity: 0.6; }
+  50% { transform: translateX(60px) translateY(0px) scale(1) rotate(0deg); opacity: 0.4; }
+  75% { transform: translateX(30px) translateY(15px) scale(0.8) rotate(-5deg); opacity: 0.2; }
+  100% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.3; }
+}
+
+@keyframes forest-mist-drift-2 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.2; }
+  30% { transform: translateX(-20px) translateY(-10px) scale(1.3) rotate(8deg); opacity: 0.5; }
+  60% { transform: translateX(-40px) translateY(0px) scale(1) rotate(0deg); opacity: 0.3; }
+  90% { transform: translateX(-20px) translateY(10px) scale(0.7) rotate(-8deg); opacity: 0.1; }
+  100% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.2; }
+}
+
+@keyframes forest-mist-drift-3 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.25; }
+  35% { transform: translateX(25px) translateY(-8px) scale(1.1) rotate(3deg); opacity: 0.5; }
+  70% { transform: translateX(50px) translateY(0px) scale(1) rotate(0deg); opacity: 0.3; }
+  100% { transform: translateX(25px) translateY(8px) scale(0.9) rotate(-3deg); opacity: 0.15; }
+}
+
+@keyframes forest-mist-drift-4 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.15; }
+  40% { transform: translateX(-15px) translateY(-5px) scale(1.4) rotate(6deg); opacity: 0.4; }
+  80% { transform: translateX(-30px) translateY(0px) scale(1) rotate(0deg); opacity: 0.2; }
+  100% { transform: translateX(-15px) translateY(5px) scale(0.6) rotate(-6deg); opacity: 0.05; }
+}
+/* === TEMAS DE NATURALEZA - MÁS ELEMENTOS ANIMADOS === */
+
+/* === AUTUMN LEAVES - Más hojas distribuidas === */
+.title-bar[data-animation="autumn-leaves"] .leaf-4 {
+  content: '🍂';
+  position: absolute;
+  top: -8px;
+  left: 15%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-6 6.5s ease-in-out infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-5 {
+  content: '🍁';
+  position: absolute;
+  top: -12px;
+  left: 35%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-7 7.5s ease-in-out infinite 6s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-6 {
+  content: '🍂';
+  position: absolute;
+  top: -6px;
+  left: 55%;
+  font-size: 13px;
+  animation: autumn-leaf-fall-8 5.5s ease-in-out infinite 7s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-7 {
+  content: '🍁';
+  position: absolute;
+  top: -10px;
+  left: 75%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-9 8.5s ease-in-out infinite 8s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-8 {
+  content: '🍂';
+  position: absolute;
+  top: -14px;
+  left: 95%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-10 6.8s ease-in-out infinite 9s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones adicionales para hojas */
+@keyframes autumn-leaf-fall-6 {
+  0% { transform: translateY(-20px) translateX(0px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(60px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-7 {
+  0% { transform: translateY(-25px) translateX(0px) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-40px) rotate(-180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-8 {
+  0% { transform: translateY(-18px) translateX(0px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(50px) rotate(270deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-9 {
+  0% { transform: translateY(-22px) translateX(0px) rotate(0deg); opacity: 0; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-30px) rotate(-270deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-10 {
+  0% { transform: translateY(-16px) translateX(0px) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(70px) rotate(360deg); opacity: 0; }
+}
+
+/* === CHERRY BLOSSOMS - Más pétalos distribuidos === */
+.title-bar[data-animation="cherry-blossoms"] .petal-3 {
+  content: '🌸';
+  position: absolute;
+  top: -6px;
+  left: 12%;
+  font-size: 8px;
+  animation: cherry-petal-float-5 9s ease-in-out infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"] .petal-4 {
+  content: '🌺';
+  position: absolute;
+  top: -4px;
+  left: 28%;
+  font-size: 7px;
+  animation: cherry-petal-float-6 11s ease-in-out infinite 6s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"] .petal-5 {
+  content: '🌸';
+  position: absolute;
+  top: -8px;
+  left: 48%;
+  font-size: 9px;
+  animation: cherry-petal-float-7 10s ease-in-out infinite 7s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"] .petal-6 {
+  content: '🌺';
+  position: absolute;
+  top: -5px;
+  left: 68%;
+  font-size: 6px;
+  animation: cherry-petal-float-8 12s ease-in-out infinite 8s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="cherry-blossoms"] .petal-7 {
+  content: '🌸';
+  position: absolute;
+  top: -7px;
+  left: 88%;
+  font-size: 8px;
+  animation: cherry-petal-float-9 9.5s ease-in-out infinite 9s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones adicionales para pétalos */
+@keyframes cherry-petal-float-5 {
+  0% { transform: translateY(-10px) translateX(0px) scale(1); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(100vh) translateX(25px) scale(0.9); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-6 {
+  0% { transform: translateY(-15px) translateX(0px) scale(1); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.7; }
+  100% { transform: translateY(100vh) translateX(-20px) scale(1.1); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-7 {
+  0% { transform: translateY(-12px) translateX(0px) scale(1); opacity: 0; }
+  20% { opacity: 0.8; }
+  80% { opacity: 0.8; }
+  100% { transform: translateY(100vh) translateX(15px) scale(0.8); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-8 {
+  0% { transform: translateY(-8px) translateX(0px) scale(1); opacity: 0; }
+  25% { opacity: 0.6; }
+  75% { opacity: 0.6; }
+  100% { transform: translateY(100vh) translateX(-10px) scale(1.2); opacity: 0; }
+}
+
+@keyframes cherry-petal-float-9 {
+  0% { transform: translateY(-14px) translateX(0px) scale(1); opacity: 0; }
+  18% { opacity: 0.9; }
+  82% { opacity: 0.9; }
+  100% { transform: translateY(100vh) translateX(35px) scale(0.7); opacity: 0; }
+}
+
+/* === OCEAN WAVES - Más ondas distribuidas === */
+.title-bar[data-animation="ocean-waves"] .wave-3 {
+  content: '🌊';
+  position: absolute;
+  top: 45%;
+  left: -30%;
+  font-size: 15px;
+  animation: ocean-wave-flow-5 5.5s ease-in-out infinite 4s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="ocean-waves"] .wave-4 {
+  content: '🌊';
+  position: absolute;
+  top: 65%;
+  left: -35%;
+  font-size: 13px;
+  animation: ocean-wave-flow-6 6.5s ease-in-out infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="ocean-waves"] .wave-5 {
+  content: '🌊';
+  position: absolute;
+  top: 35%;
+  left: -40%;
+  font-size: 11px;
+  animation: ocean-wave-flow-7 4.5s ease-in-out infinite 6s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones adicionales para ondas */
+@keyframes ocean-wave-flow-5 {
+  0% { transform: translateX(-50px) translateY(0px) scale(1); opacity: 0.7; }
+  30% { transform: translateX(30vw) translateY(-6px) scale(1.2); opacity: 1; }
+  70% { transform: translateX(70vw) translateY(0px) scale(1); opacity: 0.7; }
+  100% { transform: translateX(100vw) translateY(4px) scale(0.8); opacity: 0.3; }
+}
+
+@keyframes ocean-wave-flow-6 {
+  0% { transform: translateX(-60px) translateY(0px) scale(1); opacity: 0.6; }
+  35% { transform: translateX(35vw) translateY(8px) scale(1.1); opacity: 0.9; }
+  65% { transform: translateX(65vw) translateY(0px) scale(1); opacity: 0.6; }
+  100% { transform: translateX(110vw) translateY(-3px) scale(0.9); opacity: 0.2; }
+}
+
+@keyframes ocean-wave-flow-7 {
+  0% { transform: translateX(-70px) translateY(0px) scale(1); opacity: 0.8; }
+  40% { transform: translateX(40vw) translateY(-4px) scale(1.3); opacity: 1; }
+  60% { transform: translateX(60vw) translateY(0px) scale(1); opacity: 0.8; }
+  100% { transform: translateX(120vw) translateY(2px) scale(0.7); opacity: 0.4; }
+}
+
+/* === FOREST MIST - Más capas de niebla === */
+.title-bar[data-animation="forest-mist"] .mist-3 {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 30%;
+  width: 80px;
+  height: 25px;
+  background: radial-gradient(ellipse, rgba(76, 175, 80, 0.2) 0%, rgba(139, 195, 74, 0.06) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(6px);
+  animation: forest-mist-drift-5 26s ease-in-out infinite 12s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="forest-mist"] .mist-4 {
+  content: '';
+  position: absolute;
+  top: 60%;
+  left: 80%;
+  width: 90px;
+  height: 28px;
+  background: radial-gradient(ellipse, rgba(139, 195, 74, 0.18) 0%, rgba(76, 175, 80, 0.04) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(8px);
+  animation: forest-mist-drift-6 29s ease-in-out infinite 18s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="forest-mist"] .mist-5 {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 5%;
+  width: 70px;
+  height: 22px;
+  background: radial-gradient(ellipse, rgba(76, 175, 80, 0.22) 0%, rgba(139, 195, 74, 0.07) 50%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(7px);
+  animation: forest-mist-drift-7 31s ease-in-out infinite 22s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones adicionales para niebla */
+@keyframes forest-mist-drift-5 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.2; }
+  30% { transform: translateX(20px) translateY(-8px) scale(1.1) rotate(4deg); opacity: 0.5; }
+  70% { transform: translateX(40px) translateY(0px) scale(1) rotate(0deg); opacity: 0.3; }
+  100% { transform: translateX(20px) translateY(8px) scale(0.9) rotate(-4deg); opacity: 0.1; }
+}
+
+@keyframes forest-mist-drift-6 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.18; }
+  35% { transform: translateX(-15px) translateY(-6px) scale(1.2) rotate(5deg); opacity: 0.4; }
+  65% { transform: translateX(-30px) translateY(0px) scale(1) rotate(0deg); opacity: 0.2; }
+  100% { transform: translateX(-15px) translateY(6px) scale(0.8) rotate(-5deg); opacity: 0.08; }
+}
+
+@keyframes forest-mist-drift-7 {
+  0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 0.22; }
+  40% { transform: translateX(25px) translateY(-5px) scale(1.3) rotate(3deg); opacity: 0.5; }
+  60% { transform: translateX(50px) translateY(0px) scale(1) rotate(0deg); opacity: 0.3; }
+  100% { transform: translateX(25px) translateY(5px) scale(0.7) rotate(-3deg); opacity: 0.12; }
+}
+
+/* === SUNSET CLOUDS - Más nubes distribuidas === */
+.title-bar[data-animation="sunset-clouds"] .cloud-1 {
+  content: '☁️';
+  position: absolute;
+  top: 15%;
+  left: 5%;
+  font-size: 12px;
+  animation: sunset-cloud-drift-3 16s ease-in-out infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="sunset-clouds"] .cloud-2 {
+  content: '☁️';
+  position: absolute;
+  top: 35%;
+  left: 25%;
+  font-size: 10px;
+  animation: sunset-cloud-drift-4 19s ease-in-out infinite 8s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="sunset-clouds"] .cloud-3 {
+  content: '☁️';
+  position: absolute;
+  top: 55%;
+  left: 45%;
+  font-size: 11px;
+  animation: sunset-cloud-drift-5 17s ease-in-out infinite 11s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="sunset-clouds"] .cloud-4 {
+  content: '☁️';
+  position: absolute;
+  top: 25%;
+  left: 65%;
+  font-size: 9px;
+  animation: sunset-cloud-drift-6 20s ease-in-out infinite 14s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="sunset-clouds"] .cloud-5 {
+  content: '☁️';
+  position: absolute;
+  top: 45%;
+  left: 85%;
+  font-size: 13px;
+  animation: sunset-cloud-drift-7 18s ease-in-out infinite 17s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones adicionales para nubes */
+@keyframes sunset-cloud-drift-3 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.7; }
+  25% { transform: translateX(25px) translateY(-3px) scale(1.1); opacity: 0.9; }
+  50% { transform: translateX(50px) translateY(0px) scale(1); opacity: 0.7; }
+  75% { transform: translateX(25px) translateY(3px) scale(0.9); opacity: 0.5; }
+  100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.7; }
+}
+
+@keyframes sunset-cloud-drift-4 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.6; }
+  30% { transform: translateX(-20px) translateY(-2px) scale(1.2); opacity: 0.8; }
+  60% { transform: translateX(-40px) translateY(0px) scale(1); opacity: 0.6; }
+  90% { transform: translateX(-20px) translateY(2px) scale(0.8); opacity: 0.4; }
+  100% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.6; }
+}
+
+@keyframes sunset-cloud-drift-5 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.8; }
+  35% { transform: translateX(30px) translateY(-4px) scale(1.1); opacity: 1; }
+  70% { transform: translateX(60px) translateY(0px) scale(1); opacity: 0.8; }
+  100% { transform: translateX(30px) translateY(4px) scale(0.9); opacity: 0.6; }
+}
+
+@keyframes sunset-cloud-drift-6 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.5; }
+  40% { transform: translateX(-25px) translateY(-1px) scale(1.3); opacity: 0.7; }
+  80% { transform: translateX(-50px) translateY(0px) scale(1); opacity: 0.5; }
+  100% { transform: translateX(-25px) translateY(1px) scale(0.7); opacity: 0.3; }
+}
+
+@keyframes sunset-cloud-drift-7 {
+  0% { transform: translateX(0px) translateY(0px) scale(1); opacity: 0.9; }
+  45% { transform: translateX(35px) translateY(-5px) scale(1.2); opacity: 1; }
+  90% { transform: translateX(70px) translateY(0px) scale(1); opacity: 0.9; }
+  100% { transform: translateX(35px) translateY(5px) scale(0.8); opacity: 0.7; }
+}
+/* === AUTUMN LEAVES - Animaciones mejoradas con más frecuencia === */
+
+/* Hojas principales con caída más frecuente */
+.title-bar[data-animation="autumn-leaves"]::before {
+  content: '🍂';
+  position: absolute;
+  top: -10px;
+  left: 5%;
+  font-size: 14px;
+  animation: autumn-leaf-fall-fast-1 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"]::after {
+  content: '🍁';
+  position: absolute;
+  top: -15px;
+  left: 25%;
+  font-size: 12px;
+  animation: autumn-leaf-fall-fast-2 4s ease-in-out infinite 0.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Hojas adicionales con diferentes posiciones y frecuencias */
+.title-bar[data-animation="autumn-leaves"] .leaf-1 {
+  content: '🍂';
+  position: absolute;
+  top: -8px;
+  left: 45%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-fast-3 2.5s ease-in-out infinite 1s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-2 {
+  content: '🍁';
+  position: absolute;
+  top: -12px;
+  left: 65%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-fast-4 3.5s ease-in-out infinite 1.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-3 {
+  content: '🍂';
+  position: absolute;
+  top: -6px;
+  left: 85%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-fast-5 2.8s ease-in-out infinite 2s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Más hojas con posiciones intermedias */
+.title-bar[data-animation="autumn-leaves"] .leaf-4 {
+  content: '🍂';
+  position: absolute;
+  top: -8px;
+  left: 15%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-fast-6 3.2s ease-in-out infinite 2.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-5 {
+  content: '🍁';
+  position: absolute;
+  top: -12px;
+  left: 35%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-fast-7 2.7s ease-in-out infinite 3s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-6 {
+  content: '🍂';
+  position: absolute;
+  top: -6px;
+  left: 55%;
+  font-size: 13px;
+  animation: autumn-leaf-fall-fast-8 3.8s ease-in-out infinite 3.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-7 {
+  content: '🍁';
+  position: absolute;
+  top: -10px;
+  left: 75%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-fast-9 2.3s ease-in-out infinite 4s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-8 {
+  content: '🍂';
+  position: absolute;
+  top: -14px;
+  left: 95%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-fast-10 3.3s ease-in-out infinite 4.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Hojas adicionales para mayor densidad */
+.title-bar[data-animation="autumn-leaves"] .leaf-9 {
+  content: '🍁';
+  position: absolute;
+  top: -9px;
+  left: 8%;
+  font-size: 7px;
+  animation: autumn-leaf-fall-fast-11 2.8s ease-in-out infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-10 {
+  content: '🍂';
+  position: absolute;
+  top: -11px;
+  left: 18%;
+  font-size: 12px;
+  animation: autumn-leaf-fall-fast-12 3.6s ease-in-out infinite 5.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-11 {
+  content: '🍁';
+  position: absolute;
+  top: -7px;
+  left: 28%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-fast-13 2.4s ease-in-out infinite 6s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-12 {
+  content: '🍂';
+  position: absolute;
+  top: -13px;
+  left: 38%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-fast-14 3.1s ease-in-out infinite 6.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-13 {
+  content: '🍁';
+  position: absolute;
+  top: -5px;
+  left: 48%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-fast-15 2.9s ease-in-out infinite 7s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-14 {
+  content: '🍂';
+  position: absolute;
+  top: -10px;
+  left: 58%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-fast-16 3.4s ease-in-out infinite 7.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-15 {
+  content: '🍁';
+  position: absolute;
+  top: -8px;
+  left: 68%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-fast-17 2.6s ease-in-out infinite 8s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-16 {
+  content: '🍂';
+  position: absolute;
+  top: -12px;
+  left: 78%;
+  font-size: 7px;
+  animation: autumn-leaf-fall-fast-18 3.7s ease-in-out infinite 8.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-17 {
+  content: '🍁';
+  position: absolute;
+  top: -6px;
+  left: 88%;
+  font-size: 13px;
+  animation: autumn-leaf-fall-fast-19 2.2s ease-in-out infinite 9s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-18 {
+  content: '🍂';
+  position: absolute;
+  top: -9px;
+  left: 98%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-fast-20 3.5s ease-in-out infinite 9.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de caída más rápidas y frecuentes */
+@keyframes autumn-leaf-fall-fast-1 {
+  0% { transform: translateY(-20px) translateX(0px) rotate(0deg); opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(60px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-2 {
+  0% { transform: translateY(-25px) translateX(0px) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-40px) rotate(-360deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-3 {
+  0% { transform: translateY(-18px) translateX(0px) rotate(0deg); opacity: 0; }
+  6% { opacity: 1; }
+  94% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(50px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-4 {
+  0% { transform: translateY(-22px) translateX(0px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-30px) rotate(-180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-5 {
+  0% { transform: translateY(-16px) translateX(0px) rotate(0deg); opacity: 0; }
+  7% { opacity: 1; }
+  93% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(70px) rotate(270deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-6 {
+  0% { transform: translateY(-20px) translateX(0px) rotate(0deg); opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(45px) rotate(90deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-7 {
+  0% { transform: translateY(-24px) translateX(0px) rotate(0deg); opacity: 0; }
+  9% { opacity: 1; }
+  91% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-35px) rotate(-90deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-8 {
+  0% { transform: translateY(-19px) translateX(0px) rotate(0deg); opacity: 0; }
+  6% { opacity: 1; }
+  94% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(55px) rotate(135deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-9 {
+  0% { transform: translateY(-21px) translateX(0px) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-25px) rotate(-135deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-10 {
+  0% { transform: translateY(-17px) translateX(0px) rotate(0deg); opacity: 0; }
+  7% { opacity: 1; }
+  93% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(65px) rotate(225deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-11 {
+  0% { transform: translateY(-23px) translateX(0px) rotate(0deg); opacity: 0; }
+  4% { opacity: 1; }
+  96% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(35px) rotate(45deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-12 {
+  0% { transform: translateY(-26px) translateX(0px) rotate(0deg); opacity: 0; }
+  11% { opacity: 1; }
+  89% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-50px) rotate(-45deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-13 {
+  0% { transform: translateY(-15px) translateX(0px) rotate(0deg); opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(40px) rotate(120deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-14 {
+  0% { transform: translateY(-27px) translateX(0px) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-45px) rotate(-120deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-15 {
+  0% { transform: translateY(-18px) translateX(0px) rotate(0deg); opacity: 0; }
+  6% { opacity: 1; }
+  94% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(30px) rotate(200deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-16 {
+  0% { transform: translateY(-25px) translateX(0px) rotate(0deg); opacity: 0; }
+  9% { opacity: 1; }
+  91% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-40px) rotate(-200deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-17 {
+  0% { transform: translateY(-16px) translateX(0px) rotate(0deg); opacity: 0; }
+  7% { opacity: 1; }
+  93% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(55px) rotate(300deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-18 {
+  0% { transform: translateY(-28px) translateX(0px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-35px) rotate(-300deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-19 {
+  0% { transform: translateY(-14px) translateX(0px) rotate(0deg); opacity: 0; }
+  4% { opacity: 1; }
+  96% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(25px) rotate(150deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-fast-20 {
+  0% { transform: translateY(-29px) translateX(0px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-60px) rotate(-150deg); opacity: 0; }
+}
+/* === AUTUMN LEAVES - Animaciones corregidas con velocidad lenta y distribución horizontal === */
+
+/* Hojas principales con caída más lenta y desde diferentes posiciones */
+.title-bar[data-animation="autumn-leaves"]::before {
+  content: '🍂';
+  position: absolute;
+  top: -10px;
+  left: 10%;
+  font-size: 14px;
+  animation: autumn-leaf-fall-slow-1 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"]::after {
+  content: '🍁';
+  position: absolute;
+  top: -15px;
+  left: 30%;
+  font-size: 12px;
+  animation: autumn-leaf-fall-slow-2 10s ease-in-out infinite 2s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Hojas adicionales con distribución horizontal mejorada */
+.title-bar[data-animation="autumn-leaves"] .leaf-1 {
+  content: '🍂';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-slow-3 9s ease-in-out infinite 4s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-2 {
+  content: '🍁';
+  position: absolute;
+  top: -12px;
+  left: 70%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-slow-4 11s ease-in-out infinite 6s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-3 {
+  content: '🍂';
+  position: absolute;
+  top: -6px;
+  left: 90%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-slow-5 7s ease-in-out infinite 8s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Más hojas distribuidas horizontalmente */
+.title-bar[data-animation="autumn-leaves"] .leaf-4 {
+  content: '🍂';
+  position: absolute;
+  top: -8px;
+  left: 5%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-slow-6 12s ease-in-out infinite 10s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-5 {
+  content: '🍁';
+  position: absolute;
+  top: -12px;
+  left: 20%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-slow-7 8.5s ease-in-out infinite 12s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-6 {
+  content: '🍂';
+  position: absolute;
+  top: -6px;
+  left: 40%;
+  font-size: 13px;
+  animation: autumn-leaf-fall-slow-8 9.5s ease-in-out infinite 14s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-7 {
+  content: '🍁';
+  position: absolute;
+  top: -10px;
+  left: 60%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-slow-9 10.5s ease-in-out infinite 16s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-8 {
+  content: '🍂';
+  position: absolute;
+  top: -14px;
+  left: 80%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-slow-10 11.5s ease-in-out infinite 18s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Hojas adicionales para mayor densidad */
+.title-bar[data-animation="autumn-leaves"] .leaf-9 {
+  content: '🍁';
+  position: absolute;
+  top: -9px;
+  left: 15%;
+  font-size: 7px;
+  animation: autumn-leaf-fall-slow-11 7.5s ease-in-out infinite 20s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-10 {
+  content: '🍂';
+  position: absolute;
+  top: -11px;
+  left: 35%;
+  font-size: 12px;
+  animation: autumn-leaf-fall-slow-12 8.8s ease-in-out infinite 22s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-11 {
+  content: '🍁';
+  position: absolute;
+  top: -7px;
+  left: 55%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-slow-13 9.2s ease-in-out infinite 24s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-12 {
+  content: '🍂';
+  position: absolute;
+  top: -13px;
+  left: 75%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-slow-14 10.8s ease-in-out infinite 26s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-13 {
+  content: '🍁';
+  position: absolute;
+  top: -5px;
+  left: 95%;
+  font-size: 11px;
+  animation: autumn-leaf-fall-slow-15 8.2s ease-in-out infinite 28s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-14 {
+  content: '🍂';
+  position: absolute;
+  top: -10px;
+  left: 12%;
+  font-size: 9px;
+  animation: autumn-leaf-fall-slow-16 9.8s ease-in-out infinite 30s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-15 {
+  content: '🍁';
+  position: absolute;
+  top: -8px;
+  left: 25%;
+  font-size: 10px;
+  animation: autumn-leaf-fall-slow-17 7.8s ease-in-out infinite 32s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-16 {
+  content: '🍂';
+  position: absolute;
+  top: -12px;
+  left: 45%;
+  font-size: 7px;
+  animation: autumn-leaf-fall-slow-18 11.2s ease-in-out infinite 34s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-17 {
+  content: '🍁';
+  position: absolute;
+  top: -6px;
+  left: 65%;
+  font-size: 13px;
+  animation: autumn-leaf-fall-slow-19 8.5s ease-in-out infinite 36s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="autumn-leaves"] .leaf-18 {
+  content: '🍂';
+  position: absolute;
+  top: -9px;
+  left: 85%;
+  font-size: 8px;
+  animation: autumn-leaf-fall-slow-20 9.5s ease-in-out infinite 38s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Animaciones de caída más lentas con distribución horizontal mejorada */
+@keyframes autumn-leaf-fall-slow-1 {
+  0% { transform: translateY(-20px) translateX(0px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(30px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-2 {
+  0% { transform: translateY(-25px) translateX(0px) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-20px) rotate(-360deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-3 {
+  0% { transform: translateY(-18px) translateX(0px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(25px) rotate(180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-4 {
+  0% { transform: translateY(-22px) translateX(0px) rotate(0deg); opacity: 0; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-15px) rotate(-180deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-5 {
+  0% { transform: translateY(-16px) translateX(0px) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(35px) rotate(270deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-6 {
+  0% { transform: translateY(-20px) translateX(0px) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(20px) rotate(90deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-7 {
+  0% { transform: translateY(-24px) translateX(0px) rotate(0deg); opacity: 0; }
+  14% { opacity: 1; }
+  86% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-25px) rotate(-90deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-8 {
+  0% { transform: translateY(-19px) translateX(0px) rotate(0deg); opacity: 0; }
+  16% { opacity: 1; }
+  84% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(30px) rotate(135deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-9 {
+  0% { transform: translateY(-21px) translateX(0px) rotate(0deg); opacity: 0; }
+  13% { opacity: 1; }
+  87% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-20px) rotate(-135deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-10 {
+  0% { transform: translateY(-17px) translateX(0px) rotate(0deg); opacity: 0; }
+  17% { opacity: 1; }
+  83% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(40px) rotate(225deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-11 {
+  0% { transform: translateY(-23px) translateX(0px) rotate(0deg); opacity: 0; }
+  11% { opacity: 1; }
+  89% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(15px) rotate(45deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-12 {
+  0% { transform: translateY(-26px) translateX(0px) rotate(0deg); opacity: 0; }
+  19% { opacity: 1; }
+  81% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-30px) rotate(-45deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-13 {
+  0% { transform: translateY(-15px) translateX(0px) rotate(0deg); opacity: 0; }
+  9% { opacity: 1; }
+  91% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(25px) rotate(120deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-14 {
+  0% { transform: translateY(-27px) translateX(0px) rotate(0deg); opacity: 0; }
+  21% { opacity: 1; }
+  79% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-35px) rotate(-120deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-15 {
+  0% { transform: translateY(-18px) translateX(0px) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(20px) rotate(200deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-16 {
+  0% { transform: translateY(-25px) translateX(0px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-25px) rotate(-200deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-17 {
+  0% { transform: translateY(-16px) translateX(0px) rotate(0deg); opacity: 0; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(35px) rotate(300deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-18 {
+  0% { transform: translateY(-28px) translateX(0px) rotate(0deg); opacity: 0; }
+  22% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-30px) rotate(-300deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-19 {
+  0% { transform: translateY(-14px) translateX(0px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(15px) rotate(150deg); opacity: 0; }
+}
+
+@keyframes autumn-leaf-fall-slow-20 {
+  0% { transform: translateY(-29px) translateX(0px) rotate(0deg); opacity: 0; }
+  24% { opacity: 1; }
+  76% { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(-40px) rotate(-150deg); opacity: 0; }
+}

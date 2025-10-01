@@ -469,6 +469,9 @@ class ThemeManager {
         } else if (animationType === 'meteor-shower') {
           // La animación meteor-shower se maneja solo con CSS
           cleanupMatrixAnimation();
+        } else if (animationType === 'autumn-leaves') {
+          // Inicializar hojas de otoño con posiciones aleatorias
+          this.initAutumnLeaves();
         } else {
           cleanupMatrixAnimation();
         }
@@ -649,6 +652,100 @@ class ThemeManager {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
     this.applyTheme(savedTheme);
     return savedTheme;
+  }
+
+  initAutumnLeaves() {
+    // Limpiar hojas existentes
+    const existingLeaves = document.querySelectorAll('.autumn-leaf');
+    existingLeaves.forEach(leaf => leaf.remove());
+    
+    // Crear contenedor para las hojas si no existe
+    let leafContainer = document.querySelector('.autumn-leaf-container');
+    if (!leafContainer) {
+      leafContainer = document.createElement('div');
+      leafContainer.className = 'autumn-leaf-container';
+      leafContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1000;
+        overflow: hidden;
+      `;
+      
+      const titleBar = document.querySelector('.title-bar[data-animation="autumn-leaves"]');
+      if (titleBar) {
+        titleBar.appendChild(leafContainer);
+      }
+    }
+    
+    // Crear 25 hojas con posiciones aleatorias (más hojas)
+    for (let i = 0; i < 25; i++) {
+      const leaf = document.createElement('div');
+      leaf.className = 'autumn-leaf';
+      
+      // Posición horizontal aleatoria (5% a 95%)
+      const randomLeft = Math.random() * 90 + 5;
+      
+      // Tipo de hoja aleatorio solo otoñales
+      const leafTypes = ['🍂', '🍁', '🍂', '🍁', '🍂', '🍁', '🍂', '🍁', '🍂', '🍁'];
+      const randomLeaf = leafTypes[Math.floor(Math.random() * leafTypes.length)];
+      
+      // Tamaño aleatorio
+      const randomSize = Math.random() * 8 + 10; // 10px a 18px (más grandes)
+      
+      // Velocidad aleatoria MUY LENTA
+      const randomDuration = Math.random() * 12 + 18; // 18s a 30s (muy lento)
+      
+      // Delay aleatorio
+      const randomDelay = Math.random() * 40; // 0s a 40s
+      
+      // Desplazamiento lateral aleatorio
+      const randomDrift = (Math.random() - 0.5) * 120; // -60px a +60px
+      
+      // Rotación aleatoria
+      const randomRotation = Math.random() * 360; // 0° a 360°
+      
+      leaf.textContent = randomLeaf;
+      leaf.style.cssText = `
+        position: absolute;
+        top: -20px;
+        left: ${randomLeft}%;
+        font-size: ${randomSize}px;
+        animation: autumn-leaf-random-fall ${randomDuration}s ease-in-out infinite ${randomDelay}s;
+        pointer-events: none;
+        z-index: 1000;
+        transform: rotate(${randomRotation}deg);
+        filter: hue-rotate(${Math.random() * 60 - 30}deg) saturate(1.2) brightness(1.1);
+      `;
+      
+      // Agregar animación CSS dinámica
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes autumn-leaf-random-fall {
+          0% { 
+            transform: translateY(-20px) translateX(0px) rotate(${randomRotation}deg); 
+            opacity: 0; 
+          }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { 
+            transform: translateY(100vh) translateX(${randomDrift}px) rotate(${randomRotation + 360}deg); 
+            opacity: 0; 
+          }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      leafContainer.appendChild(leaf);
+    }
+    
+    // Renovar las hojas cada 45 segundos para mantener variedad
+    setTimeout(() => {
+      this.initAutumnLeaves();
+    }, 45000);
   }
 }
 
