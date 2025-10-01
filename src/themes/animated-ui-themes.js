@@ -6,7 +6,8 @@ const ANIMATED_UI_KEYS = [
   'Cyber Grid Animated', 'Neon Aurora Animated', 'Plasma Animated',
   // Nuevos temas basados en Meteor Shower
   'Fire Storm Animated', 'Emerald Rain Animated', 'Purple Nebula Animated', 'Golden Galaxy Animated',
-  'Crimson Comet Animated', 'Arctic Aurora Animated', 'Cosmic Storm Animated', 'Solar Flare Animated'
+  'Crimson Comet Animated', 'Arctic Aurora Animated', 'Cosmic Storm Animated', 'Solar Flare Animated',
+  'Winter Snowfall Animated', 'Thunderstorm Animated'
 ];
 
 export const animatedUiThemes = {
@@ -1421,6 +1422,186 @@ export const animatedUiThemes = {
       
       // Animaciones específicas
       animationType: 'solar-flare',
+      animationSpeed: 'fast'
+    }
+  },
+
+  'Winter Snowfall Animated': {
+    name: 'Winter Snowfall Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#bbdefb',
+      sidebarText: '#e3f2fd',
+      sidebarHover: 'rgba(187, 222, 251, 0.1)',
+      sidebarSelected: 'rgba(187, 222, 251, 0.2)',
+      sidebarGutter: '#bbdefb',
+      
+      // Menu Bar (top) - Con animación winter snowfall
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      menuBarText: '#e3f2fd',
+      menuBarBorder: '#bbdefb',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #2a3850 0%, #1a2430 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#bbdefb',
+      statusBarText: '#0a1420',
+      statusBarBorder: '#bbdefb',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #bbdefb 0%, #90caf9 60%, #e3f2fd 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #2a3850 0%, #1a2430 70%)',
+      tabText: '#e3f2fd',
+      tabActiveText: '#0a1420',
+      tabBorder: '#bbdefb',
+      tabCloseHover: '#90caf9',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#e3f2fd',
+      tabGroupBorder: '#bbdefb',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      contentBorder: '#bbdefb',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      dialogText: '#e3f2fd',
+      dialogBorder: '#bbdefb',
+      dialogShadow: 'rgba(187, 222, 251, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#bbdefb',
+      buttonPrimaryText: '#0a1420',
+      buttonPrimaryHover: '#90caf9',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#e3f2fd',
+      buttonSecondaryHover: 'rgba(187, 222, 251, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      inputText: '#e3f2fd',
+      inputBorder: '#bbdefb',
+      inputFocus: '#90caf9',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      
+      // Context Menus
+      contextMenuBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      contextMenuText: '#e3f2fd',
+      contextMenuBorder: '#bbdefb',
+      contextMenuHover: 'rgba(187, 222, 251, 0.1)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(26, 40, 64, 0.5)',
+      scrollbarThumb: '#bbdefb',
+      scrollbarThumbHover: '#90caf9',
+      
+      // Inputs
+      inputBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      inputText: '#e3f2fd',
+      inputBorder: '#bbdefb',
+      inputFocus: '#90caf9',
+      
+      // Animaciones específicas
+      animationType: 'winter-snowfall',
+      animationSpeed: 'slow'
+    }
+  },
+
+  'Thunderstorm Animated': {
+    name: 'Thunderstorm Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#6495ed',
+      sidebarText: '#b0c4de',
+      sidebarHover: 'rgba(100, 149, 237, 0.1)',
+      sidebarSelected: 'rgba(100, 149, 237, 0.2)',
+      sidebarGutter: '#6495ed',
+      
+      // Menu Bar (top) - Con animación thunderstorm
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      menuBarText: '#b0c4de',
+      menuBarBorder: '#6495ed',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #2a2f3e 0%, #1a1d24 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#6495ed',
+      statusBarText: '#0a0d14',
+      statusBarBorder: '#6495ed',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #6495ed 0%, #4682b4 60%, #87ceeb 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #2a2f3e 0%, #1a1d24 70%)',
+      tabText: '#b0c4de',
+      tabActiveText: '#0a0d14',
+      tabBorder: '#6495ed',
+      tabCloseHover: '#4682b4',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#b0c4de',
+      tabGroupBorder: '#6495ed',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      contentBorder: '#6495ed',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      dialogText: '#b0c4de',
+      dialogBorder: '#6495ed',
+      dialogShadow: 'rgba(100, 149, 237, 0.4)',
+      
+      // Buttons
+      buttonPrimary: '#6495ed',
+      buttonPrimaryText: '#0a0d14',
+      buttonPrimaryHover: '#4682b4',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#b0c4de',
+      buttonSecondaryHover: 'rgba(100, 149, 237, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      inputText: '#b0c4de',
+      inputBorder: '#6495ed',
+      inputFocus: '#4682b4',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      
+      // Context Menus
+      contextMenuBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      contextMenuText: '#b0c4de',
+      contextMenuBorder: '#6495ed',
+      contextMenuHover: 'rgba(100, 149, 237, 0.1)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(26, 31, 46, 0.5)',
+      scrollbarThumb: '#6495ed',
+      scrollbarThumbHover: '#4682b4',
+      
+      // Inputs
+      inputBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      inputText: '#b0c4de',
+      inputBorder: '#6495ed',
+      inputFocus: '#4682b4',
+      
+      // Animaciones específicas
+      animationType: 'thunderstorm',
       animationSpeed: 'fast'
     }
   }

@@ -1487,3 +1487,574 @@
   box-shadow: 0 0 20px rgba(255, 140, 0, 0.6) !important;
   transition: all 0.3s ease !important;
 }
+
+/* === 9. WINTER SNOWFALL - Nieve Invernal === */
+.title-bar[data-animation="winter-snowfall"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%) !important;
+}
+
+/* Copos de nieve con forma usando símbolos */
+.title-bar[data-animation="winter-snowfall"]::before {
+  content: '❄';
+  position: absolute;
+  top: -20px;
+  left: 15%;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  text-shadow: 0 0 8px rgba(187, 222, 251, 0.8), 0 0 16px rgba(187, 222, 251, 0.5);
+  animation: snowflake-fall-1 45s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="winter-snowfall"]::after {
+  content: '❄';
+  position: absolute;
+  top: -20px;
+  left: 75%;
+  color: rgba(224, 247, 250, 0.85);
+  font-size: 14px;
+  text-shadow: 0 0 6px rgba(187, 222, 251, 0.7), 0 0 12px rgba(187, 222, 251, 0.4);
+  animation: snowflake-fall-2 55s linear infinite 5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Copos adicionales usando clases */
+.title-bar[data-animation="winter-snowfall"] .snowflake-1,
+.title-bar[data-animation="winter-snowfall"] .snowflake-2,
+.title-bar[data-animation="winter-snowfall"] .snowflake-3,
+.title-bar[data-animation="winter-snowfall"] .snowflake-4,
+.title-bar[data-animation="winter-snowfall"] .snowflake-5,
+.title-bar[data-animation="winter-snowfall"] .snowflake-6 {
+  position: absolute;
+  top: -30px;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 1000;
+  font-family: Arial, sans-serif;
+}
+
+.title-bar[data-animation="winter-snowfall"] .snowflake-1 {
+  left: 25%;
+  font-size: 18px;
+  animation: snowflake-fall-3 50s linear infinite 4s;
+  text-shadow: 0 0 10px rgba(187, 222, 251, 0.9);
+}
+
+.title-bar[data-animation="winter-snowfall"] .snowflake-2 {
+  left: 45%;
+  font-size: 12px;
+  animation: snowflake-fall-4 60s linear infinite 10s;
+  text-shadow: 0 0 6px rgba(187, 222, 251, 0.7);
+}
+
+.title-bar[data-animation="winter-snowfall"] .snowflake-3 {
+  left: 60%;
+  font-size: 15px;
+  animation: snowflake-fall-5 48s linear infinite 2s;
+  text-shadow: 0 0 8px rgba(224, 247, 250, 0.8);
+}
+
+.title-bar[data-animation="winter-snowfall"] .snowflake-4 {
+  left: 85%;
+  font-size: 13px;
+  animation: snowflake-fall-6 58s linear infinite 15s;
+  text-shadow: 0 0 7px rgba(187, 222, 251, 0.75);
+}
+
+.title-bar[data-animation="winter-snowfall"] .snowflake-5 {
+  left: 35%;
+  font-size: 16px;
+  animation: snowflake-fall-7 52s linear infinite 8s;
+  text-shadow: 0 0 9px rgba(255, 255, 255, 0.85);
+}
+
+.title-bar[data-animation="winter-snowfall"] .snowflake-6 {
+  left: 90%;
+  font-size: 14px;
+  animation: snowflake-fall-8 62s linear infinite 18s;
+  text-shadow: 0 0 7px rgba(224, 247, 250, 0.8);
+}
+
+/* Animaciones de caída con rotación para cada copo */
+@keyframes snowflake-fall-1 {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-2 {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-3 {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(10px) rotate(180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(-5px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-4 {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(-8px) rotate(-180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(8px) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-5 {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(12px) rotate(180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(-10px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-6 {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(-6px) rotate(-180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(6px) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-7 {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(15px) rotate(180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(-12px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes snowflake-fall-8 {
+  0% {
+    transform: translateY(-30px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(-10px) rotate(-180deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(10px) rotate(-360deg);
+    opacity: 0;
+  }
+}
+
+.search-input[data-animation="winter-snowfall"] {
+  border-color: #bbdefb !important;
+  box-shadow: 0 0 20px rgba(187, 222, 251, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* === 10. THUNDERSTORM - Tormenta con Lluvia y Relámpagos === */
+.title-bar[data-animation="thunderstorm"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%) !important;
+}
+
+/* Efecto de relámpago de fondo con flash */
+.title-bar[data-animation="thunderstorm"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(100, 180, 255, 0.6) 0%, rgba(100, 180, 255, 0.3) 30%, transparent 60%);
+  opacity: 0;
+  animation: lightning-flash 14s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* Relámpago visible simple pero efectivo */
+.title-bar[data-animation="thunderstorm"] .lightning-1,
+.title-bar[data-animation="thunderstorm"] .lightning-2 {
+  position: absolute;
+  top: 5px;
+  color: rgba(100, 180, 255, 1);
+  font-size: 20px;
+  pointer-events: none;
+  z-index: 1001;
+  opacity: 0;
+  text-shadow: 
+    0 0 8px rgba(100, 180, 255, 1),
+    0 0 16px rgba(100, 180, 255, 0.8),
+    0 0 24px rgba(150, 200, 255, 0.6),
+    0 0 32px rgba(100, 180, 255, 0.4);
+  filter: brightness(2) saturate(1.5);
+}
+
+.title-bar[data-animation="thunderstorm"] .lightning-1 {
+  left: 35%;
+  animation: lightning-bolt-1 14s ease-in-out infinite;
+}
+
+.title-bar[data-animation="thunderstorm"] .lightning-2 {
+  left: 65%;
+  animation: lightning-bolt-2 14s ease-in-out infinite 7s;
+}
+
+/* Gotas de lluvia usando símbolos */
+.title-bar[data-animation="thunderstorm"]::after {
+  content: '💧';
+  position: absolute;
+  top: -10px;
+  left: 10%;
+  color: rgba(100, 150, 200, 0.5);
+  font-size: 5px;
+  text-shadow: 0 0 2px rgba(100, 150, 200, 0.3);
+  animation: raindrop-fall-1 3.5s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Gotas adicionales usando clases */
+.title-bar[data-animation="thunderstorm"] .raindrop-1,
+.title-bar[data-animation="thunderstorm"] .raindrop-2,
+.title-bar[data-animation="thunderstorm"] .raindrop-3,
+.title-bar[data-animation="thunderstorm"] .raindrop-4,
+.title-bar[data-animation="thunderstorm"] .raindrop-5,
+.title-bar[data-animation="thunderstorm"] .raindrop-6,
+.title-bar[data-animation="thunderstorm"] .raindrop-7,
+.title-bar[data-animation="thunderstorm"] .raindrop-8,
+.title-bar[data-animation="thunderstorm"] .raindrop-9,
+.title-bar[data-animation="thunderstorm"] .raindrop-10,
+.title-bar[data-animation="thunderstorm"] .raindrop-11,
+.title-bar[data-animation="thunderstorm"] .raindrop-12 {
+  position: absolute;
+  top: -10px;
+  color: rgba(100, 150, 200, 0.6);
+  pointer-events: none;
+  z-index: 1000;
+  font-family: Arial, sans-serif;
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-1 {
+  left: 15%;
+  font-size: 5px;
+  animation: raindrop-fall-2 3s linear infinite 0.2s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-2 {
+  left: 25%;
+  font-size: 4px;
+  animation: raindrop-fall-3 3.5s linear infinite 0.6s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-3 {
+  left: 35%;
+  font-size: 6px;
+  animation: raindrop-fall-2 3.2s linear infinite 1s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-4 {
+  left: 45%;
+  font-size: 4px;
+  animation: raindrop-fall-3 3.8s linear infinite 0.4s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-5 {
+  left: 55%;
+  font-size: 5px;
+  animation: raindrop-fall-2 3.3s linear infinite 0.8s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-6 {
+  left: 65%;
+  font-size: 4px;
+  animation: raindrop-fall-3 3.6s linear infinite 1.2s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-7 {
+  left: 75%;
+  font-size: 6px;
+  animation: raindrop-fall-2 3.4s linear infinite 0.3s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-8 {
+  left: 85%;
+  font-size: 5px;
+  animation: raindrop-fall-3 3.7s linear infinite 0.7s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-9 {
+  left: 20%;
+  font-size: 5px;
+  animation: raindrop-fall-2 3.5s linear infinite 1.4s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-10 {
+  left: 40%;
+  font-size: 4px;
+  animation: raindrop-fall-3 3.9s linear infinite 0.5s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-11 {
+  left: 60%;
+  font-size: 6px;
+  animation: raindrop-fall-2 3.4s linear infinite 0.9s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+.title-bar[data-animation="thunderstorm"] .raindrop-12 {
+  left: 80%;
+  font-size: 5px;
+  animation: raindrop-fall-3 3.6s linear infinite 1.1s;
+  text-shadow: 0 0 1px rgba(100, 150, 200, 0.3);
+}
+
+/* Animaciones de gotas de lluvia (caída rápida) */
+@keyframes raindrop-fall-1 {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+}
+
+@keyframes raindrop-fall-2 {
+  0% {
+    transform: translateY(-10px) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(50px) translateX(-3px);
+    opacity: 0;
+  }
+}
+
+@keyframes raindrop-fall-3 {
+  0% {
+    transform: translateY(-10px) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(50px) translateX(3px);
+    opacity: 0;
+  }
+}
+
+/* Animación de flash de relámpago de fondo */
+@keyframes lightning-flash {
+  0%, 19%, 21%, 49%, 56%, 58%, 85%, 100% {
+    opacity: 0;
+  }
+  /* Primer relámpago - flash doble */
+  20% {
+    opacity: 0.8;
+  }
+  20.2% {
+    opacity: 0;
+  }
+  20.4% {
+    opacity: 1;
+  }
+  20.8% {
+    opacity: 0;
+  }
+  /* Segundo relámpago - flash triple más intenso */
+  50% {
+    opacity: 0.9;
+  }
+  50.2% {
+    opacity: 0;
+  }
+  50.4% {
+    opacity: 1;
+  }
+  50.7% {
+    opacity: 0;
+  }
+  50.9% {
+    opacity: 0.7;
+  }
+  51.2% {
+    opacity: 0;
+  }
+}
+
+/* Animación de rayo visible 1 */
+@keyframes lightning-bolt-1 {
+  0%, 19%, 21%, 85%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  20.2% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  20.4% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  20.8% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+/* Animación de rayo visible 2 */
+@keyframes lightning-bolt-2 {
+  0%, 49%, 51.3%, 85%, 100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  50.2% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50.4% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  50.7% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50.9% {
+    opacity: 0.9;
+    transform: scale(1.2);
+  }
+  51.2% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.search-input[data-animation="thunderstorm"] {
+  border-color: #6495ed !important;
+  box-shadow: 0 0 15px rgba(100, 149, 237, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
