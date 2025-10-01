@@ -148,9 +148,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           const existingSnowflakes = titleBar.querySelectorAll('[class^="snowflake-"]');
           const existingRaindrops = titleBar.querySelectorAll('[class^="raindrop-"]');
           const existingLightning = titleBar.querySelectorAll('[class^="lightning-"]');
+          const existingSand = titleBar.querySelectorAll('[class^="sand-"]');
           existingSnowflakes.forEach(el => el.remove());
           existingRaindrops.forEach(el => el.remove());
           existingLightning.forEach(el => el.remove());
+          existingSand.forEach(el => el.remove());
           
           // Crear nuevos copos si es winter-snowfall
           if (animation === 'winter-snowfall') {
@@ -178,6 +180,16 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               lightning.className = `lightning-${i}`;
               lightning.textContent = '⚡';
               titleBar.appendChild(lightning);
+            }
+          }
+          
+          // Crear partículas de arena si es desert-storm
+          if (animation === 'desert-storm') {
+            for (let i = 1; i <= 15; i++) {
+              const sand = document.createElement('div');
+              sand.className = `sand-${i}`;
+              sand.textContent = '•';
+              titleBar.appendChild(sand);
             }
           }
         }
