@@ -408,8 +408,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#79b8ff',
       sidebarText: '#cfe6ff',
-      sidebarHover: 'rgba(121, 184, 255, 0.1)',
-      sidebarSelected: 'rgba(121, 184, 255, 0.2)',
+      sidebarHover: 'rgba(121, 184, 255, 0.15)',
+      sidebarSelected: 'rgba(121, 184, 255, 0.3)',
       sidebarGutter: '#79b8ff',
       
       // Menu Bar (top) - Con animación meteor shower
@@ -463,6 +463,22 @@ export const animatedUiThemes = {
       inputText: '#cfe6ff',
       inputBorder: '#79b8ff',
       inputFocus: '#4f9dff',
+      
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a2333 0%, #0b1220 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#1a2333',
+      contextMenuText: '#cfe6ff',
+      contextMenuBorder: '#79b8ff',
+      contextMenuHover: 'rgba(121, 184, 255, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(26, 35, 51, 0.5)',
+      scrollbarThumb: '#79b8ff',
+      scrollbarThumbHover: '#4f9dff',
       
       // Animaciones específicas
       animationType: 'meteor-shower',
@@ -881,8 +897,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#ff5722',
       sidebarText: '#ffccbc',
-      sidebarHover: 'rgba(255, 87, 34, 0.1)',
-      sidebarSelected: 'rgba(255, 87, 34, 0.2)',
+      sidebarHover: 'rgba(255, 87, 34, 0.15)',
+      sidebarSelected: 'rgba(255, 87, 34, 0.3)',
       sidebarGutter: '#ff5722',
       
       // Menu Bar (top) - Con animación fire storm
@@ -937,6 +953,22 @@ export const animatedUiThemes = {
       inputBorder: '#ff5722',
       inputFocus: '#ff9800',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#2d1410',
+      contextMenuText: '#ffccbc',
+      contextMenuBorder: '#ff5722',
+      contextMenuHover: 'rgba(255, 87, 34, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(45, 20, 16, 0.5)',
+      scrollbarThumb: '#ff5722',
+      scrollbarThumbHover: '#ff9800',
+      
       // Animaciones específicas
       animationType: 'fire-storm',
       animationSpeed: 'fast'
@@ -950,8 +982,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#00e676',
       sidebarText: '#b9f6ca',
-      sidebarHover: 'rgba(0, 230, 118, 0.1)',
-      sidebarSelected: 'rgba(0, 230, 118, 0.2)',
+      sidebarHover: 'rgba(0, 230, 118, 0.15)',
+      sidebarSelected: 'rgba(0, 230, 118, 0.3)',
       sidebarGutter: '#00e676',
       
       // Menu Bar (top) - Con animación emerald rain
@@ -1006,6 +1038,22 @@ export const animatedUiThemes = {
       inputBorder: '#00e676',
       inputFocus: '#1de9b6',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#0d2d1f',
+      contextMenuText: '#b9f6ca',
+      contextMenuBorder: '#00e676',
+      contextMenuHover: 'rgba(0, 230, 118, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(13, 45, 31, 0.5)',
+      scrollbarThumb: '#00e676',
+      scrollbarThumbHover: '#1de9b6',
+      
       // Animaciones específicas
       animationType: 'emerald-rain',
       animationSpeed: 'normal'
@@ -1019,8 +1067,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#9c27b0',
       sidebarText: '#e1bee7',
-      sidebarHover: 'rgba(156, 39, 176, 0.1)',
-      sidebarSelected: 'rgba(156, 39, 176, 0.2)',
+      sidebarHover: 'rgba(156, 39, 176, 0.15)',
+      sidebarSelected: 'rgba(156, 39, 176, 0.3)',
       sidebarGutter: '#9c27b0',
       
       // Menu Bar (top) - Con animación purple nebula
@@ -1075,6 +1123,22 @@ export const animatedUiThemes = {
       inputBorder: '#9c27b0',
       inputFocus: '#ba68c8',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#2d1a33',
+      contextMenuText: '#e1bee7',
+      contextMenuBorder: '#9c27b0',
+      contextMenuHover: 'rgba(156, 39, 176, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(45, 26, 51, 0.5)',
+      scrollbarThumb: '#9c27b0',
+      scrollbarThumbHover: '#ba68c8',
+      
       // Animaciones específicas
       animationType: 'purple-nebula',
       animationSpeed: 'normal'
@@ -1088,8 +1152,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#ffd700',
       sidebarText: '#fff9c4',
-      sidebarHover: 'rgba(255, 215, 0, 0.1)',
-      sidebarSelected: 'rgba(255, 215, 0, 0.2)',
+      sidebarHover: 'rgba(255, 215, 0, 0.15)',
+      sidebarSelected: 'rgba(255, 215, 0, 0.3)',
       sidebarGutter: '#ffd700',
       
       // Menu Bar (top) - Con animación golden galaxy
@@ -1144,6 +1208,22 @@ export const animatedUiThemes = {
       inputBorder: '#ffd700',
       inputFocus: '#ffc107',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#2d2410',
+      contextMenuText: '#fff9c4',
+      contextMenuBorder: '#ffd700',
+      contextMenuHover: 'rgba(255, 215, 0, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(45, 36, 16, 0.5)',
+      scrollbarThumb: '#ffd700',
+      scrollbarThumbHover: '#ffc107',
+      
       // Animaciones específicas
       animationType: 'golden-galaxy',
       animationSpeed: 'normal'
@@ -1157,8 +1237,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#dc143c',
       sidebarText: '#ffcdd2',
-      sidebarHover: 'rgba(220, 20, 60, 0.1)',
-      sidebarSelected: 'rgba(220, 20, 60, 0.2)',
+      sidebarHover: 'rgba(220, 20, 60, 0.15)',
+      sidebarSelected: 'rgba(220, 20, 60, 0.3)',
       sidebarGutter: '#dc143c',
       
       // Menu Bar (top) - Con animación crimson comet
@@ -1213,6 +1293,22 @@ export const animatedUiThemes = {
       inputBorder: '#dc143c',
       inputFocus: '#ff69b4',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#330d1a',
+      contextMenuText: '#ffcdd2',
+      contextMenuBorder: '#dc143c',
+      contextMenuHover: 'rgba(220, 20, 60, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(51, 13, 26, 0.5)',
+      scrollbarThumb: '#dc143c',
+      scrollbarThumbHover: '#ff69b4',
+      
       // Animaciones específicas
       animationType: 'crimson-comet',
       animationSpeed: 'fast'
@@ -1226,8 +1322,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#00ffff',
       sidebarText: '#e0f7fa',
-      sidebarHover: 'rgba(0, 255, 255, 0.1)',
-      sidebarSelected: 'rgba(0, 255, 255, 0.2)',
+      sidebarHover: 'rgba(0, 255, 255, 0.15)',
+      sidebarSelected: 'rgba(0, 255, 255, 0.3)',
       sidebarGutter: '#00ffff',
       
       // Menu Bar (top) - Con animación arctic aurora
@@ -1282,6 +1378,22 @@ export const animatedUiThemes = {
       inputBorder: '#00ffff',
       inputFocus: '#7fffd4',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#0d1f2d',
+      contextMenuText: '#e0f7fa',
+      contextMenuBorder: '#00ffff',
+      contextMenuHover: 'rgba(0, 255, 255, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(13, 31, 45, 0.5)',
+      scrollbarThumb: '#00ffff',
+      scrollbarThumbHover: '#7fffd4',
+      
       // Animaciones específicas
       animationType: 'arctic-aurora',
       animationSpeed: 'normal'
@@ -1295,8 +1407,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#8a2be2',
       sidebarText: '#e1d5e7',
-      sidebarHover: 'rgba(138, 43, 226, 0.1)',
-      sidebarSelected: 'rgba(138, 43, 226, 0.2)',
+      sidebarHover: 'rgba(138, 43, 226, 0.15)',
+      sidebarSelected: 'rgba(138, 43, 226, 0.3)',
       sidebarGutter: '#8a2be2',
       
       // Menu Bar (top) - Con animación cosmic storm (multicolor)
@@ -1351,6 +1463,22 @@ export const animatedUiThemes = {
       inputBorder: '#8a2be2',
       inputFocus: '#ff00ff',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#1a1a2e',
+      contextMenuText: '#e1d5e7',
+      contextMenuBorder: '#8a2be2',
+      contextMenuHover: 'rgba(138, 43, 226, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(26, 26, 46, 0.5)',
+      scrollbarThumb: '#8a2be2',
+      scrollbarThumbHover: '#ff00ff',
+      
       // Animaciones específicas
       animationType: 'cosmic-storm',
       animationSpeed: 'fast'
@@ -1364,8 +1492,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#ff8c00',
       sidebarText: '#ffe0b2',
-      sidebarHover: 'rgba(255, 140, 0, 0.1)',
-      sidebarSelected: 'rgba(255, 140, 0, 0.2)',
+      sidebarHover: 'rgba(255, 140, 0, 0.15)',
+      sidebarSelected: 'rgba(255, 140, 0, 0.3)',
       sidebarGutter: '#ff8c00',
       
       // Menu Bar (top) - Con animación solar flare
@@ -1420,6 +1548,22 @@ export const animatedUiThemes = {
       inputBorder: '#ff8c00',
       inputFocus: '#ffa500',
       
+      // Terminal Backgrounds
+      powershellTerminalBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      
+      // Context Menus
+      contextMenuBackground: '#331a00',
+      contextMenuText: '#ffe0b2',
+      contextMenuBorder: '#ff8c00',
+      contextMenuHover: 'rgba(255, 140, 0, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
+      
+      // Scrollbars
+      scrollbarTrack: 'rgba(51, 26, 0, 0.5)',
+      scrollbarThumb: '#ff8c00',
+      scrollbarThumbHover: '#ffa500',
+      
       // Animaciones específicas
       animationType: 'solar-flare',
       animationSpeed: 'fast'
@@ -1433,8 +1577,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#bbdefb',
       sidebarText: '#e3f2fd',
-      sidebarHover: 'rgba(187, 222, 251, 0.1)',
-      sidebarSelected: 'rgba(187, 222, 251, 0.2)',
+      sidebarHover: 'rgba(187, 222, 251, 0.15)',
+      sidebarSelected: 'rgba(187, 222, 251, 0.3)',
       sidebarGutter: '#bbdefb',
       
       // Menu Bar (top) - Con animación winter snowfall
@@ -1494,10 +1638,11 @@ export const animatedUiThemes = {
       linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
       
       // Context Menus
-      contextMenuBackground: 'radial-gradient(circle at 20% 20%, #1a2840 0%, #0a1420 70%)',
+      contextMenuBackground: '#1a2840',
       contextMenuText: '#e3f2fd',
       contextMenuBorder: '#bbdefb',
-      contextMenuHover: 'rgba(187, 222, 251, 0.1)',
+      contextMenuHover: 'rgba(187, 222, 251, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
       
       // Scrollbars
       scrollbarTrack: 'rgba(26, 40, 64, 0.5)',
@@ -1523,8 +1668,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#6495ed',
       sidebarText: '#b0c4de',
-      sidebarHover: 'rgba(100, 149, 237, 0.1)',
-      sidebarSelected: 'rgba(100, 149, 237, 0.2)',
+      sidebarHover: 'rgba(100, 149, 237, 0.15)',
+      sidebarSelected: 'rgba(100, 149, 237, 0.3)',
       sidebarGutter: '#6495ed',
       
       // Menu Bar (top) - Con animación thunderstorm
@@ -1584,10 +1729,11 @@ export const animatedUiThemes = {
       linuxTerminalBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
       
       // Context Menus
-      contextMenuBackground: 'radial-gradient(circle at 20% 20%, #1a1f2e 0%, #0a0d14 70%)',
+      contextMenuBackground: '#1a1f2e',
       contextMenuText: '#b0c4de',
       contextMenuBorder: '#6495ed',
-      contextMenuHover: 'rgba(100, 149, 237, 0.1)',
+      contextMenuHover: 'rgba(100, 149, 237, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
       
       // Scrollbars
       scrollbarTrack: 'rgba(26, 31, 46, 0.5)',
@@ -1613,8 +1759,8 @@ export const animatedUiThemes = {
       sidebarBackground: 'transparent',
       sidebarBorder: '#d2b48c',
       sidebarText: '#f5deb3',
-      sidebarHover: 'rgba(210, 180, 140, 0.1)',
-      sidebarSelected: 'rgba(210, 180, 140, 0.2)',
+      sidebarHover: 'rgba(210, 180, 140, 0.15)',
+      sidebarSelected: 'rgba(210, 180, 140, 0.3)',
       sidebarGutter: '#d2b48c',
       
       // Menu Bar (top) - Con animación desert storm
@@ -1674,10 +1820,11 @@ export const animatedUiThemes = {
       linuxTerminalBackground: 'radial-gradient(circle at 30% 50%, #3d2f1f 0%, #1a120a 70%)',
       
       // Context Menus
-      contextMenuBackground: 'radial-gradient(circle at 30% 50%, #3d2f1f 0%, #1a120a 70%)',
+      contextMenuBackground: '#3d2f1f',
       contextMenuText: '#f5deb3',
       contextMenuBorder: '#d2b48c',
-      contextMenuHover: 'rgba(210, 180, 140, 0.1)',
+      contextMenuHover: 'rgba(210, 180, 140, 0.2)',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.5)',
       
       // Scrollbars
       scrollbarTrack: 'rgba(61, 47, 31, 0.5)',

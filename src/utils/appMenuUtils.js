@@ -246,10 +246,10 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
   contextMenu.className = menuClass;
   contextMenu.style.cssText = `
     position: fixed;
-    background: var(--ui-sidebar-bg, #333);
-    border: 1px solid var(--ui-sidebar-border, #555);
+    background: var(--ui-context-bg, #333) !important;
+    border: 1px solid var(--ui-context-border, #555);
     border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
     z-index: 9999;
     min-width: 220px;
     padding: 4px 0;
@@ -261,15 +261,16 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
   `;
   
   const createMenuItem = (item, isSubmenu = false) => {
-    if (item.separator) {
-      const separator = document.createElement('div');
-      separator.style.cssText = `
-        height: 1px;
-        background: var(--ui-sidebar-border, #555);
-        margin: 4px 8px;
-      `;
-      return separator;
-    }
+      if (item.separator) {
+        const separator = document.createElement('div');
+        separator.style.cssText = `
+          height: 1px;
+          background: var(--ui-context-border, #555);
+          margin: 4px 8px;
+          opacity: 0.5;
+        `;
+        return separator;
+      }
     
     const menuItem = document.createElement('div');
     menuItem.className = 'menu-item-unified';
@@ -279,7 +280,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       display: flex;
       align-items: center;
       justify-content: space-between;
-      color: var(--ui-sidebar-text, #fff);
+      color: var(--ui-context-text, #fff);
       transition: background-color 0.15s ease;
       position: relative;
     `;
@@ -334,7 +335,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
             item.style.backgroundColor = 'transparent';
           }
         });
-        menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
+        menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
         
         // Limpiar submenú anterior
         if (activeSubmenu && document.body.contains(activeSubmenu)) {
@@ -346,10 +347,10 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         activeSubmenu.className = `${menuClass}-submenu`;
         activeSubmenu.style.cssText = `
           position: fixed;
-          background: var(--ui-sidebar-bg, #333);
-          border: 1px solid var(--ui-sidebar-border, #555);
+          background: var(--ui-context-bg, #333) !important;
+          border: 1px solid var(--ui-context-border, #555);
           border-radius: 6px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
           z-index: 10000;
           min-width: 200px;
           padding: 4px 0;
@@ -404,7 +405,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
             item.style.backgroundColor = 'transparent';
           }
         });
-        menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
+        menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
       });
       
       menuItem.addEventListener('mouseleave', () => {
