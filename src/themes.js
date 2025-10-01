@@ -780,6 +780,686 @@ export const themes = {
       selectionBackground: '#2a1b3d',
       cursor: '#ff69b4'
     }
+  },
+
+  // ========================================
+  // TEMAS ANIMADOS - ESQUEMAS DE TERMINAL
+  // ========================================
+
+  'Meteor Shower Animated': {
+    name: 'Meteor Shower Animated',
+    theme: {
+      background: '#0b1220',
+      foreground: '#cfe6ff',
+      black: '#08101d',
+      brightBlack: '#3a4a5f',
+      red: '#ff6b9d',
+      brightRed: '#ff8bb3',
+      green: '#79b8ff',
+      brightGreen: '#9ed4ff',
+      yellow: '#ffd89b',
+      brightYellow: '#ffe4b3',
+      blue: '#4f9dff',
+      brightBlue: '#79b8ff',
+      magenta: '#7a6cff',
+      brightMagenta: '#9e8fff',
+      cyan: '#6cd5ff',
+      brightCyan: '#8ee2ff',
+      white: '#cfe6ff',
+      brightWhite: '#e8f2ff',
+      selectionBackground: 'rgba(121, 184, 255, 0.3)',
+      cursor: '#79b8ff'
+    }
+  },
+
+  'Fire Storm Animated': {
+    name: 'Fire Storm Animated',
+    theme: {
+      background: '#0d0604',
+      foreground: '#ffccbc',
+      black: '#1a0a04',
+      brightBlack: '#4d2816',
+      red: '#ff5722',
+      brightRed: '#ff7043',
+      green: '#ffab40',
+      brightGreen: '#ffc107',
+      yellow: '#ffc107',
+      brightYellow: '#ffd54f',
+      blue: '#ff6f00',
+      brightBlue: '#ff9800',
+      magenta: '#ff3d00',
+      brightMagenta: '#ff6e40',
+      cyan: '#ffab91',
+      brightCyan: '#ffccbc',
+      white: '#ffccbc',
+      brightWhite: '#ffe0cc',
+      selectionBackground: 'rgba(255, 87, 34, 0.3)',
+      cursor: '#ff9800'
+    }
+  },
+
+  'Emerald Rain Animated': {
+    name: 'Emerald Rain Animated',
+    theme: {
+      background: '#040d08',
+      foreground: '#b9f6ca',
+      black: '#081810',
+      brightBlack: '#1d3d2f',
+      red: '#ff6b6b',
+      brightRed: '#ff8787',
+      green: '#00e676',
+      brightGreen: '#1de9b6',
+      yellow: '#76ff03',
+      brightYellow: '#c6ff00',
+      blue: '#00c853',
+      brightBlue: '#69f0ae',
+      magenta: '#00e5cc',
+      brightMagenta: '#1de9b6',
+      cyan: '#64ffda',
+      brightCyan: '#a7ffeb',
+      white: '#b9f6ca',
+      brightWhite: '#e8f5e9',
+      selectionBackground: 'rgba(0, 230, 118, 0.3)',
+      cursor: '#1de9b6'
+    }
+  },
+
+  'Cosmic Storm Animated': {
+    name: 'Cosmic Storm Animated',
+    theme: {
+      background: '#06060e',
+      foreground: '#e1d5e7',
+      black: '#0d0d1f',
+      brightBlack: '#2a2a3e',
+      red: '#ff00ff',
+      brightRed: '#ff5cff',
+      green: '#00ffff',
+      brightGreen: '#5cffff',
+      yellow: '#ffff00',
+      brightYellow: '#ffff5c',
+      blue: '#8a2be2',
+      brightBlue: '#9d5cff',
+      magenta: '#ff00ff',
+      brightMagenta: '#ff6eff',
+      cyan: '#00ffff',
+      brightCyan: '#6effff',
+      white: '#e1d5e7',
+      brightWhite: '#f5f0ff',
+      selectionBackground: 'rgba(138, 43, 226, 0.3)',
+      cursor: '#ff00ff'
+    }
+  },
+
+  'Space Station Animated': {
+    name: 'Space Station Animated',
+    theme: {
+      background: '#0a0f1f',
+      foreground: '#9ee1ff',
+      black: '#031018',
+      brightBlack: '#0f1b33',
+      red: '#ff5370',
+      brightRed: '#ff6b81',
+      green: '#00e5ff',
+      brightGreen: '#26c6da',
+      yellow: '#ffcb6b',
+      brightYellow: '#ffe082',
+      blue: '#00bcd4',
+      brightBlue: '#26c6da',
+      magenta: '#82aaff',
+      brightMagenta: '#a0c5ff',
+      cyan: '#00bcd4',
+      brightCyan: '#4dd0e1',
+      white: '#9ee1ff',
+      brightWhite: '#c5f0ff',
+      selectionBackground: 'rgba(0, 188, 212, 0.3)',
+      cursor: '#00bcd4'
+    }
+  },
+
+  'Cyberpunk 2077 Animated': {
+    name: 'Cyberpunk 2077 Animated',
+    theme: {
+      background: '#0f0f0f',
+      foreground: '#fcee21',
+      black: '#000000',
+      brightBlack: '#1a1a1a',
+      red: '#ff0080',
+      brightRed: '#ff3399',
+      green: '#00ff88',
+      brightGreen: '#33ffaa',
+      yellow: '#fcee21',
+      brightYellow: '#ffff55',
+      blue: '#0099ff',
+      brightBlue: '#33aaff',
+      magenta: '#7928ca',
+      brightMagenta: '#9d5cff',
+      cyan: '#00ffff',
+      brightCyan: '#33ffff',
+      white: '#fcee21',
+      brightWhite: '#ffffaa',
+      selectionBackground: 'rgba(252, 238, 33, 0.3)',
+      cursor: '#fcee21'
+    }
+  },
+
+  'Neon Matrix Blue Animated': {
+    name: 'Neon Matrix Blue Animated',
+    theme: {
+      background: '#000000',
+      foreground: '#0080ff',
+      black: '#000000',
+      brightBlack: '#000022',
+      red: '#0055cc',
+      brightRed: '#0080ff',
+      green: '#0099ff',
+      brightGreen: '#33aaff',
+      yellow: '#00ccff',
+      brightYellow: '#55ddff',
+      blue: '#0080ff',
+      brightBlue: '#0099ff',
+      magenta: '#0066ff',
+      brightMagenta: '#0080ff',
+      cyan: '#00b3ff',
+      brightCyan: '#33ccff',
+      white: '#0080ff',
+      brightWhite: '#66b3ff',
+      selectionBackground: 'rgba(0, 128, 255, 0.3)',
+      cursor: '#0080ff'
+    }
+  },
+
+  'Quantum Flux Animated': {
+    name: 'Quantum Flux Animated',
+    theme: {
+      background: '#0a0a0a',
+      foreground: '#a78bfa',
+      black: '#000000',
+      brightBlack: '#1a1a1a',
+      red: '#f59e0b',
+      brightRed: '#fbbf24',
+      green: '#8b5cf6',
+      brightGreen: '#a78bfa',
+      yellow: '#fbbf24',
+      brightYellow: '#fcd34d',
+      blue: '#8b5cf6',
+      brightBlue: '#a78bfa',
+      magenta: '#8b5cf6',
+      brightMagenta: '#c4b5fd',
+      cyan: '#a78bfa',
+      brightCyan: '#c4b5fd',
+      white: '#a78bfa',
+      brightWhite: '#e9d5ff',
+      selectionBackground: 'rgba(139, 92, 246, 0.3)',
+      cursor: '#8b5cf6'
+    }
+  },
+
+  'Holographic Animated': {
+    name: 'Holographic Animated',
+    theme: {
+      background: '#0f0f23',
+      foreground: '#9ee1ff',
+      black: '#000000',
+      brightBlack: '#1a1a3a',
+      red: '#ff6b6b',
+      brightRed: '#ff8787',
+      green: '#00d4ff',
+      brightGreen: '#33d9ff',
+      yellow: '#ffeb3b',
+      brightYellow: '#fff176',
+      blue: '#00d4ff',
+      brightBlue: '#33d9ff',
+      magenta: '#a78bfa',
+      brightMagenta: '#c4b5fd',
+      cyan: '#00d4ff',
+      brightCyan: '#4dd0e1',
+      white: '#9ee1ff',
+      brightWhite: '#cfe6ff',
+      selectionBackground: 'rgba(0, 212, 255, 0.3)',
+      cursor: '#00d4ff'
+    }
+  },
+
+  'Cyber Grid Animated': {
+    name: 'Cyber Grid Animated',
+    theme: {
+      background: '#0a0a0a',
+      foreground: '#00ff88',
+      black: '#000000',
+      brightBlack: '#1a1a1a',
+      red: '#ff4444',
+      brightRed: '#ff6666',
+      green: '#00ff88',
+      brightGreen: '#33ffaa',
+      yellow: '#ffff00',
+      brightYellow: '#ffff55',
+      blue: '#00ddaa',
+      brightBlue: '#00ff88',
+      magenta: '#00ffbb',
+      brightMagenta: '#33ffcc',
+      cyan: '#00ff88',
+      brightCyan: '#55ffaa',
+      white: '#00ff88',
+      brightWhite: '#88ffbb',
+      selectionBackground: 'rgba(0, 255, 136, 0.3)',
+      cursor: '#00ff88'
+    }
+  },
+
+  'Neon Aurora Animated': {
+    name: 'Neon Aurora Animated',
+    theme: {
+      background: '#0a0f1f',
+      foreground: '#ffb3d1',
+      black: '#000000',
+      brightBlack: '#1a1f3f',
+      red: '#ff6b9d',
+      brightRed: '#ff8bb3',
+      green: '#ff88aa',
+      brightGreen: '#ffaacc',
+      yellow: '#ffc0cb',
+      brightYellow: '#ffd9e6',
+      blue: '#ff6b9d',
+      brightBlue: '#ff8bb3',
+      magenta: '#ff6b9d',
+      brightMagenta: '#ff8bb3',
+      cyan: '#ffb3d1',
+      brightCyan: '#ffd9e6',
+      white: '#ffb3d1',
+      brightWhite: '#ffe6f2',
+      selectionBackground: 'rgba(255, 107, 157, 0.3)',
+      cursor: '#ff6b9d'
+    }
+  },
+
+  'Plasma Animated': {
+    name: 'Plasma Animated',
+    theme: {
+      background: '#1a0a2e',
+      foreground: '#ff80bf',
+      black: '#000000',
+      brightBlack: '#2a1a3e',
+      red: '#ff0080',
+      brightRed: '#ff3399',
+      green: '#ff00aa',
+      brightGreen: '#ff33bb',
+      yellow: '#ff66cc',
+      brightYellow: '#ff88dd',
+      blue: '#ff0080',
+      brightBlue: '#ff3399',
+      magenta: '#ff0080',
+      brightMagenta: '#ff3399',
+      cyan: '#ff55aa',
+      brightCyan: '#ff88cc',
+      white: '#ff80bf',
+      brightWhite: '#ffc0df',
+      selectionBackground: 'rgba(255, 0, 128, 0.3)',
+      cursor: '#ff0080'
+    }
+  },
+
+  'Purple Nebula Animated': {
+    name: 'Purple Nebula Animated',
+    theme: {
+      background: '#0d0612',
+      foreground: '#e1bee7',
+      black: '#000000',
+      brightBlack: '#2d1a33',
+      red: '#e91e63',
+      brightRed: '#f06292',
+      green: '#ba68c8',
+      brightGreen: '#ce93d8',
+      yellow: '#e1bee7',
+      brightYellow: '#f3e5f5',
+      blue: '#9c27b0',
+      brightBlue: '#ba68c8',
+      magenta: '#9c27b0',
+      brightMagenta: '#ba68c8',
+      cyan: '#ce93d8',
+      brightCyan: '#e1bee7',
+      white: '#e1bee7',
+      brightWhite: '#f3e5f5',
+      selectionBackground: 'rgba(156, 39, 176, 0.3)',
+      cursor: '#ba68c8'
+    }
+  },
+
+  'Golden Galaxy Animated': {
+    name: 'Golden Galaxy Animated',
+    theme: {
+      background: '#0d0a04',
+      foreground: '#fff9c4',
+      black: '#1a1408',
+      brightBlack: '#2d2410',
+      red: '#ff9800',
+      brightRed: '#ffb74d',
+      green: '#ffc107',
+      brightGreen: '#ffd54f',
+      yellow: '#ffd700',
+      brightYellow: '#ffeb3b',
+      blue: '#ffb300',
+      brightBlue: '#ffc107',
+      magenta: '#ffa726',
+      brightMagenta: '#ffb74d',
+      cyan: '#ffe082',
+      brightCyan: '#ffecb3',
+      white: '#fff9c4',
+      brightWhite: '#fffde7',
+      selectionBackground: 'rgba(255, 215, 0, 0.3)',
+      cursor: '#ffd700'
+    }
+  },
+
+  'Crimson Comet Animated': {
+    name: 'Crimson Comet Animated',
+    theme: {
+      background: '#0d0406',
+      foreground: '#ffcdd2',
+      black: '#1a0808',
+      brightBlack: '#330d1a',
+      red: '#dc143c',
+      brightRed: '#ff4569',
+      green: '#ff69b4',
+      brightGreen: '#ff8fc7',
+      yellow: '#ff1744',
+      brightYellow: '#ff5252',
+      blue: '#c71585',
+      brightBlue: '#ff69b4',
+      magenta: '#dc143c',
+      brightMagenta: '#ff4569',
+      cyan: '#ff6090',
+      brightCyan: '#ff8bb3',
+      white: '#ffcdd2',
+      brightWhite: '#ffe6e9',
+      selectionBackground: 'rgba(220, 20, 60, 0.3)',
+      cursor: '#dc143c'
+    }
+  },
+
+  'Arctic Aurora Animated': {
+    name: 'Arctic Aurora Animated',
+    theme: {
+      background: '#040a0d',
+      foreground: '#e0f7fa',
+      black: '#08141a',
+      brightBlack: '#0d1f2d',
+      red: '#7fffd4',
+      brightRed: '#a0ffe6',
+      green: '#00ffff',
+      brightGreen: '#40ffff',
+      yellow: '#e0ffff',
+      brightYellow: '#f0ffff',
+      blue: '#00ced1',
+      brightBlue: '#00ffff',
+      magenta: '#40e0d0',
+      brightMagenta: '#7fffd4',
+      cyan: '#00ffff',
+      brightCyan: '#b0ffff',
+      white: '#e0f7fa',
+      brightWhite: '#f0ffff',
+      selectionBackground: 'rgba(0, 255, 255, 0.3)',
+      cursor: '#00ffff'
+    }
+  },
+
+  'Solar Flare Animated': {
+    name: 'Solar Flare Animated',
+    theme: {
+      background: '#0d0600',
+      foreground: '#ffe0b2',
+      black: '#1a0c00',
+      brightBlack: '#331a00',
+      red: '#ff4500',
+      brightRed: '#ff6347',
+      green: '#ffa500',
+      brightGreen: '#ffb347',
+      yellow: '#ff8c00',
+      brightYellow: '#ffa500',
+      blue: '#ff7f00',
+      brightBlue: '#ff9500',
+      magenta: '#ff6a00',
+      brightMagenta: '#ff8500',
+      cyan: '#ffab40',
+      brightCyan: '#ffc570',
+      white: '#ffe0b2',
+      brightWhite: '#ffeccc',
+      selectionBackground: 'rgba(255, 140, 0, 0.4)',
+      cursor: '#ff8c00'
+    }
+  },
+
+  'Winter Snowfall Animated': {
+    name: 'Winter Snowfall Animated',
+    theme: {
+      background: '#0a1420',
+      foreground: '#e3f2fd',
+      black: '#0d1928',
+      brightBlack: '#1a2840',
+      red: '#90caf9',
+      brightRed: '#bbdefb',
+      green: '#64b5f6',
+      brightGreen: '#90caf9',
+      yellow: '#bbdefb',
+      brightYellow: '#e3f2fd',
+      blue: '#42a5f5',
+      brightBlue: '#64b5f6',
+      magenta: '#90caf9',
+      brightMagenta: '#bbdefb',
+      cyan: '#81d4fa',
+      brightCyan: '#b3e5fc',
+      white: '#e3f2fd',
+      brightWhite: '#f1f8ff',
+      selectionBackground: 'rgba(187, 222, 251, 0.3)',
+      cursor: '#bbdefb'
+    }
+  },
+
+  'Thunderstorm Animated': {
+    name: 'Thunderstorm Animated',
+    theme: {
+      background: '#0a0d14',
+      foreground: '#b0c4de',
+      black: '#0d1219',
+      brightBlack: '#1a1f2e',
+      red: '#4682b4',
+      brightRed: '#6495ed',
+      green: '#5a9fd4',
+      brightGreen: '#7db7e8',
+      yellow: '#87ceeb',
+      brightYellow: '#b0d8f0',
+      blue: '#4682b4',
+      brightBlue: '#6495ed',
+      magenta: '#708090',
+      brightMagenta: '#87ceeb',
+      cyan: '#5f9ea0',
+      brightCyan: '#87ceeb',
+      white: '#b0c4de',
+      brightWhite: '#dceaff',
+      selectionBackground: 'rgba(100, 149, 237, 0.3)',
+      cursor: '#6495ed'
+    }
+  },
+
+  'Desert Storm Animated': {
+    name: 'Desert Storm Animated',
+    theme: {
+      background: '#1a120a',
+      foreground: '#f5deb3',
+      black: '#2a1a10',
+      brightBlack: '#3d2f1f',
+      red: '#cd853f',
+      brightRed: '#daa520',
+      green: '#daa520',
+      brightGreen: '#f0e68c',
+      yellow: '#d2b48c',
+      brightYellow: '#f5deb3',
+      blue: '#bc8f8f',
+      brightBlue: '#d2b48c',
+      magenta: '#daa520',
+      brightMagenta: '#eedd82',
+      cyan: '#deb887',
+      brightCyan: '#f5deb3',
+      white: '#f5deb3',
+      brightWhite: '#fff8dc',
+      selectionBackground: 'rgba(210, 180, 140, 0.3)',
+      cursor: '#daa520'
+    }
+  },
+
+  'Fireflies Animated': {
+    name: 'Fireflies Animated',
+    theme: {
+      background: '#040a04',
+      foreground: '#c8e6c9',
+      black: '#081810',
+      brightBlack: '#0d1f0d',
+      red: '#ff6b6b',
+      brightRed: '#ff8787',
+      green: '#4caf50',
+      brightGreen: '#8bc34a',
+      yellow: '#ffeb3b',
+      brightYellow: '#ffff00',
+      blue: '#66bb6a',
+      brightBlue: '#8bc34a',
+      magenta: '#aed581',
+      brightMagenta: '#c8e6c9',
+      cyan: '#81c784',
+      brightCyan: '#a5d6a7',
+      white: '#c8e6c9',
+      brightWhite: '#e8f5e9',
+      selectionBackground: 'rgba(76, 175, 80, 0.3)',
+      cursor: '#8bc34a'
+    }
+  },
+
+  'Autumn Leaves Animated': {
+    name: 'Autumn Leaves Animated',
+    theme: {
+      background: '#0d0a04',
+      foreground: '#ffe0b2',
+      black: '#1a1408',
+      brightBlack: '#2d1a0a',
+      red: '#ff4500',
+      brightRed: '#ff6347',
+      green: '#ff8c00',
+      brightGreen: '#ffa500',
+      yellow: '#ffd700',
+      brightYellow: '#ffe066',
+      blue: '#8b4513',
+      brightBlue: '#a0522d',
+      magenta: '#ff6347',
+      brightMagenta: '#ff7f50',
+      cyan: '#daa520',
+      brightCyan: '#f0c870',
+      white: '#ffe0b2',
+      brightWhite: '#ffeccc',
+      selectionBackground: 'rgba(255, 140, 0, 0.3)',
+      cursor: '#ff8c00'
+    }
+  },
+
+  'Cherry Blossoms Animated': {
+    name: 'Cherry Blossoms Animated',
+    theme: {
+      background: '#0d0a0d',
+      foreground: '#ffe6f2',
+      black: '#1a141a',
+      brightBlack: '#2d1a2a',
+      red: '#ffb3d9',
+      brightRed: '#ffc0e0',
+      green: '#ffc0cb',
+      brightGreen: '#ffd6e0',
+      yellow: '#ffe6f2',
+      brightYellow: '#fff0f8',
+      blue: '#ff99cc',
+      brightBlue: '#ffb3d9',
+      magenta: '#ffb3d9',
+      brightMagenta: '#ffc0e0',
+      cyan: '#ffd0e6',
+      brightCyan: '#ffe0f0',
+      white: '#ffe6f2',
+      brightWhite: '#fff5fa',
+      selectionBackground: 'rgba(255, 179, 217, 0.3)',
+      cursor: '#ffc0cb'
+    }
+  },
+
+  'Ocean Waves Animated': {
+    name: 'Ocean Waves Animated',
+    theme: {
+      background: '#040a0d',
+      foreground: '#e0f6ff',
+      black: '#081419',
+      brightBlack: '#0a1a2a',
+      red: '#87ceeb',
+      brightRed: '#b0e0ff',
+      green: '#4682b4',
+      brightGreen: '#6ca6cd',
+      yellow: '#87ceeb',
+      brightYellow: '#b0e0ff',
+      blue: '#4682b4',
+      brightBlue: '#6ca6cd',
+      magenta: '#5f9ea0',
+      brightMagenta: '#87ceeb',
+      cyan: '#87ceeb',
+      brightCyan: '#b0e0ff',
+      white: '#e0f6ff',
+      brightWhite: '#f0f8ff',
+      selectionBackground: 'rgba(70, 130, 180, 0.3)',
+      cursor: '#87ceeb'
+    }
+  },
+
+  'Forest Mist Animated': {
+    name: 'Forest Mist Animated',
+    theme: {
+      background: '#040a04',
+      foreground: '#e8f5e8',
+      black: '#081810',
+      brightBlack: '#0d1f0d',
+      red: '#8bc34a',
+      brightRed: '#aed581',
+      green: '#4caf50',
+      brightGreen: '#8bc34a',
+      yellow: '#c8e6c9',
+      brightYellow: '#e8f5e8',
+      blue: '#66bb6a',
+      brightBlue: '#81c784',
+      magenta: '#a5d6a7',
+      brightMagenta: '#c8e6c9',
+      cyan: '#81c784',
+      brightCyan: '#a5d6a7',
+      white: '#e8f5e8',
+      brightWhite: '#f1f8e9',
+      selectionBackground: 'rgba(76, 175, 80, 0.3)',
+      cursor: '#8bc34a'
+    }
+  },
+
+  'Sunset Clouds Animated': {
+    name: 'Sunset Clouds Animated',
+    theme: {
+      background: '#0d0a04',
+      foreground: '#ffe0b2',
+      black: '#1a1408',
+      brightBlack: '#2d1a0a',
+      red: '#ff4500',
+      brightRed: '#ff6347',
+      green: '#ff8c00',
+      brightGreen: '#ffa500',
+      yellow: '#ffd700',
+      brightYellow: '#ffeb3b',
+      blue: '#ff69b4',
+      brightBlue: '#ff88cc',
+      magenta: '#ff69b4',
+      brightMagenta: '#ff88cc',
+      cyan: '#ffa500',
+      brightCyan: '#ffb74d',
+      white: '#ffe0b2',
+      brightWhite: '#ffeccc',
+      selectionBackground: 'rgba(255, 140, 0, 0.3)',
+      cursor: '#ff8c00'
+    }
   }
 };
 
