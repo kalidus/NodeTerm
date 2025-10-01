@@ -98,6 +98,99 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
   const [importBanner, setImportBanner] = useState(null);
+
+  // Efecto para crear copos de nieve dinámicamente para el tema Winter Snowfall
+  useEffect(() => {
+    const titleBar = document.querySelector('.title-bar');
+    if (!titleBar) return;
+
+    // Verificar si el tema es winter-snowfall
+    const checkAnimation = () => {
+      const animation = titleBar.getAttribute('data-animation');
+      return animation === 'winter-snowfall';
+    };
+
+    // Crear copos de nieve si el tema está activo
+    if (checkAnimation()) {
+      const snowflakes = [];
+      
+      // Crear 6 copos de nieve adicionales
+      for (let i = 1; i <= 6; i++) {
+        const snowflake = document.createElement('div');
+        snowflake.className = `snowflake-${i}`;
+        snowflake.textContent = '❄';
+        titleBar.appendChild(snowflake);
+        snowflakes.push(snowflake);
+      }
+
+      // Cleanup: remover copos cuando el componente se desmonte o cambie el tema
+      return () => {
+        snowflakes.forEach(snowflake => {
+          if (snowflake.parentNode) {
+            snowflake.parentNode.removeChild(snowflake);
+          }
+        });
+      };
+    }
+  }, []);
+
+  // Observer para detectar cambios en data-animation
+  useEffect(() => {
+    const titleBar = document.querySelector('.title-bar');
+    if (!titleBar) return;
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-animation') {
+          const animation = titleBar.getAttribute('data-animation');
+          
+          // Limpiar elementos animados existentes
+          const existingSnowflakes = titleBar.querySelectorAll('[class^="snowflake-"]');
+          const existingRaindrops = titleBar.querySelectorAll('[class^="raindrop-"]');
+          const existingLightning = titleBar.querySelectorAll('[class^="lightning-"]');
+          existingSnowflakes.forEach(el => el.remove());
+          existingRaindrops.forEach(el => el.remove());
+          existingLightning.forEach(el => el.remove());
+          
+          // Crear nuevos copos si es winter-snowfall
+          if (animation === 'winter-snowfall') {
+            for (let i = 1; i <= 6; i++) {
+              const snowflake = document.createElement('div');
+              snowflake.className = `snowflake-${i}`;
+              snowflake.textContent = '❄';
+              titleBar.appendChild(snowflake);
+            }
+          }
+          
+          // Crear gotas de lluvia y relámpagos si es thunderstorm
+          if (animation === 'thunderstorm') {
+            // Crear gotas de lluvia
+            for (let i = 1; i <= 12; i++) {
+              const raindrop = document.createElement('div');
+              raindrop.className = `raindrop-${i}`;
+              raindrop.textContent = '💧';
+              titleBar.appendChild(raindrop);
+            }
+            
+            // Crear rayos visibles
+            for (let i = 1; i <= 2; i++) {
+              const lightning = document.createElement('div');
+              lightning.className = `lightning-${i}`;
+              lightning.textContent = '⚡';
+              titleBar.appendChild(lightning);
+            }
+          }
+        }
+      });
+    });
+
+    observer.observe(titleBar, {
+      attributes: true,
+      attributeFilter: ['data-animation']
+    });
+
+    return () => observer.disconnect();
+  }, []);
   const [bannerTime, setBannerTime] = useState(null);
   useEffect(() => {
     const handler = (e) => {
