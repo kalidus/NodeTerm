@@ -2058,3 +2058,288 @@
   box-shadow: 0 0 15px rgba(100, 149, 237, 0.4) !important;
   transition: all 0.3s ease !important;
 }
+
+/* === 11. DESERT STORM - Tormenta del Desierto === */
+.title-bar[data-animation="desert-storm"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 50%, #3d2f1f 0%, #1a120a 70%) !important;
+}
+
+/* Resplandor del sol detrás de la tormenta */
+.title-bar[data-animation="desert-storm"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 80% 50%, rgba(255, 200, 100, 0.2) 0%, transparent 50%);
+  opacity: 0.6;
+  animation: desert-sun-glow 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 998;
+}
+
+/* Primera partícula de arena */
+.title-bar[data-animation="desert-storm"]::after {
+  content: '•';
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  color: rgba(210, 180, 140, 0.5);
+  font-size: 4px;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+  animation: sand-blow-1 10s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Partículas de arena volando */
+.title-bar[data-animation="desert-storm"] .sand-1,
+.title-bar[data-animation="desert-storm"] .sand-2,
+.title-bar[data-animation="desert-storm"] .sand-3,
+.title-bar[data-animation="desert-storm"] .sand-4,
+.title-bar[data-animation="desert-storm"] .sand-5,
+.title-bar[data-animation="desert-storm"] .sand-6,
+.title-bar[data-animation="desert-storm"] .sand-7,
+.title-bar[data-animation="desert-storm"] .sand-8,
+.title-bar[data-animation="desert-storm"] .sand-9,
+.title-bar[data-animation="desert-storm"] .sand-10,
+.title-bar[data-animation="desert-storm"] .sand-11,
+.title-bar[data-animation="desert-storm"] .sand-12,
+.title-bar[data-animation="desert-storm"] .sand-13,
+.title-bar[data-animation="desert-storm"] .sand-14,
+.title-bar[data-animation="desert-storm"] .sand-15 {
+  position: absolute;
+  color: rgba(210, 180, 140, 0.5);
+  pointer-events: none;
+  z-index: 1000;
+  font-family: Arial, sans-serif;
+}
+
+.title-bar[data-animation="desert-storm"] .sand-1 {
+  top: 15%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 9s linear infinite 0.5s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-2 {
+  top: 35%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 11s linear infinite 1.2s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-3 {
+  top: 60%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 10s linear infinite 2s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-4 {
+  top: 25%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 12s linear infinite 3s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-5 {
+  top: 45%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 9.5s linear infinite 0.8s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-6 {
+  top: 70%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 13s linear infinite 4s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-7 {
+  top: 10%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 10.5s linear infinite 1.5s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-8 {
+  top: 55%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 11.5s linear infinite 4.5s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-9 {
+  top: 80%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 9.8s linear infinite 2.5s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-10 {
+  top: 20%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 12.5s linear infinite 1s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-11 {
+  top: 40%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 10.2s linear infinite 3.5s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-12 {
+  top: 65%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 13.5s linear infinite 5s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-13 {
+  top: 30%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 11s linear infinite 2s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-14 {
+  top: 50%;
+  left: -10px;
+  font-size: 4px;
+  animation: sand-blow-3 10.8s linear infinite 3.8s;
+  text-shadow: 0 0 2px rgba(194, 178, 128, 0.3), 1px 0 1px rgba(194, 178, 128, 0.2);
+}
+
+.title-bar[data-animation="desert-storm"] .sand-15 {
+  top: 75%;
+  left: -10px;
+  font-size: 3px;
+  animation: sand-blow-2 12s linear infinite 5.5s;
+  text-shadow: 0 0 2px rgba(210, 180, 140, 0.3), 1px 0 1px rgba(210, 180, 140, 0.2);
+}
+
+/* Animaciones de arena soplando (movimiento horizontal lento con ondulación) */
+@keyframes sand-blow-1 {
+  0% {
+    transform: translateX(-10px) translateY(0);
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.5;
+  }
+  97% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(calc(100vw + 20px)) translateY(8px);
+    opacity: 0;
+  }
+}
+
+@keyframes sand-blow-2 {
+  0% {
+    transform: translateX(-10px) translateY(0);
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.5;
+  }
+  15% {
+    transform: translateX(15vw) translateY(-4px);
+  }
+  30% {
+    transform: translateX(30vw) translateY(3px);
+  }
+  45% {
+    transform: translateX(45vw) translateY(-3px);
+  }
+  60% {
+    transform: translateX(60vw) translateY(4px);
+  }
+  75% {
+    transform: translateX(75vw) translateY(-2px);
+  }
+  90% {
+    transform: translateX(90vw) translateY(3px);
+  }
+  97% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(calc(100vw + 20px)) translateY(5px);
+    opacity: 0;
+  }
+}
+
+@keyframes sand-blow-3 {
+  0% {
+    transform: translateX(-10px) translateY(0);
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.5;
+  }
+  12% {
+    transform: translateX(12vw) translateY(3px);
+  }
+  25% {
+    transform: translateX(25vw) translateY(-5px);
+  }
+  37% {
+    transform: translateX(37vw) translateY(4px);
+  }
+  50% {
+    transform: translateX(50vw) translateY(-3px);
+  }
+  62% {
+    transform: translateX(62vw) translateY(5px);
+  }
+  75% {
+    transform: translateX(75vw) translateY(-4px);
+  }
+  87% {
+    transform: translateX(87vw) translateY(3px);
+  }
+  97% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(calc(100vw + 20px)) translateY(6px);
+    opacity: 0;
+  }
+}
+
+/* Animación del resplandor del sol */
+@keyframes desert-sun-glow {
+  0%, 100% {
+    opacity: 0.4;
+    background: radial-gradient(ellipse at 80% 50%, rgba(255, 200, 100, 0.15) 0%, transparent 50%);
+  }
+  50% {
+    opacity: 0.7;
+    background: radial-gradient(ellipse at 80% 50%, rgba(255, 200, 100, 0.25) 0%, transparent 50%);
+  }
+}
+
+.search-input[data-animation="desert-storm"] {
+  border-color: #d2b48c !important;
+  box-shadow: 0 0 15px rgba(210, 180, 140, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
