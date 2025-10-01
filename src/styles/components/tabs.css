@@ -356,3 +356,19 @@
   background: rgba(0, 0, 0, 0.5) !important;
   border-color: transparent !important;
 }
+
+/* === ESTILOS PARA BOTONES DE ACCIÓN DE PESTAÑAS (+ y ▼) === */
+/* Los botones dentro del contenedor de pestañas que no son botones de cerrar */
+.hide-scrollbar + div .p-button-text.p-button-sm:hover,
+button[aria-label="Nueva pestaña"]:hover,
+button[aria-label="Seleccionar tipo de terminal"]:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.hide-scrollbar + div .p-button-text.p-button-sm:active,
+button[aria-label="Nueva pestaña"]:active,
+button[aria-label="Seleccionar tipo de terminal"]:active {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(0.95);
+}

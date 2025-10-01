@@ -658,7 +658,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     alignItems: 'center',
                     flex: 1,
                     overflow: 'hidden',
-                    minWidth: 0 // Permite que se contraiga
+                    minWidth: 0, // Permite que se contraiga
+                    marginLeft: '4px' // Margen izquierdo para que no esté pegado
                 }}>
                     {/* Flecha izquierda */}
                     {(canScrollLeft || tabs.length > 3) && (
@@ -820,21 +821,24 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     )}
                         
                         {/* Botones estilo PowerShell al lado de las pestañas */}
-                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '6px', gap: '4px' }}>
                             {/* Botón para nueva pestaña */}
                             <Button
                                 icon="pi pi-plus"
                                 className="p-button-text p-button-sm"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.8)',
-                                    padding: '4px 6px',
-                                    minWidth: '24px',
-                                    height: '24px',
-                                    fontSize: '10px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                                    borderRadius: '3px',
-                                    marginRight: '2px'
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    padding: '0',
+                                    minWidth: '18px',
+                                    width: '18px',
+                                    height: '18px',
+                                    fontSize: '9px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                 }}
                                 onClick={() => {
                                     // Usar el tipo de terminal actualmente seleccionado
@@ -849,14 +853,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 icon="pi pi-chevron-down"
                                 className="p-button-text p-button-sm"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.8)',
-                                    padding: '4px 6px',
-                                    minWidth: '24px',
-                                    height: '24px',
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    padding: '0',
+                                    minWidth: '18px',
+                                    width: '18px',
+                                    height: '18px',
                                     fontSize: '8px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                                    borderRadius: '3px'
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                 }}
                                 onClick={(e) => {
                                     // Crear un menú contextual
