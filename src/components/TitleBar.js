@@ -594,10 +594,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       activeSubmenu.className = 'app-submenu-titlebar';
       activeSubmenu.style.cssText = `
         position: fixed;
-        background: var(--ui-sidebar-bg, #333);
-        border: 1px solid var(--ui-sidebar-border, #555);
+        background: var(--ui-context-bg, #333) !important;
+        border: 1px solid var(--ui-context-border, #555);
         border-radius: 6px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
         z-index: 10000;
         min-width: 200px;
         padding: 4px 0;
@@ -643,10 +643,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     contextMenu.className = 'app-context-menu-titlebar';
     contextMenu.style.cssText = `
       position: fixed;
-      background: var(--ui-sidebar-bg, #333);
-      border: 1px solid var(--ui-sidebar-border, #555);
+      background: var(--ui-context-bg, #333) !important;
+      border: 1px solid var(--ui-context-border, #555);
       border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
       z-index: 9999;
       min-width: 220px;
       padding: 4px 0;
@@ -659,8 +659,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         const separator = document.createElement('div');
         separator.style.cssText = `
           height: 1px;
-          background: var(--ui-sidebar-border, #555);
+          background: var(--ui-context-border, #555);
           margin: 4px 8px;
+          opacity: 0.5;
         `;
         return separator;
       }
@@ -673,7 +674,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         display: flex;
         align-items: center;
         justify-content: space-between;
-        color: var(--ui-sidebar-text, #fff);
+        color: var(--ui-context-text, #fff);
         transition: background-color 0.15s ease;
         position: relative;
       `;
@@ -698,8 +699,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         const shortcut = document.createElement('span');
         shortcut.style.cssText = `
           font-size: 12px;
-          color: var(--ui-sidebar-text, #aaa);
+          color: var(--ui-context-text, #aaa);
           margin-left: 20px;
+          opacity: 0.7;
         `;
         shortcut.textContent = item.shortcut;
         menuItem.appendChild(shortcut);
@@ -727,7 +729,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               item.style.backgroundColor = 'transparent';
             }
           });
-          menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
+          menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
           
           // Mostrar submenú directamente - SIN TIMERS
           showSubmenu(menuItem, item.submenu);
@@ -755,7 +757,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               item.style.backgroundColor = 'transparent';
             }
           });
-          menuItem.style.backgroundColor = 'var(--ui-hover-bg, rgba(255, 255, 255, 0.1))';
+          menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
         });
         
         menuItem.addEventListener('mouseleave', () => {
