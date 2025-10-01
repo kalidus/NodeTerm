@@ -952,3 +952,538 @@
   will-change: transform, box-shadow;
   transform: translateZ(0);
 }
+
+/* ========================================
+   NUEVOS TEMAS BASADOS EN METEOR SHOWER
+   ======================================== */
+
+/* === 1. FIRE STORM - Tormenta de Fuego === */
+.title-bar[data-animation="fire-storm"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%) !important;
+}
+
+.title-bar[data-animation="fire-storm"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(255, 87, 34, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(255, 152, 0, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(255, 193, 7, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(255, 87, 34, 0.7), transparent),
+    linear-gradient(45deg, rgba(255, 87, 34, 0.3) 0%, rgba(255, 87, 34, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: fire-fall 4s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+  filter: blur(0.5px);
+}
+
+.title-bar[data-animation="fire-storm"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(255, 193, 7, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(255, 152, 0, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(255, 87, 34, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: fire-fall-delayed 5.5s linear infinite 0.8s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes fire-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes fire-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* === 2. EMERALD RAIN - Lluvia Esmeralda === */
+.title-bar[data-animation="emerald-rain"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%) !important;
+}
+
+.title-bar[data-animation="emerald-rain"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(0, 230, 118, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(29, 233, 182, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(0, 200, 83, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(102, 255, 179, 0.7), transparent),
+    linear-gradient(45deg, rgba(0, 230, 118, 0.25) 0%, rgba(0, 230, 118, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: emerald-fall 5.5s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="emerald-rain"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(29, 233, 182, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(102, 255, 179, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(0, 230, 118, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: emerald-fall-delayed 7.5s linear infinite 1.2s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes emerald-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes emerald-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* === 3. PURPLE NEBULA - Nebulosa Púrpura === */
+.title-bar[data-animation="purple-nebula"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%) !important;
+}
+
+.title-bar[data-animation="purple-nebula"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(156, 39, 176, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(186, 104, 200, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(233, 30, 99, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(171, 71, 188, 0.7), transparent),
+    linear-gradient(45deg, rgba(156, 39, 176, 0.3) 0%, rgba(156, 39, 176, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: nebula-fall 6s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+  filter: blur(0.8px);
+}
+
+.title-bar[data-animation="purple-nebula"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(186, 104, 200, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(233, 30, 99, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(156, 39, 176, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: nebula-fall-delayed 8s linear infinite 1.5s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes nebula-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes nebula-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* === 4. GOLDEN GALAXY - Galaxia Dorada === */
+.title-bar[data-animation="golden-galaxy"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%) !important;
+}
+
+.title-bar[data-animation="golden-galaxy"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(255, 215, 0, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(255, 193, 7, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(255, 235, 59, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(255, 202, 40, 0.7), transparent),
+    linear-gradient(45deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 215, 0, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: golden-fall 5s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="golden-galaxy"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(255, 193, 7, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(255, 235, 59, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(255, 215, 0, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: golden-fall-delayed 7s linear infinite 1s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes golden-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes golden-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* === 5. CRIMSON COMET - Cometa Carmesí === */
+.title-bar[data-animation="crimson-comet"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%) !important;
+}
+
+.title-bar[data-animation="crimson-comet"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(220, 20, 60, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(255, 105, 180, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(199, 21, 133, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(255, 182, 193, 0.7), transparent),
+    linear-gradient(45deg, rgba(220, 20, 60, 0.3) 0%, rgba(220, 20, 60, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: crimson-fall 4.5s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-bar[data-animation="crimson-comet"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(255, 105, 180, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(255, 182, 193, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(220, 20, 60, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: crimson-fall-delayed 6.5s linear infinite 1s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes crimson-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes crimson-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* === 6. ARCTIC AURORA - Aurora Ártica === */
+.title-bar[data-animation="arctic-aurora"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%) !important;
+}
+
+.title-bar[data-animation="arctic-aurora"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(0, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(127, 255, 212, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(64, 224, 208, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(175, 238, 238, 0.7), transparent),
+    linear-gradient(45deg, rgba(0, 255, 255, 0.25) 0%, rgba(0, 255, 255, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: aurora-fall 6s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+  filter: blur(0.6px);
+}
+
+.title-bar[data-animation="arctic-aurora"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(127, 255, 212, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(175, 238, 238, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(0, 255, 255, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: aurora-fall-delayed 8s linear infinite 1.3s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes aurora-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes aurora-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* === 7. COSMIC STORM - Tormenta Cósmica === */
+.title-bar[data-animation="cosmic-storm"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%) !important;
+}
+
+.title-bar[data-animation="cosmic-storm"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(255, 0, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(0, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(255, 255, 0, 0.9), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(0, 255, 127, 0.7), transparent),
+    linear-gradient(45deg, rgba(138, 43, 226, 0.3) 0%, rgba(138, 43, 226, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: cosmic-fall 3.5s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+  filter: hue-rotate(0deg);
+}
+
+.title-bar[data-animation="cosmic-storm"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(255, 69, 0, 0.8), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(0, 191, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(50, 205, 50, 0.9), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: cosmic-fall-delayed 5s linear infinite 0.7s, cosmic-rainbow 8s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes cosmic-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes cosmic-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+@keyframes cosmic-rainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* === 8. SOLAR FLARE - Llamarada Solar === */
+.title-bar[data-animation="solar-flare"] {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%) !important;
+}
+
+.title-bar[data-animation="solar-flare"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 10%, rgba(255, 140, 0, 0.95), transparent),
+    radial-gradient(2px 2px at 40% 30%, rgba(255, 165, 0, 0.85), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(255, 69, 0, 0.95), transparent),
+    radial-gradient(1px 1px at 30% 60%, rgba(255, 215, 0, 0.75), transparent),
+    linear-gradient(45deg, rgba(255, 140, 0, 0.35) 0%, rgba(255, 140, 0, 0) 60%);
+  background-repeat: no-repeat;
+  background-size: 2px 2px, 2px 2px, 1px 1px, 1px 1px, 200% 200%;
+  animation: solar-fall 3.8s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+  filter: blur(0.4px);
+}
+
+.title-bar[data-animation="solar-flare"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 80% 40%, rgba(255, 165, 0, 0.85), transparent),
+    radial-gradient(2px 2px at 20% 80%, rgba(255, 215, 0, 0.65), transparent),
+    radial-gradient(1px 1px at 60% 10%, rgba(255, 69, 0, 0.95), transparent);
+  background-repeat: no-repeat;
+  background-size: 1px 1px, 2px 2px, 1px 1px;
+  animation: solar-fall-delayed 5.2s linear infinite 0.9s;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes solar-fall {
+  0% {
+    background-position: 10% 10%, 40% 30%, 70% 20%, 30% 60%, 0% 0%;
+  }
+  100% {
+    background-position: 110% 110%, 140% 130%, 170% 120%, 130% 160%, 0% 0%;
+  }
+}
+
+@keyframes solar-fall-delayed {
+  0% {
+    background-position: 80% 40%, 20% 80%, 60% 10%;
+  }
+  100% {
+    background-position: 180% 140%, 120% 180%, 160% 110%;
+  }
+}
+
+/* Estilos adicionales para los nuevos temas animados */
+.search-input[data-animation="fire-storm"] {
+  border-color: #ff5722 !important;
+  box-shadow: 0 0 15px rgba(255, 87, 34, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="emerald-rain"] {
+  border-color: #00e676 !important;
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="purple-nebula"] {
+  border-color: #9c27b0 !important;
+  box-shadow: 0 0 20px rgba(156, 39, 176, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="golden-galaxy"] {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="crimson-comet"] {
+  border-color: #dc143c !important;
+  box-shadow: 0 0 20px rgba(220, 20, 60, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="arctic-aurora"] {
+  border-color: #00ffff !important;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5) !important;
+  transition: all 0.3s ease !important;
+}
+
+.search-input[data-animation="cosmic-storm"] {
+  border-color: #8a2be2 !important;
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.5) !important;
+  transition: all 0.3s ease !important;
+  animation: cosmic-glow 3s ease-in-out infinite;
+}
+
+@keyframes cosmic-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.5) !important;
+  }
+  25% {
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5) !important;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5) !important;
+  }
+  75% {
+    box-shadow: 0 0 20px rgba(255, 255, 0, 0.5) !important;
+  }
+}
+
+.search-input[data-animation="solar-flare"] {
+  border-color: #ff8c00 !important;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.6) !important;
+  transition: all 0.3s ease !important;
+}
