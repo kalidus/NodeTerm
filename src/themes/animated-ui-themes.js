@@ -3,7 +3,10 @@
 const ANIMATED_UI_KEYS = [
   'Space Station Animated', 'Terminal Hacker Animated', 'Cyberpunk 2077 Animated',
   'Neon Matrix Animated', 'Neon Matrix Blue Animated', 'Meteor Shower Animated', 'Quantum Flux Animated', 'Holographic Animated',
-  'Cyber Grid Animated', 'Neon Aurora Animated', 'Plasma Animated'
+  'Cyber Grid Animated', 'Neon Aurora Animated', 'Plasma Animated',
+  // Nuevos temas basados en Meteor Shower
+  'Fire Storm Animated', 'Emerald Rain Animated', 'Purple Nebula Animated', 'Golden Galaxy Animated',
+  'Crimson Comet Animated', 'Arctic Aurora Animated', 'Cosmic Storm Animated', 'Solar Flare Animated'
 ];
 
 export const animatedUiThemes = {
@@ -863,6 +866,562 @@ export const animatedUiThemes = {
       // Animaciones específicas
       animationType: 'plasma',
       animationSpeed: 'normal'
+    }
+  },
+
+  // ========================================
+  // NUEVOS TEMAS BASADOS EN METEOR SHOWER
+  // ========================================
+
+  'Fire Storm Animated': {
+    name: 'Fire Storm Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#ff5722',
+      sidebarText: '#ffccbc',
+      sidebarHover: 'rgba(255, 87, 34, 0.1)',
+      sidebarSelected: 'rgba(255, 87, 34, 0.2)',
+      sidebarGutter: '#ff5722',
+      
+      // Menu Bar (top) - Con animación fire storm
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      menuBarText: '#ffccbc',
+      menuBarBorder: '#ff5722',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #3d1810 0%, #1d0a04 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#ff5722',
+      statusBarText: '#0d0604',
+      statusBarBorder: '#ff5722',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #ff5722 0%, #ff9800 60%, #ffc107 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #3d1810 0%, #1d0a04 70%)',
+      tabText: '#ffccbc',
+      tabActiveText: '#0d0604',
+      tabBorder: '#ff5722',
+      tabCloseHover: '#ffc107',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#ffccbc',
+      tabGroupBorder: '#ff5722',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      contentBorder: '#ff5722',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      dialogText: '#ffccbc',
+      dialogBorder: '#ff5722',
+      dialogShadow: 'rgba(255, 87, 34, 0.4)',
+      
+      // Buttons
+      buttonPrimary: '#ff5722',
+      buttonPrimaryText: '#0d0604',
+      buttonPrimaryHover: '#ff9800',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#ffccbc',
+      buttonSecondaryHover: 'rgba(255, 87, 34, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #2d1410 0%, #0d0604 70%)',
+      inputText: '#ffccbc',
+      inputBorder: '#ff5722',
+      inputFocus: '#ff9800',
+      
+      // Animaciones específicas
+      animationType: 'fire-storm',
+      animationSpeed: 'fast'
+    }
+  },
+
+  'Emerald Rain Animated': {
+    name: 'Emerald Rain Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#00e676',
+      sidebarText: '#b9f6ca',
+      sidebarHover: 'rgba(0, 230, 118, 0.1)',
+      sidebarSelected: 'rgba(0, 230, 118, 0.2)',
+      sidebarGutter: '#00e676',
+      
+      // Menu Bar (top) - Con animación emerald rain
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      menuBarText: '#b9f6ca',
+      menuBarBorder: '#00e676',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #1d3d2f 0%, #0d1d18 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#00e676',
+      statusBarText: '#040d08',
+      statusBarBorder: '#00e676',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #00e676 0%, #1de9b6 60%, #00c853 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #1d3d2f 0%, #0d1d18 70%)',
+      tabText: '#b9f6ca',
+      tabActiveText: '#040d08',
+      tabBorder: '#00e676',
+      tabCloseHover: '#76ff03',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#b9f6ca',
+      tabGroupBorder: '#00e676',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      contentBorder: '#00e676',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      dialogText: '#b9f6ca',
+      dialogBorder: '#00e676',
+      dialogShadow: 'rgba(0, 230, 118, 0.4)',
+      
+      // Buttons
+      buttonPrimary: '#00e676',
+      buttonPrimaryText: '#040d08',
+      buttonPrimaryHover: '#1de9b6',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#b9f6ca',
+      buttonSecondaryHover: 'rgba(0, 230, 118, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #0d2d1f 0%, #040d08 70%)',
+      inputText: '#b9f6ca',
+      inputBorder: '#00e676',
+      inputFocus: '#1de9b6',
+      
+      // Animaciones específicas
+      animationType: 'emerald-rain',
+      animationSpeed: 'normal'
+    }
+  },
+
+  'Purple Nebula Animated': {
+    name: 'Purple Nebula Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#9c27b0',
+      sidebarText: '#e1bee7',
+      sidebarHover: 'rgba(156, 39, 176, 0.1)',
+      sidebarSelected: 'rgba(156, 39, 176, 0.2)',
+      sidebarGutter: '#9c27b0',
+      
+      // Menu Bar (top) - Con animación purple nebula
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      menuBarText: '#e1bee7',
+      menuBarBorder: '#9c27b0',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #3d2a43 0%, #1d1622 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#9c27b0',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#9c27b0',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 60%, #e91e63 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #3d2a43 0%, #1d1622 70%)',
+      tabText: '#e1bee7',
+      tabActiveText: '#ffffff',
+      tabBorder: '#9c27b0',
+      tabCloseHover: '#e91e63',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#e1bee7',
+      tabGroupBorder: '#9c27b0',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      contentBorder: '#9c27b0',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      dialogText: '#e1bee7',
+      dialogBorder: '#9c27b0',
+      dialogShadow: 'rgba(156, 39, 176, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#9c27b0',
+      buttonPrimaryText: '#ffffff',
+      buttonPrimaryHover: '#ba68c8',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#e1bee7',
+      buttonSecondaryHover: 'rgba(156, 39, 176, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #2d1a33 0%, #0d0612 70%)',
+      inputText: '#e1bee7',
+      inputBorder: '#9c27b0',
+      inputFocus: '#ba68c8',
+      
+      // Animaciones específicas
+      animationType: 'purple-nebula',
+      animationSpeed: 'normal'
+    }
+  },
+
+  'Golden Galaxy Animated': {
+    name: 'Golden Galaxy Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#ffd700',
+      sidebarText: '#fff9c4',
+      sidebarHover: 'rgba(255, 215, 0, 0.1)',
+      sidebarSelected: 'rgba(255, 215, 0, 0.2)',
+      sidebarGutter: '#ffd700',
+      
+      // Menu Bar (top) - Con animación golden galaxy
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      menuBarText: '#fff9c4',
+      menuBarBorder: '#ffd700',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #3d3420 0%, #1d1a14 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#ffd700',
+      statusBarText: '#0d0a04',
+      statusBarBorder: '#ffd700',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #ffd700 0%, #ffc107 60%, #ffeb3b 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #3d3420 0%, #1d1a14 70%)',
+      tabText: '#fff9c4',
+      tabActiveText: '#0d0a04',
+      tabBorder: '#ffd700',
+      tabCloseHover: '#ffeb3b',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#fff9c4',
+      tabGroupBorder: '#ffd700',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      contentBorder: '#ffd700',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      dialogText: '#fff9c4',
+      dialogBorder: '#ffd700',
+      dialogShadow: 'rgba(255, 215, 0, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#ffd700',
+      buttonPrimaryText: '#0d0a04',
+      buttonPrimaryHover: '#ffc107',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#fff9c4',
+      buttonSecondaryHover: 'rgba(255, 215, 0, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #2d2410 0%, #0d0a04 70%)',
+      inputText: '#fff9c4',
+      inputBorder: '#ffd700',
+      inputFocus: '#ffc107',
+      
+      // Animaciones específicas
+      animationType: 'golden-galaxy',
+      animationSpeed: 'normal'
+    }
+  },
+
+  'Crimson Comet Animated': {
+    name: 'Crimson Comet Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#dc143c',
+      sidebarText: '#ffcdd2',
+      sidebarHover: 'rgba(220, 20, 60, 0.1)',
+      sidebarSelected: 'rgba(220, 20, 60, 0.2)',
+      sidebarGutter: '#dc143c',
+      
+      // Menu Bar (top) - Con animación crimson comet
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      menuBarText: '#ffcdd2',
+      menuBarBorder: '#dc143c',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #431d2a 0%, #1d1416 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#dc143c',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#dc143c',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #dc143c 0%, #ff69b4 60%, #c71585 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #431d2a 0%, #1d1416 70%)',
+      tabText: '#ffcdd2',
+      tabActiveText: '#ffffff',
+      tabBorder: '#dc143c',
+      tabCloseHover: '#ff69b4',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#ffcdd2',
+      tabGroupBorder: '#dc143c',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      contentBorder: '#dc143c',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      dialogText: '#ffcdd2',
+      dialogBorder: '#dc143c',
+      dialogShadow: 'rgba(220, 20, 60, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#dc143c',
+      buttonPrimaryText: '#ffffff',
+      buttonPrimaryHover: '#ff69b4',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#ffcdd2',
+      buttonSecondaryHover: 'rgba(220, 20, 60, 0.1)',
+      buttonDanger: '#b71c1c',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#d32f2f',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #330d1a 0%, #0d0406 70%)',
+      inputText: '#ffcdd2',
+      inputBorder: '#dc143c',
+      inputFocus: '#ff69b4',
+      
+      // Animaciones específicas
+      animationType: 'crimson-comet',
+      animationSpeed: 'fast'
+    }
+  },
+
+  'Arctic Aurora Animated': {
+    name: 'Arctic Aurora Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#00ffff',
+      sidebarText: '#e0f7fa',
+      sidebarHover: 'rgba(0, 255, 255, 0.1)',
+      sidebarSelected: 'rgba(0, 255, 255, 0.2)',
+      sidebarGutter: '#00ffff',
+      
+      // Menu Bar (top) - Con animación arctic aurora
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      menuBarText: '#e0f7fa',
+      menuBarBorder: '#00ffff',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #1d2f3d 0%, #0d1a1d 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#00ffff',
+      statusBarText: '#040a0d',
+      statusBarBorder: '#00ffff',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #00ffff 0%, #7fffd4 60%, #40e0d0 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #1d2f3d 0%, #0d1a1d 70%)',
+      tabText: '#e0f7fa',
+      tabActiveText: '#040a0d',
+      tabBorder: '#00ffff',
+      tabCloseHover: '#7fffd4',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#e0f7fa',
+      tabGroupBorder: '#00ffff',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      contentBorder: '#00ffff',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      dialogText: '#e0f7fa',
+      dialogBorder: '#00ffff',
+      dialogShadow: 'rgba(0, 255, 255, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#00ffff',
+      buttonPrimaryText: '#040a0d',
+      buttonPrimaryHover: '#7fffd4',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#e0f7fa',
+      buttonSecondaryHover: 'rgba(0, 255, 255, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #0d1f2d 0%, #040a0d 70%)',
+      inputText: '#e0f7fa',
+      inputBorder: '#00ffff',
+      inputFocus: '#7fffd4',
+      
+      // Animaciones específicas
+      animationType: 'arctic-aurora',
+      animationSpeed: 'normal'
+    }
+  },
+
+  'Cosmic Storm Animated': {
+    name: 'Cosmic Storm Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#8a2be2',
+      sidebarText: '#e1d5e7',
+      sidebarHover: 'rgba(138, 43, 226, 0.1)',
+      sidebarSelected: 'rgba(138, 43, 226, 0.2)',
+      sidebarGutter: '#8a2be2',
+      
+      // Menu Bar (top) - Con animación cosmic storm (multicolor)
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      menuBarText: '#e1d5e7',
+      menuBarBorder: '#8a2be2',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #2a2a3e 0%, #16161e 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: 'linear-gradient(90deg, #8a2be2 0%, #ff00ff 50%, #00ffff 100%)',
+      statusBarText: '#ffffff',
+      statusBarBorder: '#8a2be2',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #8a2be2 0%, #ff00ff 33%, #00ffff 66%, #ffff00 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #2a2a3e 0%, #16161e 70%)',
+      tabText: '#e1d5e7',
+      tabActiveText: '#ffffff',
+      tabBorder: '#8a2be2',
+      tabCloseHover: '#ff00ff',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#e1d5e7',
+      tabGroupBorder: '#8a2be2',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      contentBorder: '#8a2be2',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      dialogText: '#e1d5e7',
+      dialogBorder: '#8a2be2',
+      dialogShadow: 'rgba(138, 43, 226, 0.5)',
+      
+      // Buttons
+      buttonPrimary: '#8a2be2',
+      buttonPrimaryText: '#ffffff',
+      buttonPrimaryHover: '#ff00ff',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#e1d5e7',
+      buttonSecondaryHover: 'rgba(138, 43, 226, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #1a1a2e 0%, #06060e 70%)',
+      inputText: '#e1d5e7',
+      inputBorder: '#8a2be2',
+      inputFocus: '#ff00ff',
+      
+      // Animaciones específicas
+      animationType: 'cosmic-storm',
+      animationSpeed: 'fast'
+    }
+  },
+
+  'Solar Flare Animated': {
+    name: 'Solar Flare Animated',
+    colors: {
+      // Sidebar
+      sidebarBackground: 'transparent',
+      sidebarBorder: '#ff8c00',
+      sidebarText: '#ffe0b2',
+      sidebarHover: 'rgba(255, 140, 0, 0.1)',
+      sidebarSelected: 'rgba(255, 140, 0, 0.2)',
+      sidebarGutter: '#ff8c00',
+      
+      // Menu Bar (top) - Con animación solar flare
+      menuBarBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      menuBarText: '#ffe0b2',
+      menuBarBorder: '#ff8c00',
+      menuBarHover: 'radial-gradient(circle at 20% 20%, #432a10 0%, #1d1610 70%)',
+      
+      // Status Bar (bottom)
+      statusBarBackground: '#ff8c00',
+      statusBarText: '#0d0600',
+      statusBarBorder: '#ff8c00',
+      
+      // Tabs
+      tabBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      tabActiveBackground: 'linear-gradient(135deg, #ff8c00 0%, #ffa500 60%, #ff4500 100%)',
+      tabHoverBackground: 'radial-gradient(circle at 20% 20%, #432a10 0%, #1d1610 70%)',
+      tabText: '#ffe0b2',
+      tabActiveText: '#0d0600',
+      tabBorder: '#ff8c00',
+      tabCloseHover: '#ff4500',
+      
+      // Tab Groups
+      tabGroupBackground: 'transparent',
+      tabGroupText: '#ffe0b2',
+      tabGroupBorder: '#ff8c00',
+      
+      // Content Area
+      contentBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      contentBorder: '#ff8c00',
+      
+      // Dialogs
+      dialogBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      dialogText: '#ffe0b2',
+      dialogBorder: '#ff8c00',
+      dialogShadow: 'rgba(255, 140, 0, 0.6)',
+      
+      // Buttons
+      buttonPrimary: '#ff8c00',
+      buttonPrimaryText: '#0d0600',
+      buttonPrimaryHover: '#ffa500',
+      buttonSecondary: 'transparent',
+      buttonSecondaryText: '#ffe0b2',
+      buttonSecondaryHover: 'rgba(255, 140, 0, 0.1)',
+      buttonDanger: '#d32f2f',
+      buttonDangerText: '#ffffff',
+      buttonDangerHover: '#f44336',
+      
+      // Form Elements
+      inputBackground: 'radial-gradient(circle at 20% 20%, #331a00 0%, #0d0600 70%)',
+      inputText: '#ffe0b2',
+      inputBorder: '#ff8c00',
+      inputFocus: '#ffa500',
+      
+      // Animaciones específicas
+      animationType: 'solar-flare',
+      animationSpeed: 'fast'
     }
   }
 };
