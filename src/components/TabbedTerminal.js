@@ -8,6 +8,7 @@ import GuacamoleTerminal from './GuacamoleTerminal';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
+import { applyTabTheme, loadSavedTabTheme } from '../utils/tabThemeLoader';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -146,6 +147,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         // Código legacy comentado para usar solo detección del backend
     }, []);
     */
+
+    // Cargar el tema de pestañas al montar el componente
+    useEffect(() => {
+        loadSavedTabTheme();
+    }, []);
 
     // Registrar eventos para la pestaña inicial
     useEffect(() => {
@@ -613,43 +619,21 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         selection: 'rgba(255,255,255,0.3)'
     };
 
-    // En el renderizado de la barra de pestañas:
-    let tabBarBg = '';
-    let activeTabBg = '';
-    if (activeTab) {
-        let localBg = '#222';
-        if (activeTab.type === 'powershell') {
-            localBg = themes[localPowerShellTheme]?.theme?.background || '#222';
-        } else if (activeTab.type === 'wsl' || activeTab.type === 'ubuntu' || activeTab.type === 'wsl-distro') {
-            localBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
-        } else if (activeTab.type === 'home') {
-            // Para la pestaña de inicio, usar el color de fondo del tema UI
-            const currentUITheme = themeManager.getCurrentTheme() || uiThemes['Light'];
-            localBg = currentUITheme.colors?.contentBackground || '#fafafa';
-        }
-        // Determinar si el fondo es claro u oscuro
-        const isDark = (() => {
-            if (!localBg.startsWith('#') || localBg.length < 7) return true;
-            const r = parseInt(localBg.slice(1, 3), 16);
-            const g = parseInt(localBg.slice(3, 5), 16);
-            const b = parseInt(localBg.slice(5, 7), 16);
-            // Percepción de brillo
-            return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
-        })();
+    // Obtener los colores del tema de pestañas seleccionado
+    const getTabColors = () => {
+        // Obtener estilos computados del documento (que incluyen los temas de pestañas)
+        const rootStyles = getComputedStyle(document.documentElement);
         
-        // Si solo hay una pestaña, usar el mismo color para bar y tab activa
-        if (tabs.length === 1) {
-            activeTabBg = adjustColorBrightness(localBg, isDark ? 12 : -12);
-            tabBarBg = activeTabBg;  // Mismo color para apariencia uniforme
-        } else {
-            // Si hay múltiples pestañas, usar colores diferenciados
-            tabBarBg = adjustColorBrightness(localBg, isDark ? 8 : -8);
-            activeTabBg = adjustColorBrightness(localBg, isDark ? 16 : -16);
-        }
-    } else {
-        tabBarBg = '#2a4a6b';
-        activeTabBg = '#3a5a7b';
-    }
+        // Leer las variables CSS del tema de pestañas
+        const tabBg = rootStyles.getPropertyValue('--ui-tab-bg')?.trim() || '#2d3138';
+        const tabActiveBg = rootStyles.getPropertyValue('--ui-tab-active-bg')?.trim() || '#1f2329';
+        const tabText = rootStyles.getPropertyValue('--ui-tab-text')?.trim() || '#d6d8db';
+        const tabActiveText = rootStyles.getPropertyValue('--ui-tab-active-text')?.trim() || '#ffffff';
+        
+        return { tabBg, tabActiveBg, tabText, tabActiveText };
+    };
+    
+    const { tabBg, tabActiveBg, tabText, tabActiveText } = getTabColors();
 
     return (
         <div style={{
@@ -662,7 +646,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         }}>
             {/* Barra de pestañas */}
             <div style={{
-                background: tabBarBg,
+                background: tabBg,
                 borderBottom: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -708,9 +692,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             scrollbarWidth: 'none', // Firefox
                             msOverflowStyle: 'none', // IE/Edge
                             WebkitScrollbar: { display: 'none' }, // Webkit browsers
-                            width: '500px', // Ancho fijo en píxeles para forzar overflow
-                            minWidth: '500px',
-                            maxWidth: '500px',
+                            flex: '0 1 auto', // Ajustar al contenido
+                            minWidth: 0, // Permite que se contraiga
+                            maxWidth: 'calc(100% - 150px)', // Dejar espacio para los botones
                             height: '40px'
                         }}
                         className="hide-scrollbar"
@@ -722,8 +706,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    background: tab.active ? activeTabBg : 'transparent',
-                                    color: '#ffffff',
+                                    background: tab.active ? tabActiveBg : 'transparent',
+                                    color: tab.active ? tabActiveText : tabText,
                                     borderTop: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderRight: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
                                     borderBottom: 'none',
@@ -780,7 +764,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     }}
                                 />
                                 <span style={{
-                                    color: '#ffffff',
+                                    color: tab.active ? tabActiveText : tabText,
                                     fontSize: '12px',
                                     fontWeight: tab.active ? '600' : '400',
                                     overflow: 'hidden',
