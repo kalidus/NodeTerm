@@ -445,6 +445,11 @@ class ThemeManager {
   }
 
   applyAnimations(theme) {
+    // Siempre limpiar todas las animaciones existentes primero
+    this.cleanupAutumnLeaves();
+    this.cleanupForestMist();
+    cleanupMatrixAnimation();
+    
     // Verificar si el tema tiene animaciones
     if (theme.colors && theme.colors.animationType) {
       const animationType = theme.colors.animationType;
@@ -634,12 +639,56 @@ class ThemeManager {
     // Remover animación Matrix si existe
     cleanupMatrixAnimation();
     
+    // Limpiar todas las animaciones específicas
+    this.cleanupAutumnLeaves();
+    this.cleanupForestMist();
+    
     // Remover atributos de animación de todos los elementos
     const elements = document.querySelectorAll('[data-animation]');
     elements.forEach(element => {
       element.removeAttribute('data-animation');
       // También remover estrellas si existen
       this.removeSpaceStationStars(element);
+    });
+  }
+
+  cleanupAutumnLeaves() {
+    // Limpiar hojas de otoño existentes
+    const existingLeaves = document.querySelectorAll('.autumn-leaf');
+    existingLeaves.forEach(leaf => leaf.remove());
+    
+    // Limpiar contenedor de hojas de otoño
+    const leafContainer = document.querySelector('.autumn-leaf-container');
+    if (leafContainer) {
+      leafContainer.remove();
+    }
+    
+    // Limpiar estilos CSS dinámicos de hojas de otoño
+    const existingStyles = document.querySelectorAll('style');
+    existingStyles.forEach(style => {
+      if (style.textContent && style.textContent.includes('autumn-leaf-random-fall')) {
+        style.remove();
+      }
+    });
+  }
+
+  cleanupForestMist() {
+    // Limpiar hojas de bosque existentes
+    const existingLeaves = document.querySelectorAll('.forest-leaf');
+    existingLeaves.forEach(leaf => leaf.remove());
+    
+    // Limpiar contenedor de hojas de bosque
+    const leafContainer = document.querySelector('.forest-leaf-container');
+    if (leafContainer) {
+      leafContainer.remove();
+    }
+    
+    // Limpiar estilos CSS dinámicos de hojas de bosque
+    const existingStyles = document.querySelectorAll('style');
+    existingStyles.forEach(style => {
+      if (style.textContent && style.textContent.includes('forest-mist-animation')) {
+        style.remove();
+      }
     });
   }
 
@@ -658,9 +707,9 @@ class ThemeManager {
   }
 
   initAutumnLeaves() {
-    // Limpiar hojas existentes
-    const existingLeaves = document.querySelectorAll('.autumn-leaf');
-    existingLeaves.forEach(leaf => leaf.remove());
+    // Limpiar todas las animaciones existentes antes de crear nuevas
+    this.cleanupAutumnLeaves();
+    this.cleanupForestMist();
     
     // Crear contenedor para las hojas si no existe
     let leafContainer = document.querySelector('.autumn-leaf-container');
@@ -752,9 +801,9 @@ class ThemeManager {
   }
 
   initForestMist() {
-    // Limpiar hojas existentes
-    const existingLeaves = document.querySelectorAll('.forest-leaf');
-    existingLeaves.forEach(leaf => leaf.remove());
+    // Limpiar todas las animaciones existentes antes de crear nuevas
+    this.cleanupAutumnLeaves();
+    this.cleanupForestMist();
     
     // Crear contenedor para las hojas si no existe
     let leafContainer = document.querySelector('.forest-leaf-container');
