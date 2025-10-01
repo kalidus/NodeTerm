@@ -472,6 +472,9 @@ class ThemeManager {
         } else if (animationType === 'autumn-leaves') {
           // Inicializar hojas de otoño con posiciones aleatorias
           this.initAutumnLeaves();
+        } else if (animationType === 'forest-mist') {
+          // Inicializar hojas verdes del bosque
+          this.initForestMist();
         } else {
           cleanupMatrixAnimation();
         }
@@ -746,6 +749,100 @@ class ThemeManager {
     setTimeout(() => {
       this.initAutumnLeaves();
     }, 45000);
+  }
+
+  initForestMist() {
+    // Limpiar hojas existentes
+    const existingLeaves = document.querySelectorAll('.forest-leaf');
+    existingLeaves.forEach(leaf => leaf.remove());
+    
+    // Crear contenedor para las hojas si no existe
+    let leafContainer = document.querySelector('.forest-leaf-container');
+    if (!leafContainer) {
+      leafContainer = document.createElement('div');
+      leafContainer.className = 'forest-leaf-container';
+      leafContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1000;
+        overflow: hidden;
+      `;
+      
+      const titleBar = document.querySelector('.title-bar[data-animation="forest-mist"]');
+      if (titleBar) {
+        titleBar.appendChild(leafContainer);
+      }
+    }
+    
+    // Crear 20 hojas verdes del bosque con posiciones aleatorias
+    for (let i = 0; i < 20; i++) {
+      const leaf = document.createElement('div');
+      leaf.className = 'forest-leaf';
+      
+      // Posición horizontal aleatoria (5% a 95%)
+      const randomLeft = Math.random() * 90 + 5;
+      
+      // Tipo de hoja verde del bosque
+      const leafTypes = ['🌿', '🍃', '🌱', '🌾', '🌿', '🍃', '🌱', '🌾', '🌿', '🍃'];
+      const randomLeaf = leafTypes[Math.floor(Math.random() * leafTypes.length)];
+      
+      // Tamaño aleatorio
+      const randomSize = Math.random() * 6 + 8; // 8px a 14px
+      
+      // Velocidad aleatoria
+      const randomDuration = Math.random() * 8 + 10; // 10s a 18s
+      
+      // Delay aleatorio
+      const randomDelay = Math.random() * 25; // 0s a 25s
+      
+      // Desplazamiento lateral aleatorio
+      const randomDrift = (Math.random() - 0.5) * 80; // -40px a +40px
+      
+      // Rotación aleatoria
+      const randomRotation = Math.random() * 360; // 0° a 360°
+      
+      leaf.textContent = randomLeaf;
+      leaf.style.cssText = `
+        position: absolute;
+        top: -20px;
+        left: ${randomLeft}%;
+        font-size: ${randomSize}px;
+        animation: forest-leaf-random-fall ${randomDuration}s ease-in-out infinite ${randomDelay}s;
+        pointer-events: none;
+        z-index: 1000;
+        transform: rotate(${randomRotation}deg);
+        filter: hue-rotate(${Math.random() * 40 - 20}deg) saturate(1.3) brightness(1.2);
+      `;
+      
+      // Agregar animación CSS dinámica
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes forest-leaf-random-fall {
+          0% { 
+            transform: translateY(-20px) translateX(0px) rotate(${randomRotation}deg); 
+            opacity: 0; 
+          }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { 
+            transform: translateY(100vh) translateX(${randomDrift}px) rotate(${randomRotation + 360}deg); 
+            opacity: 0; 
+          }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      leafContainer.appendChild(leaf);
+    }
+    
+    // Renovar las hojas cada 40 segundos para mantener variedad
+    setTimeout(() => {
+      this.initForestMist();
+    }, 40000);
   }
 }
 
