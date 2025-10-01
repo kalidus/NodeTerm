@@ -44,9 +44,17 @@ const HomeTab = ({
   }, []);
 
   // Obtener el color de fondo del tema actual
-  const currentTheme = themeManager.getCurrentTheme() || uiThemes['Light'];
-  const dashboardBg = currentTheme.colors?.contentBackground || '#fafafa';
-  const localTerminalBg = themes[localLinuxTerminalTheme]?.theme?.background || '#222';
+  const currentTheme = React.useMemo(() => {
+    return themeManager.getCurrentTheme() || uiThemes['Light'];
+  }, [themeVersion]);
+  
+  const dashboardBg = React.useMemo(() => {
+    return currentTheme.colors?.contentBackground || '#fafafa';
+  }, [currentTheme]);
+  
+  const localTerminalBg = React.useMemo(() => {
+    return themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
+  }, [localLinuxTerminalTheme, localPowerShellTheme]);
 
   const handleConnectToHistory = (connection) => {
     // console.log('Conectando a:', connection);
@@ -175,10 +183,13 @@ const HomeTab = ({
     </div>
   );
 
-  const splitterColor = currentTheme.colors?.splitter || dashboardBg;
+  const splitterColor = React.useMemo(() => {
+    return currentTheme.colors?.splitter || localTerminalBg || dashboardBg || '#2d2d2d';
+  }, [currentTheme, localTerminalBg, dashboardBg]);
 
   return (
     <SplitLayout
+      key={`home-split-${themeVersion}`} // Forzar re-render al cambiar tema
       leftTerminal={{ key: 'home_top', content: topPanel }}
       rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
       orientation="horizontal"
