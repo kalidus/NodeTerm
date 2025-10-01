@@ -34,6 +34,20 @@ const SplitLayout = ({
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
   
+  // Asegurar que siempre haya un color de separador válido desde el inicio
+  // Usar transparencia para que el separador sea visible sobre cualquier fondo
+  const effectiveSplitterColor = React.useMemo(() => {
+    // Intentar determinar si el tema es oscuro o claro
+    const bgColor = splitterColor || theme?.background || '#2d2d2d';
+    
+    // Si el color de fondo es muy oscuro, usar blanco semi-transparente
+    // Si es claro, usar negro semi-transparente
+    const isLikelyDark = bgColor.includes('#') && 
+      parseInt(bgColor.slice(1, 3), 16) < 128;
+    
+    return isLikelyDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15)';
+  }, [splitterColor, theme?.background]);
+  
   // Estado para funcionalidad de colapso (solo para vertical)
   const [isCollapsed, setIsCollapsed] = useState(false);
   const enableCollapse = orientation === 'vertical'; // Solo colapso en vertical
@@ -234,9 +248,9 @@ const SplitLayout = ({
       left: 0,
       width: '100%',
       height: '8px',
-      backgroundColor: splitterColor || 'rgba(255, 255, 255, 0.1)',
-      borderTop: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
-      borderBottom: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
+      backgroundColor: effectiveSplitterColor,
+      borderTop: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`,
+      borderBottom: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`,
       cursor: 'row-resize',
       zIndex: 1000,
       userSelect: 'none',
@@ -276,14 +290,14 @@ const SplitLayout = ({
             style={horizontalHandleStyle}
             onMouseDown={handleMouseDown}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-              e.target.style.borderTopColor = 'rgba(255, 255, 255, 0.4)';
-              e.target.style.borderBottomColor = 'rgba(255, 255, 255, 0.4)';
+              e.target.style.backgroundColor = effectiveSplitterColor.replace('0.1', '0.2').replace('0.15', '0.25');
+              e.target.style.borderTopColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
+              e.target.style.borderBottomColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-              e.target.style.borderTopColor = 'rgba(255, 255, 255, 0.2)';
-              e.target.style.borderBottomColor = 'rgba(255, 255, 255, 0.2)';
+              e.target.style.backgroundColor = effectiveSplitterColor;
+              e.target.style.borderTopColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
+              e.target.style.borderBottomColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
             }}
             title="Arrastra para redimensionar"
           >
@@ -411,7 +425,7 @@ const SplitLayout = ({
           style={{
             width: '6px',
             height: '100%',
-            backgroundColor: splitterColor || 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: effectiveSplitterColor,
             cursor: 'col-resize',
             flexShrink: 0,
             position: 'relative',
@@ -420,19 +434,19 @@ const SplitLayout = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderLeft: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`,
-            borderRight: `1px solid ${splitterColor ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'}`
+            borderLeft: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`,
+            borderRight: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`
           }}
           onMouseDown={handleMouseDown}
           onMouseEnter={(e) => {
-            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.4)';
-            e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.4)';
+            e.target.style.backgroundColor = effectiveSplitterColor.replace('0.1', '0.2').replace('0.15', '0.25');
+            e.target.style.borderLeftColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
+            e.target.style.borderRightColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
           }}
           onMouseLeave={(e) => {
-            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            e.target.style.borderLeftColor = 'rgba(255, 255, 255, 0.2)';
-            e.target.style.borderRightColor = 'rgba(255, 255, 255, 0.2)';
+            e.target.style.backgroundColor = effectiveSplitterColor;
+            e.target.style.borderLeftColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
+            e.target.style.borderRightColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
           }}
           title="Arrastra para redimensionar"
         >
