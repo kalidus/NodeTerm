@@ -89,6 +89,8 @@
     "@xterm/xterm": "^5.5.0",
     "assert": "^2.1.0",
     "browserify-zlib": "^0.2.0",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.6.2",
     "guacamole-common-js": "^1.5.0",
     "guacamole-lite": "^1.0.2",
     "https-browserify": "^1.0.0",

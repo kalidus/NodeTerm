@@ -72,6 +72,7 @@ npm run build:win
 | 🔄 Sincronización en tiempo real | 🧩 Soporte para iconos y fuentes |
 | 🛡️ Seguridad local y cifrado | 🌙 Modo oscuro y claro |
 | 🖱️ Menús contextuales avanzados | ⚡ Atajos de teclado |
+| 🔄 Actualizaciones automáticas | 📦 Sistema de actualización integrado |
 
 <details>
 <summary>🔎 <strong>Desglose avanzado de características</strong></summary>
@@ -107,11 +108,28 @@ npm run build:win
 - Búsqueda y filtrado inteligente
 - Temas de color personalizables
 
+### 🔄 **Sistema de Actualización Automática**
+- Actualizaciones desde GitHub Releases
+- Comprobación automática configurable (cada 1-168 horas)
+- Descarga en segundo plano sin interrumpir tu trabajo
+- Notificaciones de nuevas versiones disponibles
+- Instalación con un clic
+- Soporte para canales stable/beta
+- Actualizaciones firmadas y verificadas
+
 </details>
 
 ---
 
-## 🆕 Novedades en v1.5.4
+## 🆕 Novedades en v1.6.0 (Próximamente)
+
+- 🔄 **Sistema de Actualización Automática** - Actualiza NodeTerm automáticamente desde GitHub Releases
+- ⚙️ **Configuración de Actualizaciones** - Control completo sobre cuándo y cómo actualizar
+- 📦 **Canales de Actualización** - Elige entre versiones estables o beta
+- 🔔 **Notificaciones Inteligentes** - Recibe avisos de nuevas versiones sin interrupciones
+- 🛡️ **Actualizaciones Seguras** - Todas las actualizaciones están firmadas y verificadas
+
+## 🎉 Versión Actual: v1.5.4
 
 - 🚀 **Optimización del main.js** - Refactorización completa del archivo principal de Electron
 - ⚡ **Mejor Gestión de Memoria** - Optimización de la gestión de recursos del sistema
@@ -131,6 +149,46 @@ npm run build:win
 - Cambia temas, iconos y fuentes desde el menú de configuración.
 - Sincroniza tus preferencias entre escritorio y web.
 - Soporte para temas personalizados y extensiones (próximamente).
+
+---
+
+## 🔄 Sistema de Actualización
+
+NodeTerm incluye un sistema de actualización automática que mantiene tu aplicación siempre al día:
+
+### Configuración
+
+Accede a `Configuración → Actualizaciones` para personalizar:
+
+- **Actualizaciones Automáticas**: Activa/desactiva la comprobación automática
+- **Intervalo de Comprobación**: Configura cada cuántas horas buscar actualizaciones (1-168 horas)
+- **Descarga Automática**: Las actualizaciones se descargan en segundo plano automáticamente
+- **Canal de Actualizaciones**: 
+  - **Estable (Recomendado)**: Versiones probadas y estables
+  - **Beta**: Versiones de prueba con nuevas funcionalidades
+
+### Procedimiento de Actualización
+
+1. **Comprobación**: La app comprueba automáticamente si hay nuevas versiones en GitHub Releases
+2. **Notificación**: Si hay una actualización disponible, recibirás una notificación
+3. **Descarga**: La actualización se descarga en segundo plano sin interrumpir tu trabajo
+4. **Instalación**: Cuando esté lista, haz clic en "Instalar y Reiniciar" para aplicar la actualización
+5. **Reinicio**: La aplicación se reinicia automáticamente con la nueva versión
+
+### Actualización Manual
+
+Si prefieres controlar las actualizaciones manualmente:
+
+1. Abre `Configuración → Actualizaciones`
+2. Haz clic en **"Buscar Actualizaciones"**
+3. Si hay una versión disponible, haz clic en **"Descargar"**
+4. Una vez descargada, haz clic en **"Instalar y Reiniciar"**
+
+### Seguridad
+
+- Todas las actualizaciones provienen de GitHub Releases oficial
+- Las actualizaciones están firmadas y verificadas automáticamente
+- El proceso de actualización es completamente seguro y no requiere permisos de administrador
 
 ---
 
@@ -172,12 +230,22 @@ NodeTerm/
 |---------|----------------|--------|
 | **v1.5.4** | 🚀 Optimización main.js + Mejor Gestión de Memoria + Corrección de Bugs | ✅ Actual |
 | **v1.5.2** | 🚀 Major Performance Optimization + React Re-render Optimization | ✅ Completado |
-| **v1.6.0** | 🔑 Soporte para llaves SSH | 📋 Planificado |
-| **v1.7.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
+| **v1.6.0** | 🔄 Sistema de Actualización Automática + Mejoras de Seguridad | 🚧 En Desarrollo |
+| **v1.7.0** | 🔑 Soporte para llaves SSH + Autenticación mejorada | 📋 Planificado |
+| **v1.8.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
 
 ---
 
 ## 📝 Changelog
+
+### v1.6.0 (En Desarrollo)
+- 🔄 **Sistema de Actualización Automática** - Actualizaciones desde GitHub Releases
+- ⚙️ **Configuración Avanzada** - Control completo sobre el proceso de actualización
+- 📦 **Canales Stable/Beta** - Elige tu nivel de riesgo
+- 🔔 **Notificaciones Mejoradas** - Avisos inteligentes de nuevas versiones
+- 🛡️ **Seguridad Reforzada** - Verificación de firmas y actualizaciones seguras
+- 📱 **Descarga en Background** - Sin interrumpir tu flujo de trabajo
+- 🎨 **UI Mejorada** - Nueva pestaña de actualizaciones en configuración
 
 ### v1.5.4
 - 🚀 **Optimización del main.js** - Refactorización completa del archivo principal de Electron

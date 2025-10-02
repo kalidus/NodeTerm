@@ -46,7 +46,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl-distro:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
-        /^import:.*$/
+        /^import:.*$/,
+        /^updater:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -71,7 +72,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
         /^rdp:.*$/,
-        /^guacamole:.*$/
+        /^guacamole:.*$/,
+        /^updater-event$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`
@@ -96,10 +98,19 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl:.*$/,
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
-        /^rdp:.*$/
+        /^rdp:.*$/,
+        /^updater-event$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         ipcRenderer.off(channel, func);
+      }
+    },
+    removeListener: (channel, func) => {
+      const validChannels = [
+        /^updater-event$/
+      ];
+      if (validChannels.some(regex => regex.test(channel))) {
+        ipcRenderer.removeListener(channel, func);
       }
     },
     removeAllListeners: (channel) => {
@@ -119,6 +130,15 @@ contextBridge.exposeInMainWorld('electron', {
     openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
     getDownloadsPath: () => ipcRenderer.invoke('import:get-downloads-path'),
     findLatestXmlDownload: (params) => ipcRenderer.invoke('import:find-latest-xml-download', params)
+  },
+  // Update system APIs
+  updater: {
+    checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+    downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+    quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+    getConfig: () => ipcRenderer.invoke('updater:get-config'),
+    updateConfig: (config) => ipcRenderer.invoke('updater:update-config', config),
+    getUpdateInfo: () => ipcRenderer.invoke('updater:get-info')
   }
 });
 

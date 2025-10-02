@@ -46,6 +46,7 @@ const si = require('systeminformation');
 const { fork } = require('child_process');
 const GuacdService = require('./src/services/GuacdService');
 const GuacamoleLite = require('guacamole-lite');
+const { getUpdateService } = require('./src/main/services/UpdateService');
 
 let mainWindow;
 let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
@@ -373,6 +374,21 @@ function createWindow() {
       alternativePtyConfig,
       SafeWindowsTerminal,
       isAppQuitting
+    });
+    
+    // Inicializar servicio de actualizaciones
+    const updateService = getUpdateService();
+    updateService.setMainWindow(mainWindow);
+    
+    // Cargar configuración desde localStorage (se sincronizará desde el renderer)
+    // La configuración se cargará cuando el renderer la solicite
+    
+    // Iniciar comprobación automática si está habilitada
+    mainWindow.webContents.once('did-finish-load', () => {
+      // Esperar 5 segundos antes de iniciar el servicio de actualización
+      setTimeout(() => {
+        updateService.startAutoCheck();
+      }, 5000);
     });
   } catch (err) {
     console.error('[MAIN] Error estableciendo dependencias de servicios:', err);
@@ -1638,6 +1654,74 @@ ipcMain.handle('window:isMaximized', () => {
 });
 ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+// === Update System Handlers ===
+ipcMain.handle('updater:check', async () => {
+  try {
+    const updateService = getUpdateService();
+    const result = await updateService.checkForUpdates();
+    return result;
+  } catch (error) {
+    console.error('[UPDATER] Error checking for updates:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('updater:download', async () => {
+  try {
+    const updateService = getUpdateService();
+    const result = await updateService.downloadUpdate();
+    return result;
+  } catch (error) {
+    console.error('[UPDATER] Error downloading update:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('updater:quit-and-install', async () => {
+  try {
+    const updateService = getUpdateService();
+    updateService.quitAndInstall();
+    return { success: true };
+  } catch (error) {
+    console.error('[UPDATER] Error installing update:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('updater:get-config', async () => {
+  try {
+    const updateService = getUpdateService();
+    const config = updateService.getConfig();
+    return { success: true, config };
+  } catch (error) {
+    console.error('[UPDATER] Error getting config:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('updater:update-config', async (event, newConfig) => {
+  try {
+    const updateService = getUpdateService();
+    const config = updateService.updateConfig(newConfig);
+    updateService.restart(); // Reiniciar el servicio con la nueva configuración
+    return { success: true, config };
+  } catch (error) {
+    console.error('[UPDATER] Error updating config:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('updater:get-info', async () => {
+  try {
+    const updateService = getUpdateService();
+    const info = updateService.getUpdateInfo();
+    return { success: true, ...info };
+  } catch (error) {
+    console.error('[UPDATER] Error getting update info:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // === RDP Support ===
