@@ -1724,6 +1724,17 @@ ipcMain.handle('updater:get-info', async () => {
   }
 });
 
+ipcMain.handle('updater:clear-cache', async () => {
+  try {
+    const updateService = getUpdateService();
+    const result = updateService.clearUpdateCache();
+    return result;
+  } catch (error) {
+    console.error('[UPDATER] Error clearing update cache:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // === RDP Support ===
 // IPC handlers for RDP connections
 ipcMain.handle('rdp:connect', async (event, config) => {
