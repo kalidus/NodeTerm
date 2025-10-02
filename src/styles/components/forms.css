@@ -752,32 +752,32 @@ div[style*="borderTop"] .advanced-fieldset .p-fieldset-legend {
 
 /* Scroll personalizado para el dropdown del buscador */
 .search-dropdown::-webkit-scrollbar {
-  width: 8px;
+  width: 8px !important;
 }
 
 .search-dropdown::-webkit-scrollbar-track {
-  background: var(--ui-dialog-bg, #1a1a1a);
-  border-radius: 4px;
+  background: var(--scrollbar-track, var(--ui-dialog-bg, #1a1a1a)) !important;
+  border-radius: 4px !important;
 }
 
 .search-dropdown::-webkit-scrollbar-thumb {
-  background: var(--ui-sidebar-selected, #00bfff);
-  border-radius: 4px;
-  border: 1px solid var(--ui-dialog-border, #333);
+  background: var(--scrollbar-thumb, var(--ui-sidebar-selected, #00bfff)) !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .search-dropdown::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-sidebar-hover, #3cc8ff);
+  background: var(--scrollbar-thumb-hover, var(--ui-sidebar-hover, #3cc8ff)) !important;
 }
 
 .search-dropdown::-webkit-scrollbar-thumb:active {
-  background: var(--ui-sidebar-selected, #0099cc);
+  background: var(--scrollbar-thumb-hover, var(--ui-sidebar-selected, #0099cc)) !important;
 }
 
 /* Para Firefox */
 .search-dropdown {
-  scrollbar-width: thin;
-  scrollbar-color: var(--ui-sidebar-selected, #00bfff) var(--ui-dialog-bg, #1a1a1a);
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--scrollbar-thumb, var(--ui-sidebar-selected, #00bfff)) var(--scrollbar-track, var(--ui-dialog-bg, #1a1a1a)) !important;
 }
 
 /* ===== FIN DE ESTILOS PARA EL SCROLL DEL BUSCADOR ===== */

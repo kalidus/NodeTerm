@@ -153,6 +153,11 @@ class ThemeManager {
         --ui-context-border: ${colors.contextMenuBorder};
         --ui-context-shadow: ${colors.contextMenuShadow};
         
+        /* Scrollbar Colors */
+        --scrollbar-track: ${colors.scrollbarTrack || 'rgba(0, 0, 0, 0.1)'};
+        --scrollbar-thumb: ${colors.scrollbarThumb || '#888'};
+        --scrollbar-thumb-hover: ${colors.scrollbarThumbHover || '#555'};
+        
         /* File Explorer Button Colors */
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
