@@ -167,6 +167,31 @@ class UpdateService {
       log.info(`app.isPackaged: ${app.isPackaged}`);
       log.info(`Versión actual: ${app.getVersion()}`);
       
+      // MODO DESARROLLO: Simular respuesta
+      if (!app.isPackaged) {
+        log.info('🔧 MODO DESARROLLO: Simulando comprobación');
+        
+        // Enviar evento "checking" inmediatamente
+        this.sendStatusToWindow('checking-for-update');
+        
+        // Simular respuesta después de 2 segundos
+        setTimeout(() => {
+          log.info('✅ Simulación: No hay actualizaciones disponibles');
+          this.sendStatusToWindow('update-not-available', {
+            version: app.getVersion(),
+          });
+        }, 2000);
+        
+        return {
+          success: true,
+          isDevMode: true,
+          message: 'Modo desarrollo: simulación activada'
+        };
+      }
+
+      // MODO PRODUCCIÓN: Comprobación real en GitHub Releases
+      log.info('🚀 MODO PRODUCCIÓN: Comprobando GitHub Releases');
+      
       // Configurar el canal
       if (this.config.channel === 'beta') {
         autoUpdater.allowPrerelease = true;
@@ -185,7 +210,6 @@ class UpdateService {
       }, 30000);
 
       // Iniciar la comprobación real en GitHub Releases
-      log.info('🚀 Iniciando comprobación REAL en GitHub Releases');
       log.info('📡 Llamando a autoUpdater.checkForUpdates()...');
       
       try {

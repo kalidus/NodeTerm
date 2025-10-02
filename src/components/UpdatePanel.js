@@ -217,7 +217,7 @@ const UpdatePanel = () => {
    * Comprueba manualmente si hay actualizaciones
    */
   const checkForUpdates = async () => {
-    console.log('🔍 INICIANDO BÚSQUEDA DE ACTUALIZACIONES EN GITHUB');
+    console.log('🔍 INICIANDO BÚSQUEDA DE ACTUALIZACIONES');
     setIsChecking(true);
     setUpdateStatus('checking');
     setErrorMessage('');
@@ -228,8 +228,15 @@ const UpdatePanel = () => {
         const result = await window.electron.updater.checkForUpdates();
         
         console.log('📦 Resultado recibido:', result);
-        console.log('✅ Comprobación iniciada - esperando eventos IPC de GitHub');
         
+        // Si estamos en modo desarrollo, la simulación ya está en marcha
+        if (result?.isDevMode) {
+          console.log('🔧 Modo desarrollo detectado - simulación activada');
+          // Los eventos llegarán por IPC, no hacemos nada más aquí
+          return;
+        }
+        
+        console.log('✅ Comprobación iniciada - esperando eventos IPC');
         // La respuesta real llegará por eventos IPC desde electron-updater
       } else {
         console.error('❌ window.electron.updater no disponible');
