@@ -12,6 +12,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
 
+
+
   // Función para extraer y truncar el usuario correctamente
   const getDisplayUser = (node) => {
     if (!node.data) return null;
@@ -902,7 +904,26 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 6 }}>
-        <img src={require('../assets/app-icon.png')} alt="icon" style={{ width: 18, height: 18, marginRight: 6, marginLeft: 8, display: 'flex', alignItems: 'center' }} />
+        <svg 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          style={{ 
+            width: 18, 
+            height: 18, 
+            marginRight: 6, 
+            marginLeft: 8, 
+            display: 'flex', 
+            alignItems: 'center'
+          }}
+        >
+          <g fill="var(--ui-titlebar-text, #fff)">
+            {/* Símbolo > de prompt */}
+            <path d="M7 8 L11 12 L7 16" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            {/* Línea de comando _ */}
+            <rect x="13" y="15" width="5" height="1.5" rx="0.75"/>
+          </g>
+        </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
