@@ -138,7 +138,8 @@ contextBridge.exposeInMainWorld('electron', {
     quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
     getConfig: () => ipcRenderer.invoke('updater:get-config'),
     updateConfig: (config) => ipcRenderer.invoke('updater:update-config', config),
-    getUpdateInfo: () => ipcRenderer.invoke('updater:get-info')
+    getUpdateInfo: () => ipcRenderer.invoke('updater:get-info'),
+    clearCache: () => ipcRenderer.invoke('updater:clear-cache')
   }
 });
 

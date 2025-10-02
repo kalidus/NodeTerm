@@ -304,6 +304,46 @@ const UpdatePanel = () => {
     }
   };
 
+  /**
+   * Limpia el caché de actualizaciones
+   */
+  const clearUpdateCache = async () => {
+    try {
+      if (window.electron?.updater) {
+        const result = await window.electron.updater.clearCache();
+        if (result.success) {
+          if (toast.current) {
+            toast.current.show({
+              severity: 'success',
+              summary: 'Caché Limpiado',
+              detail: result.message || 'Caché de actualizaciones limpiado correctamente',
+              life: 3000,
+            });
+          }
+        } else {
+          if (toast.current) {
+            toast.current.show({
+              severity: 'error',
+              summary: 'Error',
+              detail: result.error || 'No se pudo limpiar el caché',
+              life: 3000,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error limpiando caché:', error);
+      if (toast.current) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo limpiar el caché de actualizaciones',
+          life: 3000,
+        });
+      }
+    }
+  };
+
   // Opciones para el dropdown de canal
   const channelOptions = [
     { label: 'Estable (Recomendado)', value: 'latest' },
@@ -436,6 +476,16 @@ const UpdatePanel = () => {
             icon="pi pi-check"
             onClick={installUpdate}
             className="p-button-success"
+          />
+        )}
+        
+        {updateStatus === 'error' && (
+          <Button
+            label="Limpiar Caché"
+            icon="pi pi-trash"
+            onClick={clearUpdateCache}
+            className="p-button-warning p-button-outlined"
+            tooltip="Limpia el caché de actualizaciones para resolver problemas de checksum"
           />
         )}
       </div>
