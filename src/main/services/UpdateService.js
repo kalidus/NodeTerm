@@ -44,11 +44,11 @@ class UpdateService {
    * Configura los eventos de autoUpdater
    */
   setupAutoUpdater() {
-    // Configurar para desarrollo (permitir comprobaciones en modo dev)
-    if (process.env.NODE_ENV === 'development') {
-      autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml');
-      autoUpdater.forceDevUpdateConfig = true;
-    }
+    // Permitir que funcione siempre, sin importar si está empaquetado
+    autoUpdater.forceDevUpdateConfig = false;
+    log.info('🚀 Configurado para comprobar GitHub Releases');
+    log.info('📦 Modo empaquetado:', app.isPackaged);
+    log.info('🔧 NODE_ENV:', process.env.NODE_ENV || 'undefined');
 
     // Evento: Comprobando actualizaciones
     autoUpdater.on('checking-for-update', () => {
@@ -162,49 +162,56 @@ class UpdateService {
    */
   async checkForUpdates() {
     try {
-      log.info('Comprobación manual de actualizaciones iniciada');
+      log.info('=== INICIO COMPROBACIÓN DE ACTUALIZACIONES ===');
+      log.info(`NODE_ENV: ${process.env.NODE_ENV}`);
+      log.info(`app.isPackaged: ${app.isPackaged}`);
+      log.info(`Versión actual: ${app.getVersion()}`);
       
-      // Configurar el canal si es necesario
+      // Configurar el canal
       if (this.config.channel === 'beta') {
         autoUpdater.allowPrerelease = true;
+        log.info('📦 Canal: Beta (prerelease habilitado)');
       } else {
         autoUpdater.allowPrerelease = false;
+        log.info('📦 Canal: Stable (solo releases estables)');
       }
 
-      // En modo desarrollo, simular una comprobación
-      if (process.env.NODE_ENV === 'development') {
-        log.info('Modo desarrollo: simulando comprobación de actualizaciones');
-        
-        // Simular que no hay actualizaciones disponibles
-        setTimeout(() => {
-          this.sendStatusToWindow('update-not-available', {
-            version: app.getVersion(),
-          });
-        }, 2000);
-        
-        return {
-          success: true,
-          updateInfo: null,
-          message: 'Modo desarrollo: no se pueden comprobar actualizaciones reales'
-        };
-      }
+      // Configurar timeout de seguridad (30 segundos)
+      const timeoutId = setTimeout(() => {
+        log.error('⏱️ TIMEOUT: No se recibió respuesta en 30 segundos');
+        this.sendStatusToWindow('error', {
+          message: 'La comprobación tardó demasiado. Verifica tu conexión a internet.'
+        });
+      }, 30000);
 
-      const result = await autoUpdater.checkForUpdates();
+      // Iniciar la comprobación real en GitHub Releases
+      log.info('🚀 Iniciando comprobación REAL en GitHub Releases');
+      log.info('📡 Llamando a autoUpdater.checkForUpdates()...');
+      
+      try {
+        const result = await autoUpdater.checkForUpdates();
+        clearTimeout(timeoutId);
+        log.info('✅ checkForUpdates completado exitosamente');
+        log.info('📊 Resultado:', JSON.stringify(result?.updateInfo || {}, null, 2));
+      } catch (error) {
+        clearTimeout(timeoutId);
+        log.error('❌ Error en checkForUpdates:', error.message);
+        throw error;
+      }
+      
       return {
         success: true,
-        updateInfo: result?.updateInfo || null,
+        message: 'Comprobación iniciada correctamente'
       };
-    } catch (error) {
-      log.error('Error al comprobar actualizaciones:', error);
       
-      // En modo desarrollo, mostrar mensaje más amigable
-      if (process.env.NODE_ENV === 'development') {
-        return {
-          success: false,
-          error: 'En modo desarrollo, las actualizaciones se prueban con la aplicación empaquetada',
-          isDevMode: true
-        };
-      }
+    } catch (error) {
+      log.error('❌ ERROR EN COMPROBACIÓN:', error.message);
+      log.error('Stack:', error.stack);
+      
+      // Enviar evento de error al renderer
+      this.sendStatusToWindow('error', {
+        message: error.message || 'Error desconocido al comprobar actualizaciones'
+      });
       
       return {
         success: false,
