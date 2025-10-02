@@ -79,6 +79,11 @@ class UpdateService {
     // Evento: Error durante la actualización
     autoUpdater.on('error', (err) => {
       log.error('Error en actualización:', err);
+      log.error('Error details:', {
+        message: err.message,
+        code: err.code,
+        stack: err.stack
+      });
       this.sendStatusToWindow('error', {
         message: err.message || 'Error desconocido',
       });
@@ -250,10 +255,42 @@ class UpdateService {
   async downloadUpdate() {
     try {
       log.info('Descarga manual de actualización iniciada');
+      
+      // Configurar opciones de descarga para manejar errores de checksum
+      autoUpdater.disableDifferentialDownload = true; // Deshabilitar descarga diferencial para evitar problemas de checksum
+      
       await autoUpdater.downloadUpdate();
       return { success: true };
     } catch (error) {
       log.error('Error al descargar actualización:', error);
+      
+      // Si es un error de checksum, intentar limpiar caché y reintentar
+      if (error.message && error.message.includes('checksum')) {
+        log.warn('Error de checksum detectado, limpiando caché y reintentando...');
+        try {
+          // Limpiar caché de actualizaciones
+          const { app } = require('electron');
+          const path = require('path');
+          const fs = require('fs');
+          
+          const updateCacheDir = path.join(app.getPath('userData'), 'updater');
+          if (fs.existsSync(updateCacheDir)) {
+            fs.rmSync(updateCacheDir, { recursive: true, force: true });
+            log.info('Caché de actualizaciones limpiado');
+          }
+          
+          // Reintentar descarga
+          await autoUpdater.downloadUpdate();
+          return { success: true };
+        } catch (retryError) {
+          log.error('Error en reintento de descarga:', retryError);
+          return {
+            success: false,
+            error: `Error de checksum persistente: ${retryError.message}`,
+          };
+        }
+      }
+      
       return {
         success: false,
         error: error.message,
@@ -324,6 +361,33 @@ class UpdateService {
     this.stopAutoCheck();
     if (this.config.autoCheck) {
       this.startAutoCheck();
+    }
+  }
+
+  /**
+   * Limpia el caché de actualizaciones
+   */
+  clearUpdateCache() {
+    try {
+      const { app } = require('electron');
+      const path = require('path');
+      const fs = require('fs');
+      
+      const updateCacheDir = path.join(app.getPath('userData'), 'updater');
+      if (fs.existsSync(updateCacheDir)) {
+        fs.rmSync(updateCacheDir, { recursive: true, force: true });
+        log.info('Caché de actualizaciones limpiado manualmente');
+        return { success: true, message: 'Caché limpiado correctamente' };
+      } else {
+        log.info('No se encontró caché de actualizaciones para limpiar');
+        return { success: true, message: 'No había caché que limpiar' };
+      }
+    } catch (error) {
+      log.error('Error limpiando caché de actualizaciones:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
 }
