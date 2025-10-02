@@ -34,16 +34,17 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "src/assets/app-icon.png"
+      "icon": "src/assets/app-icon.png",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
     },
     "linux": {
       "target": "AppImage",
       "category": "Utility",
       "icon": "src/assets/app-icon.png"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false
     },
     "publish": {
       "provider": "github",
