@@ -5,6 +5,24 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] - 2024-12-21
+
+### 🎨 Mejoras de Temas y Personalización
+- **Sistema de Temas Avanzado**: Nuevo gestor de temas para pestañas con mayor flexibilidad
+- **Temas Personalizados**: Soporte para temas personalizados con configuración granular
+- **Selector de Temas Mejorado**: Interfaz más intuitiva para selección de temas
+- **Persistencia de Temas**: Los temas seleccionados se mantienen entre sesiones
+
+### 🔧 Mejoras Técnicas
+- **Gestión de Temas Optimizada**: Mejor rendimiento en la carga y aplicación de temas
+- **Código Más Modular**: Refactorización del sistema de temas para mejor mantenibilidad
+- **Mejor Organización**: Estructura más clara para la gestión de temas
+
+### 🐛 Correcciones de Bugs
+- **Corrección de Temas**: Mejor aplicación de temas en pestañas
+- **Fix de Persistencia**: Los temas se mantienen correctamente al reiniciar
+- **Corrección de Rendimiento**: Mejoras en la carga de temas personalizados
+
 ## [1.5.4] - 2024-12-20
 
 ### 🚀 Optimizaciones de Rendimiento

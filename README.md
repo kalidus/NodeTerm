@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.5.4-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.5.5-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -129,18 +129,17 @@ npm run build:win
 - 🔔 **Notificaciones Inteligentes** - Recibe avisos de nuevas versiones sin interrupciones
 - 🛡️ **Actualizaciones Seguras** - Todas las actualizaciones están firmadas y verificadas
 
-## 🎉 Versión Actual: v1.5.4
+## 🎉 Versión Actual: v1.5.5
 
-- 🚀 **Optimización del main.js** - Refactorización completa del archivo principal de Electron
-- ⚡ **Mejor Gestión de Memoria** - Optimización de la gestión de recursos del sistema
-- 🏃 **Reducción de Tiempo de Inicio** - Mejoras en el tiempo de arranque de la aplicación
-- 🔧 **Optimización de IPC** - Mejor comunicación entre procesos principal y renderer
-- 🧹 **Código Más Limpio** - Refactorización de funciones y mejor organización del código
-- 🛡️ **Mejor Manejo de Errores** - Mejores mensajes de error y logging
-- 🔄 **Corrección de Memory Leaks** - Eliminación de fugas de memoria en el proceso principal
-- 🎯 **Mejor Estabilidad** - Corrección de crashes ocasionales durante el inicio
-- 📁 **Reorganización de main.js** - Mejor estructura y modularidad
-- 🐛 **Correcciones de Bugs** - Mejoras de estabilidad y rendimiento
+- 🎨 **Sistema de Temas Avanzado** - Nuevo gestor de temas para pestañas con mayor flexibilidad
+- 🎯 **Temas Personalizados** - Soporte para temas personalizados con configuración granular
+- 🔧 **Selector de Temas Mejorado** - Interfaz más intuitiva para selección de temas
+- 💾 **Persistencia de Temas** - Los temas seleccionados se mantienen entre sesiones
+- ⚡ **Gestión de Temas Optimizada** - Mejor rendimiento en la carga y aplicación de temas
+- 🏗️ **Código Más Modular** - Refactorización del sistema de temas para mejor mantenibilidad
+- 🐛 **Corrección de Temas** - Mejor aplicación de temas en pestañas
+- 🔄 **Fix de Persistencia** - Los temas se mantienen correctamente al reiniciar
+- 🚀 **Corrección de Rendimiento** - Mejoras en la carga de temas personalizados
 
 ---
 
@@ -228,7 +227,7 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.5.4** | 🚀 Optimización main.js + Mejor Gestión de Memoria + Corrección de Bugs | ✅ Actual |
+| **v1.5.5** | 🎨 Sistema de Temas Avanzado + Temas Personalizados + Mejoras de Rendimiento | ✅ Actual |
 | **v1.5.2** | 🚀 Major Performance Optimization + React Re-render Optimization | ✅ Completado |
 | **v1.6.0** | 🔄 Sistema de Actualización Automática + Mejoras de Seguridad | 🚧 En Desarrollo |
 | **v1.7.0** | 🔑 Soporte para llaves SSH + Autenticación mejorada | 📋 Planificado |
@@ -246,6 +245,17 @@ NodeTerm/
 - 🛡️ **Seguridad Reforzada** - Verificación de firmas y actualizaciones seguras
 - 📱 **Descarga en Background** - Sin interrumpir tu flujo de trabajo
 - 🎨 **UI Mejorada** - Nueva pestaña de actualizaciones en configuración
+
+### v1.5.5
+- 🎨 **Sistema de Temas Avanzado** - Nuevo gestor de temas para pestañas con mayor flexibilidad
+- 🎯 **Temas Personalizados** - Soporte para temas personalizados con configuración granular
+- 🔧 **Selector de Temas Mejorado** - Interfaz más intuitiva para selección de temas
+- 💾 **Persistencia de Temas** - Los temas seleccionados se mantienen entre sesiones
+- ⚡ **Gestión de Temas Optimizada** - Mejor rendimiento en la carga y aplicación de temas
+- 🏗️ **Código Más Modular** - Refactorización del sistema de temas para mejor mantenibilidad
+- 🐛 **Corrección de Temas** - Mejor aplicación de temas en pestañas
+- 🔄 **Fix de Persistencia** - Los temas se mantienen correctamente al reiniciar
+- 🚀 **Corrección de Rendimiento** - Mejoras en la carga de temas personalizados
 
 ### v1.5.4
 - 🚀 **Optimización del main.js** - Refactorización completa del archivo principal de Electron
