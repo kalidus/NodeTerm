@@ -289,7 +289,7 @@ const QuickActions = ({
               fontWeight: 'bold',
               color: 'var(--primary-color)'
             }}>
-              v1.5.2
+              v1.5.5
             </div>
             <div style={{ 
               fontSize: '0.8rem',
