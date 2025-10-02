@@ -16,6 +16,7 @@ import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
 import TabThemeSelector from './TabThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
+import UpdatePanel from './UpdatePanel';
 import { themes } from '../themes';
 import { getVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
@@ -1582,6 +1583,10 @@ const SettingsDialog = ({
               </div>
             </div>
           </div>
+        </TabPanel>
+
+        <TabPanel header="Actualizaciones" leftIcon="pi pi-refresh">
+          <UpdatePanel />
         </TabPanel>
 
         <TabPanel header="Sincronización" leftIcon="pi pi-cloud">
