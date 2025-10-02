@@ -14,6 +14,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
 
 
+
   // Función para extraer y truncar el usuario correctamente
   const getDisplayUser = (node) => {
     if (!node.data) return null;

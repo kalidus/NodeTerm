@@ -801,6 +801,35 @@
   box-shadow: 0 0 25px currentColor !important;
 }
 
+/* SCROLLBAR GENÉRICO PARA TODOS LOS TEMAS ANIMADOS */
+/* Usar las propiedades de scrollbar definidas en cada tema */
+.search-input[data-animation]::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.search-input[data-animation]::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, rgba(0, 0, 0, 0.1)) !important;
+  border-radius: 3px !important;
+}
+
+.search-input[data-animation]::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, #888) !important;
+  border-radius: 3px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.search-input[data-animation]::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, #555) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Firefox scrollbar para todos los temas animados */
+.search-input[data-animation] {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--scrollbar-thumb, #888) var(--scrollbar-track, rgba(0, 0, 0, 0.1)) !important;
+}
+
 /* Animaciones para elementos de la interfaz en temas animados */
 .sidebar-container[data-animation] {
   transition: all 0.3s ease !important;
@@ -1447,6 +1476,7 @@
   box-shadow: 0 0 20px rgba(255, 215, 0, 0.5) !important;
   transition: all 0.3s ease !important;
 }
+
 
 .search-input[data-animation="crimson-comet"] {
   border-color: #dc143c !important;
