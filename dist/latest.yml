@@ -1,8 +1,8 @@
-version: 1.5.5
+version: 1.5.6
 files:
-  - url: NodeTerm-Setup-1.5.5.exe
-    sha512: 5Ktrtt7UZd3C5DPzi1BHqaSvSe93FdgLiLgDn8XSuLCbBgyW1C3KPVTfIc7dtwmXOWgM5SSS9NG6McMoAeigiA==
-    size: 224585704
-path: NodeTerm-Setup-1.5.5.exe
-sha512: 5Ktrtt7UZd3C5DPzi1BHqaSvSe93FdgLiLgDn8XSuLCbBgyW1C3KPVTfIc7dtwmXOWgM5SSS9NG6McMoAeigiA==
-releaseDate: '2025-10-02T15:05:04.789Z'
+  - url: NodeTerm-Setup-1.5.6.exe
+    sha512: WwQmEvSwZGBF1+1f17wDwSug6YGSwqTOCoOPrNyvU7M0PKi109U5iqM8WjvCrhLLhvl3OkQNJ7oufFSCc8PIiA==
+    size: 224585738
+path: NodeTerm-Setup-1.5.6.exe
+sha512: WwQmEvSwZGBF1+1f17wDwSug6YGSwqTOCoOPrNyvU7M0PKi109U5iqM8WjvCrhLLhvl3OkQNJ7oufFSCc8PIiA==
+releaseDate: '2025-10-02T15:18:23.009Z'
