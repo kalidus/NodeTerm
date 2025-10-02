@@ -1,105 +1,87 @@
-# 🚀 NodeTerm v1.5.3 - Release Notes
+# 🚀 NodeTerm v1.5.5 - Release Notes
 
-**Fecha de Release**: 19 de Diciembre, 2024  
-**Tipo de Release**: Minor Release  
-**Versión Anterior**: v1.5.2
+**Fecha de Release**: 21 de Diciembre, 2024  
+**Tipo de Release**: Patch Release  
+**Versión Anterior**: v1.5.4
 
 ---
 
-## 🎉 ¡Bienvenido a NodeTerm v1.5.3!
+## 🎉 ¡Bienvenido a NodeTerm v1.5.5!
 
-Esta versión trae mejoras significativas en la experiencia de usuario, con un nuevo sistema de importación de sesiones, una sidebar colapsable inteligente, y un refactor completo de los estilos CSS para una mejor organización y mantenibilidad.
+Esta versión se enfoca en mejoras del sistema de temas y personalización, con un nuevo gestor de temas avanzado para pestañas, mejor rendimiento en la gestión de temas, y correcciones importantes de bugs relacionados con la persistencia y aplicación de temas.
 
 ---
 
 ## ✨ Características Principales
 
-### 📥 Sistema de Importación de Sesiones
-- **Importación desde XML**: Compatible con mRemoteNG y otros formatos XML
-- **Modo Vinculado**: Importación automática desde archivos externos
-- **Gestión de Carpetas**: Organización inteligente de conexiones importadas
-- **Duplicación**: Duplica carpetas y conexiones fácilmente
-- **Opciones Avanzadas**: Configuración granular de importación
+### 🎨 Sistema de Temas Avanzado
+- **Gestor de Temas para Pestañas**: Nuevo sistema de gestión de temas específico para pestañas
+- **Temas Personalizados**: Soporte completo para temas personalizados con configuración granular
+- **Selector de Temas Mejorado**: Interfaz más intuitiva y fácil de usar
+- **Persistencia de Temas**: Los temas seleccionados se mantienen entre sesiones
 
-### 🎨 Selector de Colores Avanzado
-- **Paleta de Colores Completa**: Personalización total de temas
-- **Temas Mejorados**: Iconos y colores más elegantes
-- **Interfaz Intuitiva**: Selector visual fácil de usar
-- **Previsualización en Tiempo Real**: Ve los cambios al instante
+### 🔧 Mejoras de Rendimiento
+- **Gestión de Temas Optimizada**: Mejor rendimiento en la carga y aplicación de temas
+- **Código Más Modular**: Refactorización del sistema de temas para mejor mantenibilidad
+- **Mejor Organización**: Estructura más clara para la gestión de temas
 
-### 📁 Sidebar Colapsable Inteligente
-- **Gestión de Espacio**: Mejor aprovechamiento del área de trabajo
-- **Transiciones Suaves**: Animaciones elegantes al colapsar/expandir
-- **Estado Persistente**: Recuerda tu preferencia de colapso
-- **Responsive**: Se adapta automáticamente al tamaño de ventana
-
-### 🏗️ Refactor Completo de Estilos CSS
-- **Nueva Estructura Organizada**:
-  - `src/styles/base/` - Estilos base y reset
-  - `src/styles/components/` - Componentes específicos
-  - `src/styles/layout/` - Layouts y estructura
-  - `src/styles/pages/` - Páginas específicas
-  - `src/styles/themes/` - Temas y personalización
-- **Mejor Mantenibilidad**: Código más organizado y fácil de mantener
-- **Modularidad**: Estilos separados por funcionalidad
+### 🐛 Correcciones Importantes
+- **Corrección de Temas**: Mejor aplicación de temas en pestañas
+- **Fix de Persistencia**: Los temas se mantienen correctamente al reiniciar la aplicación
+- **Corrección de Rendimiento**: Mejoras en la carga de temas personalizados
 
 ---
 
 ## 🎨 Mejoras de UI/UX
 
-### 🔧 Diálogos Mejorados
-- **Formularios SSH/RDP**: Mejor experiencia de usuario
-- **Opciones Avanzadas**: Configuración más granular
-- **Validación Mejorada**: Mejor feedback al usuario
-- **Layout Responsivo**: Se adapta a diferentes tamaños
+### 🎨 Gestión de Temas Mejorada
+- **Selector de Temas Intuitivo**: Interfaz más fácil de usar para selección de temas
+- **Previsualización en Tiempo Real**: Ve los cambios de tema al instante
+- **Persistencia Visual**: Los temas se mantienen visualmente consistentes
+- **Mejor Aplicación**: Los temas se aplican correctamente en todas las pestañas
 
-### 📱 UI Responsiva
-- **Mejor Adaptación**: A diferentes tamaños de pantalla
-- **Componentes Flexibles**: Se ajustan automáticamente
-- **Experiencia Consistente**: En todos los dispositivos
-
-### 🎯 Mejoras de Navegación
-- **Menús Contextuales**: Mejor funcionamiento
-- **Drag & Drop**: Más fluido y responsivo
-- **Atajos de Teclado**: Mejor integración
+### 🔧 Mejoras de Rendimiento
+- **Carga Más Rápida**: Los temas se cargan más eficientemente
+- **Mejor Gestión de Memoria**: Optimización en el manejo de recursos de temas
+- **Aplicación Instantánea**: Los cambios de tema se aplican sin retrasos
 
 ---
 
 ## 🔧 Mejoras Técnicas
 
-### 🚀 Optimización de Rendimiento
-- **Mejor Gestión de Memoria**: Optimización de recursos
-- **Re-renders Optimizados**: Mejor rendimiento de React
-- **Carga Más Rápida**: Tiempos de inicio mejorados
+### 🚀 Optimización del Sistema de Temas
+- **Gestión de Temas Optimizada**: Mejor rendimiento en la carga y aplicación de temas
+- **Código Más Modular**: Refactorización del sistema de temas para mejor mantenibilidad
+- **Mejor Organización**: Estructura más clara para la gestión de temas
 
 ### 🏗️ Arquitectura Mejorada
-- **Código Más Modular**: Mejor organización
-- **Componentes Reutilizables**: Mayor eficiencia
-- **Separación de Responsabilidades**: Código más limpio
+- **Sistema de Temas Refactorizado**: Mejor separación de responsabilidades
+- **Componentes de Tema Reutilizables**: Mayor eficiencia en la gestión de temas
+- **Código Más Limpio**: Mejor organización del código relacionado con temas
 
 ### 🧪 Preparación para Testing
-- **Estructura Mejorada**: Preparada para testing automatizado
-- **Código Más Testeable**: Mejor separación de lógica
+- **Sistema de Temas Testeable**: Mejor separación de lógica para testing
+- **Componentes Modulares**: Estructura preparada para testing automatizado
 
 ---
 
 ## 🐛 Correcciones de Bugs
 
-### 🔧 Correcciones de UI
-- **Scroll en Sidebar**: Eliminado scroll innecesario
-- **Tamaños de Componentes**: Mejor gestión de dimensiones
-- **Menús Contextuales**: Funcionamiento corregido
-- **Formularios**: Desbloqueo correcto de campos
+### 🎨 Correcciones de Temas
+- **Aplicación de Temas**: Mejor aplicación de temas en pestañas
+- **Persistencia de Temas**: Los temas se mantienen correctamente al reiniciar
+- **Carga de Temas**: Mejoras en la carga de temas personalizados
+- **Selector de Temas**: Corrección de problemas en el selector de temas
 
-### 🔄 Correcciones de Funcionalidad
-- **Reconexión PowerShell**: Mejor estabilidad
-- **Gestión de Estado**: Corrección de bugs menores
-- **Sincronización**: Mejoras en la sincronización de configuraciones
+### 🔧 Correcciones de Rendimiento
+- **Gestión de Memoria**: Optimización en el manejo de recursos de temas
+- **Carga de Temas**: Mejor rendimiento en la carga de temas
+- **Aplicación de Temas**: Los temas se aplican más eficientemente
 
-### 🎨 Correcciones Visuales
-- **Temas**: Mejor aplicación de colores
-- **Iconos**: Corrección de iconos faltantes
-- **Layout**: Mejor alineación de elementos
+### 🎯 Correcciones de Funcionalidad
+- **Sistema de Temas**: Corrección de bugs en el sistema de gestión de temas
+- **Persistencia**: Los temas se guardan y cargan correctamente
+- **Aplicación**: Los temas se aplican consistentemente en todas las pestañas
 
 ---
 
@@ -154,8 +136,8 @@ src/styles/
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama v1.5.3
-git checkout v1.5.3
+# Cambiar a la rama v1.5.5
+git checkout v1.5.5
 
 # Instalar dependencias
 npm install
@@ -223,4 +205,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.5.3!** 🚀
+**¡Disfruta de NodeTerm v1.5.5!** 🚀
