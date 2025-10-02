@@ -18,7 +18,7 @@ import TabThemeSelector from './TabThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import UpdatePanel from './UpdatePanel';
 import { themes } from '../themes';
-import { getVersionInfo } from '../version-info';
+import { getVersionInfo, getFullVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
@@ -175,9 +175,20 @@ const SettingsDialog = ({
   }, []);
 
   useEffect(() => {
-    // Obtener la versión real de la app
-    const info = getVersionInfo();
-    setVersionInfo(info);
+    // Obtener la versión real de la app con información completa
+    const loadVersionInfo = async () => {
+      try {
+        const info = await getFullVersionInfo();
+        setVersionInfo(info);
+      } catch (error) {
+        console.warn('Error loading version info:', error);
+        // Fallback a información básica
+        const basicInfo = getVersionInfo();
+        setVersionInfo(basicInfo);
+      }
+    };
+    
+    loadVersionInfo();
   }, []);
 
   useEffect(() => {
@@ -1727,22 +1738,30 @@ const SettingsDialog = ({
                 <div>
                   <strong>Electron:</strong>
                   <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>v25.x</span>
+                  <span style={{ color: 'var(--text-color-secondary)' }}>
+                    {versionInfo.electronVersion || 'N/A'}
+                  </span>
                 </div>
                 <div>
                   <strong>Node.js:</strong>
                   <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>v20.x</span>
+                  <span style={{ color: 'var(--text-color-secondary)' }}>
+                    {versionInfo.nodeVersion || 'N/A'}
+                  </span>
                 </div>
                 <div>
                   <strong>Chromium:</strong>
                   <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>v114.x</span>
+                  <span style={{ color: 'var(--text-color-secondary)' }}>
+                    {versionInfo.chromeVersion || 'N/A'}
+                  </span>
                 </div>
                 <div>
                   <strong>Compilación:</strong>
                   <br />
-                  <span style={{ color: 'var(--text-color-secondary)' }}>jun 2024</span>
+                  <span style={{ color: 'var(--text-color-secondary)' }}>
+                    {versionInfo.buildDate || new Date().toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             </div>

@@ -30,6 +30,27 @@ const getVersionInfo = () => {
   }
 };
 
+// Función para obtener información de versión completa desde el proceso principal
+const getFullVersionInfo = async () => {
+  try {
+    // Intentar obtener información desde el proceso principal de Electron
+    if (window.electron && window.electron.ipcRenderer && window.electron.ipcRenderer.invoke) {
+      const electronInfo = await window.electron.ipcRenderer.invoke('get-version-info');
+      if (electronInfo) {
+        return {
+          ...getVersionInfo(),
+          ...electronInfo
+        };
+      }
+    }
+  } catch (error) {
+    console.warn('Could not get full version info from Electron:', error);
+  }
+  
+  // Fallback a información básica
+  return getVersionInfo();
+};
+
 // Obtener información desde el proceso principal de Electron si está disponible
 const getElectronVersionInfo = async () => {
   try {
@@ -46,4 +67,4 @@ const getElectronVersionInfo = async () => {
   return {};
 };
 
-export { getVersionInfo, getElectronVersionInfo }; 
+export { getVersionInfo, getFullVersionInfo, getElectronVersionInfo }; 
