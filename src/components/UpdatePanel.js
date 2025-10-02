@@ -34,22 +34,114 @@ const UpdatePanel = () => {
   
   const toast = useRef(null);
 
+  /**
+   * Maneja eventos de actualización del proceso principal
+   */
+  const handleUpdateEvent = (data) => {
+    const { event, data: eventData } = data;
+    
+    console.log('📨 Evento de actualización recibido:', event, eventData);
+    
+    switch (event) {
+      case 'checking-for-update':
+        console.log('Evento: checking-for-update');
+        setUpdateStatus('checking');
+        setIsChecking(true);
+        break;
+        
+      case 'update-available':
+        console.log('Evento: update-available', eventData);
+        setUpdateStatus('available');
+        setUpdateInfo(eventData);
+        setIsChecking(false);
+        if (toast.current) {
+          toast.current.show({
+            severity: 'info',
+            summary: 'Actualización Disponible',
+            detail: `Versión ${eventData.version} disponible`,
+            life: 5000,
+          });
+        }
+        break;
+        
+      case 'update-not-available':
+        console.log('Evento: update-not-available', eventData);
+        setUpdateStatus('idle');
+        setIsChecking(false);
+        if (toast.current) {
+          toast.current.show({
+            severity: 'success',
+            summary: 'Actualizado',
+            detail: 'Ya tienes la última versión',
+            life: 3000,
+          });
+        }
+        break;
+        
+      case 'download-progress':
+        console.log('Evento: download-progress', eventData.percent);
+        setUpdateStatus('downloading');
+        setDownloadProgress(eventData.percent || 0);
+        break;
+        
+      case 'update-downloaded':
+        console.log('Evento: update-downloaded', eventData);
+        setUpdateStatus('downloaded');
+        setDownloadProgress(100);
+        if (toast.current) {
+          toast.current.show({
+            severity: 'success',
+            summary: 'Descarga Completa',
+            detail: 'La actualización está lista para instalar',
+            life: 5000,
+          });
+        }
+        break;
+        
+      case 'error':
+        console.log('Evento: error', eventData);
+        setUpdateStatus('error');
+        setErrorMessage(eventData.message || 'Error desconocido');
+        setIsChecking(false);
+        if (toast.current) {
+          toast.current.show({
+            severity: 'error',
+            summary: 'Error',
+            detail: eventData.message || 'Error al actualizar',
+            life: 5000,
+          });
+        }
+        break;
+        
+      default:
+        console.log('Evento desconocido:', event);
+        break;
+    }
+  };
+
   // Cargar configuración y versión al montar
   useEffect(() => {
     loadConfig();
     loadCurrentVersion();
     
     // Suscribirse a eventos de actualización
-    const handleUpdaterEvent = (event, data) => {
+    const handleUpdaterEvent = (data) => {
+      console.log('🎯 Evento IPC recibido en UpdatePanel:', data);
       handleUpdateEvent(data);
     };
     
     if (window.electron?.ipcRenderer) {
-      window.electron.ipcRenderer.on('updater-event', handleUpdaterEvent);
+      console.log('✅ Suscribiéndose a eventos updater-event');
+      const unsubscribe = window.electron.ipcRenderer.on('updater-event', handleUpdaterEvent);
       
       return () => {
-        window.electron.ipcRenderer.removeListener('updater-event', handleUpdaterEvent);
+        console.log('🔌 Desuscribiéndose de eventos updater-event');
+        if (unsubscribe && typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
       };
+    } else {
+      console.error('❌ window.electron.ipcRenderer NO disponible');
     }
   }, []);
 
@@ -90,82 +182,6 @@ const UpdatePanel = () => {
   };
 
   /**
-   * Maneja eventos de actualización del proceso principal
-   */
-  const handleUpdateEvent = (data) => {
-    const { event, data: eventData } = data;
-    
-    switch (event) {
-      case 'checking-for-update':
-        setUpdateStatus('checking');
-        setIsChecking(true);
-        break;
-        
-      case 'update-available':
-        setUpdateStatus('available');
-        setUpdateInfo(eventData);
-        setIsChecking(false);
-        if (toast.current) {
-          toast.current.show({
-            severity: 'info',
-            summary: 'Actualización Disponible',
-            detail: `Versión ${eventData.version} disponible`,
-            life: 5000,
-          });
-        }
-        break;
-        
-      case 'update-not-available':
-        setUpdateStatus('idle');
-        setIsChecking(false);
-        if (toast.current) {
-          toast.current.show({
-            severity: 'success',
-            summary: 'Actualizado',
-            detail: 'Ya tienes la última versión',
-            life: 3000,
-          });
-        }
-        break;
-        
-      case 'download-progress':
-        setUpdateStatus('downloading');
-        setDownloadProgress(eventData.percent || 0);
-        break;
-        
-      case 'update-downloaded':
-        setUpdateStatus('downloaded');
-        setDownloadProgress(100);
-        if (toast.current) {
-          toast.current.show({
-            severity: 'success',
-            summary: 'Descarga Completa',
-            detail: 'La actualización está lista para instalar',
-            life: 5000,
-          });
-        }
-        break;
-        
-      case 'error':
-        setUpdateStatus('error');
-        setErrorMessage(eventData.message || 'Error desconocido');
-        setIsChecking(false);
-        if (toast.current) {
-          toast.current.show({
-            severity: 'error',
-            summary: 'Error',
-            detail: eventData.message || 'Error al actualizar',
-            life: 5000,
-          });
-        }
-        break;
-        
-      default:
-        break;
-    }
-  };
-
-  /**
    * Actualiza la configuración
    */
   const updateConfig = async (newConfig) => {
@@ -201,33 +217,57 @@ const UpdatePanel = () => {
    * Comprueba manualmente si hay actualizaciones
    */
   const checkForUpdates = async () => {
+    console.log('🔍 INICIANDO BÚSQUEDA DE ACTUALIZACIONES EN GITHUB');
     setIsChecking(true);
     setUpdateStatus('checking');
+    setErrorMessage('');
     
     try {
       if (window.electron?.updater) {
+        console.log('📡 Llamando a electron.updater.checkForUpdates()');
         const result = await window.electron.updater.checkForUpdates();
         
-        // Manejar respuesta del modo desarrollo
-        if (result.isDevMode) {
-          if (toast.current) {
-            toast.current.show({
-              severity: 'info',
-              summary: 'Modo Desarrollo',
-              detail: 'Las actualizaciones se prueban con la aplicación empaquetada',
-              life: 5000,
-            });
-          }
-          setIsChecking(false);
-          setUpdateStatus('idle');
-          return;
-        }
+        console.log('📦 Resultado recibido:', result);
+        console.log('✅ Comprobación iniciada - esperando eventos IPC de GitHub');
+        
+        // La respuesta real llegará por eventos IPC desde electron-updater
+      } else {
+        console.error('❌ window.electron.updater no disponible');
+        throw new Error('Sistema de actualización no disponible');
       }
     } catch (error) {
-      console.error('Error comprobando actualizaciones:', error);
+      console.error('❌ ERROR al iniciar comprobación:', error);
       setIsChecking(false);
       setUpdateStatus('error');
       setErrorMessage(error.message || 'Error desconocido');
+      
+      if (toast.current) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.message || 'No se pudo comprobar actualizaciones',
+          life: 5000,
+        });
+      }
+    }
+  };
+
+  /**
+   * Cancela la búsqueda de actualizaciones
+   */
+  const cancelCheck = () => {
+    console.log('🛑 Cancelando búsqueda de actualizaciones');
+    setIsChecking(false);
+    setUpdateStatus('idle');
+    setErrorMessage('');
+    
+    if (toast.current) {
+      toast.current.show({
+        severity: 'info',
+        summary: 'Cancelado',
+        detail: 'Búsqueda de actualizaciones cancelada',
+        life: 3000,
+      });
     }
   };
 
@@ -357,13 +397,22 @@ const UpdatePanel = () => {
 
       {/* Botones de Acción */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <Button
-          label="Buscar Actualizaciones"
-          icon={isChecking ? 'pi pi-spin pi-spinner' : 'pi pi-search'}
-          onClick={checkForUpdates}
-          disabled={isChecking || updateStatus === 'downloading'}
-          className="p-button-outlined"
-        />
+        {!isChecking ? (
+          <Button
+            label="Buscar Actualizaciones"
+            icon="pi pi-search"
+            onClick={checkForUpdates}
+            disabled={updateStatus === 'downloading'}
+            className="p-button-outlined"
+          />
+        ) : (
+          <Button
+            label="Cancelar Búsqueda"
+            icon="pi pi-times"
+            onClick={cancelCheck}
+            className="p-button-danger p-button-outlined"
+          />
+        )}
         
         {updateStatus === 'available' && !config.autoDownload && (
           <Button

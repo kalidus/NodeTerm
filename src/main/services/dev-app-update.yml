@@ -1,4 +1,0 @@
-provider: github
-owner: kalidus
-repo: NodeTerm
-updaterCacheDirName: nodeterm-updater-dev
