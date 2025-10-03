@@ -39,12 +39,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   };
 
   useEffect(() => {
-    console.log('[BUSCADOR] sidebarFilter:', sidebarFilter);
-    console.log('[BUSCADOR] allNodes:', allNodes);
-    
     if (sidebarFilter.trim()) {
       const allConnections = findAllConnections(allNodes);
-      console.log('[BUSCADOR] allConnections encontradas:', allConnections.length);
       
       const filtered = allConnections.filter(node => {
         const labelMatch = node.label.toLowerCase().includes(sidebarFilter.toLowerCase());
@@ -56,18 +52,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         return labelMatch || usernameMatch;
       });
       
-      console.log('[BUSCADOR] conexiones filtradas:', filtered.length);
-      console.log('[BUSCADOR] resultados:', filtered.map(f => f.label));
-      
       setFilteredConnections(filtered);
       // Mostrar dropdown automáticamente si hay resultados
       if (filtered.length > 0) {
-        console.log('[BUSCADOR] Mostrando dropdown automáticamente');
         setShowDropdown(true);
-        console.log('[BUSCADOR] showDropdown establecido a true');
       } else {
         setShowDropdown(false);
-        console.log('[BUSCADOR] showDropdown establecido a false');
       }
     } else {
       setFilteredConnections([]);
@@ -91,12 +81,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   // Función para manejar el focus del input
   const handleInputFocus = () => {
-    console.log('[BUSCADOR] handleInputFocus - sidebarFilter:', sidebarFilter);
-    console.log('[BUSCADOR] handleInputFocus - filteredConnections.length:', filteredConnections.length);
-    console.log('[BUSCADOR] handleInputFocus - showDropdown:', showDropdown);
-    
     // El dropdown se muestra automáticamente en el useEffect
-    // Solo logueamos para debug
   };
 
   // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
@@ -974,15 +959,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             }}
             onFocus={handleInputFocus}
             onBlur={() => {
-              console.log('[BUSCADOR] onBlur disparado');
               // Solo ocultar el dropdown si no hay texto en el filtro
               if (!sidebarFilter.trim()) {
                 setTimeout(() => {
-                  console.log('[BUSCADOR] onBlur timeout ejecutado - ocultando dropdown');
                   setShowDropdown(false);
                 }, 150);
-              } else {
-                console.log('[BUSCADOR] onBlur - manteniendo dropdown visible porque hay texto');
               }
             }}
             autoComplete="off"
@@ -1016,7 +997,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 scrollbarWidth: 'thin',
                 scrollbarColor: 'var(--ui-sidebar-selected, #00bfff) var(--ui-dialog-bg, #232629)',
               }}>
-              {console.log('[BUSCADOR] Renderizando dropdown con', filteredConnections.length, 'conexiones')}
               {filteredConnections.map(node => {
                 const isSSH = node.data && node.data.type === 'ssh';
                 const isRDP = node.data && node.data.type === 'rdp';

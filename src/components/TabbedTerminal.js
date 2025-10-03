@@ -37,7 +37,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         const scrollWidth = container.scrollWidth;
         const clientWidth = container.clientWidth;
         
-        console.log('Scroll check:', { scrollLeft, scrollWidth, clientWidth, canScroll: scrollWidth > clientWidth });
         
         setCanScrollLeft(scrollLeft > 0);
         setCanScrollRight(scrollWidth > clientWidth && scrollLeft < scrollWidth - clientWidth - 1); // Solo mostrar si hay overflow
