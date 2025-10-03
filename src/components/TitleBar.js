@@ -144,7 +144,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           
           // Crear nuevos copos si es winter-snowfall
           if (animation === 'winter-snowfall') {
-            for (let i = 1; i <= 6; i++) {
+            // Verificar velocidad de animación
+            const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
+            const maxSnowflakes = animSpeed === 'slow' ? 2 : (animSpeed === 'normal' ? 8 : 6); // Más copos en normal
+            
+            for (let i = 1; i <= maxSnowflakes; i++) {
               const snowflake = document.createElement('div');
               snowflake.className = `snowflake-${i}`;
               snowflake.textContent = '❄';
@@ -154,8 +158,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           
           // Crear gotas de lluvia y relámpagos si es thunderstorm
           if (animation === 'thunderstorm') {
+            // Verificar velocidad de animación
+            const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
+            const maxRaindrops = animSpeed === 'slow' ? 4 : (animSpeed === 'normal' ? 16 : 12); // Más gotas en normal
+            const maxLightning = animSpeed === 'slow' ? 1 : (animSpeed === 'normal' ? 3 : 2); // Más rayos en normal
+            
             // Crear gotas de lluvia
-            for (let i = 1; i <= 12; i++) {
+            for (let i = 1; i <= maxRaindrops; i++) {
               const raindrop = document.createElement('div');
               raindrop.className = `raindrop-${i}`;
               raindrop.textContent = '💧';
@@ -163,7 +172,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             }
             
             // Crear rayos visibles
-            for (let i = 1; i <= 2; i++) {
+            for (let i = 1; i <= maxLightning; i++) {
               const lightning = document.createElement('div');
               lightning.className = `lightning-${i}`;
               lightning.textContent = '⚡';
@@ -173,7 +182,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           
           // Crear partículas de arena si es desert-storm
           if (animation === 'desert-storm') {
-            for (let i = 1; i <= 15; i++) {
+            // Verificar velocidad de animación
+            const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
+            const maxSand = animSpeed === 'slow' ? 5 : (animSpeed === 'normal' ? 20 : 15); // Más partículas en normal
+            
+            for (let i = 1; i <= maxSand; i++) {
               const sand = document.createElement('div');
               sand.className = `sand-${i}`;
               sand.textContent = '•';

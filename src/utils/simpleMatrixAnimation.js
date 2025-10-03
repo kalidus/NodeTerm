@@ -35,7 +35,9 @@ export function initSimpleMatrixAnimation() {
   const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
 
   // Crear múltiples columnas de caracteres
-  const numColumns = 15; // Número de columnas
+  // Verificar velocidad de animación para ajustar cantidad
+  const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
+  const numColumns = animSpeed === 'slow' ? 5 : (animSpeed === 'normal' ? 18 : 15); // Más columnas en normal
   const columnWidth = 100 / numColumns;
 
   for (let i = 0; i < numColumns; i++) {
@@ -77,7 +79,9 @@ export function initSimpleMatrixBlueAnimation() {
   const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
 
   // Crear múltiples columnas de caracteres
-  const numColumns = 15; // Número de columnas
+  // Verificar velocidad de animación para ajustar cantidad
+  const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
+  const numColumns = animSpeed === 'slow' ? 5 : (animSpeed === 'normal' ? 18 : 15); // Más columnas en normal
   const columnWidth = 100 / numColumns;
 
   for (let i = 0; i < numColumns; i++) {
@@ -114,7 +118,9 @@ function createMatrixColumn(container, index, columnWidth, chars, speedMultiplie
 }
 
 function createFallingChars(column, chars, columnIndex, speedMultiplier, color) {
-  const numChars = 15; // Más caracteres por columna (era 8, ahora 15)
+  // Verificar velocidad de animación para ajustar cantidad de caracteres
+  const animSpeed = document.documentElement.getAttribute('data-ui-anim-speed') || 'normal';
+  const numChars = animSpeed === 'slow' ? 8 : (animSpeed === 'normal' ? 18 : 15); // Más caracteres en normal
   const charDelay = columnIndex * 300; // Delay escalonado por columna (más tiempo)
   
   // Calcular duración base y aplicar multiplicador de velocidad

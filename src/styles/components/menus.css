@@ -150,3 +150,18 @@
   pointer-events: auto;
   user-select: none;
 }
+
+/* Reducir animaciones cuando está activado */
+[data-ui-reduced-motion="true"] .app-context-menu,
+[data-ui-reduced-motion="true"] .app-submenu {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-context-menu,
+  .app-submenu {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -927,23 +927,23 @@
   animation: glitch 2s ease-in-out infinite;
 }
 
-/* Velocidades de animación - Extremadamente lentas */
+/* Velocidades de animación - Mucho más lentas */
 [data-ui-anim-speed="slow"] .title-bar[data-animation] {
-  animation-duration: 24s !important;
+  animation-duration: 180s !important;
 }
 
 [data-ui-anim-speed="slow"] .title-bar[data-animation]::before,
 [data-ui-anim-speed="slow"] .title-bar[data-animation]::after {
-  animation-duration: 32s !important;
+  animation-duration: 240s !important;
 }
 
 [data-ui-anim-speed="normal"] .title-bar[data-animation] {
-  animation-duration: 16s !important;
+  animation-duration: 35s !important;
 }
 
 [data-ui-anim-speed="normal"] .title-bar[data-animation]::before,
 [data-ui-anim-speed="normal"] .title-bar[data-animation]::after {
-  animation-duration: 20s !important;
+  animation-duration: 45s !important;
 }
 
 [data-ui-anim-speed="fast"] .title-bar[data-animation] {
@@ -964,25 +964,106 @@
   animation-duration: 5s !important;
 }
 
-/* Reducir animaciones cuando está activado */
+/* Reducir cantidad de elementos animados en velocidad lenta */
+[data-ui-anim-speed="slow"] .falling-star:nth-child(odd),
+[data-ui-anim-speed="slow"] .twinkling-star:nth-child(odd),
+[data-ui-anim-speed="slow"] .matrix-char:nth-child(odd),
+[data-ui-anim-speed="slow"] .meteor:nth-child(odd),
+[data-ui-anim-speed="slow"] .snowflake:nth-child(odd),
+[data-ui-anim-speed="slow"] .raindrop:nth-child(odd),
+[data-ui-anim-speed="slow"] .lightning-bolt:nth-child(odd),
+[data-ui-anim-speed="slow"] .sand-particle:nth-child(odd),
+[data-ui-anim-speed="slow"] .firefly:nth-child(odd),
+[data-ui-anim-speed="slow"] .autumn-leaf:nth-child(odd) {
+  display: none !important;
+}
+
+/* Reducir aún más elementos en velocidad lenta - ocultar 3 de cada 4 */
+[data-ui-anim-speed="slow"] .falling-star:nth-child(4n),
+[data-ui-anim-speed="slow"] .falling-star:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .twinkling-star:nth-child(4n),
+[data-ui-anim-speed="slow"] .twinkling-star:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .matrix-char:nth-child(4n),
+[data-ui-anim-speed="slow"] .matrix-char:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .meteor:nth-child(4n),
+[data-ui-anim-speed="slow"] .meteor:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .snowflake:nth-child(4n),
+[data-ui-anim-speed="slow"] .snowflake:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .raindrop:nth-child(4n),
+[data-ui-anim-speed="slow"] .raindrop:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .lightning-bolt:nth-child(4n),
+[data-ui-anim-speed="slow"] .lightning-bolt:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .sand-particle:nth-child(4n),
+[data-ui-anim-speed="slow"] .sand-particle:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .firefly:nth-child(4n),
+[data-ui-anim-speed="slow"] .firefly:nth-child(4n-1),
+[data-ui-anim-speed="slow"] .autumn-leaf:nth-child(4n),
+[data-ui-anim-speed="slow"] .autumn-leaf:nth-child(4n-1) {
+  display: none !important;
+}
+
+/* Reducir animaciones cuando está activado - Reglas completas */
+[data-ui-reduced-motion="true"] [data-animation],
+[data-ui-reduced-motion="true"] [data-animation]::before,
+[data-ui-reduced-motion="true"] [data-animation]::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Reglas específicas para elementos animados */
 [data-ui-reduced-motion="true"] .title-bar[data-animation],
+[data-ui-reduced-motion="true"] .title-bar[data-animation]::before,
+[data-ui-reduced-motion="true"] .title-bar[data-animation]::after,
 [data-ui-reduced-motion="true"] .search-input[data-animation],
 [data-ui-reduced-motion="true"] .particle-effect,
 [data-ui-reduced-motion="true"] .scanline-effect,
-[data-ui-reduced-motion="true"] .glitch-effect {
+[data-ui-reduced-motion="true"] .glitch-effect,
+[data-ui-reduced-motion="true"] .falling-star,
+[data-ui-reduced-motion="true"] .twinkling-star,
+[data-ui-reduced-motion="true"] .matrix-char,
+[data-ui-reduced-motion="true"] .meteor,
+[data-ui-reduced-motion="true"] .snowflake,
+[data-ui-reduced-motion="true"] .raindrop,
+[data-ui-reduced-motion="true"] .lightning-bolt,
+[data-ui-reduced-motion="true"] .sand-particle,
+[data-ui-reduced-motion="true"] .firefly,
+[data-ui-reduced-motion="true"] .autumn-leaf {
   animation: none !important;
   transition: none !important;
+  transform: none !important;
 }
 
 /* Responsive animations - reducir animaciones en dispositivos con preferencia de movimiento reducido */
 @media (prefers-reduced-motion: reduce) {
+  [data-animation],
+  [data-animation]::before,
+  [data-animation]::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  
   .title-bar[data-animation],
+  .title-bar[data-animation]::before,
+  .title-bar[data-animation]::after,
   .search-input[data-animation],
   .particle-effect,
   .scanline-effect,
-  .glitch-effect {
+  .glitch-effect,
+  .falling-star,
+  .twinkling-star,
+  .matrix-char,
+  .meteor,
+  .snowflake,
+  .raindrop,
+  .lightning-bolt,
+  .sand-particle,
+  .firefly,
+  .autumn-leaf {
     animation: none !important;
     transition: none !important;
+    transform: none !important;
   }
 }
 
