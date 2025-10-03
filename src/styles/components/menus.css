@@ -165,3 +165,54 @@
     transition: none !important;
   }
 }
+
+/* Menú contextual de selección de terminales - FORZAR tema */
+.context-menu-themed.p-contextmenu {
+  background: var(--ui-dialog-bg, #1e1e1e) !important;
+  background-color: var(--ui-dialog-bg, #1e1e1e) !important;
+  border: 1px solid var(--ui-dialog-border, #333) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 4px !important;
+  opacity: 1 !important;
+}
+
+.context-menu-themed.p-contextmenu ul,
+.context-menu-themed.p-contextmenu li,
+.context-menu-themed.p-contextmenu .p-menuitem,
+.context-menu-themed.p-contextmenu .p-menuitem-content {
+  background: var(--ui-dialog-bg, #1e1e1e) !important;
+  background-color: var(--ui-dialog-bg, #1e1e1e) !important;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-link {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--ui-dialog-text, #ffffff) !important;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-link:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+  background-color: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-icon {
+  color: var(--ui-dialog-text, #ffffff) !important;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-link {
+  color: var(--ui-text-primary) !important;
+  background: transparent !important;
+  transition: background-color 0.15s;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-link:hover {
+  background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-icon {
+  color: var(--ui-text-secondary, #888) !important;
+}
+
+.context-menu-themed.p-contextmenu .p-menuitem-link:hover .p-menuitem-icon {
+  color: var(--ui-text-primary) !important;
+}

@@ -152,8 +152,8 @@ const MainContentArea = ({
     buttonsContainer.style.cssText = `
       display: flex;
       align-items: center;
-      gap: 4px;
-      margin-left: 6px;
+      gap: 6px;
+      margin-left: 8px;
       flex-shrink: 0;
     `;
     
@@ -164,10 +164,10 @@ const MainContentArea = ({
     plusButton.style.cssText = `
       color: rgba(255, 255, 255, 0.7);
       padding: 0;
-      min-width: 18px;
-      width: 18px;
-      height: 18px;
-      font-size: 9px;
+      min-width: 15px;
+      width: 15px;
+      height: 15px;
+      font-size: 8px;
       background: transparent;
       border: none;
       border-radius: 2px;
@@ -195,10 +195,10 @@ const MainContentArea = ({
     dropdownButton.style.cssText = `
       color: rgba(255, 255, 255, 0.7);
       padding: 0;
-      min-width: 18px;
-      width: 18px;
-      height: 18px;
-      font-size: 8px;
+      min-width: 15px;
+      width: 15px;
+      height: 15px;
+      font-size: 7px;
       background: transparent;
       border: none;
       border-radius: 2px;
@@ -725,6 +725,7 @@ const MainContentArea = ({
                     {/* ContextMenu para seleccionar tipo de terminal */}
                     <ContextMenu
                       ref={terminalSelectorMenuRef}
+                      className="context-menu-themed"
                       model={(() => {
                         const platform = window.electron?.platform || 'unknown';
                         if (platform === 'win32') {
