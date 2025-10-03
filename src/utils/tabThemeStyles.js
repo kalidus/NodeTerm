@@ -54,13 +54,13 @@ export const generateAdvancedCSS = (themeName, styles) => {
     /* Velocidades globales de animación para temas de pestañas */
     :root[data-tab-anim-speed="slow"] .p-tabview .p-tabview-nav li .p-tabview-nav-link,
     :root[data-tab-anim-speed="slow"] .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
-      animation-duration: calc( var(--tab-anim-base, 1s) * 5.5 ) !important;
-      transition-duration: calc( var(--tab-trans-base, 0.2s) * 5.5 ) !important;
+      animation-duration: calc( var(--tab-anim-base, 1s) * 30 ) !important;
+      transition-duration: calc( var(--tab-trans-base, 0.2s) * 30 ) !important;
     }
     :root[data-tab-anim-speed="normal"] .p-tabview .p-tabview-nav li .p-tabview-nav-link,
     :root[data-tab-anim-speed="normal"] .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {
-      animation-duration: calc( var(--tab-anim-base, 1s) * 3.8 ) !important;
-      transition-duration: calc( var(--tab-trans-base, 0.2s) * 3.8 ) !important;
+      animation-duration: calc( var(--tab-anim-base, 1s) * 7.5 ) !important;
+      transition-duration: calc( var(--tab-trans-base, 0.2s) * 7.5 ) !important;
     }
     :root[data-tab-anim-speed="fast"] .p-tabview .p-tabview-nav li .p-tabview-nav-link,
     :root[data-tab-anim-speed="fast"] .p-tabview .p-tabview-nav li .p-tabview-nav-link::before {

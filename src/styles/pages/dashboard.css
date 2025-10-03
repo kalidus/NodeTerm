@@ -161,6 +161,23 @@
   border: 1px solid var(--surface-border);
 }
 
+/* Reducir animaciones cuando está activado */
+[data-ui-reduced-motion="true"] .fade-in,
+[data-ui-reduced-motion="true"] .loading-pulse,
+[data-ui-reduced-motion="true"] .pulse {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .loading-pulse,
+  .pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* Indicadores de estado */
 .status-indicator {
   width: 8px;
