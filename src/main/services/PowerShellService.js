@@ -88,11 +88,11 @@ function startPowerShellSession(tabId, { cols, rows }) {
       const shellName = platform === 'win32' ? 'PowerShell' : 'Terminal';
       console.log(`${shellName} ya existe para ${tabId}, reutilizando proceso existente`);
       
-      // Simular mensaje de bienvenida y refrescar prompt para procesos reutilizados
-      if (mainWindow && mainWindow.webContents) {
-        const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
-        mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
-      }
+      // Mensaje de bienvenida silenciado - no mostrar mensaje de sesión reutilizada
+      // if (mainWindow && mainWindow.webContents) {
+      //   const welcomeMsg = `\r\n\x1b[32m=== Sesión ${shellName} reutilizada ===\x1b[0m\r\n`;
+      //   mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
+      // }
       
       // Refrescar prompt para mostrar estado actual
       setTimeout(() => {

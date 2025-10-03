@@ -2624,9 +2624,10 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 }, 2000);
             } else if (exitCode !== 0 && exitCode !== null) {
                // console.warn(`WSL distro process for tab ${tabId} exited unexpectedly`);
-                const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-                mainWindow.webContents.send(`${channelName}:error:${tabId}`,
-                    `${distroInfo?.label || 'WSL Distribution'} session ended unexpectedly (code: ${actualExitCode})`);
+                // Silenciar el mensaje de error de proceso cerrado inesperadamente
+                // const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+                // mainWindow.webContents.send(`${channelName}:error:${tabId}`,
+                //     `${distroInfo?.label || 'WSL Distribution'} session ended unexpectedly (code: ${actualExitCode})`);
             }
 
             // Clean up
@@ -2733,11 +2734,13 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       }
       
       if (actualExitCode !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL') {
-        console.warn(`Ubuntu process for tab ${tabId} exited unexpectedly`);
-        if (mainWindow && mainWindow.webContents) {
-          mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
-            `Ubuntu session ended unexpectedly (code: ${actualExitCode})`);
-        }
+        // Silenciar el mensaje de error de proceso cerrado inesperadamente
+        // console.warn(`Ubuntu process for tab ${tabId} exited unexpectedly`);
+        // No enviar mensaje de error al frontend para evitar mostrar errores al usuario
+        // if (mainWindow && mainWindow.webContents) {
+        //   mainWindow.webContents.send(`ubuntu:error:${tabId}`, 
+        //     `Ubuntu session ended unexpectedly (code: ${actualExitCode})`);
+        // }
       }
       
       // Cleanup
