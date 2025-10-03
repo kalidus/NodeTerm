@@ -99,6 +99,41 @@ const MainContentArea = ({
   
   // Estado para recordar último tipo de terminal local
   const [lastLocalTerminalType, setLastLocalTerminalType] = useState('powershell');
+  // Referencia para mantener el último tipo usado de forma síncrona
+  const lastLocalTerminalTypeRef = useRef('powershell');
+  
+  // Función para detectar el último tipo de terminal local usado
+  const getLastLocalTerminalType = () => {
+    // Usar el estado actual de sshTabs en lugar de getTabsInGroup para evitar problemas de sincronización
+    const allTabs = [...homeTabs, ...sshTabs, ...fileExplorerTabs];
+    console.log('Todas las pestañas (estado actual):', allTabs.map(tab => ({ key: tab.key, type: tab.type, terminalType: tab.terminalType, label: tab.label })));
+    
+    // Buscar la última pestaña de terminal local (tipo 'local-terminal')
+    const localTerminalTabs = allTabs.filter(tab => tab.type === 'local-terminal');
+    console.log('Pestañas de terminal local encontradas:', localTerminalTabs.length);
+    
+    if (localTerminalTabs.length > 0) {
+      // Ordenar por fecha de creación y tomar la más reciente
+      const lastLocalTab = localTerminalTabs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+      console.log('Última pestaña local:', lastLocalTab);
+      
+      if (lastLocalTab.terminalType === 'ubuntu' || lastLocalTab.terminalType === 'wsl-distro') {
+        // Si tiene información de distribución específica, usar esa distribución
+        if (lastLocalTab.distroInfo && lastLocalTab.distroInfo.name) {
+          console.log('Usando distribución específica:', `wsl-${lastLocalTab.distroInfo.name}`);
+          return `wsl-${lastLocalTab.distroInfo.name}`;
+        }
+        console.log('Usando WSL genérico');
+        return 'wsl'; // Fallback a WSL genérico
+      }
+      console.log('Usando tipo de terminal:', lastLocalTab.terminalType || 'powershell');
+      return lastLocalTab.terminalType || 'powershell';
+    }
+    
+    // Si no hay terminales locales, usar el último tipo guardado
+    console.log('No hay terminales locales, usando último tipo guardado:', lastLocalTerminalType);
+    return lastLocalTerminalType;
+  };
   
   // Ref y estado para el menú contextual de selección de terminal
   const terminalSelectorMenuRef = useRef(null);
@@ -140,10 +175,10 @@ const MainContentArea = ({
     const navList = navContainer.querySelector('.p-tabview-nav');
     if (!navList) return;
     
-    // Eliminar botones existentes si los hay
+    // Eliminar botones existentes si los hay para recrearlos
     const existingButtons = navList.querySelector('.local-terminal-buttons');
     if (existingButtons) {
-      return; // Ya existen, no recrear
+      existingButtons.remove();
     }
     
     // Crear contenedor de botones
@@ -186,8 +221,21 @@ const MainContentArea = ({
       plusButton.style.setProperty('background-color', 'transparent', 'important');
     });
     plusButton.addEventListener('click', () => {
-      const distro = wslDistributions.find(d => d.name === lastLocalTerminalType);
-      createLocalTerminalTab(lastLocalTerminalType, distro || null);
+      // Usar la referencia que se actualiza de forma síncrona
+      const terminalTypeToUse = lastLocalTerminalTypeRef.current;
+      console.log('Botón + presionado. Usando último tipo guardado (ref):', terminalTypeToUse);
+      
+      // Buscar la distribución correcta
+      let distro = null;
+      if (terminalTypeToUse.startsWith('wsl-')) {
+        // Extraer el nombre de la distribución (ej: 'wsl-Ubuntu' -> 'Ubuntu')
+        const distroName = terminalTypeToUse.replace('wsl-', '');
+        console.log('Distribuciones disponibles:', wslDistributions.map(d => d.name));
+        distro = wslDistributions.find(d => d.name === distroName);
+        console.log('Buscando distribución:', distroName, 'Encontrada:', distro);
+      }
+      
+      createLocalTerminalTab(terminalTypeToUse, distro || null);
     });
     
     // Botón dropdown
@@ -225,7 +273,7 @@ const MainContentArea = ({
     buttonsContainer.appendChild(plusButton);
     buttonsContainer.appendChild(dropdownButton);
     navList.appendChild(buttonsContainer);
-  }, []); // Solo ejecutar una vez al montar
+  }, [filteredTabs, activeTabIndex, wslDistributions]); // Recrear botones cuando cambien las pestañas o distribuciones
   
   // Función para crear una nueva pestaña de terminal local independiente
   const createLocalTerminalTab = (terminalType, distroInfo = null) => {
@@ -305,6 +353,28 @@ const MainContentArea = ({
       setOnCreateActivateTabKey(tabId);
       setActiveTabIndex(1);
       setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      
+      // Actualizar el último tipo de terminal local usado
+      let typeToStore;
+      if (finalTerminalType === 'ubuntu' || finalTerminalType === 'wsl-distro') {
+        // Para distribuciones específicas, reconstruir el tipo correcto
+        if (distroInfo && distroInfo.name) {
+          typeToStore = `wsl-${distroInfo.name}`; // ej: 'wsl-ubuntu'
+        } else {
+          typeToStore = 'wsl'; // fallback
+        }
+      } else {
+        typeToStore = finalTerminalType; // ej: 'powershell', 'wsl'
+      }
+      
+      console.log('Debug - terminalType:', terminalType, 'finalTerminalType:', finalTerminalType, 'distroInfo:', distroInfo, 'typeToStore:', typeToStore);
+      
+      setLastLocalTerminalType(typeToStore);
+      lastLocalTerminalTypeRef.current = typeToStore; // Actualizar la referencia también
+      console.log('Actualizando lastLocalTerminalType a:', typeToStore);
+      
+      console.log('Nueva pestaña creada:', newTab);
+      console.log('Todas las pestañas después de crear:', [newTab, ...prevTabs]);
       
       return [newTab, ...prevTabs];
     });
