@@ -34,6 +34,7 @@ const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
   const LOCAL_POWERSHELL_STATUSBAR_THEME_STORAGE_KEY = 'localPowerShellStatusBarTheme';
   const LOCAL_LINUX_STATUSBAR_THEME_STORAGE_KEY = 'localLinuxStatusBarTheme';
   const LOCAL_SHOW_NETWORK_DISKS_STORAGE_KEY = 'localShowNetworkDisks';
+  const INTERACTIVE_ICON_STORAGE_KEY = 'nodeterm_interactive_icon';
 
 const SettingsDialog = ({
   visible,
@@ -97,6 +98,11 @@ const SettingsDialog = ({
   // Configuración para bloquear el botón de inicio
   const [lockHomeButton, setLockHomeButton] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.LOCK_HOME_BUTTON);
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const [interactiveIcon, setInteractiveIcon] = useState(() => {
+    const saved = localStorage.getItem(INTERACTIVE_ICON_STORAGE_KEY);
     return saved ? JSON.parse(saved) : false;
   });
 
@@ -200,6 +206,20 @@ const SettingsDialog = ({
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.LOCK_HOME_BUTTON, JSON.stringify(lockHomeButton));
   }, [lockHomeButton]);
+
+  // Persistir configuración del icono interactivo
+  useEffect(() => {
+    localStorage.setItem(INTERACTIVE_ICON_STORAGE_KEY, JSON.stringify(interactiveIcon));
+    // Aplicar inmediatamente el cambio
+    const titleBar = document.querySelector('.title-bar');
+    if (titleBar) {
+      if (interactiveIcon) {
+        titleBar.setAttribute('data-interactive-icon', 'true');
+      } else {
+        titleBar.removeAttribute('data-interactive-icon');
+      }
+    }
+  }, [interactiveIcon]);
 
   // Persist RDP settings (guardar en milisegundos)
   useEffect(() => {
@@ -552,6 +572,39 @@ const SettingsDialog = ({
                     color: 'var(--text-color-secondary)'
                   }}>
                     Cuando está activado, el botón de inicio no se puede cerrar ni mover
+                  </span>
+                </div>
+              </div>
+
+              {/* Opción Icono Interactivo */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                padding: '1rem',
+                background: 'var(--surface-card)',
+                border: '1px solid var(--surface-border)',
+                borderRadius: '8px'
+              }}>
+                <Checkbox
+                  id="interactive-icon"
+                  checked={interactiveIcon}
+                  onChange={(e) => setInteractiveIcon(e.checked)}
+                />
+                <div>
+                  <label htmlFor="interactive-icon" style={{
+                    display: 'block',
+                    color: 'var(--text-color)',
+                    fontWeight: '500',
+                    marginBottom: '0.25rem'
+                  }}>
+                    Icono NodeTerm Interactivo
+                  </label>
+                  <span style={{
+                    fontSize: '0.9rem',
+                    color: 'var(--text-color-secondary)'
+                  }}>
+                    Hace que el cursor "_" en el título parpadee como un terminal real
                   </span>
                 </div>
               </div>
