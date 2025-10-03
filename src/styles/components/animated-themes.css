@@ -1,5 +1,20 @@
 /* --- Component: Animated Themes --- */
 
+/* Animación para el parpadeo del cursor en el título */
+@keyframes cursorBlink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Clase para aplicar el parpadeo del cursor cuando está habilitado */
+.title-bar[data-interactive-icon] .title-cursor-blink {
+  animation: cursorBlink 2s infinite;
+}
+
 /* Animaciones para la barra del menú superior en temas animados */
 
 /* Animación Space Station con estrellas cayendo */

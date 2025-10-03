@@ -62,6 +62,9 @@ class ThemeManager {
     // Aplicar animaciones si es un tema animado
     this.applyAnimations(theme);
     
+    // Aplicar configuración del icono interactivo
+    this.applyInteractiveIcon();
+    
     // Guardar el tema seleccionado
     localStorage.setItem('ui_theme', themeName);
     
@@ -897,6 +900,20 @@ class ThemeManager {
     setTimeout(() => {
       this.initForestMist();
     }, 40000);
+  }
+
+  applyInteractiveIcon() {
+    // Verificar si el icono interactivo está habilitado
+    const interactiveIconEnabled = localStorage.getItem('nodeterm_interactive_icon');
+    const titleBar = document.querySelector('.title-bar');
+    
+    if (titleBar) {
+      if (interactiveIconEnabled === 'true') {
+        titleBar.setAttribute('data-interactive-icon', 'true');
+      } else {
+        titleBar.removeAttribute('data-interactive-icon');
+      }
+    }
   }
 }
 

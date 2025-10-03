@@ -907,7 +907,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             {/* Símbolo > de prompt */}
             <path d="M7 8 L11 12 L7 16" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             {/* Línea de comando _ */}
-            <rect x="13" y="15" width="5" height="1.5" rx="0.75"/>
+            <rect x="13" y="15" width="5" height="1.5" rx="0.75" className="title-cursor-blink"/>
           </g>
         </svg>
         <span style={{ fontWeight: 600, fontSize: 12, color: 'var(--ui-titlebar-text, #fff)', letterSpacing: 0.1, lineHeight: '18px', display: 'flex', alignItems: 'center', height: 18, marginTop: '2px' }}>NodeTerm</span>
