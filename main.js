@@ -2500,7 +2500,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
         // Múltiples configuraciones para mayor compatibilidad con WSL
         const wslConfigurations = [
-            // Configuración 1: Por defecto con ConPTY deshabilitado
+            // Configuración 1: Por defecto con ConPTY deshabilitado y WinPTY forzado
             {
                 env,
                 cwd: undefined,
@@ -2509,6 +2509,9 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 rows: rows,
                 encoding: null,
                 useConpty: false,
+                conptyLegacy: false,
+                experimentalUseConpty: false,
+                backend: 'winpty',
                 windowsHide: false
             },
             // Configuración 2: Conservativa sin ConPTY 
@@ -2522,15 +2525,18 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
                 useConpty: false,
                 conptyLegacy: false,
                 experimentalUseConpty: false,
+                backend: 'winpty',
                 windowsHide: false
             },
-            // Configuración 3: Mínima
+            // Configuración 3: Mínima con WinPTY
             {
                 env,
                 cwd: undefined,
                 name: 'xterm',
                 cols: cols || 80,
                 rows: rows || 24,
+                useConpty: false,
+                backend: 'winpty',
                 windowsHide: false
             }
         ];
@@ -2693,8 +2699,13 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
       windowsHide: false
     };
     
-    // Para Ubuntu, usar configuración simple sin modificaciones ConPTY
-    // Ubuntu funciona mejor con configuración por defecto
+    // Platform-specific configurations
+    if (os.platform() === 'win32') {
+      spawnOptions.useConpty = false;              // Deshabilitar ConPTY completamente
+      spawnOptions.conptyLegacy = false;           // No usar ConPTY legacy
+      spawnOptions.experimentalUseConpty = false;  // Deshabilitar experimental
+      spawnOptions.backend = 'winpty';             // Forzar uso de WinPTY
+    }
     
     ubuntuProcesses[tabId] = pty.spawn(shell, args, spawnOptions);
 

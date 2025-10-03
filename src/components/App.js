@@ -1718,15 +1718,19 @@ const App = () => {
         // Tab management props
         homeTabs={homeTabs}
         sshTabs={sshTabs}
+        setSshTabs={setSshTabs}
         fileExplorerTabs={fileExplorerTabs}
         rdpTabs={rdpTabs}
         guacamoleTabs={guacamoleTabs}
         activeGroupId={activeGroupId}
+        setActiveGroupId={setActiveGroupId}
         getTabsInGroup={getTabsInGroup}
         activeTabIndex={activeTabIndex}
         setActiveTabIndex={setActiveTabIndex}
         activatingNowRef={activatingNowRef}
         setGroupActiveIndices={setGroupActiveIndices}
+        setLastOpenedTabKey={setLastOpenedTabKey}
+        setOnCreateActivateTabKey={setOnCreateActivateTabKey}
         GROUP_KEYS={GROUP_KEYS}
         
         // Tab rendering props

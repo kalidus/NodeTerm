@@ -24,15 +24,19 @@ const MainContentArea = ({
   // Tab management props
   homeTabs,
   sshTabs,
+  setSshTabs,
   fileExplorerTabs,
   rdpTabs,
   guacamoleTabs,
   activeGroupId,
+  setActiveGroupId,
   getTabsInGroup,
   activeTabIndex,
   setActiveTabIndex,
   activatingNowRef,
   setGroupActiveIndices,
+  setLastOpenedTabKey,
+  setOnCreateActivateTabKey,
   GROUP_KEYS,
   
   // Tab rendering props
@@ -92,6 +96,215 @@ const MainContentArea = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const tabsContainerRef = useRef(null);
+  
+  // Estado para recordar último tipo de terminal local
+  const [lastLocalTerminalType, setLastLocalTerminalType] = useState('powershell');
+  
+  // Ref y estado para el menú contextual de selección de terminal
+  const terminalSelectorMenuRef = useRef(null);
+  
+  // Contador para IDs de terminales locales - iniciar desde 1000 para evitar colisiones con Home
+  const localTerminalCounterRef = useRef(1000);
+  
+  // Estado para distribuciones WSL disponibles
+  const [wslDistributions, setWslDistributions] = useState([]);
+  
+  // Detectar distribuciones WSL disponibles al montar el componente
+  useEffect(() => {
+    const detectWSLDistributions = async () => {
+      try {
+        if (window.electron && window.electron.ipcRenderer) {
+          const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+          if (Array.isArray(distributions)) {
+            setWslDistributions(distributions);
+          } else {
+            setWslDistributions([]);
+          }
+        } else {
+          setWslDistributions([]);
+        }
+      } catch (error) {
+        console.error('Error detecting WSL distributions:', error);
+        setWslDistributions([]);
+      }
+    };
+    
+    detectWSLDistributions();
+  }, []);
+  
+  // Efecto para añadir botones después de las pestañas usando DOM
+  useEffect(() => {
+    const navContainer = tabsContainerRef.current;
+    if (!navContainer) return;
+    
+    const navList = navContainer.querySelector('.p-tabview-nav');
+    if (!navList) return;
+    
+    // Eliminar botones existentes si los hay
+    const existingButtons = navList.querySelector('.local-terminal-buttons');
+    if (existingButtons) {
+      return; // Ya existen, no recrear
+    }
+    
+    // Crear contenedor de botones
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'local-terminal-buttons';
+    buttonsContainer.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 6px;
+      flex-shrink: 0;
+    `;
+    
+    // Botón +
+    const plusButton = document.createElement('button');
+    plusButton.innerHTML = '<i class="pi pi-plus"></i>';
+    plusButton.className = 'p-button p-button-text p-button-sm';
+    plusButton.style.cssText = `
+      color: rgba(255, 255, 255, 0.7);
+      padding: 0;
+      min-width: 18px;
+      width: 18px;
+      height: 18px;
+      font-size: 9px;
+      background: transparent;
+      border: none;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    `;
+    plusButton.title = 'Nueva terminal local';
+    plusButton.addEventListener('mouseenter', () => {
+      plusButton.style.background = 'rgba(255, 255, 255, 0.1)';
+    });
+    plusButton.addEventListener('mouseleave', () => {
+      plusButton.style.background = 'transparent';
+    });
+    plusButton.addEventListener('click', () => {
+      const distro = wslDistributions.find(d => d.name === lastLocalTerminalType);
+      createLocalTerminalTab(lastLocalTerminalType, distro || null);
+    });
+    
+    // Botón dropdown
+    const dropdownButton = document.createElement('button');
+    dropdownButton.innerHTML = '<i class="pi pi-chevron-down"></i>';
+    dropdownButton.className = 'p-button p-button-text p-button-sm';
+    dropdownButton.style.cssText = `
+      color: rgba(255, 255, 255, 0.7);
+      padding: 0;
+      min-width: 18px;
+      width: 18px;
+      height: 18px;
+      font-size: 8px;
+      background: transparent;
+      border: none;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    `;
+    dropdownButton.title = 'Seleccionar tipo de terminal';
+    dropdownButton.addEventListener('mouseenter', () => {
+      dropdownButton.style.background = 'rgba(255, 255, 255, 0.1)';
+    });
+    dropdownButton.addEventListener('mouseleave', () => {
+      dropdownButton.style.background = 'transparent';
+    });
+    dropdownButton.addEventListener('click', (e) => {
+      terminalSelectorMenuRef.current?.show(e);
+    });
+    
+    buttonsContainer.appendChild(plusButton);
+    buttonsContainer.appendChild(dropdownButton);
+    navList.appendChild(buttonsContainer);
+  }, []); // Solo ejecutar una vez al montar
+  
+  // Función para crear una nueva pestaña de terminal local independiente
+  const createLocalTerminalTab = (terminalType, distroInfo = null) => {
+    if (activeGroupId !== null) {
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: activeTabIndex
+      }));
+      setActiveGroupId(null);
+    }
+    
+    setSshTabs(prevTabs => {
+      const nowTs = Date.now();
+      // Usar formato simple con contador alto para evitar colisiones: tab-1000, tab-1001, etc.
+      const tabId = `tab-${localTerminalCounterRef.current}`;
+      localTerminalCounterRef.current += 1;
+      
+      // Registrar eventos para el nuevo tab en el backend de Electron
+      if (window.electron) {
+        window.electron.ipcRenderer.send('register-tab-events', tabId);
+      }
+      
+      // Determinar el label según el tipo de terminal
+      let label = 'Terminal';
+      let finalTerminalType = terminalType;
+      
+      // Si hay distroInfo, usamos sus datos
+      if (distroInfo) {
+        label = distroInfo.label;
+        finalTerminalType = distroInfo.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+      } else {
+        // Si no hay distroInfo, usar lógica anterior
+        switch(terminalType) {
+          case 'powershell':
+            label = 'PowerShell';
+            break;
+          case 'wsl':
+            label = 'WSL';
+            break;
+          case 'wsl-ubuntu':
+            label = 'Ubuntu 24.04';
+            finalTerminalType = 'ubuntu';
+            break;
+          case 'wsl-ubuntu-old':
+            label = 'Ubuntu';
+            finalTerminalType = 'ubuntu';
+            break;
+          case 'wsl-kali':
+            label = 'Kali Linux';
+            finalTerminalType = 'wsl-distro';
+            break;
+          case 'wsl-debian':
+            label = 'Debian';
+            finalTerminalType = 'wsl-distro';
+            break;
+          case 'linux-terminal':
+            label = 'Terminal';
+            break;
+          default:
+            label = 'Terminal';
+        }
+      }
+      
+      const newTab = {
+        key: tabId,
+        label: label,
+        type: 'local-terminal',
+        terminalType: finalTerminalType,
+        distroInfo: distroInfo, // Información completa de la distribución
+        createdAt: nowTs,
+        groupId: null
+      };
+      
+      // Activar como última abierta (índice 1) y registrar orden de apertura
+      setLastOpenedTabKey(tabId);
+      setOnCreateActivateTabKey(tabId);
+      setActiveTabIndex(1);
+      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      
+      return [newTab, ...prevTabs];
+    });
+  };
   
   // Funciones para controlar el scroll de pestañas
   const checkScrollButtons = () => {
@@ -508,6 +721,74 @@ const MainContentArea = ({
                         title="Desplazar pestañas a la derecha"
                       />
                     )}
+                    
+                    {/* ContextMenu para seleccionar tipo de terminal */}
+                    <ContextMenu
+                      ref={terminalSelectorMenuRef}
+                      model={(() => {
+                        const platform = window.electron?.platform || 'unknown';
+                        if (platform === 'win32') {
+                          const menuItems = [
+                            {
+                              label: 'PowerShell',
+                              icon: 'pi pi-desktop',
+                              command: () => {
+                                setLastLocalTerminalType('powershell');
+                                createLocalTerminalTab('powershell');
+                              }
+                            },
+                            {
+                              label: 'WSL',
+                              icon: 'pi pi-server',
+                              command: () => {
+                                setLastLocalTerminalType('wsl');
+                                createLocalTerminalTab('wsl');
+                              }
+                            }
+                          ];
+                          
+                          // Agregar distribuciones WSL detectadas dinámicamente
+                          if (wslDistributions && wslDistributions.length > 0) {
+                            wslDistributions.forEach(distro => {
+                              menuItems.push({
+                                label: distro.label,
+                                icon: distro.icon || 'pi pi-circle',
+                                command: () => {
+                                  // Guardar el tipo de terminal para el botón "+"
+                                  setLastLocalTerminalType(distro.name);
+                                  // Crear tab pasando la información completa de la distro
+                                  createLocalTerminalTab(distro.name, distro);
+                                }
+                              });
+                            });
+                          }
+                          
+                          return menuItems;
+                        } else if (platform === 'linux' || platform === 'darwin') {
+                          return [
+                            {
+                              label: 'Terminal',
+                              icon: 'pi pi-desktop',
+                              command: () => {
+                                setLastLocalTerminalType('linux-terminal');
+                                createLocalTerminalTab('linux-terminal');
+                              }
+                            }
+                          ];
+                        } else {
+                          return [
+                            {
+                              label: 'Terminal',
+                              icon: 'pi pi-desktop',
+                              command: () => {
+                                setLastLocalTerminalType('powershell');
+                                createLocalTerminalTab('powershell');
+                              }
+                            }
+                          ];
+                        }
+                      })()}
+                    />
                   </div>
                 )}
                 
