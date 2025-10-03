@@ -197,7 +197,7 @@ const MainContentArea = ({
     plusButton.innerHTML = '<i class="pi pi-plus"></i>';
     plusButton.className = 'p-button p-button-text p-button-sm';
     plusButton.style.cssText = `
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: var(--ui-sidebar-text, #cccccc) !important;
       padding: 0 !important;
       min-width: 15px !important;
       width: 15px !important;
@@ -211,14 +211,26 @@ const MainContentArea = ({
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
-      transition: background-color 0.2s ease !important;
+      transition: all 0.2s ease !important;
     `;
+    
+    // Aplicar color del tema al icono
+    const plusIcon = plusButton.querySelector('i');
+    if (plusIcon) {
+      plusIcon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+    }
     plusButton.title = 'Nueva terminal local';
     plusButton.addEventListener('mouseenter', () => {
-      plusButton.style.setProperty('background-color', 'rgba(255, 255, 255, 0.2)', 'important');
+      plusButton.style.setProperty('background-color', 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))', 'important');
+      plusButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      const icon = plusButton.querySelector('i');
+      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
     });
     plusButton.addEventListener('mouseleave', () => {
       plusButton.style.setProperty('background-color', 'transparent', 'important');
+      plusButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      const icon = plusButton.querySelector('i');
+      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
     });
     plusButton.addEventListener('click', () => {
       // Usar la referencia que se actualiza de forma síncrona
@@ -243,7 +255,7 @@ const MainContentArea = ({
     dropdownButton.innerHTML = '<i class="pi pi-chevron-down"></i>';
     dropdownButton.className = 'p-button p-button-text p-button-sm';
     dropdownButton.style.cssText = `
-      color: rgba(255, 255, 255, 0.7) !important;
+      color: var(--ui-sidebar-text, #cccccc) !important;
       padding: 0 !important;
       min-width: 15px !important;
       width: 15px !important;
@@ -257,14 +269,26 @@ const MainContentArea = ({
       align-items: center !important;
       justify-content: center !important;
       cursor: pointer !important;
-      transition: background-color 0.2s ease !important;
+      transition: all 0.2s ease !important;
     `;
+    
+    // Aplicar color del tema al icono
+    const dropdownIcon = dropdownButton.querySelector('i');
+    if (dropdownIcon) {
+      dropdownIcon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+    }
     dropdownButton.title = 'Seleccionar tipo de terminal';
     dropdownButton.addEventListener('mouseenter', () => {
-      dropdownButton.style.setProperty('background-color', 'rgba(255, 255, 255, 0.2)', 'important');
+      dropdownButton.style.setProperty('background-color', 'var(--ui-sidebar-hover, rgba(255, 255, 255, 0.1))', 'important');
+      dropdownButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      const icon = dropdownButton.querySelector('i');
+      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
     });
     dropdownButton.addEventListener('mouseleave', () => {
       dropdownButton.style.setProperty('background-color', 'transparent', 'important');
+      dropdownButton.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
+      const icon = dropdownButton.querySelector('i');
+      if (icon) icon.style.setProperty('color', 'var(--ui-sidebar-text, #cccccc)', 'important');
     });
     dropdownButton.addEventListener('click', (e) => {
       terminalSelectorMenuRef.current?.show(e);
