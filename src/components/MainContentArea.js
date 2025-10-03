@@ -162,26 +162,28 @@ const MainContentArea = ({
     plusButton.innerHTML = '<i class="pi pi-plus"></i>';
     plusButton.className = 'p-button p-button-text p-button-sm';
     plusButton.style.cssText = `
-      color: rgba(255, 255, 255, 0.7);
-      padding: 0;
-      min-width: 15px;
-      width: 15px;
-      height: 15px;
-      font-size: 8px;
-      background: transparent;
-      border: none;
-      border-radius: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
+      color: rgba(255, 255, 255, 0.7) !important;
+      padding: 0 !important;
+      min-width: 15px !important;
+      width: 15px !important;
+      height: 15px !important;
+      font-size: 8px !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-radius: 2px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: background-color 0.2s ease !important;
     `;
     plusButton.title = 'Nueva terminal local';
     plusButton.addEventListener('mouseenter', () => {
-      plusButton.style.background = 'rgba(255, 255, 255, 0.1)';
+      plusButton.style.setProperty('background-color', 'rgba(255, 255, 255, 0.2)', 'important');
     });
     plusButton.addEventListener('mouseleave', () => {
-      plusButton.style.background = 'transparent';
+      plusButton.style.setProperty('background-color', 'transparent', 'important');
     });
     plusButton.addEventListener('click', () => {
       const distro = wslDistributions.find(d => d.name === lastLocalTerminalType);
@@ -193,26 +195,28 @@ const MainContentArea = ({
     dropdownButton.innerHTML = '<i class="pi pi-chevron-down"></i>';
     dropdownButton.className = 'p-button p-button-text p-button-sm';
     dropdownButton.style.cssText = `
-      color: rgba(255, 255, 255, 0.7);
-      padding: 0;
-      min-width: 15px;
-      width: 15px;
-      height: 15px;
-      font-size: 7px;
-      background: transparent;
-      border: none;
-      border-radius: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
+      color: rgba(255, 255, 255, 0.7) !important;
+      padding: 0 !important;
+      min-width: 15px !important;
+      width: 15px !important;
+      height: 15px !important;
+      font-size: 7px !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-radius: 2px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transition: background-color 0.2s ease !important;
     `;
     dropdownButton.title = 'Seleccionar tipo de terminal';
     dropdownButton.addEventListener('mouseenter', () => {
-      dropdownButton.style.background = 'rgba(255, 255, 255, 0.1)';
+      dropdownButton.style.setProperty('background-color', 'rgba(255, 255, 255, 0.2)', 'important');
     });
     dropdownButton.addEventListener('mouseleave', () => {
-      dropdownButton.style.background = 'transparent';
+      dropdownButton.style.setProperty('background-color', 'transparent', 'important');
     });
     dropdownButton.addEventListener('click', (e) => {
       terminalSelectorMenuRef.current?.show(e);
