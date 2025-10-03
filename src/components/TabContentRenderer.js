@@ -6,6 +6,10 @@ import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import GuacamoleTab from './GuacamoleTab';
 import TerminalComponent from './TerminalComponent';
+import PowerShellTerminal from './PowerShellTerminal';
+import WSLTerminal from './WSLTerminal';
+import UbuntuTerminal from './UbuntuTerminal';
+import { themes } from '../themes';
 
 const TabContentRenderer = React.memo(({
   tab,
@@ -229,6 +233,73 @@ const TabContentRenderer = React.memo(({
       <GuacamoleTab
         config={tab.config}
         tabId={tab.tabId}
+      />
+    );
+  }
+
+  // Terminal local independiente
+  if (tab.type === 'local-terminal') {
+    const terminalType = tab.terminalType || 'powershell';
+    
+    // PowerShell o terminal genérico
+    if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
+      // Obtener el tema correcto
+      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+      
+      return (
+        <PowerShellTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={powerShellTheme}
+        />
+      );
+    }
+    
+    // WSL genérico
+    if (terminalType === 'wsl') {
+      // Obtener el tema correcto
+      const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
+      
+      return (
+        <WSLTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={linuxTheme}
+        />
+      );
+    }
+    
+    // Ubuntu o distribución WSL con información completa desde tab.distroInfo
+    if (terminalType === 'ubuntu' || terminalType === 'wsl-distro') {
+      // Obtener el tema correcto
+      const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
+      
+      return (
+        <UbuntuTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          ubuntuInfo={tab.distroInfo}
+          theme={linuxTheme}
+        />
+      );
+    }
+    
+    // Fallback a PowerShell
+    const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+    
+    return (
+      <PowerShellTerminal
+        ref={el => terminalRefs.current[tab.key] = el}
+        tabId={tab.key}
+        fontFamily={localFontFamily}
+        fontSize={localFontSize}
+        theme={powerShellTheme}
       />
     );
   }

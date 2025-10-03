@@ -113,6 +113,29 @@ const TabHeader = React.memo(({
         <i className="pi pi-globe" style={{ fontSize: '12px', marginRight: '6px', color: '#00C851' }}></i>
       )}
       
+      {/* Icono específico para terminales locales */}
+      {tab.type === 'local-terminal' && (
+        <i 
+          className={
+            tab.terminalType === 'powershell' ? 'pi pi-desktop' :
+            tab.terminalType === 'wsl' ? 'pi pi-server' :
+            tab.terminalType?.startsWith('wsl-') ? 'pi pi-circle' :
+            tab.terminalType === 'linux-terminal' ? 'pi pi-desktop' :
+            'pi pi-desktop'
+          }
+          style={{ 
+            fontSize: '12px', 
+            marginRight: '6px',
+            color: 
+              tab.terminalType === 'powershell' ? '#4fc3f7' :
+              tab.terminalType === 'wsl' ? '#8ae234' :
+              tab.terminalType?.startsWith('wsl-') ? '#e95420' :
+              tab.terminalType === 'linux-terminal' ? '#4fc3f7' :
+              '#4fc3f7'
+          }}
+        ></i>
+      )}
+      
       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {tab.label}
       </span>

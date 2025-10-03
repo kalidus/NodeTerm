@@ -408,6 +408,7 @@ export const useTabManagement = (toast, {
     }
     
     const isSSHTab = closedTab.type === 'terminal' || closedTab.type === 'split' || closedTab.isExplorerInSSH;
+    const isLocalTerminal = closedTab.type === 'local-terminal';
     
     if (isHomeTab) {
       // Verificar si el botón de inicio está bloqueado
@@ -434,6 +435,34 @@ export const useTabManagement = (toast, {
       
       const newHomeTabs = homeTabs.filter(t => t.key !== closedTab.key);
       setHomeTabs(newHomeTabs);
+    } else if (isLocalTerminal) {
+      // Manejar cierre de terminales locales
+      if (window.electron && window.electron.ipcRenderer) {
+        // Determinar qué comando de stop enviar según el tipo de terminal
+        const terminalType = closedTab.terminalType || 'powershell';
+        
+        if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
+          window.electron.ipcRenderer.send(`powershell:stop:${closedTab.key}`);
+        } else if (terminalType === 'wsl') {
+          window.electron.ipcRenderer.send(`wsl:stop:${closedTab.key}`);
+        } else if (terminalType.startsWith('wsl-')) {
+          const distroName = terminalType.replace('wsl-', '');
+          // Determinar el canal según la distribución
+          if (distroName === 'ubuntu' || distroName === 'ubuntu-old') {
+            window.electron.ipcRenderer.send(`ubuntu:stop:${closedTab.key}`);
+          } else {
+            window.electron.ipcRenderer.send(`wsl-distro:stop:${closedTab.key}`);
+          }
+        }
+      }
+      
+      // Limpiar referencia del terminal si existe
+      if (externalTerminalRefs?.current) {
+        delete externalTerminalRefs.current[closedTab.key];
+      }
+      
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else if (isSSHTab) {
       // Manejar cierre de pestañas split
       if (closedTab.type === 'split') {
