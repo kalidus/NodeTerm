@@ -278,6 +278,33 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     return findPath(nodes, targetNode);
   };
 
+  // Función para obtener la ruta de carpetas de una conexión
+  const getNodeFolderPath = (nodes, targetNode) => {
+    const findFolderPath = (nodeList, target, currentPath = []) => {
+      for (const node of nodeList) {
+        // Solo agregar a la ruta si es una carpeta (no una conexión)
+        const isFolder = !node.data || (!node.data.type || (node.data.type !== 'ssh' && node.data.type !== 'rdp' && node.data.type !== 'rdp-guacamole'));
+        const newPath = isFolder ? [...currentPath, node.label] : currentPath;
+        
+        // Si encontramos el nodo objetivo, retornar la ruta de carpetas (sin incluir la conexión)
+        if (node.key === target.key) {
+          return currentPath; // Retornar solo las carpetas padre, no la conexión misma
+        }
+        
+        // Si tiene hijos, buscar recursivamente
+        if (node.children && node.children.length > 0) {
+          const foundPath = findFolderPath(node.children, target, newPath);
+          if (foundPath) {
+            return foundPath;
+          }
+        }
+      }
+      return null;
+    };
+    
+    return findFolderPath(nodes, targetNode);
+  };
+
   // Función para expandir carpetas en la ruta de una conexión
   const expandNodePath = (nodePath, currentExpandedKeys) => {
     if (!nodePath || nodePath.length === 0) return currentExpandedKeys;
@@ -1029,6 +1056,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   protocolName = 'RDP';
                 }
                 
+                // Obtener la ruta de carpetas de la conexión
+                const folderPath = getNodeFolderPath(allNodes, node);
+                const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Raíz';
+                
                 // Verificar si es favorito
                 const connection = helpers.fromSidebarNode(node);
                 const favorites = JSON.parse(localStorage.getItem('nodeterm_favorite_connections') || '[]');
@@ -1038,10 +1069,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   <div
                     key={node.key}
                     style={{
-                      padding: '8px 12px',
+                      padding: '10px 12px',
                       cursor: 'pointer',
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       gap: 8,
                       fontSize: 13,
                       borderBottom: '1px solid var(--ui-dialog-border, #333)',
@@ -1049,6 +1080,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       transition: 'all 0.2s ease',
                       borderRadius: '4px',
                       margin: '2px 4px',
+                      minHeight: '60px',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #2a2d31)';
@@ -1064,7 +1096,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                     onClick={() => handleSelectConnection(node)}
                   >
                     {/* Icono de conexión */}
-                    <div style={{ display: 'flex', alignItems: 'center', minWidth: 20, justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', minWidth: 20, justifyContent: 'center', paddingTop: '2px' }}>
                       {isSSH ? (
                         <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>⚡</span>
                       ) : isRDP ? (
@@ -1074,39 +1106,61 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       )}
                     </div>
                     
-                    {/* Nombre y protocolo */}
-                    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ 
-                        whiteSpace: 'nowrap', 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis',
-                        fontWeight: 500,
-                        color: 'var(--ui-dialog-text, #fff)',
-                        fontSize: '13px'
+                    {/* Nombre, carpeta y protocolo */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ 
+                          whiteSpace: 'nowrap', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis',
+                          fontWeight: 500,
+                          color: 'var(--ui-dialog-text, #fff)',
+                          fontSize: '13px'
+                        }}>
+                          {node.label}
+                        </span>
+                        <span style={{ 
+                          fontSize: 10, 
+                          color: protocolColor,
+                          fontWeight: 600,
+                          backgroundColor: `${protocolColor}20`,
+                          padding: '2px 6px',
+                          borderRadius: '10px',
+                          border: `1px solid ${protocolColor}40`,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {protocolName}
+                        </span>
+                      </div>
+                      {/* Ruta de carpeta */}
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 4,
+                        fontSize: '11px',
+                        color: 'var(--ui-dialog-text, #aaa)',
+                        opacity: 0.8
                       }}>
-                        {node.label}
-                      </span>
-                      <span style={{ 
-                        fontSize: 10, 
-                        color: protocolColor,
-                        fontWeight: 600,
-                        backgroundColor: `${protocolColor}20`,
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        border: `1px solid ${protocolColor}40`,
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {protocolName}
-                      </span>
+                        <span style={{ fontSize: '10px' }}>📁</span>
+                        <span style={{ 
+                          whiteSpace: 'nowrap', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis',
+                          fontStyle: 'italic'
+                        }}>
+                          {folderPathString}
+                        </span>
+                      </div>
                     </div>
                     
                     {/* Usuario con mismo formato que protocolo */}
                     {getDisplayUser(node) && (
                       <div style={{ 
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         gap: 6,
-                        marginRight: 8
+                        marginRight: 8,
+                        paddingTop: '2px'
                       }}>
                         <span style={{ 
                           fontSize: 11, 
@@ -1128,7 +1182,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                     )}
                     
                     {/* Botones de acción */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: '2px' }}>
                       {/* Botón de favoritos */}
                       <button
                         style={{
