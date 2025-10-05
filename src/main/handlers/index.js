@@ -28,25 +28,21 @@ const registerSSHHandlers = require('./ssh-handlers');
  * @param {Object} dependencies.isAppQuitting - Variable de estado de cierre
  */
 function registerAllHandlers(dependencies) {
-  console.log('🔧 Registrando handlers del sistema...');
+  // Registrando handlers silenciosamente
   
   // Registrar handlers de aplicación (UI, versión, cierre)
   registerAppHandlers(dependencies);
-  console.log('✅ Handlers de aplicación registrados');
   
   // Registrar handlers del sistema
   registerSystemHandlers();
-  console.log('✅ Handlers del sistema registrados');
   
   // Registrar handlers de Guacamole
   registerGuacamoleHandlers(dependencies);
-  console.log('✅ Handlers de Guacamole registrados');
   
   // Registrar handlers SSH
   registerSSHHandlers(dependencies);
-  console.log('✅ Handlers SSH registrados');
   
-  console.log('🎉 Todos los handlers registrados correctamente');
+  console.log('✅ Sistema: Handlers registrados');
 }
 
 module.exports = {

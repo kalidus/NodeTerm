@@ -261,11 +261,11 @@ const CygwinTerminal = forwardRef(({
 
         if (window.electron) {
             term.current.clear();
-            console.log(`🔵 [CygwinTerminal ${tabId}] Terminal creado, cols: ${term.current.cols}, rows: ${term.current.rows}`);
+            // Terminal creado silenciosamente
             
             const delay = tabId === 'tab-1' ? 300 : 0;
             setTimeout(() => {
-                console.log(`🔵 [CygwinTerminal ${tabId}] Enviando cygwin:start:${tabId}`);
+                // Iniciando sesión silenciosamente
                 window.electron.ipcRenderer.send(`cygwin:start:${tabId}`, {
                     cols: term.current.cols,
                     rows: term.current.rows
@@ -308,15 +308,12 @@ const CygwinTerminal = forwardRef(({
             });
 
             const dataListener = (data) => {
-                console.log(`🔵 [CygwinTerminal ${tabId}] Recibiendo datos:`, data.substring(0, 50));
                 if (term.current) {
-                    console.log(`🔵 [CygwinTerminal ${tabId}] Escribiendo al terminal`);
                     term.current.write(data);
                 } else {
-                    console.error(`🔴 [CygwinTerminal ${tabId}] term.current es null!`);
+                    console.error(`🔴 Cygwin ${tabId}: Terminal no disponible`);
                 }
             };
-            console.log(`🔵 [CygwinTerminal ${tabId}] Registrando listener en canal: cygwin:data:${tabId}`);
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`cygwin:data:${tabId}`, dataListener);
 
             const errorListener = (error) => {
