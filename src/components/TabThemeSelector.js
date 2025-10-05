@@ -2324,10 +2324,13 @@ const TabThemeSelector = () => {
     setReducedMotion(initialReduced);
     document.documentElement.setAttribute('data-tab-reduced-motion', initialReduced ? 'true' : 'false');
 
-    // Velocidad de animación
+    // Velocidad de animación (ya inicializada globalmente)
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
-    document.documentElement.setAttribute('data-tab-anim-speed', savedSpeed);
+    // No sobrescribir si ya está establecido globalmente
+    if (!document.documentElement.hasAttribute('data-tab-anim-speed')) {
+      document.documentElement.setAttribute('data-tab-anim-speed', savedSpeed);
+    }
   }, []); // Solo ejecutar al montar el componente
 
   useEffect(() => {
