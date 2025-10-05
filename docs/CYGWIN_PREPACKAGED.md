@@ -47,6 +47,11 @@ Esto creará `cygwin64-portable.zip` (~80-100 MB comprimido).
    - git, vim, nano
    - curl, wget
    - openssh, tar, gzip, bzip2
+   - Herramientas de red: nc (netcat), ping, telnet, nmap
+   - Herramientas de diagnóstico: traceroute, tcpdump, net-tools
+   - Herramientas de sistema: htop, iotop, tree, strace, lsof
+   - Lenguajes de programación: python3, nodejs, ruby, perl, php, go, rust, java
+   - Utilidades avanzadas: gnuplot, graphviz, imagemagick, ffmpeg
    ```
 6. **Adjunta el archivo** `cygwin64-portable.zip`
 7. **Publish release**
