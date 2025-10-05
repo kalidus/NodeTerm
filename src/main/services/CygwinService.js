@@ -116,10 +116,15 @@ async function startCygwinSession(tabId, { cols, rows }) {
       console.log(`📁 Directorio home creado: ${cygwinHome}`);
     }
 
-    // Crear un archivo .bashrc moderno estilo MobaXterm si no existe
+    // Crear un archivo .bashrc moderno estilo MobaXterm (siempre regenerar para aplicar cambios)
     const bashrcPath = path.join(cygwinHome, '.bashrc');
-    if (!fs.existsSync(bashrcPath)) {
-      const bashrcContent = `# NodeTerm Cygwin - Configuración moderna
+    // Eliminar el archivo existente para forzar la regeneración con los cambios
+    if (fs.existsSync(bashrcPath)) {
+      fs.unlinkSync(bashrcPath);
+      console.log(`🗑️ .bashrc existente eliminado para aplicar cambios`);
+    }
+    
+    const bashrcContent = `# NodeTerm Cygwin - Configuración moderna
 # Prompt bonito con colores y símbolos
 export PS1='\\[\\033[01;36m\\]┌─[\\[\\033[01;32m\\]\\u\\[\\033[01;33m\\]@\\[\\033[01;35m\\]\\h\\[\\033[01;36m\\]]─[\\[\\033[01;34m\\]\\w\\[\\033[01;36m\\]]\\n└─\\[\\033[01;32m\\]\\$\\[\\033[00m\\] '
 
@@ -139,16 +144,13 @@ export LS_COLORS='di=01;34:ln=01;36:ex=01;32:*.tar=01;31:*.zip=01;31:*.jpg=01;35
 # Bienvenida
 echo -e "\\033[1;36m┌─────────────────────────────────────────┐\\033[0m"
 echo -e "\\033[1;36m│\\033[0m  \\033[1;32mCygwin Terminal\\033[0m - NodeTerm      \\033[1;36m│\\033[0m"
-echo -e "\\033[1;36m│\\033[0m  \\033[1;37mVersión: 1.0.0\\033[0m                      \\033[1;36m│\\033[0m"
-echo -e "\\033[1;36m│\\033[0m  \\033[1;37mDesarrollado por: Kalidou\\033[0m             \\033[1;36m│\\033[0m"
 echo -e "\\033[1;36m└─────────────────────────────────────────┘\\033[0m"
 echo ""
 
 cd ~
 `;
-      fs.writeFileSync(bashrcPath, bashrcContent, 'utf8');
-      console.log(`📝 .bashrc creado en: ${bashrcPath}`);
-    }
+    fs.writeFileSync(bashrcPath, bashrcContent, 'utf8');
+    console.log(`📝 .bashrc creado/actualizado en: ${bashrcPath}`);
 
     // Configuración de entorno para Cygwin
     const cygwinEnv = {
