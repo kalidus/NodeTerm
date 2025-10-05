@@ -115,6 +115,19 @@ const initializeGlobalThemes = () => {
       localStorage.setItem('localLinuxTerminalTheme', 'Night Owl');
     }
     
+    // Inicializar velocidad de animaciones globalmente
+    const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
+    const hasAnimSpeed = localStorage.getItem(ANIM_SPEED_KEY);
+    if (!hasAnimSpeed) {
+      console.log('[THEME] Aplicando velocidad de animaciones por defecto...');
+      localStorage.setItem(ANIM_SPEED_KEY, 'normal');
+    }
+    
+    // Establecer velocidad de animaciones en el DOM inmediatamente
+    const animSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
+    document.documentElement.setAttribute('data-ui-anim-speed', animSpeed);
+    document.documentElement.setAttribute('data-tab-anim-speed', animSpeed);
+    
   } catch (error) {
     console.error('[THEME] Error en inicialización global:', error);
   }

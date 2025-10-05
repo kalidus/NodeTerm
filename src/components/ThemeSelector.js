@@ -26,10 +26,13 @@ const ThemeSelector = ({ showPreview = false }) => {
     const savedTitlebarPreference = localStorage.getItem('use_primary_colors_titlebar') === 'true';
     setUsePrimaryColorsForTitlebar(savedTitlebarPreference);
     
-    // Cargar preferencias de animación
+    // Cargar preferencias de animación (ya inicializada globalmente)
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
-    document.documentElement.setAttribute('data-ui-anim-speed', savedSpeed);
+    // No sobrescribir si ya está establecido globalmente
+    if (!document.documentElement.hasAttribute('data-ui-anim-speed')) {
+      document.documentElement.setAttribute('data-ui-anim-speed', savedSpeed);
+    }
     
     // Reduced motion inicial
     const savedReduced = localStorage.getItem(REDUCED_MOTION_KEY);
