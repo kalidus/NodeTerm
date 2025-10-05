@@ -21,8 +21,9 @@ $SETUP_FILE = ".\cygwin-setup-temp.exe"
 # Paquetes minimos
 $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
 
-# Paquetes completos (mas herramientas)
-$FULL_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,bzip2,diffutils,file,procps-ng,netcat,iputils,inetutils,telnet,nmap,traceroute,tcpdump,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,less,more,man-db,info"
+# Paquetes completos (herramientas básicas + red + desarrollo)
+# Incluye: básicos + red (wget,curl,netcat,ping,telnet,nmap) + desarrollo (gcc,g++,make,cmake)
+$FULL_PACKAGES = "$MINIMAL_PACKAGES,wget,curl,git,vim,nano,openssh,tar,gzip,bzip2,diffutils,file,procps-ng,netcat,iputils,inetutils,telnet,nmap,traceroute,tcpdump,net-tools,openssl,ca-certificates,libcurl4,libssh2,rsync,unzip,zip,less,more,man-db,info,gcc,g++,make,cmake,autoconf,automake,libtool,pkg-config,binutils"
 
 # Paquetes ultra completos (todo incluido)
 $ULTRA_COMPLETE_PACKAGES = "$FULL_PACKAGES,htop,iotop,tree,strace,ltrace,lsof,psmisc,sysstat,util-linux,which,time,parallel,gnuplot,graphviz,imagemagick,ffmpeg,python3,pip,nodejs,npm,yarn,ruby,perl,php,go,rust,java-openjdk"

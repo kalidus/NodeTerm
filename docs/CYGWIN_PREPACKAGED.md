@@ -1,152 +1,364 @@
-# 📦 Cygwin Pre-empaquetado para NodeTerm
+# 🐧 Integración Completa de Cygwin en NodeTerm
 
-En lugar de instalar Cygwin desde cero (que tarda 10 minutos y puede causar reinicios), NodeTerm descarga un **paquete pre-empaquetado** de Cygwin que ya está listo para usar.
+NodeTerm incluye **Cygwin embebido** (portable) directamente en el instalador, similar a cómo MobaXterm lo integra. **No requiere instalación por parte del usuario** - todo viene integrado en la aplicación, eliminando la necesidad de descargas o instalaciones adicionales.
 
-## 🎯 Ventajas
+## 📋 ¿Qué es Cygwin?
 
-- ✅ **Más rápido** - 2-3 minutos vs 10+ minutos
-- ✅ **Sin reinicios** - Descarga fuera del proyecto
+Cygwin es una colección de herramientas Unix/Linux para Windows que proporciona un entorno completo de línea de comandos estilo Unix directamente en Windows.
+
+## 🎯 Características y Ventajas
+
+### Características Técnicas
+- ✅ **Completamente embebido** - No requiere instalación separada
+- ✅ **Shell Bash** - Terminal Unix completo en Windows
+- ✅ **Herramientas incluidas** - ls, grep, sed, git, vim, nano, curl, wget, etc.
+- ✅ **Integración nativa** - Funciona como PowerShell o WSL
+- ✅ **Status bar** con estadísticas del sistema
+- ✅ **Temas personalizables**
+
+### Ventajas para el Usuario
+- ✅ **Completamente transparente** - Sin descargas ni instalaciones
+- ✅ **Funciona inmediatamente** - Disponible desde el primer uso
+- ✅ **Sin dependencias de red** - No requiere conexión a internet
 - ✅ **Confiable** - Siempre la misma versión probada
-- ✅ **Sin instalación** - Solo descarga y extrae
+- ✅ **Portable** - Funciona en cualquier Windows
 
-## 📋 Cómo Crear el Paquete
+## 📋 Cómo Crear el Paquete Cygwin
 
 ### 1. Crear Cygwin Portable
 
-Primero, crea el Cygwin portable localmente:
+Ejecuta el script principal para crear la instalación completa:
 
 ```powershell
-cd C:\Users\kalid\Documents\Cursor\NodeTerm
+# Instalación ULTRA COMPLETA con TODAS las herramientas (RECOMENDADO)
 .\scripts\create-cygwin-portable.ps1
+
+# Instalación completa (herramientas básicas + red, sin lenguajes)
+.\scripts\create-cygwin-portable.ps1 -NoUltraComplete
+
+# Instalación mínima (solo básico)
+.\scripts\create-cygwin-portable.ps1 -Minimal
+
+# Instalación en directorio temporal (para evitar problemas de permisos)
+.\scripts\create-cygwin-portable.ps1 -UseTemp
 ```
 
 Esto creará `resources\cygwin64\` con todo Cygwin instalado.
 
-### 2. Empaquetar Cygwin
+**Paquetes incluidos por modo:**
 
-Una vez creado, empaquétalo en un archivo comprimido:
+**🔹 MODO MINIMAL (`-Minimal`):**
+- ✅ **Básicos**: bash, coreutils, grep, sed, gawk, findutils, which, less, ncurses
 
-```powershell
-.\scripts\package-cygwin.ps1
+**🔹 MODO FULL (`-NoUltraComplete`):**
+- ✅ **Básicos**: bash, coreutils, grep, sed, gawk, findutils
+- ✅ **Red**: wget, curl, openssh, netcat, ping, telnet, nmap, traceroute, tcpdump
+- ✅ **Herramientas**: git, vim, nano, tar, gzip, bzip2, rsync
+- ✅ **Desarrollo**: gcc, g++, make, cmake, autoconf, automake, libtool, pkg-config, binutils
+- ✅ **Utilidades**: openssl, ca-certificates, unzip, zip, man-db
+
+**🔹 MODO ULTRA COMPLETE (POR DEFECTO):**
+- ✅ **Todo lo anterior** PLUS:
+- ✅ **Sistema**: htop, iotop, tree, strace, lsof, sysstat, util-linux
+- ✅ **Lenguajes**: python3, nodejs, ruby, perl, php, go, rust, java-openjdk
+- ✅ **Utilidades avanzadas**: gnuplot, graphviz, imagemagick, ffmpeg
+
+### 3. Verificar Estructura
+
+Después de ejecutar el script, verifica que exista esta estructura:
+
+```
+NodeTerm/
+└── resources/
+    └── cygwin64/           ✓ Creado por el script
+        ├── bin/
+        │   ├── bash.exe    ✓ Archivo principal
+        │   ├── ls.exe
+        │   └── ...
+        ├── etc/
+        ├── home/
+        ├── lib/
+        └── usr/
 ```
 
-Esto creará `cygwin64-portable.zip` (~80-100 MB comprimido).
+### 4. Compilar la Aplicación
 
-### 3. Subir a GitHub Releases
+```bash
+# Desarrollo (para probar):
+npm start
 
-1. Ve a tu repositorio en GitHub
-2. Click en **Releases** → **Create a new release**
-3. Tag: `cygwin-v1.0.0`
-4. Title: `Cygwin Portable Package v1.0.0`
-5. Description:
-   ```markdown
-   Paquete de Cygwin portable pre-instalado para NodeTerm.
-   
-   Incluye:
-   - bash, coreutils, grep, sed, gawk
-   - git, vim, nano
-   - curl, wget
-   - openssh, tar, gzip, bzip2
-   - Herramientas de red: nc (netcat), ping, telnet, nmap
-   - Herramientas de diagnóstico: traceroute, tcpdump, net-tools
-   - Herramientas de sistema: htop, iotop, tree, strace, lsof
-   - Lenguajes de programación: python3, nodejs, ruby, perl, php, go, rust, java
-   - Utilidades avanzadas: gnuplot, graphviz, imagemagick, ffmpeg
-   ```
-6. **Adjunta el archivo** `cygwin64-portable.zip`
-7. **Publish release**
-
-### 4. Actualizar URL en el Código
-
-Edita `src/main/services/CygwinDownloader.js`:
-
-```javascript
-const CYGWIN_PACKAGE_URL = 'https://github.com/TU_USUARIO/NodeTerm/releases/download/cygwin-v1.0.0/cygwin64-portable.zip';
+# Build de producción:
+npm run build       # Webpack
+npm run dist        # Electron builder
 ```
 
-Reemplaza:
-- `TU_USUARIO` con tu usuario de GitHub
-- `NodeTerm` con el nombre de tu repo
-- `cygwin-v1.0.0` con tu tag de release
+Electron Builder automáticamente incluirá la carpeta `resources/cygwin64/` en el instalador gracias a la configuración `extraResources` en `package.json`.
+
+### 5. Usar Cygwin
+
+Una vez compilada la aplicación:
+
+1. **Abre NodeTerm**
+2. **Verás "Cygwin" en el selector de terminal** (solo en Windows)
+3. **Crea una nueva pestaña** seleccionando Cygwin
+4. **¡Disfruta del terminal Unix en Windows!**
 
 ## 🚀 Cómo Funciona
 
-1. **Usuario intenta usar Cygwin** por primera vez
-2. **NodeTerm detecta** que no está instalado
-3. **Descarga automáticamente** el paquete desde GitHub Releases
-4. **Extrae** en `resources\cygwin64\`
-5. **¡Listo para usar!**
+1. **Usuario instala NodeTerm** desde el instalador
+2. **Cygwin ya está incluido** en `resources\cygwin64\`
+3. **Usuario abre NodeTerm** y selecciona terminal Cygwin
+4. **¡Funciona inmediatamente!** - Sin descargas ni instalaciones
 
 ## 📊 Tamaños Esperados
 
-- **Sin comprimir:** ~150-200 MB
-- **Comprimido (ZIP):** ~80-100 MB
-- **Comprimido (7Z):** ~60-80 MB (mejor compresión)
+- **Cygwin sin comprimir:** ~858 MB
+- **Instalador final:** ~514 MB (comprimido por Electron Builder)
+- **Espacio en disco del usuario:** ~858 MB después de instalar
+
+## 🔧 Arquitectura Técnica
+
+### Backend (`src/main/services/CygwinService.js`)
+
+- **Detección automática** del Cygwin embebido
+- **Spawn de procesos** usando `node-pty` con WinPTY
+- **Gestión de sesiones** por pestaña
+- **Variables de entorno** configuradas automáticamente
+
+### Frontend (`src/components/CygwinTerminal.js`)
+
+- **xterm.js** para renderizado del terminal
+- **Tema Unix-like** (verde sobre negro por defecto)
+- **Status bar** con métricas del sistema
+- **Copy/paste** con Ctrl+C/Ctrl+V
+
+### Handlers IPC (`main.js`)
+
+```javascript
+// Detección
+ipcMain.handle('cygwin:detect', async () => { ... });
+
+// Operaciones por pestaña
+ipcMain.on(`cygwin:start:${tabId}`, ...);
+ipcMain.on(`cygwin:data:${tabId}`, ...);
+ipcMain.on(`cygwin:resize:${tabId}`, ...);
+ipcMain.on(`cygwin:stop:${tabId}`, ...);
+```
+
+## 📦 Distribución
+
+### En Desarrollo
+
+El Cygwin portable debe estar en:
+```
+NodeTerm/resources/cygwin64/
+```
+
+### En Producción
+
+Electron Builder copia automáticamente Cygwin a:
+```
+C:\Users\<user>\AppData\Local\Programs\NodeTerm\resources\cygwin64\
+```
 
 ## 🔄 Actualizaciones
 
 Para actualizar Cygwin:
 
-1. Crea una nueva versión con el script
-2. Empaquétalo
-3. Sube como nuevo release (ej: `cygwin-v1.1.0`)
-4. Actualiza la URL en el código
-5. Los usuarios descargarán la nueva versión automáticamente
+1. Ejecuta `.\scripts\create-cygwin-portable.ps1` para crear nueva versión
+2. Ejecuta `npm run dist` para crear nuevo instalador
+3. Distribuye el nuevo instalador a los usuarios
+4. Los usuarios instalan la nueva versión que incluye el Cygwin actualizado
+
+## 🎨 Personalización
+
+### Tema
+
+Edita el tema de Cygwin en `src/components/CygwinTerminal.js`:
+
+```javascript
+theme: {
+    background: '#000000',      // Fondo negro
+    foreground: '#00FF00',      // Texto verde (clásico)
+    cursor: '#00FF00',
+    // ... más colores
+}
+```
+
+### Paquetes Adicionales
+
+Modifica el script `scripts/create-cygwin-portable.ps1`:
+
+```powershell
+# Línea de paquetes
+$FULL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses,wget,curl,git,vim,nano,openssh,tar,gzip,bzip2,diffutils,file,procps-ng,YOUR_PACKAGE_HERE"
+```
 
 ## 🛠️ Mantenimiento
 
-### Verificar Integridad
+### Verificar Instalación
 
-Puedes generar un hash SHA256 del paquete:
+Después de ejecutar los scripts, puedes verificar que las herramientas estén disponibles:
 
-```powershell
-Get-FileHash .\cygwin64-portable.zip -Algorithm SHA256
+```bash
+# En tu terminal de Cygwin
+which nc
+which ping
+which telnet
+which nmap
+
+# Probar herramientas
+nc --version
+ping --version
 ```
 
-### Incluir en el Instalador (Opcional)
+### Verificar Integridad
 
-Si quieres que venga pre-instalado en el instalador de la app:
+Puedes verificar que Cygwin está correctamente incluido en el instalador:
 
-1. Incluye `resources\cygwin64\` en el build
-2. Actualiza `package.json`:
-   ```json
-   "build": {
-     "extraResources": [
-       {
-         "from": "resources/cygwin64",
-         "to": "cygwin64",
-         "filter": ["**/*"]
-       }
-     ]
-   }
-   ```
+```powershell
+# Verificar que bash.exe está en el instalador
+Test-Path "dist\win-unpacked\resources\cygwin64\bin\bash.exe"
 
-Esto aumentará el tamaño del instalador en ~80-100 MB, pero Cygwin estará disponible inmediatamente sin descargas.
+# Verificar configuración fstab
+Get-Content "dist\win-unpacked\resources\cygwin64\etc\fstab" | Select-String "tmp"
+```
 
-## 📝 Notas
+### Configuración Automática
 
-- El paquete se descarga en `%TEMP%\nodeterm-cygwin-download\`
-- Después de extraer, los archivos temporales se eliminan
-- Si la descarga falla, se puede reintentar
-- La extracción usa PowerShell `Expand-Archive` (nativo en Windows 10+)
+El instalador incluye automáticamente `resources\cygwin64\` gracias a la configuración en `package.json`:
+
+```json
+"build": {
+  "extraResources": [
+    {
+      "from": "resources/cygwin64",
+      "to": "cygwin64",
+      "filter": ["**/*"]
+    }
+  ]
+}
+```
+
+## 📋 Requisitos para Desarrollo
+
+- **PowerShell 5.0+**
+- **Conexión a Internet** (para descargar paquetes)
+- **Permisos de escritura** en el directorio del proyecto
+- **~858MB de espacio libre** para instalación Ultra Complete
+- **~200MB de espacio libre** para instalación Full
+- **~50MB de espacio libre** para instalación Minimal
+
+## ⚠️ Notas Importantes
+
+1. **Primera ejecución**: Los scripts descargan el instalador de Cygwin (~2MB)
+2. **Tiempo de instalación**: 5-10 minutos dependiendo de la conexión
+3. **Tamaño final**: ~858MB para instalación Ultra Complete
+4. **Reinstalación**: Ejecutar `create-cygwin-portable.ps1` sobrescribe la instalación anterior
+
+## 🐛 Solución de Problemas
+
+### Error de permisos
+```powershell
+# Usar directorio temporal
+.\scripts\create-cygwin-portable.ps1 -UseTemp
+```
+
+### Error de conexión
+- Verificar conexión a Internet
+- Intentar con otro mirror: cambiar URL en el script
+
+### Herramientas no encontradas
+```powershell
+# Verificar que el paquete se instaló correctamente
+Get-ChildItem .\resources\cygwin64\bin\ | Where-Object { $_.Name -like "*nc*" }
+```
+
+### Error `/tmp` en Cygwin
+Este error se solucionó automáticamente en el script. Si aparece:
+1. Verificar que `resources\cygwin64\etc\fstab` contiene la línea para `/tmp`
+2. Si no está, ejecutar nuevamente `create-cygwin-portable.ps1`
+
+### Cygwin no aparece en el selector
+
+1. Verifica que `resources/cygwin64/bin/bash.exe` existe
+2. Revisa la consola de desarrollo (F12) para errores
+3. Busca el log: `🔍 Cygwin disponible: false`
+
+### Error al iniciar Cygwin
+
+**Síntoma:** `No se pudo iniciar Cygwin`
+
+**Soluciones:**
+1. Ejecuta el script de creación de Cygwin de nuevo
+2. Verifica permisos de la carpeta `resources/cygwin64/`
+3. En desarrollo, verifica que `app.getAppPath()` apunta correctamente
+
+### Comandos no funcionan
+
+**Síntoma:** Comandos como `ls`, `git` no se encuentran
+
+**Solución:**
+- Verifica que los paquetes están instalados
+- Vuelve a ejecutar el script sin `-Minimal`
 
 ## ❓ FAQ
 
-### ¿Por qué no incluirlo directamente en el repo?
+### ¿Por qué incluirlo en el instalador?
 
-Git no maneja bien archivos grandes (>100 MB). GitHub tiene límites y el clone sería muy lento.
+- **Transparencia total** - El usuario no necesita hacer nada
+- **Sin dependencias de red** - Funciona offline
+- **Confiable** - Siempre la misma versión probada
+- **Inmediato** - Disponible desde el primer uso
 
-### ¿Y si GitHub está bloqueado?
+### ¿El instalador será muy grande?
 
-Puedes:
-1. Subir el paquete a tu propio servidor
-2. Usar un CDN
-3. Incluirlo directamente en el instalador
+- **Sí, ~514MB** - Pero incluye todo lo necesario
+- **Una sola descarga** - El usuario no necesita descargar nada más
+- **Sin instalaciones adicionales** - Todo viene listo
 
-### ¿Puedo usar 7-Zip en lugar de ZIP?
+### ¿Puedo crear versiones más pequeñas?
 
-Sí, pero necesitarías que 7-Zip esté instalado en la máquina del usuario. ZIP es nativo en PowerShell.
+Sí, usando los parámetros del script:
+- `-NoUltraComplete`: ~200MB (sin lenguajes de programación)
+- `-Minimal`: ~50MB (solo herramientas básicas)
+
+## 📊 Rendimiento
+
+- **Uso de memoria:** ~50-80 MB por sesión
+- **Tiempo de inicio:** ~1-2 segundos
+- **Backend:** WinPTY (mejor compatibilidad que ConPTY)
+
+## 🔐 Seguridad
+
+- Cygwin se ejecuta con los permisos del usuario actual
+- No requiere permisos de administrador
+- Sandboxed dentro de Electron
+- Sin conexiones de red salientes por defecto
+
+## 📄 Licencia
+
+Cygwin está bajo licencia GPLv3. Al distribuir NodeTerm con Cygwin embebido, debes:
+
+1. Incluir el código fuente de Cygwin (o un enlace)
+2. Mantener las licencias de Cygwin
+3. Cumplir con los términos de la GPL
+
+## 🎯 Roadmap Futuro
+
+- [ ] Actualización automática de Cygwin
+- [ ] Selector de paquetes en la UI
+- [ ] Soporte para X11 (aplicaciones gráficas)
+- [ ] Integración con WSL para compartir home
+
+## 📚 Más Información
+
+- [Documentación de Cygwin](https://cygwin.com/cygwin-ug-net/)
+- [Lista de paquetes disponibles](https://cygwin.com/packages/)
+- [MobaXterm](https://mobaxterm.mobatek.net/)
+- [node-pty](https://github.com/microsoft/node-pty)
+- [xterm.js](https://xtermjs.org/)
 
 ---
 
-**¡Esta solución es mucho más simple y confiable!** 🎉
+**¡Disfruta de tu terminal Unix embebido en Windows! 🎉**
