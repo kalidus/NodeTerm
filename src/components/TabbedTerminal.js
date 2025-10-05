@@ -151,16 +151,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     const result = await window.electronAPI.invoke('cygwin:detect');
                     if (result && typeof result.available === 'boolean') {
                         setCygwinAvailable(result.available);
-                        console.log('🔍 Cygwin disponible:', result.available);
-                        if (result.available) {
-                            console.log('   Path:', result.path);
-                        }
+                        // Cygwin detectado silenciosamente
                     } else {
-                        console.warn('⚠️ Respuesta de cygwin:detect inválida:', result);
+                        console.warn('⚠️ Cygwin: Respuesta inválida');
                         setCygwinAvailable(false);
                     }
                 } catch (error) {
-                    console.error('Error detectando Cygwin:', error);
+                    console.error('❌ Cygwin: Error de detección');
                     setCygwinAvailable(false);
                 }
             }
@@ -172,7 +169,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     // Función para instalar Cygwin bajo demanda
     const installCygwin = async () => {
         try {
-            console.log('🚀 Iniciando instalación de Cygwin...');
+            console.log('🚀 Cygwin: Iniciando instalación...');
             
             // Mostrar notificación de inicio
             const proceed = window.confirm(
@@ -190,11 +187,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             }
             
             // Llamar al handler de instalación
-            console.log('📥 Descargando e instalando Cygwin...');
+            console.log('📥 Cygwin: Descargando...');
             const result = await window.electronAPI.invoke('cygwin:install');
             
             if (result.success) {
-                console.log('✅ Cygwin instalado correctamente');
+                console.log('✅ Cygwin: Instalación completada');
                 
                 // Re-detectar Cygwin
                 const detectResult = await window.electronAPI.invoke('cygwin:detect');
@@ -208,7 +205,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 alert('❌ Error instalando Cygwin:\n\n' + (result.error || 'Error desconocido') + '\n\nPuedes ejecutar manualmente:\n.\\scripts\\create-cygwin-portable.ps1');
             }
         } catch (error) {
-            console.error('❌ Error instalando Cygwin:', error);
+            console.error('❌ Cygwin: Error en instalación');
             alert('❌ Error instalando Cygwin:\n\n' + error.message + '\n\nPor favor, ejecuta manualmente:\n.\\scripts\\create-cygwin-portable.ps1');
         }
     };

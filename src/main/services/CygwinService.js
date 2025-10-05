@@ -46,10 +46,7 @@ function initializeCygwinPaths() {
 
     const exists = fs.existsSync(cygwinBashPath);
 
-    console.log('🔍 Buscando Cygwin embebido:');
-    console.log('   Root:', cygwinRootPath);
-    console.log('   Bash:', cygwinBashPath);
-    console.log('   Exists:', exists);
+    console.log('🔍 Cygwin embebido:', exists ? '✅ Disponible' : '❌ No encontrado');
 
     return {
       root: cygwinRootPath,
@@ -93,7 +90,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
   try {
     // Verificar si ya hay un proceso activo
     if (cygwinProcesses[tabId]) {
-      console.log(`✅ Cygwin ya existe para ${tabId}, reutilizando`);
+      console.log(`✅ Cygwin ${tabId}: Reutilizando`);
       
       // No enviar prompt falso - el proceso ya está activo y mostrará su prompt real
       return;
@@ -105,7 +102,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
       throw new Error('Cygwin embebido no encontrado en la aplicación');
     }
 
-    console.log(`🚀 Iniciando Cygwin embebido para ${tabId}...`);
+    // Iniciando Cygwin silenciosamente
 
     // Crear directorio home para el usuario si no existe
     const userName = process.env.USERNAME || process.env.USER || 'user';
@@ -113,7 +110,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
     
     if (!fs.existsSync(cygwinHome)) {
       fs.mkdirSync(cygwinHome, { recursive: true });
-      console.log(`📁 Directorio home creado: ${cygwinHome}`);
+      // Home creado silenciosamente
     }
 
     // Crear un archivo .bashrc moderno estilo MobaXterm (siempre regenerar para aplicar cambios)
@@ -121,7 +118,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
     // Eliminar el archivo existente para forzar la regeneración con los cambios
     if (fs.existsSync(bashrcPath)) {
       fs.unlinkSync(bashrcPath);
-      console.log(`🗑️ .bashrc existente eliminado para aplicar cambios`);
+      // .bashrc actualizado silenciosamente
     }
     
     const bashrcContent = `# NodeTerm Cygwin - Configuración moderna
@@ -141,16 +138,14 @@ alias l='ls -CF'
 # Colores para ls
 export LS_COLORS='di=01;34:ln=01;36:ex=01;32:*.tar=01;31:*.zip=01;31:*.jpg=01;35:*.png=01;35'
 
-# Bienvenida
-echo -e "\\033[1;36m┌─────────────────────────────────────────┐\\033[0m"
-echo -e "\\033[1;36m│\\033[0m  \\033[1;32mCygwin Terminal\\033[0m - NodeTerm      \\033[1;36m│\\033[0m"
-echo -e "\\033[1;36m└─────────────────────────────────────────┘\\033[0m"
+# Bienvenida simple
+echo -e "\\033[1;32m■\\033[0m \\033[1;36mCygwin Terminal\\033[0m - NodeTerm"
 echo ""
 
 cd ~
 `;
     fs.writeFileSync(bashrcPath, bashrcContent, 'utf8');
-    console.log(`📝 .bashrc creado/actualizado en: ${bashrcPath}`);
+    // Configurado silenciosamente
 
     // Configuración de entorno para Cygwin
     const cygwinEnv = {
@@ -193,12 +188,8 @@ cd ~
     const args = ['--rcfile', path.join(cygwinHome, '.bashrc')];
 
     // Spawn del proceso
-    console.log(`📌 Spawning: ${paths.bash}`);
-    console.log(`📂 CWD: ${cygwinHome}`);
-    
     cygwinProcesses[tabId] = pty.spawn(paths.bash, args, spawnOptions);
-
-    console.log(`🔍 Proceso Cygwin spawned, PID: ${cygwinProcesses[tabId].pid}`);
+    console.log(`✅ Cygwin ${tabId}: Listo`);
 
     // Buffer para almacenar salida inicial hasta que el listener esté listo
     let outputBuffer = [];
@@ -206,11 +197,8 @@ cd ~
 
     // Handle output - bufferea inicialmente
     cygwinProcesses[tabId].onData((data) => {
-      console.log(`📤 Cygwin ${tabId} output:`, Buffer.from(data).toString('utf8').substring(0, 100));
-      
       if (!listenerReady) {
         // Almacenar en buffer durante los primeros 600ms
-        console.log(`💾 Buffereando output para ${tabId}...`);
         outputBuffer.push(data);
       } else if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:data:${tabId}`, data);
@@ -221,7 +209,6 @@ cd ~
     setTimeout(() => {
       listenerReady = true;
       if (outputBuffer.length > 0 && mainWindow && mainWindow.webContents) {
-        console.log(`📤 Enviando buffer de ${outputBuffer.length} chunks a ${tabId}`);
         outputBuffer.forEach(data => {
           mainWindow.webContents.send(`cygwin:data:${tabId}`, data);
         });
@@ -233,7 +220,7 @@ cd ~
 
     // Handle exit
     cygwinProcesses[tabId].onExit(({ exitCode, signal }) => {
-      console.log(`🔚 Cygwin ${tabId} terminó - Code: ${exitCode}, Signal: ${signal}`);
+      console.log(`🔚 Cygwin ${tabId}: Terminado`);
       delete cygwinProcesses[tabId];
       
       if (mainWindow && mainWindow.webContents) {
@@ -243,16 +230,16 @@ cd ~
 
     // Handle errors
     cygwinProcesses[tabId].on('error', (error) => {
-      console.error(`❌ Error en Cygwin ${tabId}:`, error);
+        console.error(`❌ Cygwin ${tabId}: Error`);
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send(`cygwin:error:${tabId}`, error.message);
       }
     });
 
-    console.log(`✅ Sesión Cygwin iniciada para ${tabId}`);
+    // Sesión lista silenciosamente
 
   } catch (error) {
-    console.error(`❌ Error starting Cygwin for ${tabId}:`, error);
+    console.error(`❌ Cygwin ${tabId}: Error de inicio`);
     if (mainWindow && mainWindow.webContents) {
       mainWindow.webContents.send(`cygwin:error:${tabId}`, 
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
@@ -272,11 +259,7 @@ const CygwinHandlers = {
       const available = isCygwinAvailable();
       const paths = initializeCygwinPaths();
       
-      console.log('🔍 CygwinHandlers.detect() result:', {
-        available: available,
-        path: available ? paths.bash : null,
-        root: available ? paths.root : null
-      });
+      // Log simplificado para detección
       
       return {
         available: available === true,
@@ -284,7 +267,7 @@ const CygwinHandlers = {
         root: available ? paths.root : null
       };
     } catch (error) {
-      console.error('❌ Error en CygwinHandlers.detect():', error);
+      console.error('❌ Cygwin: Error de detección');
       return {
         available: false,
         path: null,
@@ -303,10 +286,10 @@ const CygwinHandlers = {
       try {
         cygwinProcesses[tabId].write(data);
       } catch (error) {
-        console.error(`❌ Error writing to Cygwin ${tabId}:`, error);
+        console.error(`❌ Cygwin ${tabId}: Error de escritura`);
       }
     } else {
-      console.warn(`⚠️ No Cygwin process found for ${tabId}`);
+      console.warn(`⚠️ Cygwin ${tabId}: Proceso no encontrado`);
     }
   },
 
@@ -316,7 +299,7 @@ const CygwinHandlers = {
       try {
         cygwinProcesses[tabId].resize(cols, rows);
       } catch (error) {
-        console.error(`❌ Error resizing Cygwin ${tabId}:`, error);
+        console.error(`❌ Cygwin ${tabId}: Error de redimensionado`);
       }
     }
   },
@@ -325,20 +308,20 @@ const CygwinHandlers = {
   stop: (tabId) => {
     if (cygwinProcesses[tabId]) {
       try {
-        console.log(`🛑 Stopping Cygwin process for ${tabId}`);
+        console.log(`🛑 Cygwin ${tabId}: Deteniendo`);
         const process = cygwinProcesses[tabId];
         process.removeAllListeners();
         process.kill();
         delete cygwinProcesses[tabId];
       } catch (error) {
-        console.error(`❌ Error stopping Cygwin ${tabId}:`, error);
+        console.error(`❌ Cygwin ${tabId}: Error al detener`);
       }
     }
   },
 
   // Limpiar todos los procesos (al cerrar la app)
   cleanup: () => {
-    console.log(`🧹 Limpiando ${Object.keys(cygwinProcesses).length} procesos Cygwin...`);
+    console.log(`🧹 Cygwin: Limpiando ${Object.keys(cygwinProcesses).length} procesos`);
     Object.keys(cygwinProcesses).forEach(tabId => {
       CygwinHandlers.stop(tabId);
     });

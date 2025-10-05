@@ -131,11 +131,11 @@ const UpdatePanel = () => {
     };
     
     if (window.electron?.ipcRenderer) {
-      console.log('✅ Suscribiéndose a eventos updater-event');
+      // Suscribiéndose a eventos updater silenciosamente
       const unsubscribe = window.electron.ipcRenderer.on('updater-event', handleUpdaterEvent);
       
       return () => {
-        console.log('🔌 Desuscribiéndose de eventos updater-event');
+        // Desuscribiéndose silenciosamente
         if (unsubscribe && typeof unsubscribe === 'function') {
           unsubscribe();
         }
