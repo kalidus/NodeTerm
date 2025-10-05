@@ -138,11 +138,75 @@ const MainContentArea = ({
   // Ref y estado para el menú contextual de selección de terminal
   const terminalSelectorMenuRef = useRef(null);
   
+  // Estado para las opciones del menú de terminales
+  const [terminalMenuItems, setTerminalMenuItems] = useState([]);
+  
   // Contador para IDs de terminales locales - iniciar desde 1000 para evitar colisiones con Home
   const localTerminalCounterRef = useRef(1000);
   
   // Estado para distribuciones WSL disponibles
   const [wslDistributions, setWslDistributions] = useState([]);
+  
+  // Generar opciones del menú de terminales
+  useEffect(() => {
+    const platform = window.electron?.platform || 'unknown';
+    
+    if (platform === 'win32') {
+      const menuItems = [
+        {
+          label: 'PowerShell',
+          icon: 'pi pi-desktop',
+          command: () => {
+            setLastLocalTerminalType('powershell');
+            createLocalTerminalTab('powershell');
+          }
+        },
+        {
+          label: 'WSL',
+          icon: 'pi pi-server',
+          command: () => {
+            setLastLocalTerminalType('wsl');
+            createLocalTerminalTab('wsl');
+          }
+        },
+        {
+          label: 'Cygwin',
+          icon: 'pi pi-code',
+          command: () => {
+            setLastLocalTerminalType('cygwin');
+            createLocalTerminalTab('cygwin');
+          }
+        }
+      ];
+      
+      // Agregar distribuciones WSL detectadas dinámicamente
+      if (wslDistributions && wslDistributions.length > 0) {
+        wslDistributions.forEach(distro => {
+          menuItems.push({
+            label: distro.label,
+            icon: distro.icon || 'pi pi-circle',
+            command: () => {
+              setLastLocalTerminalType(distro.name);
+              createLocalTerminalTab(distro.name, distro);
+            }
+          });
+        });
+      }
+      
+      setTerminalMenuItems(menuItems);
+    } else {
+      setTerminalMenuItems([
+        {
+          label: 'Terminal',
+          icon: 'pi pi-desktop',
+          command: () => {
+            setLastLocalTerminalType('linux-terminal');
+            createLocalTerminalTab('linux-terminal');
+          }
+        }
+      ]);
+    }
+  }, [wslDistributions]);
   
   // Detectar distribuciones WSL disponibles al montar el componente
   useEffect(() => {
@@ -824,69 +888,7 @@ const MainContentArea = ({
                     <ContextMenu
                       ref={terminalSelectorMenuRef}
                       className="context-menu-themed"
-                      model={(() => {
-                        const platform = window.electron?.platform || 'unknown';
-                        if (platform === 'win32') {
-                          const menuItems = [
-                            {
-                              label: 'PowerShell',
-                              icon: 'pi pi-desktop',
-                              command: () => {
-                                setLastLocalTerminalType('powershell');
-                                createLocalTerminalTab('powershell');
-                              }
-                            },
-                            {
-                              label: 'WSL',
-                              icon: 'pi pi-server',
-                              command: () => {
-                                setLastLocalTerminalType('wsl');
-                                createLocalTerminalTab('wsl');
-                              }
-                            }
-                          ];
-                          
-                          // Agregar distribuciones WSL detectadas dinámicamente
-                          if (wslDistributions && wslDistributions.length > 0) {
-                            wslDistributions.forEach(distro => {
-                              menuItems.push({
-                                label: distro.label,
-                                icon: distro.icon || 'pi pi-circle',
-                                command: () => {
-                                  // Guardar el tipo de terminal para el botón "+"
-                                  setLastLocalTerminalType(distro.name);
-                                  // Crear tab pasando la información completa de la distro
-                                  createLocalTerminalTab(distro.name, distro);
-                                }
-                              });
-                            });
-                          }
-                          
-                          return menuItems;
-                        } else if (platform === 'linux' || platform === 'darwin') {
-                          return [
-                            {
-                              label: 'Terminal',
-                              icon: 'pi pi-desktop',
-                              command: () => {
-                                setLastLocalTerminalType('linux-terminal');
-                                createLocalTerminalTab('linux-terminal');
-                              }
-                            }
-                          ];
-                        } else {
-                          return [
-                            {
-                              label: 'Terminal',
-                              icon: 'pi pi-desktop',
-                              command: () => {
-                                setLastLocalTerminalType('powershell');
-                                createLocalTerminalTab('powershell');
-                              }
-                            }
-                          ];
-                        }
-                      })()}
+                      model={terminalMenuItems}
                     />
                   </div>
                 )}

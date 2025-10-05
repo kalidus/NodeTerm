@@ -483,12 +483,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     
     const terminalOptions = getTerminalOptions();
     
-    // Log para depuración
-    //     wslDistributionsCount: wslDistributions.length,
-    //     optionsCount: terminalOptions.length,
-    //     options: terminalOptions.map(opt => opt.label),
-    //     distributions: wslDistributions.map(distro => `${distro.label} (${distro.category})`)
-    // });
 
     // Función para crear una pestaña RDP con configuración específica
     const createRdpTab = (title, rdpConfig) => {
