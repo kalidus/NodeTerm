@@ -321,16 +321,8 @@ const TabContentRenderer = React.memo(({
     );
   }
 
-  // Si llegamos aquí y no es SSH, mostrar error
-  console.error('❌ Tipo de pestaña no soportado:', { 
-    tabKey: tab.key, 
-    type: tab.type, 
-    terminalType: tab.terminalType,
-    fullTab: tab 
-  });
-
-  // Default: TerminalComponent (SSH) o mensaje de error
-  if (tab.sshConfig) {
+  // Terminal SSH (type: 'terminal' con sshConfig)
+  if (tab.type === 'terminal' && tab.sshConfig) {
     return (
       <TerminalComponent
         key={tab.key}
@@ -347,6 +339,14 @@ const TabContentRenderer = React.memo(({
       />
     );
   }
+
+  // Si llegamos aquí y no es SSH, mostrar error
+  console.error('❌ Tipo de pestaña no soportado:', { 
+    tabKey: tab.key, 
+    type: tab.type, 
+    terminalType: tab.terminalType,
+    fullTab: tab 
+  });
 
   // Mensaje de error para tipos no soportados
   return (
