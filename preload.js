@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl:.*$/,
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
+        /^cygwin:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^updater-event$/
@@ -98,6 +99,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl:.*$/,
         /^ubuntu:.*$/,
         /^wsl-distro:.*$/,
+        /^cygwin:.*$/,
         /^rdp:.*$/,
         /^updater-event$/
       ];
@@ -172,5 +174,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPresets: () => ipcRenderer.invoke('rdp:get-presets'),
     showWindow: (server) => ipcRenderer.invoke('rdp:show-window', { server }),
     disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server })
+  },
+  // Generic invoke method for IPC
+  invoke: (channel, data) => {
+    const validChannels = [
+      'cygwin:detect',
+      'cygwin:install',
+      // Add more channels as needed
+    ];
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, data);
+    }
+    return Promise.reject(new Error(`Invalid channel: ${channel}`));
   }
 }); 
