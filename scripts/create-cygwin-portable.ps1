@@ -134,6 +134,17 @@ foreach ($cleanPath in $cleanupPaths) {
 # Crear archivo .cygwinrc personalizado
 Write-Host ""
 Write-Host "Creando configuracion personalizada..." -ForegroundColor Cyan
+
+# Configurar fstab para /tmp
+Write-Host "   Configurando fstab para /tmp..." -ForegroundColor Gray
+$fstabPath = Join-Path $OutputDir "etc\fstab"
+if (Test-Path $fstabPath) {
+    $fstabContent = Get-Content $fstabPath -Raw
+    if ($fstabContent -notmatch "/tmp") {
+        $fstabContent += "`n# Configurar directorio /tmp`nnone /tmp usertemp binary,posix=0,user 0 0`n"
+        Set-Content $fstabPath $fstabContent -Encoding UTF8
+    }
+}
 $cygwinrc = @"
 # NodeTerm Cygwin Configuration
 # This file is sourced by bash on login
