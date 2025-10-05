@@ -94,16 +94,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
       //   mainWindow.webContents.send(`powershell:data:${tabId}`, welcomeMsg);
       // }
       
-      // Refrescar prompt para mostrar estado actual
-      setTimeout(() => {
-        if (powershellProcesses[tabId]) {
-          try {
-            powershellProcesses[tabId].write('\r');
-          } catch (e) {
-            console.log(`Error refrescando prompt para ${tabId}:`, e.message);
-          }
-        }
-      }, 300);
+      // No refrescar prompt automáticamente para evitar duplicación
+      // El prompt ya está activo cuando se reutiliza el proceso
       
       return;
     }
