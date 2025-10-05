@@ -95,20 +95,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
     if (cygwinProcesses[tabId]) {
       console.log(`✅ Cygwin ya existe para ${tabId}, reutilizando`);
       
-      // IMPORTANTE: Dar tiempo al frontend para registrar el listener
-      setTimeout(() => {
-        if (cygwinProcesses[tabId] && mainWindow && mainWindow.webContents) {
-          try {
-            console.log(`🔄 Reenviando prompt a ${tabId}...`);
-            // Enviar un prompt visible inmediatamente
-            mainWindow.webContents.send(`cygwin:data:${tabId}`, 'kalid@Kore:~$ ');
-            
-            // No enviar newline extra para evitar duplicación del prompt
-          } catch (e) {
-            console.warn(`⚠️ Error refrescando prompt:`, e.message);
-          }
-        }
-      }, 600); // Delay mayor para asegurar que el listener esté listo
+      // No enviar prompt falso - el proceso ya está activo y mostrará su prompt real
       return;
     }
 
@@ -240,18 +227,7 @@ cd ~
       }
     }, 600);
 
-    // Activar el prompt después de que bash se inicialice
-    setTimeout(() => {
-      try {
-        if (cygwinProcesses[tabId]) {
-          console.log(`📝 Activando prompt para ${tabId}...`);
-          // Enviar enter para mostrar el prompt con el bashrc cargado
-          cygwinProcesses[tabId].write('\r');
-        }
-      } catch (e) {
-        console.warn(`⚠️ Error activando prompt:`, e.message);
-      }
-    }, 400);
+    // No enviar \r automático - bash ya mostrará su prompt cuando esté listo
 
     // Handle exit
     cygwinProcesses[tabId].onExit(({ exitCode, signal }) => {
