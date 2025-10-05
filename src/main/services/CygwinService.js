@@ -103,12 +103,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
             // Enviar un prompt visible inmediatamente
             mainWindow.webContents.send(`cygwin:data:${tabId}`, 'kalid@Kore:~$ ');
             
-            // También enviar newline para generar prompt real
-            setTimeout(() => {
-              if (cygwinProcesses[tabId]) {
-                cygwinProcesses[tabId].write('\r');
-              }
-            }, 100);
+            // No enviar newline extra para evitar duplicación del prompt
           } catch (e) {
             console.warn(`⚠️ Error refrescando prompt:`, e.message);
           }
@@ -157,6 +152,8 @@ export LS_COLORS='di=01;34:ln=01;36:ex=01;32:*.tar=01;31:*.zip=01;31:*.jpg=01;35
 # Bienvenida
 echo -e "\\033[1;36m┌─────────────────────────────────────────┐\\033[0m"
 echo -e "\\033[1;36m│\\033[0m  \\033[1;32mCygwin Terminal\\033[0m - NodeTerm      \\033[1;36m│\\033[0m"
+echo -e "\\033[1;36m│\\033[0m  \\033[1;37mVersión: 1.0.0\\033[0m                      \\033[1;36m│\\033[0m"
+echo -e "\\033[1;36m│\\033[0m  \\033[1;37mDesarrollado por: Kalidou\\033[0m             \\033[1;36m│\\033[0m"
 echo -e "\\033[1;36m└─────────────────────────────────────────┘\\033[0m"
 echo ""
 
@@ -203,8 +200,8 @@ cd ~
       }
     };
 
-    // Args para bash: NO usar --login para evitar problemas
-    const args = ['--norc', '--noprofile', '-i'];
+    // Args para bash: cargar bashrc pero sin modo interactivo extra
+    const args = ['--rcfile', path.join(cygwinHome, '.bashrc')];
 
     // Spawn del proceso
     console.log(`📌 Spawning: ${paths.bash}`);
@@ -243,36 +240,18 @@ cd ~
       }
     }, 600);
 
-    // Enviar "newline" inicial para activar bash
+    // Activar el prompt después de que bash se inicialice
     setTimeout(() => {
       try {
         if (cygwinProcesses[tabId]) {
-          console.log(`📝 Enviando newline inicial a ${tabId}...`);
+          console.log(`📝 Activando prompt para ${tabId}...`);
+          // Enviar enter para mostrar el prompt con el bashrc cargado
           cygwinProcesses[tabId].write('\r');
         }
       } catch (e) {
-        console.warn(`⚠️ Error enviando newline inicial:`, e.message);
+        console.warn(`⚠️ Error activando prompt:`, e.message);
       }
-    }, 200);
-
-    // Enviar comandos iniciales después de un delay mayor
-    setTimeout(() => {
-      try {
-        if (cygwinProcesses[tabId]) {
-          console.log(`📝 Cargando bashrc para ${tabId}...`);
-          // Cargar bashrc manualmente
-          cygwinProcesses[tabId].write('source ~/.bashrc\r');
-          // Otro enter para mostrar el prompt
-          setTimeout(() => {
-            if (cygwinProcesses[tabId]) {
-              cygwinProcesses[tabId].write('\r');
-            }
-          }, 300);
-        }
-      } catch (e) {
-        console.warn(`⚠️ Error enviando comandos iniciales:`, e.message);
-      }
-    }, 800);
+    }, 400);
 
     // Handle exit
     cygwinProcesses[tabId].onExit(({ exitCode, signal }) => {
