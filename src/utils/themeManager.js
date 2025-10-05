@@ -70,7 +70,10 @@ class ThemeManager {
     
     // Emitir evento global para notificar cambio de tema
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('theme-changed'));
+      // Usar setTimeout para asegurar que el tema se haya aplicado completamente
+      setTimeout(() => {
+        window.dispatchEvent(new Event('theme-changed'));
+      }, 10);
     }
   }
 

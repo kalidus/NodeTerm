@@ -2339,8 +2339,16 @@ const TabThemeSelector = () => {
       const currentTheme = themeManager.getCurrentTheme();
       if (currentTheme) {
         setCurrentUITheme(currentTheme.name);
-        // Re-aplicar tema de pestañas si es default
-        if (selectedTheme === 'default') {
+        
+        // Si el tema de pestañas no es 'default', cambiarlo automáticamente a 'default'
+        // para que respete el nuevo tema UI seleccionado
+        if (selectedTheme !== 'default') {
+          console.log(`[TAB-THEME] Cambiando tema de pestañas de "${selectedTheme}" a "default" debido a cambio de tema UI`);
+          setSelectedTheme('default');
+          localStorage.setItem(TAB_THEME_STORAGE_KEY, 'default');
+          applyTabThemeWithAnimations('default');
+        } else {
+          // Re-aplicar tema de pestañas si ya es default
           applyTabThemeWithAnimations('default');
         }
       }
