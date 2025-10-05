@@ -4,6 +4,7 @@ import { Dropdown } from 'primereact/dropdown';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
+import CygwinTerminal from './CygwinTerminal';
 import GuacamoleTerminal from './GuacamoleTerminal';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
@@ -97,6 +98,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [selectedTerminalType, setSelectedTerminalType] = useState(getDefaultTerminalType());
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
+    const [cygwinAvailable, setCygwinAvailable] = useState(false); // Estado para Cygwin
     // Estado para drag & drop de pestañas locales del terminal
     const [draggedTabIndex, setDraggedTabIndex] = useState(null);
     const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
@@ -139,6 +141,77 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         
         detectWSLDistributions();
     }, []);
+
+    // Detectar disponibilidad de Cygwin embebido
+    useEffect(() => {
+        const detectCygwin = async () => {
+            if (window.electron && window.electron.platform === 'win32') {
+                try {
+                    // Usar window.electronAPI.invoke que definimos en preload.js
+                    const result = await window.electronAPI.invoke('cygwin:detect');
+                    if (result && typeof result.available === 'boolean') {
+                        setCygwinAvailable(result.available);
+                        console.log('🔍 Cygwin disponible:', result.available);
+                        if (result.available) {
+                            console.log('   Path:', result.path);
+                        }
+                    } else {
+                        console.warn('⚠️ Respuesta de cygwin:detect inválida:', result);
+                        setCygwinAvailable(false);
+                    }
+                } catch (error) {
+                    console.error('Error detectando Cygwin:', error);
+                    setCygwinAvailable(false);
+                }
+            }
+        };
+        
+        detectCygwin();
+    }, []);
+
+    // Función para instalar Cygwin bajo demanda
+    const installCygwin = async () => {
+        try {
+            console.log('🚀 Iniciando instalación de Cygwin...');
+            
+            // Mostrar notificación de inicio
+            const proceed = window.confirm(
+                '⏳ ¿Instalar Cygwin Portable?\n\n' +
+                '• Descarga: ~150 MB\n' +
+                '• Tiempo: 5-10 minutos\n' +
+                '• Requiere internet\n\n' +
+                'Se abrirá una ventana de PowerShell mostrando el progreso.\n\n' +
+                '¿Continuar?'
+            );
+            
+            if (!proceed) {
+                console.log('❌ Instalación cancelada por el usuario');
+                return;
+            }
+            
+            // Llamar al handler de instalación
+            console.log('📥 Descargando e instalando Cygwin...');
+            const result = await window.electronAPI.invoke('cygwin:install');
+            
+            if (result.success) {
+                console.log('✅ Cygwin instalado correctamente');
+                
+                // Re-detectar Cygwin
+                const detectResult = await window.electronAPI.invoke('cygwin:detect');
+                if (detectResult && detectResult.available) {
+                    setCygwinAvailable(true);
+                    alert('✅ ¡Cygwin instalado correctamente!\n\nAhora puedes crear pestañas de Cygwin.');
+                } else {
+                    alert('⚠️ Cygwin se instaló pero no se pudo verificar.\n\nPor favor, reinicia la aplicación.');
+                }
+            } else {
+                alert('❌ Error instalando Cygwin:\n\n' + (result.error || 'Error desconocido') + '\n\nPuedes ejecutar manualmente:\n.\\scripts\\create-cygwin-portable.ps1');
+            }
+        } catch (error) {
+            console.error('❌ Error instalando Cygwin:', error);
+            alert('❌ Error instalando Cygwin:\n\n' + error.message + '\n\nPor favor, ejecuta manualmente:\n.\\scripts\\create-cygwin-portable.ps1');
+        }
+    };
 
     // LEGACY: Detección frontend temporal (DESACTIVADA - usando solo backend)
     /*
@@ -213,6 +286,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     window.electron.ipcRenderer.send(`powershell:stop:${tab.id}`);
                     window.electron.ipcRenderer.send(`wsl:stop:${tab.id}`);
                     window.electron.ipcRenderer.send(`ubuntu:stop:${tab.id}`);
+                    window.electron.ipcRenderer.send(`cygwin:stop:${tab.id}`);
                 });
             }
         };
@@ -372,21 +446,31 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         const platform = window.electron?.platform || 'unknown';
         
         if (platform === 'win32') {
-            // En Windows: mostrar PowerShell, WSL y cada distribución WSL detectada (sin RDP aquí)
-            return [
+            // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
+            const options = [
                 { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
                 { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
-                // Agregar cada distribución WSL como opción separada
-                ...wslDistributions.map(distro => ({
-                    label: distro.label,
-                    value: `wsl-${distro.name}`,
-                    icon: distro.icon,
-                    executable: distro.executable,
-                    category: distro.category,
-                    distroName: distro.name,
-                    distroInfo: distro
-                }))
+                // Cygwin siempre visible en Windows (se instalará bajo demanda si no existe)
+                { 
+                    label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)', 
+                    value: 'cygwin', 
+                    icon: 'pi pi-code',
+                    color: '#00FF00'
+                },
             ];
+            
+            // Agregar cada distribución WSL como opción separada
+            options.push(...wslDistributions.map(distro => ({
+                label: distro.label,
+                value: `wsl-${distro.name}`,
+                icon: distro.icon,
+                executable: distro.executable,
+                category: distro.category,
+                distroName: distro.name,
+                distroInfo: distro
+            })));
+            
+            return options;
         } else if (platform === 'linux' || platform === 'darwin') {
             // En Linux/macOS: mostrar terminal nativo
             return [
@@ -473,6 +557,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         } else if (terminalTypeToUse === 'rdp-guacamole') {
             title = 'RDP Session';
             terminalType = 'rdp-guacamole';
+        } else if (terminalTypeToUse === 'cygwin') {
+            // Verificar si Cygwin está instalado antes de crear la pestaña
+            if (!cygwinAvailable) {
+                // Mostrar diálogo para instalar Cygwin
+                const install = window.confirm(
+                    '🐧 Cygwin no está instalado en la aplicación.\n\n' +
+                    '¿Deseas instalarlo ahora?\n\n' +
+                    'Esto descargará e instalará Cygwin portable (~150 MB).\n' +
+                    'Puede tomar 5-10 minutos.\n\n' +
+                    'Nota: Requiere conexión a internet.'
+                );
+                
+                if (install) {
+                    // Iniciar instalación de Cygwin
+                    installCygwin();
+                }
+                return; // No crear la pestaña aún
+            }
+            
+            title = 'Cygwin';
+            terminalType = 'cygwin';
         } else if (terminalTypeToUse.startsWith('wsl-')) {
             // Extraer información de la distribución WSL seleccionada
             const distroName = terminalTypeToUse.replace('wsl-', '');
@@ -512,7 +617,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             const newTabs = [...prevTabs, {
                 id: newTabId,
                 title,
-                type: terminalType,
+                type: terminalType,  // Tipo de terminal: powershell, wsl, cygwin, ubuntu, etc.
                 distroInfo: distroInfo, // Información específica para distribuciones WSL
                 active: true
             }];
@@ -572,6 +677,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             window.electron.ipcRenderer.send(`powershell:stop:${tabId}`);
             window.electron.ipcRenderer.send(`wsl:stop:${tabId}`);
             window.electron.ipcRenderer.send(`ubuntu:stop:${tabId}`);
+            window.electron.ipcRenderer.send(`cygwin:stop:${tabId}`);
         }
         
         setTabs(prevTabs => {
@@ -754,10 +860,12 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 <i 
                                     className={tab.type === 'powershell' ? 'pi pi-desktop' : 
                                               tab.type === 'wsl' ? 'pi pi-server' : 
+                                              tab.type === 'cygwin' ? 'pi pi-code' :
                                               tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'} 
                                     style={{ 
                                         color: tab.type === 'powershell' ? '#4fc3f7' : 
                                                tab.type === 'wsl' ? '#8ae234' : 
+                                               tab.type === 'cygwin' ? '#00FF00' :
                                                tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
                                         fontSize: '12px',
                                         marginRight: '6px'
@@ -898,6 +1006,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                             <i class="${option.icon}" style="color: ${
                                                 option.value === 'powershell' ? '#4fc3f7' : 
                                                 option.value === 'wsl' ? '#8ae234' : 
+                                                option.value === 'cygwin' ? '#00FF00' :
                                                 option.value === 'rdp-guacamole' ? '#ff6b35' : '#e95420'
                                             }; font-size: 12px;"></i>
                                             <span>${option.label}</span>
@@ -1173,6 +1282,17 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 }}
                                 tabId={tab.id}
                                 ubuntuInfo={tab.distroInfo}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                            />
+                        ) : tab.type === 'cygwin' ? (
+                            <CygwinTerminal 
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                             />
                         ) : tab.type === 'rdp-guacamole' ? (

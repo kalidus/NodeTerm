@@ -9,6 +9,7 @@ import TerminalComponent from './TerminalComponent';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
+import CygwinTerminal from './CygwinTerminal';
 import { themes } from '../themes';
 
 const TabContentRenderer = React.memo(({
@@ -240,6 +241,7 @@ const TabContentRenderer = React.memo(({
   // Terminal local independiente
   if (tab.type === 'local-terminal') {
     const terminalType = tab.terminalType || 'powershell';
+    console.log('🔍 Renderizando terminal local:', { tabKey: tab.key, type: tab.type, terminalType });
     
     // PowerShell o terminal genérico
     if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
@@ -289,6 +291,21 @@ const TabContentRenderer = React.memo(({
         />
       );
     }
+
+    // Cygwin Terminal
+    if (terminalType === 'cygwin') {
+      const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
+
+      return (
+        <CygwinTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={linuxTheme}
+        />
+      );
+    }
     
     // Fallback a PowerShell
     const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
@@ -304,21 +321,58 @@ const TabContentRenderer = React.memo(({
     );
   }
 
-  // Default: TerminalComponent (SSH)
+  // Si llegamos aquí y no es SSH, mostrar error
+  console.error('❌ Tipo de pestaña no soportado:', { 
+    tabKey: tab.key, 
+    type: tab.type, 
+    terminalType: tab.terminalType,
+    fullTab: tab 
+  });
+
+  // Default: TerminalComponent (SSH) o mensaje de error
+  if (tab.sshConfig) {
+    return (
+      <TerminalComponent
+        key={tab.key}
+        ref={el => terminalRefs.current[tab.key] = el}
+        tabId={tab.key}
+        sshConfig={tab.sshConfig}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
+        theme={terminalTheme.theme}
+        onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey, showTerminalContextMenu)}
+        active={isActiveTab}
+        stats={terminalSshStatsByTabId[tab.key]}
+        statusBarIconTheme={statusBarIconTheme}
+      />
+    );
+  }
+
+  // Mensaje de error para tipos no soportados
   return (
-    <TerminalComponent
-      key={tab.key}
-      ref={el => terminalRefs.current[tab.key] = el}
-      tabId={tab.key}
-      sshConfig={tab.sshConfig}
-      fontFamily={fontFamily}
-      fontSize={fontSize}
-      theme={terminalTheme.theme}
-      onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey, showTerminalContextMenu)}
-      active={isActiveTab}
-      stats={terminalSshStatsByTabId[tab.key]}
-      statusBarIconTheme={statusBarIconTheme}
-    />
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100%', 
+      color: '#fff',
+      flexDirection: 'column',
+      gap: '10px',
+      padding: '20px',
+      textAlign: 'center'
+    }}>
+      <div style={{ fontSize: '18px' }}>⚠️ Tipo de terminal no soportado</div>
+      <div style={{ fontSize: '14px', opacity: 0.7 }}>
+        type: <code>{tab.type || 'undefined'}</code>
+      </div>
+      <div style={{ fontSize: '14px', opacity: 0.7 }}>
+        terminalType: <code>{tab.terminalType || 'undefined'}</code>
+      </div>
+      <div style={{ fontSize: '12px', opacity: 0.5, marginTop: '20px' }}>
+        Esta pestaña fue creada con una estructura antigua.<br/>
+        Cierra esta pestaña y crea una nueva.
+      </div>
+    </div>
   );
 });
 

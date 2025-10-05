@@ -25,4 +25,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+
+# Cygwin portable y directorios de instalacion
+resources/cygwin64/
+cygwin-setup-temp.exe
+http*/
+ftp*/
+*%*/ 

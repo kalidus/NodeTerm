@@ -5,7 +5,7 @@ let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers;
 const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./src/main/utils');
 
 // Importar servicios centralizados (fuera del try-catch para acceso global)
-const { WSL, PowerShell } = require('./src/main/services');
+const { WSL, PowerShell, Cygwin } = require('./src/main/services');
 
 try {
   // Importar configuraciones de terminal desde archivo externo
@@ -23,7 +23,16 @@ try {
 }
 
 try {
-  require('electron-reloader')(module);
+  require('electron-reloader')(module, {
+    ignore: [
+      'resources/**',           // Ignorar carpeta resources (Cygwin, etc.)
+      'node_modules/**',
+      'dist/**',
+      '**/*.map',
+      '.git/**'
+    ],
+    watchRenderer: true
+  });
 } catch (_) {}
 
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu } = require('electron');
@@ -375,6 +384,7 @@ function createWindow() {
       SafeWindowsTerminal,
       isAppQuitting
     });
+    Cygwin.setMainWindow(mainWindow);
     
     // Inicializar servicio de actualizaciones
     const updateService = getUpdateService();
@@ -453,6 +463,88 @@ ipcMain.handle('detect-ubuntu-availability', async () => {
   } catch (error) {
     console.error('❌ Error en detección de distribuciones WSL:', error);
     return [];
+  }
+});
+
+// Handler para detectar disponibilidad de Cygwin embebido
+ipcMain.handle('cygwin:detect', async () => {
+  try {
+    const result = Cygwin.CygwinHandlers.detect();
+    console.log('🔍 Cygwin detection result:', result.available ? '✅ Available' : '❌ Not available');
+    return result;
+  } catch (error) {
+    console.error('❌ Error detecting Cygwin:', error);
+    return { available: false, path: null, error: error.message };
+  }
+});
+
+// Variable global para controlar instalación de Cygwin
+let cygwinInstalling = false;
+
+// Handler para instalar Cygwin portable automáticamente
+// NOTA: Actualmente usa descarga de paquete pre-empaquetado
+// Para crear el paquete: .\scripts\package-cygwin.ps1
+ipcMain.handle('cygwin:install', async () => {
+  // Prevenir múltiples instalaciones simultáneas
+  if (cygwinInstalling) {
+    console.log('⚠️ Instalación de Cygwin ya en progreso, ignorando solicitud duplicada');
+    return { 
+      success: false, 
+      error: 'Ya hay una instalación de Cygwin en progreso. Por favor espera a que termine.' 
+    };
+  }
+  
+  try {
+    cygwinInstalling = true;
+    
+    // TODO: Cambiar a CygwinDownloader cuando el paquete esté en GitHub
+    // Por ahora, ejecutar script local para testing
+    console.log('🚀 Iniciando instalación automática de Cygwin...');
+    
+    const { spawn } = require('child_process');
+    const scriptPath = path.join(app.getAppPath(), 'scripts', 'create-cygwin-portable.ps1');
+    
+    return new Promise((resolve) => {
+      const ps = spawn('powershell.exe', [
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptPath,
+        '-OutputDir', path.join(app.getAppPath(), 'resources', 'cygwin64')
+      ], {
+        stdio: 'inherit',  // Mostrar salida en consola
+        windowsHide: false
+      });
+      
+      ps.on('close', (code) => {
+        cygwinInstalling = false;
+        if (code === 0) {
+          console.log('✅ Cygwin instalado correctamente');
+          resolve({ success: true });
+        } else {
+          console.error('❌ Error en instalación de Cygwin. Código:', code);
+          resolve({ 
+            success: false, 
+            error: `Instalación falló con código ${code}`
+          });
+        }
+      });
+      
+      ps.on('error', (error) => {
+        cygwinInstalling = false;
+        console.error('❌ Error ejecutando script:', error);
+        resolve({ 
+          success: false, 
+          error: `Error ejecutando PowerShell: ${error.message}`
+        });
+      });
+    });
+    
+  } catch (error) {
+    cygwinInstalling = false;
+    console.error('❌ Error en handler cygwin:install:', error);
+    return { 
+      success: false, 
+      error: error.message + '\n\nPor favor, ejecuta manualmente:\n.\\scripts\\create-cygwin-portable.ps1'
+    };
   }
 });
 
@@ -1405,6 +1497,15 @@ app.on('before-quit', () => {
       // Ignorar errores
     }
   });
+  
+  // Cleanup Cygwin processes
+  if (Cygwin && Cygwin.CygwinHandlers) {
+    try {
+      Cygwin.CygwinHandlers.cleanup();
+    } catch (error) {
+      console.error('Error cleaning up Cygwin processes:', error);
+    }
+  }
 });
 
 // Handlers del sistema (clipboard, dialog, import) movidos a main/handlers/system-handlers.js
@@ -3038,6 +3139,28 @@ function registerTabEvents(tabId) {
   
   ipcMain.on(`wsl-distro:stop:${tabId}`, (event) => {
     handleWSLDistroStop(tabId);
+  });
+  
+  // Cygwin events
+  ipcMain.removeAllListeners(`cygwin:start:${tabId}`);
+  ipcMain.removeAllListeners(`cygwin:data:${tabId}`);
+  ipcMain.removeAllListeners(`cygwin:resize:${tabId}`);
+  ipcMain.removeAllListeners(`cygwin:stop:${tabId}`);
+  
+  ipcMain.on(`cygwin:start:${tabId}`, (event, data) => {
+    Cygwin.CygwinHandlers.start(tabId, data);
+  });
+  
+  ipcMain.on(`cygwin:data:${tabId}`, (event, data) => {
+    Cygwin.CygwinHandlers.data(tabId, data);
+  });
+  
+  ipcMain.on(`cygwin:resize:${tabId}`, (event, data) => {
+    Cygwin.CygwinHandlers.resize(tabId, data);
+  });
+  
+  ipcMain.on(`cygwin:stop:${tabId}`, (event) => {
+    Cygwin.CygwinHandlers.stop(tabId);
   });
 }
 
