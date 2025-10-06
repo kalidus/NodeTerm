@@ -1,165 +1,204 @@
 /* --- Component: Dialogs --- */
 
-/* Centrado vertical para el contenido de los paneles de configuración en diálogos */
-.settings-dialog-tabview .p-tabview-panels {
+/* ========================================
+   ESTILOS PARA DIÁLOGO DE CONFIGURACIÓN
+   ======================================== */
+
+/* Contenedor principal del TabView de configuración */
+.settings-dialog .settings-dialog-tabview,
+.p-dialog.settings-dialog .settings-dialog-tabview {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor de navegación de pestañas */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav-container,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  background: var(--ui-dialog-bg) !important;
+  border-bottom: 2px solid var(--ui-dialog-border) !important;
+}
+
+/* Barra de navegación de pestañas */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav {
+  position: relative !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  margin: 0 !important;
+  gap: 0.5rem !important;
+  height: auto !important;
+  min-height: auto !important;
+  background: var(--ui-dialog-bg) !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+/* Items de pestañas individuales */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav li,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav li {
+  flex: 0 0 auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+  list-style: none !important;
+}
+
+/* Enlaces de navegación de pestañas */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 0.65rem 1.25rem !important;
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: auto !important;
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  background: var(--ui-tab-bg, var(--surface-card)) !important;
+  color: var(--ui-tab-text, var(--text-color-secondary)) !important;
+  border: 1px solid var(--ui-dialog-border, var(--surface-border)) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+/* Estado hover de pestañas */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link:hover,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link:hover {
+  background: var(--ui-tab-hover-bg, var(--surface-hover)) !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  border-color: var(--ui-button-primary, var(--primary-color)) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Pestaña activa */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-button-primary, var(--primary-color)) !important;
+  color: var(--ui-button-primary-text, #ffffff) !important;
+  border-color: var(--ui-button-primary, var(--primary-color)) !important;
+  box-shadow: 0 2px 12px var(--ui-dialog-shadow, rgba(0, 123, 255, 0.3)) !important;
+}
+
+/* Iconos dentro de las pestañas */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-left-icon,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-left-icon {
+  font-size: 1rem !important;
+  margin: 0 !important;
+}
+
+/* Ocultar la barra de tinta de PrimeReact */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-ink-bar,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-ink-bar {
+  display: none !important;
+}
+
+/* Paneles de contenido */
+.settings-dialog .settings-dialog-tabview .p-tabview-panels,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panels {
   width: 100% !important;
   min-height: unset !important;
   max-height: unset !important;
   height: auto !important;
-  overflow: visible !important;
-}
-
-.settings-dialog-tabview .p-tabview-panel {
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-items: center !important;
-  min-height: 40vh !important;
-  width: 100% !important;
-}
-
-/* ===== ESTILOS ESPECÍFICOS PARA EL DIÁLOGO DE CONFIGURACIÓN ===== */
-/* Sobrescribir TODOS los estilos problemáticos de las pestañas principales */
-
-.settings-dialog .settings-dialog-tabview {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav-container {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: visible !important;
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav {
-  /* Resetear todos los estilos problemáticos */
-  position: relative !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  white-space: nowrap !important;
-  flex-wrap: nowrap !important;
-  padding: 0 16px !important;
-  margin: 0 !important;
-  height: auto !important;
-  min-height: auto !important;
-  background: var(--ui-dialog-bg) !important;
-  border-bottom: 1px solid var(--ui-dialog-border) !important;
-  
-  /* Ocultar scrollbar */
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE/Edge */
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar-track {
-  display: none !important;
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar-thumb {
-  display: none !important;
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar-corner {
-  display: none !important;
-}
-
-/* SOBRESCRIBIR COMPLETAMENTE los estilos de las pestañas individuales */
-.settings-dialog .settings-dialog-tabview .p-tabview-nav li {
-  flex: 0 0 auto !important;
-  min-width: auto !important; /* CRÍTICO: Sobrescribir el min-width: 130px */
-  max-width: none !important; /* CRÍTICO: Sobrescribir el max-width: 220px */
-  width: auto !important;
-  white-space: nowrap !important;
-  margin: 0 !important;
   padding: 0 !important;
-  margin-right: 0 !important;
-  margin-left: 0 !important;
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-/* SOBRESCRIBIR los estilos específicos de la primera pestaña */
-.settings-dialog .settings-dialog-tabview .p-tabview-nav li:first-child {
-  flex: 0 0 auto !important;
-  min-width: auto !important;
-  max-width: none !important;
-  width: auto !important;
-  margin-right: 0 !important;
-  padding-right: 0 !important;
-  padding-left: 0 !important;
-  margin-left: 0 !important;
-}
-
-.settings-dialog .settings-dialog-tabview .p-tabview-nav li:first-child .p-tabview-nav-link {
-  padding: 0.5rem 1rem !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  width: auto !important;
-  display: flex !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-}
-
-/* Estilos para los enlaces de navegación */
-.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link {
-  padding: 0.5rem 1rem !important;
-  font-size: 0.9rem !important;
-  white-space: nowrap !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-  min-width: auto !important;
-  max-width: none !important;
-  width: auto !important;
-  height: auto !important;
-  min-height: auto !important;
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
+  margin: 0 !important;
   background: transparent !important;
   border: none !important;
-  color: var(--ui-dialog-text) !important;
+  overflow: visible !important;
 }
 
-.settings-dialog .settings-dialog-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  background: var(--ui-button-primary) !important;
-  color: var(--ui-button-primary-text) !important;
-  border-color: transparent !important;
+.settings-dialog .settings-dialog-tabview .p-tabview-panel,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  min-height: 40vh !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
 }
 
-/* Ocultar la barra de tinta */
-.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-ink-bar {
-  display: none !important;
+/* ========================================
+   ESTILOS PARA SUB-TABS (Pestañas anidadas)
+   ======================================== */
+
+.settings-dialog .settings-dialog-subtabview .p-tabview-nav-container {
+  background: transparent !important;
+  border-bottom: 1px solid var(--ui-dialog-border, var(--surface-border)) !important;
 }
 
-/* ===== REGLAS ADICIONALES DE ALTA PRIORIDAD ===== */
-/* Asegurar que estos estilos tengan la máxima prioridad */
+.settings-dialog .settings-dialog-subtabview .p-tabview-nav {
+  padding: 0.5rem 1rem !important;
+  gap: 0.35rem !important;
+  background: transparent !important;
+}
 
-.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav li {
-  min-width: auto !important;
-  max-width: none !important;
-  width: auto !important;
+.settings-dialog .settings-dialog-subtabview .p-tabview-nav li {
   flex: 0 0 auto !important;
-}
-
-.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav li:first-child {
   min-width: auto !important;
   max-width: none !important;
-  width: auto !important;
-  flex: 0 0 auto !important;
 }
 
-.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link {
-  min-width: auto !important;
-  max-width: none !important;
-  width: auto !important;
-  white-space: nowrap !important;
+.settings-dialog .settings-dialog-subtabview .p-tabview-nav .p-tabview-nav-link {
+  padding: 0.5rem 1rem !important;
+  font-size: 0.9rem !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  color: var(--ui-tab-text, var(--text-color-secondary)) !important;
+}
+
+.settings-dialog .settings-dialog-subtabview .p-tabview-nav .p-tabview-nav-link:hover {
+  background: var(--ui-tab-hover-bg, var(--surface-hover)) !important;
+  color: var(--ui-dialog-text, var(--text-color)) !important;
+  border-color: var(--ui-dialog-border, var(--surface-border)) !important;
+}
+
+.settings-dialog .settings-dialog-subtabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-content-bg, var(--surface-card)) !important;
+  color: var(--ui-button-primary, var(--primary-color)) !important;
+  border-color: var(--ui-button-primary, var(--primary-color)) !important;
+  font-weight: 600 !important;
+}
+
+/* ========================================
+   RESPONSIVE: Ajustes para pantallas pequeñas
+   ======================================== */
+
+@media (max-width: 1200px) {
+  .settings-dialog .settings-dialog-tabview .p-tabview-nav,
+  .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav {
+    padding: 0.5rem !important;
+    gap: 0.35rem !important;
+  }
+  
+  .settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link,
+  .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link {
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.85rem !important;
+  }
 }
 
 /* Previsualización de temas en diálogos */
