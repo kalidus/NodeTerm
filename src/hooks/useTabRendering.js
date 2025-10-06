@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Button } from 'primereact/button';
+import { getGroupTabIcon } from '../themes/group-tab-icons';
 
 export const useTabRendering = ({
   // Estados de pestañas
@@ -24,6 +25,19 @@ export const useTabRendering = ({
   // Toast
   toast
 }) => {
+  
+  // Estado para el icono de grupos
+  const [groupIconVersion, setGroupIconVersion] = useState(0);
+  
+  // Escuchar cambios en el icono de grupos
+  useEffect(() => {
+    const handleGroupIconChange = () => {
+      setGroupIconVersion(v => v + 1);
+    };
+    
+    window.addEventListener('group-icon-changed', handleGroupIconChange);
+    return () => window.removeEventListener('group-icon-changed', handleGroupIconChange);
+  }, []);
 
   /**
    * RENDERIZA LA BARRA DE PESTAÑAS DE GRUPOS
@@ -87,7 +101,7 @@ export const useTabRendering = ({
           }}
           header={
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-              <i className="pi pi-home" style={{ fontSize: '14px', color: 'var(--ui-tab-text, #666)' }}></i>
+              {getGroupTabIcon(20)}
             </span>
           }
         >

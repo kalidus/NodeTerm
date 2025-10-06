@@ -26,6 +26,7 @@ import SecureStorage from '../services/SecureStorage';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { STORAGE_KEYS } from '../utils/constants';
 import { homeTabIcons, setHomeTabIcon } from '../themes/home-tab-icons';
+import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
 const LOCAL_FONT_FAMILY_STORAGE_KEY = 'basicapp_local_terminal_font_family';
@@ -110,6 +111,10 @@ const SettingsDialog = ({
   // Configuración del icono de la pestaña de inicio
   const [selectedHomeIcon, setSelectedHomeIcon] = useState(() => {
     return localStorage.getItem(STORAGE_KEYS.HOME_TAB_ICON) || 'wifiHeartHome';
+  });
+
+  const [selectedGroupIcon, setSelectedGroupIcon] = useState(() => {
+    return localStorage.getItem('group_tab_icon') || 'groupGrid';
   });
 
   // RDP settings (persisted in localStorage)
@@ -231,6 +236,11 @@ const SettingsDialog = ({
   useEffect(() => {
     setHomeTabIcon(selectedHomeIcon);
   }, [selectedHomeIcon]);
+
+  // Persistir configuración del icono de grupos
+  useEffect(() => {
+    setGroupTabIcon(selectedGroupIcon);
+  }, [selectedGroupIcon]);
 
   // Persist RDP settings (guardar en milisegundos)
   useEffect(() => {
@@ -716,6 +726,111 @@ const SettingsDialog = ({
                       {iconData.name}
                     </span>
                     {selectedHomeIcon === key && (
+                      <i className="pi pi-check-circle" style={{
+                        fontSize: '16px',
+                        color: 'var(--primary-color)',
+                        position: 'absolute',
+                        top: '0.75rem',
+                        right: '0.75rem'
+                      }}></i>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Divider style={{ margin: '1.5rem 0' }} />
+
+            {/* Selector de Icono de Grupos */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4 style={{ 
+                margin: '0 0 1rem 0', 
+                color: 'var(--text-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <i className="pi pi-th-large" style={{ color: 'var(--primary-color)' }}></i>
+                Icono de Grupos de Pestañas
+              </h4>
+              
+              <p style={{
+                fontSize: '0.9rem',
+                color: 'var(--text-color-secondary)',
+                marginBottom: '1rem'
+              }}>
+                Selecciona el icono que se mostrará en la pestaña de grupos
+              </p>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                gap: '1.25rem',
+                marginTop: '1rem',
+                maxHeight: '500px',
+                overflowY: 'auto',
+                padding: '0.5rem'
+              }}>
+                {Object.entries(groupTabIcons).map(([key, iconData]) => (
+                  <div
+                    key={key}
+                    onClick={() => setSelectedGroupIcon(key)}
+                    style={{
+                      position: 'relative',
+                      padding: '1.5rem 1rem',
+                      border: selectedGroupIcon === key 
+                        ? '3px solid var(--primary-color)' 
+                        : '2px solid var(--surface-border)',
+                      borderRadius: '12px',
+                      background: selectedGroupIcon === key 
+                        ? 'var(--primary-color-lighter, var(--surface-hover))' 
+                        : 'var(--surface-card)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      boxShadow: selectedGroupIcon === key 
+                        ? '0 4px 12px rgba(0, 123, 255, 0.2)' 
+                        : '0 2px 4px rgba(0, 0, 0, 0.1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedGroupIcon !== key) {
+                        e.currentTarget.style.background = 'var(--surface-hover)';
+                        e.currentTarget.style.borderColor = 'var(--primary-color)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedGroupIcon !== key) {
+                        e.currentTarget.style.background = 'var(--surface-card)';
+                        e.currentTarget.style.borderColor = 'var(--surface-border)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                      }
+                    }}
+                  >
+                    <div style={{ 
+                      fontSize: '64px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--text-color)'
+                    }}>
+                      {iconData.icon(64)}
+                    </div>
+                    <span style={{
+                      fontSize: '0.9rem',
+                      color: 'var(--text-color)',
+                      fontWeight: selectedGroupIcon === key ? '600' : '500',
+                      textAlign: 'center',
+                      lineHeight: '1.2'
+                    }}>
+                      {iconData.name}
+                    </span>
+                    {selectedGroupIcon === key && (
                       <i className="pi pi-check-circle" style={{
                         fontSize: '16px',
                         color: 'var(--primary-color)',
