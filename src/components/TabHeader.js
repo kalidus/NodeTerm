@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import DistroIcon from './DistroIcon';
+import { getHomeTabIcon } from '../themes/home-tab-icons';
 
 const TabHeader = React.memo(({ 
   // Props básicas de PrimeReact
@@ -36,6 +37,17 @@ const TabHeader = React.memo(({
   onTabClose
 }) => {
   const isHomeTab = tab.type === 'home';
+  const [homeIconVersion, setHomeIconVersion] = useState(0);
+  
+  // Escuchar cambios en el icono de inicio
+  useEffect(() => {
+    const handleHomeIconChange = () => {
+      setHomeIconVersion(v => v + 1);
+    };
+    
+    window.addEventListener('home-icon-changed', handleHomeIconChange);
+    return () => window.removeEventListener('home-icon-changed', handleHomeIconChange);
+  }, []);
 
   return (
     <div
@@ -84,10 +96,12 @@ const TabHeader = React.memo(({
         <DistroIcon distro={tabDistros[tab.key]} size={12} />
       )}
       
-      {/* Icono específico para pestaña de inicio */}
-      {tab.type === 'home' && (
-        <i className="pi pi-home" style={{ fontSize: '16px', marginRight: '0px', color: '#28a745' }}></i>
-      )}
+        {/* Icono específico para pestaña de inicio */}
+        {tab.type === 'home' && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '0px' }}>
+            {getHomeTabIcon(26)}
+          </span>
+        )}
       
       {/* Icono específico para splits */}
       {tab.type === 'split' && (
