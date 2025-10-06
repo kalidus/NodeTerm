@@ -455,14 +455,8 @@ const MainContentArea = ({
         typeToStore = finalTerminalType; // ej: 'powershell', 'wsl'
       }
       
-      console.log('Debug - terminalType:', terminalType, 'finalTerminalType:', finalTerminalType, 'distroInfo:', distroInfo, 'typeToStore:', typeToStore);
-      
       setLastLocalTerminalType(typeToStore);
       lastLocalTerminalTypeRef.current = typeToStore; // Actualizar la referencia también
-      console.log('Actualizando lastLocalTerminalType a:', typeToStore);
-      
-      console.log('Nueva pestaña creada:', newTab);
-      console.log('Todas las pestañas después de crear:', [newTab, ...prevTabs]);
       
       return [newTab, ...prevTabs];
     });

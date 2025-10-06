@@ -19,6 +19,7 @@ const WSLTerminal = forwardRef(({
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const [statusStats, setStatusStats] = useState(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [cpuHistory, setCpuHistory] = useState([]);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -125,6 +126,7 @@ const WSLTerminal = forwardRef(({
                     cpuHistory
                 };
                 setStatusStats(payload);
+                setIsLoadingStats(false);
                 const cpuVal = typeof payload.cpu === 'number' ? payload.cpu : null;
                 if (cpuVal !== null && !isNaN(cpuVal)) {
                     setCpuHistory(prev => [...prev, cpuVal].slice(-30));
@@ -436,7 +438,7 @@ const WSLTerminal = forwardRef(({
                 }} 
             />
             <div style={{ ...getScopedStatusBarCssVars() }}>
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} />
+                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
             </div>
         </div>
     );

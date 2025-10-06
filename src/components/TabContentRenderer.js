@@ -241,7 +241,6 @@ const TabContentRenderer = React.memo(({
   // Terminal local independiente
   if (tab.type === 'local-terminal') {
     const terminalType = tab.terminalType || 'powershell';
-    console.log('🔍 Renderizando terminal local:', { tabKey: tab.key, type: tab.type, terminalType });
     
     // PowerShell o terminal genérico
     if (terminalType === 'powershell' || terminalType === 'linux-terminal') {

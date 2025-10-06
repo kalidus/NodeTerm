@@ -90,19 +90,60 @@ const DistroIcon = ({ distro }) => {
     }
 };
 
-const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true }) => {
+const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false }) => {
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
     
     // Obtener el tema de iconos actual
     const currentIconTheme = statusBarIconThemes[statusBarIconTheme] || statusBarIconThemes.classic;
     
-
-    if (!stats) {
-        // Mostrar solo la barra vacía si no hay stats
+    // Mostrar estado de carga si no hay stats o está cargando
+    if (!stats || isLoading) {
         return (
             <div className="status-bar">
-                <div className="status-group"></div>
+                <div className="status-group">
+                    <div className="status-bar-section loading-section">
+                        <span 
+                            className="status-bar-icon cpu loading" 
+                            style={{ color: currentIconTheme.colors.cpu }}
+                        >
+                            {currentIconTheme.icons.cpu}
+                        </span>
+                        <span className="loading-text">--%</span>
+                        <div className="sparkline-container loading">
+                            <div className="sparkline-bars">
+                                {Array.from({ length: 10 }, (_, i) => (
+                                    <div key={i} className="sparkline-bar loading" />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="status-bar-section loading-section">
+                        <span 
+                            className="status-bar-icon mem loading" 
+                            style={{ color: currentIconTheme.colors.memory }}
+                        >
+                            {currentIconTheme.icons.memory}
+                        </span>
+                        <span className="loading-text">-- / --</span>
+                    </div>
+                    <div className="status-bar-section loading-section">
+                        <span 
+                            className="status-bar-icon net-down loading" 
+                            style={{ color: currentIconTheme.colors.networkDown }}
+                        >
+                            {currentIconTheme.icons.networkDown}
+                        </span>
+                        <span className="loading-text">-- B/s</span>
+                        <span 
+                            className="status-bar-icon net-up loading" 
+                            style={{ color: currentIconTheme.colors.networkUp, marginLeft: '5px' }}
+                        >
+                            {currentIconTheme.icons.networkUp}
+                        </span>
+                        <span className="loading-text">-- B/s</span>
+                    </div>
+                </div>
             </div>
         );
     }
