@@ -654,89 +654,67 @@ const SettingsDialog = ({
                 Selecciona el icono que se mostrará en la pestaña de inicio
               </p>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: '1.25rem',
-                marginTop: '1rem',
-                maxHeight: '500px',
-                overflowY: 'auto',
-                padding: '0.5rem'
-              }}>
-                {Object.entries(homeTabIcons).map(([key, iconData]) => (
-                  <div
-                    key={key}
-                    onClick={() => setSelectedHomeIcon(key)}
-                    style={{
-                      position: 'relative',
-                      padding: '1.5rem 1rem',
-                      border: selectedHomeIcon === key 
-                        ? '3px solid var(--primary-color)' 
-                        : '2px solid var(--surface-border)',
-                      borderRadius: '12px',
-                      background: selectedHomeIcon === key 
-                        ? 'var(--primary-color-lighter, var(--surface-hover))' 
-                        : 'var(--surface-card)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      boxShadow: selectedHomeIcon === key 
-                        ? '0 4px 12px rgba(0, 123, 255, 0.2)' 
-                        : '0 2px 4px rgba(0, 0, 0, 0.1)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedHomeIcon !== key) {
-                        e.currentTarget.style.background = 'var(--surface-hover)';
-                        e.currentTarget.style.borderColor = 'var(--primary-color)';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedHomeIcon !== key) {
-                        e.currentTarget.style.background = 'var(--surface-card)';
-                        e.currentTarget.style.borderColor = 'var(--surface-border)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                      }
-                    }}
-                  >
-                    <div style={{ 
-                      fontSize: '64px',
+              <Dropdown
+                value={selectedHomeIcon}
+                options={Object.entries(homeTabIcons).map(([key, iconData]) => ({
+                  label: iconData.name,
+                  value: key,
+                  icon: iconData.icon(20)
+                }))}
+                onChange={(e) => setSelectedHomeIcon(e.value)}
+                placeholder="Selecciona un icono"
+                style={{
+                  width: '100%',
+                  marginTop: '1rem'
+                }}
+                itemTemplate={(option) => (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.5rem 0'
+                  }}>
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      height: '72px',
-                      width: '72px',
-                      background: 'radial-gradient(circle, rgba(0,229,255,0.1) 0%, transparent 70%)',
-                      borderRadius: '50%'
+                      width: '24px',
+                      height: '24px'
                     }}>
-                      {iconData.icon(72)}
+                      {option.icon}
                     </div>
                     <span style={{
                       fontSize: '0.9rem',
-                      color: 'var(--text-color)',
-                      fontWeight: selectedHomeIcon === key ? '600' : '500',
-                      textAlign: 'center',
-                      lineHeight: '1.2'
+                      color: 'var(--text-color)'
                     }}>
-                      {iconData.name}
+                      {option.label}
                     </span>
-                    {selectedHomeIcon === key && (
-                      <i className="pi pi-check-circle" style={{
-                        fontSize: '16px',
-                        color: 'var(--primary-color)',
-                        position: 'absolute',
-                        top: '0.75rem',
-                        right: '0.75rem'
-                      }}></i>
-                    )}
                   </div>
-                ))}
-              </div>
+                )}
+                valueTemplate={(option) => (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px'
+                    }}>
+                      {option?.icon}
+                    </div>
+                    <span style={{
+                      fontSize: '0.9rem',
+                      color: 'var(--text-color)'
+                    }}>
+                      {option?.label || 'Selecciona un icono'}
+                    </span>
+                  </div>
+                )}
+              />
             </div>
 
             <Divider style={{ margin: '1.5rem 0' }} />
@@ -762,86 +740,67 @@ const SettingsDialog = ({
                 Selecciona el icono que se mostrará en la pestaña de grupos
               </p>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: '1.25rem',
-                marginTop: '1rem',
-                maxHeight: '500px',
-                overflowY: 'auto',
-                padding: '0.5rem'
-              }}>
-                {Object.entries(groupTabIcons).map(([key, iconData]) => (
-                  <div
-                    key={key}
-                    onClick={() => setSelectedGroupIcon(key)}
-                    style={{
-                      position: 'relative',
-                      padding: '1.5rem 1rem',
-                      border: selectedGroupIcon === key 
-                        ? '3px solid var(--primary-color)' 
-                        : '2px solid var(--surface-border)',
-                      borderRadius: '12px',
-                      background: selectedGroupIcon === key 
-                        ? 'var(--primary-color-lighter, var(--surface-hover))' 
-                        : 'var(--surface-card)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      boxShadow: selectedGroupIcon === key 
-                        ? '0 4px 12px rgba(0, 123, 255, 0.2)' 
-                        : '0 2px 4px rgba(0, 0, 0, 0.1)'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedGroupIcon !== key) {
-                        e.currentTarget.style.background = 'var(--surface-hover)';
-                        e.currentTarget.style.borderColor = 'var(--primary-color)';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedGroupIcon !== key) {
-                        e.currentTarget.style.background = 'var(--surface-card)';
-                        e.currentTarget.style.borderColor = 'var(--surface-border)';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                      }
-                    }}
-                  >
-                    <div style={{ 
-                      fontSize: '64px',
+              <Dropdown
+                value={selectedGroupIcon}
+                options={Object.entries(groupTabIcons).map(([key, iconData]) => ({
+                  label: iconData.name,
+                  value: key,
+                  icon: iconData.icon(20)
+                }))}
+                onChange={(e) => setSelectedGroupIcon(e.value)}
+                placeholder="Selecciona un icono"
+                style={{
+                  width: '100%',
+                  marginTop: '1rem'
+                }}
+                itemTemplate={(option) => (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.5rem 0'
+                  }}>
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: 'var(--text-color)'
+                      width: '24px',
+                      height: '24px'
                     }}>
-                      {iconData.icon(64)}
+                      {option.icon}
                     </div>
                     <span style={{
                       fontSize: '0.9rem',
-                      color: 'var(--text-color)',
-                      fontWeight: selectedGroupIcon === key ? '600' : '500',
-                      textAlign: 'center',
-                      lineHeight: '1.2'
+                      color: 'var(--text-color)'
                     }}>
-                      {iconData.name}
+                      {option.label}
                     </span>
-                    {selectedGroupIcon === key && (
-                      <i className="pi pi-check-circle" style={{
-                        fontSize: '16px',
-                        color: 'var(--primary-color)',
-                        position: 'absolute',
-                        top: '0.75rem',
-                        right: '0.75rem'
-                      }}></i>
-                    )}
                   </div>
-                ))}
-              </div>
+                )}
+                valueTemplate={(option) => (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px'
+                    }}>
+                      {option?.icon}
+                    </div>
+                    <span style={{
+                      fontSize: '0.9rem',
+                      color: 'var(--text-color)'
+                    }}>
+                      {option?.label || 'Selecciona un icono'}
+                    </span>
+                  </div>
+                )}
+              />
             </div>
           </div>
         </TabPanel>
