@@ -44,7 +44,8 @@ const TabHeader = React.memo(({
         ...style, 
         display: 'flex', 
         alignItems: 'center', 
-        maxWidth: 220,
+        justifyContent: isHomeTab ? 'center' : 'flex-start',
+        maxWidth: isHomeTab ? 50 : 220,
         opacity: isDragging ? 0.5 : 1,
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s',
@@ -85,7 +86,7 @@ const TabHeader = React.memo(({
       
       {/* Icono específico para pestaña de inicio */}
       {tab.type === 'home' && (
-        <i className="pi pi-home" style={{ fontSize: '12px', marginRight: '6px', color: '#28a745' }}></i>
+        <i className="pi pi-home" style={{ fontSize: '16px', marginRight: '0px', color: '#28a745' }}></i>
       )}
       
       {/* Icono específico para splits */}
@@ -136,9 +137,11 @@ const TabHeader = React.memo(({
         ></i>
       )}
       
-      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {tab.label}
-      </span>
+      {!isHomeTab && (
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {tab.label}
+        </span>
+      )}
       
       {tab.type !== 'home' && (
         <Button
