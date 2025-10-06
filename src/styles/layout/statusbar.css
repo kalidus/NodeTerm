@@ -108,3 +108,70 @@
   /* Escalado dinámico del gap para disk-info-item */
   gap: calc(var(--statusbar-height, 40px) * 0.15);
 }
+
+/* --- Estados de carga para Status Bar --- */
+
+.status-bar-section.loading-section {
+  opacity: 0.6;
+  animation: statusbar-loading-pulse 2s ease-in-out infinite;
+}
+
+.loading-text {
+  color: var(--statusbar-text, #cccccc) !important;
+  opacity: 0.7;
+  font-family: 'Courier New', monospace;
+}
+
+.status-bar-icon.loading {
+  opacity: 0.8;
+  animation: statusbar-icon-pulse 1.5s ease-in-out infinite;
+}
+
+.sparkline-container.loading {
+  opacity: 0.5;
+}
+
+.sparkline-bar.loading {
+  background-color: var(--statusbar-sparkline-color, #40a9f3) !important;
+  opacity: 0.3;
+  animation: statusbar-sparkline-loading 1.8s ease-in-out infinite;
+}
+
+.sparkline-bar.loading:nth-child(odd) {
+  animation-delay: 0.2s;
+}
+
+.sparkline-bar.loading:nth-child(even) {
+  animation-delay: 0.4s;
+}
+
+@keyframes statusbar-loading-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes statusbar-icon-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes statusbar-sparkline-loading {
+  0%, 100% {
+    opacity: 0.3;
+    height: 20%;
+  }
+  50% {
+    opacity: 0.7;
+    height: 60%;
+  }
+}

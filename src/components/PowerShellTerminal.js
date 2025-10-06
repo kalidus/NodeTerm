@@ -19,6 +19,7 @@ const PowerShellTerminal = forwardRef(({
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const [statusStats, setStatusStats] = useState(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [cpuHistory, setCpuHistory] = useState([]);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -104,6 +105,7 @@ const PowerShellTerminal = forwardRef(({
                     cpuHistory
                 };
                 setStatusStats(statsPayload);
+                setIsLoadingStats(false);
                 const cpuValue = typeof statsPayload.cpu === 'number' ? statsPayload.cpu : null;
                 if (cpuValue !== null && !isNaN(cpuValue)) {
                     setCpuHistory(prev => {
@@ -494,7 +496,7 @@ const PowerShellTerminal = forwardRef(({
                 }} 
             />
             <div style={{ ...getScopedStatusBarCssVars() }}>
-                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} />
+                <StatusBar stats={{ ...(statusStats || {}), cpuHistory }} active={true} statusBarIconTheme={statusBarIconTheme} showNetworkDisks={showNetworkDisks} isLoading={isLoadingStats} />
             </div>
         </div>
     );

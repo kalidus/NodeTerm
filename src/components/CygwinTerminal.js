@@ -18,6 +18,7 @@ const CygwinTerminal = forwardRef(({
     const term = useRef(null);
     const fitAddon = useRef(null);
     const [statusStats, setStatusStats] = useState(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [cpuHistory, setCpuHistory] = useState([]);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -81,6 +82,7 @@ const CygwinTerminal = forwardRef(({
                     cpuHistory
                 };
                 setStatusStats(payload);
+                setIsLoadingStats(false);
                 
                 const cpuVal = typeof payload.cpu === 'number' ? payload.cpu : null;
                 if (cpuVal !== null && !isNaN(cpuVal)) {
@@ -436,6 +438,7 @@ const CygwinTerminal = forwardRef(({
                     active={true} 
                     statusBarIconTheme={statusBarIconTheme} 
                     showNetworkDisks={showNetworkDisks} 
+                    isLoading={isLoadingStats}
                 />
             </div>
         </div>
