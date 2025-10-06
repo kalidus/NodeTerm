@@ -989,65 +989,6 @@ export const homeTabIcons = {
     )
   },
 
-  phoneApps: {
-    name: 'Apps Móvil',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        <defs>
-          <linearGradient id="g_phone" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a855f7"/>
-            <stop offset="100%" stopColor="#d946ef"/>
-          </linearGradient>
-          <filter id="f_phone"><feGaussianBlur stdDeviation="2" result="blur"/></filter>
-        </defs>
-        <rect x="30" y="15" width="40" height="70" rx="8" fill="#1e0e2e" stroke="url(#g_phone)" strokeWidth="4" filter="url(#f_phone)"/>
-        <rect x="35" y="25" width="10" height="10" rx="2" fill="#a855f7"/>
-        <rect x="55" y="25" width="10" height="10" rx="2" fill="#ec4899"/>
-        <rect x="35" y="45" width="10" height="10" rx="2" fill="#06b6d4"/>
-        <rect x="55" y="45" width="10" height="10" rx="2" fill="#f59e0b"/>
-        <rect x="35" y="65" width="10" height="10" rx="2" fill="#10b981"/>
-        <rect x="55" y="65" width="10" height="10" rx="2" fill="#ef4444"/>
-      </svg>
-    )
-  },
-
-  wifiCircle: {
-    name: 'Señal WiFi',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        <defs>
-          <linearGradient id="g_wifi" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#eab308"/>
-            <stop offset="100%" stopColor="#f59e0b"/>
-          </linearGradient>
-          <filter id="f_wifi"><feGaussianBlur stdDeviation="3" result="blur"/></filter>
-        </defs>
-        <circle cx="50" cy="50" r="35" stroke="url(#g_wifi)" strokeWidth="4" fill="none" filter="url(#f_wifi)"/>
-        <circle cx="50" cy="60" r="5" fill="url(#g_wifi)" filter="url(#f_wifi)"/>
-        <path d="M35 50 Q50 38 65 50" stroke="url(#g_wifi)" strokeWidth="4" fill="none" strokeLinecap="round"/>
-        <path d="M25 40 Q50 22 75 40" stroke="url(#g_wifi)" strokeWidth="4" fill="none" strokeLinecap="round"/>
-      </svg>
-    )
-  },
-
-  bulbBrain: {
-    name: 'Bombilla IA',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        <defs>
-          <linearGradient id="g_bulb" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06b6d4"/>
-            <stop offset="100%" stopColor="#22d3ee"/>
-          </linearGradient>
-          <filter id="f_bulb"><feGaussianBlur stdDeviation="3" result="blur"/></filter>
-        </defs>
-        <circle cx="50" cy="40" r="20" fill="url(#g_bulb)" filter="url(#f_bulb)"/>
-        <rect x="40" y="60" width="20" height="10" fill="#06b6d4"/>
-        <path d="M40 52 Q45 48 50 52 Q55 56 60 52" stroke="#0e7490" strokeWidth="2.5" fill="none"/>
-        <path d="M40 45 Q45 49 50 45 Q55 41 60 45" stroke="#0e7490" strokeWidth="2.5" fill="none"/>
-      </svg>
-    )
-  },
 
   battery: {
     name: 'Batería',
@@ -1069,22 +1010,6 @@ export const homeTabIcons = {
     )
   },
 
-  upDownArrows: {
-    name: 'Transferencia',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-        <defs>
-          <linearGradient id="g_arrows" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#a855f7"/>
-            <stop offset="100%" stopColor="#d946ef"/>
-          </linearGradient>
-          <filter id="f_arrows"><feGaussianBlur stdDeviation="3" result="blur"/></filter>
-        </defs>
-        <path d="M35 20 L35 50 M35 20 L25 30 M35 20 L45 30" stroke="url(#g_arrows)" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="url(#f_arrows)"/>
-        <path d="M65 80 L65 50 M65 80 L55 70 M65 80 L75 70" stroke="url(#g_arrows)" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" filter="url(#f_arrows)"/>
-      </svg>
-    )
-  },
 };
 
 /**
