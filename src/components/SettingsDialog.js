@@ -505,7 +505,7 @@ const SettingsDialog = ({
       style={{
         maxWidth: '98vw',
         maxHeight: '98vh',
-        minWidth: '600px',
+        minWidth: '1000px',
         minHeight: '500px'
       }}
       contentStyle={{
