@@ -18,6 +18,150 @@
   width: 100% !important;
 }
 
+/* ===== ESTILOS ESPECÍFICOS PARA EL DIÁLOGO DE CONFIGURACIÓN ===== */
+/* Sobrescribir TODOS los estilos problemáticos de las pestañas principales */
+
+.settings-dialog .settings-dialog-tabview {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav {
+  /* Resetear todos los estilos problemáticos */
+  position: relative !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  white-space: nowrap !important;
+  flex-wrap: nowrap !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+  background: var(--ui-dialog-bg) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+  
+  /* Ocultar scrollbar */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar-track {
+  display: none !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar-thumb {
+  display: none !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav::-webkit-scrollbar-corner {
+  display: none !important;
+}
+
+/* SOBRESCRIBIR COMPLETAMENTE los estilos de las pestañas individuales */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav li {
+  flex: 0 0 auto !important;
+  min-width: auto !important; /* CRÍTICO: Sobrescribir el min-width: 130px */
+  max-width: none !important; /* CRÍTICO: Sobrescribir el max-width: 220px */
+  width: auto !important;
+  white-space: nowrap !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* SOBRESCRIBIR los estilos específicos de la primera pestaña */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav li:first-child {
+  flex: 0 0 auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav li:first-child .p-tabview-nav-link {
+  padding: 0.5rem 1rem !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: auto !important;
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+}
+
+/* Estilos para los enlaces de navegación */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link {
+  padding: 0.5rem 1rem !important;
+  font-size: 0.9rem !important;
+  white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: auto !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.settings-dialog .settings-dialog-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+  border-color: transparent !important;
+}
+
+/* Ocultar la barra de tinta */
+.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-ink-bar {
+  display: none !important;
+}
+
+/* ===== REGLAS ADICIONALES DE ALTA PRIORIDAD ===== */
+/* Asegurar que estos estilos tengan la máxima prioridad */
+
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav li {
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  flex: 0 0 auto !important;
+}
+
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav li:first-child {
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  flex: 0 0 auto !important;
+}
+
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav .p-tabview-nav-link {
+  min-width: auto !important;
+  max-width: none !important;
+  width: auto !important;
+  white-space: nowrap !important;
+}
+
 /* Previsualización de temas en diálogos */
 .theme-preview {
   padding: 12px;
