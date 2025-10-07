@@ -160,10 +160,8 @@ const MainContentArea = ({
       }
     };
     
-    // Escuchar cambios en el localStorage
     window.addEventListener('storage', handleStorageChange);
     
-    // También escuchar cambios locales (mismo tab)
     const interval = setInterval(() => {
       const currentValue = localStorage.getItem('lock_home_button') === 'true';
       if (currentValue !== homeButtonLocked) {
@@ -176,6 +174,7 @@ const MainContentArea = ({
       clearInterval(interval);
     };
   }, [homeButtonLocked]);
+  
   
   // Generar opciones del menú de terminales
   useEffect(() => {
@@ -771,10 +770,11 @@ const MainContentArea = ({
                         <TabPanel 
                           key={tab.key} 
                           header={tab.label}
+                          headerClassName={isHomeTab ? 'home-tab' : ''}
                           headerTemplate={(options) => (
                             <TabHeader
                               // Props de PrimeReact
-                              className={options.className}
+                              className={`${options.className} ${isHomeTab ? 'home-tab' : ''}`}
                               onClick={options.onClick}
                               onKeyDown={options.onKeyDown}
                               leftIcon={options.leftIcon}

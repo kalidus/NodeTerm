@@ -59,8 +59,9 @@ const TabHeader = React.memo(({
         ...style, 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: (isHomeTab && isHomeButtonLocked) ? 'center' : 'flex-start',
-        maxWidth: (isHomeTab && isHomeButtonLocked) ? 50 : 220,
+        justifyContent: isHomeTab ? 'center' : 'flex-start',
+        maxWidth: isHomeTab ? 50 : 220,
+        minWidth: isHomeTab ? 50 : 130,
         opacity: isDragging ? 0.5 : 1,
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s',
@@ -154,7 +155,8 @@ const TabHeader = React.memo(({
         ></i>
       )}
       
-      {!(isHomeTab && isHomeButtonLocked) && (
+      {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
+      {!isHomeTab && (
         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {tab.label}
         </span>
