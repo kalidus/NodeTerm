@@ -48,8 +48,8 @@
   margin-right: 2px !important;
 }
 
-/* Eliminar margin-right de la primera pestaña (Home) */
-.p-tabview .p-tabview-nav li:first-child {
+/* Estilos para la primera pestaña cuando el botón de inicio está bloqueado */
+.p-tabview.home-locked .p-tabview-nav li:first-child {
   margin-right: 0px !important;
   padding-right: 0px !important;
   padding-left: 0px !important;
@@ -60,8 +60,20 @@
   flex: 0 0 50px !important;
 }
 
-/* Eliminar padding del nav-link en la primera pestaña */
-.p-tabview .p-tabview-nav li:first-child .p-tabview-nav-link {
+/* Estilos normales para la primera pestaña cuando NO está bloqueada */
+.p-tabview.home-unlocked .p-tabview-nav li:first-child {
+  margin-right: 2px !important;
+  padding-right: 0.7rem !important;
+  padding-left: 0.7rem !important;
+  margin-left: 0px !important;
+  width: auto !important;
+  min-width: 130px !important;
+  max-width: 220px !important;
+  flex: 0 0 auto !important;
+}
+
+/* Eliminar padding del nav-link en la primera pestaña - solo cuando está bloqueada */
+.p-tabview.home-locked .p-tabview-nav li:first-child .p-tabview-nav-link {
   padding-left: 0px !important;
   padding-right: 0px !important;
   margin-left: 0px !important;
@@ -69,6 +81,17 @@
   width: 100% !important;
   display: flex !important;
   justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Estilos normales para el nav-link de la primera pestaña cuando NO está bloqueada */
+.p-tabview.home-unlocked .p-tabview-nav li:first-child .p-tabview-nav-link {
+  padding: 0 0.7rem !important;
+  margin-left: 0px !important;
+  margin-right: 0px !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: flex-start !important;
   align-items: center !important;
 }
 

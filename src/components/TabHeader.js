@@ -39,6 +39,9 @@ const TabHeader = React.memo(({
   const isHomeTab = tab.type === 'home';
   const [homeIconVersion, setHomeIconVersion] = useState(0);
   
+  // Verificar si el botón de inicio está bloqueado
+  const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+  
   // Escuchar cambios en el icono de inicio
   useEffect(() => {
     const handleHomeIconChange = () => {
@@ -56,8 +59,8 @@ const TabHeader = React.memo(({
         ...style, 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: isHomeTab ? 'center' : 'flex-start',
-        maxWidth: isHomeTab ? 50 : 220,
+        justifyContent: (isHomeTab && isHomeButtonLocked) ? 'center' : 'flex-start',
+        maxWidth: (isHomeTab && isHomeButtonLocked) ? 50 : 220,
         opacity: isDragging ? 0.5 : 1,
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s',
@@ -151,12 +154,13 @@ const TabHeader = React.memo(({
         ></i>
       )}
       
-      {!isHomeTab && (
+      {!(isHomeTab && isHomeButtonLocked) && (
         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {tab.label}
         </span>
       )}
       
+      {/* Mostrar botón de cierre solo si NO es una pestaña de inicio (las pestañas de inicio nunca se pueden cerrar) */}
       {tab.type !== 'home' && (
         <Button
           icon="pi pi-times"

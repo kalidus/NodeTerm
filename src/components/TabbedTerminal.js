@@ -816,7 +816,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     cursor: draggedTabIndex === index ? 'grabbing' : 'grab',
                                     position: 'relative',
                                     minWidth: '150px',
-                                    maxWidth: '200px',
+                                    maxWidth: '220px',
                                     flexShrink: 0, // Evita que las pestañas se contraigan
                                     borderTopLeftRadius: '4px',
                                     borderTopRightRadius: '4px',
