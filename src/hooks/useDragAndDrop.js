@@ -90,6 +90,7 @@ export const useDragAndDrop = (tabManagementProps = {}) => {
       setDragOverTabIndex(null);
       return;
     }
+    
 
     // Obtener todas las claves de pestañas en el orden actual
     const allTabKeys = filtered.map(t => t.key);

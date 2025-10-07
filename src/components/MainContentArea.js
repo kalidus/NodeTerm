@@ -147,6 +147,36 @@ const MainContentArea = ({
   // Estado para distribuciones WSL disponibles
   const [wslDistributions, setWslDistributions] = useState([]);
   
+  // Estado para forzar re-render cuando cambie lock_home_button
+  const [homeButtonLocked, setHomeButtonLocked] = useState(() => {
+    return localStorage.getItem('lock_home_button') === 'true';
+  });
+  
+  // Escuchar cambios en el localStorage para lock_home_button
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'lock_home_button') {
+        setHomeButtonLocked(e.newValue === 'true');
+      }
+    };
+    
+    // Escuchar cambios en el localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // También escuchar cambios locales (mismo tab)
+    const interval = setInterval(() => {
+      const currentValue = localStorage.getItem('lock_home_button') === 'true';
+      if (currentValue !== homeButtonLocked) {
+        setHomeButtonLocked(currentValue);
+      }
+    }, 100);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [homeButtonLocked]);
+  
   // Generar opciones del menú de terminales
   useEffect(() => {
     const platform = window.electron?.platform || 'unknown';
@@ -719,7 +749,7 @@ const MainContentArea = ({
                       }}
                       renderActiveOnly={false}
                       scrollable={true}
-                      className="main-tab-view"
+                      className={`main-tab-view ${homeButtonLocked ? 'home-locked' : 'home-unlocked'}`}
                       pt={{
                         navContainer: {
                           ref: tabsContainerRef,
