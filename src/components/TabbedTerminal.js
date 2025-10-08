@@ -510,13 +510,32 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         
         setNextTabId(prev => prev + 1);
         
-        // Redimensionar el terminal de la nueva pestaña después de que se renderice
+        // Redimensionar y dar focus al terminal de la nueva pestaña después de que se renderice
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
             if (terminalRef && terminalRef.fit) {
                 terminalRef.fit();
             }
+            // Dar focus al terminal para que el cursor sea visible inmediatamente
+            if (terminalRef && terminalRef.focus) {
+                terminalRef.focus();
+            }
         }, 200);
+        
+        // Intentos adicionales para asegurar el focus
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[newTabId];
+            if (terminalRef && terminalRef.focus) {
+                terminalRef.focus();
+            }
+        }, 300);
+        
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[newTabId];
+            if (terminalRef && terminalRef.focus) {
+                terminalRef.focus();
+            }
+        }, 500);
     };
 
     // Función para crear una nueva pestaña
@@ -618,13 +637,32 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         
         setNextTabId(prev => prev + 1);
         
-        // Redimensionar el terminal de la nueva pestaña después de que se renderice
+        // Redimensionar y dar focus al terminal de la nueva pestaña después de que se renderice
         setTimeout(() => {
             const terminalRef = terminalRefs.current[newTabId];
             if (terminalRef && terminalRef.fit) {
                 terminalRef.fit();
             }
+            // Dar focus al terminal para que el cursor sea visible inmediatamente
+            if (terminalRef && terminalRef.focus) {
+                terminalRef.focus();
+            }
         }, 200);
+        
+        // Intentos adicionales para asegurar el focus
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[newTabId];
+            if (terminalRef && terminalRef.focus) {
+                terminalRef.focus();
+            }
+        }, 300);
+        
+        setTimeout(() => {
+            const terminalRef = terminalRefs.current[newTabId];
+            if (terminalRef && terminalRef.focus) {
+                terminalRef.focus();
+            }
+        }, 500);
     };
 
     // Función para cambiar de pestaña activa
