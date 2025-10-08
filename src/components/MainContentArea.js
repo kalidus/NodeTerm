@@ -450,6 +450,9 @@ const MainContentArea = ({
           case 'linux-terminal':
             label = 'Terminal';
             break;
+          case 'cygwin':
+            label = 'Cygwin';
+            break;
           default:
             label = 'Terminal';
         }
