@@ -417,6 +417,25 @@ const CygwinTerminal = forwardRef(({
         setTimeout(forceResize, 300);
     }, [tabId]);
 
+    // Efecto adicional para asegurar el focus automático después del montaje
+    useEffect(() => {
+        const ensureFocus = () => {
+            if (term.current) {
+                try {
+                    term.current.focus();
+                } catch (e) {
+                    // Silently handle
+                }
+            }
+        };
+        
+        // Aplicar focus múltiples veces para asegurar que se aplique correctamente
+        setTimeout(ensureFocus, 100);
+        setTimeout(ensureFocus, 250);
+        setTimeout(ensureFocus, 400);
+        setTimeout(ensureFocus, 600);
+    }, [tabId]);
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', flex: 1, width: '100%', height: '100%', minWidth: 0, minHeight: 0, overflow: 'hidden', position: 'relative', background: theme.background || '#000000' }}>
             <div 
