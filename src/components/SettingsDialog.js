@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Divider } from 'primereact/divider';
@@ -11,6 +11,7 @@ import { Password } from 'primereact/password';
 import { Toast } from 'primereact/toast';
 import { Badge } from 'primereact/badge';
 import { Checkbox } from 'primereact/checkbox';
+import { OverlayPanel } from 'primereact/overlaypanel';
 import ThemeSelector from './ThemeSelector';
 import StatusBarThemeSelector from './StatusBarThemeSelector';
 import StatusBarIconThemeSelector from './StatusBarIconThemeSelector';
@@ -25,7 +26,7 @@ import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { STORAGE_KEYS } from '../utils/constants';
-import { homeTabIcons, setHomeTabIcon } from '../themes/home-tab-icons';
+import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 
 const STATUSBAR_HEIGHT_STORAGE_KEY = 'basicapp_statusbar_height';
@@ -147,6 +148,62 @@ const SettingsDialog = ({
   const [hasMasterKey, setHasMasterKey] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const HomeIconSelectorGrid = useMemo(() => {
+    return function HomeIconSelectorGrid({ selected, onSelect }) {
+      const opRef = useRef(null);
+      const groups = getHomeTabIconGroups();
+      const [activeTab, setActiveTab] = useState(0);
+      const openPanel = (e) => opRef.current?.toggle(e);
+      return (
+        <div>
+          <Button
+            type="button"
+            label="Elegir icono"
+            icon="pi pi-chevron-down"
+            iconPos="right"
+            onClick={openPanel}
+            className="p-button-outlined"
+          />
+          <OverlayPanel ref={opRef} showCloseIcon dismissable style={{ width: 420, maxWidth: '90vw' }}>
+            <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--text-color-secondary)' }}>
+              Selecciona una categoría
+            </div>
+            <TabView activeIndex={activeTab} onTabChange={(e) => setActiveTab(e.index)}>
+              {groups.map(group => (
+                <TabPanel key={group.label} header={group.label}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(6, 1fr)',
+                    gap: 8,
+                    paddingTop: 4
+                  }}>
+                    {group.items.map(item => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => { onSelect(item.value); opRef.current?.hide(); }}
+                        className="p-button p-component"
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          height: 44, borderRadius: 8,
+                          border: selected === item.value ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)',
+                          background: selected === item.value ? 'rgba(0,0,0,0.04)' : 'transparent',
+                          cursor: 'pointer'
+                        }}
+                        title={item.label}
+                      >
+                        <div style={{ transform: 'scale(1.0)' }}>{item.icon}</div>
+                      </button>
+                    ))}
+                  </div>
+                </TabPanel>
+              ))}
+            </TabView>
+          </OverlayPanel>
+        </div>
+      );
+    };
+  }, []);
 
   // Guacd preferred method (docker|wsl|mock)
   const GUACD_PREF_KEY = 'nodeterm_guacd_preferred_method';
@@ -654,67 +711,18 @@ const SettingsDialog = ({
                 Selecciona el icono que se mostrará en la pestaña de inicio
               </p>
 
-              <Dropdown
-                value={selectedHomeIcon}
-                options={Object.entries(homeTabIcons).map(([key, iconData]) => ({
-                  label: iconData.name,
-                  value: key,
-                  icon: iconData.icon(20)
-                }))}
-                onChange={(e) => setSelectedHomeIcon(e.value)}
-                placeholder="Selecciona un icono"
-                style={{
-                  width: '100%',
-                  marginTop: '1rem'
-                }}
-                itemTemplate={(option) => (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.5rem 0'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '24px',
-                      height: '24px'
-                    }}>
-                      {option.icon}
-                    </div>
-                    <span style={{
-                      fontSize: '0.9rem',
-                      color: 'var(--text-color)'
-                    }}>
-                      {option.label}
-                    </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--surface-border)', borderRadius: 8 }}>
+                  <span style={{ color: 'var(--text-color-secondary)', fontSize: 12 }}>Actual:</span>
+                  <div title={homeTabIcons[selectedHomeIcon]?.name}>
+                    {homeTabIcons[selectedHomeIcon]?.icon(22)}
                   </div>
-                )}
-                valueTemplate={(option) => (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px'
-                    }}>
-                      {option?.icon}
-                    </div>
-                    <span style={{
-                      fontSize: '0.9rem',
-                      color: 'var(--text-color)'
-                    }}>
-                      {option?.label || 'Selecciona un icono'}
-                    </span>
-                  </div>
-                )}
-              />
+                </div>
+                <HomeIconSelectorGrid
+                  selected={selectedHomeIcon}
+                  onSelect={setSelectedHomeIcon}
+                />
+              </div>
             </div>
 
             <Divider style={{ margin: '1.5rem 0' }} />
