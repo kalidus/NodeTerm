@@ -13,6 +13,53 @@
   flex-direction: column;
 }
 
+/* Home Icon Selector - themed */
+.home-icon-overlay .p-overlaypanel-content {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+}
+
+.home-icon-tabs .p-tabview-nav {
+  background: var(--ui-dialog-bg) !important;
+  border-color: var(--ui-dialog-border) !important;
+}
+.home-icon-tabs .p-tabview-nav li .p-tabview-nav-link {
+  color: var(--ui-dialog-text) !important;
+  background: var(--ui-dialog-bg) !important;
+}
+.home-icon-tabs .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  color: var(--ui-button-primary-text) !important;
+  border-color: var(--ui-button-primary) !important;
+  background: var(--ui-button-primary) !important;
+}
+
+.home-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.home-icon-grid-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--ui-dialog-border) !important;
+  background: var(--ui-dialog-bg) !important;
+  transition: border-color .15s ease, background .15s ease;
+}
+.home-icon-grid-btn:hover {
+  border-color: var(--ui-button-primary) !important;
+  background: var(--ui-dialog-bg) !important;
+  opacity: 0.8;
+}
+.home-icon-grid-btn.is-selected {
+  border: 2px solid var(--ui-button-primary) !important;
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+}
+
 /* Contenedor de navegación de pestañas */
 .settings-dialog .settings-dialog-tabview .p-tabview-nav-container,
 .p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-nav-container {

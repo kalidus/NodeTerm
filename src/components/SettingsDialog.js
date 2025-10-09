@@ -155,41 +155,30 @@ const SettingsDialog = ({
       const [activeTab, setActiveTab] = useState(0);
       const openPanel = (e) => opRef.current?.toggle(e);
       return (
-        <div>
+        <div className="home-icon-selector">
           <Button
             type="button"
             label="Elegir icono"
             icon="pi pi-chevron-down"
             iconPos="right"
             onClick={openPanel}
-            className="p-button-outlined"
+            className="p-button-outlined home-icon-trigger"
           />
-          <OverlayPanel ref={opRef} showCloseIcon dismissable style={{ width: 420, maxWidth: '90vw' }}>
+          <OverlayPanel ref={opRef} showCloseIcon dismissable style={{ width: 420, maxWidth: '90vw' }} className="home-icon-overlay">
             <div style={{ marginBottom: 8, fontWeight: 600, color: 'var(--text-color-secondary)' }}>
               Selecciona una categoría
             </div>
-            <TabView activeIndex={activeTab} onTabChange={(e) => setActiveTab(e.index)}>
+            <TabView activeIndex={activeTab} onTabChange={(e) => setActiveTab(e.index)} className="home-icon-tabs">
               {groups.map(group => (
                 <TabPanel key={group.label} header={group.label}>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(6, 1fr)',
-                    gap: 8,
-                    paddingTop: 4
-                  }}>
+                  <div className="home-icon-grid" style={{ paddingTop: 4 }}>
                     {group.items.map(item => (
                       <button
                         key={item.value}
                         type="button"
                         onClick={() => { onSelect(item.value); opRef.current?.hide(); }}
-                        className="p-button p-component"
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          height: 44, borderRadius: 8,
-                          border: selected === item.value ? '2px solid var(--primary-color)' : '1px solid var(--surface-border)',
-                          background: selected === item.value ? 'rgba(0,0,0,0.04)' : 'transparent',
-                          cursor: 'pointer'
-                        }}
+                        className={`home-icon-grid-btn ${selected === item.value ? 'is-selected' : ''}`}
+                        style={{ height: 44 }}
                         title={item.label}
                       >
                         <div style={{ transform: 'scale(1.0)' }}>{item.icon}</div>
