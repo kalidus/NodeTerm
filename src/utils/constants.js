@@ -36,7 +36,8 @@ export const TAB_TYPES = {
   RDP: 'rdp',
   RDP_GUACAMOLE: 'rdp-guacamole',
   GUACAMOLE: 'guacamole',
-  EXPLORER: 'explorer'
+  EXPLORER: 'explorer',
+  PASSWORD: 'password'
 };
 
 // Constantes de estados de conexión

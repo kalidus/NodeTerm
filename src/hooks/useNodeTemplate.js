@@ -9,6 +9,8 @@ export const useNodeTemplate = ({
   setActiveTabIndex,
   setGroupActiveIndices,
   setSshTabs,
+  setLastOpenedTabKey,
+  setOnCreateActivateTabKey,
   homeTabs,
   onOpenRdpConnection,
   iconThemes,
@@ -46,9 +48,16 @@ export const useNodeTemplate = ({
 
   // Node template simplificado - acciones movidas al menú contextual
   const nodeTemplate = useCallback((node, options) => {
+    console.log('🎨 Rendering node:', node.label, 'data:', node.data);
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isPassword = node.data && node.data.type === 'password';
+    
+    // Debug log para verificar tipo de nodo
+    if (node.data && node.data.type) {
+      console.log('🔍 Node type detected:', node.data.type, 'isPassword:', isPassword, node);
+    }
     
     // Icono según tema seleccionado para la sidebar
     let icon = null;
@@ -56,6 +65,8 @@ export const useNodeTemplate = ({
       icon = iconThemes[iconThemeSidebar]?.icons?.ssh || <span className="pi pi-desktop" />;
     } else if (isRDP) {
       icon = iconThemes[iconThemeSidebar]?.icons?.rdp || <span className="pi pi-desktop" style={{ color: '#007ad9' }} />;
+    } else if (isPassword) {
+      icon = <span className="pi pi-key" style={{ color: '#ffc107' }} />;
     } else if (isFolder) {
       // Usar el color del tema por defecto si no hay color personalizado
       const getThemeDefaultColor = (themeName) => {
@@ -166,7 +177,7 @@ export const useNodeTemplate = ({
     return (
       <div className="flex align-items-center gap-1"
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
-        onDoubleClick={(isSSH || isRDP) ? (e) => {
+        onDoubleClick={(isSSH || isRDP || isPassword) ? (e) => {
           e.stopPropagation();
           if (activeGroupId !== null) {
             const currentGroupKey = activeGroupId || 'no-group';
@@ -208,6 +219,22 @@ export const useNodeTemplate = ({
             });
           } else if (isRDP) {
             onOpenRdpConnection(node);
+          } else if (isPassword) {
+            // Delegar a App para crear/activar la pestaña
+            console.log('🔑 Password double-click detected:', node);
+            const payload = {
+              key: node.key,
+              label: node.label,
+              data: {
+                username: node.data?.username || '',
+                password: node.data?.password || '',
+                url: node.data?.url || '',
+                group: node.data?.group || '',
+                notes: node.data?.notes || ''
+              }
+            };
+            console.log('🔑 Dispatching open-password-tab event:', payload);
+            window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
           }
         } : undefined}
         onClick={isSSH ? (e) => {} : undefined}

@@ -11,6 +11,7 @@ import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
 import { themes } from '../themes';
+import { TAB_TYPES } from '../utils/constants';
 
 const TabContentRenderer = React.memo(({
   tab,
@@ -151,6 +152,105 @@ const TabContentRenderer = React.memo(({
         explorerColorTheme={explorerColorTheme}
         explorerFontSize={explorerFontSize}
       />
+    );
+  }
+
+  // Password info tab
+  if (tab.type === TAB_TYPES.PASSWORD && tab.passwordData) {
+    const p = tab.passwordData;
+    const copyToClipboard = async (text, fieldName) => {
+      try {
+        if (window.electron?.clipboard?.writeText) {
+          await window.electron.clipboard.writeText(text);
+        } else {
+          await navigator.clipboard.writeText(text);
+        }
+        // Show success toast if available
+        if (window.toast?.current?.show) {
+          window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
+        }
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    };
+
+    const Row = ({ label, value, copy }) => (
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #333' }}>
+        <div style={{ width: 120, color: '#9aa0a6', fontWeight: '500' }}>{label}</div>
+        <div style={{ flex: 1, color: '#e8eaed', fontFamily: 'monospace', fontSize: '14px' }}>{value || '-'}</div>
+        {copy && value && (
+          <button 
+            onClick={() => copyToClipboard(value, label)} 
+            style={{ 
+              padding: '6px 12px', 
+              borderRadius: 6, 
+              border: '1px solid #555', 
+              background: '#3a3a3a', 
+              color: '#fff', 
+              cursor: 'pointer',
+              fontSize: '12px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
+            onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
+          >
+            Copiar
+          </button>
+        )}
+      </div>
+    );
+
+    return (
+      <div style={{ 
+        padding: '24px', 
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+        height: '100%',
+        overflow: 'auto'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <span className="pi pi-key" style={{ fontSize: '24px', color: '#ffc107' }}></span>
+          <h2 style={{ margin: 0, color: '#fff', fontSize: '24px' }}>{p.title}</h2>
+        </div>
+        
+        <div style={{ 
+          background: '#2a2a2a', 
+          borderRadius: 12, 
+          padding: 20, 
+          border: '1px solid #444',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <Row label="Usuario" value={p.username} copy />
+          <Row label="Contraseña" value={p.password} copy />
+          <Row label="URL" value={p.url} />
+          <Row label="Grupo" value={p.group} />
+          <Row label="Notas" value={p.notes} />
+        </div>
+        
+        {p.url && (
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <button 
+              onClick={() => window.electron?.import?.openExternal?.(p.url)} 
+              style={{ 
+                padding: '12px 24px', 
+                borderRadius: 8, 
+                border: 'none', 
+                background: 'linear-gradient(135deg, #007ad9 0%, #0056b3 100%)', 
+                color: '#fff', 
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 8px rgba(0,122,217,0.3)'
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              <span className="pi pi-external-link" style={{ marginRight: 8 }}></span>
+              Abrir URL
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 

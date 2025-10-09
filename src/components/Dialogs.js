@@ -297,7 +297,7 @@ export function UnifiedConnectionDialog({
   editConnectionType = null, // 'ssh' o 'rdp'
   editNodeData = null
 }) {
-  const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP
+  const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP, 2 = Password
   const [isExpanded, setIsExpanded] = useState(false); // Estado para controlar si está expandido
   
   // Estados para RDP
@@ -379,6 +379,16 @@ export function UnifiedConnectionDialog({
   const dialogStyle = isExpanded 
     ? { width: '98vw', height: '98vh', minWidth: '1000px', minHeight: '800px' }
     : { width: '1100px', height: '80vh', minWidth: '1000px', minHeight: '700px' };
+
+  // Permitir cambiar pestaña desde evento global (para abrir directamente Password)
+  useEffect(() => {
+    const switchHandler = (e) => {
+      const idx = e.detail?.index ?? 2;
+      if (typeof idx === 'number') setActiveTabIndex(idx);
+    };
+    window.addEventListener('switch-unified-tab', switchHandler);
+    return () => window.removeEventListener('switch-unified-tab', switchHandler);
+  }, []);
 
   // Precargar datos cuando esté en modo edición
   useEffect(() => {
@@ -1049,11 +1059,74 @@ export function UnifiedConnectionDialog({
             </div>
           </div>
         </TabPanel>
+
+        {/* Tab Password */}
+        <TabPanel header="Password" leftIcon="pi pi-key">
+          <PasswordCreateForm
+            foldersOptions={foldersOptions}
+            onCreate={(payload) => {
+              // Lógica de creación vendrá por props parent (usaremos window-dispatch via custom event)
+              const ev = new CustomEvent('create-password-from-dialog', { detail: payload });
+              window.dispatchEvent(ev);
+              onHide();
+            }}
+          />
+        </TabPanel>
       </TabView>
       )}
     </Dialog>
   );
 }
+function PasswordCreateForm({ foldersOptions = [], onCreate }) {
+  const [title, setTitle] = React.useState('');
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [url, setUrl] = React.useState('');
+  const [group, setGroup] = React.useState('');
+  const [notes, setNotes] = React.useState('');
+  const [targetFolder, setTargetFolder] = React.useState(null);
+
+  const canCreate = title.trim().length > 0;
+
+  return (
+    <div className="p-fluid" style={{ padding: '12px' }}>
+      <div className="formgrid grid">
+        <div className="field col-12">
+          <label htmlFor="pwdTitle">Título *</label>
+          <InputText id="pwdTitle" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Mi cuenta" />
+        </div>
+        <div className="field col-6">
+          <label htmlFor="pwdUser">Usuario</label>
+          <InputText id="pwdUser" value={username} onChange={(e) => setUsername(e.target.value)} />
+        </div>
+        <div className="field col-6">
+          <label htmlFor="pwdPass">Contraseña</label>
+          <InputText id="pwdPass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </div>
+        <div className="field col-12">
+          <label htmlFor="pwdUrl">URL</label>
+          <InputText id="pwdUrl" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+        </div>
+        <div className="field col-6">
+          <label htmlFor="pwdGroup">Grupo</label>
+          <InputText id="pwdGroup" value={group} onChange={(e) => setGroup(e.target.value)} />
+        </div>
+        <div className="field col-6">
+          <label htmlFor="pwdTarget">Carpeta destino</label>
+          <Dropdown id="pwdTarget" value={targetFolder} options={foldersOptions} onChange={(e) => setTargetFolder(e.value)} placeholder="Opcional" showClear filter />
+        </div>
+        <div className="field col-12">
+          <label htmlFor="pwdNotes">Notas</label>
+          <InputText id="pwdNotes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </div>
+      <div className="p-field" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: '12px' }}>
+        <Button label="Crear" icon="pi pi-check" disabled={!canCreate} onClick={() => onCreate && onCreate({ title, username, password, url, group, notes, targetFolder })} />
+      </div>
+    </div>
+  );
+}
+
 
 // --- EnhancedSSHForm: Formulario SSH mejorado con soporte para claves ---
 export function EnhancedSSHForm({
