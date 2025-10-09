@@ -242,6 +242,726 @@ export const homeTabIcons = {
     )
   },
 
+  // === ICONOS CASAS NORMALES - MODERNOS Y PROFESIONALES ===
+
+  homeClassicOutline: {
+    name: 'Casa (Outline clásico)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5h-4v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9.5Z" stroke="#374151" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 21v-5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v5" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+
+  homeClassicFilled: {
+    name: 'Casa (Relleno moderno)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="homeFillGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4f46e5"/>
+            <stop offset="100%" stopColor="#06b6d4"/>
+          </linearGradient>
+        </defs>
+        <path d="M12 3L3 10.5V20a1 1 0 0 0 1 1h5v-5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5h5a1 1 0 0 0 1-1v-9.5L12 3Z" fill="url(#homeFillGrad)"/>
+        <rect x="10" y="12" width="4" height="3" rx="1" fill="#ffffff" opacity="0.65"/>
+      </svg>
+    )
+  },
+
+  homeRounded: {
+    name: 'Casa (Esquinas redondeadas)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4.5 11.2 12 5l7.5 6.2V19a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2v-7.8Z" stroke="#2563eb" strokeWidth="1.8" fill="#eff6ff"/>
+        <rect x="10" y="12.5" width="4" height="5" rx="1.2" fill="#bfdbfe"/>
+        <path d="M7 11.5h10" stroke="#93c5fd" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  homeMinimal: {
+    name: 'Casa (Minimal)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6" stroke="#111827" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M6.5 10.75V19a1.5 1.5 0 0 0 1.5 1.5H16a1.5 1.5 0 0 0 1.5-1.5v-8.25" stroke="#374151" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10 20v-5h4v5" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  homeDuotone: {
+    name: 'Casa (Duotono)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M3.5 10.5 12 4l8.5 6.5V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9.5Z" fill="#e5e7eb"/>
+        <path d="M3.5 10.5 12 4l8.5 6.5" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="9" y="12" width="6" height="6" rx="1" fill="#93c5fd"/>
+      </svg>
+    )
+  },
+
+  homeFlat: {
+    name: 'Casa (Flat)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M12 4l8 6v9a1 1 0 0 1-1 1h-5v-5H10v5H5a1 1 0 0 1-1-1v-9l8-6Z" fill="#0ea5e9"/>
+        <path d="M4 10l8-6 8 6" stroke="#0284c7" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+
+  homeGlass: {
+    name: 'Casa (Glassmorphism)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="homeGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22d3ee"/>
+            <stop offset="100%" stopColor="#6366f1"/>
+          </linearGradient>
+          <filter id="homeGlassBlur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.5"/>
+          </filter>
+        </defs>
+        <path d="M12 3l8 6v9a2 2 0 0 1-2 2h-2.5v-5.5a2.5 2.5 0 0 0-2.5-2.5h-2a2.5 2.5 0 0 0-2.5 2.5V20H6a2 2 0 0 1-2-2v-9l8-6Z" fill="url(#homeGlassGrad)" opacity="0.35" filter="url(#homeGlassBlur)"/>
+        <path d="M4 10l8-6 8 6" stroke="#6366f1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="9" y="12" width="6" height="6" rx="1.2" fill="#ffffff" opacity="0.45"/>
+      </svg>
+    )
+  },
+
+  homeLine: {
+    name: 'Casa (Line)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M6 10.5V19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8.5" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10 21v-4h4v4" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  homePro: {
+    name: 'Casa (Pro)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="homeProGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#22c55e"/>
+          </linearGradient>
+        </defs>
+        <path d="M3.5 11 12 4l8.5 7V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9Z" fill="#f8fafc" stroke="url(#homeProGrad)" strokeWidth="1.8"/>
+        <rect x="9" y="12" width="6" height="6" rx="1.2" fill="#e2e8f0" stroke="#22c55e" strokeWidth="1.2"/>
+        <path d="M3.5 11 12 4l8.5 7" stroke="url(#homeProGrad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+
+  // === MÁS CASAS NORMALES ===
+
+  homeDoorCentered: {
+    name: 'Casa (Puerta centrada)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#f3f4f6" stroke="#111827" strokeWidth="1.6"/>
+        <rect x="10.25" y="12" width="3.5" height="6.5" rx="0.9" fill="#e5e7eb" stroke="#6b7280" strokeWidth="1.2"/>
+        <circle cx="13.25" cy="15.25" r="0.4" fill="#6b7280"/>
+      </svg>
+    )
+  },
+
+  homeDoorLeft: {
+    name: 'Casa (Puerta izquierda)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M3.5 11 12 4l8.5 7V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9Z" fill="#eef2ff" stroke="#1f2937" strokeWidth="1.6"/>
+        <rect x="7.5" y="12" width="4" height="7" rx="1" fill="#e0e7ff" stroke="#4b5563" strokeWidth="1.2"/>
+        <circle cx="10.7" cy="15.5" r="0.4" fill="#4b5563"/>
+        <rect x="14" y="12.5" width="3.5" height="3" rx="0.6" fill="#c7d2fe"/>
+      </svg>
+    )
+  },
+
+  homeWindows2: {
+    name: 'Casa (2 ventanas)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4.5 11.2 12 5l7.5 6.2V19a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2v-7.8Z" stroke="#2563eb" strokeWidth="1.8" fill="#ffffff"/>
+        <rect x="7.25" y="12.2" width="3.5" height="3.2" rx="0.6" fill="#dbeafe"/>
+        <rect x="13.25" y="12.2" width="3.5" height="3.2" rx="0.6" fill="#dbeafe"/>
+        <rect x="10.25" y="16.2" width="3.5" height="3.8" rx="0.9" fill="#bfdbfe"/>
+      </svg>
+    )
+  },
+
+  townhouse: {
+    name: 'Casa adosada',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l4-3 4 3v8H4v-8Zm8 0 4-3 4 3v8h-8v-8Z" fill="#f1f5f9" stroke="#0f172a" strokeWidth="1.6"/>
+        <rect x="5.5" y="12.2" width="2.8" height="2.6" rx="0.4" fill="#cbd5e1"/>
+        <rect x="15.7" y="12.2" width="2.8" height="2.6" rx="0.4" fill="#cbd5e1"/>
+        <rect x="6.2" y="15.5" width="1.8" height="3.5" rx="0.4" fill="#94a3b8"/>
+        <rect x="16.4" y="15.5" width="1.8" height="3.5" rx="0.4" fill="#94a3b8"/>
+      </svg>
+    )
+  },
+
+  cottage: {
+    name: 'Cabaña (Cottage)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="cottageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f59e0b"/>
+            <stop offset="100%" stopColor="#ef4444"/>
+          </linearGradient>
+        </defs>
+        <path d="M3.5 12.2 9.5 8l2.5-1.6L20.5 12.2V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-7.8Z" fill="#fff7ed" stroke="url(#cottageGrad)" strokeWidth="1.7"/>
+        <rect x="6.5" y="13" width="3.2" height="2.6" rx="0.5" fill="#fed7aa"/>
+        <rect x="14.3" y="13" width="3.2" height="2.6" rx="0.5" fill="#fed7aa"/>
+        <rect x="10.5" y="15.8" width="3" height="3.8" rx="0.8" fill="#fdba74"/>
+      </svg>
+    )
+  },
+
+  villa: {
+    name: 'Villa',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M3.8 12.2 12 6l8.2 6.2V20a2 2 0 0 1-2 2h-3.5v-4.5a2 2 0 0 0-2-2h-3.4a2 2 0 0 0-2 2V22H5.8a2 2 0 0 1-2-2v-7.8Z" fill="#f8fafc" stroke="#0ea5e9" strokeWidth="1.7"/>
+        <rect x="7.2" y="13" width="3.2" height="2.6" rx="0.5" fill="#bae6fd"/>
+        <rect x="13.6" y="13" width="3.2" height="2.6" rx="0.5" fill="#bae6fd"/>
+        <rect x="10.3" y="15.8" width="3.4" height="4.2" rx="1" fill="#7dd3fc"/>
+      </svg>
+    )
+  },
+
+  apartment: {
+    name: 'Apartamento',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="6.5" width="16" height="13.5" rx="1.5" fill="#f1f5f9" stroke="#1f2937" strokeWidth="1.6"/>
+        <rect x="6.3" y="9" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
+        <rect x="10.4" y="9" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
+        <rect x="14.5" y="9" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
+        <rect x="6.3" y="13" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
+        <rect x="10.4" y="13" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
+        <rect x="14.5" y="13" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
+        <rect x="10.6" y="16.7" width="2.8" height="3.3" rx="0.6" fill="#94a3b8"/>
+      </svg>
+    )
+  },
+
+  homeGradient: {
+    name: 'Casa (Gradiente)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="homeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e"/>
+            <stop offset="100%" stopColor="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <path d="M4.2 11.2 12 5l7.8 6.2V19a2 2 0 0 1-2 2H6.2a2 2 0 0 1-2-2v-7.8Z" fill="url(#homeGrad)"/>
+        <rect x="9.5" y="12.2" width="5" height="5.8" rx="1.1" fill="#ffffff" opacity="0.6"/>
+      </svg>
+    )
+  },
+
+  homeTwoToneBlue: {
+    name: 'Casa (Dos tonos azul)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#eff6ff"/>
+        <path d="M4 11l8-6 8 6" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" fill="#bfdbfe"/>
+      </svg>
+    )
+  },
+
+  homeTwoToneGray: {
+    name: 'Casa (Dos tonos gris)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4.2 11.2 12 5l7.8 6.2V19a2 2 0 0 1-2 2H6.2a2 2 0 0 1-2-2v-7.8Z" fill="#f3f4f6"/>
+        <path d="M4.2 11.2 12 5l7.8 6.2" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="10" y="12.5" width="4" height="5" rx="1" fill="#d1d5db"/>
+      </svg>
+    )
+  },
+
+  homeMono: {
+    name: 'Casa (Monocromo)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" stroke="#111827" strokeWidth="1.8"/>
+        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" stroke="#374151" strokeWidth="1.6"/>
+      </svg>
+    )
+  },
+
+  homeOutlineThin: {
+    name: 'Casa (Outline fino)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" stroke="#334155" strokeWidth="1.2"/>
+        <rect x="10.2" y="12.2" width="3.6" height="5.6" rx="0.9" stroke="#64748b" strokeWidth="1.2"/>
+      </svg>
+    )
+  },
+
+  homeOutlineBold: {
+    name: 'Casa (Outline grueso)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" stroke="#0f172a" strokeWidth="2.2"/>
+        <rect x="9.6" y="12.2" width="4.8" height="6" rx="1.1" stroke="#1f2937" strokeWidth="2"/>
+      </svg>
+    )
+  },
+
+  homeWithChimney: {
+    name: 'Casa (Chimenea)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M16.5 6.5v-2h2.2v3.2" stroke="#6b7280" strokeWidth="1.4"/>
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#f3f4f6" stroke="#111827" strokeWidth="1.6"/>
+        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" fill="#e5e7eb"/>
+      </svg>
+    )
+  },
+
+  homeWithFence: {
+    name: 'Casa (Valla)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.6"/>
+        <path d="M3 20h18" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M6 18v2M8 18v2M10 18v2M12 18v2M14 18v2M16 18v2M18 18v2" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round"/>
+        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" fill="#e5e7eb"/>
+      </svg>
+    )
+  },
+
+  // === ICONOS FUTURISTAS: CENTRO DE CONTROL / OPERACIONES ===
+
+  controlCenter: {
+    name: 'Centro de Control',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="ctrlGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00d4ff"/>
+            <stop offset="100%" stopColor="#7c3aed"/>
+          </linearGradient>
+        </defs>
+        <rect x="3" y="5" width="18" height="14" rx="2.5" fill="#0b1220" stroke="url(#ctrlGrad)" strokeWidth="1.6"/>
+        <rect x="5" y="7" width="10" height="6" rx="1.2" fill="#0f1a2b" stroke="#22d3ee" strokeWidth="1"/>
+        <path d="M6 12 Q10 9 14 12" stroke="#22d3ee" strokeWidth="1.4" fill="none"/>
+        <circle cx="17.5" cy="9.5" r="1.2" fill="#22d3ee"/>
+        <rect x="16" y="12.5" width="4.5" height="1.6" rx="0.8" fill="#7c3aed"/>
+        <rect x="6" y="15" width="12" height="2.2" rx="1.1" fill="#111827" stroke="#7c3aed" strokeWidth="1"/>
+      </svg>
+    )
+  },
+
+  operationsHub: {
+    name: 'Centro de Operaciones',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="8.5" fill="#0b1220" stroke="#00d4ff" strokeWidth="1.6"/>
+        <circle cx="12" cy="12" r="5.5" stroke="#7c3aed" strokeWidth="1.4"/>
+        <path d="M12 6.5 V9.5 M12 14.5 V17.5 M6.5 12 H9.5 M14.5 12 H17.5" stroke="#22d3ee" strokeWidth="1.4" strokeLinecap="round"/>
+        <circle cx="12" cy="12" r="1.5" fill="#22d3ee"/>
+      </svg>
+    )
+  },
+
+  commandConsole: {
+    name: 'Consola de Comandos',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="5" width="18" height="14" rx="2.5" fill="#0f0f23" stroke="#7c3aed" strokeWidth="1.6"/>
+        <path d="M7.5 12.5 L10 10 M7.5 12.5 L10 15" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="11.5" y="14.2" width="5.5" height="1.6" rx="0.8" fill="#22d3ee"/>
+        <circle cx="6" cy="7.5" r="0.6" fill="#22d3ee"/>
+        <circle cx="7.8" cy="7.5" r="0.6" fill="#7c3aed"/>
+        <circle cx="9.6" cy="7.5" r="0.6" fill="#00d4ff"/>
+      </svg>
+    )
+  },
+
+  radarSweep: {
+    name: 'Radar',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="8.5" stroke="#22d3ee" strokeWidth="1.6"/>
+        <path d="M12 12 L18 8" stroke="#7c3aed" strokeWidth="1.6" strokeLinecap="round"/>
+        <circle cx="15.5" cy="9.8" r="1.2" fill="#22d3ee"/>
+        <path d="M7 12 A5 5 0 0 1 12 7" stroke="#00d4ff" strokeWidth="1.2" fill="none"/>
+      </svg>
+    )
+  },
+
+  satelliteUplink: {
+    name: 'Enlace Satelital',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M5.5 18.5 l3-3 3 3 -3 3 -3-3Z" fill="#7c3aed"/>
+        <path d="M11 8 l3-3 3 3 -3 3 -3-3Z" fill="#22d3ee"/>
+        <path d="M8.5 15 L15 8.5" stroke="#00d4ff" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M16.5 12.5 Q19 10 20.5 12.5" stroke="#22d3ee" strokeWidth="1.4" fill="none" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  networkHub: {
+    name: 'Hub de Red',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="2.2" fill="#22d3ee"/>
+        <circle cx="6" cy="7" r="1.8" fill="#7c3aed"/>
+        <circle cx="18" cy="7" r="1.8" fill="#7c3aed"/>
+        <circle cx="6" cy="17" r="1.8" fill="#7c3aed"/>
+        <circle cx="18" cy="17" r="1.8" fill="#7c3aed"/>
+        <path d="M12 12 L6 7 M12 12 L18 7 M12 12 L6 17 M12 12 L18 17" stroke="#00d4ff" strokeWidth="1.6"/>
+      </svg>
+    )
+  },
+
+  analyticsDashboard: {
+    name: 'Panel Analítico',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="3.5" y="6" width="17" height="12" rx="2" fill="#0b1220" stroke="#22d3ee" strokeWidth="1.6"/>
+        <path d="M6.5 15 L9.5 12.2 L12 13.6 L16.5 9.5" stroke="#7c3aed" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+        <circle cx="16.5" cy="9.5" r="1" fill="#7c3aed"/>
+        <rect x="5.5" y="7.2" width="12" height="1.4" rx="0.7" fill="#111827"/>
+      </svg>
+    )
+  },
+
+  systemMonitor: {
+    name: 'Monitor de Sistema',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="3.5" y="5.5" width="17" height="11.5" rx="2" fill="#0f1a2b" stroke="#00d4ff" strokeWidth="1.6"/>
+        <path d="M5.8 12 h2.2 l1.1-3.2 1.4 6 1.2-3h2.2 l1-2.2 1 2.2 h2.1" stroke="#22d3ee" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect x="8.5" y="18.2" width="7" height="1.6" rx="0.8" fill="#7c3aed"/>
+      </svg>
+    )
+  },
+
+  slidersControl: {
+    name: 'Controles Deslizantes',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M6 6 v12" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M12 6 v12" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M18 6 v12" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round"/>
+        <rect x="4.5" y="9.5" width="3" height="3" rx="1" fill="#7c3aed"/>
+        <rect x="10.5" y="7" width="3" height="3" rx="1" fill="#00d4ff"/>
+        <rect x="16.5" y="12" width="3" height="3" rx="1" fill="#7c3aed"/>
+      </svg>
+    )
+  },
+
+  serverRack: {
+    name: 'Rack de Servidores',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="6" y="4.5" width="12" height="15" rx="1.6" fill="#0b1220" stroke="#22d3ee" strokeWidth="1.6"/>
+        <rect x="8" y="6.5" width="8" height="2.6" rx="0.6" fill="#111827" stroke="#7c3aed" strokeWidth="1"/>
+        <rect x="8" y="10" width="8" height="2.6" rx="0.6" fill="#111827" stroke="#7c3aed" strokeWidth="1"/>
+        <rect x="8" y="13.5" width="8" height="2.6" rx="0.6" fill="#111827" stroke="#7c3aed" strokeWidth="1"/>
+        <circle cx="9.4" cy="7.8" r="0.4" fill="#00d4ff"/>
+        <circle cx="9.4" cy="11.3" r="0.4" fill="#00d4ff"/>
+        <circle cx="9.4" cy="14.8" r="0.4" fill="#00d4ff"/>
+      </svg>
+    )
+  },
+
+  globeGrid: {
+    name: 'Globo en Rejilla',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="8.5" stroke="#22d3ee" strokeWidth="1.6"/>
+        <path d="M4.2 12 h15.6 M12 4.2 v15.6 M7.5 7.5 A8.5 8.5 0 0 0 16.5 16.5 M16.5 7.5 A8.5 8.5 0 0 0 7.5 16.5" stroke="#7c3aed" strokeWidth="1.2" fill="none"/>
+      </svg>
+    )
+  },
+
+  waveformScope: {
+    name: 'Osciloscopio',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="3.5" y="6" width="17" height="12" rx="2" fill="#0b1220" stroke="#00d4ff" strokeWidth="1.6"/>
+        <path d="M5.8 12 H8 l1-2.5 1.2 5 1-2.2 H13 l1-2 1 2 h2.2" stroke="#22d3ee" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+
+  shieldOps: {
+    name: 'Seguridad (Ops)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M12 4 l7 3 v5.5c0 4.6-4.2 7.4-7 8.5-2.8-1.1-7-3.9-7-8.5V7l7-3Z" fill="#0b1220" stroke="#22d3ee" strokeWidth="1.6"/>
+        <path d="M9.5 12.5 l1.8 1.8 3.7-3.7" stroke="#7c3aed" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+
+  holoConsole: {
+    name: 'Consola Holográfica',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="holoCtrl" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22d3ee"/>
+            <stop offset="100%" stopColor="#7c3aed"/>
+          </linearGradient>
+        </defs>
+        <rect x="5" y="14" width="14" height="3.2" rx="1.6" fill="#0b1220" stroke="url(#holoCtrl)" strokeWidth="1.4"/>
+        <rect x="7" y="7" width="10" height="5.2" rx="1.2" fill="#0f1a2b" stroke="#22d3ee" strokeWidth="1.2"/>
+        <path d="M8 11 Q12 8.7 16 11" stroke="#22d3ee" strokeWidth="1.4" fill="none"/>
+      </svg>
+    )
+  },
+
+  cockpitHUD: {
+    name: 'HUD de Cabina',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="7.8" stroke="#00d4ff" strokeWidth="1.6"/>
+        <path d="M8 12 h8" stroke="#7c3aed" strokeWidth="1.6" strokeLinecap="round"/>
+        <path d="M12 8 v8" stroke="#7c3aed" strokeWidth="1.6" strokeLinecap="round"/>
+        <circle cx="12" cy="12" r="2.2" fill="#22d3ee"/>
+      </svg>
+    )
+  },
+
+  opsTimeline: {
+    name: 'Línea de Tiempo (Ops)',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M4 12 h16" stroke="#22d3ee" strokeWidth="1.6" strokeLinecap="round"/>
+        <circle cx="6.5" cy="12" r="1.1" fill="#7c3aed"/>
+        <circle cx="12" cy="12" r="1.1" fill="#22d3ee"/>
+        <circle cx="17.5" cy="12" r="1.1" fill="#7c3aed"/>
+      </svg>
+    )
+  },
+
+  opsGrid: {
+    name: 'Rejilla de Operaciones',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="6" width="16" height="12" rx="2" fill="#0b1220" stroke="#22d3ee" strokeWidth="1.6"/>
+        <path d="M4 10 H20 M4 14 H20 M8 6 V18 M16 6 V18" stroke="#7c3aed" strokeWidth="1.2"/>
+        <circle cx="10" cy="12" r="1" fill="#22d3ee"/>
+        <circle cx="14" cy="12" r="1" fill="#22d3ee"/>
+      </svg>
+    )
+  },
+
+  // === ICONOS DE ALTA DETALLA Y COLOR (OPS / CONTROL) ===
+
+  opCenterNeon: {
+    name: 'Centro de Control Neón',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="opNeonGradA" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00ffe0"/>
+            <stop offset="100%" stopColor="#0066ff"/>
+          </linearGradient>
+          <linearGradient id="opNeonGradB" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ff00ff"/>
+            <stop offset="100%" stopColor="#00e5ff"/>
+          </linearGradient>
+          <filter id="opNeonGlowA" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.4"/>
+          </filter>
+        </defs>
+        <rect x="3.2" y="5.2" width="17.6" height="13.6" rx="2.8" fill="#0a0f1f" stroke="url(#opNeonGradA)" strokeWidth="1.6"/>
+        <rect x="5.2" y="7.3" width="8.8" height="5.1" rx="1.2" fill="#0e1630" stroke="#00e5ff" strokeWidth="1"/>
+        <path d="M6.2 11 Q9.6 8.9 13 11" stroke="#00e5ff" strokeWidth="1.3" fill="none"/>
+        <rect x="15.2" y="8.2" width="3.6" height="1.6" rx="0.8" fill="#ff00ff"/>
+        <rect x="6.2" y="14.4" width="11.6" height="2.2" rx="1.1" fill="#0f172a" stroke="url(#opNeonGradB)" strokeWidth="1" filter="url(#opNeonGlowA)"/>
+        <circle cx="7.6" cy="8.6" r="0.6" fill="#00e5ff"/>
+        <circle cx="9.0" cy="8.6" r="0.6" fill="#ff00ff"/>
+        <circle cx="10.4" cy="8.6" r="0.6" fill="#00ffe0"/>
+      </svg>
+    )
+  },
+
+  controlMatrixGrid: {
+    name: 'Matriz de Control',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="ctrlMxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00ff88"/>
+            <stop offset="100%" stopColor="#006644"/>
+          </linearGradient>
+        </defs>
+        <rect x="4" y="6" width="16" height="12" rx="2" fill="#061218" stroke="#00d4aa" strokeWidth="1.6"/>
+        <path d="M6 8 H18 M6 10 H18 M6 12 H18 M6 14 H18" stroke="#00ffa8" strokeWidth="1" opacity="0.9"/>
+        <circle cx="8" cy="8" r="0.75" fill="url(#ctrlMxGrad)"/>
+        <circle cx="12" cy="10" r="0.75" fill="#00e6a0"/>
+        <circle cx="16" cy="12" r="0.75" fill="#00ffcc"/>
+        <rect x="7.2" y="15" width="9.6" height="2.2" rx="1.1" fill="#0a1a1f" stroke="#00ffcc" strokeWidth="1"/>
+      </svg>
+    )
+  },
+
+  multiPanelCockpit: {
+    name: 'Cabina Multipanel',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="3.5" y="5.2" width="17" height="13.6" rx="2.4" fill="#0c1326" stroke="#22d3ee" strokeWidth="1.6"/>
+        <rect x="5.2" y="7" width="5.6" height="4.2" rx="0.8" fill="#101b33" stroke="#7c3aed" strokeWidth="1"/>
+        <rect x="11.6" y="7" width="5.6" height="4.2" rx="0.8" fill="#101b33" stroke="#00d4ff" strokeWidth="1"/>
+        <rect x="5.2" y="12.2" width="12" height="4" rx="1.2" fill="#0f172a" stroke="#22d3ee" strokeWidth="1"/>
+        <path d="M6.4 13.8 H15.8" stroke="#22d3ee" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  cyberOpsShield: {
+    name: 'Escudo Cibernético',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="cybShieldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#00e5ff"/>
+            <stop offset="100%" stopColor="#7c3aed"/>
+          </linearGradient>
+        </defs>
+        <path d="M12 4.2 l7 2.9 v5.6c0 4.4-4 7.1-7 8.2-3-1.1-7-3.8-7-8.2V7.1l7-2.9Z" fill="#0a0f1f" stroke="url(#cybShieldGrad)" strokeWidth="1.6"/>
+        <path d="M9.2 12.5 l2.2 2.2 4.4-4.4" stroke="#22d3ee" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="9.2" r="1.2" fill="#7c3aed"/>
+      </svg>
+    )
+  },
+
+  alertCenter: {
+    name: 'Centro de Alertas',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="6" width="16" height="12" rx="2" fill="#1a0e16" stroke="#ff00aa" strokeWidth="1.6"/>
+        <path d="M12 8 l2.8 4.8 h-5.6L12 8Z" fill="#ff4dd2"/>
+        <rect x="7" y="14.5" width="10" height="1.6" rx="0.8" fill="#33091f" stroke="#ff4dd2" strokeWidth="1"/>
+      </svg>
+    )
+  },
+
+  commandPalette: {
+    name: 'Paleta de Comandos',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="cmdPalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#34d399"/>
+            <stop offset="100%" stopColor="#10b981"/>
+          </linearGradient>
+        </defs>
+        <rect x="3.5" y="6" width="17" height="12" rx="2" fill="#071912" stroke="#10b981" strokeWidth="1.6"/>
+        <rect x="5.5" y="8" width="7.5" height="3.2" rx="0.8" fill="#0b2419" stroke="#34d399" strokeWidth="1"/>
+        <rect x="13.8" y="8" width="4.7" height="3.2" rx="0.8" fill="url(#cmdPalGrad)"/>
+        <rect x="5.5" y="12.5" width="13" height="1.8" rx="0.9" fill="#0b2419" stroke="#10b981" strokeWidth="1"/>
+      </svg>
+    )
+  },
+
+  telemetryRings: {
+    name: 'Anillos de Telemetría',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="7.8" stroke="#00d4ff" strokeWidth="1.6"/>
+        <circle cx="12" cy="12" r="5.3" stroke="#7c3aed" strokeWidth="1.4"/>
+        <circle cx="12" cy="12" r="3.2" stroke="#22d3ee" strokeWidth="1.3"/>
+        <circle cx="12" cy="12" r="1.4" fill="#22d3ee"/>
+      </svg>
+    )
+  },
+
+  meshNetwork: {
+    name: 'Red Mallada',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <circle cx="6" cy="6" r="1.2" fill="#22d3ee"/>
+        <circle cx="18" cy="6" r="1.2" fill="#22d3ee"/>
+        <circle cx="6" cy="18" r="1.2" fill="#22d3ee"/>
+        <circle cx="18" cy="18" r="1.2" fill="#22d3ee"/>
+        <circle cx="12" cy="12" r="1.4" fill="#7c3aed"/>
+        <path d="M6 6 L12 12 L18 6 L18 18 L12 12 L6 18 Z" stroke="#00d4ff" strokeWidth="1.4"/>
+      </svg>
+    )
+  },
+
+  kpiGauges: {
+    name: 'Indicadores KPI',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="kpiGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#fb923c"/>
+            <stop offset="100%" stopColor="#f43f5e"/>
+          </linearGradient>
+        </defs>
+        <path d="M12 5 a7 7 0 0 1 7 7h-14a7 7 0 0 1 7-7Z" fill="#0b1220" stroke="url(#kpiGrad)" strokeWidth="1.6"/>
+        <path d="M12 12 L16 9.5" stroke="#fb7185" strokeWidth="1.8" strokeLinecap="round"/>
+        <circle cx="12" cy="12" r="1.2" fill="#fb7185"/>
+      </svg>
+    )
+  },
+
+  pipelineFlow: {
+    name: 'Flujo de Pipeline',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="4.5" y="7" width="5" height="3" rx="0.8" fill="#0b1220" stroke="#22d3ee" strokeWidth="1.2"/>
+        <rect x="10.5" y="7" width="5" height="3" rx="0.8" fill="#0b1220" stroke="#7c3aed" strokeWidth="1.2"/>
+        <rect x="16.5" y="7" width="3.5" height="3" rx="0.8" fill="#0b1220" stroke="#00d4ff" strokeWidth="1.2"/>
+        <path d="M7 10 L7 12 H12 L12 14 H18" stroke="#00d4ff" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  securityVault: {
+    name: 'Bóveda de Seguridad',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="5.2" y="6" width="13.6" height="12" rx="1.6" fill="#0b1220" stroke="#22d3ee" strokeWidth="1.6"/>
+        <circle cx="12" cy="12" r="3" stroke="#7c3aed" strokeWidth="1.6"/>
+        <path d="M12 9 v6 M9 12 h6" stroke="#00d4ff" strokeWidth="1.6" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
+  quantumConsole: {
+    name: 'Consola Cuántica',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <defs>
+          <radialGradient id="qConsGrad" cx="50%" cy="40%" r="70%">
+            <stop offset="0%" stopColor="#7c3aed"/>
+            <stop offset="100%" stopColor="#00d4ff"/>
+          </radialGradient>
+        </defs>
+        <rect x="3.5" y="6" width="17" height="12" rx="2.2" fill="#0a0f1f" stroke="#7c3aed" strokeWidth="1.6"/>
+        <circle cx="12" cy="12" r="4.2" fill="url(#qConsGrad)" opacity="0.7"/>
+        <path d="M8.5 12 h7" stroke="#22d3ee" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+    )
+  },
+
   // === ICONOS ADICIONALES - MÁS VARIEDAD FUTURISTA ===
 
 
@@ -1308,4 +2028,36 @@ export function setHomeTabIcon(iconKey) {
   localStorage.setItem('home_tab_icon', iconKey);
   // Disparar evento para que otros componentes se actualicen
   window.dispatchEvent(new Event('home-icon-changed'));
+}
+
+// Categorías de iconos para el selector (agrupación para mejor UX)
+const HOME_ICON_CATEGORIES = {
+  Casas: [
+    'homeClassicOutline','homeClassicFilled','homeRounded','homeMinimal','homeDuotone','homeFlat','homeGlass','homeLine','homePro',
+    'homeDoorCentered','homeDoorLeft','homeWindows2','townhouse','cottage','villa','apartment','homeGradient','homeTwoToneBlue','homeTwoToneGray','homeMono','homeOutlineThin','homeOutlineBold','homeWithChimney','homeWithFence'
+  ],
+  'Control / Operaciones': [
+    'controlCenter','operationsHub','commandConsole','radarSweep','satelliteUplink','networkHub','analyticsDashboard','systemMonitor','slidersControl','serverRack','globeGrid','waveformScope','shieldOps','holoConsole','cockpitHUD','opsTimeline','opsGrid',
+    'opCenterNeon','controlMatrixGrid','multiPanelCockpit','cyberOpsShield','alertCenter','commandPalette','telemetryRings','meshNetwork','kpiGauges','pipelineFlow','securityVault','quantumConsole'
+  ],
+  Futuristas: [
+    'wifiHeartHome','cyberHouse','neonHome','hologramHouse','matrixHome','quantumHome','cyberpunkHouse','holographicHome','energyHouse','digitalHome','laserHouse','plasmaHome','neonMatrix','cyberGlow','neonCircuit',
+    'brainPlugHome','purplePlugHome','chipSecurityHex','colorLayers','upArrow','cloudHeart','gearFuture','soundHome','brainHome','leafHome','lockHome','tempHome','lightningHome','battery'
+  ]
+};
+
+/**
+ * Devuelve una lista de opciones agrupadas para usar en el selector (PrimeReact optionGroup)
+ */
+export function getHomeTabIconGroups() {
+  const makeItem = (key) => {
+    const data = homeTabIcons[key];
+    if (!data) return null;
+    return { label: data.name, value: key, icon: data.icon(20) };
+  };
+  const groups = Object.entries(HOME_ICON_CATEGORIES).map(([label, keys]) => ({
+    label,
+    items: keys.map(makeItem).filter(Boolean)
+  })).filter(g => g.items && g.items.length > 0);
+  return groups;
 }
