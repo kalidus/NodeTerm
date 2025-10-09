@@ -14,6 +14,117 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
+// Devuelve un color totalmente opaco a partir de posibles valores con alfa
+function toSolidColor(color) {
+    if (!color || typeof color !== 'string') return color;
+
+    // rgba(r, g, b, a) -> rgb(r, g, b)
+    if (color.startsWith('rgba')) {
+        try {
+            const parts = color
+                .replace('rgba(', '')
+                .replace(')', '')
+                .split(',')
+                .map((p) => p.trim());
+            const r = parseInt(parts[0], 10);
+            const g = parseInt(parts[1], 10);
+            const b = parseInt(parts[2], 10);
+            if (Number.isFinite(r) && Number.isFinite(g) && Number.isFinite(b)) {
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        } catch (_) {
+            return color;
+        }
+    }
+
+    // #RRGGBBAA -> #RRGGBB
+    if (/^#([0-9a-fA-F]{8})$/.test(color)) {
+        return `#${color.slice(1, 7)}`;
+    }
+
+    // #RGBA -> #RRGGBB (expansión simple)
+    if (/^#([0-9a-fA-F]{4})$/.test(color)) {
+        const r = color[1];
+        const g = color[2];
+        const b = color[3];
+        return `#${r}${r}${g}${g}${b}${b}`;
+    }
+
+    return color;
+}
+
+// Helpers para calcular contraste
+function parseColorToRgb(color) {
+    if (!color || typeof color !== 'string') return null;
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        if (hex.length === 3 || hex.length === 4) {
+            const r = parseInt(hex[0] + hex[0], 16);
+            const g = parseInt(hex[1] + hex[1], 16);
+            const b = parseInt(hex[2] + hex[2], 16);
+            return { r, g, b };
+        }
+        if (hex.length === 6 || hex.length === 8) {
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            return { r, g, b };
+        }
+        return null;
+    }
+    if (color.startsWith('rgb')) {
+        try {
+            const parts = color.replace(/rgba?\(/, '').replace(')', '').split(',');
+            const r = parseInt(parts[0].trim(), 10);
+            const g = parseInt(parts[1].trim(), 10);
+            const b = parseInt(parts[2].trim(), 10);
+            if ([r, g, b].every(n => Number.isFinite(n))) return { r, g, b };
+        } catch (_) { return null; }
+    }
+    return null;
+}
+
+function perceivedBrightness(rgb) {
+    if (!rgb) return 0;
+    const { r, g, b } = rgb;
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+function adjustRgbBrightness(rgb, factor) {
+    // factor in [-1, 1]; >0 lighten towards white, <0 darken towards black
+    const amt = Math.max(-1, Math.min(1, factor));
+    const lighten = amt > 0;
+    const mix = Math.abs(amt);
+    const mixChannel = (v) => {
+        if (lighten) return Math.round(v + (255 - v) * mix);
+        return Math.round(v * (1 - mix));
+    };
+    const r = mixChannel(rgb.r);
+    const g = mixChannel(rgb.g);
+    const b = mixChannel(rgb.b);
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Obtiene un color sólido a partir del tema o del prop splitterColor
+function getSolidSplitterColor(theme, splitterColor) {
+    if (splitterColor) return toSolidColor(splitterColor);
+    const bg = theme?.background || '#2d2d2d';
+    const isDark = bg.startsWith('#') && parseInt(bg.slice(1, 3), 16) < 128;
+    const rgbBg = parseColorToRgb(bg);
+    const prefer = theme?.splitter || theme?.cursor || theme?.cursorAccent || theme?.selection || theme?.selectionBackground || theme?.foreground;
+    if (prefer) {
+        const solid = toSolidColor(prefer);
+        const rgb = parseColorToRgb(solid);
+        if (rgb && rgbBg) {
+            const diff = Math.abs(perceivedBrightness(rgb) - perceivedBrightness(rgbBg));
+            if (diff >= 40) return solid; // contraste aceptable
+        } else {
+            return solid;
+        }
+    }
+    return isDark ? '#FFFFFF' : '#000000';
+}
+
 const SplitLayout = ({ 
   leftTerminal, 
   rightTerminal, 
@@ -343,6 +454,42 @@ const SplitLayout = ({
   if (orientation === 'vertical') {
     const [leftSize, setLeftSize] = useState(50);
     const [isDragging, setIsDragging] = useState(false);
+    const verticalSplitterColor = getSolidSplitterColor(theme, splitterColor);
+    const bgForContrast = theme?.background || '#2d2d2d';
+    const bgRgb = parseColorToRgb(bgForContrast);
+    const lineRgb = parseColorToRgb(verticalSplitterColor);
+    let visibleLineColor = verticalSplitterColor;
+    if (bgRgb && lineRgb) {
+      const diff = Math.abs(perceivedBrightness(bgRgb) - perceivedBrightness(lineRgb));
+      if (diff < 40) {
+        // Mantener tono del tema pero ajustar brillo para buen contraste
+        const isBgDark = perceivedBrightness(bgRgb) < 128;
+        visibleLineColor = adjustRgbBrightness(lineRgb, isBgDark ? 0.6 : -0.6);
+      }
+    }
+    const gutterRef = useRef(null);
+    const lineRef = useRef(null);
+
+    // Alinear la línea al pixel para evitar artefactos (doble línea por subpíxeles)
+    useEffect(() => {
+      const updateLineLeft = () => {
+        const gutter = gutterRef.current;
+        const line = lineRef.current;
+        if (!gutter || !line) return;
+        const gutterWidth = gutter.clientWidth; // entero en CSS px
+        const lineWidth = 2; // px
+        const left = Math.max(0, Math.round((gutterWidth - lineWidth) / 2));
+        line.style.left = `${left}px`;
+      };
+      updateLineLeft();
+      const ro = new ResizeObserver(updateLineLeft);
+      if (gutterRef.current) ro.observe(gutterRef.current);
+      window.addEventListener('resize', updateLineLeft);
+      return () => {
+        window.removeEventListener('resize', updateLineLeft);
+        ro.disconnect();
+      };
+    }, []);
     
     const handleMouseDown = (e) => {
       e.preventDefault();
@@ -386,7 +533,8 @@ const SplitLayout = ({
         width: '100%', 
         display: 'flex',
         flexDirection: 'row',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        background: theme?.background || 'transparent'
       }}>
         {/* Panel izquierdo */}
         <div style={{
@@ -395,7 +543,11 @@ const SplitLayout = ({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          minWidth: '200px'
+          minWidth: '200px',
+          border: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+          background: theme?.background || 'transparent'
         }}>
           {leftTerminal.content ? (
             leftTerminal.content
@@ -420,44 +572,29 @@ const SplitLayout = ({
           )}
         </div>
         
-        {/* Gutter */}
+        {/* Gutter (vertical) - área de agarre 8px con línea central dibujada por gradiente */}
         <div 
           style={{
-            width: '6px',
+            width: '8px',
             height: '100%',
-            backgroundColor: effectiveSplitterColor,
             cursor: 'col-resize',
             flexShrink: 0,
             position: 'relative',
             zIndex: 10,
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderLeft: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`,
-            borderRight: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`
+            transition: 'filter 0.15s ease',
+            userSelect: 'none',
+            background: 'transparent',
+            backgroundImage: `linear-gradient(to right, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleLineColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: '100% 100%'
           }}
+          ref={gutterRef}
           onMouseDown={handleMouseDown}
-          onMouseEnter={(e) => {
-            e.target.style.backgroundColor = effectiveSplitterColor.replace('0.1', '0.2').replace('0.15', '0.25');
-            e.target.style.borderLeftColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
-            e.target.style.borderRightColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.backgroundColor = effectiveSplitterColor;
-            e.target.style.borderLeftColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
-            e.target.style.borderRightColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
           title="Arrastra para redimensionar"
         >
-          {/* Indicador visual del gutter */}
-          <div style={{
-            width: '2px',
-            height: '40px',
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            borderRadius: '1px',
-            opacity: 0.8
-          }} />
+          {/* línea se dibuja con backgroundImage */}
         </div>
         
         {/* Panel derecho */}
@@ -467,7 +604,11 @@ const SplitLayout = ({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          minWidth: '200px'
+          minWidth: '200px',
+          border: 'none',
+          outline: 'none',
+          boxShadow: 'none',
+          background: theme?.background || 'transparent'
         }}>
           {rightTerminal.content ? (
             rightTerminal.content
