@@ -352,23 +352,35 @@ const SplitLayout = ({
       }
     }, [isDragging, handleMouseMove, handleMouseUp]);
 
-    // Estilo del handle horizontal
+    // Calcular color del separador horizontal con buen contraste
+    const horizontalBaseColor = getSolidSplitterColor(theme, splitterColor);
+    const bgForHorizontal = theme?.background || '#2d2d2d';
+    const bgH = parseColorToRgb(bgForHorizontal);
+    const lineH = parseColorToRgb(horizontalBaseColor);
+    let visibleHorizontalColor = horizontalBaseColor;
+    if (bgH && lineH) {
+      const diff = Math.abs(perceivedBrightness(bgH) - perceivedBrightness(lineH));
+      if (diff < 40) {
+        const isBgDark = perceivedBrightness(bgH) < 128;
+        visibleHorizontalColor = adjustRgbBrightness(lineH, isBgDark ? 0.6 : -0.6);
+      }
+    }
+
+    // Estilo del handle horizontal (área de 8px con línea central de 2px)
     const horizontalHandleStyle = {
       position: 'absolute',
       bottom: '-4px',
       left: 0,
       width: '100%',
       height: '8px',
-      backgroundColor: effectiveSplitterColor,
-      borderTop: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`,
-      borderBottom: `1px solid ${effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3')}`,
+      background: 'transparent',
+      backgroundImage: `linear-gradient(to bottom, transparent calc(50% - 1px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% - 1px), var(--ui-tab-border, ${visibleHorizontalColor}) calc(50% + 1px), transparent calc(50% + 1px))`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: '100% 100%',
       cursor: 'row-resize',
       zIndex: 1000,
       userSelect: 'none',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
+      transition: 'filter 0.2s ease'
     };
 
     return (
@@ -400,27 +412,10 @@ const SplitLayout = ({
           <div 
             style={horizontalHandleStyle}
             onMouseDown={handleMouseDown}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = effectiveSplitterColor.replace('0.1', '0.2').replace('0.15', '0.25');
-              e.target.style.borderTopColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
-              e.target.style.borderBottomColor = effectiveSplitterColor.replace('0.1', '0.4').replace('0.15', '0.4');
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = effectiveSplitterColor;
-              e.target.style.borderTopColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
-              e.target.style.borderBottomColor = effectiveSplitterColor.replace('0.1', '0.3').replace('0.15', '0.3');
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
             title="Arrastra para redimensionar"
-          >
-            {/* Indicador visual horizontal */}
-            <div style={{
-              width: '40px',
-              height: '2px',
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              borderRadius: '1px',
-              opacity: 0.8
-            }} />
-          </div>
+          />
         </div>
         
         <div style={finalSecondaryPaneStyle}>
