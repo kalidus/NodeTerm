@@ -1134,9 +1134,11 @@ const Sidebar = React.memo(({
   // };
   // nodeTemplate adaptado de App.js
   const nodeTemplate = (node, options) => {
+    console.log('🎨 Sidebar rendering node:', node.label, 'data:', node.data);
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
+    const isPassword = node.data && node.data.type === 'password';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
@@ -1162,6 +1164,8 @@ const Sidebar = React.memo(({
           height: `${connectionIconSize}px`
         }
       }) : '🖥️'; // Icono RDP o fallback
+    } else if (isPassword) {
+      icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
     } else if (isFolder) {
       // Lógica inteligente para determinar el color de la carpeta:
       // 1. Si no tiene color asignado → usar color por defecto del tema actual
@@ -1404,10 +1408,25 @@ const Sidebar = React.memo(({
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
+          console.log('🖱️ Double click on node:', node.label, 'isPassword:', isPassword);
           if (isSSH && onOpenSSHConnection) {
             onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(node);
+          } else if (isPassword) {
+            console.log('🔑 Opening password tab for:', node.label);
+            const payload = {
+              key: node.key,
+              label: node.label,
+              data: {
+                username: node.data?.username || '',
+                password: node.data?.password || '',
+                url: node.data?.url || '',
+                group: node.data?.group || '',
+                notes: node.data?.notes || ''
+              }
+            };
+            window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
           }
         }}
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}

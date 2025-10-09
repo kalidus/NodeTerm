@@ -933,7 +933,8 @@ const App = () => {
     openNewRdpDialog,
     closeRdpDialog,
     openEditRdpDialog,
-    handleSaveRdpToSidebar
+    handleSaveRdpToSidebar,
+    createNewPasswordEntry
   } = useFormHandlers({
     toast,
     setShowRdpDialog,
@@ -989,6 +990,8 @@ const App = () => {
     setActiveTabIndex,
     setGroupActiveIndices,
     setSshTabs,
+    setLastOpenedTabKey,
+    setOnCreateActivateTabKey,
     homeTabs,
     onOpenRdpConnection,
     iconThemes,
@@ -1158,6 +1161,78 @@ const App = () => {
     window.__DEBUG_NODES__ = () => nodes;
   }, [nodes]);
 
+  // Crear password desde el tab Password del diálogo unificado
+  useEffect(() => {
+    const handler = (e) => {
+      const p = e.detail || {};
+      try {
+        // Crear nodo en la carpeta seleccionada
+        const targetKey = p.targetFolder || null;
+        createNewPasswordEntry(targetKey, p);
+      } catch (err) {
+        console.error('Error creando password desde diálogo:', err);
+      }
+    };
+    window.addEventListener('create-password-from-dialog', handler);
+    return () => window.removeEventListener('create-password-from-dialog', handler);
+  }, []);
+
+  // Abrir diálogo unificado directamente en pestaña Password desde menú contextual
+  useEffect(() => {
+    const handler = (e) => {
+      try {
+        const targetFolder = e.detail?.targetFolder || null;
+        // Abrir diálogo unificado y cambiar a pestaña Password (índice 2)
+        setShowUnifiedConnectionDialog(true);
+        // Dejar una marca global para que el propio diálogo active la pestaña Password
+        setTimeout(() => {
+          try { document.querySelector('.unified-connection-dialog'); } catch {}
+          const ev = new CustomEvent('switch-unified-tab', { detail: { index: 2, targetFolder } });
+          window.dispatchEvent(ev);
+        }, 0);
+      } catch (err) {
+        console.error('Error abriendo diálogo password:', err);
+      }
+    };
+    window.addEventListener('open-password-tab-in-dialog', handler);
+    return () => window.removeEventListener('open-password-tab-in-dialog', handler);
+  }, []);
+
+  // Crear y activar pestaña de info de password desde doble clic
+  useEffect(() => {
+    const handler = (e) => {
+      console.log('🔑 Password tab event received:', e.detail);
+      const info = e.detail || {};
+      const tabId = `${info.key}_${Date.now()}`;
+      const passwordData = {
+        title: info.label,
+        username: info.data?.username || '',
+        password: info.data?.password || '',
+        url: info.data?.url || '',
+        group: info.data?.group || '',
+        notes: info.data?.notes || ''
+      };
+      // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
+      const newTab = { key: tabId, label: `🔑 ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
+      console.log('🔑 Creating password tab:', newTab);
+      setSshTabs(prev => [newTab, ...prev]);
+      // Activar la nueva pestaña usando la misma lógica que otras pestañas
+      setTimeout(() => {
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        const allTabs = getAllTabs();
+        const tabIndex = allTabs.findIndex(t => t.key === tabId);
+        console.log('🔑 Tab index found:', tabIndex);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+      }, 0);
+    };
+    window.addEventListener('open-password-tab', handler);
+    return () => window.removeEventListener('open-password-tab', handler);
+  }, [getAllTabs]);
+
   // Escuchar eventos de expansión de nodos desde el buscador
   useEffect(() => {
     const handleExpandNodePath = (event) => {
@@ -1189,6 +1264,12 @@ const App = () => {
     };
     sidebarCallbacksRef.current.connectRDP = (node) => {
       onOpenRdpConnection(node);
+    };
+    sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
+      // Detectar si la carpeta tiene hijos
+      const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
+      const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
+      confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
     };
   }, [sidebarCallbacksRef.current]);
 

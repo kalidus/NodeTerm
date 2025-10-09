@@ -297,6 +297,53 @@ export const useFormHandlers = ({
     });
   }, [rdpName, rdpServer, rdpUsername, rdpPassword, rdpPort, rdpClientType, rdpTargetFolder, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, toast]);
 
+  /**
+   * Crear nueva entrada de Password
+   */
+  const createNewPasswordEntry = useCallback((targetFolderKey = null, entry) => {
+    console.log('📝 createNewPasswordEntry called with:', { targetFolderKey, entry });
+    const title = (entry?.title || '').trim();
+    if (!title) {
+      toast.current.show({ severity: 'error', summary: 'Error', detail: 'El título es obligatorio', life: 2500 });
+      return;
+    }
+    const newKey = generateUniqueKey();
+    const newNode = {
+      key: newKey,
+      label: title,
+      data: {
+        type: 'password',
+        username: entry?.username || '',
+        password: entry?.password || '',
+        url: entry?.url || '',
+        group: entry?.group || '',
+        notes: entry?.notes || ''
+      },
+      draggable: true,
+      droppable: false,
+      uid: newKey,
+      createdAt: new Date().toISOString(),
+      isUserCreated: true
+    };
+    console.log('📝 Created password node:', newNode);
+    const nodesCopy = deepCopy(nodes);
+    if (targetFolderKey) {
+      const parentNode = findNodeByKey(nodesCopy, targetFolderKey);
+      if (parentNode && parentNode.droppable) {
+        parentNode.children = parentNode.children || [];
+        parentNode.children.push(newNode);
+      } else {
+        nodesCopy.push(newNode);
+      }
+    } else {
+      nodesCopy.push(newNode);
+    }
+    setNodes(nodesCopy);
+    console.log('📝 Nodes updated, new password node added');
+    toast.current.show({ severity: 'success', summary: 'Creado', detail: `Entrada "${title}" añadida a la sidebar`, life: 2500 });
+    return newNode;
+  }, [nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, toast]);
+
   // === FUNCIONES DE EDICIÓN ===
 
   /**
@@ -637,6 +684,8 @@ export const useFormHandlers = ({
     closeRdpDialog,
     openEditRdpDialog,
     handleSaveRdpToSidebar
+    ,
+    createNewPasswordEntry
   };
 };
 
