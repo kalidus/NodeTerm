@@ -672,6 +672,826 @@ export const homeTabIcons = {
     )
   },
 
+  // === CASAS ADICIONALES REALISTAS DE ALTA CALIDAD ===
+
+  modernPenthouse: {
+    name: 'Ático Moderno',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="pentGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="pentGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e293b"/>
+            <stop offset="100%" stopColor="#0f172a"/>
+          </linearGradient>
+          <linearGradient id="pentGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4"/>
+            <stop offset="100%" stopColor="#0891b2"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="30" width="60" height="55" fill="url(#pentGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <polygon points="15,30 50,10 85,30" fill="url(#pentGrad2)" stroke="#0f172a" strokeWidth="2"/>
+        <rect x="25" y="25" width="50" height="8" fill="#fbbf24" stroke="#d97706" strokeWidth="1.5"/>
+        <rect x="25" y="40" width="50" height="25" rx="2" fill="url(#pentGrad3)" stroke="#0891b2" strokeWidth="1.5"/>
+        <rect x="30" y="15" width="8" height="12" rx="1" fill="#67e8f9" stroke="#06b6d4" strokeWidth="1"/>
+        <rect x="62" y="15" width="8" height="12" rx="1" fill="#67e8f9" stroke="#06b6d4" strokeWidth="1"/>
+        <rect x="47" y="70" width="6" height="15" rx="3" fill="#374151" stroke="#111827" strokeWidth="1.5"/>
+        <rect x="25" y="28" width="50" height="2" fill="#64748b" stroke="#374151" strokeWidth="1"/>
+        <line x1="50" y1="30" x2="50" y2="85" stroke="#94a3b8" strokeWidth="1"/>
+        <line x1="25" y1="50" x2="75" y2="50" stroke="#94a3b8" strokeWidth="1"/>
+        <rect x="18" y="85" width="64" height="10" fill="#475569" stroke="#334155" strokeWidth="1.5"/>
+      </svg>
+    )
+  },
+
+  artDecoMansion: {
+    name: 'Mansión Art Déco',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="artDecoGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="artDecoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+          <linearGradient id="artDecoGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="15" y="45" width="70" height="40" fill="url(#artDecoGrad1)" stroke="#d97706" strokeWidth="2"/>
+        <polygon points="15,45 35,25 55,35 75,25 95,45" fill="url(#artDecoGrad2)" stroke="#431407" strokeWidth="2"/>
+        <rect x="10" y="35" width="15" height="50" fill="url(#artDecoGrad1)" stroke="#d97706" strokeWidth="1.5"/>
+        <rect x="75" y="35" width="15" height="50" fill="url(#artDecoGrad1)" stroke="#d97706" strokeWidth="1.5"/>
+        <polygon points="10,35 17.5,20 25,35" fill="url(#artDecoGrad2)" stroke="#431407" strokeWidth="1.5"/>
+        <polygon points="75,35 82.5,20 90,35" fill="url(#artDecoGrad2)" stroke="#431407" strokeWidth="1.5"/>
+        <rect x="25" y="55" width="12" height="15" rx="2" fill="url(#artDecoGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="63" y="55" width="12" height="15" rx="2" fill="url(#artDecoGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="44" y="55" width="12" height="15" rx="2" fill="url(#artDecoGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="15" y="45" width="8" height="12" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="77" y="45" width="8" height="12" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="46" y="70" width="8" height="15" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="50" cy="78" r="1.2" fill="#fbbf24"/>
+        <rect x="35" y="40" width="30" height="3" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <rect x="35" y="35" width="30" height="3" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <rect x="35" y="30" width="30" height="3" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <ellipse cx="30" cy="90" rx="12" ry="6" fill="#16a34a" opacity="0.7"/>
+        <ellipse cx="70" cy="90" rx="12" ry="6" fill="#16a34a" opacity="0.7"/>
+        <circle cx="30" cy="85" r="3" fill="#22c55e"/>
+        <circle cx="70" cy="85" r="3" fill="#22c55e"/>
+      </svg>
+    )
+  },
+
+  beachHouse: {
+    name: 'Casa de Playa',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="beachGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="beachGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+          <linearGradient id="beachGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="40" width="50" height="45" fill="url(#beachGrad1)" stroke="#d97706" strokeWidth="2"/>
+        <polygon points="20,40 50,20 80,40" fill="url(#beachGrad3)" stroke="#d97706" strokeWidth="2"/>
+        <rect x="20" y="75" width="60" height="10" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="22" y="70" width="3" height="15" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="27" y="70" width="3" height="15" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="70" y="70" width="3" height="15" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="75" y="70" width="3" height="15" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="30" y="50" width="15" height="20" rx="2" fill="url(#beachGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="55" y="50" width="15" height="20" rx="2" fill="url(#beachGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="47" y="65" width="6" height="20" rx="3" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <path d="M35 35 Q45 30 55 35" stroke="#451a03" strokeWidth="2" fill="none"/>
+        <path d="M37 37 Q45 32 53 37" stroke="#451a03" strokeWidth="2" fill="none"/>
+        <ellipse cx="50" cy="95" rx="50" ry="8" fill="#fbbf24" opacity="0.8"/>
+        <ellipse cx="30" cy="92" rx="8" ry="3" fill="#22c55e" opacity="0.6"/>
+        <ellipse cx="70" cy="93" rx="8" ry="3" fill="#22c55e" opacity="0.6"/>
+        <line x1="15" y1="85" x2="15" y2="75" stroke="#451a03" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M15 75 Q10 70 15 65 Q20 70 15 75" fill="#22c55e"/>
+        <line x1="85" y1="85" x2="85" y2="75" stroke="#451a03" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M85 75 Q80 70 85 65 Q90 70 85 75" fill="#22c55e"/>
+      </svg>
+    )
+  },
+
+  mountainLodge: {
+    name: 'Refugio de Montaña',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="lodgeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#92400e"/>
+            <stop offset="100%" stopColor="#451a03"/>
+          </linearGradient>
+          <linearGradient id="lodgeGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="45" width="60" height="40" fill="url(#lodgeGrad1)" stroke="#451a03" strokeWidth="2"/>
+        <polygon points="15,45 50,25 85,45" fill="url(#lodgeGrad2)" stroke="#431407" strokeWidth="2"/>
+        <rect x="65" y="25" width="12" height="20" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="67" y="15" width="8" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        <rect x="30" y="55" width="10" height="12" rx="1" fill="#1e40af" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <rect x="60" y="55" width="10" height="12" rx="1" fill="#1e40af" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <line x1="35" y1="55" x2="35" y2="67" stroke="#1e3a8a" strokeWidth="1"/>
+        <line x1="30" y1="61" x2="40" y2="61" stroke="#1e3a8a" strokeWidth="1"/>
+        <line x1="65" y1="55" x2="65" y2="67" stroke="#1e3a8a" strokeWidth="1"/>
+        <line x1="60" y1="61" x2="70" y2="61" stroke="#1e3a8a" strokeWidth="1"/>
+        <rect x="46" y="65" width="8" height="20" rx="2" fill="#451a03" stroke="#1f2937" strokeWidth="1.5"/>
+        <circle cx="50" cy="75" r="1.2" fill="#fbbf24"/>
+        <rect x="42" y="80" width="16" height="5" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <polygon points="0,85 20,70 40,75 60,65 80,70 100,75 100,100 0,100" fill="#6b7280" opacity="0.7"/>
+        <polygon points="0,90 15,80 30,85 45,75 60,80 75,75 100,80 100,100 0,100" fill="#9ca3af" opacity="0.5"/>
+        <rect x="20" y="40" width="60" height="5" fill="#ffffff" opacity="0.8"/>
+      </svg>
+    )
+  },
+
+  industrialLoft: {
+    name: 'Loft Industrial',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="loftGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="loftGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#374151"/>
+            <stop offset="100%" stopColor="#1f2937"/>
+          </linearGradient>
+          <linearGradient id="loftGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ef4444"/>
+            <stop offset="100%" stopColor="#dc2626"/>
+          </linearGradient>
+        </defs>
+        <rect x="15" y="35" width="70" height="50" fill="url(#loftGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <rect x="15" y="30" width="70" height="10" fill="url(#loftGrad2)" stroke="#1f2937" strokeWidth="2"/>
+        <rect x="20" y="45" width="25" height="25" rx="2" fill="url(#loftGrad3)" stroke="#dc2626" strokeWidth="1.5"/>
+        <rect x="55" y="45" width="25" height="25" rx="2" fill="url(#loftGrad3)" stroke="#dc2626" strokeWidth="1.5"/>
+        <rect x="22" y="47" width="21" height="21" rx="1" fill="none" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="57" y="47" width="21" height="21" rx="1" fill="none" stroke="#1f2937" strokeWidth="1"/>
+        <line x1="32.5" y1="47" x2="32.5" y2="68" stroke="#1f2937" strokeWidth="1"/>
+        <line x1="67.5" y1="47" x2="67.5" y2="68" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="46" y="70" width="8" height="15" rx="2" fill="#374151" stroke="#1f2937" strokeWidth="1.5"/>
+        <rect x="60" y="80" width="15" height="5" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="62" y="75" width="11" height="5" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="64" y="70" width="7" height="5" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="10" y="40" width="3" height="40" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="87" y="40" width="3" height="40" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="12" y="85" width="76" height="10" fill="#9ca3af" stroke="#6b7280" strokeWidth="1.5"/>
+      </svg>
+    )
+  },
+
+  gothicCastle: {
+    name: 'Castillo Gótico',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="gothicGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6b7280"/>
+            <stop offset="100%" stopColor="#374151"/>
+          </linearGradient>
+          <linearGradient id="gothicGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#374151"/>
+            <stop offset="100%" stopColor="#1f2937"/>
+          </linearGradient>
+          <linearGradient id="gothicGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e40af"/>
+            <stop offset="100%" stopColor="#1e3a8a"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="40" width="60" height="45" fill="url(#gothicGrad1)" stroke="#374151" strokeWidth="2"/>
+        <rect x="15" y="30" width="12" height="55" fill="url(#gothicGrad1)" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="73" y="30" width="12" height="55" fill="url(#gothicGrad1)" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="42" y="20" width="16" height="65" fill="url(#gothicGrad1)" stroke="#374151" strokeWidth="1.5"/>
+        <polygon points="15,30 21,15 27,30" fill="url(#gothicGrad2)" stroke="#1f2937" strokeWidth="1.5"/>
+        <polygon points="73,30 79,15 85,30" fill="url(#gothicGrad2)" stroke="#1f2937" strokeWidth="1.5"/>
+        <polygon points="42,20 50,5 58,20" fill="url(#gothicGrad2)" stroke="#1f2937" strokeWidth="1.5"/>
+        <path d="M25 50 Q30 45 35 50 Q30 55 25 50" fill="url(#gothicGrad3)" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <path d="M65 50 Q70 45 75 50 Q70 55 65 50" fill="url(#gothicGrad3)" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <path d="M47 35 Q50 30 53 35 Q50 40 47 35" fill="url(#gothicGrad3)" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <path d="M45 70 Q50 65 55 70 Q50 85 45 70" fill="#1f2937" stroke="#111827" strokeWidth="1.5"/>
+        <rect x="10" y="60" width="8" height="25" fill="url(#gothicGrad1)" stroke="#374151" strokeWidth="1"/>
+        <rect x="82" y="60" width="8" height="25" fill="url(#gothicGrad1)" stroke="#374151" strokeWidth="1"/>
+        <polygon points="10,60 14,50 18,60" fill="url(#gothicGrad2)" stroke="#1f2937" strokeWidth="1"/>
+        <polygon points="82,60 86,50 90,60" fill="url(#gothicGrad2)" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="45" y="85" width="10" height="3" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <ellipse cx="50" cy="95" rx="40" ry="5" fill="#1e40af" opacity="0.6"/>
+      </svg>
+    )
+  },
+
+  modernChalet: {
+    name: 'Chalet Alpino',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="chaletGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="chaletGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#92400e"/>
+            <stop offset="100%" stopColor="#451a03"/>
+          </linearGradient>
+          <linearGradient id="chaletGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="45" width="50" height="40" fill="url(#chaletGrad1)" stroke="#d97706" strokeWidth="2"/>
+        <polygon points="20,45 50,25 80,45" fill="url(#chaletGrad2)" stroke="#451a03" strokeWidth="2"/>
+        <rect x="30" y="65" width="40" height="8" fill="url(#chaletGrad2)" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="32" y="60" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="37" y="60" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="61" y="60" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="66" y="60" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="35" y="50" width="15" height="12" rx="1" fill="url(#chaletGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="50" y="50" width="15" height="12" rx="1" fill="url(#chaletGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="46" y="75" width="8" height="10" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="70" y="35" width="8" height="15" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="71" y="25" width="6" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        <polygon points="0,85 15,75 30,80 45,70 60,75 75,70 90,75 100,80 100,100 0,100" fill="#6b7280" opacity="0.6"/>
+        <polygon points="0,90 10,85 20,88 30,83 40,87 50,82 60,86 70,81 80,85 90,82 100,85 100,100 0,100" fill="#9ca3af" opacity="0.4"/>
+        <rect x="30" y="68" width="40" height="3" fill="#ffffff" opacity="0.9"/>
+      </svg>
+    )
+  },
+
+  luxuryEstate: {
+    name: 'Finca de Lujo',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="estateGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="estateGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e293b"/>
+            <stop offset="100%" stopColor="#0f172a"/>
+          </linearGradient>
+          <linearGradient id="estateGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+          <linearGradient id="estateGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e"/>
+            <stop offset="100%" stopColor="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="40" width="60" height="45" fill="url(#estateGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <polygon points="15,40 50,20 85,40" fill="url(#estateGrad2)" stroke="#0f172a" strokeWidth="2"/>
+        <rect x="25" y="50" width="4" height="25" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <rect x="31" y="50" width="4" height="25" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <rect x="65" y="50" width="4" height="25" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <rect x="71" y="50" width="4" height="25" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <rect x="40" y="55" width="12" height="15" rx="1" fill="url(#estateGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="48" y="55" width="12" height="15" rx="1" fill="url(#estateGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="47" y="70" width="6" height="15" rx="3" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="50" cy="77" r="1" fill="#fbbf24"/>
+        <rect x="42" y="85" width="16" height="3" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <rect x="44" y="82" width="12" height="3" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <ellipse cx="30" cy="95" rx="15" ry="5" fill="url(#estateGrad4)" opacity="0.8"/>
+        <ellipse cx="70" cy="95" rx="15" ry="5" fill="url(#estateGrad4)" opacity="0.8"/>
+        <circle cx="30" cy="90" r="4" fill="#22c55e"/>
+        <circle cx="70" cy="90" r="4" fill="#22c55e"/>
+        <circle cx="50" cy="88" r="3" fill="#0ea5e9" stroke="#0284c7" strokeWidth="1"/>
+        <circle cx="50" cy="88" r="1.5" fill="#67e8f9"/>
+      </svg>
+    )
+  },
+
+  rusticCabin: {
+    name: 'Cabaña Rústica',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="cabinGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#92400e"/>
+            <stop offset="100%" stopColor="#451a03"/>
+          </linearGradient>
+          <linearGradient id="cabinGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="45" width="50" height="40" fill="url(#cabinGrad1)" stroke="#451a03" strokeWidth="2"/>
+        <polygon points="20,45 50,25 80,45" fill="url(#cabinGrad2)" stroke="#431407" strokeWidth="2"/>
+        <line x1="30" y1="45" x2="30" y2="85" stroke="#7c2d12" strokeWidth="2"/>
+        <line x1="50" y1="45" x2="50" y2="85" stroke="#7c2d12" strokeWidth="2"/>
+        <line x1="70" y1="45" x2="70" y2="85" stroke="#7c2d12" strokeWidth="2"/>
+        <line x1="25" y1="55" x2="75" y2="55" stroke="#7c2d12" strokeWidth="2"/>
+        <line x1="25" y1="65" x2="75" y2="65" stroke="#7c2d12" strokeWidth="2"/>
+        <line x1="25" y1="75" x2="75" y2="75" stroke="#7c2d12" strokeWidth="2"/>
+        <rect x="35" y="55" width="8" height="8" rx="1" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <rect x="57" y="55" width="8" height="8" rx="1" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <rect x="47" y="70" width="6" height="15" rx="2" fill="#7c2d12" stroke="#431407" strokeWidth="1.5"/>
+        <rect x="65" y="35" width="10" height="15" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="67" y="25" width="6" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        <rect x="40" y="80" width="20" height="5" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <polygon points="0,85 10,75 20,80 30,70 40,75 50,68 60,72 70,65 80,70 90,68 100,72 100,100 0,100" fill="#16a34a" opacity="0.6"/>
+        <circle cx="15" cy="80" r="6" fill="#22c55e" opacity="0.8"/>
+        <circle cx="35" cy="78" r="5" fill="#22c55e" opacity="0.8"/>
+        <circle cx="65" cy="75" r="6" fill="#22c55e" opacity="0.8"/>
+        <circle cx="85" cy="78" r="5" fill="#22c55e" opacity="0.8"/>
+      </svg>
+    )
+  },
+
+  contemporaryVilla: {
+    name: 'Villa Contemporánea',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="contVillaGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f1f5f9"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="contVillaGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#374151"/>
+            <stop offset="100%" stopColor="#1f2937"/>
+          </linearGradient>
+          <linearGradient id="contVillaGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4"/>
+            <stop offset="100%" stopColor="#0891b2"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="35" width="60" height="50" fill="url(#contVillaGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <rect x="20" y="30" width="60" height="8" fill="url(#contVillaGrad2)" stroke="#1f2937" strokeWidth="2"/>
+        <rect x="25" y="25" width="50" height="3" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        <rect x="30" y="15" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="35" y="15" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="63" y="15" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="68" y="15" width="2" height="13" fill="#451a03" stroke="#1f2937" strokeWidth="1"/>
+        <rect x="25" y="45" width="20" height="25" rx="2" fill="url(#contVillaGrad3)" stroke="#0891b2" strokeWidth="1.5"/>
+        <rect x="55" y="45" width="20" height="25" rx="2" fill="url(#contVillaGrad3)" stroke="#0891b2" strokeWidth="1.5"/>
+        <rect x="47" y="65" width="6" height="20" rx="3" fill="#374151" stroke="#1f2937" strokeWidth="1.5"/>
+        <ellipse cx="70" cy="90" rx="15" ry="8" fill="#0ea5e9" stroke="#0284c7" strokeWidth="1.5"/>
+        <ellipse cx="70" cy="88" rx="12" ry="6" fill="#67e8f9" opacity="0.6"/>
+        <rect x="15" y="85" width="70" height="10" fill="#fbbf24" stroke="#d97706" strokeWidth="1.5"/>
+        <ellipse cx="30" cy="95" rx="12" ry="5" fill="#22c55e" opacity="0.7"/>
+        <circle cx="30" cy="90" r="3" fill="#22c55e"/>
+      </svg>
+    )
+  },
+
+  japaneseHouse: {
+    name: 'Casa Japonesa',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="japGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#fbbf24"/>
+          </linearGradient>
+          <linearGradient id="japGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#451a03"/>
+          </linearGradient>
+          <linearGradient id="japGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#dc2626"/>
+            <stop offset="100%" stopColor="#991b1b"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="50" width="50" height="35" fill="url(#japGrad1)" stroke="#d97706" strokeWidth="2"/>
+        <path d="M15 50 L20 45 L50 30 L80 45 L85 50" fill="url(#japGrad3)" stroke="#991b1b" strokeWidth="2"/>
+        <path d="M18 48 L22 43 L50 28 L78 43 L82 48" fill="url(#japGrad2)" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="30" y="60" width="12" height="15" rx="1" fill="#fef3c7" stroke="#d97706" strokeWidth="1.5"/>
+        <rect x="58" y="60" width="12" height="15" rx="1" fill="#fef3c7" stroke="#d97706" strokeWidth="1.5"/>
+        <line x1="36" y1="60" x2="36" y2="75" stroke="#d97706" strokeWidth="1"/>
+        <line x1="30" y1="67" x2="42" y2="67" stroke="#d97706" strokeWidth="1"/>
+        <line x1="64" y1="60" x2="64" y2="75" stroke="#d97706" strokeWidth="1"/>
+        <line x1="58" y1="67" x2="70" y2="67" stroke="#d97706" strokeWidth="1"/>
+        <rect x="47" y="68" width="6" height="17" rx="1" fill="#7c2d12" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="20" y="85" width="60" height="5" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <ellipse cx="50" cy="95" rx="45" ry="8" fill="#22c55e" opacity="0.6"/>
+        <circle cx="30" cy="90" r="4" fill="#dc2626" opacity="0.8"/>
+        <circle cx="70" cy="90" r="4" fill="#dc2626" opacity="0.8"/>
+      </svg>
+    )
+  },
+
+  tropicalVilla: {
+    name: 'Villa Tropical',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="tropGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#fbbf24"/>
+          </linearGradient>
+          <linearGradient id="tropGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+          <linearGradient id="tropGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e"/>
+            <stop offset="100%" stopColor="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="40" width="50" height="45" fill="url(#tropGrad1)" stroke="#f59e0b" strokeWidth="2"/>
+        <polygon points="20,40 50,20 80,40" fill="#d97706" stroke="#92400e" strokeWidth="2"/>
+        <rect x="20" y="70" width="60" height="12" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="22" y="65" width="3" height="20" fill="#7c2d12" stroke="#451a03" strokeWidth="1"/>
+        <rect x="28" y="65" width="3" height="20" fill="#7c2d12" stroke="#451a03" strokeWidth="1"/>
+        <rect x="69" y="65" width="3" height="20" fill="#7c2d12" stroke="#451a03" strokeWidth="1"/>
+        <rect x="75" y="65" width="3" height="20" fill="#7c2d12" stroke="#451a03" strokeWidth="1"/>
+        <rect x="32" y="50" width="16" height="18" rx="2" fill="url(#tropGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="52" y="50" width="16" height="18" rx="2" fill="url(#tropGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="47" y="72" width="6" height="13" rx="2" fill="#7c2d12" stroke="#451a03" strokeWidth="1.5"/>
+        <line x1="10" y1="85" x2="10" y2="72" stroke="#7c2d12" strokeWidth="4" strokeLinecap="round"/>
+        <circle cx="10" cy="70" r="8" fill="url(#tropGrad3)"/>
+        <circle cx="10" cy="68" r="5" fill="#22c55e"/>
+        <line x1="90" y1="85" x2="90" y2="72" stroke="#7c2d12" strokeWidth="4" strokeLinecap="round"/>
+        <circle cx="90" cy="70" r="8" fill="url(#tropGrad3)"/>
+        <circle cx="90" cy="68" r="5" fill="#22c55e"/>
+        <ellipse cx="50" cy="95" rx="50" ry="8" fill="#fbbf24" opacity="0.7"/>
+      </svg>
+    )
+  },
+
+  scandinavianHome: {
+    name: 'Casa Escandinava',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="scandGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="scandGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#475569"/>
+            <stop offset="100%" stopColor="#334155"/>
+          </linearGradient>
+          <linearGradient id="scandGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="40" width="50" height="45" fill="url(#scandGrad1)" stroke="#94a3b8" strokeWidth="2"/>
+        <polygon points="20,40 50,20 80,40" fill="url(#scandGrad2)" stroke="#334155" strokeWidth="2"/>
+        <rect x="30" y="50" width="18" height="20" rx="1" fill="url(#scandGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="52" y="50" width="18" height="20" rx="1" fill="url(#scandGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <line x1="39" y1="50" x2="39" y2="70" stroke="#0284c7" strokeWidth="1"/>
+        <line x1="30" y1="60" x2="48" y2="60" stroke="#0284c7" strokeWidth="1"/>
+        <line x1="61" y1="50" x2="61" y2="70" stroke="#0284c7" strokeWidth="1"/>
+        <line x1="52" y1="60" x2="70" y2="60" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="46" y="70" width="8" height="15" rx="1" fill="#cbd5e1" stroke="#64748b" strokeWidth="1.5"/>
+        <circle cx="50" cy="78" r="1" fill="#475569"/>
+        <rect x="65" y="30" width="8" height="15" fill="#6b7280" stroke="#475569" strokeWidth="1.5"/>
+        <rect x="66" y="20" width="6" height="10" fill="#94a3b8" stroke="#475569" strokeWidth="1"/>
+        <ellipse cx="50" cy="92" rx="40" ry="6" fill="#cbd5e1" opacity="0.6"/>
+        <rect x="22" y="85" width="56" height="5" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1"/>
+      </svg>
+    )
+  },
+
+  frenchChateau: {
+    name: 'Château Francés',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="chateauGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#fde68a"/>
+          </linearGradient>
+          <linearGradient id="chateauGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6b7280"/>
+            <stop offset="100%" stopColor="#475569"/>
+          </linearGradient>
+          <linearGradient id="chateauGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6"/>
+            <stop offset="100%" stopColor="#1d4ed8"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="45" width="60" height="40" fill="url(#chateauGrad1)" stroke="#f59e0b" strokeWidth="2"/>
+        <polygon points="18,45 30,30 50,35 70,30 82,45" fill="url(#chateauGrad2)" stroke="#475569" strokeWidth="2"/>
+        <rect x="15" y="40" width="12" height="45" fill="url(#chateauGrad1)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <rect x="73" y="40" width="12" height="45" fill="url(#chateauGrad1)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <polygon points="15,40 21,25 27,40" fill="url(#chateauGrad2)" stroke="#475569" strokeWidth="1.5"/>
+        <polygon points="73,40 79,25 85,40" fill="url(#chateauGrad2)" stroke="#475569" strokeWidth="1.5"/>
+        <circle cx="21" cy="32" r="2" fill="#fbbf24"/>
+        <circle cx="79" cy="32" r="2" fill="#fbbf24"/>
+        <rect x="30" y="55" width="12" height="16" rx="1" fill="url(#chateauGrad3)" stroke="#1d4ed8" strokeWidth="1.5"/>
+        <rect x="58" y="55" width="12" height="16" rx="1" fill="url(#chateauGrad3)" stroke="#1d4ed8" strokeWidth="1.5"/>
+        <rect x="17" y="50" width="8" height="12" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="75" y="50" width="8" height="12" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="46" y="72" width="8" height="13" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="50" cy="79" r="1" fill="#fbbf24"/>
+        <ellipse cx="50" cy="92" rx="35" ry="6" fill="#22c55e" opacity="0.6"/>
+        <circle cx="35" cy="88" r="3" fill="#ef4444"/>
+        <circle cx="65" cy="88" r="3" fill="#ef4444"/>
+      </svg>
+    )
+  },
+
+  spanishHacienda: {
+    name: 'Hacienda Española',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="hacGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#fde047"/>
+          </linearGradient>
+          <linearGradient id="hacGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ea580c"/>
+            <stop offset="100%" stopColor="#c2410c"/>
+          </linearGradient>
+          <linearGradient id="hacGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="15" y="45" width="70" height="40" fill="url(#hacGrad1)" stroke="#f59e0b" strokeWidth="2"/>
+        <polygon points="12,45 50,28 88,45" fill="url(#hacGrad2)" stroke="#c2410c" strokeWidth="2"/>
+        <rect x="10" y="50" width="15" height="35" fill="url(#hacGrad1)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <rect x="75" y="50" width="15" height="35" fill="url(#hacGrad1)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <path d="M20 60 A5 5 0 0 1 30 60" stroke="#d97706" strokeWidth="1.5" fill="#fef3c7"/>
+        <path d="M70 60 A5 5 0 0 1 80 60" stroke="#d97706" strokeWidth="1.5" fill="#fef3c7"/>
+        <path d="M30 55 A8 8 0 0 1 46 55 L46 70 L30 70 Z" fill="url(#hacGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <path d="M54 55 A8 8 0 0 1 70 55 L70 70 L54 70 Z" fill="url(#hacGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="47" y="72" width="6" height="13" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="40" y="85" width="20" height="8" fill="#ea580c" stroke="#c2410c" strokeWidth="1.5"/>
+        <ellipse cx="50" cy="95" rx="40" ry="6" fill="#22c55e" opacity="0.7"/>
+        <circle cx="30" cy="90" r="4" fill="#fbbf24"/>
+        <circle cx="70" cy="90" r="4" fill="#fbbf24"/>
+      </svg>
+    )
+  },
+
+  modernSkyscraper: {
+    name: 'Rascacielos Moderno',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="skyGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#e2e8f0"/>
+            <stop offset="100%" stopColor="#94a3b8"/>
+          </linearGradient>
+          <linearGradient id="skyGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="35" y="10" width="30" height="75" fill="url(#skyGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <rect x="35" y="5" width="30" height="8" fill="#334155" stroke="#1e293b" strokeWidth="1.5"/>
+        <rect x="38" y="18" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="51" y="18" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="38" y="30" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="51" y="30" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="38" y="42" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="51" y="42" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="38" y="54" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="51" y="54" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="38" y="66" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="51" y="66" width="11" height="10" rx="1" fill="url(#skyGrad2)" stroke="#0284c7" strokeWidth="1"/>
+        <rect x="45" y="78" width="10" height="7" rx="1" fill="#475569" stroke="#334155" strokeWidth="1"/>
+        <rect x="30" y="85" width="40" height="10" fill="#64748b" stroke="#475569" strokeWidth="1.5"/>
+      </svg>
+    )
+  },
+
+  ecoGreenHome: {
+    name: 'Casa Ecológica',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="ecoGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f0fdf4"/>
+            <stop offset="100%" stopColor="#bbf7d0"/>
+          </linearGradient>
+          <linearGradient id="ecoGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e"/>
+            <stop offset="100%" stopColor="#16a34a"/>
+          </linearGradient>
+          <linearGradient id="ecoGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="22" y="38" width="56" height="47" fill="url(#ecoGrad1)" stroke="#22c55e" strokeWidth="2"/>
+        <polygon points="18,38 50,18 82,38" fill="url(#ecoGrad2)" stroke="#16a34a" strokeWidth="2"/>
+        <rect x="35" y="25" width="30" height="10" rx="1" fill="#1e3a8a" stroke="#3b82f6" strokeWidth="1.5"/>
+        <line x1="35" y1="30" x2="65" y2="30" stroke="#60a5fa" strokeWidth="0.5"/>
+        <line x1="42" y1="25" x2="42" y2="35" stroke="#60a5fa" strokeWidth="0.5"/>
+        <line x1="50" y1="25" x2="50" y2="35" stroke="#60a5fa" strokeWidth="0.5"/>
+        <line x1="58" y1="25" x2="58" y2="35" stroke="#60a5fa" strokeWidth="0.5"/>
+        <rect x="30" y="48" width="16" height="20" rx="2" fill="url(#ecoGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="54" y="48" width="16" height="20" rx="2" fill="url(#ecoGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="46" y="70" width="8" height="15" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="50" cy="78" r="1.5" fill="#22c55e"/>
+        <rect x="20" y="85" width="60" height="8" fill="url(#ecoGrad2)" stroke="#16a34a" strokeWidth="1.5"/>
+        <circle cx="25" cy="90" r="5" fill="#22c55e" opacity="0.8"/>
+        <circle cx="35" cy="92" r="4" fill="#22c55e" opacity="0.8"/>
+        <circle cx="65" cy="92" r="4" fill="#22c55e" opacity="0.8"/>
+        <circle cx="75" cy="90" r="5" fill="#22c55e" opacity="0.8"/>
+        <path d="M50 55 Q55 55 58 60 Q58 65 50 68" fill="#22c55e" opacity="0.6"/>
+      </svg>
+    )
+  },
+
+  desertAdobeHouse: {
+    name: 'Casa Adobe del Desierto',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="adobeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fed7aa"/>
+            <stop offset="100%" stopColor="#fdba74"/>
+          </linearGradient>
+          <linearGradient id="adobeGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fb923c"/>
+            <stop offset="100%" stopColor="#f97316"/>
+          </linearGradient>
+          <linearGradient id="adobeGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="45" width="60" height="40" rx="3" fill="url(#adobeGrad1)" stroke="#f97316" strokeWidth="2"/>
+        <rect x="20" y="38" width="60" height="10" rx="2" fill="url(#adobeGrad2)" stroke="#ea580c" strokeWidth="1.5"/>
+        <rect x="10" y="52" width="18" height="33" rx="2" fill="url(#adobeGrad1)" stroke="#f97316" strokeWidth="1.5"/>
+        <rect x="72" y="52" width="18" height="33" rx="2" fill="url(#adobeGrad1)" stroke="#f97316" strokeWidth="1.5"/>
+        <rect x="12" y="45" width="14" height="10" rx="2" fill="url(#adobeGrad2)" stroke="#ea580c" strokeWidth="1"/>
+        <rect x="74" y="45" width="14" height="10" rx="2" fill="url(#adobeGrad2)" stroke="#ea580c" strokeWidth="1"/>
+        <path d="M30 58 A3 3 0 0 1 36 58 L36 72 L30 72 Z" fill="url(#adobeGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <path d="M64 58 A3 3 0 0 1 70 58 L70 72 L64 72 Z" fill="url(#adobeGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="47" y="72" width="6" height="13" rx="2" fill="#7c2d12" stroke="#451a03" strokeWidth="1.5"/>
+        <ellipse cx="50" cy="93" rx="45" ry="7" fill="#fbbf24" opacity="0.7"/>
+        <circle cx="30" cy="88" r="3" fill="#22c55e" opacity="0.6"/>
+        <circle cx="70" cy="88" r="3" fill="#22c55e" opacity="0.6"/>
+      </svg>
+    )
+  },
+
+  skylineApartment: {
+    name: 'Apartamento Urbano',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="aptGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#cbd5e1"/>
+          </linearGradient>
+          <linearGradient id="aptGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="15" width="50" height="70" fill="url(#aptGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <rect x="30" y="23" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="45" y="23" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="60" y="23" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="30" y="36" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="45" y="36" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="60" y="36" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="30" y="49" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="45" y="49" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="60" y="49" width="10" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="30" y="62" width="10" height="10" rx="1" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/>
+        <rect x="45" y="62" width="10" height="10" rx="1" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/>
+        <rect x="60" y="62" width="10" height="10" rx="1" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/>
+        <rect x="46" y="75" width="8" height="10" rx="1" fill="#475569" stroke="#334155" strokeWidth="1.5"/>
+        <rect x="23" y="85" width="54" height="8" fill="#64748b" stroke="#475569" strokeWidth="1.5"/>
+        <rect x="25" y="10" width="50" height="3" fill="url(#aptGrad2)"/>
+      </svg>
+    )
+  },
+
+  gardenCottage: {
+    name: 'Cottage con Jardín',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="cottageGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#fde68a"/>
+          </linearGradient>
+          <linearGradient id="cottageGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#dc2626"/>
+            <stop offset="100%" stopColor="#991b1b"/>
+          </linearGradient>
+          <linearGradient id="cottageGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e"/>
+            <stop offset="100%" stopColor="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <rect x="25" y="45" width="50" height="40" fill="url(#cottageGrad1)" stroke="#f59e0b" strokeWidth="2"/>
+        <polygon points="20,45 50,25 80,45" fill="url(#cottageGrad2)" stroke="#991b1b" strokeWidth="2"/>
+        <rect x="32" y="55" width="10" height="12" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1.5"/>
+        <rect x="58" y="55" width="10" height="12" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1.5"/>
+        <rect x="47" y="70" width="6" height="15" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="65" y="35" width="8" height="15" fill="#7c2d12" stroke="#451a03" strokeWidth="1.5"/>
+        <rect x="66" y="25" width="6" height="10" fill="#6b7280" stroke="#475569" strokeWidth="1"/>
+        <ellipse cx="50" cy="95" rx="48" ry="8" fill="url(#cottageGrad3)" opacity="0.7"/>
+        <circle cx="20" cy="85" r="6" fill="#ef4444"/>
+        <circle cx="80" cy="85" r="6" fill="#f59e0b"/>
+        <circle cx="30" cy="90" r="5" fill="#22c55e"/>
+        <circle cx="40" cy="92" r="4" fill="#22c55e"/>
+        <circle cx="60" cy="92" r="4" fill="#22c55e"/>
+        <circle cx="70" cy="90" r="5" fill="#22c55e"/>
+        <path d="M15 88 Q20 83 25 88" stroke="#16a34a" strokeWidth="2" fill="none"/>
+        <path d="M75 88 Q80 83 85 88" stroke="#16a34a" strokeWidth="2" fill="none"/>
+      </svg>
+    )
+  },
+
+  californianModern: {
+    name: 'Casa Californiana',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="caliGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="caliGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+          <linearGradient id="caliGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+        </defs>
+        <rect x="18" y="35" width="64" height="50" fill="url(#caliGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <rect x="18" y="28" width="64" height="10" fill="#475569" stroke="#334155" strokeWidth="1.5"/>
+        <rect x="22" y="45" width="26" height="30" rx="2" fill="url(#caliGrad2)" stroke="#0284c7" strokeWidth="2"/>
+        <rect x="52" y="45" width="26" height="30" rx="2" fill="url(#caliGrad2)" stroke="#0284c7" strokeWidth="2"/>
+        <line x1="35" y1="45" x2="35" y2="75" stroke="#06b6d4" strokeWidth="1.5"/>
+        <line x1="22" y1="60" x2="48" y2="60" stroke="#06b6d4" strokeWidth="1.5"/>
+        <line x1="65" y1="45" x2="65" y2="75" stroke="#06b6d4" strokeWidth="1.5"/>
+        <line x1="52" y1="60" x2="78" y2="60" stroke="#06b6d4" strokeWidth="1.5"/>
+        <rect x="46" y="77" width="8" height="8" rx="1" fill="#334155" stroke="#1e293b" strokeWidth="1.5"/>
+        <rect x="15" y="85" width="70" height="8" fill="url(#caliGrad3)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <rect x="18" y="87" width="64" height="3" fill="#fbbf24"/>
+        <circle cx="30" cy="90" r="3" fill="#22c55e" opacity="0.7"/>
+        <circle cx="70" cy="90" r="3" fill="#22c55e" opacity="0.7"/>
+      </svg>
+    )
+  },
+
+  luxuryPalace: {
+    name: 'Palacio de Lujo',
+    icon: (size = 20) => (
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="palaceGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#fbbf24"/>
+          </linearGradient>
+          <linearGradient id="palaceGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="palaceGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6"/>
+            <stop offset="100%" stopColor="#1d4ed8"/>
+          </linearGradient>
+        </defs>
+        <rect x="15" y="40" width="70" height="45" fill="url(#palaceGrad1)" stroke="#f59e0b" strokeWidth="2.5"/>
+        <polygon points="10,40 50,15 90,40" fill="url(#palaceGrad2)" stroke="#f59e0b" strokeWidth="2"/>
+        <rect x="10" y="35" width="15" height="50" fill="url(#palaceGrad1)" stroke="#f59e0b" strokeWidth="2"/>
+        <rect x="75" y="35" width="15" height="50" fill="url(#palaceGrad1)" stroke="#f59e0b" strokeWidth="2"/>
+        <polygon points="10,35 17.5,18 25,35" fill="url(#palaceGrad2)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <polygon points="75,35 82.5,18 90,35" fill="url(#palaceGrad2)" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="17.5" cy="25" r="2.5" fill="#fbbf24"/>
+        <circle cx="82.5" cy="25" r="2.5" fill="#fbbf24"/>
+        <rect x="20" y="50" width="60" height="3" fill="#fbbf24"/>
+        <rect x="22" y="45" width="56" height="3" fill="#fbbf24"/>
+        <rect x="30" y="55" width="15" height="18" rx="2" fill="url(#palaceGrad3)" stroke="#1d4ed8" strokeWidth="2"/>
+        <rect x="55" y="55" width="15" height="18" rx="2" fill="url(#palaceGrad3)" stroke="#1d4ed8" strokeWidth="2"/>
+        <rect x="15" y="55" width="10" height="15" rx="1" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="75" y="55" width="10" height="15" rx="1" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="45" y="73" width="10" height="12" rx="3" fill="#92400e" stroke="#fbbf24" strokeWidth="2"/>
+        <circle cx="50" cy="80" r="1.5" fill="#fbbf24"/>
+        <rect x="40" y="85" width="20" height="5" fill="url(#palaceGrad2)" stroke="#f59e0b" strokeWidth="1"/>
+        <ellipse cx="50" cy="93" rx="35" ry="6" fill="#22c55e" opacity="0.7"/>
+      </svg>
+    )
+  },
+
   // === ICONOS FUTURISTAS: CENTRO DE CONTROL / OPERACIONES ===
 
   controlCenter: {
@@ -2157,7 +2977,9 @@ export function setHomeTabIcon(iconKey) {
 // Categorías de iconos para el selector (agrupación para mejor UX)
 const HOME_ICON_CATEGORIES = {
   Casas: [
-    'modernMansion','luxuryVilla','contemporaryHome','colonialHouse','victorianHouse','mediterraneanVilla','tudorHouse','modernFarmhouse'
+    'modernMansion','luxuryVilla','contemporaryHome','colonialHouse','victorianHouse','mediterraneanVilla','tudorHouse','modernFarmhouse',
+    'modernPenthouse','artDecoMansion','beachHouse','mountainLodge','industrialLoft','gothicCastle','modernChalet','luxuryEstate','rusticCabin','contemporaryVilla',
+    'japaneseHouse','tropicalVilla','scandinavianHome','frenchChateau','spanishHacienda','modernSkyscraper','ecoGreenHome','desertAdobeHouse','skylineApartment','gardenCottage','californianModern','luxuryPalace'
   ],
   'Control / Operaciones': [
     'controlCenter','operationsHub','commandConsole','radarSweep','satelliteUplink','networkHub','analyticsDashboard','systemMonitor','slidersControl','serverRack','globeGrid','waveformScope','shieldOps','holoConsole','cockpitHUD','opsTimeline','opsGrid',
