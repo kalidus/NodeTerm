@@ -140,6 +140,19 @@
   scrollbar-color: var(--ui-sidebar-border, #3e3e42) transparent !important;
 }
 
+/* --- Ocultar scrollbars en modo split vertical para evitar "doble barra" central --- */
+.split-container .terminal-outer-padding .xterm-viewport {
+  scrollbar-width: none !important; /* Firefox */
+}
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar {
+  width: 0 !important; /* Chrome/Safari/Edge */
+  height: 0 !important;
+}
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-thumb,
+.split-container .terminal-outer-padding .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
 /* Padding externo opcional para el terminal */
 .terminal-outer-padding .xterm-viewport,
 .terminal-outer-padding .xterm {
