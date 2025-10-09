@@ -242,308 +242,432 @@ export const homeTabIcons = {
     )
   },
 
-  // === ICONOS CASAS NORMALES - MODERNOS Y PROFESIONALES ===
+  // === ICONOS CASAS REALISTAS Y PROFESIONALES ===
 
-  homeClassicOutline: {
-    name: 'Casa (Outline clásico)',
+  modernMansion: {
+    name: 'Mansión Moderna',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5h-4v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9.5Z" stroke="#374151" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M8 21v-5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v5" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    )
-  },
-
-  homeClassicFilled: {
-    name: 'Casa (Relleno moderno)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
         <defs>
-          <linearGradient id="homeFillGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#4f46e5"/>
-            <stop offset="100%" stopColor="#06b6d4"/>
+          <linearGradient id="mansionGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#e5e7eb"/>
+            <stop offset="50%" stopColor="#f3f4f6"/>
+            <stop offset="100%" stopColor="#e5e7eb"/>
+          </linearGradient>
+          <linearGradient id="mansionGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6b7280"/>
+            <stop offset="100%" stopColor="#374151"/>
+          </linearGradient>
+          <linearGradient id="mansionGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6"/>
+            <stop offset="100%" stopColor="#1d4ed8"/>
           </linearGradient>
         </defs>
-        <path d="M12 3L3 10.5V20a1 1 0 0 0 1 1h5v-5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5h5a1 1 0 0 0 1-1v-9.5L12 3Z" fill="url(#homeFillGrad)"/>
-        <rect x="10" y="12" width="4" height="3" rx="1" fill="#ffffff" opacity="0.65"/>
+        {/* Estructura principal */}
+        <rect x="20" y="45" width="60" height="40" fill="url(#mansionGrad1)" stroke="#374151" strokeWidth="2"/>
+        <polygon points="20,45 50,20 80,45" fill="url(#mansionGrad1)" stroke="#374151" strokeWidth="2"/>
+        
+        {/* Chimenea */}
+        <rect x="65" y="25" width="8" height="15" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="66" y="15" width="6" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        
+        {/* Ventanas principales */}
+        <rect x="28" y="55" width="8" height="10" rx="1" fill="url(#mansionGrad3)" stroke="#1d4ed8" strokeWidth="1.5"/>
+        <rect x="64" y="55" width="8" height="10" rx="1" fill="url(#mansionGrad3)" stroke="#1d4ed8" strokeWidth="1.5"/>
+        
+        {/* Ventanas del ático */}
+        <rect x="35" y="35" width="6" height="8" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="59" y="35" width="6" height="8" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        
+        {/* Puerta principal */}
+        <rect x="45" y="65" width="10" height="20" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="53" cy="75" r="1.2" fill="#fbbf24"/>
+        
+        {/* Tejado con textura */}
+        <path d="M20 45 L50 20 L80 45" fill="url(#mansionGrad2)" stroke="#374151" strokeWidth="2"/>
+        <line x1="30" y1="35" x2="30" y2="45" stroke="#4b5563" strokeWidth="1"/>
+        <line x1="40" y1="30" x2="40" y2="45" stroke="#4b5563" strokeWidth="1"/>
+        <line x1="50" y1="25" x2="50" y2="45" stroke="#4b5563" strokeWidth="1"/>
+        <line x1="60" y1="30" x2="60" y2="45" stroke="#4b5563" strokeWidth="1"/>
+        <line x1="70" y1="35" x2="70" y2="45" stroke="#4b5563" strokeWidth="1"/>
+        
+        {/* Base/cimientos */}
+        <rect x="18" y="85" width="64" height="8" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
       </svg>
     )
   },
 
-  homeRounded: {
-    name: 'Casa (Esquinas redondeadas)',
+  luxuryVilla: {
+    name: 'Villa de Lujo',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4.5 11.2 12 5l7.5 6.2V19a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2v-7.8Z" stroke="#2563eb" strokeWidth="1.8" fill="#eff6ff"/>
-        <rect x="10" y="12.5" width="4" height="5" rx="1.2" fill="#bfdbfe"/>
-        <path d="M7 11.5h10" stroke="#93c5fd" strokeWidth="1.6" strokeLinecap="round"/>
-      </svg>
-    )
-  },
-
-  homeMinimal: {
-    name: 'Casa (Minimal)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6" stroke="#111827" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M6.5 10.75V19a1.5 1.5 0 0 0 1.5 1.5H16a1.5 1.5 0 0 0 1.5-1.5v-8.25" stroke="#374151" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M10 20v-5h4v5" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    )
-  },
-
-  homeDuotone: {
-    name: 'Casa (Duotono)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M3.5 10.5 12 4l8.5 6.5V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9.5Z" fill="#e5e7eb"/>
-        <path d="M3.5 10.5 12 4l8.5 6.5" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="9" y="12" width="6" height="6" rx="1" fill="#93c5fd"/>
-      </svg>
-    )
-  },
-
-  homeFlat: {
-    name: 'Casa (Flat)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M12 4l8 6v9a1 1 0 0 1-1 1h-5v-5H10v5H5a1 1 0 0 1-1-1v-9l8-6Z" fill="#0ea5e9"/>
-        <path d="M4 10l8-6 8 6" stroke="#0284c7" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    )
-  },
-
-  homeGlass: {
-    name: 'Casa (Glassmorphism)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
         <defs>
-          <linearGradient id="homeGlassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22d3ee"/>
-            <stop offset="100%" stopColor="#6366f1"/>
+          <linearGradient id="villaGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
           </linearGradient>
-          <filter id="homeGlassBlur" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.5"/>
-          </filter>
-        </defs>
-        <path d="M12 3l8 6v9a2 2 0 0 1-2 2h-2.5v-5.5a2.5 2.5 0 0 0-2.5-2.5h-2a2.5 2.5 0 0 0-2.5 2.5V20H6a2 2 0 0 1-2-2v-9l8-6Z" fill="url(#homeGlassGrad)" opacity="0.35" filter="url(#homeGlassBlur)"/>
-        <path d="M4 10l8-6 8 6" stroke="#6366f1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="9" y="12" width="6" height="6" rx="1.2" fill="#ffffff" opacity="0.45"/>
-      </svg>
-    )
-  },
-
-  homeLine: {
-    name: 'Casa (Line)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M6 10.5V19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8.5" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M10 21v-4h4v4" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-    )
-  },
-
-  homePro: {
-    name: 'Casa (Pro)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <defs>
-          <linearGradient id="homeProGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id="villaGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#0ea5e9"/>
-            <stop offset="100%" stopColor="#22c55e"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+          <linearGradient id="villaGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#dc2626"/>
+            <stop offset="100%" stopColor="#991b1b"/>
           </linearGradient>
         </defs>
-        <path d="M3.5 11 12 4l8.5 7V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9Z" fill="#f8fafc" stroke="url(#homeProGrad)" strokeWidth="1.8"/>
-        <rect x="9" y="12" width="6" height="6" rx="1.2" fill="#e2e8f0" stroke="#22c55e" strokeWidth="1.2"/>
-        <path d="M3.5 11 12 4l8.5 7" stroke="url(#homeProGrad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Estructura principal */}
+        <rect x="15" y="50" width="70" height="35" fill="url(#villaGrad1)" stroke="#d97706" strokeWidth="2"/>
+        <polygon points="15,50 50,25 85,50" fill="url(#villaGrad3)" stroke="#991b1b" strokeWidth="2"/>
+        
+        {/* Ala izquierda */}
+        <rect x="5" y="60" width="25" height="25" fill="url(#villaGrad1)" stroke="#d97706" strokeWidth="1.5"/>
+        <polygon points="5,60 17.5,45 30,60" fill="url(#villaGrad3)" stroke="#991b1b" strokeWidth="1.5"/>
+        
+        {/* Ala derecha */}
+        <rect x="70" y="60" width="25" height="25" fill="url(#villaGrad1)" stroke="#d97706" strokeWidth="1.5"/>
+        <polygon points="70,60 82.5,45 95,60" fill="url(#villaGrad3)" stroke="#991b1b" strokeWidth="1.5"/>
+        
+        {/* Pórtico */}
+        <rect x="40" y="70" width="20" height="15" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="58" cy="78" r="1.5" fill="#fbbf24"/>
+        
+        {/* Ventanas grandes */}
+        <rect x="25" y="58" width="10" height="12" rx="1" fill="url(#villaGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="65" y="58" width="10" height="12" rx="1" fill="url(#villaGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="45" y="58" width="10" height="12" rx="1" fill="url(#villaGrad2)" stroke="#0284c7" strokeWidth="1.5"/>
+        
+        {/* Ventanas pequeñas */}
+        <rect x="10" y="68" width="8" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="82" y="68" width="8" height="10" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        
+        {/* Columnas del pórtico */}
+        <rect x="42" y="60" width="3" height="25" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        <rect x="55" y="60" width="3" height="25" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1"/>
+        
+        {/* Jardín */}
+        <ellipse cx="30" cy="90" rx="15" ry="8" fill="#16a34a" opacity="0.6"/>
+        <ellipse cx="70" cy="90" rx="15" ry="8" fill="#16a34a" opacity="0.6"/>
       </svg>
     )
   },
 
-  // === MÁS CASAS NORMALES ===
-
-  homeDoorCentered: {
-    name: 'Casa (Puerta centrada)',
+  contemporaryHome: {
+    name: 'Casa Contemporánea',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#f3f4f6" stroke="#111827" strokeWidth="1.6"/>
-        <rect x="10.25" y="12" width="3.5" height="6.5" rx="0.9" fill="#e5e7eb" stroke="#6b7280" strokeWidth="1.2"/>
-        <circle cx="13.25" cy="15.25" r="0.4" fill="#6b7280"/>
-      </svg>
-    )
-  },
-
-  homeDoorLeft: {
-    name: 'Casa (Puerta izquierda)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M3.5 11 12 4l8.5 7V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-9Z" fill="#eef2ff" stroke="#1f2937" strokeWidth="1.6"/>
-        <rect x="7.5" y="12" width="4" height="7" rx="1" fill="#e0e7ff" stroke="#4b5563" strokeWidth="1.2"/>
-        <circle cx="10.7" cy="15.5" r="0.4" fill="#4b5563"/>
-        <rect x="14" y="12.5" width="3.5" height="3" rx="0.6" fill="#c7d2fe"/>
-      </svg>
-    )
-  },
-
-  homeWindows2: {
-    name: 'Casa (2 ventanas)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4.5 11.2 12 5l7.5 6.2V19a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2v-7.8Z" stroke="#2563eb" strokeWidth="1.8" fill="#ffffff"/>
-        <rect x="7.25" y="12.2" width="3.5" height="3.2" rx="0.6" fill="#dbeafe"/>
-        <rect x="13.25" y="12.2" width="3.5" height="3.2" rx="0.6" fill="#dbeafe"/>
-        <rect x="10.25" y="16.2" width="3.5" height="3.8" rx="0.9" fill="#bfdbfe"/>
-      </svg>
-    )
-  },
-
-  townhouse: {
-    name: 'Casa adosada',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l4-3 4 3v8H4v-8Zm8 0 4-3 4 3v8h-8v-8Z" fill="#f1f5f9" stroke="#0f172a" strokeWidth="1.6"/>
-        <rect x="5.5" y="12.2" width="2.8" height="2.6" rx="0.4" fill="#cbd5e1"/>
-        <rect x="15.7" y="12.2" width="2.8" height="2.6" rx="0.4" fill="#cbd5e1"/>
-        <rect x="6.2" y="15.5" width="1.8" height="3.5" rx="0.4" fill="#94a3b8"/>
-        <rect x="16.4" y="15.5" width="1.8" height="3.5" rx="0.4" fill="#94a3b8"/>
-      </svg>
-    )
-  },
-
-  cottage: {
-    name: 'Cabaña (Cottage)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
         <defs>
-          <linearGradient id="cottageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#f59e0b"/>
-            <stop offset="100%" stopColor="#ef4444"/>
+          <linearGradient id="contempGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="contempGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e293b"/>
+            <stop offset="100%" stopColor="#0f172a"/>
+          </linearGradient>
+          <linearGradient id="contempGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06b6d4"/>
+            <stop offset="100%" stopColor="#0891b2"/>
           </linearGradient>
         </defs>
-        <path d="M3.5 12.2 9.5 8l2.5-1.6L20.5 12.2V20a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 20v-7.8Z" fill="#fff7ed" stroke="url(#cottageGrad)" strokeWidth="1.7"/>
-        <rect x="6.5" y="13" width="3.2" height="2.6" rx="0.5" fill="#fed7aa"/>
-        <rect x="14.3" y="13" width="3.2" height="2.6" rx="0.5" fill="#fed7aa"/>
-        <rect x="10.5" y="15.8" width="3" height="3.8" rx="0.8" fill="#fdba74"/>
+        {/* Estructura principal */}
+        <rect x="25" y="40" width="50" height="45" fill="url(#contempGrad1)" stroke="#64748b" strokeWidth="2"/>
+        
+        {/* Tejado moderno */}
+        <polygon points="20,40 50,15 80,40" fill="url(#contempGrad2)" stroke="#0f172a" strokeWidth="2"/>
+        
+        {/* Ventana panorámica */}
+        <rect x="30" y="50" width="40" height="20" rx="2" fill="url(#contempGrad3)" stroke="#0891b2" strokeWidth="1.5"/>
+        
+        {/* Ventanas laterales */}
+        <rect x="35" y="25" width="8" height="12" rx="1" fill="#67e8f9" stroke="#06b6d4" strokeWidth="1"/>
+        <rect x="57" y="25" width="8" height="12" rx="1" fill="#67e8f9" stroke="#06b6d4" strokeWidth="1"/>
+        
+        {/* Puerta moderna */}
+        <rect x="47" y="70" width="6" height="15" rx="3" fill="#374151" stroke="#111827" strokeWidth="1.5"/>
+        
+        {/* Líneas arquitectónicas */}
+        <line x1="50" y1="40" x2="50" y2="85" stroke="#94a3b8" strokeWidth="1"/>
+        <line x1="25" y1="55" x2="75" y2="55" stroke="#94a3b8" strokeWidth="1"/>
+        
+        {/* Base moderna */}
+        <rect x="22" y="85" width="56" height="10" fill="#475569" stroke="#334155" strokeWidth="1.5"/>
       </svg>
     )
   },
 
-  villa: {
-    name: 'Villa',
+  colonialHouse: {
+    name: 'Casa Colonial',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M3.8 12.2 12 6l8.2 6.2V20a2 2 0 0 1-2 2h-3.5v-4.5a2 2 0 0 0-2-2h-3.4a2 2 0 0 0-2 2V22H5.8a2 2 0 0 1-2-2v-7.8Z" fill="#f8fafc" stroke="#0ea5e9" strokeWidth="1.7"/>
-        <rect x="7.2" y="13" width="3.2" height="2.6" rx="0.5" fill="#bae6fd"/>
-        <rect x="13.6" y="13" width="3.2" height="2.6" rx="0.5" fill="#bae6fd"/>
-        <rect x="10.3" y="15.8" width="3.4" height="4.2" rx="1" fill="#7dd3fc"/>
-      </svg>
-    )
-  },
-
-  apartment: {
-    name: 'Apartamento',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <rect x="4" y="6.5" width="16" height="13.5" rx="1.5" fill="#f1f5f9" stroke="#1f2937" strokeWidth="1.6"/>
-        <rect x="6.3" y="9" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
-        <rect x="10.4" y="9" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
-        <rect x="14.5" y="9" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
-        <rect x="6.3" y="13" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
-        <rect x="10.4" y="13" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
-        <rect x="14.5" y="13" width="3.2" height="3" rx="0.4" fill="#cbd5e1"/>
-        <rect x="10.6" y="16.7" width="2.8" height="3.3" rx="0.6" fill="#94a3b8"/>
-      </svg>
-    )
-  },
-
-  homeGradient: {
-    name: 'Casa (Gradiente)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
         <defs>
-          <linearGradient id="homeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22c55e"/>
-            <stop offset="100%" stopColor="#16a34a"/>
+          <linearGradient id="colonialGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef2f2"/>
+            <stop offset="100%" stopColor="#fecaca"/>
+          </linearGradient>
+          <linearGradient id="colonialGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+          <linearGradient id="colonialGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
           </linearGradient>
         </defs>
-        <path d="M4.2 11.2 12 5l7.8 6.2V19a2 2 0 0 1-2 2H6.2a2 2 0 0 1-2-2v-7.8Z" fill="url(#homeGrad)"/>
-        <rect x="9.5" y="12.2" width="5" height="5.8" rx="1.1" fill="#ffffff" opacity="0.6"/>
+        {/* Estructura principal */}
+        <rect x="20" y="45" width="60" height="40" fill="url(#colonialGrad1)" stroke="#dc2626" strokeWidth="2"/>
+        <polygon points="20,45 50,20 80,45" fill="url(#colonialGrad2)" stroke="#431407" strokeWidth="2"/>
+        
+        {/* Columnas */}
+        <rect x="25" y="50" width="6" height="35" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1.5"/>
+        <rect x="35" y="50" width="6" height="35" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1.5"/>
+        <rect x="59" y="50" width="6" height="35" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1.5"/>
+        <rect x="69" y="50" width="6" height="35" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1.5"/>
+        
+        {/* Puerta principal */}
+        <rect x="45" y="60" width="10" height="25" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="53" cy="72" r="1.5" fill="#fbbf24"/>
+        
+        {/* Ventanas simétricas */}
+        <rect x="30" y="55" width="8" height="10" rx="1" fill="url(#colonialGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="62" y="55" width="8" height="10" rx="1" fill="url(#colonialGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        
+        {/* Ventanas del segundo piso */}
+        <rect x="32" y="35" width="6" height="8" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        <rect x="62" y="35" width="6" height="8" rx="1" fill="#93c5fd" stroke="#3b82f6" strokeWidth="1"/>
+        
+        {/* Escaleras */}
+        <rect x="42" y="85" width="16" height="4" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="44" y="81" width="12" height="4" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
+        <rect x="46" y="77" width="8" height="4" fill="#6b7280" stroke="#374151" strokeWidth="1"/>
       </svg>
     )
   },
 
-  homeTwoToneBlue: {
-    name: 'Casa (Dos tonos azul)',
+  victorianHouse: {
+    name: 'Casa Victoriana',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#eff6ff"/>
-        <path d="M4 11l8-6 8 6" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" fill="#bfdbfe"/>
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="victorianGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="victorianGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+          <linearGradient id="victorianGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e40af"/>
+            <stop offset="100%" stopColor="#1e3a8a"/>
+          </linearGradient>
+        </defs>
+        {/* Estructura principal */}
+        <rect x="15" y="50" width="70" height="35" fill="url(#victorianGrad1)" stroke="#d97706" strokeWidth="2"/>
+        
+        {/* Tejado principal */}
+        <polygon points="15,50 50,20 85,50" fill="url(#victorianGrad2)" stroke="#431407" strokeWidth="2"/>
+        
+        {/* Torre/torreón */}
+        <rect x="42" y="35" width="16" height="20" fill="url(#victorianGrad1)" stroke="#d97706" strokeWidth="1.5"/>
+        <polygon points="42,35 50,15 58,35" fill="url(#victorianGrad2)" stroke="#431407" strokeWidth="1.5"/>
+        
+        {/* Chimenea */}
+        <rect x="60" y="25" width="8" height="20" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="61" y="15" width="6" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        
+        {/* Ventanas ornamentadas */}
+        <rect x="25" y="58" width="10" height="12" rx="2" fill="url(#victorianGrad3)" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <rect x="65" y="58" width="10" height="12" rx="2" fill="url(#victorianGrad3)" stroke="#1e3a8a" strokeWidth="1.5"/>
+        <rect x="45" y="40" width="8" height="12" rx="2" fill="url(#victorianGrad3)" stroke="#1e3a8a" strokeWidth="1.5"/>
+        
+        {/* Puerta principal ornamentada */}
+        <rect x="43" y="65" width="14" height="20" rx="3" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="55" cy="75" r="1.5" fill="#fbbf24"/>
+        
+        {/* Detalles decorativos */}
+        <circle cx="50" cy="32" r="2" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <rect x="48" y="30" width="4" height="4" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        
+        {/* Jardín victoriano */}
+        <ellipse cx="30" cy="90" rx="12" ry="6" fill="#16a34a" opacity="0.7"/>
+        <ellipse cx="70" cy="90" rx="12" ry="6" fill="#16a34a" opacity="0.7"/>
+        <circle cx="30" cy="85" r="3" fill="#22c55e"/>
+        <circle cx="70" cy="85" r="3" fill="#22c55e"/>
       </svg>
     )
   },
 
-  homeTwoToneGray: {
-    name: 'Casa (Dos tonos gris)',
+  mediterraneanVilla: {
+    name: 'Villa Mediterránea',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4.2 11.2 12 5l7.8 6.2V19a2 2 0 0 1-2 2H6.2a2 2 0 0 1-2-2v-7.8Z" fill="#f3f4f6"/>
-        <path d="M4.2 11.2 12 5l7.8 6.2" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <rect x="10" y="12.5" width="4" height="5" rx="1" fill="#d1d5db"/>
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="medGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="medGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#dc2626"/>
+            <stop offset="100%" stopColor="#991b1b"/>
+          </linearGradient>
+          <linearGradient id="medGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        {/* Estructura principal */}
+        <rect x="20" y="45" width="60" height="40" fill="url(#medGrad1)" stroke="#d97706" strokeWidth="2"/>
+        
+        {/* Tejado mediterráneo */}
+        <polygon points="15,45 50,15 85,45" fill="url(#medGrad2)" stroke="#991b1b" strokeWidth="2"/>
+        
+        {/* Terraza */}
+        <rect x="25" y="40" width="50" height="8" fill="#fbbf24" stroke="#d97706" strokeWidth="1.5"/>
+        
+        {/* Arcos característicos */}
+        <path d="M35 40 Q35 35 40 35 Q45 35 45 40" stroke="#d97706" strokeWidth="2" fill="none"/>
+        <path d="M55 40 Q55 35 60 35 Q65 35 65 40" stroke="#d97706" strokeWidth="2" fill="none"/>
+        
+        {/* Ventanas con persianas */}
+        <rect x="30" y="55" width="12" height="15" rx="1" fill="url(#medGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="58" y="55" width="12" height="15" rx="1" fill="url(#medGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        
+        {/* Persiana */}
+        <rect x="32" y="57" width="8" height="11" fill="#0f172a" opacity="0.6"/>
+        <rect x="60" y="57" width="8" height="11" fill="#0f172a" opacity="0.6"/>
+        
+        {/* Puerta principal */}
+        <rect x="46" y="65" width="8" height="20" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="52" cy="75" r="1.2" fill="#fbbf24"/>
+        
+        {/* Balcón */}
+        <rect x="40" y="35" width="20" height="5" fill="#fbbf24" stroke="#d97706" strokeWidth="1"/>
+        <rect x="42" y="30" width="3" height="10" fill="#d97706" stroke="#991b1b" strokeWidth="1"/>
+        <rect x="47" y="30" width="3" height="10" fill="#d97706" stroke="#991b1b" strokeWidth="1"/>
+        <rect x="52" y="30" width="3" height="10" fill="#d97706" stroke="#991b1b" strokeWidth="1"/>
+        <rect x="57" y="30" width="3" height="10" fill="#d97706" stroke="#991b1b" strokeWidth="1"/>
+        
+        {/* Jardín mediterráneo */}
+        <ellipse cx="25" cy="90" rx="15" ry="8" fill="#16a34a" opacity="0.6"/>
+        <ellipse cx="75" cy="90" rx="15" ry="8" fill="#16a34a" opacity="0.6"/>
+        <circle cx="25" cy="85" r="4" fill="#22c55e"/>
+        <circle cx="75" cy="85" r="4" fill="#22c55e"/>
       </svg>
     )
   },
 
-  homeMono: {
-    name: 'Casa (Monocromo)',
+  tudorHouse: {
+    name: 'Casa Tudor',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" stroke="#111827" strokeWidth="1.8"/>
-        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" stroke="#374151" strokeWidth="1.6"/>
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="tudorGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fef3c7"/>
+            <stop offset="100%" stopColor="#f59e0b"/>
+          </linearGradient>
+          <linearGradient id="tudorGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+          <linearGradient id="tudorGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        {/* Estructura principal */}
+        <rect x="20" y="45" width="60" height="40" fill="url(#tudorGrad1)" stroke="#d97706" strokeWidth="2"/>
+        
+        {/* Tejado Tudor */}
+        <polygon points="15,45 50,20 85,45" fill="url(#tudorGrad2)" stroke="#431407" strokeWidth="2"/>
+        
+        {/* Vigas de madera características */}
+        <rect x="25" y="50" width="50" height="4" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        <rect x="25" y="60" width="50" height="4" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        <rect x="25" y="70" width="50" height="4" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        
+        {/* Vigas verticales */}
+        <rect x="35" y="45" width="4" height="40" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        <rect x="50" y="45" width="4" height="40" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        <rect x="65" y="45" width="4" height="40" fill="#92400e" stroke="#451a03" strokeWidth="1"/>
+        
+        {/* Ventanas con marco de madera */}
+        <rect x="30" y="55" width="8" height="10" rx="1" fill="url(#tudorGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="62" y="55" width="8" height="10" rx="1" fill="url(#tudorGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        
+        {/* Cruz en la ventana */}
+        <line x1="34" y1="55" x2="34" y2="65" stroke="#1e3a8a" strokeWidth="1"/>
+        <line x1="30" y1="60" x2="38" y2="60" stroke="#1e3a8a" strokeWidth="1"/>
+        <line x1="66" y1="55" x2="66" y2="65" stroke="#1e3a8a" strokeWidth="1"/>
+        <line x1="62" y1="60" x2="70" y2="60" stroke="#1e3a8a" strokeWidth="1"/>
+        
+        {/* Puerta principal */}
+        <rect x="46" y="65" width="8" height="20" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        <circle cx="52" cy="75" r="1.2" fill="#fbbf24"/>
+        
+        {/* Chimenea */}
+        <rect x="65" y="25" width="8" height="15" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="66" y="15" width="6" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        
+        {/* Base de piedra */}
+        <rect x="18" y="85" width="64" height="8" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
       </svg>
     )
   },
 
-  homeOutlineThin: {
-    name: 'Casa (Outline fino)',
+  modernFarmhouse: {
+    name: 'Granja Moderna',
     icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" stroke="#334155" strokeWidth="1.2"/>
-        <rect x="10.2" y="12.2" width="3.6" height="5.6" rx="0.9" stroke="#64748b" strokeWidth="1.2"/>
-      </svg>
-    )
-  },
-
-  homeOutlineBold: {
-    name: 'Casa (Outline grueso)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" stroke="#0f172a" strokeWidth="2.2"/>
-        <rect x="9.6" y="12.2" width="4.8" height="6" rx="1.1" stroke="#1f2937" strokeWidth="2"/>
-      </svg>
-    )
-  },
-
-  homeWithChimney: {
-    name: 'Casa (Chimenea)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M16.5 6.5v-2h2.2v3.2" stroke="#6b7280" strokeWidth="1.4"/>
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#f3f4f6" stroke="#111827" strokeWidth="1.6"/>
-        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" fill="#e5e7eb"/>
-      </svg>
-    )
-  },
-
-  homeWithFence: {
-    name: 'Casa (Valla)',
-    icon: (size = 20) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <path d="M4 11l8-6 8 6v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.6"/>
-        <path d="M3 20h18" stroke="#64748b" strokeWidth="1.6" strokeLinecap="round"/>
-        <path d="M6 18v2M8 18v2M10 18v2M12 18v2M14 18v2M16 18v2M18 18v2" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round"/>
-        <rect x="9.5" y="12.2" width="5" height="5.6" rx="1" fill="#e5e7eb"/>
+      <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="farmGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#f8fafc"/>
+            <stop offset="100%" stopColor="#e2e8f0"/>
+          </linearGradient>
+          <linearGradient id="farmGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#7c2d12"/>
+            <stop offset="100%" stopColor="#431407"/>
+          </linearGradient>
+          <linearGradient id="farmGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#0ea5e9"/>
+            <stop offset="100%" stopColor="#0284c7"/>
+          </linearGradient>
+        </defs>
+        {/* Estructura principal */}
+        <rect x="25" y="40" width="50" height="45" fill="url(#farmGrad1)" stroke="#64748b" strokeWidth="2"/>
+        
+        {/* Tejado granero */}
+        <polygon points="20,40 50,15 80,40" fill="url(#farmGrad2)" stroke="#431407" strokeWidth="2"/>
+        
+        {/* Granero adjunto */}
+        <rect x="5" y="50" width="25" height="35" fill="url(#farmGrad1)" stroke="#64748b" strokeWidth="2"/>
+        <polygon points="5,50 17.5,35 30,50" fill="url(#farmGrad2)" stroke="#431407" strokeWidth="2"/>
+        
+        {/* Puerta del granero */}
+        <rect x="12" y="60" width="11" height="25" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        
+        {/* Ventanas principales */}
+        <rect x="35" y="50" width="12" height="15" rx="1" fill="url(#farmGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        <rect x="53" y="50" width="12" height="15" rx="1" fill="url(#farmGrad3)" stroke="#0284c7" strokeWidth="1.5"/>
+        
+        {/* Puerta principal */}
+        <rect x="48" y="65" width="4" height="20" rx="2" fill="#92400e" stroke="#451a03" strokeWidth="1.5"/>
+        
+        {/* Porche */}
+        <rect x="40" y="75" width="20" height="10" fill="#fbbf24" stroke="#d97706" strokeWidth="1.5"/>
+        <rect x="42" y="70" width="3" height="15" fill="#d97706" stroke="#991b1b" strokeWidth="1"/>
+        <rect x="55" y="70" width="3" height="15" fill="#d97706" stroke="#991b1b" strokeWidth="1"/>
+        
+        {/* Chimenea */}
+        <rect x="65" y="25" width="8" height="15" fill="#6b7280" stroke="#374151" strokeWidth="1.5"/>
+        <rect x="66" y="15" width="6" height="10" fill="#ef4444" stroke="#374151" strokeWidth="1"/>
+        
+        {/* Jardín/vegetación */}
+        <ellipse cx="30" cy="90" rx="20" ry="8" fill="#16a34a" opacity="0.6"/>
+        <ellipse cx="70" cy="90" rx="20" ry="8" fill="#16a34a" opacity="0.6"/>
+        <circle cx="25" cy="85" r="4" fill="#22c55e"/>
+        <circle cx="35" cy="88" r="3" fill="#22c55e"/>
+        <circle cx="65" cy="85" r="4" fill="#22c55e"/>
+        <circle cx="75" cy="88" r="3" fill="#22c55e"/>
       </svg>
     )
   },
@@ -2033,8 +2157,7 @@ export function setHomeTabIcon(iconKey) {
 // Categorías de iconos para el selector (agrupación para mejor UX)
 const HOME_ICON_CATEGORIES = {
   Casas: [
-    'homeClassicOutline','homeClassicFilled','homeRounded','homeMinimal','homeDuotone','homeFlat','homeGlass','homeLine','homePro',
-    'homeDoorCentered','homeDoorLeft','homeWindows2','townhouse','cottage','villa','apartment','homeGradient','homeTwoToneBlue','homeTwoToneGray','homeMono','homeOutlineThin','homeOutlineBold','homeWithChimney','homeWithFence'
+    'modernMansion','luxuryVilla','contemporaryHome','colonialHouse','victorianHouse','mediterraneanVilla','tudorHouse','modernFarmhouse'
   ],
   'Control / Operaciones': [
     'controlCenter','operationsHub','commandConsole','radarSweep','satelliteUplink','networkHub','analyticsDashboard','systemMonitor','slidersControl','serverRack','globeGrid','waveformScope','shieldOps','holoConsole','cockpitHUD','opsTimeline','opsGrid',
