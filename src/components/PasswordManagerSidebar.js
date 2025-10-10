@@ -696,26 +696,109 @@ const PasswordManagerSidebar = ({
     let icon = null;
     const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
     
+    const renderStandardIcon = (id, sizePx) => {
+      const ids = [
+        'pi-key',           // 0 key
+        'pi-globe',         // 1 globe
+        'pi-exclamation-triangle', // 2 warn
+        'pi-user',          // 3 user
+        'pi-save',          // 4 disk
+        'pi-calendar',      // 5 calendar
+        'pi-cog',           // 6 cog
+        'pi-envelope',      // 7 mail
+        'pi-database',      // 8 db
+        'pi-lock',          // 9 lock
+        'pi-unlock',        // 10 unlock
+        'pi-link',          // 11 link
+        'pi-book',          // 12 book
+        'pi-shield',        // 13 shield
+        'pi-wifi',          // 14 wifi
+        'pi-desktop',       // 15 pc
+        'pi-mobile',        // 16 phone
+        'pi-chart-line',    // 17 chart
+        'pi-sitemap',       // 18 network
+        'pi-cloud',         // 19 cloud
+        'pi-server',        // 20 server
+        'pi-bolt',          // 21 lightning
+        'pi-star',          // 22 star
+        'pi-wrench',        // 23 wrench
+        'pi-credit-card',   // 24 card
+        'pi-map',           // 25 map
+        'pi-question-circle', // 26 help
+        'pi-info-circle',   // 27 info
+        'pi-times-circle',  // 28 cancel
+        'pi-check-circle',  // 29 ok
+        'pi-download',      // 30 download
+        'pi-upload',        // 31 upload
+        'pi-bell',          // 32 bell
+        'pi-image',         // 33 image
+        'pi-briefcase',     // 34 briefcase
+        'pi-clipboard',     // 35 clipboard
+        'pi-list',          // 36 list
+        'pi-prime',         // 37 cube
+        'pi-building',      // 38 building
+        'pi-folder'         // 39 folder
+      ];
+      const colors = [
+        '#ffc107','#00bcd4','#ff7043','#8bc34a','#90caf9','#ffb74d','#9fa8da','#f48fb1','#ce93d8','#ff5252',
+        '#4db6ac','#64b5f6','#bdbdbd','#81c784','#ffca28','#42a5f5','#26a69a','#9575cd','#4dd0e1','#90a4ae',
+        '#ff8a65','#ffd54f','#fbc02d','#78909c','#8d6e63','#a5d6a7','#4fc3f7','#f06292','#ef9a9a','#66bb6a',
+        '#29b6f6','#ab47bc','#7e57c2','#5c6bc0','#26c6da','#9ccc65','#ffa726','#607d8b','#ffd54f'
+      ];
+      const cls = ids[(id || 0) % ids.length];
+      const color = colors[(id || 0) % colors.length];
+      return <span className={`pi ${cls}`} style={{ color, fontSize: `${sizePx}px` }} />;
+    };
+
     if (isPassword) {
-      icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
-    } else if (isFolder) {
-      const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
-      
-      if (themeIcon) {
-        icon = React.cloneElement(themeIcon, {
-          width: folderIconSize,
-          height: folderIconSize,
-          style: { 
-            ...themeIcon.props.style, 
-            color: node.color || getThemeDefaultColor(iconTheme),
-            width: `${folderIconSize}px`,
-            height: `${folderIconSize}px`
-          }
-        });
+      if (node.data && node.data.iconImage) {
+        icon = (
+          <img 
+            src={node.data.iconImage} 
+            alt="icon" 
+            style={{ width: `${connectionIconSize}px`, height: `${connectionIconSize}px`, objectFit: 'cover', borderRadius: 3 }}
+          />
+        );
+      } else if (node.data && node.data.iconId != null) {
+        icon = renderStandardIcon(Number(node.data.iconId), connectionIconSize);
       } else {
-        icon = options.expanded
-          ? <span className="pi pi-folder-open" style={{ color: node.color || getThemeDefaultColor(iconTheme) }} />
-          : <span className="pi pi-folder" style={{ color: node.color || getThemeDefaultColor(iconTheme) }} />;
+        icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
+      }
+    } else if (isFolder) {
+      if (node.data && node.data.iconImage) {
+        icon = (
+          <img 
+            src={node.data.iconImage} 
+            alt="icon" 
+            style={{ width: `${folderIconSize}px`, height: `${folderIconSize}px`, objectFit: 'cover', borderRadius: 3 }}
+          />
+        );
+      } else {
+        // Mapear por iconId para dar variación visual si existe
+        let tintColor = node.color || getThemeDefaultColor(iconTheme);
+        if (node.data && node.data.iconId != null) {
+          const id = Number(node.data.iconId);
+          const palette = ['#5e81ac', '#88c0d0', '#a3be8c', '#ebcb8b', '#d08770', '#b48ead', '#bf616a', '#8fbcbb'];
+          tintColor = palette[id % palette.length];
+        }
+        const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+        
+        if (themeIcon) {
+          icon = React.cloneElement(themeIcon, {
+            width: folderIconSize,
+            height: folderIconSize,
+            style: { 
+              ...themeIcon.props.style, 
+              color: tintColor,
+              width: `${folderIconSize}px`,
+              height: `${folderIconSize}px`
+            }
+          });
+        } else {
+          icon = options.expanded
+            ? <span className="pi pi-folder-open" style={{ color: tintColor }} />
+            : <span className="pi pi-folder" style={{ color: tintColor }} />;
+        }
       }
     }
     
