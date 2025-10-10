@@ -111,7 +111,6 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
-  const [showKeePassDialog, setShowKeePassDialog] = useState(false);
   
   // Estado para modo de visualización (conexiones o passwords)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords'
@@ -235,7 +234,7 @@ const Sidebar = React.memo(({
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
     console.log('handleAppMenuClick ejecutado - menú unificado');
-    const menuStructure = createAppMenu(setShowImportDialog, setShowKeePassDialog);
+    const menuStructure = createAppMenu(setShowImportDialog);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
   
@@ -1799,7 +1798,6 @@ const Sidebar = React.memo(({
                 toggleExpandAll={toggleExpandAll}
                 collapsed={sidebarCollapsed}
                 onShowImportDialog={setShowImportDialog}
-                onShowPasswordImportDialog={() => setShowKeePassDialog(true)}
               />
             </>
           ) : (
@@ -1888,52 +1886,6 @@ const Sidebar = React.memo(({
         showToast={showToast}
       />
 
-      {/* Diálogo KeePass centralizado desde el menú Archivo -> Importar Passwords */}
-      {/* Renderizamos el mismo diálogo utilizado en la vista de passwords para reutilizar lógica */}
-      {viewMode === 'passwords' ? null : (
-        <div style={{ display: 'contents' }}>
-          {/* Cargamos bajo demanda para evitar peso extra cuando no se usa */}
-          {showKeePassDialog && (
-            (() => {
-              const KeePassImportDialog = require('./KeePassImportDialog').default;
-              return (
-                <KeePassImportDialog
-                  visible={showKeePassDialog}
-                  onHide={() => setShowKeePassDialog(false)}
-                  showToast={showToast}
-                  defaultContainerName={`KeePass imported - ${new Date().toLocaleDateString()}`}
-                  onImportComplete={async ({ nodes: importedFolders, createContainerFolder, containerFolderName }) => {
-                    try {
-                      const newNodes = JSON.parse(JSON.stringify(nodes || []));
-                      const container = {
-                        key: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
-                        label: containerFolderName || `KeePass imported - ${new Date().toLocaleDateString()}`,
-                        droppable: true,
-                        children: importedFolders || [],
-                        uid: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
-                        createdAt: new Date().toISOString(),
-                        isUserCreated: true,
-                        data: { type: 'password-folder' }
-                      };
-                      if (createContainerFolder !== false) {
-                        newNodes.unshift(container);
-                      } else {
-                        (importedFolders || []).forEach(f => newNodes.unshift(f));
-                      }
-                      setNodes(newNodes);
-                      setShowKeePassDialog(false);
-                      showToast && showToast({ severity: 'success', summary: 'Importado', detail: 'Passwords importados correctamente', life: 3000 });
-                    } catch (e) {
-                      console.error('Error aplicando importación KeePass:', e);
-                      showToast && showToast({ severity: 'error', summary: 'Error', detail: 'No se pudo aplicar la importación', life: 4000 });
-                    }
-                  }}
-                />
-              );
-            })()
-          )}
-        </div>
-      )}
     </div>
   );
 });

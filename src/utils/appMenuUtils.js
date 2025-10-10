@@ -3,7 +3,7 @@
  * Se usa tanto en Sidebar como en SidebarFooter
  */
 
-export const createAppMenu = (onShowImportDialog, onShowPasswordImportDialog) => {
+export const createAppMenu = (onShowImportDialog) => {
   const menuStructure = [
     {
       label: 'Archivo',
@@ -14,13 +14,6 @@ export const createAppMenu = (onShowImportDialog, onShowPasswordImportDialog) =>
           icon: 'pi pi-file-excel',
           command: () => {
             onShowImportDialog && onShowImportDialog(true);
-          }
-        },
-        {
-          label: 'Importar Passwords (KeePass)',
-          icon: 'pi pi-key',
-          command: () => {
-            onShowPasswordImportDialog && onShowPasswordImportDialog(true);
           }
         }
       ]

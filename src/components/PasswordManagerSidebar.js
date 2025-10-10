@@ -193,6 +193,36 @@ const PasswordManagerSidebar = ({
     savePasswords();
   }, [passwordNodes, masterKey, secureStorage, isLoading]);
 
+  // Escuchar importación desde el diálogo unificado (pestaña Passwords)
+  useEffect(() => {
+    const handler = (e) => {
+      const { nodes: importedFolders, createContainerFolder, containerFolderName } = e.detail || {};
+      try {
+        const newNodes = JSON.parse(JSON.stringify(passwordNodes || []));
+        const addAsContainer = (children) => ({
+          key: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
+          label: containerFolderName || `KeePass imported - ${new Date().toLocaleDateString()}`,
+          droppable: true,
+          children,
+          uid: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
+          createdAt: new Date().toISOString(),
+          isUserCreated: true,
+          color: getThemeDefaultColor(iconTheme),
+          data: { type: 'password-folder' }
+        });
+        if (createContainerFolder !== false) newNodes.unshift(addAsContainer(importedFolders || []));
+        else (importedFolders || []).forEach(f => newNodes.unshift(f));
+        setPasswordNodes(newNodes);
+        showToast && showToast({ severity: 'success', summary: 'Importado', detail: 'Passwords importados correctamente', life: 3000 });
+      } catch (err) {
+        console.error('Error aplicando importación de passwords:', err);
+        showToast && showToast({ severity: 'error', summary: 'Error', detail: 'No se pudo aplicar la importación', life: 4000 });
+      }
+    };
+    window.addEventListener('import-passwords-to-manager', handler);
+    return () => window.removeEventListener('import-passwords-to-manager', handler);
+  }, [passwordNodes, iconTheme, showToast]);
+
 
   const resetForm = () => {
     setFormData({

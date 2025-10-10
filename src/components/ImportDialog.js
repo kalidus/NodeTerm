@@ -4,6 +4,8 @@ import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
 import { ProgressBar } from 'primereact/progressbar';
 import { Divider } from 'primereact/divider';
+import { TabView, TabPanel } from 'primereact/tabview';
+import KeePassImportPanel from './KeePassImportPanel';
 import { Message } from 'primereact/message';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
@@ -21,6 +23,7 @@ const ImportDialog = ({
   defaultTargetFolderKey
 }) => {
   const [manualSelectedFile, setManualSelectedFile] = useState(null);
+  const [activeTab, setActiveTab] = useState(0); // 0=Sesiones, 1=Passwords
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -717,8 +720,10 @@ const ImportDialog = ({
         }
       >
         <div style={{ padding: '0 16px 16px 16px' }}>
-          {/* Layout de 2 filas: Card manual arriba y Card vinculada abajo */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <TabView activeIndex={activeTab} onTabChange={(e) => setActiveTab(e.index)}>
+            <TabPanel header="Sesiones">
+              {/* Layout de 2 filas: Card manual arriba y Card vinculada abajo */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             
             {/* Primera fila - Importación manual */}
             <Card style={{ backgroundColor: 'var(--surface-card)', border: '1px solid var(--surface-border)' }}>
@@ -1432,18 +1437,29 @@ const ImportDialog = ({
                 )}
               </div>
             </Card>
-          </div>
-          
-          <Divider />
-          
-          <div className="text-sm text-gray-600">
-            <strong>Formatos soportados:</strong>
-            <ul className="list-disc list-inside mt-2 ml-4">
-              <li>Conexiones SSH (SSH1, SSH2)</li>
-              <li>Conexiones RDP</li>
-              <li>Otros protocolos se convertirán a SSH</li>
-            </ul>
-          </div>
+              </div>
+              <Divider />
+              <div className="text-sm text-gray-600">
+                <strong>Formatos soportados:</strong>
+                <ul className="list-disc list-inside mt-2 ml-4">
+                  <li>Conexiones SSH (SSH1, SSH2)</li>
+                  <li>Conexiones RDP</li>
+                  <li>Otros protocolos se convertirán a SSH</li>
+                </ul>
+              </div>
+            </TabPanel>
+
+            <TabPanel header="Passwords">
+              <KeePassImportPanel
+                defaultContainerName={`KeePass imported - ${new Date().toLocaleDateString()}`}
+                showToast={(opts) => showToast ? showToast(opts) : toast.current?.show && toast.current.show(opts)}
+                onImportPasswordsComplete={(payload) => {
+                  // Emitimos un evento para PasswordManagerSidebar
+                  window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+                }}
+              />
+            </TabPanel>
+          </TabView>
         </div>
       </Dialog>
     </>
