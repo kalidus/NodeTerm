@@ -45,7 +45,8 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'preload.js', to: 'preload.js' }
+        { from: 'preload.js', to: 'preload.js' },
+        { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' }
       ]
     }),
     new webpack.DefinePlugin({
