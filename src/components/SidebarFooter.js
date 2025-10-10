@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from 'primereact/button';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 
-const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog }) => {
+const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed, onShowImportDialog, onShowPasswordImportDialog }) => {
   if (collapsed) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
@@ -32,7 +32,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
   const handleAppMenuClick = (event) => {
     // Handle app menu click
     // Usar el menú unificado
-    const menuStructure = createAppMenu(onShowImportDialog);
+    const menuStructure = createAppMenu(onShowImportDialog, onShowPasswordImportDialog);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
   };
   
