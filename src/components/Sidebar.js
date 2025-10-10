@@ -573,8 +573,6 @@ const Sidebar = React.memo(({
       setTimeout(() => {
         safeUnblockForms(showToast);
       }, 0);
-      
-      console.log('✅ Sidebar handleImportComplete COMPLETADO EXITOSAMENTE');
 
     } catch (error) {
       console.error('Error al procesar importación:', error);
@@ -1138,7 +1136,6 @@ const Sidebar = React.memo(({
   // };
   // nodeTemplate adaptado de App.js
   const nodeTemplate = (node, options) => {
-    console.log('🎨 Sidebar rendering node:', node.label, 'data:', node.data);
     const isFolder = node.droppable;
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
@@ -1412,7 +1409,6 @@ const Sidebar = React.memo(({
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          console.log('🖱️ Double click on node:', node.label);
           if (isSSH && onOpenSSHConnection) {
             onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
