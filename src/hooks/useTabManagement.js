@@ -534,6 +534,10 @@ export const useTabManagement = (toast, {
       // Cerrar pestañas Guacamole
       const newGuacamoleTabs = guacamoleTabs.filter(t => t.key !== closedTab.key);
       setGuacamoleTabs(newGuacamoleTabs);
+    } else if (closedTab.type === 'password') {
+      // Cerrar pestañas de información de contraseñas (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else {
       if (closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
         window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
