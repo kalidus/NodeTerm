@@ -355,6 +355,12 @@ const SettingsDialog = ({
     try {
       await secureStorage.saveMasterKey(masterPassword);
       setHasMasterKey(true);
+      
+      // Notificar a App.js que se configuró la master password
+      if (onMasterPasswordConfigured) {
+        onMasterPasswordConfigured(masterPassword);
+      }
+      
       setMasterPassword('');
       setConfirmPassword('');
       showToast('success', 'Éxito', 'Clave maestra configurada correctamente');
@@ -860,10 +866,35 @@ const SettingsDialog = ({
                       </div>
                       
                       {hasMasterKey && (
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)' }}>
-                          <i className="pi pi-info-circle" style={{ marginRight: '0.5rem' }}></i>
-                          Las sesiones se cifran automáticamente antes del almacenamiento
-                        </div>
+                        <>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--text-color-secondary)', marginBottom: '0.75rem' }}>
+                            <i className="pi pi-info-circle" style={{ marginRight: '0.5rem' }}></i>
+                            Las sesiones se cifran automáticamente antes del almacenamiento
+                          </div>
+                          
+                          {/* Opción de recordar contraseña */}
+                          <div className="field-checkbox" style={{ marginTop: '0.5rem' }}>
+                            <Checkbox
+                              inputId="remember-password-settings"
+                              checked={localStorage.getItem('nodeterm_remember_password') === 'true'}
+                              onChange={(e) => {
+                                if (e.checked) {
+                                  localStorage.setItem('nodeterm_remember_password', 'true');
+                                  showToast('success', 'Configurado', 'La contraseña se recordará en este dispositivo');
+                                } else {
+                                  localStorage.removeItem('nodeterm_remember_password');
+                                  showToast('info', 'Configurado', 'Se pedirá la contraseña al iniciar la app');
+                                }
+                              }}
+                            />
+                            <label htmlFor="remember-password-settings" className="ml-2" style={{ fontSize: '0.9rem' }}>
+                              Recordar contraseña en este dispositivo
+                            </label>
+                          </div>
+                          <small style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-color-secondary)', fontSize: '0.85rem', marginLeft: '2rem' }}>
+                            Si está activado, no se pedirá la contraseña al iniciar la app
+                          </small>
+                        </>
                       )}
                     </div>
 

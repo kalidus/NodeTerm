@@ -43,6 +43,8 @@ import SyncSettingsDialog from './SyncSettingsDialog';
 import ImportDialog from './ImportDialog';
 import ImportService from '../services/ImportService';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
+import SecureStorage from '../services/SecureStorage';
+import UnlockDialog from './UnlockDialog';
 
 import RdpSessionTab from './RdpSessionTab';
 import GuacamoleTab from './GuacamoleTab';
@@ -83,6 +85,11 @@ const App = () => {
   const [showImportDialog, setShowImportDialog] = React.useState(false);
   const [importPreset, setImportPreset] = React.useState(null);
 
+  // === SISTEMA DE ENCRIPTACIÓN ===
+  const [secureStorage] = useState(() => new SecureStorage());
+  const [needsUnlock, setNeedsUnlock] = useState(false);
+  const [masterKey, setMasterKey] = useState(null);
+
   // Cargar tema de pestañas al inicializar la aplicación
   useEffect(() => {
     // Función para inicializar todos los temas de forma robusta
@@ -122,6 +129,48 @@ const App = () => {
     
     // Ejecutar inicialización
     initializeAllThemes();
+  }, []);
+
+  // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
+  useEffect(() => {
+    const initializeApp = async () => {
+      if (secureStorage.hasSavedMasterKey()) {
+        // Verificar si el usuario marcó "recordar contraseña"
+        const rememberPassword = localStorage.getItem('nodeterm_remember_password') === 'true';
+        
+        if (rememberPassword) {
+          // Intentar auto-unlock
+          try {
+            const savedMasterKey = await secureStorage.loadMasterKey();
+            if (savedMasterKey) {
+              // Auto-unlock exitoso
+              setMasterKey(savedMasterKey);
+              setNeedsUnlock(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error en auto-unlock:', err);
+          }
+        }
+        
+        // Si no está recordado o falló, mostrar unlock dialog
+        setNeedsUnlock(true);
+      }
+    };
+
+    initializeApp();
+  }, [secureStorage]);
+
+  // Handler para unlock exitoso
+  const handleUnlockSuccess = useCallback((key) => {
+    setMasterKey(key);
+    setNeedsUnlock(false);
+  }, []);
+
+  // Handler cuando se configura master password desde Settings
+  const handleMasterPasswordConfigured = useCallback((key) => {
+    setMasterKey(key);
+    // Ahora los datos se empezarán a guardar encriptados
   }, []);
   
   // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas
@@ -1037,38 +1086,114 @@ const App = () => {
 
 
 
-  // Load initial nodes from localStorage or use default
+  // Load initial nodes from localStorage or use default (CON ENCRIPTACIÓN)
   useEffect(() => {
-    const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
-    if (savedNodes) {
-      let loadedNodes = JSON.parse(savedNodes);
-      if (!Array.isArray(loadedNodes)) {
-        loadedNodes = [loadedNodes];
+    const loadNodes = async () => {
+      try {
+        if (masterKey) {
+          // CON master key: Cargar encriptado
+          const encryptedData = localStorage.getItem('connections_encrypted');
+          
+          if (encryptedData) {
+            const decrypted = await secureStorage.decryptData(
+              JSON.parse(encryptedData),
+              masterKey
+            );
+            setNodes(decrypted);
+          } else {
+            // Migración: Si hay datos sin encriptar, encriptarlos
+            const plainData = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
+            if (plainData) {
+              let loadedNodes = JSON.parse(plainData);
+              if (!Array.isArray(loadedNodes)) {
+                loadedNodes = [loadedNodes];
+              }
+              
+              const migrateNodes = (nodes) => {
+                return nodes.map(node => {
+                  const migratedNode = { ...node };
+                  if (node.data && node.data.type === 'ssh') {
+                    migratedNode.droppable = false;
+                  }
+                  if (node.children && node.children.length > 0) {
+                    migratedNode.children = migrateNodes(node.children);
+                  }
+                  return migratedNode;
+                });
+              };
+              const migratedNodes = migrateNodes(loadedNodes);
+              
+              // Encriptar y guardar
+              const encrypted = await secureStorage.encryptData(migratedNodes, masterKey);
+              localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
+              
+              // Eliminar datos sin encriptar
+              localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+              
+              setNodes(migratedNodes);
+            } else {
+              setNodes(getDefaultNodes());
+            }
+          }
+        } else {
+          // SIN master key: Funciona como antes
+          const savedNodes = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
+          if (savedNodes) {
+            let loadedNodes = JSON.parse(savedNodes);
+            if (!Array.isArray(loadedNodes)) {
+              loadedNodes = [loadedNodes];
+            }
+            const migrateNodes = (nodes) => {
+              return nodes.map(node => {
+                const migratedNode = { ...node };
+                if (node.data && node.data.type === 'ssh') {
+                  migratedNode.droppable = false;
+                }
+                if (node.children && node.children.length > 0) {
+                  migratedNode.children = migrateNodes(node.children);
+                }
+                return migratedNode;
+              });
+            };
+            const migratedNodes = migrateNodes(loadedNodes);
+            setNodes(migratedNodes);
+          } else {
+            setNodes(getDefaultNodes());
+          }
+        }
+      } catch (error) {
+        console.error('Error loading nodes:', error);
+        setNodes(getDefaultNodes());
       }
-      const migrateNodes = (nodes) => {
-        return nodes.map(node => {
-          const migratedNode = { ...node };
-          if (node.data && node.data.type === 'ssh') {
-            migratedNode.droppable = false;
-          }
-          if (node.children && node.children.length > 0) {
-            migratedNode.children = migrateNodes(node.children);
-          }
-          return migratedNode;
-        });
-      };
-      const migratedNodes = migrateNodes(loadedNodes);
-      setNodes(migratedNodes); // <-- Si está vacío, se respeta
-    } else {
-      setNodes(getDefaultNodes());
-    }
-    
-    }, []);
+    };
 
-  // Save nodes to localStorage whenever they change
+    loadNodes();
+  }, [masterKey, secureStorage]);
+
+  // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN)
   useEffect(() => {
-            localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(nodes));
-  }, [nodes]);
+    const saveNodes = async () => {
+      if (nodes.length === 0) return;
+
+      try {
+        if (masterKey) {
+          // CON master key: Guardar encriptado
+          const encrypted = await secureStorage.encryptData(nodes, masterKey);
+          localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
+          
+          // Limpiar datos sin encriptar
+          localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+        } else {
+          // SIN master key: Guardar como antes
+          localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(nodes));
+        }
+      } catch (error) {
+        console.error('Error saving nodes:', error);
+      }
+    };
+
+    saveNodes();
+  }, [nodes, masterKey, secureStorage]);
 
   // Efecto para manejar cambios en el explorador de archivos
   useEffect(() => {
@@ -1448,7 +1573,11 @@ const App = () => {
     
     // Estados de formularios RDP
     rdpNodeData, setRdpNodeData,
-    editingRdpNode, setEditingRdpNode
+    editingRdpNode, setEditingRdpNode,
+    
+    // Encriptación
+    masterKey,
+    secureStorage
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
@@ -1463,7 +1592,10 @@ const App = () => {
     editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort, editSSHNode, setEditSSHNode,
-    rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode
+    rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
+    
+    // Dependencias de encriptación
+    masterKey, secureStorage
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
@@ -1518,6 +1650,13 @@ const App = () => {
 
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0 }}>
+      {/* UnlockDialog - Pide master password al inicio si existe */}
+      <UnlockDialog
+        visible={needsUnlock}
+        onSuccess={handleUnlockSuccess}
+        secureStorage={secureStorage}
+      />
+
       <TitleBar
         sidebarFilter={sidebarFilter}
         setSidebarFilter={setSidebarFilter}
@@ -1786,6 +1925,9 @@ const App = () => {
         exportTreeToJson={exportTreeToJson}
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}
+        
+        // Encriptación
+        onMasterPasswordConfigured={handleMasterPasswordConfigured}
       />
 
       {/* Menú contextual del árbol de la sidebar */}

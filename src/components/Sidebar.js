@@ -101,7 +101,11 @@ const Sidebar = React.memo(({
   
   // Estados de formularios RDP
   rdpNodeData, setRdpNodeData,
-  editingRdpNode, setEditingRdpNode
+  editingRdpNode, setEditingRdpNode,
+  
+  // Encriptación
+  masterKey,
+  secureStorage
 }) => {
   
   // Estado para diálogos
@@ -1811,6 +1815,8 @@ const Sidebar = React.memo(({
               connectionIconSize={connectionIconSize}
               explorerFont={explorerFont}
               explorerFontSize={explorerFontSize}
+              masterKey={masterKey}
+              secureStorage={secureStorage}
             />
           )}
         </>
