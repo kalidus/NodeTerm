@@ -7,6 +7,7 @@ import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
+import PasswordManagerSidebar from './PasswordManagerSidebar';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
@@ -106,6 +107,9 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
+  
+  // Estado para modo de visualización (conexiones o passwords)
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords'
   
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
@@ -1408,25 +1412,11 @@ const Sidebar = React.memo(({
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          console.log('🖱️ Double click on node:', node.label, 'isPassword:', isPassword);
+          console.log('🖱️ Double click on node:', node.label);
           if (isSSH && onOpenSSHConnection) {
             onOpenSSHConnection(node, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
             sidebarCallbacksRef.current.connectRDP(node);
-          } else if (isPassword) {
-            console.log('🔑 Opening password tab for:', node.label);
-            const payload = {
-              key: node.key,
-              label: node.label,
-              data: {
-                username: node.data?.username || '',
-                password: node.data?.password || '',
-                url: node.data?.url || '',
-                group: node.data?.group || '',
-                notes: node.data?.notes || ''
-              }
-            };
-            window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
           }
         }}
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
@@ -1611,6 +1601,30 @@ const Sidebar = React.memo(({
                 opacity: '1 !important'
               }} 
             />
+            
+            {/* Botón de gestor de passwords */}
+            <Button 
+              icon="pi pi-key" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={() => setViewMode('passwords')} 
+              tooltip="Gestor de passwords" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                border: 'none',
+                display: 'flex !important',
+                alignItems: 'center',
+                justifyContent: 'center',
+                visibility: 'visible !important',
+                opacity: '1 !important',
+                color: '#ffc107'
+              }} 
+            />
           </div>
 
           {/* Botones de menú de aplicación y configuración en la parte inferior */}
@@ -1677,103 +1691,132 @@ const Sidebar = React.memo(({
       ) : (
         // Sidebar completa
         <>
-          {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
-            <div style={{ 
-              width: '100%', 
-              height: '0.5px', 
-              backgroundColor: 'var(--ui-sidebar-border)', 
-              opacity: 0.6,
-              margin: 0,
-              padding: 0,
-              boxSizing: 'border-box',
-              border: 'none',
-              outline: 'none'
-            }} />
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
-            <Button 
-              icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setSidebarCollapsed(v => !v)} 
-              tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
-              tooltipOptions={{ position: 'bottom' }} 
-              style={{ marginRight: 8 }} 
-            />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
-              <Button 
-                icon="pi pi-desktop" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
-                tooltip="Nueva conexión" 
-                tooltipOptions={{ position: 'bottom' }} 
-              />
-              <Button 
-                icon="pi pi-plus" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => setShowFolderDialog(true)} 
-                tooltip="Crear carpeta" 
-                tooltipOptions={{ position: 'bottom' }} 
-              />
-              <Button 
-                icon="pi pi-th-large" 
-                className="p-button-rounded p-button-text sidebar-action-button" 
-                onClick={() => setShowCreateGroupDialog(true)} 
-                tooltip="Crear grupo de pestañas" 
-                tooltipOptions={{ position: 'bottom' }} 
-              />
-            </div>
-          </div>
-          <Divider className="my-2" />
-          
-          <div 
-            style={{ 
-              flex: 1, 
-              minHeight: 0, 
-              overflowY: 'auto', 
-              overflowX: 'auto',
-              position: 'relative',
-              fontSize: `${explorerFontSize}px`
-            }}
-            onContextMenu={onTreeAreaContextMenu}
-            className="tree-container"
-          >
-            {nodes.length === 0 ? (
-              <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                No hay elementos en el árbol.<br/>Usa el botón "+" para crear una carpeta o conexión.
+          {viewMode === 'connections' ? (
+            // Vista de conexiones (árbol normal)
+            <>
+              {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+                <div style={{ 
+                  width: '100%', 
+                  height: '0.5px', 
+                  backgroundColor: 'var(--ui-sidebar-border)', 
+                  opacity: 0.6,
+                  margin: 0,
+                  padding: 0,
+                  boxSizing: 'border-box',
+                  border: 'none',
+                  outline: 'none'
+                }} />
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
+                <Button 
+                  icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
+                  className="p-button-rounded p-button-text sidebar-action-button" 
+                  onClick={() => setSidebarCollapsed(v => !v)} 
+                  tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                  tooltipOptions={{ position: 'bottom' }} 
+                  style={{ marginRight: 8 }} 
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+                  <Button 
+                    icon="pi pi-desktop" 
+                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
+                    tooltip="Nueva conexión" 
+                    tooltipOptions={{ position: 'bottom' }} 
+                  />
+                  <Button 
+                    icon="pi pi-plus" 
+                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    onClick={() => setShowFolderDialog(true)} 
+                    tooltip="Crear carpeta" 
+                    tooltipOptions={{ position: 'bottom' }} 
+                  />
+                  <Button 
+                    icon="pi pi-key" 
+                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    onClick={() => setViewMode('passwords')} 
+                    tooltip="Gestor de passwords" 
+                    tooltipOptions={{ position: 'bottom' }} 
+                    style={{ color: '#ffc107' }}
+                  />
+                  <Button 
+                    icon="pi pi-th-large" 
+                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    onClick={() => setShowCreateGroupDialog(true)} 
+                    tooltip="Crear grupo de pestañas" 
+                    tooltipOptions={{ position: 'bottom' }} 
+                  />
+                </div>
               </div>
-            ) : (
-              <Tree
-                key={`tree-${iconTheme}-${explorerFontSize}`} // Forzar re-render cuando cambie el tema
-                value={nodes}
-                selectionMode="single"
-                selectionKeys={selectedNodeKey}
-                onSelectionChange={e => setSelectedNodeKey(e.value)}
-                expandedKeys={expandedKeys}
-                onToggle={e => setExpandedKeys(e.value)}
-                dragdropScope="files"
-                onDragDrop={onDragDrop}
-                onDragStart={e => {
-                  // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
-                }}
-                onDragEnd={() => {}}
-                className="sidebar-tree"
-                data-icon-theme={iconTheme}
+              <Divider className="my-2" />
+              
+              <div 
                 style={{ 
-                  fontSize: `${explorerFontSize}px`,
-                  '--icon-size': `${iconSize}px`
+                  flex: 1, 
+                  minHeight: 0, 
+                  overflowY: 'auto', 
+                  overflowX: 'auto',
+                  position: 'relative',
+                  fontSize: `${explorerFontSize}px`
                 }}
-                nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+                onContextMenu={onTreeAreaContextMenu}
+                className="tree-container"
+              >
+                {nodes.length === 0 ? (
+                  <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                    No hay elementos en el árbol.<br/>Usa el botón "+" para crear una carpeta o conexión.
+                  </div>
+                ) : (
+                  <Tree
+                    key={`tree-${iconTheme}-${explorerFontSize}`} // Forzar re-render cuando cambie el tema
+                    value={nodes}
+                    selectionMode="single"
+                    selectionKeys={selectedNodeKey}
+                    onSelectionChange={e => setSelectedNodeKey(e.value)}
+                    expandedKeys={expandedKeys}
+                    onToggle={e => setExpandedKeys(e.value)}
+                    dragdropScope="files"
+                    onDragDrop={onDragDrop}
+                    onDragStart={e => {
+                      // if (e.node) setDraggedNodeKey(e.node.key); // This line was removed as per the edit hint
+                    }}
+                    onDragEnd={() => {}}
+                    className="sidebar-tree"
+                    data-icon-theme={iconTheme}
+                    style={{ 
+                      fontSize: `${explorerFontSize}px`,
+                      '--icon-size': `${iconSize}px`
+                    }}
+                    nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+                  />
+                )}
+              </div>
+              
+              <SidebarFooter 
+                onConfigClick={() => setShowSettingsDialog(true)} 
+                allExpanded={allExpanded}
+                toggleExpandAll={toggleExpandAll}
+                collapsed={sidebarCollapsed}
+                onShowImportDialog={setShowImportDialog}
               />
-            )}
-          </div>
-          
-          <SidebarFooter 
-            onConfigClick={() => setShowSettingsDialog(true)} 
-            allExpanded={allExpanded}
-            toggleExpandAll={toggleExpandAll}
-            collapsed={sidebarCollapsed}
-            onShowImportDialog={setShowImportDialog}
-          />
+            </>
+          ) : (
+            // Vista de passwords
+            <PasswordManagerSidebar
+              nodes={nodes}
+              setNodes={setNodes}
+              showToast={showToast}
+              confirmDialog={confirmDialog}
+              uiTheme={uiTheme}
+              onBackToConnections={() => setViewMode('connections')}
+              iconTheme={iconTheme}
+              iconSize={iconSize}
+              folderIconSize={folderIconSize}
+              connectionIconSize={connectionIconSize}
+              explorerFont={explorerFont}
+              explorerFontSize={explorerFontSize}
+            />
+          )}
         </>
       )}
 
