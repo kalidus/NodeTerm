@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Dialog } from 'primereact/dialog';
 import { Divider } from 'primereact/divider';
 import { Tree } from 'primereact/tree';
+import { ContextMenu } from 'primereact/contextmenu';
 import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import '../styles/components/password-manager-sidebar.css';
@@ -37,9 +38,15 @@ const PasswordManagerSidebar = ({
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
+  const [editingFolder, setEditingFolder] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
+  
+  // Referencias y estados para el menú contextual
+  const contextMenuRef = useRef(null);
+  const [contextMenuItems, setContextMenuItems] = useState([]);
+  const [currentContextNode, setCurrentContextNode] = useState(null);
   
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -144,46 +151,83 @@ const PasswordManagerSidebar = ({
     }
     
     const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
-    const newKey = `password_folder_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
-    const newFolder = {
-      key: newKey,
-      label: folderName.trim(),
-      droppable: true,
-      children: [],
-      uid: newKey,
-      createdAt: new Date().toISOString(),
-      isUserCreated: true,
-      color: folderColor,
-      data: { type: 'password-folder' }
-    };
     
-    if (parentNodeKey) {
-      // Add to parent folder
-      const addToParent = (nodeList) => {
+    if (editingFolder) {
+      // Editar carpeta existente
+      const updateFolderInTree = (nodeList) => {
         return nodeList.map(node => {
-          if (node.key === parentNodeKey) {
+          if (node.key === editingFolder.key) {
             return {
               ...node,
-              children: [...(node.children || []), newFolder]
+              label: folderName.trim(),
+              color: folderColor
             };
           }
           if (node.children) {
-            return { ...node, children: addToParent(node.children) };
+            return { ...node, children: updateFolderInTree(node.children) };
           }
           return node;
         });
       };
-      setPasswordNodes(addToParent(passwordNodesCopy));
+      
+      const updatedPasswordNodes = updateFolderInTree(passwordNodesCopy);
+      setPasswordNodes(updatedPasswordNodes);
+      
+      showToast && showToast({ 
+        severity: 'success', 
+        summary: 'Actualizado', 
+        detail: `Carpeta "${folderName}" actualizada`, 
+        life: 3000 
+      });
     } else {
-      // Add to root
-      passwordNodesCopy.unshift(newFolder);
-      setPasswordNodes(passwordNodesCopy);
+      // Crear nueva carpeta
+      const newKey = `password_folder_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
+      const newFolder = {
+        key: newKey,
+        label: folderName.trim(),
+        droppable: true,
+        children: [],
+        uid: newKey,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true,
+        color: folderColor,
+        data: { type: 'password-folder' }
+      };
+      
+      if (parentNodeKey) {
+        // Add to parent folder
+        const addToParent = (nodeList) => {
+          return nodeList.map(node => {
+            if (node.key === parentNodeKey) {
+              return {
+                ...node,
+                children: [...(node.children || []), newFolder]
+              };
+            }
+            if (node.children) {
+              return { ...node, children: addToParent(node.children) };
+            }
+            return node;
+          });
+        };
+        setPasswordNodes(addToParent(passwordNodesCopy));
+      } else {
+        // Add to root
+        passwordNodesCopy.unshift(newFolder);
+        setPasswordNodes(passwordNodesCopy);
+      }
+      
+      showToast && showToast({ 
+        severity: 'success', 
+        summary: 'Creado', 
+        detail: `Carpeta "${folderName}" creada`, 
+        life: 3000 
+      });
     }
     
     setShowFolderDialog(false);
     setFolderName('');
-    
-    showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" creada`, life: 3000 });
+    setEditingFolder(null);
   };
 
   const handleEditPassword = (password) => {
@@ -338,23 +382,6 @@ const PasswordManagerSidebar = ({
     }
   };
 
-  const handleCopyToClipboard = (text, field) => {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast && showToast({
-        severity: 'success',
-        summary: 'Copiado',
-        detail: `${field} copiado al portapapeles`,
-        life: 2000
-      });
-    }).catch(() => {
-      showToast && showToast({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudo copiar al portapapeles',
-        life: 3000
-      });
-    });
-  };
 
   const generateRandomPassword = () => {
     const length = 16;
@@ -395,6 +422,113 @@ const PasswordManagerSidebar = ({
   };
 
   const filteredPasswordNodes = filterNodes(passwordNodes, searchFilter);
+
+  // Funcionalidad de drag & drop para passwords
+  const onDragDrop = (event) => {
+    const { dragNode, dropNode, dropIndex } = event;
+    
+    if (!dragNode || !dropNode) return;
+    
+    // No permitir arrastrar un nodo sobre sí mismo
+    if (dragNode.key === dropNode.key) return;
+    
+    // No permitir arrastrar un nodo dentro de sus propios hijos
+    const isDescendant = (parent, child) => {
+      if (parent.children) {
+        for (const node of parent.children) {
+          if (node.key === child.key) return true;
+          if (isDescendant(node, child)) return true;
+        }
+      }
+      return false;
+    };
+    
+    if (isDescendant(dragNode, dropNode)) return;
+    
+    const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
+    
+    // Función para remover el nodo arrastrado de su ubicación actual
+    const removeNodeFromTree = (nodeList, targetKey) => {
+      return nodeList.filter(node => {
+        if (node.key === targetKey) {
+          return false;
+        }
+        if (node.children) {
+          node.children = removeNodeFromTree(node.children, targetKey);
+        }
+        return true;
+      });
+    };
+    
+    // Función para añadir el nodo en su nueva ubicación
+    const addNodeToTree = (nodeList, targetKey, newNode, index = 0) => {
+      return nodeList.map(node => {
+        if (node.key === targetKey) {
+          const newChildren = [...(node.children || [])];
+          newChildren.splice(index, 0, newNode);
+          return { ...node, children: newChildren };
+        }
+        if (node.children) {
+          return { ...node, children: addNodeToTree(node.children, targetKey, newNode, index) };
+        }
+        return node;
+      });
+    };
+    
+    // Determinar si el dropNode es una carpeta
+    const isDroppingOnFolder = dropNode.droppable;
+    
+    if (isDroppingOnFolder) {
+      // Arrastrar a una carpeta
+      const updatedNodes = removeNodeFromTree(passwordNodesCopy, dragNode.key);
+      const finalNodes = addNodeToTree(updatedNodes, dropNode.key, dragNode);
+      setPasswordNodes(finalNodes);
+      
+      showToast && showToast({
+        severity: 'success',
+        summary: 'Movido',
+        detail: `"${dragNode.label}" movido a "${dropNode.label}"`,
+        life: 3000
+      });
+    } else {
+      // Arrastrar a un password (mover al mismo nivel)
+      const updatedNodes = removeNodeFromTree(passwordNodesCopy, dragNode.key);
+      
+      // Encontrar el padre del dropNode
+      const findParent = (nodeList, targetKey) => {
+        for (const node of nodeList) {
+          if (node.children) {
+            for (const child of node.children) {
+              if (child.key === targetKey) {
+                return node;
+              }
+            }
+            const found = findParent(node.children, targetKey);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      
+      const parent = findParent(updatedNodes, dropNode.key);
+      if (parent) {
+        const finalNodes = addNodeToTree(updatedNodes, parent.key, dragNode, dropIndex);
+        setPasswordNodes(finalNodes);
+      } else {
+        // Si no hay padre, mover a la raíz
+        const rootIndex = updatedNodes.findIndex(node => node.key === dropNode.key);
+        updatedNodes.splice(rootIndex + 1, 0, dragNode);
+        setPasswordNodes(updatedNodes);
+      }
+      
+      showToast && showToast({
+        severity: 'success',
+        summary: 'Movido',
+        detail: `"${dragNode.label}" reorganizado`,
+        life: 3000
+      });
+    }
+  };
 
   const handleOpenPassword = (node) => {
     const payload = {
@@ -455,6 +589,7 @@ const PasswordManagerSidebar = ({
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}
         data-connection-type={isPassword ? 'password' : null}
         data-node-type={isFolder ? 'folder' : 'connection'}
+        draggable={true}
       >
         <span style={{ 
           minWidth: 20,
@@ -474,30 +609,131 @@ const PasswordManagerSidebar = ({
     );
   };
 
-  // Menú contextual para passwords (similar al de conexiones)
+  // Función para copiar al portapapeles
+  const handleCopyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast && showToast({
+        severity: 'success',
+        summary: 'Copiado',
+        detail: `${type} copiado al portapapeles`,
+        life: 2000
+      });
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+      showToast && showToast({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudo copiar al portapapeles',
+        life: 3000
+      });
+    }
+  };
+
+  // Función para abrir URL
+  const handleOpenUrl = (url) => {
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      window.open(url, '_blank');
+    } else {
+      showToast && showToast({
+        severity: 'warn',
+        summary: 'URL inválida',
+        detail: 'La URL no es válida o no está configurada',
+        life: 3000
+      });
+    }
+  };
+
+  // Función para editar carpeta
+  const handleEditFolder = (folder) => {
+    setFolderName(folder.label);
+    setFolderColor(folder.color || getThemeDefaultColor(iconTheme));
+    setEditingFolder(folder);
+    setShowFolderDialog(true);
+  };
+
+  // Función para eliminar carpeta
+  const handleDeleteFolder = (folder) => {
+    const executeDelete = () => {
+      const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
+
+      const removeFolderFromTree = (nodeList) => {
+        return nodeList.filter(node => {
+          if (node.key === folder.key) {
+            return false;
+          }
+          if (node.children) {
+            node.children = removeFolderFromTree(node.children);
+          }
+          return true;
+        });
+      };
+
+      const updatedPasswordNodes = removeFolderFromTree(passwordNodesCopy);
+      setPasswordNodes(updatedPasswordNodes);
+
+      showToast && showToast({
+        severity: 'success',
+        summary: 'Eliminado',
+        detail: `Carpeta "${folder.label}" eliminada`,
+        life: 3000
+      });
+    };
+
+    const dialogToUse = confirmDialog || window.confirmDialog;
+    if (dialogToUse) {
+      dialogToUse({
+        message: `¿Estás seguro de que deseas eliminar la carpeta "${folder.label}" y todo su contenido?`,
+        header: 'Confirmar eliminación',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClassName: 'p-button-danger',
+        accept: executeDelete
+      });
+    } else {
+      executeDelete();
+    }
+  };
+
+  // Menú contextual para passwords usando ContextMenu nativo
   const onNodeContextMenu = (event, node) => {
+    console.log('🖱️ Context menu triggered for node:', node.label, 'Type:', node.data?.type);
     event.preventDefault();
     event.stopPropagation();
     setSelectedNodeKey({ [node.key]: true });
+    setCurrentContextNode(node);
     
     // Crear menú contextual simple para passwords
     const isPassword = node.data && node.data.type === 'password';
     const isFolder = node.droppable;
+    
+    console.log('🔍 Node analysis - isPassword:', isPassword, 'isFolder:', isFolder);
     
     if (isPassword) {
       const menuItems = [
         {
           label: 'Ver detalles',
           icon: 'pi pi-eye',
-          command: () => handleOpenPassword(node)
+          command: () => {
+            console.log('👁️ Ver detalles clicked');
+            handleOpenPassword(node);
+          }
         },
+        { separator: true },
         {
           label: 'Copiar usuario',
           icon: 'pi pi-user',
           command: () => {
+            console.log('👤 Copiar usuario clicked');
             const username = node.data?.username || '';
             if (username) {
               handleCopyToClipboard(username, 'Usuario');
+            } else {
+              showToast && showToast({
+                severity: 'warn',
+                summary: 'Sin usuario',
+                detail: 'Este password no tiene usuario configurado',
+                life: 2000
+              });
             }
           }
         },
@@ -505,9 +741,35 @@ const PasswordManagerSidebar = ({
           label: 'Copiar contraseña',
           icon: 'pi pi-key',
           command: () => {
+            console.log('🔑 Copiar contraseña clicked');
             const password = node.data?.password || '';
             if (password) {
               handleCopyToClipboard(password, 'Password');
+            } else {
+              showToast && showToast({
+                severity: 'warn',
+                summary: 'Sin contraseña',
+                detail: 'Este password no tiene contraseña configurada',
+                life: 2000
+              });
+            }
+          }
+        },
+        {
+          label: 'Abrir URL',
+          icon: 'pi pi-external-link',
+          command: () => {
+            console.log('🔗 Abrir URL clicked');
+            const url = node.data?.url || '';
+            if (url) {
+              handleOpenUrl(url);
+            } else {
+              showToast && showToast({
+                severity: 'warn',
+                summary: 'Sin URL',
+                detail: 'Este password no tiene URL configurada',
+                life: 2000
+              });
             }
           }
         },
@@ -515,18 +777,27 @@ const PasswordManagerSidebar = ({
         {
           label: 'Editar',
           icon: 'pi pi-pencil',
-          command: () => handleEditPassword(node)
+          command: () => {
+            console.log('✏️ Editar clicked');
+            handleEditPassword(node);
+          }
         },
         {
           label: 'Eliminar',
           icon: 'pi pi-trash',
-          command: () => handleDeletePassword(node)
+          command: () => {
+            console.log('🗑️ Eliminar clicked');
+            handleDeletePassword(node);
+          }
         }
       ];
       
-      // Crear menú contextual usando la función existente
-      if (window.createContextMenu) {
-        window.createContextMenu(event, menuItems, 'password-context-menu');
+      console.log('📋 Password menu items:', menuItems);
+      setContextMenuItems(menuItems);
+      
+      // Mostrar el menú contextual nativo
+      if (contextMenuRef.current) {
+        contextMenuRef.current.show(event);
       }
     } else if (isFolder) {
       const menuItems = [
@@ -534,6 +805,7 @@ const PasswordManagerSidebar = ({
           label: 'Nuevo Password',
           icon: 'pi pi-plus',
           command: () => {
+            console.log('➕ Nuevo Password clicked');
             setParentNodeKey(node.key);
             setShowPasswordDialog(true);
           }
@@ -542,14 +814,36 @@ const PasswordManagerSidebar = ({
           label: 'Nueva Carpeta',
           icon: 'pi pi-folder-plus',
           command: () => {
+            console.log('📁 Nueva Carpeta clicked');
             setParentNodeKey(node.key);
             setShowFolderDialog(true);
+          }
+        },
+        { separator: true },
+        {
+          label: 'Editar Carpeta',
+          icon: 'pi pi-pencil',
+          command: () => {
+            console.log('✏️ Editar Carpeta clicked');
+            handleEditFolder(node);
+          }
+        },
+        {
+          label: 'Eliminar Carpeta',
+          icon: 'pi pi-trash',
+          command: () => {
+            console.log('🗑️ Eliminar Carpeta clicked');
+            handleDeleteFolder(node);
           }
         }
       ];
       
-      if (window.createContextMenu) {
-        window.createContextMenu(event, menuItems, 'password-folder-context-menu');
+      console.log('📁 Folder menu items:', menuItems);
+      setContextMenuItems(menuItems);
+      
+      // Mostrar el menú contextual nativo
+      if (contextMenuRef.current) {
+        contextMenuRef.current.show(event);
       }
     }
   };
@@ -599,22 +893,32 @@ const PasswordManagerSidebar = ({
             No hay passwords guardados.<br/>Usa el botón "+" para crear uno.
           </div>
         ) : (
-          <Tree
-            key={`password-tree-${iconTheme}-${explorerFontSize}`}
-            value={filteredPasswordNodes}
-            selectionMode="single"
-            selectionKeys={selectedNodeKey}
-            onSelectionChange={e => setSelectedNodeKey(e.value)}
-            expandedKeys={expandedKeys}
-            onToggle={e => setExpandedKeys(e.value)}
-            className="sidebar-tree"
-            data-icon-theme={iconTheme}
-            style={{ 
-              fontSize: `${explorerFontSize}px`,
-              '--icon-size': `${iconSize}px`
-            }}
-            nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
-          />
+                  <Tree
+                    key={`password-tree-${iconTheme}-${explorerFontSize}`}
+                    value={filteredPasswordNodes}
+                    selectionMode="single"
+                    selectionKeys={selectedNodeKey}
+                    onSelectionChange={e => setSelectedNodeKey(e.value)}
+                    expandedKeys={expandedKeys}
+                    onToggle={e => setExpandedKeys(e.value)}
+                    dragdropScope="password-tree"
+                    onDragDrop={onDragDrop}
+                    onDragStart={(e) => {
+                      // Feedback visual opcional
+                      console.log('🔄 Dragging password node:', e.node?.label);
+                    }}
+                    onDragEnd={() => {
+                      // Feedback visual opcional
+                      console.log('✅ Drag ended');
+                    }}
+                    className="sidebar-tree"
+                    data-icon-theme={iconTheme}
+                    style={{ 
+                      fontSize: `${explorerFontSize}px`,
+                      '--icon-size': `${iconSize}px`
+                    }}
+                    nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+                  />
         )}
       </div>
 
@@ -727,21 +1031,29 @@ const PasswordManagerSidebar = ({
         </div>
       </Dialog>
 
-      {/* Dialog para crear carpeta */}
+      {/* Dialog para crear/editar carpeta */}
       <FolderDialog
         visible={showFolderDialog}
         onHide={() => {
           setShowFolderDialog(false);
           setFolderName('');
           setFolderColor(getThemeDefaultColor(iconTheme));
+          setEditingFolder(null);
         }}
-        mode="new"
+        mode={editingFolder ? "edit" : "new"}
         folderName={folderName}
         setFolderName={setFolderName}
         folderColor={folderColor}
         setFolderColor={setFolderColor}
         onConfirm={createNewFolder}
         iconTheme={iconTheme}
+      />
+
+      {/* Menú contextual nativo */}
+      <ContextMenu
+        model={contextMenuItems}
+        ref={contextMenuRef}
+        appendTo={document.body}
       />
     </>
   );
