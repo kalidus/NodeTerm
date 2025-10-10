@@ -295,7 +295,9 @@ export function UnifiedConnectionDialog({
   // Props para modo edición
   isEditMode = false,
   editConnectionType = null, // 'ssh' o 'rdp'
-  editNodeData = null
+  editNodeData = null,
+  // Prop para controlar si mostrar la pestaña de password
+  allowPasswordTab = false
 }) {
   const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP, 2 = Password
   const [isExpanded, setIsExpanded] = useState(false); // Estado para controlar si está expandido
@@ -384,11 +386,18 @@ export function UnifiedConnectionDialog({
   useEffect(() => {
     const switchHandler = (e) => {
       const idx = e.detail?.index ?? 2;
-      if (typeof idx === 'number') setActiveTabIndex(idx);
+      if (typeof idx === 'number') {
+        // Solo permitir cambiar a la pestaña de password si allowPasswordTab es true
+        if (idx === 2 && !allowPasswordTab) {
+          console.log('⚠️ Intentando acceder a pestaña de password sin permisos - ignorando');
+          return;
+        }
+        setActiveTabIndex(idx);
+      }
     };
     window.addEventListener('switch-unified-tab', switchHandler);
     return () => window.removeEventListener('switch-unified-tab', switchHandler);
-  }, []);
+  }, [allowPasswordTab]);
 
   // Precargar datos cuando esté en modo edición
   useEffect(() => {
@@ -1060,8 +1069,9 @@ export function UnifiedConnectionDialog({
           </div>
         </TabPanel>
 
-        {/* Tab Password */}
-        <TabPanel header="Password" leftIcon="pi pi-key">
+        {/* Tab Password - Solo mostrar si allowPasswordTab es true */}
+        {allowPasswordTab && (
+          <TabPanel header="Password" leftIcon="pi pi-key">
           <PasswordCreateForm
             foldersOptions={foldersOptions}
             onCreate={(payload) => {
@@ -1072,6 +1082,7 @@ export function UnifiedConnectionDialog({
             }}
           />
         </TabPanel>
+        )}
       </TabView>
       )}
     </Dialog>
