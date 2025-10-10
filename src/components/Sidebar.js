@@ -1816,7 +1816,9 @@ const Sidebar = React.memo(({
               explorerFont={explorerFont}
               explorerFontSize={explorerFontSize}
               masterKey={masterKey}
-              secureStorage={secureStorage}
+            secureStorage={secureStorage}
+            setShowSettingsDialog={setShowSettingsDialog}
+            onShowImportDialog={setShowImportDialog}
             />
           )}
         </>
