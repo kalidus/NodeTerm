@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import KeePassImportDialog from './KeePassImportDialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -37,7 +36,6 @@ const PasswordManagerSidebar = ({
   const [isLoading, setIsLoading] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
-  const [showKeePassDialog, setShowKeePassDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
   const [editingFolder, setEditingFolder] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
@@ -978,14 +976,6 @@ const PasswordManagerSidebar = ({
             style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />
           <Button 
-            icon="pi pi-download" 
-            className="p-button-rounded p-button-text sidebar-action-button" 
-            onClick={() => setShowKeePassDialog(true)} 
-            tooltip="Importar KeePass (.kdbx)" 
-            tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
-          />
-          <Button 
             icon="pi pi-sitemap" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={onBackToConnections} 
@@ -1180,44 +1170,6 @@ const PasswordManagerSidebar = ({
         appendTo={document.body}
       />
 
-      {/* Diálogo de importación de KeePass */}
-      <KeePassImportDialog
-        visible={showKeePassDialog}
-        onHide={() => setShowKeePassDialog(false)}
-        showToast={showToast}
-        defaultContainerName={`KeePass imported - ${new Date().toLocaleDateString()}`}
-        onImportComplete={async ({ nodes: importedFolders, createContainerFolder, containerFolderName }) => {
-          try {
-            const newNodes = JSON.parse(JSON.stringify(passwordNodes || []));
-
-            // Si se pide contenedor, crear uno con children importados
-            const addAsContainer = (children) => ({
-              key: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
-              label: containerFolderName || `KeePass imported - ${new Date().toLocaleDateString()}`,
-              droppable: true,
-              children,
-              uid: `password_folder_${Date.now()}_${Math.floor(Math.random()*1e6)}`,
-              createdAt: new Date().toISOString(),
-              isUserCreated: true,
-              color: getThemeDefaultColor(iconTheme),
-              data: { type: 'password-folder' }
-            });
-
-            if (createContainerFolder) {
-              newNodes.unshift(addAsContainer(importedFolders || []));
-            } else {
-              // Insertar todos en raíz
-              (importedFolders || []).forEach(f => newNodes.unshift(f));
-            }
-
-            setPasswordNodes(newNodes);
-            setShowKeePassDialog(false);
-          } catch (e) {
-            console.error('Error fusionando importación KeePass:', e);
-            showToast && showToast({ severity: 'error', summary: 'Error', detail: 'No se pudo aplicar la importación', life: 4000 });
-          }
-        }}
-      />
     </>
   );
 };
