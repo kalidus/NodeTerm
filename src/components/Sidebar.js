@@ -1809,6 +1809,8 @@ const Sidebar = React.memo(({
               confirmDialog={confirmDialog}
               uiTheme={uiTheme}
               onBackToConnections={() => setViewMode('connections')}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
               iconTheme={iconTheme}
               iconSize={iconSize}
               folderIconSize={folderIconSize}

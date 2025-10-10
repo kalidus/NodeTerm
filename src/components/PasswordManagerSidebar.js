@@ -18,6 +18,8 @@ const PasswordManagerSidebar = ({
   confirmDialog,
   uiTheme = 'Light',
   onBackToConnections,
+  sidebarCollapsed,
+  setSidebarCollapsed,
   iconTheme,
   iconSize = 20,
   folderIconSize = 20,
@@ -40,6 +42,26 @@ const PasswordManagerSidebar = ({
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [allExpanded, setAllExpanded] = useState(false);
+  
+  // Restaurar estado de expansión desde localStorage
+  useEffect(() => {
+    try {
+      const savedExpanded = localStorage.getItem('passwords_expanded_keys');
+      if (savedExpanded) setExpandedKeys(JSON.parse(savedExpanded));
+    } catch {}
+    try {
+      const savedAllExpanded = localStorage.getItem('passwords_all_expanded');
+      if (savedAllExpanded !== null) setAllExpanded(JSON.parse(savedAllExpanded));
+    } catch {}
+  }, []);
+  
+  // Persistir estado de expansión
+  useEffect(() => {
+    try { localStorage.setItem('passwords_expanded_keys', JSON.stringify(expandedKeys)); } catch {}
+  }, [expandedKeys]);
+  useEffect(() => {
+    try { localStorage.setItem('passwords_all_expanded', JSON.stringify(allExpanded)); } catch {}
+  }, [allExpanded]);
   
   // Referencias y estados para el menú contextual
   const contextMenuRef = useRef(null);
@@ -929,10 +951,10 @@ const PasswordManagerSidebar = ({
       {/* Header igual que la sidebar de conexiones */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.5rem 0.25rem 0.5rem' }}>
         <Button 
-          icon="pi pi-arrow-left" 
+          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
           className="p-button-rounded p-button-text sidebar-action-button" 
-          onClick={onBackToConnections} 
-          tooltip="Volver a conexiones" 
+          onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)} 
+          tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
           tooltipOptions={{ position: 'bottom' }} 
           style={{ marginRight: 8 }} 
         />
@@ -943,13 +965,23 @@ const PasswordManagerSidebar = ({
             onClick={handleNewPassword} 
             tooltip="Nuevo password" 
             tooltipOptions={{ position: 'bottom' }} 
+            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />
           <Button 
-            icon="pi pi-folder-plus" 
+            icon="pi pi-folder" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={handleNewFolder} 
             tooltip="Nueva carpeta" 
             tooltipOptions={{ position: 'bottom' }} 
+            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
+          />
+          <Button 
+            icon="pi pi-sitemap" 
+            className="p-button-rounded p-button-text sidebar-action-button" 
+            onClick={onBackToConnections} 
+            tooltip="Ir a conexiones" 
+            tooltipOptions={{ position: 'bottom' }} 
+            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />
         </div>
       </div>
