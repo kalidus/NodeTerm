@@ -1182,6 +1182,14 @@ const App = () => {
     const handler = (e) => {
       try {
         const targetFolder = e.detail?.targetFolder || null;
+        const isPasswordView = e.detail?.isPasswordView || false;
+        
+        // Solo permitir crear passwords si estamos en la vista de passwords
+        if (!isPasswordView) {
+          console.log('⚠️ Intentando crear password fuera de la vista de passwords - ignorando');
+          return;
+        }
+        
         // Abrir diálogo unificado y cambiar a pestaña Password (índice 2)
         setShowUnifiedConnectionDialog(true);
         // Dejar una marca global para que el propio diálogo active la pestaña Password

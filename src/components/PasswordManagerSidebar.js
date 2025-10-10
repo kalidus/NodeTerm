@@ -23,7 +23,17 @@ const PasswordManagerSidebar = ({
   explorerFont,
   explorerFontSize = 14
 }) => {
-  const [passwordNodes, setPasswordNodes] = useState([]);
+  // Estado separado para passwords - no usar el árbol principal de conexiones
+  const [passwordNodes, setPasswordNodes] = useState(() => {
+    // Cargar passwords existentes del localStorage o crear array vacío
+    try {
+      const saved = localStorage.getItem('passwordManagerNodes');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading passwords from localStorage:', error);
+      return [];
+    }
+  });
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
@@ -79,34 +89,15 @@ const PasswordManagerSidebar = ({
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
   const [parentNodeKey, setParentNodeKey] = useState(null);
 
-  // Cargar passwords del árbol de nodos
+  // Guardar passwords en localStorage cuando cambien
   useEffect(() => {
-    loadPasswordsFromTree();
-  }, [nodes]);
+    try {
+      localStorage.setItem('passwordManagerNodes', JSON.stringify(passwordNodes));
+    } catch (error) {
+      console.error('Error saving passwords to localStorage:', error);
+    }
+  }, [passwordNodes]);
 
-  const loadPasswordsFromTree = () => {
-    const extractPasswordNodes = (nodeList) => {
-      let passwordNodes = [];
-      nodeList.forEach(node => {
-        if (node.data && node.data.type === 'password') {
-          passwordNodes.push(node);
-        } else if (node.droppable && node.children && node.children.length > 0) {
-          // Es una carpeta, extraer passwords de sus hijos
-          const childPasswords = extractPasswordNodes(node.children);
-          if (childPasswords.length > 0) {
-            passwordNodes.push({
-              ...node,
-              children: childPasswords
-            });
-          }
-        }
-      });
-      return passwordNodes;
-    };
-
-    const extractedPasswordNodes = extractPasswordNodes(nodes);
-    setPasswordNodes(extractedPasswordNodes);
-  };
 
   const resetForm = () => {
     setFormData({
@@ -125,6 +116,20 @@ const PasswordManagerSidebar = ({
     setShowPasswordDialog(true);
   };
 
+  // Helper function to find node by key
+  const findNodeByKey = (nodeList, key) => {
+    for (const node of nodeList) {
+      if (node.key === key) {
+        return node;
+      }
+      if (node.children) {
+        const found = findNodeByKey(node.children, key);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const handleNewFolder = () => {
     setFolderName('');
     setFolderColor(getThemeDefaultColor(iconTheme));
@@ -138,7 +143,7 @@ const PasswordManagerSidebar = ({
       return;
     }
     
-    const nodesCopy = JSON.parse(JSON.stringify(nodes));
+    const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
     const newKey = `password_folder_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
     const newFolder = {
       key: newKey,
@@ -152,8 +157,29 @@ const PasswordManagerSidebar = ({
       data: { type: 'password-folder' }
     };
     
-    nodesCopy.unshift(newFolder);
-    setNodes(nodesCopy);
+    if (parentNodeKey) {
+      // Add to parent folder
+      const addToParent = (nodeList) => {
+        return nodeList.map(node => {
+          if (node.key === parentNodeKey) {
+            return {
+              ...node,
+              children: [...(node.children || []), newFolder]
+            };
+          }
+          if (node.children) {
+            return { ...node, children: addToParent(node.children) };
+          }
+          return node;
+        });
+      };
+      setPasswordNodes(addToParent(passwordNodesCopy));
+    } else {
+      // Add to root
+      passwordNodesCopy.unshift(newFolder);
+      setPasswordNodes(passwordNodesCopy);
+    }
+    
     setShowFolderDialog(false);
     setFolderName('');
     
@@ -184,7 +210,7 @@ const PasswordManagerSidebar = ({
       return;
     }
 
-    const nodesCopy = JSON.parse(JSON.stringify(nodes));
+    const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
 
     if (editingPassword) {
       // Editar password existente
@@ -214,8 +240,8 @@ const PasswordManagerSidebar = ({
         });
       };
 
-      const updatedNodes = updatePasswordInTree(nodesCopy);
-      setNodes(updatedNodes);
+      const updatedPasswordNodes = updatePasswordInTree(passwordNodesCopy);
+      setPasswordNodes(updatedPasswordNodes);
 
       showToast && showToast({
         severity: 'success',
@@ -244,9 +270,20 @@ const PasswordManagerSidebar = ({
         droppable: false
       };
 
-      // Añadir a la raíz del árbol
-      nodesCopy.unshift(newPasswordNode);
-      setNodes(nodesCopy);
+      if (parentNodeKey) {
+        // Add to parent folder
+        const parentNode = findNodeByKey(passwordNodesCopy, parentNodeKey);
+        if (parentNode) {
+          parentNode.children = parentNode.children || [];
+          parentNode.children.unshift(newPasswordNode);
+        } else {
+          passwordNodesCopy.unshift(newPasswordNode); // Fallback to root if parent not found
+        }
+      } else {
+        // Añadir a la raíz del árbol
+        passwordNodesCopy.unshift(newPasswordNode);
+      }
+      setPasswordNodes(passwordNodesCopy);
 
       showToast && showToast({
         severity: 'success',
@@ -258,12 +295,11 @@ const PasswordManagerSidebar = ({
 
     setShowPasswordDialog(false);
     resetForm();
-    loadPasswordsFromTree();
   };
 
   const handleDeletePassword = (password) => {
     const executeDelete = () => {
-      const nodesCopy = JSON.parse(JSON.stringify(nodes));
+      const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
 
       const removePasswordFromTree = (nodeList) => {
         return nodeList.filter(node => {
@@ -277,8 +313,8 @@ const PasswordManagerSidebar = ({
         });
       };
 
-      const updatedNodes = removePasswordFromTree(nodesCopy);
-      setNodes(updatedNodes);
+      const updatedPasswordNodes = removePasswordFromTree(passwordNodesCopy);
+      setPasswordNodes(updatedPasswordNodes);
 
       showToast && showToast({
         severity: 'success',
@@ -286,8 +322,6 @@ const PasswordManagerSidebar = ({
         detail: `Password "${password.label || password.title}" eliminado`,
         life: 3000
       });
-
-      loadPasswordsFromTree();
     };
 
     const dialogToUse = confirmDialog || window.confirmDialog;

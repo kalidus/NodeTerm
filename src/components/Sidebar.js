@@ -1870,6 +1870,7 @@ const Sidebar = React.memo(({
         sshTargetFolder={sshTargetFolder}
         setSSHTargetFolder={setSSHTargetFolder}
         onSSHConfirm={editSSHNode ? saveEditSSH : createNewSSH}
+        allowPasswordTab={viewMode === 'passwords'}
       />
       
       <ImportDialog
