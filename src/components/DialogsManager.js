@@ -175,7 +175,10 @@ const DialogsManager = ({
   // Tree sync functions
   exportTreeToJson,
   importTreeFromJson,
-  sessionManager
+  sessionManager,
+  
+  // Encriptación
+  onMasterPasswordConfigured
 }) => {
   return (
     <>
@@ -235,6 +238,7 @@ const DialogsManager = ({
         exportTreeToJson={exportTreeToJson}
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}
+        onMasterPasswordConfigured={onMasterPasswordConfigured}
       />
       
       {/* Sync Settings Dialog */}

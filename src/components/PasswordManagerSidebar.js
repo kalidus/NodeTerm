@@ -22,19 +22,13 @@ const PasswordManagerSidebar = ({
   folderIconSize = 20,
   connectionIconSize = 20,
   explorerFont,
-  explorerFontSize = 14
+  explorerFontSize = 14,
+  masterKey,
+  secureStorage
 }) => {
   // Estado separado para passwords - no usar el árbol principal de conexiones
-  const [passwordNodes, setPasswordNodes] = useState(() => {
-    // Cargar passwords existentes del localStorage o crear array vacío
-    try {
-      const saved = localStorage.getItem('passwordManagerNodes');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Error loading passwords from localStorage:', error);
-      return [];
-    }
-  });
+  const [passwordNodes, setPasswordNodes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
@@ -96,14 +90,82 @@ const PasswordManagerSidebar = ({
   const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
   const [parentNodeKey, setParentNodeKey] = useState(null);
 
-  // Guardar passwords en localStorage cuando cambien
+  // CARGAR passwords (con o sin encriptación)
   useEffect(() => {
-    try {
-      localStorage.setItem('passwordManagerNodes', JSON.stringify(passwordNodes));
-    } catch (error) {
-      console.error('Error saving passwords to localStorage:', error);
-    }
-  }, [passwordNodes]);
+    const loadPasswords = async () => {
+      try {
+        if (masterKey && secureStorage) {
+          // CON master key: Cargar encriptado
+          const encryptedData = localStorage.getItem('passwords_encrypted');
+          
+          if (encryptedData) {
+            const decrypted = await secureStorage.decryptData(
+              JSON.parse(encryptedData),
+              masterKey
+            );
+            setPasswordNodes(decrypted);
+          } else {
+            // Migración: Si hay datos sin encriptar, encriptarlos
+            const plainData = localStorage.getItem('passwordManagerNodes');
+            if (plainData) {
+              const parsed = JSON.parse(plainData);
+              
+              // Encriptar y guardar
+              const encrypted = await secureStorage.encryptData(parsed, masterKey);
+              localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+              
+              // Eliminar datos sin encriptar
+              localStorage.removeItem('passwordManagerNodes');
+              
+              setPasswordNodes(parsed);
+            } else {
+              setPasswordNodes([]);
+            }
+          }
+        } else {
+          // SIN master key: Funciona como antes
+          const saved = localStorage.getItem('passwordManagerNodes');
+          if (saved) {
+            setPasswordNodes(JSON.parse(saved));
+          } else {
+            setPasswordNodes([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading passwords:', error);
+        setPasswordNodes([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPasswords();
+  }, [masterKey, secureStorage]);
+
+  // GUARDAR passwords (con o sin encriptación)
+  useEffect(() => {
+    const savePasswords = async () => {
+      if (isLoading) return;
+
+      try {
+        if (masterKey && secureStorage) {
+          // CON master key: Guardar encriptado
+          const encrypted = await secureStorage.encryptData(passwordNodes, masterKey);
+          localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+          
+          // Limpiar datos sin encriptar
+          localStorage.removeItem('passwordManagerNodes');
+        } else {
+          // SIN master key: Guardar como antes
+          localStorage.setItem('passwordManagerNodes', JSON.stringify(passwordNodes));
+        }
+      } catch (error) {
+        console.error('Error saving passwords:', error);
+      }
+    };
+
+    savePasswords();
+  }, [passwordNodes, masterKey, secureStorage, isLoading]);
 
 
   const resetForm = () => {

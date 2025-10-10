@@ -17,7 +17,7 @@
 
 NodeTerm es un cliente SSH visual, rápido y personalizable, pensado para administradores, devs y entusiastas que buscan productividad y una experiencia moderna tanto en escritorio como en web/PWA.
 
-- 🔒 **Seguro**: Sincronización y almacenamiento local cifrado.
+- 🔒 **Seguro**: Encriptación AES-256 para credenciales y datos sensibles.
 - ⚡ **Rápido**: Conexión instantánea y gestión de múltiples sesiones.
 - 🎨 **Personalizable**: Temas, iconos, fuentes y más.
 - 🌐 **Multiplataforma**: Windows, Linux, Mac y versión web progresiva.
@@ -364,6 +364,20 @@ NodeTerm/
 - Abre una [Feature Request](https://github.com/kalidus/NodeTerm/issues/new)
 - Describe claramente la funcionalidad deseada
 - Explica cómo mejoraría la experiencia de usuario
+
+---
+
+## 🔒 Seguridad y Encriptación
+
+NodeTerm incluye un sistema completo de encriptación AES-256 para proteger todas las credenciales y datos sensibles:
+
+- **Encriptación AES-256**: Grado militar para passwords y conexiones
+- **Master Password**: Clave única para desbloquear la aplicación
+- **Auto-Unlock**: Opción para no pedir contraseña cada vez
+- **Migración Automática**: Encripta datos existentes sin pérdida
+- **Retrocompatibilidad**: Funciona con y sin encriptación
+
+📖 **Documentación completa**: [docs/SISTEMA_ENCRIPTACION.md](docs/SISTEMA_ENCRIPTACION.md)
 
 ---
 
