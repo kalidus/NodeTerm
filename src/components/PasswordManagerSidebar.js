@@ -696,7 +696,6 @@ const PasswordManagerSidebar = ({
 
   // Menú contextual para passwords usando ContextMenu nativo
   const onNodeContextMenu = (event, node) => {
-    console.log('🖱️ Context menu triggered for node:', node.label, 'Type:', node.data?.type);
     event.preventDefault();
     event.stopPropagation();
     setSelectedNodeKey({ [node.key]: true });
@@ -706,15 +705,12 @@ const PasswordManagerSidebar = ({
     const isPassword = node.data && node.data.type === 'password';
     const isFolder = node.droppable;
     
-    console.log('🔍 Node analysis - isPassword:', isPassword, 'isFolder:', isFolder);
-    
     if (isPassword) {
       const menuItems = [
         {
           label: 'Ver detalles',
           icon: 'pi pi-eye',
           command: () => {
-            console.log('👁️ Ver detalles clicked');
             handleOpenPassword(node);
           }
         },
@@ -723,7 +719,6 @@ const PasswordManagerSidebar = ({
           label: 'Copiar usuario',
           icon: 'pi pi-user',
           command: () => {
-            console.log('👤 Copiar usuario clicked');
             const username = node.data?.username || '';
             if (username) {
               handleCopyToClipboard(username, 'Usuario');
@@ -741,7 +736,6 @@ const PasswordManagerSidebar = ({
           label: 'Copiar contraseña',
           icon: 'pi pi-key',
           command: () => {
-            console.log('🔑 Copiar contraseña clicked');
             const password = node.data?.password || '';
             if (password) {
               handleCopyToClipboard(password, 'Password');
@@ -759,7 +753,6 @@ const PasswordManagerSidebar = ({
           label: 'Abrir URL',
           icon: 'pi pi-external-link',
           command: () => {
-            console.log('🔗 Abrir URL clicked');
             const url = node.data?.url || '';
             if (url) {
               handleOpenUrl(url);
@@ -778,7 +771,6 @@ const PasswordManagerSidebar = ({
           label: 'Editar',
           icon: 'pi pi-pencil',
           command: () => {
-            console.log('✏️ Editar clicked');
             handleEditPassword(node);
           }
         },
@@ -786,13 +778,11 @@ const PasswordManagerSidebar = ({
           label: 'Eliminar',
           icon: 'pi pi-trash',
           command: () => {
-            console.log('🗑️ Eliminar clicked');
             handleDeletePassword(node);
           }
         }
       ];
       
-      console.log('📋 Password menu items:', menuItems);
       setContextMenuItems(menuItems);
       
       // Mostrar el menú contextual nativo
@@ -805,7 +795,6 @@ const PasswordManagerSidebar = ({
           label: 'Nuevo Password',
           icon: 'pi pi-plus',
           command: () => {
-            console.log('➕ Nuevo Password clicked');
             setParentNodeKey(node.key);
             setShowPasswordDialog(true);
           }
@@ -814,7 +803,6 @@ const PasswordManagerSidebar = ({
           label: 'Nueva Carpeta',
           icon: 'pi pi-folder-plus',
           command: () => {
-            console.log('📁 Nueva Carpeta clicked');
             setParentNodeKey(node.key);
             setShowFolderDialog(true);
           }
@@ -824,7 +812,6 @@ const PasswordManagerSidebar = ({
           label: 'Editar Carpeta',
           icon: 'pi pi-pencil',
           command: () => {
-            console.log('✏️ Editar Carpeta clicked');
             handleEditFolder(node);
           }
         },
@@ -832,13 +819,11 @@ const PasswordManagerSidebar = ({
           label: 'Eliminar Carpeta',
           icon: 'pi pi-trash',
           command: () => {
-            console.log('🗑️ Eliminar Carpeta clicked');
             handleDeleteFolder(node);
           }
         }
       ];
       
-      console.log('📁 Folder menu items:', menuItems);
       setContextMenuItems(menuItems);
       
       // Mostrar el menú contextual nativo
@@ -905,11 +890,9 @@ const PasswordManagerSidebar = ({
                     onDragDrop={onDragDrop}
                     onDragStart={(e) => {
                       // Feedback visual opcional
-                      console.log('🔄 Dragging password node:', e.node?.label);
                     }}
                     onDragEnd={() => {
                       // Feedback visual opcional
-                      console.log('✅ Drag ended');
                     }}
                     className="sidebar-tree"
                     data-icon-theme={iconTheme}
