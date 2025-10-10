@@ -65,6 +65,41 @@ const KeePassImportPanel = ({
     } catch { return ''; }
   };
 
+  const bytesToDataUrl = (bytes, mime = 'image/png') => {
+    try {
+      if (!bytes) return null;
+      const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+      let binary = '';
+      for (let i = 0; i < arr.length; i++) binary += String.fromCharCode(arr[i]);
+      const base64 = btoa(binary);
+      return `data:${mime};base64,${base64}`;
+    } catch { return null; }
+  };
+
+  const getCustomIconData = (db, uuid) => {
+    try {
+      const icons = db && db.meta && db.meta.customIcons;
+      if (!uuid || !icons) return null;
+      if (typeof icons.get === 'function') {
+        let val = icons.get(uuid);
+        if (!val) {
+          // Iterar por si el Map usa claves con objetos Uuid no estrictamente iguales
+          for (const [k, v] of icons) {
+            if ((k && k.equals && k.equals(uuid)) || (k && k.toString && uuid && uuid.toString && k.toString() === uuid.toString())) {
+              val = v; break;
+            }
+          }
+        }
+        return (val && (val.data || val)) || null;
+      }
+      if (Array.isArray(icons)) {
+        const found = icons.find(ci => (ci && (ci.uuid?.toString?.() === uuid?.toString?.())));
+        return found && (found.data || found) || null;
+      }
+      return null;
+    } catch { return null; }
+  };
+
   const getEntryField = (entry, key) => {
     try {
       if (!entry || !entry.fields) return null;
@@ -86,11 +121,20 @@ const KeePassImportPanel = ({
       const password = await protectedToString(getEntryField(entry, 'Password'));
       const url = await protectedToString(getEntryField(entry, 'URL'));
       const notes = await protectedToString(getEntryField(entry, 'Notes'));
+      const iconId = entry.icon || entry.iconId || null;
+      // Icono: intentar extraer icono personalizado desde db.meta.customIcons
+      let iconImage = null;
+      try {
+        const uuid = entry.customIcon || entry.customIconId || entry.customIconUuid;
+        const data = getCustomIconData(db, uuid);
+        const url = data ? bytesToDataUrl(data, 'image/png') : null;
+        if (url) iconImage = url;
+      } catch {}
       const key = genKey('password');
       return {
         key,
         label: title || username || url || '(Sin título)',
-        data: { type: 'password', username: username || '', password: password || '', url: url || '', group: groupPath || '', notes: notes || '' },
+        data: { type: 'password', username: username || '', password: password || '', url: url || '', group: groupPath || '', notes: notes || '', iconImage, iconId },
         uid: key,
         createdAt: new Date().toISOString(),
         isUserCreated: true,
@@ -98,13 +142,22 @@ const KeePassImportPanel = ({
         droppable: false
       };
     };
-    const toFolderNode = (label) => {
+    const toFolderNode = (label, iconImage = null, iconId = null) => {
       const key = genKey('password_folder');
-      return { key, label, droppable: true, children: [], uid: key, createdAt: new Date().toISOString(), isUserCreated: true, data: { type: 'password-folder' } };
+      return { key, label, droppable: true, children: [], uid: key, createdAt: new Date().toISOString(), isUserCreated: true, data: { type: 'password-folder', iconImage, iconId } };
     };
     const processGroup = async (group, path = []) => {
       const currentPath = [...path, group.name].filter(Boolean);
-      const folder = toFolderNode(group.name || 'Carpeta');
+      // Intentar icono por grupo (KeePass suele permitir iconos en grupos también)
+      let folderIcon = null;
+      let folderIconId = group.icon || group.iconId || null;
+      try {
+        const uuid = group.customIcon || group.customIconId || group.customIconUuid;
+        const data = getCustomIconData(db, uuid);
+        const url = data ? bytesToDataUrl(data, 'image/png') : null;
+        if (url) folderIcon = url;
+      } catch {}
+      const folder = toFolderNode(group.name || 'Carpeta', folderIcon, folderIconId);
       if (Array.isArray(group.entries)) {
         for (const entry of group.entries) {
           folder.children.push(await toPasswordNode(entry, currentPath.join(' / ')));
