@@ -14,26 +14,28 @@
     "version:major": "npm version major --no-git-tag-version",
     "version:build": "npm run build && npm run pack"
   },
-    "build": {
-      "appId": "com.electron.nodeterm",
-      "productName": "NodeTerm",
-      "files": [
-        "dist/",
-        "binaries/**",
-        "src/**",
-        "node_modules/",
-        "main.js",
-        "preload.js",
-        "system-stats-worker.js",
-        "package.json"
-      ],
-      "extraResources": [
-        {
-          "from": "resources/cygwin64",
-          "to": "cygwin64",
-          "filter": ["**/*"]
-        }
-      ],
+  "build": {
+    "appId": "com.electron.nodeterm",
+    "productName": "NodeTerm",
+    "files": [
+      "dist/",
+      "binaries/**",
+      "src/**",
+      "node_modules/",
+      "main.js",
+      "preload.js",
+      "system-stats-worker.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/cygwin64",
+        "to": "cygwin64",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "asarUnpack": [
       "binaries/**",
       "node_modules/ssh2-promise/**",
@@ -102,6 +104,7 @@
     "guacamole-common-js": "^1.5.0",
     "guacamole-lite": "^1.0.2",
     "https-browserify": "^1.0.0",
+    "kdbxweb": "^2.1.1",
     "node-pty": "^1.1.0-beta34",
     "node-ssh": "^13.2.1",
     "primeflex": "^3.3.1",
