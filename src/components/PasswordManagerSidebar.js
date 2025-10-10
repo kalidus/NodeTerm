@@ -7,6 +7,7 @@ import { Divider } from 'primereact/divider';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
 import { FolderDialog } from './Dialogs';
+import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
 import '../styles/components/password-manager-sidebar.css';
 
@@ -24,7 +25,9 @@ const PasswordManagerSidebar = ({
   explorerFont,
   explorerFontSize = 14,
   masterKey,
-  secureStorage
+  secureStorage,
+  setShowSettingsDialog,
+  onShowImportDialog
 }) => {
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
@@ -36,6 +39,7 @@ const PasswordManagerSidebar = ({
   const [searchFilter, setSearchFilter] = useState('');
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
+  const [allExpanded, setAllExpanded] = useState(false);
   
   // Referencias y estados para el menú contextual
   const contextMenuRef = useRef(null);
@@ -484,6 +488,31 @@ const PasswordManagerSidebar = ({
   };
 
   const filteredPasswordNodes = filterNodes(passwordNodes, searchFilter);
+
+  // Expandir/plegar todas las carpetas del árbol
+  const toggleExpandAll = () => {
+    if (!allExpanded) {
+      const collectFolderKeys = (list) => {
+        return list.reduce((acc, node) => {
+          if (node && node.droppable) {
+            acc[node.key] = true;
+            if (Array.isArray(node.children) && node.children.length > 0) {
+              Object.assign(acc, collectFolderKeys(node.children));
+            }
+          } else if (node && Array.isArray(node.children) && node.children.length > 0) {
+            Object.assign(acc, collectFolderKeys(node.children));
+          }
+          return acc;
+        }, {});
+      };
+      const allKeys = collectFolderKeys(passwordNodes || []);
+      setExpandedKeys(allKeys);
+      setAllExpanded(true);
+    } else {
+      setExpandedKeys({});
+      setAllExpanded(false);
+    }
+  };
 
   // Funcionalidad de drag & drop para passwords
   const onDragDrop = (event) => {
@@ -966,6 +995,14 @@ const PasswordManagerSidebar = ({
                   />
         )}
       </div>
+
+      <SidebarFooter
+        onConfigClick={() => setShowSettingsDialog && setShowSettingsDialog(true)}
+        allExpanded={allExpanded}
+        toggleExpandAll={toggleExpandAll}
+        collapsed={false}
+        onShowImportDialog={onShowImportDialog}
+      />
 
       {/* Dialog para crear/editar password */}
       <Dialog
