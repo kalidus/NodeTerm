@@ -330,47 +330,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         }
       });
     } else if (isPassword) {
-      // Acciones para nodos de tipo password
-      items.push({
-        label: 'Abrir',
-        icon: 'pi pi-eye',
-        command: () => {
-          const payload = {
-            key: node.key,
-            label: node.label,
-            data: {
-              username: node.data?.username || '',
-              password: node.data?.password || '',
-              url: node.data?.url || '',
-              group: node.data?.group || '',
-              notes: node.data?.notes || ''
-            }
-          };
-          window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
-        }
-      });
-      items.push({
-        label: 'Copiar usuario',
-        icon: 'pi pi-user',
-        command: () => {
-          try { window.electron?.clipboard?.writeText?.(node.data?.username || ''); } catch (_) {}
-        }
-      });
-      items.push({
-        label: 'Copiar contraseña',
-        icon: 'pi pi-key',
-        command: () => {
-          try { window.electron?.clipboard?.writeText?.(node.data?.password || ''); } catch (_) {}
-        }
-      });
-      if (node.data?.url) {
-        items.push({
-          label: 'Abrir URL',
-          icon: 'pi pi-external-link',
-          command: () => { try { window.electron?.import?.openExternal?.(node.data.url); } catch (_) {} }
-        });
-      }
-      items.push({ separator: true });
+      // Solo opción de eliminar para passwords antiguos en la sidebar de conexiones
       items.push({
         label: 'Eliminar',
         icon: 'pi pi-trash',
@@ -406,14 +366,6 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           if (sidebarCallbacksRef.current.createRDP) {
             sidebarCallbacksRef.current.createRDP(node.key);
           }
-        }
-      });
-      items.push({
-        label: 'Nueva Entrada (Password)',
-        icon: 'pi pi-key',
-        command: () => {
-          const ev = new CustomEvent('open-password-tab-in-dialog', { detail: { targetFolder: node.key } });
-          window.dispatchEvent(ev);
         }
       });
       items.push({ separator: true });
