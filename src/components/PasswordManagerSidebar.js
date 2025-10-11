@@ -689,6 +689,45 @@ const PasswordManagerSidebar = ({
     window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
   };
 
+  // Función para recolectar todos los passwords de una carpeta recursivamente
+  const collectPasswordsFromFolder = (node) => {
+    const passwords = [];
+    
+    const collectRecursive = (currentNode) => {
+      if (currentNode.children && currentNode.children.length > 0) {
+        currentNode.children.forEach(child => {
+          if (child.data && child.data.type === 'password') {
+            passwords.push({
+              key: child.key,
+              label: child.label,
+              username: child.data.username || '',
+              password: child.data.password || '',
+              url: child.data.url || '',
+              group: child.data.group || '',
+              notes: child.data.notes || ''
+            });
+          } else if (child.droppable) {
+            // Si es una subcarpeta, recolectar recursivamente
+            collectRecursive(child);
+          }
+        });
+      }
+    };
+    
+    collectRecursive(node);
+    return passwords;
+  };
+
+  const handleOpenFolder = (node) => {
+    const passwords = collectPasswordsFromFolder(node);
+    const payload = {
+      folderKey: node.key,
+      folderLabel: node.label,
+      passwords: passwords
+    };
+    window.dispatchEvent(new CustomEvent('open-password-folder-tab', { detail: payload }));
+  };
+
   // Node template para el árbol de passwords - igual que la sidebar de conexiones
   const nodeTemplate = (node, options) => {
     const isFolder = node.droppable;
@@ -811,6 +850,8 @@ const PasswordManagerSidebar = ({
           e.stopPropagation();
           if (isPassword) {
             handleOpenPassword(node);
+          } else if (isFolder) {
+            handleOpenFolder(node);
           }
         }}
         style={{ cursor: 'pointer', fontFamily: explorerFont, alignItems: 'flex-start' }}

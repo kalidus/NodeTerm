@@ -1366,6 +1366,43 @@ const App = () => {
     return () => window.removeEventListener('open-password-tab', handler);
   }, [getAllTabs]);
 
+  // Crear y activar pestaña de carpeta de passwords desde doble clic
+  useEffect(() => {
+    const handler = (e) => {
+      console.log('📁 Password folder tab event received:', e.detail);
+      const info = e.detail || {};
+      const tabId = `${info.folderKey}_${Date.now()}`;
+      const folderData = {
+        folderLabel: info.folderLabel,
+        passwords: info.passwords || []
+      };
+      // Usar TAB_TYPES.PASSWORD_FOLDER para el nuevo tipo de pestaña
+      const newTab = { 
+        key: tabId, 
+        label: `📁 ${info.folderLabel}`, 
+        type: TAB_TYPES.PASSWORD_FOLDER, 
+        folderData, 
+        createdAt: Date.now() 
+      };
+      console.log('📁 Creating password folder tab:', newTab);
+      setSshTabs(prev => [newTab, ...prev]);
+      // Activar la nueva pestaña usando la misma lógica que otras pestañas
+      setTimeout(() => {
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        const allTabs = getAllTabs();
+        const tabIndex = allTabs.findIndex(t => t.key === tabId);
+        console.log('📁 Tab index found:', tabIndex);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+      }, 0);
+    };
+    window.addEventListener('open-password-folder-tab', handler);
+    return () => window.removeEventListener('open-password-folder-tab', handler);
+  }, [getAllTabs]);
+
   // Escuchar eventos de expansión de nodos desde el buscador
   useEffect(() => {
     const handleExpandNodePath = (event) => {
