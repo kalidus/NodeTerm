@@ -951,6 +951,23 @@ const TabContentRenderer = React.memo(({
     return (
       <GlobalAuditTab
         recordings={tab.recordings}
+        onPlayRecording={(recording) => {
+          // Crear nueva pestaña para reproducir la grabación
+          if (setSshTabs) {
+            setSshTabs(prevTabs => {
+              const tabId = `player_${recording.id}_${Date.now()}`;
+              const newTab = {
+                key: tabId,
+                label: `▶️ ${recording.title || recording.metadata?.title || 'Reproducción'}`,
+                type: 'recording-player',
+                recording: recording,
+                createdAt: Date.now(),
+                groupId: null
+              };
+              return [newTab, ...prevTabs];
+            });
+          }
+        }}
       />
     );
   }

@@ -3,7 +3,7 @@
  */
 import React, { useState, useEffect } from 'react';
 
-const GlobalAuditTab = ({ recordings = [] }) => {
+const GlobalAuditTab = ({ recordings = [], onPlayRecording }) => {
   const [groupedRecordings, setGroupedRecordings] = useState({});
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -83,16 +83,10 @@ const GlobalAuditTab = ({ recordings = [] }) => {
   };
 
   const handlePlayRecording = (recording) => {
-    // Crear pestaña de reproductor
-    const playerTabId = `player_${recording.id}_${Date.now()}`;
-    
-    window.dispatchEvent(new CustomEvent('create-recording-player-tab', {
-      detail: {
-        tabId: playerTabId,
-        title: `Reproducir: ${recording.title}`,
-        recordingId: recording.id
-      }
-    }));
+    // Usar la función de callback pasada como prop
+    if (onPlayRecording) {
+      onPlayRecording(recording);
+    }
   };
 
   const handleDeleteRecording = async (recordingId) => {

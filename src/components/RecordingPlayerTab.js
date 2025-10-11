@@ -57,7 +57,9 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
       cursorBlink: false,
       disableStdin: true, // Deshabilitar entrada durante reproducción
       rows: recording?.metadata?.height || 24,
-      cols: recording?.metadata?.width || 80
+      cols: recording?.metadata?.width || 80,
+      allowTransparency: true,
+      scrollback: 10000
     });
 
     fitAddon.current = new FitAddon();
@@ -71,6 +73,76 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     }
 
     terminalInstance.current = term;
+
+    // Habilitar copiado con Ctrl+C cuando hay texto seleccionado
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+        const selection = term.getSelection();
+        if (selection) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (window.electron?.clipboard?.writeText) {
+            window.electron.clipboard.writeText(selection);
+            console.log('Texto copiado:', selection.substring(0, 50) + '...');
+          }
+        }
+      }
+    };
+
+    // Añadir listener al contenedor del terminal
+    terminalRef.current.addEventListener('keydown', handleKeyDown, true);
+
+    // Añadir menú contextual para copiar
+    const handleContextMenu = (event) => {
+      const selection = term.getSelection();
+      if (selection) {
+        event.preventDefault();
+        // Crear menú contextual simple
+        const menu = document.createElement('div');
+        menu.style.position = 'fixed';
+        menu.style.left = `${event.clientX}px`;
+        menu.style.top = `${event.clientY}px`;
+        menu.style.background = 'var(--ui-dialog-bg)';
+        menu.style.border = '1px solid var(--ui-content-border)';
+        menu.style.borderRadius = '4px';
+        menu.style.padding = '4px 0';
+        menu.style.zIndex = '10000';
+        menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        
+        const copyOption = document.createElement('div');
+        copyOption.textContent = '📋 Copiar';
+        copyOption.style.padding = '8px 16px';
+        copyOption.style.cursor = 'pointer';
+        copyOption.style.color = 'var(--ui-dialog-text)';
+        copyOption.onmouseover = () => copyOption.style.background = 'var(--ui-sidebar-hover)';
+        copyOption.onmouseout = () => copyOption.style.background = 'transparent';
+        copyOption.onclick = () => {
+          if (window.electron?.clipboard?.writeText) {
+            window.electron.clipboard.writeText(selection);
+            console.log('Texto copiado desde menú contextual');
+          }
+          document.body.removeChild(menu);
+        };
+        
+        menu.appendChild(copyOption);
+        document.body.appendChild(menu);
+        
+        // Cerrar menú al hacer clic fuera
+        const closeMenu = (e) => {
+          if (!menu.contains(e.target)) {
+            document.body.removeChild(menu);
+            document.removeEventListener('click', closeMenu);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closeMenu), 0);
+      }
+    };
+
+    terminalRef.current.addEventListener('contextmenu', handleContextMenu);
+
+    // Guardar las referencias para limpiarlas después
+    term._customKeyHandler = handleKeyDown;
+    term._contextMenuHandler = handleContextMenu;
 
     // Mensaje inicial
     term.writeln('\x1b[1;36m╔═══════════════════════════════════════════════╗\x1b[0m');
@@ -234,6 +306,17 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     if (playbackData.current.timeout) {
       clearTimeout(playbackData.current.timeout);
     }
+    
+    // Remover event listeners
+    if (terminalInstance.current && terminalRef.current) {
+      if (terminalInstance.current._customKeyHandler) {
+        terminalRef.current.removeEventListener('keydown', terminalInstance.current._customKeyHandler, true);
+      }
+      if (terminalInstance.current._contextMenuHandler) {
+        terminalRef.current.removeEventListener('contextmenu', terminalInstance.current._contextMenuHandler);
+      }
+    }
+    
     if (terminalInstance.current) {
       terminalInstance.current.dispose();
     }
@@ -351,6 +434,38 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
             title="Reiniciar"
           >
             <span className="pi pi-refresh"></span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (terminalInstance.current) {
+                const selection = terminalInstance.current.getSelection();
+                if (selection && window.electron?.clipboard?.writeText) {
+                  window.electron.clipboard.writeText(selection);
+                  // Mostrar feedback visual temporal
+                  const btn = document.activeElement;
+                  if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="pi pi-check"></span>';
+                    setTimeout(() => {
+                      btn.innerHTML = originalText;
+                    }, 1000);
+                  }
+                }
+              }
+            }}
+            disabled={isLoading || error}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--ui-content-border)',
+              background: 'var(--ui-button-secondary)',
+              color: 'var(--ui-button-secondary-text)',
+              cursor: 'pointer'
+            }}
+            title="Copiar texto seleccionado (Ctrl+C)"
+          >
+            <span className="pi pi-copy"></span>
           </button>
 
           {/* Selector de velocidad */}
