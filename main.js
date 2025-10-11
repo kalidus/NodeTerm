@@ -1270,11 +1270,57 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     });
 
-    stream.on('close', () => {
+    stream.on('close', async () => {
       sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
       const conn = sshConnections[tabId];
       if (conn && conn.statsTimeout) {
           clearTimeout(conn.statsTimeout);
+      }
+      
+      // Detener grabación automática si está activa
+      if (sessionRecorder.isRecording(tabId)) {
+        try {
+          const recording = sessionRecorder.stopRecording(tabId);
+          
+          // Guardar grabación automáticamente (siempre guardar cuando hay una grabación activa)
+          const autoRecordingEnabled = true; // Asumir que si hay grabación activa, debe guardarse
+          if (autoRecordingEnabled) {
+            // Guardar archivo en disco
+            const userDataPath = app.getPath('userData');
+            const recordingsDir = path.join(userDataPath, 'recordings');
+            
+            // Crear directorio si no existe
+            await fs.mkdir(recordingsDir, { recursive: true });
+            
+            // Generar formato asciicast
+            const asciicastContent = sessionRecorder.toAsciicast(recording);
+            const filename = `${recording.id}.cast`;
+            const filepath = path.join(recordingsDir, filename);
+            
+            // Guardar archivo
+            await fs.writeFile(filepath, asciicastContent, 'utf-8');
+            
+            // Guardar metadata en archivo separado para índice rápido
+            const metadataPath = path.join(recordingsDir, `${recording.id}.meta.json`);
+            const metadata = {
+              id: recording.id,
+              filepath,
+              filename,
+              ...recording.metadata,
+              duration: recording.duration,
+              endTime: recording.endTime,
+              eventCount: recording.eventCount,
+              bytesRecorded: recording.bytesRecorded,
+              createdAt: Date.now()
+            };
+            
+            await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+            
+            console.log(`💾 Grabación automática guardada: ${filename}`);
+          }
+        } catch (error) {
+          console.error('Error guardando grabación automática:', error);
+        }
       }
       
       // Enviar evento de desconexión

@@ -461,6 +461,18 @@ export const useTabManagement = (toast, {
       if (closedTab.type === 'split') {
         // Desconectar ambos terminales del split
         if (closedTab.leftTerminal && window.electron && window.electron.ipcRenderer) {
+          // Detener grabación si está activa
+          if (closedTab.leftTerminal.recordingId) {
+            window.electron.ipcRenderer.invoke('recording:stop', { tabId: closedTab.leftTerminal.key })
+              .then(result => {
+                if (result.success) {
+                  console.log(`📹 Grabación detenida al cerrar split izquierdo: ${result.recordingId}`);
+                }
+              })
+              .catch(error => {
+                console.error('Error deteniendo grabación del split izquierdo:', error);
+              });
+          }
           window.electron.ipcRenderer.send('ssh:disconnect', closedTab.leftTerminal.key);
           if (externalTerminalRefs?.current) {
             delete externalTerminalRefs.current[closedTab.leftTerminal.key];
@@ -470,6 +482,18 @@ export const useTabManagement = (toast, {
           }
         }
         if (closedTab.rightTerminal && window.electron && window.electron.ipcRenderer) {
+          // Detener grabación si está activa
+          if (closedTab.rightTerminal.recordingId) {
+            window.electron.ipcRenderer.invoke('recording:stop', { tabId: closedTab.rightTerminal.key })
+              .then(result => {
+                if (result.success) {
+                  console.log(`📹 Grabación detenida al cerrar split derecho: ${result.recordingId}`);
+                }
+              })
+              .catch(error => {
+                console.error('Error deteniendo grabación del split derecho:', error);
+              });
+          }
           window.electron.ipcRenderer.send('ssh:disconnect', closedTab.rightTerminal.key);
           if (externalTerminalRefs?.current) {
             delete externalTerminalRefs.current[closedTab.rightTerminal.key];
@@ -482,6 +506,18 @@ export const useTabManagement = (toast, {
         // Solo enviar ssh:disconnect para pestañas de terminal o exploradores que tengan su propia conexión
         if (!closedTab.isExplorerInSSH && window.electron && window.electron.ipcRenderer) {
           // Terminal SSH - siempre desconectar
+          // Detener grabación si está activa
+          if (closedTab.recordingId) {
+            window.electron.ipcRenderer.invoke('recording:stop', { tabId: closedTab.key })
+              .then(result => {
+                if (result.success) {
+                  console.log(`📹 Grabación detenida al cerrar pestaña: ${result.recordingId}`);
+                }
+              })
+              .catch(error => {
+                console.error('Error deteniendo grabación al cerrar pestaña:', error);
+              });
+          }
           window.electron.ipcRenderer.send('ssh:disconnect', closedTab.key);
         } else if (closedTab.isExplorerInSSH && closedTab.needsOwnConnection && window.electron && window.electron.ipcRenderer) {
           // Explorador con conexión propia - desconectar
