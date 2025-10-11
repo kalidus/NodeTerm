@@ -29,7 +29,8 @@ const PasswordManagerSidebar = ({
   masterKey,
   secureStorage,
   setShowSettingsDialog,
-  onShowImportDialog
+  onShowImportDialog,
+  sidebarFilter = '' // Filtro desde la TitleBar
 }) => {
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
@@ -38,7 +39,6 @@ const PasswordManagerSidebar = ({
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
   const [editingFolder, setEditingFolder] = useState(null);
-  const [searchFilter, setSearchFilter] = useState('');
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [allExpanded, setAllExpanded] = useState(false);
@@ -521,6 +521,7 @@ const PasswordManagerSidebar = ({
         return (
           node.label.toLowerCase().includes(search) ||
           (node.data.username && node.data.username.toLowerCase().includes(search)) ||
+          (node.data.password && node.data.password.toLowerCase().includes(search)) ||
           (node.data.url && node.data.url.toLowerCase().includes(search)) ||
           (node.data.group && node.data.group.toLowerCase().includes(search))
         );
@@ -539,7 +540,7 @@ const PasswordManagerSidebar = ({
     }).filter(Boolean);
   };
 
-  const filteredPasswordNodes = filterNodes(passwordNodes, searchFilter);
+  const filteredPasswordNodes = filterNodes(passwordNodes, sidebarFilter);
 
   // Expandir/plegar todas las carpetas del árbol
   const toggleExpandAll = () => {

@@ -105,7 +105,10 @@ const Sidebar = React.memo(({
   
   // Encriptación
   masterKey,
-  secureStorage
+  secureStorage,
+  
+  // Filtro de búsqueda desde TitleBar
+  sidebarFilter = ''
 }) => {
   
   // Estado para diálogos
@@ -1821,6 +1824,7 @@ const Sidebar = React.memo(({
             secureStorage={secureStorage}
             setShowSettingsDialog={setShowSettingsDialog}
             onShowImportDialog={setShowImportDialog}
+              sidebarFilter={sidebarFilter}
             />
           )}
         </>
