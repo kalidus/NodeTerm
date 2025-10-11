@@ -76,20 +76,30 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
 
     // Habilitar copiado con Ctrl+C cuando hay texto seleccionado
     const handleKeyDown = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+      // Solo procesar si es Ctrl+C o Cmd+C
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
         const selection = term.getSelection();
-        if (selection) {
+        if (selection && selection.length > 0) {
+          console.log('🔑 Ctrl+C detectado, copiando:', selection.substring(0, 50) + '...');
           event.preventDefault();
           event.stopPropagation();
+          event.stopImmediatePropagation();
+          
           if (window.electron?.clipboard?.writeText) {
             window.electron.clipboard.writeText(selection);
-            console.log('Texto copiado:', selection.substring(0, 50) + '...');
+            console.log('✅ Texto copiado al portapapeles');
+          } else {
+            console.warn('⚠️ clipboard.writeText no disponible');
           }
+          return false;
         }
       }
     };
 
-    // Añadir listener al contenedor del terminal
+    // Añadir listener a nivel del documento con captura
+    document.addEventListener('keydown', handleKeyDown, true);
+    
+    // También añadir al contenedor del terminal como respaldo
     terminalRef.current.addEventListener('keydown', handleKeyDown, true);
 
     // Añadir menú contextual para copiar
@@ -308,16 +318,21 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     }
     
     // Remover event listeners
-    if (terminalInstance.current && terminalRef.current) {
+    if (terminalInstance.current) {
       if (terminalInstance.current._customKeyHandler) {
-        terminalRef.current.removeEventListener('keydown', terminalInstance.current._customKeyHandler, true);
+        // Remover del documento
+        document.removeEventListener('keydown', terminalInstance.current._customKeyHandler, true);
+        
+        // Remover del contenedor del terminal si existe
+        if (terminalRef.current) {
+          terminalRef.current.removeEventListener('keydown', terminalInstance.current._customKeyHandler, true);
+        }
       }
-      if (terminalInstance.current._contextMenuHandler) {
+      
+      if (terminalInstance.current._contextMenuHandler && terminalRef.current) {
         terminalRef.current.removeEventListener('contextmenu', terminalInstance.current._contextMenuHandler);
       }
-    }
-    
-    if (terminalInstance.current) {
+      
       terminalInstance.current.dispose();
     }
   };
