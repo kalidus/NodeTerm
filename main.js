@@ -414,8 +414,33 @@ function createWindow() {
     // Inicializar SessionRecorder
     setSessionRecorder(sessionRecorder);
     
-    // Registrar handlers de grabación
-    registerRecordingHandlers();
+  // Registrar handlers de grabación
+  registerRecordingHandlers();
+  
+  // Handlers simples para auditoría
+  ipcMain.handle('app:get-user-data-path', () => {
+    return app.getPath('userData');
+  });
+  
+  ipcMain.handle('fs:mkdir-recursive', async (event, path) => {
+    try {
+      const fs = require('fs').promises;
+      await fs.mkdir(path, { recursive: true });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  
+  ipcMain.handle('shell:open-path', async (event, path) => {
+    try {
+      const { shell } = require('electron');
+      await shell.openPath(path);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
     
     registerAllHandlers({ 
       mainWindow, 

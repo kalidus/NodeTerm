@@ -1442,8 +1442,36 @@ const App = () => {
 
     window.addEventListener('expand-node-path', handleExpandNodePath);
     
+    // Event listener para crear pestañas de auditoría global
+    const handleCreateAuditTab = (event) => {
+      const { tabId, title, recordings } = event.detail;
+      
+      // Crear nueva pestaña de auditoría global
+      const newAuditTab = {
+        key: tabId,
+        label: title,
+        type: 'audit-global',
+        recordings: recordings,
+        createdAt: Date.now(),
+        groupId: null
+      };
+      
+      // Añadir a las pestañas SSH (reutilizando la estructura existente)
+      setSshTabs(prevTabs => [newAuditTab, ...prevTabs]);
+      
+      // Activar la nueva pestaña
+      setLastOpenedTabKey(tabId);
+      setOnCreateActivateTabKey(tabId);
+      setActiveTabIndex(1);
+      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+    };
+    
+    window.addEventListener('create-audit-tab', handleCreateAuditTab);
+    
     return () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
+      window.removeEventListener('create-audit-tab', handleCreateAuditTab);
     };
   }, [setExpandedKeys]);
 

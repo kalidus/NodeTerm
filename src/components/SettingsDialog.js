@@ -475,13 +475,35 @@ const SettingsDialog = ({
     const loadAuditStats = async () => {
       try {
         if (window?.electron?.ipcRenderer) {
-          const result = await window.electron.ipcRenderer.invoke('audit:get-stats');
-          if (result.success) {
-            setAuditStats(result.stats);
+          // Usar el handler de estadísticas de grabaciones existente
+          const result = await window.electron.ipcRenderer.invoke('recording:stats');
+          if (result && result.success) {
+            // Convertir las estadísticas de grabaciones al formato de auditoría
+            setAuditStats({
+              fileCount: result.stats.total || 0,
+              totalSize: result.stats.totalSize || 0,
+              oldestFile: null, // No disponible en recording:stats
+              lastCleanup: null // No disponible en recording:stats
+            });
+          } else {
+            // Valores por defecto si no hay datos
+            setAuditStats({
+              fileCount: 0,
+              totalSize: 0,
+              oldestFile: null,
+              lastCleanup: null
+            });
           }
         }
       } catch (error) {
         console.error('Error cargando estadísticas de auditoría:', error);
+        // Valores por defecto en caso de error
+        setAuditStats({
+          fileCount: 0,
+          totalSize: 0,
+          oldestFile: null,
+          lastCleanup: null
+        });
       }
     };
 
@@ -597,14 +619,33 @@ const SettingsDialog = ({
   const handleViewAuditFiles = async () => {
     try {
       if (window?.electron?.ipcRenderer) {
-        const result = await window.electron.ipcRenderer.invoke('audit:open-folder');
-        if (!result.success) {
-          showToast('error', 'Error', 'No se pudo abrir la carpeta de auditoría');
+        // Obtener todas las grabaciones
+        const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+        
+        if (result && result.success && result.recordings && result.recordings.length > 0) {
+          // Cerrar el diálogo de configuración
+          onHide();
+          
+          // Crear una nueva pestaña de auditoría global
+          const auditTabId = `audit_global_${Date.now()}`;
+          
+          // Disparar evento para crear pestaña de auditoría global
+          window.dispatchEvent(new CustomEvent('create-audit-tab', {
+            detail: {
+              tabId: auditTabId,
+              title: 'Auditoría Global',
+              recordings: result.recordings
+            }
+          }));
+          
+          showToast('success', 'Auditoría abierta', 'Pestaña de auditoría global creada');
+        } else {
+          showToast('info', 'Sin grabaciones', 'No hay grabaciones disponibles para mostrar');
         }
       }
     } catch (error) {
-      console.error('Error abriendo carpeta de auditoría:', error);
-      showToast('error', 'Error', 'Error abriendo carpeta de auditoría');
+      console.error('Error abriendo auditoría:', error);
+      showToast('error', 'Error', 'Error al cargar las grabaciones');
     }
   };
 
