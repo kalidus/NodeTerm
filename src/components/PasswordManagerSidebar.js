@@ -223,6 +223,42 @@ const PasswordManagerSidebar = ({
     return () => window.removeEventListener('import-passwords-to-manager', handler);
   }, [passwordNodes, iconTheme, showToast]);
 
+  // Escuchar sincronización desde Nextcloud
+  useEffect(() => {
+    const handler = async (e) => {
+      const { count } = e.detail || {};
+      try {
+        // Recargar passwords desde localStorage
+        if (masterKey && secureStorage) {
+          const encryptedData = localStorage.getItem('passwords_encrypted');
+          if (encryptedData) {
+            const decrypted = await secureStorage.decryptData(
+              JSON.parse(encryptedData),
+              masterKey
+            );
+            setPasswordNodes(decrypted);
+            showToast && showToast({ 
+              severity: 'success', 
+              summary: 'Sincronizado', 
+              detail: `${count} password(s) descargado(s) desde Nextcloud`, 
+              life: 3000 
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error recargando passwords sincronizados:', err);
+        showToast && showToast({ 
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'No se pudieron cargar los passwords sincronizados', 
+          life: 4000 
+        });
+      }
+    };
+    window.addEventListener('passwords-synced-from-cloud', handler);
+    return () => window.removeEventListener('passwords-synced-from-cloud', handler);
+  }, [masterKey, secureStorage, showToast]);
+
 
   const resetForm = () => {
     setFormData({

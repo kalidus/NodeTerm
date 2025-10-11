@@ -315,6 +315,66 @@ class SyncManager {
         }
       }
       
+      // Sincronizar passwords cifrados si hay clave maestra
+      let passwordsResult = null;
+      if (this.secureStorage.hasSavedMasterKey()) {
+        try {
+          const masterKey = await this.secureStorage.getMasterKey();
+          if (masterKey) {
+            // Obtener passwords encriptados de localStorage
+            const encryptedPasswordsData = localStorage.getItem('passwords_encrypted');
+            if (encryptedPasswordsData) {
+              // Subir passwords ya encriptados
+              await this.nextcloudService.uploadFile('nodeterm-passwords.enc', encryptedPasswordsData);
+              
+              // Contar passwords
+              try {
+                const encryptedObj = JSON.parse(encryptedPasswordsData);
+                const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
+                const passwordCount = Array.isArray(decryptedPasswords) ? decryptedPasswords.length : 0;
+                
+                passwordsResult = {
+                  success: true,
+                  count: passwordCount
+                };
+              } catch (countError) {
+                console.warn('Error contando passwords:', countError);
+                passwordsResult = {
+                  success: true,
+                  count: 'unknown'
+                };
+              }
+            } else {
+              // No hay passwords encriptados, verificar si hay sin encriptar
+              const plainPasswords = localStorage.getItem('passwordManagerNodes');
+              if (plainPasswords) {
+                // Encriptar y subir
+                const passwordNodes = JSON.parse(plainPasswords);
+                const encrypted = await this.secureStorage.encryptData(passwordNodes, masterKey);
+                await this.nextcloudService.uploadFile('nodeterm-passwords.enc', JSON.stringify(encrypted, null, 2));
+                
+                passwordsResult = {
+                  success: true,
+                  count: passwordNodes.length
+                };
+              } else {
+                passwordsResult = {
+                  success: true,
+                  count: 0,
+                  message: 'No hay passwords para sincronizar'
+                };
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Error sincronizando passwords cifrados:', error);
+          passwordsResult = {
+            success: false,
+            error: error.message
+          };
+        }
+      }
+      
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
       this.saveSyncConfig();
@@ -324,7 +384,8 @@ class SyncManager {
         message: 'Datos sincronizados a la nube',
         timestamp: this.lastSyncTime,
         itemsCount: Object.keys(localData).length - 2, // Excluir metadatos
-        sessions: sessionsResult
+        sessions: sessionsResult,
+        passwords: passwordsResult
       };
     } finally {
       this.syncInProgress = false;
@@ -404,6 +465,62 @@ class SyncManager {
         }
       }
       
+      // Sincronizar passwords cifrados si hay clave maestra
+      let passwordsResult = null;
+      if (this.secureStorage.hasSavedMasterKey()) {
+        try {
+          const masterKey = await this.secureStorage.getMasterKey();
+          if (masterKey) {
+            // Intentar descargar passwords cifrados
+            const passwordsData = await this.nextcloudService.downloadFile('nodeterm-passwords.enc');
+            if (passwordsData) {
+              // Guardar passwords encriptados en localStorage
+              localStorage.setItem('passwords_encrypted', passwordsData);
+              
+              // Eliminar passwords sin encriptar si existen
+              localStorage.removeItem('passwordManagerNodes');
+              
+              // Contar passwords importados
+              try {
+                const encryptedObj = JSON.parse(passwordsData);
+                const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
+                const passwordCount = Array.isArray(decryptedPasswords) ? decryptedPasswords.length : 0;
+                
+                passwordsResult = {
+                  success: true,
+                  passwordsImported: passwordCount
+                };
+                
+                // Disparar evento para recargar passwords en el sidebar
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {
+                    detail: { count: passwordCount }
+                  }));
+                }
+              } catch (countError) {
+                console.warn('Error contando passwords importados:', countError);
+                passwordsResult = {
+                  success: true,
+                  passwordsImported: 'unknown'
+                };
+              }
+            } else {
+              passwordsResult = {
+                success: true,
+                passwordsImported: 0,
+                message: 'No se encontraron passwords en la nube'
+              };
+            }
+          }
+        } catch (error) {
+          console.warn('Error sincronizando passwords desde la nube:', error);
+          passwordsResult = {
+            success: false,
+            error: error.message
+          };
+        }
+      }
+      
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
       this.saveSyncConfig();
@@ -414,7 +531,8 @@ class SyncManager {
         timestamp: this.lastSyncTime,
         itemsCount: appliedItems.length,
         appliedItems,
-        sessions: sessionsResult
+        sessions: sessionsResult,
+        passwords: passwordsResult
       };
     } finally {
       this.syncInProgress = false;
