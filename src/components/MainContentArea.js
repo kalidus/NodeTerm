@@ -81,6 +81,12 @@ const MainContentArea = ({
   handleSelectAllTerminalWrapper,
   handleClearTerminalWrapper,
   
+  // Recording handlers
+  handleStartRecording,
+  handleStopRecording,
+  isRecordingTab,
+  recordingTabs,
+  
   // Theme props
   isHomeTabActive,
   localTerminalBg,
@@ -943,6 +949,9 @@ const MainContentArea = ({
                   onPaste={handlePasteToTerminalWrapper}
                   onSelectAll={handleSelectAllTerminalWrapper}
                   onClear={handleClearTerminalWrapper}
+                  onStartRecording={handleStartRecording}
+                  onStopRecording={handleStopRecording}
+                  isRecording={terminalContextMenu ? isRecordingTab(terminalContextMenu.tabKey) : false}
                 />
 
                 <OverflowMenu

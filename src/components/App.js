@@ -17,6 +17,7 @@ import { useSplitManagement } from '../hooks/useSplitManagement';
 import { useTreeOperations } from '../hooks/useTreeOperations';
 import { useNodeTemplate } from '../hooks/useNodeTemplate';
 import { useTabRendering } from '../hooks/useTabRendering';
+import { useRecordingManagement } from '../hooks/useRecordingManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
@@ -780,6 +781,33 @@ const App = () => {
     fileExplorerTabs,
     toast
   });
+
+  // Recording management hook
+  const {
+    recordingTabs,
+    startRecording,
+    stopRecording,
+    isRecording,
+    getRecordingInfo,
+    pauseRecording,
+    resumeRecording,
+    cleanupRecording
+  } = useRecordingManagement(toast);
+
+  // Recording handlers
+  const handleStartRecording = useCallback(async (tabKey) => {
+    const tab = sshTabs.find(t => t.key === tabKey);
+    if (!tab || !tab.sshConfig) {
+      console.warn('No se encontró tab SSH para grabar:', tabKey);
+      return;
+    }
+
+    await startRecording(tabKey, tab);
+  }, [sshTabs, startRecording]);
+
+  const handleStopRecording = useCallback(async (tabKey) => {
+    await stopRecording(tabKey);
+  }, [stopRecording]);
 
   // Usar el hook de gestión del sidebar
   const {
@@ -1675,14 +1703,17 @@ const App = () => {
     handleCloseSplitPanel,
     // RDP props
     rdpTabs,
-    findNodeByKey
+    findNodeByKey,
+    // Recording props
+    setSshTabs
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
     localLinuxTerminalTheme, localPowerShellTheme, iconTheme, explorerFont,
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
-    terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey
+    terminalRefs, statusBarIconTheme, handleCloseSplitPanel, rdpTabs, findNodeByKey,
+    setSshTabs
   ]);
 
   return (
@@ -2044,6 +2075,12 @@ const App = () => {
         handlePasteToTerminalWrapper={handlePasteToTerminalWrapper}
         handleSelectAllTerminalWrapper={handleSelectAllTerminalWrapper}
         handleClearTerminalWrapper={handleClearTerminalWrapper}
+        
+        // Recording handlers
+        handleStartRecording={handleStartRecording}
+        handleStopRecording={handleStopRecording}
+        isRecordingTab={isRecording}
+        recordingTabs={recordingTabs}
         
         // Theme props
         isHomeTabActive={isHomeTabActive}

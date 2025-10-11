@@ -47,7 +47,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^import:.*$/,
-        /^updater:.*$/
+        /^updater:.*$/,
+        /^recording:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

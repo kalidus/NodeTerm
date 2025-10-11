@@ -56,6 +56,11 @@ const { fork } = require('child_process');
 const GuacdService = require('./src/services/GuacdService');
 const GuacamoleLite = require('guacamole-lite');
 const { getUpdateService } = require('./src/main/services/UpdateService');
+const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
+
+// Importar y crear instancia de SessionRecorder para grabaciones
+const SessionRecorder = require('./src/services/SessionRecorder');
+const sessionRecorder = new SessionRecorder();
 
 let mainWindow;
 let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
@@ -406,6 +411,12 @@ function createWindow() {
 
   // Registrar todos los handlers después de crear la ventana
   try {
+    // Inicializar SessionRecorder
+    setSessionRecorder(sessionRecorder);
+    
+    // Registrar handlers de grabación
+    registerRecordingHandlers();
+    
     registerAllHandlers({ 
       mainWindow, 
       findSSHConnection,
@@ -612,7 +623,14 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     const { conn } = createBastionShell(
       bastionConfig,
       (data) => {
-        sendToRenderer(event.sender, `ssh:data:${tabId}`, data.toString('utf-8'));
+        const dataStr = data.toString('utf-8');
+        
+        // Grabar output si hay grabación activa
+        if (sessionRecorder.isRecording(tabId)) {
+          sessionRecorder.recordOutput(tabId, dataStr);
+        }
+        
+        sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
       },
       () => {
         sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
@@ -1240,6 +1258,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           return; 
         }
         
+        // Grabar output si hay grabación activa
+        if (sessionRecorder.isRecording(tabId)) {
+          sessionRecorder.recordOutput(tabId, dataStr);
+        }
+        
         // For all subsequent packets, just send them
         sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
       } catch (e) {
@@ -1342,6 +1365,11 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 ipcMain.on('ssh:data', (event, { tabId, data }) => {
   const conn = sshConnections[tabId];
   if (conn && conn.stream && !conn.stream.destroyed) {
+    // Grabar input si hay grabación activa
+    if (sessionRecorder.isRecording(tabId)) {
+      sessionRecorder.recordInput(tabId, data);
+    }
+    
     conn.stream.write(data);
   }
 });

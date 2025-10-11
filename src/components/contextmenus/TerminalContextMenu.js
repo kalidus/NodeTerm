@@ -6,7 +6,10 @@ const TerminalContextMenu = ({
   onCopy,
   onPaste,
   onSelectAll,
-  onClear
+  onClear,
+  onStartRecording,
+  onStopRecording,
+  isRecording = false
 }) => {
   if (!terminalContextMenu) return null;
 
@@ -24,6 +27,14 @@ const TerminalContextMenu = ({
 
   const handleClear = () => {
     onClear(terminalContextMenu.tabKey);
+  };
+
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      onStopRecording && onStopRecording(terminalContextMenu.tabKey);
+    } else {
+      onStartRecording && onStartRecording(terminalContextMenu.tabKey);
+    }
   };
 
   return (
@@ -105,6 +116,25 @@ const TerminalContextMenu = ({
           <i className="pi pi-trash" style={{ width: '16px' }}></i>
           Limpiar terminal
         </div>
+        <div style={{ height: '1px', backgroundColor: '#e0e0e0', margin: '4px 0' }}></div>
+        {(onStartRecording || onStopRecording) && (
+          <div
+            style={{
+              padding: '8px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: isRecording ? '#d32f2f' : '#4caf50'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = isRecording ? '#ffebee' : '#f1f8f4'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            onClick={handleToggleRecording}
+          >
+            <i className={isRecording ? 'pi pi-stop-circle' : 'pi pi-circle'} style={{ width: '16px', color: isRecording ? '#d32f2f' : '#d32f2f' }}></i>
+            {isRecording ? '⏹ Detener grabación' : '⏺ Iniciar grabación'}
+          </div>
+        )}
       </div>
 
       {/* Overlay para cerrar menú al hacer clic fuera */}
