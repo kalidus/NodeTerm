@@ -12,6 +12,7 @@ import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
+import GlobalAuditTab from './GlobalAuditTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 
@@ -941,6 +942,15 @@ const TabContentRenderer = React.memo(({
         fontFamily={localFontFamily}
         fontSize={localFontSize}
         theme={powerShellTheme}
+      />
+    );
+  }
+
+  // Tab de auditoría global de grabaciones
+  if (tab.type === 'audit-global' && tab.recordings) {
+    return (
+      <GlobalAuditTab
+        recordings={tab.recordings}
       />
     );
   }
