@@ -7,13 +7,108 @@ import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 
-const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys }) => {
+const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onShowImportDialog, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
+  const [passwordNodes, setPasswordNodes] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Cache para passwords y conexiones aplanados
+  const [cachedAllItems, setCachedAllItems] = useState([]);
 
 
 
+
+  // Cargar passwords desde localStorage (con soporte para encriptación)
+  useEffect(() => {
+    const loadPasswords = async () => {
+      try {
+        if (masterKey && secureStorage) {
+          // CON master key: Cargar encriptado
+          const encryptedData = localStorage.getItem('passwords_encrypted');
+          
+          if (encryptedData) {
+            const decrypted = await secureStorage.decryptData(
+              JSON.parse(encryptedData),
+              masterKey
+            );
+            setPasswordNodes(decrypted);
+          } else {
+            // Migración: Si hay datos sin encriptar, usarlos
+            const plainData = localStorage.getItem('passwordManagerNodes');
+            if (plainData) {
+              const parsed = JSON.parse(plainData);
+              setPasswordNodes(parsed);
+            } else {
+              setPasswordNodes([]);
+            }
+          }
+        } else {
+          // SIN master key: Funciona como antes
+          const saved = localStorage.getItem('passwordManagerNodes');
+          if (saved) {
+            setPasswordNodes(JSON.parse(saved));
+          } else {
+            setPasswordNodes([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading passwords for search:', error);
+        setPasswordNodes([]);
+      }
+    };
+
+    loadPasswords();
+    
+    // Recargar cuando cambie el localStorage o masterKey
+    const handleStorageChange = (e) => {
+      if (e.key === 'passwordManagerNodes' || e.key === 'passwords_encrypted') {
+        loadPasswords();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [masterKey, secureStorage]);
+  
+  // Función para extraer todos los passwords recursivamente
+  const findAllPasswords = (nodes) => {
+    const result = [];
+    const traverse = (nodeList) => {
+      for (const node of nodeList) {
+        if (node.data && node.data.type === 'password') {
+          result.push(node);
+        }
+        if (node.children && node.children.length > 0) {
+          traverse(node.children);
+        }
+      }
+    };
+    traverse(nodes);
+    return result;
+  };
+  
+  // Actualizar cache cuando cambien los nodos o passwords
+  useEffect(() => {
+    const updateCache = () => {
+      try {
+        const allConnections = findAllConnections(allNodes);
+        const allPasswords = findAllPasswords(passwordNodes);
+        const combined = [...allConnections, ...allPasswords];
+        setCachedAllItems(combined);
+      } catch (error) {
+        console.error('Error actualizando cache:', error);
+      }
+    };
+    
+    // Usar requestIdleCallback para no bloquear
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(updateCache);
+    } else {
+      setTimeout(updateCache, 0);
+    }
+  }, [allNodes, passwordNodes, findAllConnections]);
 
   // Función para extraer y truncar el usuario correctamente
   const getDisplayUser = (node) => {
@@ -38,32 +133,76 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     return user.length > 25 ? user.substring(0, 22) + '...' : user;
   };
 
+  // Búsqueda optimizada con debouncing y límite de resultados
   useEffect(() => {
-    if (sidebarFilter.trim()) {
-      const allConnections = findAllConnections(allNodes);
-      
-      const filtered = allConnections.filter(node => {
-        const labelMatch = node.label.toLowerCase().includes(sidebarFilter.toLowerCase());
-        // Buscar tanto en username como en user (SSH usa 'user', RDP usa 'username')
-        const usernameMatch = node.data && (
-          (node.data.username && node.data.username.toLowerCase().includes(sidebarFilter.toLowerCase())) ||
-          (node.data.user && node.data.user.toLowerCase().includes(sidebarFilter.toLowerCase()))
-        );
-        return labelMatch || usernameMatch;
-      });
-      
-      setFilteredConnections(filtered);
-      // Mostrar dropdown automáticamente si hay resultados
-      if (filtered.length > 0) {
-        setShowDropdown(true);
+    // Debouncing: esperar 200ms después de que el usuario deje de escribir
+    const timeoutId = setTimeout(() => {
+      if (sidebarFilter.trim()) {
+        setIsSearching(true);
+        
+        // Realizar filtrado de manera asíncrona
+        const performFilter = () => {
+          try {
+            const searchTerm = sidebarFilter.toLowerCase();
+            const filtered = [];
+            const MAX_RESULTS = 50; // Limitar a 50 resultados para mejor rendimiento
+            
+            // Filtrado eficiente: parar cuando tengamos suficientes resultados
+            for (let i = 0; i < cachedAllItems.length && filtered.length < MAX_RESULTS; i++) {
+              const node = cachedAllItems[i];
+              let matches = false;
+              
+              // Búsqueda rápida en label primero (más común)
+              if (node.label.toLowerCase().includes(searchTerm)) {
+                matches = true;
+              } else if (node.data) {
+                // Buscar en passwords
+                if (node.data.type === 'password') {
+                  matches = (
+                    (node.data.password && node.data.password.toLowerCase().includes(searchTerm)) ||
+                    (node.data.username && node.data.username.toLowerCase().includes(searchTerm)) ||
+                    (node.data.url && node.data.url.toLowerCase().includes(searchTerm)) ||
+                    (node.data.group && node.data.group.toLowerCase().includes(searchTerm))
+                  );
+                } else {
+                  // Buscar en conexiones (SSH/RDP)
+                  matches = (
+                    (node.data.username && node.data.username.toLowerCase().includes(searchTerm)) ||
+                    (node.data.user && node.data.user.toLowerCase().includes(searchTerm))
+                  );
+                }
+              }
+              
+              if (matches) {
+                filtered.push(node);
+              }
+            }
+            
+            setFilteredConnections(filtered);
+            setShowDropdown(filtered.length > 0);
+            setIsSearching(false);
+          } catch (error) {
+            console.error('Error en búsqueda:', error);
+            setIsSearching(false);
+          }
+        };
+        
+        // Usar requestIdleCallback si está disponible, sino setTimeout para no bloquear
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(performFilter, { timeout: 100 });
+        } else {
+          setTimeout(performFilter, 0);
+        }
       } else {
+        setFilteredConnections([]);
         setShowDropdown(false);
+        setIsSearching(false);
       }
-    } else {
-      setFilteredConnections([]);
-      setShowDropdown(false);
-    }
-  }, [sidebarFilter, allNodes, findAllConnections]);
+    }, 200); // Reducido a 200ms para respuesta más rápida
+    
+    // Limpiar timeout si el usuario sigue escribiendo
+    return () => clearTimeout(timeoutId);
+  }, [sidebarFilter, cachedAllItems]);
 
   // Efecto para ocultar dropdown al hacer click fuera
   useEffect(() => {
@@ -341,11 +480,26 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       window.dispatchEvent(expandEvent);
     }
     
-    // Detectar el tipo de conexión y llamar a la función apropiada
+    // Detectar el tipo y llamar a la función apropiada
+    const isPassword = node.data && node.data.type === 'password';
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && (node.data.type === 'rdp' || node.data.type === 'rdp-guacamole');
     
-    if (isSSH && onOpenSSHConnection) {
+    if (isPassword) {
+      // Abrir password en una pestaña
+      const payload = {
+        key: node.key,
+        label: node.label,
+        data: {
+          username: node.data?.username || '',
+          password: node.data?.password || '',
+          url: node.data?.url || '',
+          group: node.data?.group || '',
+          notes: node.data?.notes || ''
+        }
+      };
+      window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
+    } else if (isSSH && onOpenSSHConnection) {
       onOpenSSHConnection(node, allNodes);
     } else if (isRDP && onOpenRdpConnection) {
       onOpenRdpConnection(node, allNodes);
@@ -954,7 +1108,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 350, maxWidth: 600, width: '35vw', WebkitAppRegion: 'no-drag' }}>
-          {!sidebarFilter && (
+          {!sidebarFilter ? (
             <span style={{ 
               position: 'absolute', 
               left: '50%', 
@@ -971,6 +1125,21 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             }}>
               <FaSearch />
               <span>NodeTerm</span>
+            </span>
+          ) : isSearching && (
+            <span style={{ 
+              position: 'absolute', 
+              right: '12px', 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              color: '#666', 
+              pointerEvents: 'none', 
+              fontSize: 12, 
+              display: 'flex', 
+              alignItems: 'center',
+              zIndex: 2
+            }}>
+              <i className="pi pi-spin pi-spinner" style={{ fontSize: '12px' }} />
             </span>
           )}
           <InputText
@@ -1040,13 +1209,17 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               {filteredConnections.map(node => {
                 const isSSH = node.data && node.data.type === 'ssh';
                 const isRDP = node.data && node.data.type === 'rdp';
+                const isPassword = node.data && node.data.type === 'password';
                 const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
                 
                 let icon = null;
                 let protocolColor = '#4fc3f7';
                 let protocolName = 'Conexión';
                 
-                if (isSSH) {
+                if (isPassword) {
+                  protocolColor = '#ffc107';
+                  protocolName = 'Password';
+                } else if (isSSH) {
                   icon = themeIcons.ssh;
                   protocolColor = '#28a745';
                   protocolName = 'SSH';
@@ -1097,7 +1270,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   >
                     {/* Icono de conexión */}
                     <div style={{ display: 'flex', alignItems: 'flex-start', minWidth: 20, justifyContent: 'center', paddingTop: '2px' }}>
-                      {isSSH ? (
+                      {isPassword ? (
+                        <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>🔑</span>
+                      ) : isSSH ? (
                         <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>⚡</span>
                       ) : isRDP ? (
                         <span style={{ color: protocolColor, fontSize: 16, fontWeight: 'bold' }}>🖥️</span>
@@ -1181,72 +1356,74 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       </div>
                     )}
                     
-                    {/* Botones de acción */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: '2px' }}>
-                      {/* Botón de favoritos */}
-                      <button
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = 'var(--ui-primary-color, #ffd700)';
-                          e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleFavorite(node);
-                        }}
-                        title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-                      >
-                        <i className="pi pi-star" />
-                      </button>
-                      
-                      {/* Botón de editar */}
-                      <button
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--ui-dialog-text, #888)',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = 'var(--ui-dialog-text, #fff)';
-                          e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = 'var(--ui-dialog-text, #888)';
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditConnection(node);
-                        }}
-                        title="Editar conexión"
-                      >
-                        <i className="pi pi-pencil" />
-                      </button>
-                    </div>
+                    {/* Botones de acción - Solo para conexiones, no passwords */}
+                    {!isPassword && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: '2px' }}>
+                        {/* Botón de favoritos */}
+                        <button
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--ui-primary-color, #ffd700)';
+                            e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleFavorite(node);
+                          }}
+                          title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+                        >
+                          <i className="pi pi-star" />
+                        </button>
+                        
+                        {/* Botón de editar */}
+                        <button
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--ui-dialog-text, #888)',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--ui-dialog-text, #fff)';
+                            e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--ui-dialog-text, #888)';
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditConnection(node);
+                          }}
+                          title="Editar conexión"
+                        >
+                          <i className="pi pi-pencil" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1258,6 +1435,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                   textAlign: 'center',
                   fontFamily: 'inherit'
                 }}>Sin resultados</div>
+              )}
+              {filteredConnections.length >= 50 && (
+                <div style={{ 
+                  padding: '8px 12px', 
+                  color: 'var(--ui-dialog-text, #888)', 
+                  fontSize: 11, 
+                  textAlign: 'center',
+                  fontFamily: 'inherit',
+                  fontStyle: 'italic',
+                  borderTop: '1px solid var(--ui-dialog-border, #333)'
+                }}>
+                  Mostrando primeros 50 resultados. Refina tu búsqueda para ver más.
+                </div>
               )}
             </div>,
             document.body

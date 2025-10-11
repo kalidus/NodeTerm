@@ -1665,6 +1665,8 @@ const App = () => {
         onOpenSSHConnection={onOpenSSHConnection}
         onOpenRdpConnection={onOpenRdpConnection}
         onShowImportDialog={setShowImportDialog}
+        masterKey={masterKey}
+        secureStorage={secureStorage}
         onOpenImportWithSource={(source) => {
           try {
             setImportPreset({
