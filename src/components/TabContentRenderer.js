@@ -175,24 +175,24 @@ const TabContentRenderer = React.memo(({
     };
 
     const Row = ({ label, value, copy }) => (
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #333' }}>
-        <div style={{ width: 120, color: '#9aa0a6', fontWeight: '500' }}>{label}</div>
-        <div style={{ flex: 1, color: '#e8eaed', fontFamily: 'monospace', fontSize: '14px' }}>{value || '-'}</div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--ui-content-border)' }}>
+        <div style={{ width: 120, color: 'var(--ui-dialog-text)', fontWeight: '500', opacity: 0.7 }}>{label}</div>
+        <div style={{ flex: 1, color: 'var(--ui-dialog-text)', fontFamily: 'monospace', fontSize: '14px' }}>{value || '-'}</div>
         {copy && value && (
           <button 
             onClick={() => copyToClipboard(value, label)} 
             style={{ 
               padding: '6px 12px', 
               borderRadius: 6, 
-              border: '1px solid #555', 
-              background: '#3a3a3a', 
-              color: '#fff', 
+              border: '1px solid var(--ui-content-border)', 
+              background: 'var(--ui-button-secondary)', 
+              color: 'var(--ui-button-secondary-text)', 
               cursor: 'pointer',
               fontSize: '12px',
               transition: 'all 0.2s'
             }}
-            onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
-            onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
+            onMouseOver={(e) => e.target.style.background = 'var(--ui-button-hover)'}
+            onMouseOut={(e) => e.target.style.background = 'var(--ui-button-secondary)'}
           >
             Copiar
           </button>
@@ -203,21 +203,21 @@ const TabContentRenderer = React.memo(({
     return (
       <div style={{ 
         padding: '24px', 
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+        background: 'var(--ui-content-bg)',
         height: '100%',
         overflow: 'auto'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <span className="pi pi-key" style={{ fontSize: '24px', color: '#ffc107' }}></span>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '24px' }}>{p.title}</h2>
+          <span className="pi pi-key" style={{ fontSize: '24px', color: 'var(--ui-button-primary)' }}></span>
+          <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px' }}>{p.title}</h2>
         </div>
         
         <div style={{ 
-          background: '#2a2a2a', 
+          background: 'var(--ui-dialog-bg)', 
           borderRadius: 12, 
           padding: 20, 
-          border: '1px solid #444',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          border: '1px solid var(--ui-content-border)',
+          boxShadow: '0 4px 12px var(--ui-dialog-shadow)'
         }}>
           <Row label="Usuario" value={p.username} copy />
           <Row label="Contraseña" value={p.password} copy />
@@ -234,16 +234,22 @@ const TabContentRenderer = React.memo(({
                 padding: '12px 24px', 
                 borderRadius: 8, 
                 border: 'none', 
-                background: 'linear-gradient(135deg, #007ad9 0%, #0056b3 100%)', 
-                color: '#fff', 
+                background: 'var(--ui-button-primary)', 
+                color: 'var(--ui-button-primary-text)', 
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: '500',
                 transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(0,122,217,0.3)'
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
               }}
-              onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+              onMouseOver={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.background = 'var(--ui-button-hover)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.background = 'var(--ui-button-primary)';
+              }}
             >
               <span className="pi pi-external-link" style={{ marginRight: 8 }}></span>
               Abrir URL
@@ -370,8 +376,8 @@ const TabContentRenderer = React.memo(({
         display: 'flex',
         alignItems: 'center',
         padding: '8px 12px',
-        borderBottom: '1px solid #333',
-        background: isSelected ? '#2e4a2e' : 'transparent',
+        borderBottom: '1px solid var(--ui-content-border)',
+        background: isSelected ? 'var(--ui-sidebar-selected)' : 'transparent',
         cursor: 'pointer',
         transition: 'background-color 0.2s',
         minHeight: '40px'
@@ -380,7 +386,7 @@ const TabContentRenderer = React.memo(({
       return (
         <div 
           style={rowStyle}
-          onMouseEnter={(e) => !isSelected && (e.target.style.background = '#3a3a3a')}
+          onMouseEnter={(e) => !isSelected && (e.target.style.background = 'var(--ui-sidebar-hover)')}
           onMouseLeave={(e) => !isSelected && (e.target.style.background = 'transparent')}
           onClick={() => setSelectedRowIndex(isSelected ? null : index)}
         >
@@ -402,7 +408,7 @@ const TabContentRenderer = React.memo(({
             whiteSpace: 'nowrap'
           }}>
             <span style={{ 
-              color: '#fff', 
+              color: 'var(--ui-dialog-text)', 
               fontSize: '13px', 
               fontWeight: '500'
             }}>
@@ -418,7 +424,7 @@ const TabContentRenderer = React.memo(({
             whiteSpace: 'nowrap'
           }}>
             <span style={{ 
-              color: '#e8eaed', 
+              color: 'var(--ui-dialog-text)', 
               fontSize: '12px',
               fontFamily: 'monospace'
             }}>
@@ -436,7 +442,7 @@ const TabContentRenderer = React.memo(({
             {password.url ? (
               <span 
                 style={{ 
-                  color: '#64b5f6', 
+                  color: 'var(--ui-button-primary)', 
                   fontSize: '12px',
                   cursor: 'pointer',
                   textDecoration: 'underline'
@@ -449,7 +455,7 @@ const TabContentRenderer = React.memo(({
                 {truncateText(password.url, 25)}
               </span>
             ) : (
-              <span style={{ color: '#666', fontSize: '12px' }}>-</span>
+              <span style={{ color: 'var(--text-color-secondary)', fontSize: '12px' }}>-</span>
             )}
           </div>
 
@@ -461,7 +467,8 @@ const TabContentRenderer = React.memo(({
             whiteSpace: 'nowrap'
           }}>
             <span style={{ 
-              color: '#b0b0b0', 
+              color: 'var(--ui-dialog-text)',
+            opacity: 0.7, 
               fontSize: '12px'
             }}>
               {truncateText(password.notes, 20)}
@@ -477,14 +484,14 @@ const TabContentRenderer = React.memo(({
           }}>
             {password.password ? (
               <span style={{ 
-                color: '#e8eaed', 
+                color: 'var(--ui-dialog-text)', 
                 fontSize: '12px',
                 fontFamily: 'monospace'
               }}>
                 {'•'.repeat(Math.min(password.password.length, 12))}
               </span>
             ) : (
-              <span style={{ color: '#666', fontSize: '12px' }}>-</span>
+              <span style={{ color: 'var(--text-color-secondary)', fontSize: '12px' }}>-</span>
             )}
           </div>
 
@@ -504,15 +511,15 @@ const TabContentRenderer = React.memo(({
                 style={{ 
                   padding: '2px 6px', 
                   borderRadius: 3, 
-                  border: '1px solid #555', 
-                  background: '#3a3a3a', 
-                  color: '#fff', 
+                  border: '1px solid var(--ui-content-border)', 
+                  background: 'var(--ui-button-secondary)', 
+                  color: 'var(--ui-button-secondary-text)', 
                   cursor: 'pointer',
                   fontSize: '10px',
                   transition: 'all 0.2s'
                 }}
-                onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
-                onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
+                onMouseOver={(e) => e.target.style.background = 'var(--ui-button-hover)'}
+                onMouseOut={(e) => e.target.style.background = 'var(--ui-button-secondary)'}
                 title="Copiar usuario"
               >
                 <span className="pi pi-user" style={{ fontSize: '10px' }}></span>
@@ -528,15 +535,15 @@ const TabContentRenderer = React.memo(({
                 style={{ 
                   padding: '2px 6px', 
                   borderRadius: 3, 
-                  border: '1px solid #555', 
-                  background: '#3a3a3a', 
-                  color: '#fff', 
+                  border: '1px solid var(--ui-content-border)', 
+                  background: 'var(--ui-button-secondary)', 
+                  color: 'var(--ui-button-secondary-text)', 
                   cursor: 'pointer',
                   fontSize: '10px',
                   transition: 'all 0.2s'
                 }}
-                onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
-                onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
+                onMouseOver={(e) => e.target.style.background = 'var(--ui-button-hover)'}
+                onMouseOut={(e) => e.target.style.background = 'var(--ui-button-secondary)'}
                 title="Copiar contraseña"
               >
                 <span className="pi pi-key" style={{ fontSize: '10px' }}></span>
@@ -554,17 +561,17 @@ const TabContentRenderer = React.memo(({
         style={{
           padding: '8px 16px',
           borderRadius: 6,
-          border: '1px solid #555',
-          background: disabled ? '#2a2a2a' : '#3a3a3a',
-          color: disabled ? '#666' : '#fff',
+          border: '1px solid var(--ui-content-border)',
+          background: disabled ? 'var(--ui-content-bg)' : 'var(--ui-button-secondary)',
+          color: disabled ? 'var(--text-color-secondary)' : 'var(--ui-button-secondary-text)',
           cursor: disabled ? 'not-allowed' : 'pointer',
           fontSize: '13px',
           fontWeight: '500',
           transition: 'all 0.2s',
           opacity: disabled ? 0.5 : 1
         }}
-        onMouseOver={(e) => !disabled && (e.target.style.background = '#4a4a4a')}
-        onMouseOut={(e) => !disabled && (e.target.style.background = '#3a3a3a')}
+        onMouseOver={(e) => !disabled && (e.target.style.background = 'var(--ui-button-hover)')}
+        onMouseOut={(e) => !disabled && (e.target.style.background = 'var(--ui-button-secondary)')}
       >
         {children}
       </button>
@@ -573,21 +580,22 @@ const TabContentRenderer = React.memo(({
     return (
       <div style={{ 
         padding: '24px', 
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+        background: 'var(--ui-content-bg)',
         height: '100%',
         overflow: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <span className="pi pi-folder-open" style={{ fontSize: '28px', color: '#64b5f6' }}></span>
-          <h2 style={{ margin: 0, color: '#fff', fontSize: '24px' }}>{folderLabel}</h2>
+          <span className="pi pi-folder-open" style={{ fontSize: '28px', color: 'var(--ui-button-primary)' }}></span>
+          <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px' }}>{folderLabel}</h2>
           <span style={{ 
             marginLeft: 'auto',
             padding: '4px 12px',
             borderRadius: 12,
-            background: 'rgba(100, 181, 246, 0.2)',
-            color: '#64b5f6',
+            background: 'var(--ui-button-primary)',
+            opacity: 0.2,
+            color: 'var(--ui-button-primary)',
             fontSize: '12px',
             fontWeight: '600'
           }}>
@@ -599,7 +607,8 @@ const TabContentRenderer = React.memo(({
           <div style={{ 
             textAlign: 'center', 
             padding: '40px', 
-            color: '#9aa0a6',
+            color: 'var(--ui-dialog-text)',
+            opacity: 0.7,
             fontSize: '14px'
           }}>
             <span className="pi pi-inbox" style={{ fontSize: '48px', display: 'block', marginBottom: '16px', opacity: 0.5 }}></span>
@@ -612,8 +621,8 @@ const TabContentRenderer = React.memo(({
               display: 'flex', 
               alignItems: 'center', 
               padding: '12px 12px 8px 12px',
-              background: '#3a3a3a',
-              borderBottom: '2px solid #555',
+              background: 'var(--ui-sidebar-hover)',
+              borderBottom: '2px solid var(--ui-content-border)',
               marginBottom: '8px',
               borderRadius: '6px 6px 0 0'
             }}>
@@ -624,7 +633,7 @@ const TabContentRenderer = React.memo(({
               <div style={{ 
                 flex: '0 0 200px', 
                 marginRight: '12px',
-                color: '#fff',
+                color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
                 fontWeight: '600'
               }}>
@@ -636,7 +645,7 @@ const TabContentRenderer = React.memo(({
               <div style={{ 
                 flex: '0 0 150px', 
                 marginRight: '12px',
-                color: '#fff',
+                color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
                 fontWeight: '600'
               }}>
@@ -647,7 +656,7 @@ const TabContentRenderer = React.memo(({
               <div style={{ 
                 flex: '0 0 180px', 
                 marginRight: '12px',
-                color: '#fff',
+                color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
                 fontWeight: '600'
               }}>
@@ -658,7 +667,7 @@ const TabContentRenderer = React.memo(({
               <div style={{ 
                 flex: '0 0 150px', 
                 marginRight: '12px',
-                color: '#fff',
+                color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
                 fontWeight: '600'
               }}>
@@ -669,7 +678,7 @@ const TabContentRenderer = React.memo(({
               <div style={{ 
                 flex: '0 0 120px', 
                 marginRight: '12px',
-                color: '#fff',
+                color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
                 fontWeight: '600'
               }}>
@@ -679,7 +688,7 @@ const TabContentRenderer = React.memo(({
               {/* Columna Acciones */}
               <div style={{ 
                 flex: '0 0 60px',
-                color: '#fff',
+                color: 'var(--ui-dialog-text)',
                 fontSize: '13px',
                 fontWeight: '600',
                 textAlign: 'center'
@@ -692,7 +701,7 @@ const TabContentRenderer = React.memo(({
               flex: 1, 
               overflow: 'auto', 
               marginBottom: '16px',
-              background: '#2a2a2a',
+              background: 'var(--ui-dialog-bg)',
               borderRadius: '0 0 6px 6px'
             }}>
               {currentPasswords.map((password, index) => (
