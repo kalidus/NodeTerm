@@ -5,6 +5,119 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-01-11
+
+### 🎥 Nueva Funcionalidad: Sistema de Auditoría y Grabación de Sesiones
+
+- **Grabación de Sesiones SSH**: Captura completa de entrada/salida en tiempo real
+  - Formato estándar asciicast v2 (compatible con asciinema)
+  - Soporte para conexiones SSH directas y con Bastion/Wallix
+  - Control desde menú contextual del terminal (⏺ Iniciar / ⏹ Detener)
+  - Captura automática sin impacto en el rendimiento
+
+- **Panel de Auditoría**: Nueva pestaña para gestionar grabaciones
+  - Acceso desde menú contextual de conexión SSH (📼 Auditoría)
+  - Lista filtrada por host y usuario
+  - Estadísticas: total de grabaciones, duración, tamaño
+  - Acciones: Reproducir, Exportar, Eliminar
+
+- **Reproductor Integrado**: Playback profesional de grabaciones
+  - Controles completos: Play, Pause, Stop, Reiniciar
+  - Velocidad ajustable (0.5x - 3x)
+  - Barra de progreso interactiva
+  - Renderizado con xterm.js (mismo motor que terminal)
+  - Display de tiempo transcurrido / total
+
+- **Exportación y Compatibilidad**:
+  - Exportación a archivos `.cast` estándar
+  - Compatible con asciinema-player y otras herramientas
+  - Almacenamiento local en `userData/recordings/`
+  - Metadata separada para búsqueda rápida
+
+### 🔧 Mejoras Técnicas
+
+- **Backend (Proceso Principal)**:
+  - Nueva clase `SessionRecorder` para captura en tiempo real
+  - Nueva clase `SessionRecordingManager` para gestión de archivos
+  - IPC handlers: `recording:start`, `recording:stop`, `recording:list`, etc.
+  - Integración no invasiva en flujo SSH existente
+  
+- **Frontend (Proceso Renderer)**:
+  - Nuevo componente `AuditTab` para lista de grabaciones
+  - Nuevo componente `RecordingPlayerTab` para reproducción
+  - Hook `useRecordingManagement` para gestión de estado
+  - Integración en menús contextuales (terminal y sidebar)
+  - Soporte para nuevos tipos de tabs (`audit`, `recording-player`)
+
+- **Preload Script**:
+  - Nuevos canales IPC permitidos: `/^recording:.*$/`
+  - Exposición segura de métodos de grabación
+
+### 📖 Documentación
+
+- **Nueva Guía Completa**: [docs/GUIA_AUDITORIA_SESIONES.md](docs/GUIA_AUDITORIA_SESIONES.md)
+  - Introducción y casos de uso
+  - Guía de usuario detallada con ejemplos visuales
+  - Arquitectura técnica y flujos de datos
+  - Especificación de formato de datos
+  - Seguridad y privacidad
+  - Solución de problemas
+  - Referencias y herramientas compatibles
+
+- **README Actualizado**: Nueva sección sobre sistema de auditoría
+
+### 📁 Archivos Nuevos
+
+```
+src/services/
+├── SessionRecorder.js               # Motor de grabación en tiempo real
+└── SessionRecordingManager.js       # Gestión de almacenamiento
+
+src/main/handlers/
+└── recording-handlers.js            # IPC handlers para grabaciones
+
+src/components/
+├── AuditTab.js                      # UI de lista de grabaciones
+└── RecordingPlayerTab.js            # UI de reproductor
+
+src/hooks/
+└── useRecordingManagement.js        # Hook React para grabaciones
+
+docs/
+└── GUIA_AUDITORIA_SESIONES.md       # Documentación completa
+```
+
+### 📁 Archivos Modificados
+
+- `main.js` - Integración de captura SSH
+- `preload.js` - Exposición de canales IPC
+- `src/components/contextmenus/TerminalContextMenu.js` - Botón de grabación
+- `src/hooks/useSidebarManagement.js` - Menú de auditoría
+- `src/components/TabContentRenderer.js` - Renderizado de nuevos tabs
+- `src/components/App.js` - Integración de hook
+- `src/components/MainContentArea.js` - Props de grabación
+
+### 🎯 Casos de Uso
+
+1. **Auditoría de Seguridad**: Registro de acciones en servidores críticos
+2. **Debugging**: Reproducir secuencias que causaron errores
+3. **Documentación**: Crear tutoriales paso a paso
+4. **Formación**: Compartir sesiones de ejemplo
+5. **Compliance**: Cumplir requisitos de trazabilidad
+
+### 🚀 Características Futuras Planificadas
+
+- [ ] Indicador visual de grabación activa en tab
+- [ ] Búsqueda de texto dentro de grabaciones
+- [ ] Marcadores/timestamps en grabaciones
+- [ ] Exportación a GIF animado
+- [ ] Cifrado de grabaciones sensibles
+- [ ] Limpieza automática de grabaciones antiguas
+- [ ] Compresión de grabaciones
+- [ ] Anotaciones en reproducción
+
+---
+
 ## [1.5.5] - 2024-12-21
 
 ### 🎨 Mejoras de Temas y Personalización
