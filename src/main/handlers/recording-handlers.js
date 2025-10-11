@@ -426,6 +426,232 @@ function registerRecordingHandlers() {
     }
   });
 
+  // AUDIT: Obtener estadísticas de auditoría
+  ipcMain.handle('audit:get-stats', async () => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const recordingsDir = path.join(userDataPath, 'recordings');
+      
+      try {
+        await fs.access(recordingsDir);
+      } catch {
+        return {
+          success: true,
+          stats: {
+            fileCount: 0,
+            totalSize: 0,
+            oldestFile: null,
+            lastCleanup: null
+          }
+        };
+      }
+      
+      const files = await fs.readdir(recordingsDir);
+      const castFiles = files.filter(f => f.endsWith('.cast'));
+      const metaFiles = files.filter(f => f.endsWith('.meta.json'));
+      
+      let totalSize = 0;
+      let oldestFile = null;
+      
+      // Calcular tamaño total y archivo más antiguo
+      for (const file of castFiles) {
+        try {
+          const filePath = path.join(recordingsDir, file);
+          const stats = await fs.stat(filePath);
+          totalSize += stats.size;
+          
+          if (!oldestFile || stats.birthtime < oldestFile) {
+            oldestFile = stats.birthtime;
+          }
+        } catch (error) {
+          console.error(`Error obteniendo stats de ${file}:`, error);
+        }
+      }
+      
+      // Leer configuración de última limpieza
+      const configPath = path.join(userDataPath, 'audit-config.json');
+      let lastCleanup = null;
+      try {
+        const configContent = await fs.readFile(configPath, 'utf-8');
+        const config = JSON.parse(configContent);
+        lastCleanup = config.lastCleanup;
+      } catch {
+        // Config file doesn't exist or is invalid
+      }
+      
+      return {
+        success: true,
+        stats: {
+          fileCount: castFiles.length,
+          totalSize,
+          oldestFile: oldestFile ? oldestFile.getTime() : null,
+          lastCleanup
+        }
+      };
+    } catch (error) {
+      console.error('Error obteniendo estadísticas de auditoría:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
+  // AUDIT: Ejecutar limpieza de archivos
+  ipcMain.handle('audit:cleanup', async (event, { retentionDays, maxStorageSize, force = false }) => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const recordingsDir = path.join(userDataPath, 'recordings');
+      
+      try {
+        await fs.access(recordingsDir);
+      } catch {
+        return {
+          success: true,
+          deletedFiles: 0,
+          freedSpace: 0,
+          message: 'No hay archivos de auditoría para limpiar'
+        };
+      }
+      
+      const files = await fs.readdir(recordingsDir);
+      const metaFiles = files.filter(f => f.endsWith('.meta.json'));
+      
+      let deletedFiles = 0;
+      let freedSpace = 0;
+      const cutoffDate = new Date(Date.now() - (retentionDays * 24 * 60 * 60 * 1000));
+      
+      // Leer todos los archivos y sus metadatos
+      const fileInfo = await Promise.all(
+        metaFiles.map(async (metaFile) => {
+          try {
+            const metaPath = path.join(recordingsDir, metaFile);
+            const content = await fs.readFile(metaPath, 'utf-8');
+            const metadata = JSON.parse(content);
+            
+            const castFile = metaFile.replace('.meta.json', '.cast');
+            const castPath = path.join(recordingsDir, castFile);
+            const stats = await fs.stat(castPath);
+            
+            return {
+              metadata,
+              castFile,
+              metaFile,
+              castPath,
+              metaPath,
+              size: stats.size,
+              created: stats.birthtime
+            };
+          } catch (error) {
+            console.error(`Error procesando ${metaFile}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      const validFiles = fileInfo.filter(Boolean);
+      
+      // Filtrar archivos a eliminar por fecha
+      const filesToDelete = validFiles.filter(file => {
+        const fileDate = new Date(file.createdAt || file.created);
+        return fileDate < cutoffDate;
+      });
+      
+      // Si hay límite de tamaño, ordenar por fecha (más antiguos primero) y eliminar hasta cumplir límite
+      if (maxStorageSize > 0) {
+        const totalCurrentSize = validFiles.reduce((sum, file) => sum + file.size, 0);
+        
+        if (totalCurrentSize > maxStorageSize) {
+          // Ordenar por fecha de creación (más antiguos primero)
+          validFiles.sort((a, b) => new Date(a.createdAt || a.created) - new Date(b.createdAt || b.created));
+          
+          let currentSize = totalCurrentSize;
+          for (const file of validFiles) {
+            if (currentSize <= maxStorageSize) break;
+            
+            if (!filesToDelete.includes(file)) {
+              filesToDelete.push(file);
+            }
+            currentSize -= file.size;
+          }
+        }
+      }
+      
+      // Eliminar archivos
+      for (const file of filesToDelete) {
+        try {
+          await Promise.all([
+            fs.unlink(file.castPath).catch(() => {}),
+            fs.unlink(file.metaPath).catch(() => {})
+          ]);
+          
+          deletedFiles++;
+          freedSpace += file.size;
+          
+          console.log(`🗑️ Archivo de auditoría eliminado: ${file.castFile}`);
+        } catch (error) {
+          console.error(`Error eliminando ${file.castFile}:`, error);
+        }
+      }
+      
+      // Actualizar configuración de última limpieza
+      const configPath = path.join(userDataPath, 'audit-config.json');
+      const config = {
+        lastCleanup: Date.now(),
+        retentionDays,
+        maxStorageSize,
+        lastCleanupStats: {
+          deletedFiles,
+          freedSpace,
+          cutoffDate: cutoffDate.getTime()
+        }
+      };
+      
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+      
+      console.log(`🧹 Limpieza completada: ${deletedFiles} archivos eliminados, ${freedSpace} bytes liberados`);
+      
+      return {
+        success: true,
+        deletedFiles,
+        freedSpace,
+        message: `Limpieza completada: ${deletedFiles} archivos eliminados`
+      };
+    } catch (error) {
+      console.error('Error ejecutando limpieza:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
+  // AUDIT: Abrir carpeta de auditoría
+  ipcMain.handle('audit:open-folder', async () => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const recordingsDir = path.join(userDataPath, 'recordings');
+      
+      // Crear directorio si no existe
+      await fs.mkdir(recordingsDir, { recursive: true });
+      
+      // Abrir carpeta en el explorador de archivos
+      const { shell } = require('electron');
+      await shell.openPath(recordingsDir);
+      
+      return {
+        success: true,
+        message: 'Carpeta de auditoría abierta'
+      };
+    } catch (error) {
+      console.error('Error abriendo carpeta de auditoría:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+
   console.log('✅ Recording handlers registrados');
 }
 

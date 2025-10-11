@@ -196,6 +196,44 @@ export const useConnectionManagement = ({
         createdAt: nowTs,
         groupId: null
       };
+
+      // Iniciar grabación automática si está habilitada
+      const autoRecordingEnabled = localStorage.getItem('audit_auto_recording') === 'true';
+      if (autoRecordingEnabled && window.electron?.ipcRenderer) {
+        const recordingQuality = localStorage.getItem('audit_recording_quality') || 'medium';
+        const encryptRecordings = localStorage.getItem('audit_encrypt_recordings') === 'true';
+        
+        const recordingMetadata = {
+          host: sshConfig.useBastionWallix ? sshConfig.bastionHost : sshConfig.host,
+          username: sshConfig.useBastionWallix ? sshConfig.bastionUser : sshConfig.username,
+          port: sshConfig.port || 22,
+          connectionType: 'ssh',
+          useBastionWallix: sshConfig.useBastionWallix || false,
+          bastionHost: sshConfig.bastionHost || null,
+          bastionUser: sshConfig.bastionUser || null,
+          sessionName: `${conn.name}_${nowTs}`,
+          title: `${sshConfig.username}@${sshConfig.host}`,
+          cols: 80,
+          rows: 24,
+          shell: '/bin/bash'
+        };
+
+        // Iniciar grabación de forma asíncrona
+        window.electron.ipcRenderer.invoke('recording:start', {
+          tabId: tabId,
+          metadata: recordingMetadata
+        }).then(result => {
+          if (result.success) {
+            console.log(`📹 Grabación automática iniciada: ${result.recordingId}`);
+            // Guardar ID de grabación en la pestaña para referencia
+            newTab.recordingId = result.recordingId;
+          } else {
+            console.warn('⚠️ Error iniciando grabación automática:', result.error);
+          }
+        }).catch(error => {
+          console.error('Error iniciando grabación automática:', error);
+        });
+      }
       // Activar como última abierta (índice 1) y registrar orden de apertura
       setLastOpenedTabKey(tabId);
       setOnCreateActivateTabKey(tabId);
