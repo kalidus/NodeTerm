@@ -10,6 +10,8 @@ import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
 import CygwinTerminal from './CygwinTerminal';
+import AuditTab from './AuditTab';
+import RecordingPlayerTab from './RecordingPlayerTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 
@@ -47,7 +49,10 @@ const TabContentRenderer = React.memo(({
   rdpTabs,
   findNodeByKey,
   // Terminal props
-  sshStatsByTabId: terminalSshStatsByTabId
+  sshStatsByTabId: terminalSshStatsByTabId,
+  // Recording props
+  onOpenRecordingPlayer,
+  setSshTabs
 }) => {
   if (tab.type === 'home') {
     return (
@@ -936,6 +941,44 @@ const TabContentRenderer = React.memo(({
         fontFamily={localFontFamily}
         fontSize={localFontSize}
         theme={powerShellTheme}
+      />
+    );
+  }
+
+  // Tab de auditoría de grabaciones
+  if (tab.type === 'audit' && tab.connectionInfo) {
+    return (
+      <AuditTab
+        connectionInfo={tab.connectionInfo}
+        onPlayRecording={(recording) => {
+          // Crear nueva pestaña para reproducir la grabación
+          if (setSshTabs) {
+            setSshTabs(prevTabs => {
+              const tabId = `player_${recording.id}_${Date.now()}`;
+              const newTab = {
+                key: tabId,
+                label: `▶️ ${recording.title || recording.metadata?.title || 'Reproducción'}`,
+                type: 'recording-player',
+                recording: recording,
+                createdAt: Date.now(),
+                groupId: null
+              };
+              return [newTab, ...prevTabs];
+            });
+          }
+        }}
+      />
+    );
+  }
+
+  // Tab de reproducción de grabaciones
+  if (tab.type === 'recording-player' && tab.recording) {
+    return (
+      <RecordingPlayerTab
+        recording={tab.recording}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
+        theme={terminalTheme.theme}
       />
     );
   }

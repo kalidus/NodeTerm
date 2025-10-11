@@ -176,6 +176,50 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         command: () => openFileExplorer(node)
       });
       
+      // Opción de auditoría de sesiones
+      items.push({
+        label: '📼 Auditoría',
+        icon: 'pi pi-video',
+        command: () => {
+          // Crear tab de auditoría
+          if (activeGroupId !== null) {
+            const currentGroupKey = activeGroupId || 'no-group';
+            setGroupActiveIndices(prev => ({
+              ...prev,
+              [currentGroupKey]: activeTabIndex
+            }));
+            setActiveGroupId(null);
+          }
+          
+          setSshTabs(prevTabs => {
+            const tabId = `audit_${node.key}_${Date.now()}`;
+            const connectionInfo = {
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
+              username: node.data.user,
+              port: node.data.port || 22,
+              name: node.label
+            };
+            
+            const newTab = {
+              key: tabId,
+              label: `📼 ${node.label}`,
+              originalKey: node.key,
+              type: 'audit',
+              connectionInfo: connectionInfo,
+              createdAt: Date.now(),
+              groupId: null
+            };
+            
+            // Activación inmediata
+            setLastOpenedTabKey(tabId);
+            setOnCreateActivateTabKey(tabId);
+            setActiveTabIndex(1);
+            setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+            return [newTab, ...prevTabs];
+          });
+        }
+      });
+      
       items.push({
         label: 'Agregar/Quitar de Favoritos',
         icon: 'pi pi-star',
