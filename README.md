@@ -381,6 +381,21 @@ NodeTerm incluye un sistema completo de encriptación AES-256 para proteger toda
 
 ---
 
+## 📹 Sistema de Auditoría y Grabación
+
+NodeTerm incluye un sistema completo de grabación y auditoría de sesiones SSH para compliance, debugging y documentación:
+
+- **Grabación en tiempo real**: Captura toda la entrada/salida de sesiones SSH
+- **Formato estándar**: Compatible con asciicast v2 (asciinema)
+- **Reproductor integrado**: Playback con controles de velocidad
+- **Búsqueda y filtrado**: Encuentra grabaciones por conexión
+- **Exportación**: Comparte grabaciones en formato estándar
+- **Almacenamiento local**: Sin dependencias de servicios externos
+
+📖 **Guía completa**: [docs/GUIA_AUDITORIA_SESIONES.md](docs/GUIA_AUDITORIA_SESIONES.md)
+
+---
+
 ## 🤖 Sobre el Desarrollo
 
 **NodeTerm** es un proyecto innovador desarrollado utilizando **IA avanzada** en colaboración humano-máquina. Lo que comenzó como un ejercicio de **vibe coding** se ha transformado en una herramienta profesional y moderna, específicamente diseñada para **administradores de infraestructuras** que necesitan una solución SSH robusta y eficiente.
