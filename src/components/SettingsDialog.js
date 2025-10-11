@@ -87,7 +87,8 @@ const SettingsDialog = ({
   setLocalLinuxTerminalTheme,
   exportTreeToJson,
   importTreeFromJson,
-  sessionManager
+  sessionManager,
+  onMasterPasswordConfigured
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   

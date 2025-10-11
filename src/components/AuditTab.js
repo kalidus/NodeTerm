@@ -24,6 +24,9 @@ const AuditTab = ({ connectionInfo, onPlayRecording }) => {
         username: connectionInfo.username
       };
       
+      console.log('🔍 AuditTab - ConnectionInfo recibido:', connectionInfo);
+      console.log('🔍 AuditTab - Filtros a enviar:', filters);
+      
       const result = await window.electron.ipcRenderer.invoke('recording:list', filters);
       
       if (result.success) {
