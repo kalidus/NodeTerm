@@ -289,102 +289,263 @@ const TabContentRenderer = React.memo(({
       }
     };
 
-    const PasswordCard = ({ password }) => (
-      <div style={{ 
-        background: '#2a2a2a', 
-        borderRadius: 8, 
-        padding: '16px', 
-        border: '1px solid #444',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-        transition: 'all 0.2s',
-        marginBottom: '12px'
-      }}
-      onMouseOver={(e) => e.currentTarget.style.borderColor = '#ffc107'}
-      onMouseOut={(e) => e.currentTarget.style.borderColor = '#444'}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="pi pi-key" style={{ fontSize: '16px', color: '#ffc107' }}></span>
-            <h3 style={{ margin: 0, color: '#fff', fontSize: '16px', fontWeight: '600' }}>{password.label}</h3>
-          </div>
-        </div>
+    // Estado para fila seleccionada
+    const [selectedRowIndex, setSelectedRowIndex] = React.useState(null);
+
+    // Función para truncar texto
+    const truncateText = (text, maxLength = 40) => {
+      if (!text) return '';
+      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    };
+
+    // Función para obtener icono según la URL o tipo
+    const getPasswordIcon = (password) => {
+      const label = password.label.toLowerCase();
+      const url = password.url ? password.url.toLowerCase() : '';
+      
+      // Detectar por etiquetas comunes
+      if (label.includes('cisco') || label.includes('ucs') || url.includes('cisco.com')) return '⚙️';
+      if (label.includes('dell') || label.includes('poweredge')) return '🖥️';
+      if (label.includes('vmware') || label.includes('vcenter') || label.includes('vsphere')) return '☁️';
+      if (label.includes('windows') || label.includes('server') || label.includes('host')) return '🖥️';
+      if (label.includes('router') || label.includes('switch') || label.includes('network')) return '📶';
+      if (label.includes('database') || label.includes('mysql') || label.includes('oracle')) return '🗄️';
+      if (label.includes('linux') || label.includes('ubuntu') || label.includes('centos')) return '⚡';
+      if (label.includes('admin') || label.includes('administrator')) return '🛡️';
+      
+      // Detectar por URL
+      if (url) {
+        if (url.includes('github.com')) return '🐙';
+        if (url.includes('google.com') || url.includes('gmail.com')) return '🌐';
+        if (url.includes('microsoft.com') || url.includes('office.com') || url.includes('outlook.com')) return '🪟';
+        if (url.includes('facebook.com')) return '📘';
+        if (url.includes('twitter.com') || url.includes('x.com')) return '🐦';
+        if (url.includes('linkedin.com')) return '💼';
+        if (url.includes('amazon.com') || url.includes('aws.com')) return '📦';
+        if (url.includes('docker.com') || url.includes('hub.docker.com')) return '🐳';
+        if (url.includes('kubernetes') || url.includes('k8s')) return '⚓';
+        if (url.includes('jenkins') || url.includes('ci/cd')) return '🔧';
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {password.username && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: '#9aa0a6', fontSize: '12px', minWidth: '80px' }}>Usuario:</span>
-              <span style={{ flex: 1, color: '#e8eaed', fontFamily: 'monospace', fontSize: '13px' }}>{password.username}</span>
-              <button 
-                onClick={() => copyToClipboard(password.username, 'Usuario')} 
-                style={{ 
-                  padding: '4px 10px', 
-                  borderRadius: 4, 
-                  border: '1px solid #555', 
-                  background: '#3a3a3a', 
-                  color: '#fff', 
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
-                onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
-              >
-                <span className="pi pi-copy" style={{ fontSize: '10px' }}></span>
-              </button>
-            </div>
-          )}
-          
-          {password.password && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: '#9aa0a6', fontSize: '12px', minWidth: '80px' }}>Contraseña:</span>
-              <span style={{ flex: 1, color: '#e8eaed', fontFamily: 'monospace', fontSize: '13px' }}>{'•'.repeat(password.password.length)}</span>
-              <button 
-                onClick={() => copyToClipboard(password.password, 'Contraseña')} 
-                style={{ 
-                  padding: '4px 10px', 
-                  borderRadius: 4, 
-                  border: '1px solid #555', 
-                  background: '#3a3a3a', 
-                  color: '#fff', 
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
-                onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
-              >
-                <span className="pi pi-copy" style={{ fontSize: '10px' }}></span>
-              </button>
-            </div>
-          )}
-          
-          {password.url && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: '#9aa0a6', fontSize: '12px', minWidth: '80px' }}>URL:</span>
+        // Detectar por IPs internas
+        if (url.includes('10.') || url.includes('192.168.') || url.includes('172.')) {
+          if (url.includes(':443') || url.includes('https://')) return '🔒';
+          return '🖥️';
+        }
+        
+        // Detectar por protocolos
+        if (url.startsWith('ssh://') || url.includes(':22')) return '💻';
+        if (url.startsWith('rdp://') || url.includes(':3389')) return '🖥️';
+        if (url.startsWith('https://')) return '🔒';
+        if (url.startsWith('http://')) return '🌐';
+        if (url.startsWith('ftp://') || url.startsWith('sftp://')) return '⬆️';
+        if (url.startsWith('cmd://') || url.includes('.exe')) return '💻';
+      }
+      
+      // Detectar por nombre de usuario
+      if (password.username) {
+        const username = password.username.toLowerCase();
+        if (username === 'root' || username === 'admin' || username.includes('administrator')) return '👑';
+        if (username.includes('service') || username.includes('svc_')) return '⚙️';
+        if (username.includes('user') || username.includes('usr_')) return '👤';
+      }
+      
+      // Iconos por defecto más variados
+      const defaultIcons = ['🔑', '🔐', '🛡️', '🌐', '🖥️', '⚙️', '🗄️', '📊', '🔧', '⚡'];
+      const hash = password.label.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      return defaultIcons[Math.abs(hash) % defaultIcons.length];
+    };
+
+    // Función para obtener color del icono según el tipo (ahora los emojis ya tienen sus colores)
+    const getIconColor = (password) => {
+      // Los emojis ya tienen sus propios colores, pero podemos ajustar la opacidad si está seleccionado
+      return 'transparent'; // Los emojis mantienen sus colores naturales
+    };
+
+    const PasswordTableRow = ({ password, index }) => {
+      const isSelected = selectedRowIndex === index;
+      const rowStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        padding: '8px 12px',
+        borderBottom: '1px solid #333',
+        background: isSelected ? '#2e4a2e' : 'transparent',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s',
+        minHeight: '40px'
+      };
+
+      return (
+        <div 
+          style={rowStyle}
+          onMouseEnter={(e) => !isSelected && (e.target.style.background = '#3a3a3a')}
+          onMouseLeave={(e) => !isSelected && (e.target.style.background = 'transparent')}
+          onClick={() => setSelectedRowIndex(isSelected ? null : index)}
+        >
+          {/* Columna Icono */}
+          <div style={{ width: '24px', marginRight: '12px', display: 'flex', justifyContent: 'center' }}>
+            <span style={{ 
+              fontSize: '16px',
+              filter: isSelected ? 'brightness(1.2) saturate(1.3)' : 'none'
+            }}>
+              {getPasswordIcon(password)}
+            </span>
+          </div>
+
+          {/* Columna Título */}
+          <div style={{ 
+            flex: '0 0 200px', 
+            marginRight: '12px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{ 
+              color: '#fff', 
+              fontSize: '13px', 
+              fontWeight: '500'
+            }}>
+              {truncateText(password.label, 25)}
+            </span>
+          </div>
+
+          {/* Columna Usuario */}
+          <div style={{ 
+            flex: '0 0 150px', 
+            marginRight: '12px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{ 
+              color: '#e8eaed', 
+              fontSize: '12px',
+              fontFamily: 'monospace'
+            }}>
+              {truncateText(password.username, 20)}
+            </span>
+          </div>
+
+          {/* Columna URL */}
+          <div style={{ 
+            flex: '0 0 180px', 
+            marginRight: '12px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}>
+            {password.url ? (
               <span 
                 style={{ 
-                  flex: 1, 
                   color: '#64b5f6', 
-                  fontSize: '12px', 
-                  textDecoration: 'underline',
-                  cursor: 'pointer'
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
                 }}
-                onClick={() => window.electron?.import?.openExternal?.(password.url)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.electron?.import?.openExternal?.(password.url);
+                }}
               >
-                {password.url}
+                {truncateText(password.url, 25)}
               </span>
-            </div>
-          )}
-          
-          {password.notes && (
-            <div style={{ display: 'flex', gap: 8, marginTop: '4px' }}>
-              <span style={{ color: '#9aa0a6', fontSize: '12px', minWidth: '80px' }}>Notas:</span>
-              <span style={{ flex: 1, color: '#b0b0b0', fontSize: '12px' }}>{password.notes}</span>
-            </div>
-          )}
+            ) : (
+              <span style={{ color: '#666', fontSize: '12px' }}>-</span>
+            )}
+          </div>
+
+          {/* Columna Notas */}
+          <div style={{ 
+            flex: '0 0 150px', 
+            marginRight: '12px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{ 
+              color: '#b0b0b0', 
+              fontSize: '12px'
+            }}>
+              {truncateText(password.notes, 20)}
+            </span>
+          </div>
+
+          {/* Columna Contraseña */}
+          <div style={{ 
+            flex: '0 0 120px', 
+            marginRight: '12px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap'
+          }}>
+            {password.password ? (
+              <span style={{ 
+                color: '#e8eaed', 
+                fontSize: '12px',
+                fontFamily: 'monospace'
+              }}>
+                {'•'.repeat(Math.min(password.password.length, 12))}
+              </span>
+            ) : (
+              <span style={{ color: '#666', fontSize: '12px' }}>-</span>
+            )}
+          </div>
+
+          {/* Columna Acciones */}
+          <div style={{ 
+            flex: '0 0 60px', 
+            display: 'flex', 
+            gap: '4px',
+            justifyContent: 'flex-end'
+          }}>
+            {password.username && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(password.username, 'Usuario');
+                }}
+                style={{ 
+                  padding: '2px 6px', 
+                  borderRadius: 3, 
+                  border: '1px solid #555', 
+                  background: '#3a3a3a', 
+                  color: '#fff', 
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
+                onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
+                title="Copiar usuario"
+              >
+                <span className="pi pi-user" style={{ fontSize: '10px' }}></span>
+              </button>
+            )}
+            
+            {password.password && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(password.password, 'Contraseña');
+                }}
+                style={{ 
+                  padding: '2px 6px', 
+                  borderRadius: 3, 
+                  border: '1px solid #555', 
+                  background: '#3a3a3a', 
+                  color: '#fff', 
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#4a4a4a'}
+                onMouseOut={(e) => e.target.style.background = '#3a3a3a'}
+                title="Copiar contraseña"
+              >
+                <span className="pi pi-key" style={{ fontSize: '10px' }}></span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    );
+      );
+    };
 
     const PaginationButton = ({ onClick, disabled, children }) => (
       <button
@@ -446,9 +607,100 @@ const TabContentRenderer = React.memo(({
           </div>
         ) : (
           <>
-            <div style={{ flex: 1, overflow: 'auto', marginBottom: '16px' }}>
+            {/* Encabezados de tabla */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              padding: '12px 12px 8px 12px',
+              background: '#3a3a3a',
+              borderBottom: '2px solid #555',
+              marginBottom: '8px',
+              borderRadius: '6px 6px 0 0'
+            }}>
+              {/* Columna Icono */}
+              <div style={{ width: '24px', marginRight: '12px' }}></div>
+              
+              {/* Columna Título */}
+              <div style={{ 
+                flex: '0 0 200px', 
+                marginRight: '12px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                Título
+                <span className="pi pi-sort-up" style={{ marginLeft: '8px', fontSize: '12px' }}></span>
+              </div>
+
+              {/* Columna Usuario */}
+              <div style={{ 
+                flex: '0 0 150px', 
+                marginRight: '12px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                Usuario
+              </div>
+
+              {/* Columna URL */}
+              <div style={{ 
+                flex: '0 0 180px', 
+                marginRight: '12px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                URL
+              </div>
+
+              {/* Columna Notas */}
+              <div style={{ 
+                flex: '0 0 150px', 
+                marginRight: '12px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                Notas
+              </div>
+
+              {/* Columna Contraseña */}
+              <div style={{ 
+                flex: '0 0 120px', 
+                marginRight: '12px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600'
+              }}>
+                Contraseña
+              </div>
+
+              {/* Columna Acciones */}
+              <div style={{ 
+                flex: '0 0 60px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                Acciones
+              </div>
+            </div>
+
+            <div style={{ 
+              flex: 1, 
+              overflow: 'auto', 
+              marginBottom: '16px',
+              background: '#2a2a2a',
+              borderRadius: '0 0 6px 6px'
+            }}>
               {currentPasswords.map((password, index) => (
-                <PasswordCard key={password.key || index} password={password} />
+                <PasswordTableRow 
+                  key={password.key || index} 
+                  password={password} 
+                  index={index}
+                />
               ))}
             </div>
             
