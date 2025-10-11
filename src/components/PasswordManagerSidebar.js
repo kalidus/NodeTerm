@@ -1074,18 +1074,33 @@ const PasswordManagerSidebar = ({
         />
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
           <Button 
-            icon="pi pi-plus" 
+            icon="pi pi-key" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={handleNewPassword} 
             tooltip="Nuevo password" 
             tooltipOptions={{ position: 'bottom' }} 
-            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
+            style={{ color: '#ffc107' }}
           />
           <Button 
             icon="pi pi-folder" 
             className="p-button-rounded p-button-text sidebar-action-button" 
             onClick={handleNewFolder} 
             tooltip="Nueva carpeta" 
+            tooltipOptions={{ position: 'bottom' }} 
+            style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
+          />
+          <Button 
+            icon="pi pi-th-large" 
+            className="p-button-rounded p-button-text sidebar-action-button" 
+            onClick={() => {
+              // Volver a la vista de conexiones y crear grupo
+              onBackToConnections();
+              // Disparar evento para abrir el diálogo de crear grupo
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('open-create-group-dialog'));
+              }, 100);
+            }} 
+            tooltip="Crear grupo de pestañas" 
             tooltipOptions={{ position: 'bottom' }} 
             style={{ color: 'var(--ui-sidebar-text, #cccccc)' }}
           />
@@ -1102,14 +1117,16 @@ const PasswordManagerSidebar = ({
       <Divider className="my-2" />
       
       {/* Árbol de passwords - igual que la sidebar de conexiones */}
-      <div style={{ 
-        flex: 1, 
-        minHeight: 0, 
-        overflowY: 'auto', 
-        overflowX: 'auto',
-        position: 'relative',
-        fontSize: `${explorerFontSize}px`
-      }}>
+      <div 
+        className="tree-container"
+        style={{ 
+          flex: 1, 
+          minHeight: 0, 
+          overflowY: 'auto', 
+          overflowX: 'auto',
+          position: 'relative',
+          fontSize: `${explorerFontSize}px`
+        }}>
         {filteredPasswordNodes.length === 0 ? (
           <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
             No hay passwords guardados.<br/>Usa el botón "+" para crear uno.
