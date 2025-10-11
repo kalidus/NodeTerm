@@ -792,6 +792,17 @@ const Sidebar = React.memo(({
   }, [nodes]);
 
 
+  // Escuchar evento para abrir el diálogo de crear grupo desde la vista de passwords
+  useEffect(() => {
+    const handleOpenCreateGroupDialog = () => {
+      setShowCreateGroupDialog(true);
+    };
+    window.addEventListener('open-create-group-dialog', handleOpenCreateGroupDialog);
+    return () => {
+      window.removeEventListener('open-create-group-dialog', handleOpenCreateGroupDialog);
+    };
+  }, [setShowCreateGroupDialog]);
+
   // Registrar callbacks para el menú contextual
   useEffect(() => {
     if (sidebarCallbacksRef) {
@@ -1728,10 +1739,17 @@ const Sidebar = React.memo(({
                     tooltipOptions={{ position: 'bottom' }} 
                   />
                   <Button 
-                    icon="pi pi-plus" 
+                    icon="pi pi-folder" 
                     className="p-button-rounded p-button-text sidebar-action-button" 
                     onClick={() => setShowFolderDialog(true)} 
                     tooltip="Crear carpeta" 
+                    tooltipOptions={{ position: 'bottom' }} 
+                  />
+                  <Button 
+                    icon="pi pi-th-large" 
+                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    onClick={() => setShowCreateGroupDialog(true)} 
+                    tooltip="Crear grupo de pestañas" 
                     tooltipOptions={{ position: 'bottom' }} 
                   />
                   <Button 
@@ -1741,13 +1759,6 @@ const Sidebar = React.memo(({
                     tooltip="Gestor de passwords" 
                     tooltipOptions={{ position: 'bottom' }} 
                     style={{ color: '#ffc107' }}
-                  />
-                  <Button 
-                    icon="pi pi-th-large" 
-                    className="p-button-rounded p-button-text sidebar-action-button" 
-                    onClick={() => setShowCreateGroupDialog(true)} 
-                    tooltip="Crear grupo de pestañas" 
-                    tooltipOptions={{ position: 'bottom' }} 
                   />
                 </div>
               </div>
