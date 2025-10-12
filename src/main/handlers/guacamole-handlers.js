@@ -265,22 +265,21 @@ function registerGuacamoleHandlers({
             "ignore-cert": true,
             // Drive redirection
             ...driveSettings,
-            "enable-wallpaper": config.enableWallpaper || false,
+            "enable-wallpaper": config.enableWallpaper === true ? true : false,
             width: finalWidth,
             height: finalHeight,
             dpi: config.dpi || 96,
             "color-depth": normalizedColorDepth,
-            // Características visuales opcionales (solo si están activadas)
-            "enable-desktop-composition": config.enableDesktopComposition === true ? true : undefined,
-            "enable-font-smoothing": config.enableFontSmoothing === true ? true : undefined,
-            "enable-theming": config.enableTheming === true ? true : undefined,
-            "enable-full-window-drag": config.enableFullWindowDrag === true ? true : undefined,
-            "enable-menu-animations": config.enableMenuAnimations === true ? true : undefined,
+            // Características visuales optimizadas: desactivadas por defecto para conexión más rápida
+            // Solo se activan si el usuario las habilita explícitamente o si autoResize está activo
+            "enable-desktop-composition": (config.enableDesktopComposition === true || config.autoResize === true) ? true : false,
+            "enable-font-smoothing": config.enableFontSmoothing === true ? true : false,
+            "enable-theming": config.enableTheming === true ? true : false,
+            "enable-full-window-drag": (config.enableFullWindowDrag === true || config.autoResize === true) ? true : false,
+            "enable-menu-animations": config.enableMenuAnimations === true ? true : false,
             // Configuración específica para resize dinámico
             // Usar display-update siempre para evitar reconexiones, incluso con resolución fija
             "resize-method": "display-update",
-            "enable-desktop-composition": config.autoResize ? true : false,
-            "enable-full-window-drag": config.autoResize ? true : false,
             // Portapapeles: desactivar solo si el usuario lo deshabilitó
             "disable-clipboard": (config.redirectClipboard === false) ? true : undefined,
             // Compatibilidad Windows 11: desactivar GFX cuando se active la casilla
