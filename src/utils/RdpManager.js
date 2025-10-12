@@ -17,11 +17,14 @@ class RdpManager {
     const connectionId = `rdp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     
     try {
+      console.log(`[RDP] Iniciando conexión ${connectionId} a ${config.server}:${config.port || 3389}`);
+      
       // Validar configuración
       this.validateConfig(config);
       
       // Crear archivo .rdp temporal con configuración simple
       const rdpFilePath = await this.createRdpFile(config, connectionId);
+      console.log(`[RDP] Archivo temporal creado: ${rdpFilePath}`);
       
       // Construir argumentos para mstsc.exe
       const args = this.buildMstscArgs(config, rdpFilePath);
@@ -36,8 +39,13 @@ class RdpManager {
         process: process,
         rdpFilePath: rdpFilePath,
         status: 'connecting',
-        startTime: Date.now()
+        startTime: Date.now(),
+        server: config.server,
+        port: config.port || 3389,
+        username: config.username
       });
+      
+      console.log(`[RDP] Conexión ${connectionId} guardada en activeConnections. Total: ${this.activeConnections.size}`);
       
       // Configurar handlers
       this.setupProcessHandlers(process, connectionId, onConnect, onDisconnect, onError);
@@ -45,7 +53,7 @@ class RdpManager {
       return connectionId;
       
     } catch (error) {
-      console.error(`Error starting RDP connection ${connectionId}:`, error);
+      console.error(`[RDP] Error starting RDP connection ${connectionId}:`, error);
       throw error;
     }
   }
@@ -57,13 +65,17 @@ class RdpManager {
     const connection = this.activeConnections.get(connectionId);
     
     if (!connection) {
+      console.log(`[RDP] No se encontró conexión ${connectionId} para desconectar`);
       return false;
     }
     
     try {
+      console.log(`[RDP] Desconectando ${connectionId} (${connection.server}:${connection.port})`);
+      
       // Terminar proceso si existe
       if (connection.process && !connection.process.killed) {
         connection.process.kill('SIGTERM');
+        console.log(`[RDP] Proceso terminado para ${connectionId}`);
       }
       
       // Limpiar archivo temporal si existe
@@ -73,11 +85,12 @@ class RdpManager {
       
       // Remover de conexiones activas
       this.activeConnections.delete(connectionId);
+      console.log(`[RDP] Conexión ${connectionId} eliminada. Total restante: ${this.activeConnections.size}`);
       
       return true;
       
     } catch (error) {
-      console.error(`Error disconnecting ${connectionId}:`, error);
+      console.error(`[RDP] Error disconnecting ${connectionId}:`, error);
       return false;
     }
   }
@@ -286,21 +299,31 @@ class RdpManager {
     // Con start, el proceso se ejecuta de forma independiente
     connection.status = 'launched';
     
-    // Considerar conectado después de un delay para dar tiempo a certificados
+    console.log(`[RDP] Conexión lanzada: ${connectionId} - esperando 8 segundos para confirmar`);
+    
+    // Considerar conectado después de un delay más corto
+    // 8 segundos es suficiente para que se abra la ventana de mstsc
     setTimeout(() => {
       if (connection.status === 'launched') {
         connection.status = 'connected';
+        console.log(`[RDP] Conexión confirmada como conectada: ${connectionId}`);
         if (onConnect) {
           onConnect(connectionId);
         }
       }
-    }, 35000); // 35 segundos de delay para dar tiempo a certificados
+    }, 8000); // 8 segundos de delay
 
     // Con exec usamos 'close' en lugar de 'exit'
     process.on('close', (code, signal) => {
-      // Con start, el proceso se cierra inmediatamente pero mstsc.exe sigue ejecutándose
-      // Solo marcar como desconectado si hay un error real
+      console.log(`[RDP] Proceso cerrado para ${connectionId} - code: ${code}, signal: ${signal}`);
+      
+      // Con start, el proceso launcher se cierra inmediatamente pero mstsc.exe sigue ejecutándose
+      // No hacer nada aquí ya que code === 0 indica que el comando start se ejecutó correctamente
+      // El proceso mstsc.exe sigue corriendo independientemente
+      
+      // Solo marcar como desconectado si hay un error real del launcher
       if (code !== 0 && code !== null) {
+        console.log(`[RDP] Error en launcher para ${connectionId}, marcando como desconectado`);
         connection.status = 'disconnected';
         
         if (onDisconnect) {
@@ -314,16 +337,19 @@ class RdpManager {
         
         // Remover de conexiones activas
         this.activeConnections.delete(connectionId);
+      } else {
+        console.log(`[RDP] Launcher cerrado normalmente para ${connectionId}, mstsc.exe sigue ejecutándose`);
       }
     });
 
     // Error en el proceso
     process.on('error', (error) => {
-      console.error(`RDP process error for connection ${connectionId}:`, error);
+      console.error(`[RDP] Error en proceso launcher para ${connectionId}:`, error);
       
       // Solo marcar como error si realmente hay un problema
       if (connection.status !== 'connected') {
         connection.status = 'error';
+        console.log(`[RDP] Marcando ${connectionId} como error`);
         
         if (onError) {
           onError(connectionId, error);

@@ -6,11 +6,15 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
 import { Divider } from 'primereact/divider';
 
-const RdpSessionTab = ({ rdpConfig, tabId, connectionStatus: tabConnectionStatus, connectionInfo: tabConnectionInfo, onEditConnection }) => {
+const RdpSessionTab = ({ rdpConfig, tabId, connectionStatus: tabConnectionStatus, connectionInfo: tabConnectionInfo, isActive, onEditConnection }) => {
   const [connectionStatus, setConnectionStatus] = useState(tabConnectionStatus || 'disconnected');
   const [connectionInfo, setConnectionInfo] = useState(tabConnectionInfo || null);
   const [error, setError] = useState(null);
   const toast = React.useRef(null);
+
+  // Nota: isActive indica si esta pestaña está visible actualmente
+  // Para sesiones RDP (mstsc.exe), la conexión es un proceso independiente que no se ve afectado por cambios de pestaña
+  // Sin embargo, mantenemos esta prop para posibles mejoras futuras y consistencia con otros componentes
 
   // Sincronizar con el estado de la pestaña
   useEffect(() => {

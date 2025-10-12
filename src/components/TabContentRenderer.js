@@ -807,6 +807,7 @@ const TabContentRenderer = React.memo(({
         tabId={tab.key}
         connectionStatus={tab.connectionStatus}
         connectionInfo={tab.connectionInfo}
+        isActive={isActiveTab}
         onEditConnection={(rdpConfig, tabId) => {
           // Buscar la pestaña RDP para obtener el originalKey
           const rdpTab = rdpTabs.find(tab => tab.key === tabId);
