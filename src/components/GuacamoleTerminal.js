@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } f
 import { Button } from 'primereact/button';
 import Guacamole from 'guacamole-common-js';
 import ResizeController from '../utils/ResizeController';
+import ErrorMapper from '../utils/guacamoleErrorMapper';
 
 const GuacamoleTerminal = forwardRef(({ 
     tabId = 'default',
@@ -61,6 +62,7 @@ const GuacamoleTerminal = forwardRef(({
     const lastSentSizeRef = useRef({ width: 0, height: 0, at: 0 });
     // Anti ping-pong A->B->A
     // Solo se mantiene el último tamaño y tiempos; el coalesce lo gestiona el ResizeController
+    const hasFatalErrorRef = useRef(false);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -296,10 +298,24 @@ const GuacamoleTerminal = forwardRef(({
                  // Crear token de conexión
                  // Log crítico: verificar configuración antes de enviar al backend
                  
-                 const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
+                const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
                 
                 if (!tokenResponse.success) {
-                    throw new Error(tokenResponse.error);
+                    try {
+                        const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                            ? ErrorMapper.mapGuacamoleError({ message: tokenResponse.error, type: 'token' })
+                            : null;
+                        const userMsg = mapped && mapped.userMessage ? mapped.userMessage : (tokenResponse.error || 'Error creando token');
+                        hasFatalErrorRef.current = true;
+                        setConnectionState('error');
+                        setErrorMessage(userMsg);
+                        return;
+                    } catch (_) {
+                        hasFatalErrorRef.current = true;
+                        setConnectionState('error');
+                        setErrorMessage(tokenResponse.error || 'Error creando token');
+                        return;
+                    }
                 }
 
                 // Configurar tunnel WebSocket
@@ -471,6 +487,7 @@ const GuacamoleTerminal = forwardRef(({
 
                 // Eventos de estado de conexión
                 client.onstatechange = (state) => {
+                    if (hasFatalErrorRef.current) return; // Mantener pantalla de error hasta que el usuario reintente
                     const stateNames = {
                         0: 'IDLE',
                         1: 'CONNECTING', 
@@ -873,21 +890,46 @@ const GuacamoleTerminal = forwardRef(({
                 };
 
                                  // Eventos de error
-                 client.onerror = (error) => {
+                client.onerror = (error) => {
                      console.error('❌ Error en cliente Guacamole:', error);
                      console.error('❌ Detalles del error:', {
                          message: error.message,
                          stack: error.stack,
                          type: error.type
                      });
-                     setConnectionState('error');
-                     setErrorMessage(`Error de conexión: ${error.message || 'Error desconocido'}`);
+                    hasFatalErrorRef.current = true;
+                    setConnectionState('error');
+                    try {
+                        const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                            ? ErrorMapper.mapGuacamoleError(error, {
+                                phase: (connectionStateRef.current === 'connected') ? 'connected' : 'connecting',
+                                elapsedMs: Date.now() - connectStartedAt
+                              })
+                            : null;
+                        const userMsg = mapped && mapped.userMessage 
+                            ? mapped.userMessage 
+                            : (`Error de conexión: ${error?.message || 'Error desconocido'}`);
+                        setErrorMessage(userMsg);
+                    } catch (_) {
+                        setErrorMessage(`Error de conexión: ${error?.message || 'Error desconocido'}`);
+                    }
                  };
                  
                  // Eventos de datos recibidos (para debug)
-                 if (tunnel.onerror) {
+                if (tunnel.onerror) {
                      tunnel.onerror = (error) => {
                          console.error('❌ Error en tunnel WebSocket:', error);
+                        try {
+                            const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                                ? ErrorMapper.mapGuacamoleError(error, {
+                                    phase: (connectionStateRef.current === 'connected') ? 'connected' : 'connecting',
+                                    elapsedMs: Date.now() - connectStartedAt
+                                  })
+                                : null;
+                            if (mapped && mapped.userMessage) {
+                                setErrorMessage(mapped.userMessage);
+                            }
+                        } catch (_) {}
                      };
                  }
                  
@@ -907,8 +949,16 @@ const GuacamoleTerminal = forwardRef(({
                 // Timeout de conexión (30 segundos)
                 const connectionTimeout = setTimeout(() => {
                     console.error('⏰ Timeout de conexión RDP - 30 segundos');
+                    hasFatalErrorRef.current = true;
                     setConnectionState('error');
-                                                    setErrorMessage(`Timeout: El servidor RDP no responde (${rdpConfig.hostname} no existe?)`);
+                    try {
+                        const userMsg = ErrorMapper && typeof ErrorMapper.mapTimeoutError === 'function'
+                            ? ErrorMapper.mapTimeoutError(rdpConfig?.hostname || rdpConfig?.server)
+                            : `Timeout: El servidor RDP no responde (${rdpConfig?.hostname || rdpConfig?.server || ''} no existe?)`;
+                        setErrorMessage(userMsg);
+                    } catch (_) {
+                        setErrorMessage(`Timeout: El servidor RDP no responde (${rdpConfig?.hostname || rdpConfig?.server || ''} no existe?)`);
+                    }
                     if (client) {
                         client.disconnect();
                     }
@@ -919,8 +969,9 @@ const GuacamoleTerminal = forwardRef(({
                 client.connect();
                 
                                  // Limpiar timeout cuando se conecte exitosamente
-                 const originalStateChange = client.onstatechange;
-                 client.onstatechange = (state) => {
+                const originalStateChange = client.onstatechange;
+                client.onstatechange = (state) => {
+                    if (hasFatalErrorRef.current) return; // No sobrescribir estado de error
                      if (state === 3) { // CONNECTED
                          clearTimeout(connectionTimeout);
                      }
@@ -945,14 +996,35 @@ const GuacamoleTerminal = forwardRef(({
                             }, 200);
                             return;
                         }
+                        // Si Guacamole reporta SESSION_CONFLICT durante conexión, remapear a mensaje más claro
+                        try {
+                            const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function'
+                                ? ErrorMapper.mapGuacamoleError({ code: 519, message: 'SESSION_CONFLICT' }, { phase: 'connecting', elapsedMs: elapsed })
+                                : null;
+                            if (mapped && mapped.userMessage && mapped.kind !== 'conflict') {
+                                hasFatalErrorRef.current = true;
+                                setConnectionState('error');
+                                setErrorMessage(mapped.userMessage);
+                                return;
+                            }
+                        } catch {}
                      }
                      originalStateChange(state);
                  };
 
             } catch (error) {
                 console.error('❌ Error inicializando conexión Guacamole:', error);
+                hasFatalErrorRef.current = true;
                 setConnectionState('error');
-                setErrorMessage(error.message);
+                try {
+                    const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function' 
+                        ? ErrorMapper.mapGuacamoleError(error)
+                        : null;
+                    const userMsg = mapped && mapped.userMessage ? mapped.userMessage : (error?.message || 'Error desconocido');
+                    setErrorMessage(userMsg);
+                } catch (_) {
+                    setErrorMessage(error?.message || 'Error desconocido');
+                }
             }
         };
 
@@ -993,7 +1065,7 @@ const GuacamoleTerminal = forwardRef(({
                 guacamoleClientRef.current = null;
             }
         };
-    }, [isGuacamoleLoaded, rdpConfig, tabId]);
+    }, [isGuacamoleLoaded, rdpConfig, tabId, connectionState]);
 
     // Desconexión segura en recargas/cierrres de ventana
     useEffect(() => {
@@ -1930,10 +2002,11 @@ const GuacamoleTerminal = forwardRef(({
                         <i className="pi pi-exclamation-triangle" style={{ fontSize: '48px', marginBottom: '16px', color: '#f44336' }} />
                         <h3>Error de Conexión</h3>
                         <p style={{ textAlign: 'center', marginBottom: '20px' }}>{errorMessage}</p>
-                        <Button 
+                    <Button 
                             label="Reintentar" 
                             icon="pi pi-refresh" 
                             onClick={() => {
+                                hasFatalErrorRef.current = false;
                                 setConnectionState('disconnected');
                                 setErrorMessage('');
                             }}
