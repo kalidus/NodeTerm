@@ -147,8 +147,8 @@ const GuacamoleTerminal = forwardRef(({
                     throw new Error('Electron IPC no está disponible');
                 }
 
-                // Esperar un poco para asegurar que los servicios estén listos
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Esperar un poco para asegurar que los servicios estén listos (optimizado)
+                await new Promise(resolve => setTimeout(resolve, 300));
 
                                  // Obtener estado del servicio Guacamole con reintentos
                  let status = null;
@@ -178,7 +178,7 @@ const GuacamoleTerminal = forwardRef(({
                     } catch (error) {
                         console.error(`❌ Error en intento ${attempts}:`, error);
                         if (attempts < maxAttempts) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            await new Promise(resolve => setTimeout(resolve, 400));
                         }
                     }
                 }
@@ -191,13 +191,13 @@ const GuacamoleTerminal = forwardRef(({
                     throw new Error('Servidor Guacamole no está ejecutándose');
                 }
 
-                // Warm-up si el servidor WebSocket acaba de arrancar
+                // Warm-up si el servidor WebSocket acaba de arrancar (optimizado)
                 try {
                     const readyAt = Number(status.server.readyAt || 0);
                     if (readyAt > 0) {
                         const sinceReady = Date.now() - readyAt;
-                        if (sinceReady < 2000) {
-                            const waitMs = 2000 - sinceReady + 200;
+                        if (sinceReady < 800) {
+                            const waitMs = 800 - sinceReady;
                             await new Promise(resolve => setTimeout(resolve, waitMs));
                         }
                     }
@@ -416,12 +416,12 @@ const GuacamoleTerminal = forwardRef(({
                      // Añadir al contenedor
                      container.appendChild(displayElement);
                      
-                     // Forzar un refresco del display
+                     // Forzar un refresco del display (optimizado)
                      setTimeout(() => {
                          if (display.onresize) {
                              display.onresize();
                          }
-                     }, 100);
+                     }, 50);
                  } else {
                      console.error('❌ Contenedor no encontrado');
                  }
@@ -508,13 +508,13 @@ const GuacamoleTerminal = forwardRef(({
                              container.style.display = 'block';
                          }
                          
-                         // Forzar un refresco del display después de conectar
+                         // Forzar un refresco del display después de conectar (optimizado)
                          setTimeout(() => {
                             if (display && display.onresize) {
                                 // Siempre refrescar el display localmente; esto no envía tamaño
                                 display.onresize();
                              }
-                         }, 500);
+                         }, 200);
                          
                         setConnectionState('connected');
                         setIsRdpSessionActive(true); // Marcar sesión RDP como activa
@@ -584,7 +584,7 @@ const GuacamoleTerminal = forwardRef(({
                                  const container = containerRef.current;
                                  if (!container) {
                                      if (attempt < 5) {
-                                         setTimeout(() => attemptInitialResize(attempt + 1), 500);
+                                         setTimeout(() => attemptInitialResize(attempt + 1), 200);
                                      }
 
                           // Si hay un resize pendiente post-reconexión (por inactividad), enviarlo una vez
@@ -701,7 +701,7 @@ const GuacamoleTerminal = forwardRef(({
                                      } catch (e) {
                                          console.error('❌ Error en resize inicial:', e);
                                       if (attempt < 5) {
-                                          setTimeout(() => attemptInitialResize(attempt + 1), 1000);
+                                          setTimeout(() => attemptInitialResize(attempt + 1), 400);
                                      }
                                  }
                               };
