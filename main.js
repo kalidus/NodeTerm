@@ -337,6 +337,22 @@ function createWindow() {
     }
   });
 
+  // 🚀 PRECALENTAMIENTO: Iniciar guacd en paralelo mientras se carga la UI
+  // Esto reduce significativamente el tiempo de primera conexión RDP
+  (async () => {
+    try {
+      console.log('🔥 Precalentando guacd en background...');
+      const pref = await loadPreferredGuacdMethod();
+      if (pref) {
+        guacdService.setPreferredMethod(pref);
+      }
+      await guacdService.initialize();
+      console.log('✅ Guacd precalentado y listo');
+    } catch (error) {
+      console.warn('⚠️ Error en precalentamiento de guacd:', error.message);
+    }
+  })();
+
   mainWindow.loadURL(
     process.env.NODE_ENV === 'development'
       ? 'http://localhost:3000'

@@ -132,9 +132,9 @@ const GuacamoleTerminal = forwardRef(({
                     }
                 }
 
-                // Aplicar congelación inicial (por defecto 8000ms, configurable vía localStorage)
+                // Aplicar congelación inicial (por defecto 4000ms optimizado, configurable vía localStorage)
                 try {
-                    const freezeMs = Math.max(0, parseInt(localStorage.getItem('rdp_initial_freeze_ms') || '8000', 10));
+                    const freezeMs = Math.max(0, parseInt(localStorage.getItem('rdp_initial_freeze_ms') || '4000', 10));
                     if (rdpConfig && rdpConfig.freezeInitialResize) {
                         freezeResizeUntilRef.current = Date.now() + freezeMs;
                     } else {
@@ -234,12 +234,12 @@ const GuacamoleTerminal = forwardRef(({
                                 cont.appendChild(probe);
                             }
                         } catch {}
-                        // Esperar a que el layout se estabilice
-                        await wait(150);
+                        // Esperar a que el layout se estabilice (optimizado a ~800ms máximo)
+                        await wait(100);
                         let last = { w: 0, h: 0 };
                         let stableCount = 0;
                         let attempts = 0;
-                        while (attempts < 100) { // hasta ~5s
+                        while (attempts < 15) { // hasta ~800ms (15 * 50ms + 100ms inicial)
                             await wait(50);
                             const now = measureContainer();
                             const dw = Math.abs(now.w - last.w);
