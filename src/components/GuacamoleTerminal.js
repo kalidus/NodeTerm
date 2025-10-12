@@ -633,11 +633,13 @@ const GuacamoleTerminal = forwardRef(({
                                      }
 
                                       // 2) Enviar tamaño al servidor
-                                       if (client.sendSize && isActive) {
-                                             console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight}`);
+                                     // IMPORTANTE: El resize inicial SIEMPRE debe enviarse, incluso si la pestaña no está activa
+                                     // Esto es crítico para configurar correctamente la sesión RDP desde el inicio
+                                       if (client.sendSize) {
+                                             console.log(`📡 Resize inicial via sendSize: ${newWidth}x${newHeight} (isActive: ${isActive})`);
                                              client.sendSize(newWidth, newHeight);
                                      } else if (client.sendInstruction) {
-                                         console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight}`);
+                                         console.log(`📡 Resize inicial via sendInstruction: ${newWidth}x${newHeight} (isActive: ${isActive})`);
                                          client.sendInstruction("size", newWidth, newHeight);
                                          } else {
                                              console.log(`⚠️ No se encontró método de resize para resize inicial`);
@@ -666,8 +668,9 @@ const GuacamoleTerminal = forwardRef(({
                                              const ok = Math.abs(cw - newWidth) < 40 && Math.abs(ch - newHeight) < 40;
                                              if (ok) return;
                                              if (attempt >= 3) return;
-                                              // Reenviar tamaño una vez más
-                                               if (client.sendSize && isActive && allowResizeNow()) client.sendSize(newWidth, newHeight);
+                                              // Reenviar tamaño una vez más (como parte del resize inicial, NO verificar isActive)
+                                             console.log(`🔄 Reintento ${attempt} de resize inicial: ${newWidth}x${newHeight}`);
+                                               if (client.sendSize && allowResizeNow()) client.sendSize(newWidth, newHeight);
                                              else if (client.sendInstruction) client.sendInstruction("size", newWidth, newHeight);
                                              const disp = client.getDisplay?.();
                                              if (disp?.onresize) disp.onresize();
@@ -1071,6 +1074,7 @@ const GuacamoleTerminal = forwardRef(({
 
     // Mantener ref sincronizado con el estado de actividad de la pestaña
     useEffect(() => {
+        console.log(`[Guacamole ${tabId}] Cambio de estado isActive: ${isActiveRef.current} -> ${isActive}`);
         isActiveRef.current = isActive;
     }, [isActive]);
 
@@ -1095,13 +1099,22 @@ const GuacamoleTerminal = forwardRef(({
             if (!client || !client.getDisplay) return false;
             const display = client.getDisplay();
             // Enviar sólo si pestaña está activa y display presente
-            if (!isActiveRef.current) return false;
+            // Esta restricción es correcta para resizes NO iniciales
+            if (!isActiveRef.current) {
+                console.log(`[Guacamole ${tabId}] canSend: false (pestaña inactiva)`);
+                return false;
+            }
             return !!(display && display.getDefaultLayer && display.getDefaultLayer());
         };
         const sendSize = (w, h) => {
             const client = guacamoleClientRef.current;
             if (!client || !client.sendSize) return;
-            if (!isActiveRef.current) return; // nunca enviar desde pestaña inactiva
+            // Esta restricción es correcta para resizes NO iniciales
+            if (!isActiveRef.current) {
+                console.log(`[Guacamole ${tabId}] sendSize bloqueado: pestaña inactiva`);
+                return;
+            }
+            console.log(`[Guacamole ${tabId}] Enviando resize posterior: ${w}x${h}`);
             client.sendSize(w, h);
         };
         const getContainer = () => containerRef.current;
