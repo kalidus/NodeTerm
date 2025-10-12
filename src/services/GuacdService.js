@@ -544,7 +544,7 @@ class GuacdService {
         // Docker proceso cerrado
       });
 
-      // Esperar un momento y verificar si el contenedor está corriendo
+      // Esperar un momento y verificar si el contenedor está corriendo (optimizado)
       setTimeout(async () => {
         try {
           // Verificar si el puerto está disponible (cerrado = guacd corriendo)
@@ -558,7 +558,7 @@ class GuacdService {
         } catch (error) {
           resolve(false);
         }
-      }, 3000);
+      }, 1500);
     });
   }
 
@@ -720,7 +720,7 @@ class GuacdService {
         resolve(false);
       });
 
-      // Esperar un momento y verificar si está corriendo
+      // Esperar un momento y verificar si está corriendo (optimizado)
       setTimeout(async () => {
         try {
           const available = await this.isPortAvailable(this.port);
@@ -736,7 +736,7 @@ class GuacdService {
           console.log('❌ Error verificando Native guacd:', error);
           resolve(false);
         }
-      }, 2000);
+      }, 1500);
     });
   }
 
@@ -826,7 +826,7 @@ class GuacdService {
             } catch (e) {
               resolve(false);
             }
-          }, 3000);
+          }, 1500);
         });
       });
     });
@@ -859,7 +859,7 @@ class GuacdService {
     return new Promise((resolve) => {
       const socket = new net.Socket();
       
-      socket.setTimeout(2000); // Aumentar timeout
+      socket.setTimeout(1000); // Timeout optimizado para conexión más rápida
       
       socket.on('connect', () => {
         socket.destroy();
