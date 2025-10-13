@@ -75,7 +75,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^cygwin:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
-        /^updater-event$/
+        /^updater-event$/,
+        /^path-auto-corrected$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
         // Deliberately strip event as it includes `sender`

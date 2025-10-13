@@ -79,6 +79,77 @@ function ensureDriveHostDir() {
 }
 
 /**
+ * Detecta si una ruta es incompatible con el sistema operativo actual
+ */
+function isPathIncompatibleWithOS(inputPath) {
+  try {
+    if (typeof inputPath !== 'string' || !inputPath.trim()) return false;
+    
+    const trimmedPath = inputPath.trim();
+    const currentPlatform = process.platform;
+    
+    // Detectar rutas de Windows en sistemas no-Windows
+    if (currentPlatform !== 'win32' && /^[A-Za-z]:[\\/]/.test(trimmedPath)) {
+      return true;
+    }
+    
+    // Detectar rutas de Unix en Windows (menos común pero posible)
+    if (currentPlatform === 'win32' && trimmedPath.startsWith('/') && !trimmedPath.startsWith('//')) {
+      return true;
+    }
+    
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Normaliza una ruta para el sistema operativo actual
+ */
+function normalizePathForCurrentOS(inputPath) {
+  try {
+    if (typeof inputPath !== 'string' || !inputPath.trim()) {
+      return ensureDriveHostDir();
+    }
+    
+    const trimmedPath = inputPath.trim();
+    const currentPlatform = process.platform;
+    
+    // Si la ruta es incompatible, usar la ruta por defecto
+    if (isPathIncompatibleWithOS(trimmedPath)) {
+      console.warn(`⚠️ Ruta incompatible detectada: "${trimmedPath}" en ${currentPlatform}`);
+      console.log('🔄 Usando ruta por defecto para el sistema actual');
+      return ensureDriveHostDir();
+    }
+    
+    // Normalizar separadores de ruta según el SO
+    const normalizedPath = currentPlatform === 'win32' 
+      ? trimmedPath.replace(/\//g, '\\')
+      : trimmedPath.replace(/\\/g, '/');
+    
+    // Verificar que la ruta existe y es accesible
+    try {
+      if (!fs.existsSync(normalizedPath)) {
+        console.warn(`⚠️ Ruta no existe: "${normalizedPath}"`);
+        console.log('🔄 Usando ruta por defecto');
+        return ensureDriveHostDir();
+      }
+      
+      // Verificar permisos de escritura
+      fs.accessSync(normalizedPath, fs.constants.W_OK);
+      return normalizedPath;
+    } catch (error) {
+      console.warn(`⚠️ Ruta no accesible: "${normalizedPath}" - ${error.message}`);
+      console.log('🔄 Usando ruta por defecto');
+      return ensureDriveHostDir();
+    }
+  } catch (_) {
+    return ensureDriveHostDir();
+  }
+}
+
+/**
  * Convierte una ruta de Windows (C:\\Users\\...) a su ruta equivalente en WSL (/mnt/c/Users/...).
  * Si no parece una ruta de Windows, devuelve el input tal cual.
  */
@@ -1110,12 +1181,28 @@ class GuacdService {
    * Para docker, siempre devuelve '/guacdrive' (requiere que el contenedor monte hostDir previamente).
    * Para wsl, si el usuario especifica una ruta personalizada, la convierte a WSL; si no, usa ruta nativa de Linux.
    * Para nativo, devuelve hostDir.
+   * 
+   * NUEVO: Valida automáticamente rutas incompatibles con el SO actual y las corrige.
    */
   resolveDrivePath(hostDir) {
     const method = this.detectedMethod || this.preferredMethod || '';
-    const dir = typeof hostDir === 'string' && hostDir.trim().length > 0 ? hostDir.trim() : this.driveHostDir;
     
-    console.log('[GuacdService] resolveDrivePath llamado con:', { hostDir, dir, currentDriveHostDir: this.driveHostDir, method });
+    // NUEVA VALIDACIÓN: Normalizar ruta para el SO actual
+    const originalDir = typeof hostDir === 'string' && hostDir.trim().length > 0 ? hostDir.trim() : this.driveHostDir;
+    const dir = normalizePathForCurrentOS(originalDir);
+    
+    console.log('[GuacdService] resolveDrivePath llamado con:', { 
+      hostDir, 
+      originalDir, 
+      normalizedDir: dir, 
+      currentDriveHostDir: this.driveHostDir, 
+      method 
+    });
+    
+    // Si la ruta fue corregida automáticamente, notificar
+    if (originalDir !== dir) {
+      console.warn(`⚠️ Ruta corregida automáticamente: "${originalDir}" → "${dir}"`);
+    }
     
     if (method === 'docker') {
       if (dir && this.driveHostDir && path.resolve(dir) !== path.resolve(this.driveHostDir)) {
