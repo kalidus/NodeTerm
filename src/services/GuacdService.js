@@ -512,7 +512,7 @@ class GuacdService {
           return;
         }
 
-      // Intentar iniciar contenedor guacd
+      // Intentar iniciar contenedor guacd con imagen multi-arquitectura
       const dockerArgs = [
         'run',
         '--name', 'nodeterm-guacd',
@@ -522,7 +522,7 @@ class GuacdService {
         // Montar carpeta de staging del host dentro del contenedor
         // Importante: pasar como un único argumento host:container
         '-v', `${this.driveHostDir}:/guacdrive`,
-        'guacamole/guacd'
+        'guacamole/guacd:latest' // Usar tag latest para mejor compatibilidad multi-arquitectura
       ];
 
       this.guacdProcess = spawn(dockerCommand, dockerArgs);
