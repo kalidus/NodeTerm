@@ -405,7 +405,13 @@ class GuacdService {
 
       // Orden dinámico según preferencia y SO
       const isWindows = this.platform === 'win32';
-      const all = isWindows ? ['docker', 'wsl', 'mock'] : ['docker', 'native', 'mock'];
+      const isMacOS = this.platform === 'darwin';
+      // Windows: solo docker, wsl, mock (no hay guacd nativo)
+      // macOS: solo docker, mock (no hay guacd nativo)
+      // Linux: docker, native, mock (guacd nativo disponible)
+      const all = isWindows ? ['docker', 'wsl', 'mock'] : 
+                  isMacOS ? ['docker', 'mock'] : 
+                  ['docker', 'native', 'mock'];
       const pref = all.includes(this.preferredMethod) ? this.preferredMethod : 'docker';
       const rest = all.filter(m => m !== pref);
       const orderedMethods = [pref, ...rest];
@@ -512,20 +518,33 @@ class GuacdService {
           return;
         }
 
-      // Intentar iniciar contenedor guacd con imagen multi-arquitectura
-      const dockerArgs = [
+      // Configurar variables de entorno optimizadas
+      const envVars = {
+        GUACD_LOG_LEVEL: 'WARN',           // Reducir logs para mejor rendimiento
+        GUACD_MAX_LOG_LEVEL: 'WARN',
+        // Optimizaciones específicas por plataforma
+        ...(process.platform === 'darwin' ? {
+          MALLOC_ARENA_MAX: '2',           // Optimización de memoria para macOS
+          MALLOC_MMAP_THRESHOLD_: '131072'
+        } : {})
+      };
+
+      // Crear comando Docker con variables de entorno optimizadas
+      const dockerArgsWithEnv = [
         'run',
         '--name', 'nodeterm-guacd',
         '--rm', // Eliminar contenedor al salir
         '-d', // Modo detached
         '-p', `${this.port}:4822`,
+        // Agregar variables de entorno
+        ...Object.entries(envVars).flatMap(([key, value]) => ['-e', `${key}=${value}`]),
         // Montar carpeta de staging del host dentro del contenedor
         // Importante: pasar como un único argumento host:container
         '-v', `${this.driveHostDir}:/guacdrive`,
         'guacamole/guacd:latest' // Usar tag latest para mejor compatibilidad multi-arquitectura
       ];
 
-      this.guacdProcess = spawn(dockerCommand, dockerArgs);
+      this.guacdProcess = spawn(dockerCommand, dockerArgsWithEnv);
 
       this.guacdProcess.stdout.on('data', (data) => {
         // Docker stdout
@@ -608,23 +627,31 @@ class GuacdService {
 
   /**
    * Intenta iniciar guacd usando binarios nativos
+   * NOTA: Solo disponible en Linux (Windows y macOS usan Docker)
    */
   async startWithNative() {
     return new Promise(async (resolve) => {
       const platform = process.platform;
       const isWindows = platform === 'win32';
+      const isMacOS = platform === 'darwin';
 
-      // Buscar guacd en diferentes ubicaciones predefinidas
+      // En Windows y macOS, guacd nativo no está disponible
+      if (isWindows || isMacOS) {
+        console.log('❌ guacd nativo no está disponible en', isWindows ? 'Windows' : 'macOS', '. Usa Docker.');
+        resolve(false);
+        return;
+      }
+
+      // Buscar guacd en diferentes ubicaciones predefinidas (solo Linux)
       const userDataInstallDir = path.join(getUserDataDir(), 'guacd');
       const possiblePaths = [
         // PATH del sistema
-        isWindows ? 'guacd.exe' : 'guacd',
         'guacd',
         // Copias locales en el workspace (dev)
-        path.join(__dirname, '..', '..', 'binaries', 'guacd', 'guacd.exe'),
-        path.join(__dirname, '..', '..', 'binaries', 'guacd', 'bin', 'guacd.exe'),
+        path.join(__dirname, '..', '..', 'binaries', 'guacd', 'guacd'),
+        path.join(__dirname, '..', '..', 'binaries', 'guacd', 'bin', 'guacd'),
         // Instalación previa en userData (prod)
-        path.join(userDataInstallDir, 'bin', 'guacd.exe')
+        path.join(userDataInstallDir, 'bin', 'guacd')
       ];
 
       let guacdPath = null;
@@ -671,10 +698,10 @@ class GuacdService {
       }
 
       if (!guacdPath) {
-        console.log('❌ guacd no disponible.');
+        console.log('❌ guacd nativo no disponible.');
         console.log('💡 Sugerencias:');
-        console.log('   - Verifica que el paquete binaries/guacd.zip esté incluido en el build');
-        console.log('   - O instala Docker Desktop para usar el contenedor guacamole/guacd');
+        console.log('   - Instala guacd desde el repositorio de tu distribución Linux');
+        console.log('   - O usa Docker para usar el contenedor guacamole/guacd');
         resolve(false);
         return;
       }
@@ -684,10 +711,12 @@ class GuacdService {
       try {
         const finalCwd = spawnCwd || path.dirname(guacdPath);
         const envVars = { ...process.env };
-        // Asegurar resolución de DLLs desde el directorio del ejecutable
-        try {
-          envVars.PATH = `${finalCwd};${envVars.PATH || ''}`;
-        } catch (_) {}
+        // Asegurar resolución de DLLs desde el directorio del ejecutable (solo Windows)
+        if (isWindows) {
+          try {
+            envVars.PATH = `${finalCwd};${envVars.PATH || ''}`;
+          } catch (_) {}
+        }
         // Intentar configurar ruta de plugins de FreeRDP si existe
         try {
           const pluginsDir = path.join(finalCwd, '..', 'lib', 'freerdp2');
@@ -992,7 +1021,13 @@ class GuacdService {
   }
 
   _continueDetection(resolve) {
-    // Intentar detectar WSL (distros y puerto 4822 escuchando)
+    // Intentar detectar WSL (solo en Windows)
+    if (process.platform !== 'win32') {
+      this.detectedMethod = 'unknown';
+      resolve();
+      return;
+    }
+    
     execFile('wsl.exe', ['-l', '-q'], { encoding: 'buffer' }, (listErr, stdoutBuf) => {
       const tryWSL = async () => {
         try {
@@ -1128,8 +1163,8 @@ class GuacdService {
         // El usuario especificó una ruta personalizada, convertirla a WSL
         return toWslPath(dir);
       } else {
-        // Usar la ruta por defecto nativa de Linux
-        return '/home/kalidus/NodeTermDrive';
+        // Usar la ruta por defecto nativa de Linux (solo en Windows con WSL)
+        return process.platform === 'win32' ? '/home/kalidus/NodeTermDrive' : '/guacdrive';
       }
     }
     if (method === 'native') {
