@@ -1158,74 +1158,36 @@ export function EnhancedSSHForm({
   const [sshPrivateKey, setSSHPrivateKey] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
 
-  // Validación en tiempo real
-  const validateField = (field, value) => {
-    const errors = { ...validationErrors };
+  // Validación solo al intentar crear la conexión
+  const validateForm = () => {
+    const errors = {};
     
-    switch (field) {
-      case 'name':
-        if (!value?.trim()) {
-          errors.name = 'El nombre es requerido';
-        } else {
-          delete errors.name;
-        }
-        break;
-      case 'host':
-        if (!value?.trim()) {
-          errors.host = 'El host es requerido';
-        } else {
-          delete errors.host;
-        }
-        break;
-      case 'user':
-        if (!value?.trim()) {
-          errors.user = 'El usuario es requerido';
-        } else {
-          delete errors.user;
-        }
-        break;
-      case 'auth':
-        if (authMethod === 'password' && !sshPassword?.trim()) {
-          errors.auth = 'La contraseña es requerida';
-        } else if (authMethod === 'key' && !sshPrivateKey?.trim()) {
-          errors.auth = 'La clave privada es requerida';
-        } else {
-          delete errors.auth;
-        }
-        break;
-      case 'port':
-        const portNum = parseInt(value);
-        if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-          errors.port = 'Puerto debe ser un número entre 1 y 65535';
-        } else {
-          delete errors.port;
-        }
-        break;
+    if (!sshName?.trim()) {
+      errors.name = 'El nombre es requerido';
+    }
+    
+    if (!sshHost?.trim()) {
+      errors.host = 'El host es requerido';
+    }
+    
+    if (!sshUser?.trim()) {
+      errors.user = 'El usuario es requerido';
+    }
+    
+    if (authMethod === 'password' && !sshPassword?.trim()) {
+      errors.auth = 'La contraseña es requerida';
+    } else if (authMethod === 'key' && !sshPrivateKey?.trim()) {
+      errors.auth = 'La clave privada es requerida';
+    }
+    
+    const portNum = parseInt(sshPort);
+    if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+      errors.port = 'Puerto debe ser un número entre 1 y 65535';
     }
     
     setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
-
-  // Validar al cambiar valores
-  React.useEffect(() => {
-    validateField('name', sshName);
-  }, [sshName]);
-
-  React.useEffect(() => {
-    validateField('host', sshHost);
-  }, [sshHost]);
-
-  React.useEffect(() => {
-    validateField('user', sshUser);
-  }, [sshUser]);
-
-  React.useEffect(() => {
-    validateField('auth');
-  }, [authMethod, sshPassword, sshPrivateKey]);
-
-  React.useEffect(() => {
-    validateField('port', sshPort);
-  }, [sshPort]);
 
   const handleFileUpload = (event) => {
     const file = event.files[0];
@@ -1239,8 +1201,7 @@ export function EnhancedSSHForm({
   };
 
   const isFormValid = () => {
-    return Object.keys(validationErrors).length === 0 && 
-           sshName?.trim() && 
+    return sshName?.trim() && 
            sshHost?.trim() && 
            sshUser?.trim() &&
            (authMethod === 'password' ? sshPassword?.trim() : sshPrivateKey?.trim());
@@ -1407,11 +1368,8 @@ export function EnhancedSSHForm({
           icon="pi pi-check" 
           className="p-button-primary" 
           onClick={() => {
-            if (isFormValid()) {
-              onSSHConfirm({
-                authMethod,
-                privateKey: authMethod === 'key' ? sshPrivateKey : undefined
-              });
+            if (validateForm()) {
+              onSSHConfirm();
             }
           }}
           style={{ fontSize: '13px', padding: '8px 16px' }}

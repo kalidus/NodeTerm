@@ -216,7 +216,7 @@ export const useFormHandlers = ({
     }
     
     setNodes(nodesCopy);
-    closeSSHDialogWithReset();
+    setShowUnifiedConnectionDialog(false); // Cerrar el diálogo unificado
     
     toast.current.show({
       severity: 'success',
@@ -224,7 +224,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, closeSSHDialogWithReset, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -403,7 +403,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, toast]);
 
   /**
    * Guardar edición de carpeta
