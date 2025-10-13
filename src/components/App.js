@@ -1308,6 +1308,32 @@ const App = () => {
     }
   }, []);
 
+  // Handler para notificaciones de corrección automática de rutas
+  useEffect(() => {
+    const handlePathAutoCorrected = (data) => {
+      const { originalPath, correctedPath, reason } = data;
+      
+      // Mostrar notificación al usuario
+      if (toast.current) {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Ruta corregida automáticamente',
+          detail: `La ruta "${originalPath}" fue incompatible con ${process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : 'Linux'}. Se usó "${correctedPath}" en su lugar.`,
+          life: 8000,
+          closable: true
+        });
+      }
+      
+      console.log(`⚠️ Ruta corregida automáticamente: "${originalPath}" → "${correctedPath}" (${reason})`);
+    };
+
+    // Escuchar eventos de corrección automática de rutas
+    if (window.electron && window.electron.ipcRenderer) {
+      const unsubscribe = window.electron.ipcRenderer.on('path-auto-corrected', handlePathAutoCorrected);
+      return () => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch {} };
+    }
+  }, []);
+
 
 
   useEffect(() => {
