@@ -222,34 +222,10 @@ function registerGuacamoleHandlers({
           
           // Si llega una carpeta de host desde UI, resolverla según método actual
           let resolvedDrivePath = null;
-          let pathWasCorrected = false;
           if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
-            const originalPath = config.driveHostDir.trim();
             resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
-            console.log('🔍 [DEBUG] Resolved drive path:', resolvedDrivePath);
-            
-            // Verificar si la ruta fue corregida automáticamente
-            if (typeof guacdService.getDriveHostDir === 'function') {
-              const currentHostDir = guacdService.getDriveHostDir();
-              if (currentHostDir !== originalPath) {
-                pathWasCorrected = true;
-                console.log(`⚠️ Ruta corregida automáticamente: "${originalPath}" → "${currentHostDir}"`);
-                
-                // Enviar notificación al renderer
-                try {
-                  sendToRenderer('path-auto-corrected', {
-                    originalPath,
-                    correctedPath: currentHostDir,
-                    reason: 'Ruta incompatible con el sistema operativo actual'
-                  });
-                } catch (e) {
-                  console.warn('No se pudo enviar notificación de corrección de ruta:', e);
-                }
-              }
-            }
           } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
             resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
-            console.log('🔍 [DEBUG] Default drive path:', resolvedDrivePath);
           }
           const drivePath = resolvedDrivePath;
           const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';

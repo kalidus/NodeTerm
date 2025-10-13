@@ -118,8 +118,6 @@ function normalizePathForCurrentOS(inputPath) {
     
     // Si la ruta es incompatible, usar la ruta por defecto
     if (isPathIncompatibleWithOS(trimmedPath)) {
-      console.warn(`⚠️ Ruta incompatible detectada: "${trimmedPath}" en ${currentPlatform}`);
-      console.log('🔄 Usando ruta por defecto para el sistema actual');
       return ensureDriveHostDir();
     }
     
@@ -131,8 +129,6 @@ function normalizePathForCurrentOS(inputPath) {
     // Verificar que la ruta existe y es accesible
     try {
       if (!fs.existsSync(normalizedPath)) {
-        console.warn(`⚠️ Ruta no existe: "${normalizedPath}"`);
-        console.log('🔄 Usando ruta por defecto');
         return ensureDriveHostDir();
       }
       
@@ -140,8 +136,6 @@ function normalizePathForCurrentOS(inputPath) {
       fs.accessSync(normalizedPath, fs.constants.W_OK);
       return normalizedPath;
     } catch (error) {
-      console.warn(`⚠️ Ruta no accesible: "${normalizedPath}" - ${error.message}`);
-      console.log('🔄 Usando ruta por defecto');
       return ensureDriveHostDir();
     }
   } catch (_) {
@@ -1191,17 +1185,9 @@ class GuacdService {
     const originalDir = typeof hostDir === 'string' && hostDir.trim().length > 0 ? hostDir.trim() : this.driveHostDir;
     const dir = normalizePathForCurrentOS(originalDir);
     
-    console.log('[GuacdService] resolveDrivePath llamado con:', { 
-      hostDir, 
-      originalDir, 
-      normalizedDir: dir, 
-      currentDriveHostDir: this.driveHostDir, 
-      method 
-    });
-    
-    // Si la ruta fue corregida automáticamente, notificar
+    // Si la ruta fue corregida automáticamente, actualizar driveHostDir
     if (originalDir !== dir) {
-      console.warn(`⚠️ Ruta corregida automáticamente: "${originalDir}" → "${dir}"`);
+      this.driveHostDir = dir;
     }
     
     if (method === 'docker') {
