@@ -1621,6 +1621,8 @@ const App = () => {
     setExpandedKeys,
     setShowCreateGroupDialog,
     setShowSettingsDialog,
+    showUnifiedConnectionDialog,
+    setShowUnifiedConnectionDialog,
     iconTheme: iconThemeSidebar,
     iconSize: iconSize,
     folderIconSize: folderIconSize,

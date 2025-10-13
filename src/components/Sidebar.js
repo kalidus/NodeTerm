@@ -54,6 +54,8 @@ const Sidebar = React.memo(({
   setExpandedKeys,
   setShowCreateGroupDialog,
   setShowSettingsDialog,
+  showUnifiedConnectionDialog,
+  setShowUnifiedConnectionDialog,
 
   iconTheme,
   iconSize = 20,
@@ -113,7 +115,6 @@ const Sidebar = React.memo(({
   
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
-  const [showUnifiedConnectionDialog, setShowUnifiedConnectionDialog] = useState(false);
   
   // Estado para modo de visualización (conexiones o passwords)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords'
