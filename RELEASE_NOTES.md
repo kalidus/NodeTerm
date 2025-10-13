@@ -1,119 +1,118 @@
-# 🚀 NodeTerm v1.5.5 - Release Notes
+# 🚀 NodeTerm v1.5.9 - Release Notes
 
-**Fecha de Release**: 21 de Diciembre, 2024  
-**Tipo de Release**: Patch Release  
-**Versión Anterior**: v1.5.4
+**Fecha de Release**: 13 de Enero, 2025  
+**Tipo de Release**: Feature Release  
+**Versión Anterior**: v1.5.8
 
 ---
 
-## 🎉 ¡Bienvenido a NodeTerm v1.5.5!
+## 🎉 ¡Bienvenido a NodeTerm v1.5.9!
 
-Esta versión se enfoca en mejoras del sistema de temas y personalización, con un nuevo gestor de temas avanzado para pestañas, mejor rendimiento en la gestión de temas, y correcciones importantes de bugs relacionados con la persistencia y aplicación de temas.
+Esta versión introduce el **Password Manager integrado** con soporte completo para KeePass, permitiéndote importar y gestionar tus credenciales de forma segura directamente desde NodeTerm. Además incluye mejoras significativas en la UI/UX y correcciones de bugs importantes.
 
 ---
 
 ## ✨ Características Principales
 
-### 🎨 Sistema de Temas Avanzado
-- **Gestor de Temas para Pestañas**: Nuevo sistema de gestión de temas específico para pestañas
-- **Temas Personalizados**: Soporte completo para temas personalizados con configuración granular
-- **Selector de Temas Mejorado**: Interfaz más intuitiva y fácil de usar
-- **Persistencia de Temas**: Los temas seleccionados se mantienen entre sesiones
+### 🔐 Password Manager Integrado
+- **Integración de KeePass**: Importa y gestiona bases de datos .kdbx de forma nativa
+- **Sidebar de Password Manager**: Nuevo panel lateral dedicado a la gestión de credenciales
+- **Panel de Importación**: Interfaz intuitiva para importar bases de datos KeePass
+- **Auto-completado de Credenciales**: Relleno automático de formularios SSH/RDP desde tus credenciales guardadas
+- **Gestión Segura**: Todas las credenciales se almacenan de forma encriptada
 
-### 🔧 Mejoras de Rendimiento
-- **Gestión de Temas Optimizada**: Mejor rendimiento en la carga y aplicación de temas
-- **Código Más Modular**: Refactorización del sistema de temas para mejor mantenibilidad
-- **Mejor Organización**: Estructura más clara para la gestión de temas
+### 🎨 Mejoras de UI/UX
+- **Nueva Sidebar de Password Manager**: Panel lateral con diseño moderno para gestión de contraseñas
+- **Diálogos Mejorados**: Mejor experiencia de usuario en la importación de KeePass
+- **Iconos y Temas**: Nuevos iconos específicos para el gestor de contraseñas
+- **Interfaz Más Intuitiva**: Navegación mejorada y acceso rápido a credenciales
 
-### 🐛 Correcciones Importantes
-- **Corrección de Temas**: Mejor aplicación de temas en pestañas
-- **Fix de Persistencia**: Los temas se mantienen correctamente al reiniciar la aplicación
-- **Corrección de Rendimiento**: Mejoras en la carga de temas personalizados
+### 🔧 Mejoras Técnicas
+- **Integración kdbxweb**: Librería profesional para manejo de archivos KeePass
+- **Mejor Gestión de Estado**: Optimización en el manejo de credenciales en memoria
+- **Seguridad Mejorada**: Encriptación adicional para credenciales importadas
+- **Código Más Modular**: Refactorización de componentes para mejor mantenibilidad
 
 ---
 
 ## 🎨 Mejoras de UI/UX
 
-### 🎨 Gestión de Temas Mejorada
-- **Selector de Temas Intuitivo**: Interfaz más fácil de usar para selección de temas
-- **Previsualización en Tiempo Real**: Ve los cambios de tema al instante
-- **Persistencia Visual**: Los temas se mantienen visualmente consistentes
-- **Mejor Aplicación**: Los temas se aplican correctamente en todas las pestañas
+### 🔐 Password Manager
+- **Sidebar Integrada**: Acceso rápido a tus credenciales desde el panel lateral
+- **Panel de Importación KeePass**: Interfaz intuitiva para importar bases de datos .kdbx
+- **Auto-completado Inteligente**: Rellena automáticamente formularios SSH/RDP
+- **Gestión Visual**: Lista organizada de todas tus credenciales
+- **Búsqueda Rápida**: Encuentra credenciales fácilmente
 
 ### 🔧 Mejoras de Rendimiento
-- **Carga Más Rápida**: Los temas se cargan más eficientemente
-- **Mejor Gestión de Memoria**: Optimización en el manejo de recursos de temas
-- **Aplicación Instantánea**: Los cambios de tema se aplican sin retrasos
+- **Carga Optimizada**: Mejor rendimiento al cargar bases de datos KeePass
+- **Gestión Eficiente**: Optimización en el manejo de credenciales en memoria
+- **Encriptación Rápida**: Procesamiento eficiente de datos sensibles
 
 ---
 
 ## 🔧 Mejoras Técnicas
 
-### 🚀 Optimización del Sistema de Temas
-- **Gestión de Temas Optimizada**: Mejor rendimiento en la carga y aplicación de temas
-- **Código Más Modular**: Refactorización del sistema de temas para mejor mantenibilidad
-- **Mejor Organización**: Estructura más clara para la gestión de temas
+### 🔐 Integración de KeePass
+- **Librería kdbxweb**: Integración completa con la librería profesional de KeePass
+- **Gestión de Credenciales**: Sistema robusto para manejo de credenciales
+- **Encriptación AES-256**: Seguridad de nivel militar para tus contraseñas
+- **Compatibilidad Total**: Soporte completo para archivos .kdbx v3 y v4
 
 ### 🏗️ Arquitectura Mejorada
-- **Sistema de Temas Refactorizado**: Mejor separación de responsabilidades
-- **Componentes de Tema Reutilizables**: Mayor eficiencia en la gestión de temas
-- **Código Más Limpio**: Mejor organización del código relacionado con temas
+- **Nuevos Servicios**: ImportService para gestión de importación de credenciales
+- **Componentes Modulares**: PasswordManagerSidebar, KeePassImportDialog, KeePassImportPanel
+- **Estado Centralizado**: Mejor gestión del estado de credenciales
+- **Código Más Limpio**: Refactorización completa de componentes relacionados
 
-### 🧪 Preparación para Testing
-- **Sistema de Temas Testeable**: Mejor separación de lógica para testing
-- **Componentes Modulares**: Estructura preparada para testing automatizado
+### 🧪 Seguridad y Privacidad
+- **Almacenamiento Seguro**: Todas las credenciales se almacenan encriptadas
+- **Sin Servicios Externos**: Todo se procesa y almacena localmente
+- **Master Password**: Protección adicional para acceder a credenciales
 
 ---
 
 ## 🐛 Correcciones de Bugs
 
-### 🎨 Correcciones de Temas
-- **Aplicación de Temas**: Mejor aplicación de temas en pestañas
-- **Persistencia de Temas**: Los temas se mantienen correctamente al reiniciar
-- **Carga de Temas**: Mejoras en la carga de temas personalizados
-- **Selector de Temas**: Corrección de problemas en el selector de temas
+### 🔐 Correcciones de Password Manager
+- **Importación de KeePass**: Corrección de problemas al importar bases de datos grandes
+- **Persistencia de Credenciales**: Las credenciales se mantienen correctamente al reiniciar
+- **Auto-completado**: Mejoras en el relleno automático de formularios
+- **Encriptación**: Corrección de problemas de encriptación en credenciales
 
 ### 🔧 Correcciones de Rendimiento
-- **Gestión de Memoria**: Optimización en el manejo de recursos de temas
-- **Carga de Temas**: Mejor rendimiento en la carga de temas
-- **Aplicación de Temas**: Los temas se aplican más eficientemente
+- **Gestión de Memoria**: Optimización en el manejo de credenciales en memoria
+- **Carga de Datos**: Mejor rendimiento al cargar bases de datos KeePass
+- **Renderizado**: Los componentes se renderizan más eficientemente
 
-### 🎯 Correcciones de Funcionalidad
-- **Sistema de Temas**: Corrección de bugs en el sistema de gestión de temas
-- **Persistencia**: Los temas se guardan y cargan correctamente
-- **Aplicación**: Los temas se aplican consistentemente en todas las pestañas
+### 🎯 Correcciones Generales
+- **Estabilidad General**: Mejoras significativas en la estabilidad de la aplicación
+- **UI/UX**: Corrección de problemas visuales en la interfaz
+- **Compatibilidad**: Mejor compatibilidad con diferentes formatos de KeePass
 
 ---
 
 ## 📁 Cambios en la Estructura del Proyecto
 
-### 🗂️ Nueva Organización de Estilos
+### 🗂️ Nuevos Componentes
 ```
-src/styles/
-├── base/
-│   └── base.css
-├── components/
-│   ├── color-selector.css
-│   ├── dialogs.css
-│   ├── forms.css
-│   ├── menus.css
-│   ├── tabs.css
-│   └── terminal.css
-├── layout/
-│   ├── sidebar.css
-│   ├── splitter.css
-│   └── statusbar.css
-├── pages/
-│   ├── dashboard.css
-│   └── file-explorer.css
-└── themes/
-    └── (temas personalizados)
+src/components/
+├── PasswordManagerSidebar.js      # Panel lateral de password manager
+├── KeePassImportDialog.js         # Diálogo de importación KeePass
+└── KeePassImportPanel.js          # Panel de importación de credenciales
+
+src/services/
+└── ImportService.js               # Servicio de importación de credenciales
+
+src/styles/components/
+└── password-manager.css           # Estilos del password manager
 ```
 
-### 📦 Componentes Nuevos
-- **ColorSelector**: Selector de colores avanzado
-- **ImportDialog**: Diálogo de importación de sesiones
-- **SidebarColapsable**: Sidebar con funcionalidad de colapso
+### 📦 Componentes Actualizados
+- **App.js**: Integración del password manager
+- **MainContentArea.js**: Soporte para nuevas funcionalidades
+- **DialogsManager.js**: Nuevos diálogos de KeePass
+- **Sidebar.js**: Integración con password manager sidebar
 
 ---
 
@@ -136,8 +135,8 @@ src/styles/
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama v1.5.5
-git checkout v1.5.5
+# Cambiar a la rama v1.5.9
+git checkout v1.5.9
 
 # Instalar dependencias
 npm install
@@ -205,4 +204,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.5.5!** 🚀
+**¡Disfruta de NodeTerm v1.5.9!** 🚀

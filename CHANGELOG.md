@@ -5,6 +5,29 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.9] - 2025-01-13
+
+### 🔐 Nuevas Características - Password Manager
+- **Integración de KeePass**: Sistema completo de gestor de contraseñas
+- **Sidebar de Password Manager**: Panel lateral para gestión de credenciales
+- **Importación de KeePass**: Importa bases de datos .kdbx
+- **Panel de Importación**: Nueva interfaz para importar credenciales
+- **Auto-completado de Credenciales**: Relleno automático de formularios SSH/RDP
+
+### 🎨 Mejoras de UI/UX
+- **Nueva Sidebar**: Panel lateral para gestión de contraseñas
+- **Diálogos Mejorados**: Mejor UX en importación de KeePass
+- **Iconos y Temas**: Nuevos iconos para password manager
+
+### 🔧 Mejoras Técnicas
+- **Servicios de KeePass**: Integración con kdbxweb
+- **Gestión de Estado**: Mejor manejo de credenciales
+- **Seguridad Mejorada**: Encriptación de credenciales importadas
+
+### 🐛 Correcciones de Bugs
+- **Estabilidad General**: Mejoras en la estabilidad de la aplicación
+- **Optimización de Rendimiento**: Mejoras en la carga de componentes
+
 ## [1.6.0] - 2025-01-11
 
 ### 🎥 Nueva Funcionalidad: Sistema de Auditoría y Grabación de Sesiones
