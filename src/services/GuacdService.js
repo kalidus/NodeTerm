@@ -518,33 +518,20 @@ class GuacdService {
           return;
         }
 
-      // Configurar variables de entorno optimizadas
-      const envVars = {
-        GUACD_LOG_LEVEL: 'WARN',           // Reducir logs para mejor rendimiento
-        GUACD_MAX_LOG_LEVEL: 'WARN',
-        // Optimizaciones específicas por plataforma
-        ...(process.platform === 'darwin' ? {
-          MALLOC_ARENA_MAX: '2',           // Optimización de memoria para macOS
-          MALLOC_MMAP_THRESHOLD_: '131072'
-        } : {})
-      };
-
-      // Crear comando Docker con variables de entorno optimizadas
-      const dockerArgsWithEnv = [
+      // Intentar iniciar contenedor guacd con imagen multi-arquitectura
+      const dockerArgs = [
         'run',
         '--name', 'nodeterm-guacd',
         '--rm', // Eliminar contenedor al salir
         '-d', // Modo detached
         '-p', `${this.port}:4822`,
-        // Agregar variables de entorno
-        ...Object.entries(envVars).flatMap(([key, value]) => ['-e', `${key}=${value}`]),
         // Montar carpeta de staging del host dentro del contenedor
         // Importante: pasar como un único argumento host:container
         '-v', `${this.driveHostDir}:/guacdrive`,
         'guacamole/guacd:latest' // Usar tag latest para mejor compatibilidad multi-arquitectura
       ];
 
-      this.guacdProcess = spawn(dockerCommand, dockerArgsWithEnv);
+      this.guacdProcess = spawn(dockerCommand, dockerArgs);
 
       this.guacdProcess.stdout.on('data', (data) => {
         // Docker stdout
@@ -1053,17 +1040,9 @@ class GuacdService {
             if (this.detectedMethod === 'wsl') { resolve(); return; }
           }
         } catch {}
-        // Verificar proceso nativo como último intento
-        exec('tasklist /FI "IMAGENAME eq guacd.exe" /FO CSV', (tErr, tOut) => {
-          if (!tErr && tOut.includes('guacd.exe')) {
-            console.log('📦 Detectado: guacd corriendo como proceso nativo');
-            this.detectedMethod = 'native';
-            resolve();
-          } else {
-            this.detectedMethod = 'unknown';
-            resolve();
-          }
-        });
+        // En Windows, no hay guacd nativo, solo Docker o WSL
+        this.detectedMethod = 'unknown';
+        resolve();
       };
 
       if (listErr) {
