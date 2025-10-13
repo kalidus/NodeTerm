@@ -222,6 +222,51 @@ const SettingsDialog = ({
     };
   }, []);
 
+  const GroupIconSelectorGrid = useMemo(() => {
+    return function GroupIconSelectorGrid({ selected, onSelect }) {
+      const opRef = useRef(null);
+      const openPanel = (e) => opRef.current?.toggle(e);
+      const iconOptions = Object.entries(groupTabIcons).map(([key, iconData]) => ({
+        key,
+        name: iconData.name,
+        icon: iconData.icon(18)
+      }));
+
+      return (
+        <div className="group-icon-selector">
+          <Button
+            type="button"
+            label="Elegir icono"
+            icon="pi pi-chevron-down"
+            iconPos="right"
+            onClick={openPanel}
+            className="p-button-outlined group-icon-trigger"
+          />
+          <OverlayPanel ref={opRef} showCloseIcon dismissable
+            className="group-icon-overlay"
+            style={{ width: '300px' }}
+          >
+            <div className="group-icon-grid">
+              {iconOptions.map((option) => (
+                <button
+                  key={option.key}
+                  className={`group-icon-grid-btn ${selected === option.key ? 'is-selected' : ''}`}
+                  onClick={() => {
+                    onSelect(option.key);
+                    opRef.current?.hide();
+                  }}
+                  title={option.name}
+                >
+                  {option.icon}
+                </button>
+              ))}
+            </div>
+          </OverlayPanel>
+        </div>
+      );
+    };
+  }, [groupTabIcons]);
+
   // Guacd preferred method (docker|wsl|mock)
   const GUACD_PREF_KEY = 'nodeterm_guacd_preferred_method';
   const isWindows = window?.electron?.platform === 'win32';
@@ -780,206 +825,140 @@ const SettingsDialog = ({
         className="settings-dialog-tabview"
       >
         <TabPanel header="General" leftIcon="pi pi-cog">
-          <div style={{ padding: '2rem' }}>
-            <h3 style={{ 
-              margin: '0 0 1.5rem 0', 
-              color: 'var(--text-color)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <i className="pi pi-cog" style={{ color: 'var(--primary-color)' }}></i>
-              Configuración General
-            </h3>
+          <div className="general-settings-container">
+            {/* Header con descripción */}
+            <div className="settings-header">
+              <div className="header-content">
+                <h3 className="settings-title">
+                  <i className="pi pi-cog header-icon"></i>
+                  Configuración General
+                </h3>
+                <p className="settings-description">
+                  Personaliza el comportamiento y la apariencia básica de NodeTerm
+                </p>
+              </div>
+            </div>
             
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.75rem',
-                padding: '1rem',
-                background: 'var(--surface-card)',
-                border: '1px solid var(--surface-border)',
-                borderRadius: '8px'
-              }}>
-                <Checkbox
-                  id="lock-home-button"
-                  checked={lockHomeButton}
-                  onChange={(e) => setLockHomeButton(e.checked)}
-                />
-                <div>
-                  <label htmlFor="lock-home-button" style={{
-                    display: 'block',
-                    color: 'var(--text-color)',
-                    fontWeight: '500',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Bloquear Botón de Inicio
-                  </label>
-                  <span style={{
-                    fontSize: '0.9rem',
-                    color: 'var(--text-color-secondary)'
-                  }}>
-                    Cuando está activado, el botón de inicio no se puede cerrar ni mover
-                  </span>
-                </div>
+            {/* Sección de Comportamiento */}
+            <div className="settings-section">
+              <div className="section-header">
+                <i className="pi pi-sliders-h section-icon"></i>
+                <h4 className="section-title">Comportamiento de la Aplicación</h4>
               </div>
+              
+              <div className="settings-options">
+                <div className="setting-card">
+                  <div className="setting-content">
+                    <div className="setting-icon">
+                      <i className="pi pi-lock"></i>
+                    </div>
+                    <div className="setting-info">
+                      <label htmlFor="lock-home-button" className="setting-label">
+                        Bloquear Botón de Inicio
+                      </label>
+                      <p className="setting-description">
+                        Previene que el botón de inicio se pueda cerrar o mover accidentalmente
+                      </p>
+                    </div>
+                    <div className="setting-control">
+                      <Checkbox
+                        id="lock-home-button"
+                        checked={lockHomeButton}
+                        onChange={(e) => setLockHomeButton(e.checked)}
+                        className="modern-checkbox"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              {/* Opción Icono Interactivo */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.75rem',
-                padding: '1rem',
-                background: 'var(--surface-card)',
-                border: '1px solid var(--surface-border)',
-                borderRadius: '8px'
-              }}>
-                <Checkbox
-                  id="interactive-icon"
-                  checked={interactiveIcon}
-                  onChange={(e) => setInteractiveIcon(e.checked)}
-                />
-                <div>
-                  <label htmlFor="interactive-icon" style={{
-                    display: 'block',
-                    color: 'var(--text-color)',
-                    fontWeight: '500',
-                    marginBottom: '0.25rem'
-                  }}>
-                    Icono NodeTerm Interactivo
-                  </label>
-                  <span style={{
-                    fontSize: '0.9rem',
-                    color: 'var(--text-color-secondary)'
-                  }}>
-                    Hace que el cursor "_" en el título parpadee como un terminal real
-                  </span>
+                <div className="setting-card">
+                  <div className="setting-content">
+                    <div className="setting-icon">
+                      <i className="pi pi-bolt"></i>
+                    </div>
+                    <div className="setting-info">
+                      <label htmlFor="interactive-icon" className="setting-label">
+                        Icono NodeTerm Interactivo
+                      </label>
+                      <p className="setting-description">
+                        Hace que el cursor "_" en el título parpadee como un terminal real
+                      </p>
+                    </div>
+                    <div className="setting-control">
+                      <Checkbox
+                        id="interactive-icon"
+                        checked={interactiveIcon}
+                        onChange={(e) => setInteractiveIcon(e.checked)}
+                        className="modern-checkbox"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <Divider style={{ margin: '1.5rem 0' }} />
-
-            {/* Selector de Icono de Pestaña de Inicio */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ 
-                margin: '0 0 1rem 0', 
-                color: 'var(--text-color)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <i className="pi pi-home" style={{ color: 'var(--primary-color)' }}></i>
-                Icono de la Pestaña de Inicio
-              </h4>
+            {/* Sección de Personalización Visual */}
+            <div className="settings-section">
+              <div className="section-header">
+                <i className="pi pi-palette section-icon"></i>
+                <h4 className="section-title">Personalización Visual</h4>
+              </div>
               
-              <p style={{
-                fontSize: '0.9rem',
-                color: 'var(--text-color-secondary)',
-                marginBottom: '1rem'
-              }}>
-                Selecciona el icono que se mostrará en la pestaña de inicio
-              </p>
+              {/* Selector de Icono de Pestaña de Inicio */}
+              <div className="icon-selector-section">
+                <div className="selector-header">
+                  <div className="selector-title">
+                    <i className="pi pi-home selector-icon"></i>
+                    <span>Icono de la Pestaña de Inicio</span>
+                  </div>
+                  <p className="selector-description">
+                    Personaliza el icono que aparece en la pestaña de inicio
+                  </p>
+                </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--surface-border)', borderRadius: 8 }}>
-                  <span style={{ color: 'var(--text-color-secondary)', fontSize: 12 }}>Actual:</span>
-                  <div title={homeTabIcons[selectedHomeIcon]?.name}>
-                    {homeTabIcons[selectedHomeIcon]?.icon(22)}
+                <div className="current-selection">
+                  <div className="current-label">Selección actual:</div>
+                  <div className="current-icon-display">
+                    {homeTabIcons[selectedHomeIcon]?.icon(18)}
+                    <span className="icon-name">{homeTabIcons[selectedHomeIcon]?.name}</span>
                   </div>
                 </div>
-                <HomeIconSelectorGrid
-                  selected={selectedHomeIcon}
-                  onSelect={setSelectedHomeIcon}
-                />
+
+                <div className="icon-selector-container">
+                  <HomeIconSelectorGrid
+                    selected={selectedHomeIcon}
+                    onSelect={setSelectedHomeIcon}
+                  />
+                </div>
               </div>
-            </div>
 
-            <Divider style={{ margin: '1.5rem 0' }} />
-
-            {/* Selector de Icono de Grupos */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ 
-                margin: '0 0 1rem 0', 
-                color: 'var(--text-color)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <i className="pi pi-th-large" style={{ color: 'var(--primary-color)' }}></i>
-                Icono de Grupos de Pestañas
-              </h4>
-              
-              <p style={{
-                fontSize: '0.9rem',
-                color: 'var(--text-color-secondary)',
-                marginBottom: '1rem'
-              }}>
-                Selecciona el icono que se mostrará en la pestaña de grupos
-              </p>
-
-              <Dropdown
-                value={selectedGroupIcon}
-                options={Object.entries(groupTabIcons).map(([key, iconData]) => ({
-                  label: iconData.name,
-                  value: key,
-                  icon: iconData.icon(20)
-                }))}
-                onChange={(e) => setSelectedGroupIcon(e.value)}
-                placeholder="Selecciona un icono"
-                style={{
-                  width: '100%',
-                  marginTop: '1rem'
-                }}
-                itemTemplate={(option) => (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.5rem 0'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '24px',
-                      height: '24px'
-                    }}>
-                      {option.icon}
-                    </div>
-                    <span style={{
-                      fontSize: '0.9rem',
-                      color: 'var(--text-color)'
-                    }}>
-                      {option.label}
-                    </span>
+              {/* Selector de Icono de Grupos */}
+              <div className="icon-selector-section">
+                <div className="selector-header">
+                  <div className="selector-title">
+                    <i className="pi pi-th-large selector-icon"></i>
+                    <span>Icono de Grupos de Pestañas</span>
                   </div>
-                )}
-                valueTemplate={(option) => (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px'
-                    }}>
-                      {option?.icon}
-                    </div>
-                    <span style={{
-                      fontSize: '0.9rem',
-                      color: 'var(--text-color)'
-                    }}>
-                      {option?.label || 'Selecciona un icono'}
-                    </span>
+                  <p className="selector-description">
+                    Elige el icono para la pestaña de grupos
+                  </p>
+                </div>
+
+                <div className="current-selection">
+                  <div className="current-label">Selección actual:</div>
+                  <div className="current-icon-display">
+                    {groupTabIcons[selectedGroupIcon]?.icon(18)}
+                    <span className="icon-name">{groupTabIcons[selectedGroupIcon]?.name}</span>
                   </div>
-                )}
-              />
+                </div>
+
+                <div className="icon-selector-container">
+                  <GroupIconSelectorGrid
+                    selected={selectedGroupIcon}
+                    onSelect={setSelectedGroupIcon}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </TabPanel>

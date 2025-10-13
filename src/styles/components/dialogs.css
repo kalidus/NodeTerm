@@ -4,6 +4,288 @@
    ESTILOS PARA DIÁLOGO DE CONFIGURACIÓN
    ======================================== */
 
+/* Estilos para la configuración general mejorada */
+.general-settings-container {
+  padding: 2rem;
+  max-width: 100%;
+}
+
+.settings-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-title {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.header-icon {
+  color: var(--ui-button-primary) !important;
+  font-size: 1.25rem;
+}
+
+.settings-description {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.8;
+  font-size: 0.95rem;
+  max-width: 500px;
+  line-height: 1.5;
+}
+
+.settings-section {
+  margin-bottom: 2.5rem;
+  background: var(--ui-dialog-bg) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  background: var(--ui-content-bg) !important;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-icon {
+  color: var(--ui-button-primary) !important;
+  font-size: 1.1rem;
+}
+
+.section-title {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.settings-options {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.setting-card {
+  background: var(--ui-content-bg) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.setting-card:hover {
+  border-color: var(--ui-button-primary) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.setting-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.setting-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--ui-button-primary) !important;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.setting-icon i {
+  color: var(--ui-button-primary-text) !important;
+  font-size: 1.1rem;
+}
+
+.setting-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-label {
+  display: block;
+  color: var(--ui-dialog-text) !important;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.setting-description {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.8;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modern-checkbox {
+  transform: scale(1.2);
+}
+
+/* Estilos para selectores de iconos */
+.icon-selector-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+}
+
+.icon-selector-section:last-child {
+  border-bottom: none;
+}
+
+.selector-header {
+  margin-bottom: 1.5rem;
+}
+
+.selector-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.selector-icon {
+  color: var(--ui-button-primary) !important;
+  font-size: 1rem;
+}
+
+.selector-title span {
+  color: var(--ui-dialog-text) !important;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.selector-description {
+  margin: 0;
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.8;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.current-selection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--ui-content-bg) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  border-radius: 8px;
+}
+
+.current-label {
+  color: var(--ui-dialog-text) !important;
+  opacity: 0.8;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.current-icon-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--ui-dialog-bg) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  border-radius: 6px;
+}
+
+.icon-name {
+  color: var(--ui-dialog-text) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.icon-selector-container {
+  margin-top: 1rem;
+}
+
+.dropdown-container {
+  margin-top: 1rem;
+}
+
+.modern-dropdown {
+  width: 100%;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.dropdown-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.dropdown-label {
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.dropdown-value {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .general-settings-container {
+    padding: 1rem;
+  }
+  
+  .setting-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .setting-control {
+    align-self: flex-start;
+  }
+  
+  .current-selection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
 /* Contenedor principal del TabView de configuración */
 .settings-dialog .settings-dialog-tabview,
 .p-dialog.settings-dialog .settings-dialog-tabview {
@@ -36,18 +318,24 @@
 
 .home-icon-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0.75rem;
 }
 
 .home-icon-grid-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--ui-dialog-border) !important;
   background: var(--ui-dialog-bg) !important;
-  transition: border-color .15s ease, background .15s ease;
+  transition: all 0.15s ease;
+  padding: 0.5rem;
+  cursor: pointer;
+  min-height: 40px;
+  width: 40px;
+  height: 40px;
 }
 .home-icon-grid-btn:hover {
   border-color: var(--ui-button-primary) !important;
@@ -55,6 +343,47 @@
   opacity: 0.8;
 }
 .home-icon-grid-btn.is-selected {
+  border: 2px solid var(--ui-button-primary) !important;
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+}
+
+/* Group Icon Selector - themed */
+.group-icon-overlay .p-overlaypanel-content {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+}
+
+.group-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0.75rem;
+}
+
+.group-icon-grid-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--ui-dialog-border) !important;
+  background: var(--ui-dialog-bg) !important;
+  transition: all 0.15s ease;
+  padding: 0.5rem;
+  cursor: pointer;
+  min-height: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.group-icon-grid-btn:hover {
+  border-color: var(--ui-button-primary) !important;
+  background: var(--ui-dialog-bg) !important;
+  opacity: 0.8;
+}
+
+.group-icon-grid-btn.is-selected {
   border: 2px solid var(--ui-button-primary) !important;
   background: var(--ui-button-primary) !important;
   color: var(--ui-button-primary-text) !important;
