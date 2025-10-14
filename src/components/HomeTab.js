@@ -7,6 +7,7 @@ import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
 import QuickActions from './QuickActions';
+import NodeTermStatus from './NodeTermStatus';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
@@ -133,7 +134,7 @@ const HomeTab = ({
     return size;
   };
 
-  // Panel superior: Hub de conexiones (Favoritos + Recientes) en 2 columnas
+  // Panel superior: Hub de conexiones con nuevo layout
   const topPanel = (
     <div style={{
       height: '100%',
@@ -146,7 +147,13 @@ const HomeTab = ({
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
       <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-        <div style={{ marginBottom: '1rem' }}>
+        {/* Fila superior: Acciones Rápidas y Estado de NodeTerm */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '2fr 1fr', 
+          gap: '1rem', 
+          marginBottom: '1rem' 
+        }}>
           <QuickActions
             onCreateSSHConnection={onCreateSSHConnection}
             onCreateFolder={onCreateFolder}
@@ -164,7 +171,14 @@ const HomeTab = ({
             sshConnectionsCount={sshConnectionsCount}
             foldersCount={foldersCount}
           />
+          <NodeTermStatus
+            sshConnectionsCount={sshConnectionsCount}
+            foldersCount={foldersCount}
+            rdpConnectionsCount={rdpConnectionsCount}
+          />
         </div>
+        
+        {/* Fila inferior: Conexiones Favoritas y Recientes */}
         <ConnectionHistory 
           onConnectToHistory={handleConnectToHistory}
           layout="two-columns"
