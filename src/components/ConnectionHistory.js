@@ -488,6 +488,21 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					{(() => {
 						const { appVersion } = getVersionInfo();
 						const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#3b82f6';
+						// Obtener número de passwords (contador fiable o conteo en claro)
+						let passwordsCount = 0;
+						try {
+							const stored = parseInt(localStorage.getItem('passwords_count'));
+							if (!isNaN(stored) && stored >= 0) {
+								passwordsCount = stored;
+							} else {
+								const plain = localStorage.getItem('passwordManagerNodes');
+								if (plain) {
+									const parsed = JSON.parse(plain);
+									const walk = (list) => list.reduce((acc, n) => acc + (n?.data?.type === 'password' ? 1 : 0) + (Array.isArray(n?.children) ? walk(n.children) : 0), 0);
+									passwordsCount = Array.isArray(parsed) ? walk(parsed) : 0;
+								}
+							}
+						} catch {}
 						return (
 							<div style={{
 								display: 'grid',
@@ -510,12 +525,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Conexiones RDP</div>
 								</div>
 								<div style={{ textAlign: 'center' }}>
-									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{foldersCount}</div>
-									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Carpetas</div>
+									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{passwordsCount}</div>
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Passwords</div>
 								</div>
 								<div style={{ textAlign: 'center' }}>
-									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{`v${appVersion}`}</div>
-									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>NodeTerm</div>
+									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{foldersCount}</div>
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Carpetas</div>
 								</div>
 							</div>
 						);
