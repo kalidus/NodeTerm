@@ -168,6 +168,42 @@ const App = () => {
     setNeedsUnlock(false);
   }, []);
 
+  // Actualizar contador de passwords cuando haya masterKey o en claro
+  useEffect(() => {
+    const updatePasswordsCount = async () => {
+      try {
+        let count = 0;
+        const walk = (list) => Array.isArray(list) ? list.reduce((acc, n) => acc + (n?.data?.type === 'password' ? 1 : 0) + (Array.isArray(n?.children) ? walk(n.children) : 0), 0) : 0;
+
+        // Intentar con datos encriptados si hay masterKey
+        const enc = localStorage.getItem('passwords_encrypted');
+        if (enc && masterKey) {
+          try {
+            const obj = JSON.parse(enc);
+            const decrypted = await secureStorage.decryptData(obj, masterKey);
+            // Los passwords se guardan como árbol; contar de forma recursiva
+            count = walk(decrypted);
+          } catch {}
+        }
+
+        // Fallback: datos sin cifrar
+        if (!count) {
+          const plain = localStorage.getItem('passwordManagerNodes');
+          if (plain) {
+            try { count = walk(JSON.parse(plain)); } catch {}
+          }
+        }
+
+        // Guardar contador si es un número válido
+        if (!isNaN(count) && count >= 0) {
+          try { localStorage.setItem('passwords_count', String(count)); } catch {}
+        }
+      } catch {}
+    };
+
+    updatePasswordsCount();
+  }, [masterKey, secureStorage]);
+
   // Handler cuando se configura master password desde Settings
   const handleMasterPasswordConfigured = useCallback((key) => {
     setMasterKey(key);
