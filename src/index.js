@@ -48,6 +48,24 @@ import './styles/main.css';
 // import './assets/form-fixes.css';
 // import './assets/sidebar-theme-fixes.css';
 
+// Aplicar tema mínimo lo antes posible: evita destello blanco
+const applyEarlyBootTheme = () => {
+  try {
+    const saved = localStorage.getItem('ui_theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDarkDefault = saved ? saved !== 'Light' : prefersDark;
+    const root = document.documentElement;
+    // Asignar atributos de velocidad para animaciones antes del render
+    const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
+    const animSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
+    root.setAttribute('data-ui-anim-speed', animSpeed);
+    root.setAttribute('data-tab-anim-speed', animSpeed);
+    // Fondo base acorde para evitar flash
+    document.body.style.backgroundColor = isDarkDefault ? '#0e1116' : '#fafafa';
+  } catch {}
+};
+applyEarlyBootTheme();
+
 // Habilitar el modo "ripple" para los componentes de PrimeReact
 PrimeReact.ripple = true;
 
@@ -139,6 +157,14 @@ initializeGlobalThemes();
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-root.render(
-  <App />
-); 
+// Render y ocultar splash cuando React está listo en el siguiente frame
+root.render(<App />);
+
+// Ocultar splash y marcar app lista
+requestAnimationFrame(() => {
+  const splash = document.getElementById('boot-splash');
+  if (splash) {
+    splash.classList.add('hidden');
+  }
+  document.documentElement.classList.add('app-ready');
+});

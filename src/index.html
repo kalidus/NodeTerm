@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>NodeTerm</title>
+    <meta name="color-scheme" content="dark light" />
     <script>
       // Global polyfill - DEBE ejecutarse ANTES que cualquier otro script
       (function() {
@@ -26,8 +27,49 @@
         console.log('Global polyfill loaded:', typeof global !== 'undefined');
       })();
     </script>
+    <style>
+      /* Estilos críticos de arranque: evitan flash blanco y permiten fade-in */
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: #0e1116; /* fondo oscuro para evitar destello blanco */
+        color: #cfd8dc;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* El contenido React inicia oculto y aparece suavemente */
+      #root { opacity: 0; transition: opacity 240ms ease; min-height: 100%; }
+      html.app-ready #root { opacity: 1; }
+
+      /* Splash de arranque: cubre todo hasta que la app esté lista */
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: radial-gradient(120% 120% at 50% 10%, #1b2330 0%, #0e1116 60%, #0a0c10 100%);
+        color: #e3f2fd;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", "Noto Sans", "Liberation Sans", sans-serif;
+        letter-spacing: 0.2px;
+        transition: opacity 300ms ease, visibility 0s linear 300ms;
+      }
+      #boot-splash.hidden { opacity: 0; visibility: hidden; }
+      #boot-splash .brand { font-weight: 600; font-size: 18px; opacity: 0.95; }
+      #boot-splash .spinner {
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.25);
+        border-top-color: #79b8ff;
+        animation: spin 720ms linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <div id="boot-splash"><div class="spinner"></div><div class="brand">NodeTerm</div></div>
     <div id="root"></div>
   </body>
 </html> 
