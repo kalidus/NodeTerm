@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.5.9-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.0-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -129,17 +129,27 @@ npm run build:win
 - 🔔 **Notificaciones Inteligentes** - Recibe avisos de nuevas versiones sin interrupciones
 - 🛡️ **Actualizaciones Seguras** - Todas las actualizaciones están firmadas y verificadas
 
-## 🎉 Versión Actual: v1.5.5
+## 🎉 Versión Actual: v1.6.0
 
-- 🎨 **Sistema de Temas Avanzado** - Nuevo gestor de temas para pestañas con mayor flexibilidad
-- 🎯 **Temas Personalizados** - Soporte para temas personalizados con configuración granular
-- 🔧 **Selector de Temas Mejorado** - Interfaz más intuitiva para selección de temas
-- 💾 **Persistencia de Temas** - Los temas seleccionados se mantienen entre sesiones
-- ⚡ **Gestión de Temas Optimizada** - Mejor rendimiento en la carga y aplicación de temas
-- 🏗️ **Código Más Modular** - Refactorización del sistema de temas para mejor mantenibilidad
-- 🐛 **Corrección de Temas** - Mejor aplicación de temas en pestañas
-- 🔄 **Fix de Persistencia** - Los temas se mantienen correctamente al reiniciar
-- 🚀 **Corrección de Rendimiento** - Mejoras en la carga de temas personalizados
+### 🔄 Sistema de Actualización Automática
+- **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
+- **Configuración Avanzada**: Control completo sobre cuándo y cómo actualizar
+- **Canales Stable/Beta**: Elige entre versiones estables o beta
+- **Notificaciones Inteligentes**: Recibe avisos de nuevas versiones sin interrupciones
+- **Actualizaciones Seguras**: Todas las actualizaciones están firmadas y verificadas
+- **Descarga en Background**: Sin interrumpir tu flujo de trabajo
+
+### 🎨 Mejoras de UI/UX
+- **Nueva Pestaña de Actualizaciones**: Interfaz dedicada en configuración
+- **Indicadores Visuales**: Estado claro de actualizaciones disponibles
+- **Proceso Transparente**: Información detallada del progreso de actualización
+- **Configuración Flexible**: Personaliza intervalos y canales de actualización
+
+### 🔧 Mejoras Técnicas
+- **Integración electron-updater**: Sistema robusto de actualización automática
+- **Gestión de Versiones**: Control avanzado de versiones y compatibilidad
+- **Seguridad Reforzada**: Verificación de firmas y checksums
+- **Arquitectura Mejorada**: Mejor separación de responsabilidades
 
 ---
 
@@ -227,9 +237,12 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.5.5** | 🎨 Sistema de Temas Avanzado + Temas Personalizados + Mejoras de Rendimiento | ✅ Actual |
-| **v1.5.2** | 🚀 Major Performance Optimization + React Re-render Optimization | ✅ Completado |
-| **v1.6.0** | 🔄 Sistema de Actualización Automática + Mejoras de Seguridad | 🚧 En Desarrollo |
+| **v1.6.0** | 🔄 Sistema de Actualización Automática + Configuración Avanzada + Canales Stable/Beta | ✅ Actual |
+| **v1.5.9** | 🔐 Password Manager Integrado + KeePass + Auto-completado de Credenciales | ✅ Completado |
+| **v1.5.8** | 🚧 Rama de Desarrollo + Mejoras de Estabilidad | ✅ Completado |
+| **v1.5.7** | 🔧 Fix de Checksum Final + Instalador Funcional | ✅ Completado |
+| **v1.5.6** | 🐛 Fix de Checksum Issue + Instalador Corregido | ✅ Completado |
+| **v1.5.5** | 🎨 Sistema de Temas Avanzado + Temas Personalizados | ✅ Completado |
 | **v1.7.0** | 🔑 Soporte para llaves SSH + Autenticación mejorada | 📋 Planificado |
 | **v1.8.0** | 🖥️ Terminal integrado con múltiples shells | 💭 Concepto |
 
@@ -237,7 +250,7 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.0 (En Desarrollo)
+### v1.6.0 (13 Enero 2025) - ACTUAL
 - 🔄 **Sistema de Actualización Automática** - Actualizaciones desde GitHub Releases
 - ⚙️ **Configuración Avanzada** - Control completo sobre el proceso de actualización
 - 📦 **Canales Stable/Beta** - Elige tu nivel de riesgo
@@ -245,6 +258,29 @@ NodeTerm/
 - 🛡️ **Seguridad Reforzada** - Verificación de firmas y actualizaciones seguras
 - 📱 **Descarga en Background** - Sin interrumpir tu flujo de trabajo
 - 🎨 **UI Mejorada** - Nueva pestaña de actualizaciones en configuración
+
+### v1.5.9 (13 Enero 2025)
+- 🔐 **Password Manager Integrado** - Sistema completo de gestor de contraseñas con KeePass
+- 🎨 **Sidebar de Password Manager** - Panel lateral para gestión de credenciales
+- 📥 **Importación de KeePass** - Importa bases de datos .kdbx de forma nativa
+- 🔄 **Auto-completado de Credenciales** - Relleno automático de formularios SSH/RDP
+- 🛡️ **Seguridad Mejorada** - Encriptación adicional para credenciales importadas
+- 🏗️ **Código Más Modular** - Refactorización de componentes para mejor mantenibilidad
+
+### v1.5.8 (En Desarrollo)
+- 🚧 **Rama de Desarrollo** - Preparación para nuevas funcionalidades
+- 🔧 **Mejoras de Estabilidad** - Correcciones y optimizaciones internas
+
+### v1.5.7 (2 Octubre 2025)
+- 🔧 **Fix de Checksum Final** - Versión definitiva con checksum corregido
+- 📦 **Actualización de Dependencias** - package-lock.json actualizado
+- ✅ **Instalador Funcional** - Resuelve problemas de actualización
+
+### v1.5.6 (2 Octubre 2025)
+- 🐛 **Fix de Checksum Issue** - Corrección del error "sha512 checksum mismatch"
+- 📥 **Instalador Corregido** - Nuevo instalador con checksum válido
+- 🔄 **Mejor Manejo de Errores** - Enhanced error handling para futuros problemas de checksum
+- ⚠️ **Nota Importante** - Usuarios deben actualizar de v1.5.4 → v1.5.6 (saltar v1.5.5)
 
 ### v1.5.5
 - 🎨 **Sistema de Temas Avanzado** - Nuevo gestor de temas para pestañas con mayor flexibilidad

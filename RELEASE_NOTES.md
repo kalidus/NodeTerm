@@ -1,94 +1,94 @@
-# 🚀 NodeTerm v1.5.9 - Release Notes
+# 🚀 NodeTerm v1.6.0 - Release Notes
 
 **Fecha de Release**: 13 de Enero, 2025  
-**Tipo de Release**: Feature Release  
-**Versión Anterior**: v1.5.8
+**Tipo de Release**: Major Feature Release  
+**Versión Anterior**: v1.5.9
 
 ---
 
-## 🎉 ¡Bienvenido a NodeTerm v1.5.9!
+## 🎉 ¡Bienvenido a NodeTerm v1.6.0!
 
-Esta versión introduce el **Password Manager integrado** con soporte completo para KeePass, permitiéndote importar y gestionar tus credenciales de forma segura directamente desde NodeTerm. Además incluye mejoras significativas en la UI/UX y correcciones de bugs importantes.
+Esta versión introduce el **Sistema de Actualización Automática** completo, permitiéndote mantener NodeTerm siempre actualizado con las últimas funcionalidades y correcciones de seguridad. Además incluye mejoras significativas en la UI/UX y una arquitectura más robusta.
 
 ---
 
 ## ✨ Características Principales
 
-### 🔐 Password Manager Integrado
-- **Integración de KeePass**: Importa y gestiona bases de datos .kdbx de forma nativa
-- **Sidebar de Password Manager**: Nuevo panel lateral dedicado a la gestión de credenciales
-- **Panel de Importación**: Interfaz intuitiva para importar bases de datos KeePass
-- **Auto-completado de Credenciales**: Relleno automático de formularios SSH/RDP desde tus credenciales guardadas
-- **Gestión Segura**: Todas las credenciales se almacenan de forma encriptada
+### 🔄 Sistema de Actualización Automática
+- **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
+- **Configuración Avanzada**: Control completo sobre cuándo y cómo actualizar
+- **Canales Stable/Beta**: Elige entre versiones estables o beta
+- **Notificaciones Inteligentes**: Recibe avisos de nuevas versiones sin interrupciones
+- **Actualizaciones Seguras**: Todas las actualizaciones están firmadas y verificadas
+- **Descarga en Background**: Sin interrumpir tu flujo de trabajo
 
 ### 🎨 Mejoras de UI/UX
-- **Nueva Sidebar de Password Manager**: Panel lateral con diseño moderno para gestión de contraseñas
-- **Diálogos Mejorados**: Mejor experiencia de usuario en la importación de KeePass
-- **Iconos y Temas**: Nuevos iconos específicos para el gestor de contraseñas
-- **Interfaz Más Intuitiva**: Navegación mejorada y acceso rápido a credenciales
+- **Nueva Pestaña de Actualizaciones**: Interfaz dedicada en configuración
+- **Indicadores Visuales**: Estado claro de actualizaciones disponibles
+- **Proceso Transparente**: Información detallada del progreso de actualización
+- **Configuración Flexible**: Personaliza intervalos y canales de actualización
 
 ### 🔧 Mejoras Técnicas
-- **Integración kdbxweb**: Librería profesional para manejo de archivos KeePass
-- **Mejor Gestión de Estado**: Optimización en el manejo de credenciales en memoria
-- **Seguridad Mejorada**: Encriptación adicional para credenciales importadas
-- **Código Más Modular**: Refactorización de componentes para mejor mantenibilidad
+- **Integración electron-updater**: Sistema robusto de actualización automática
+- **Gestión de Versiones**: Control avanzado de versiones y compatibilidad
+- **Seguridad Reforzada**: Verificación de firmas y checksums
+- **Arquitectura Mejorada**: Mejor separación de responsabilidades
 
 ---
 
 ## 🎨 Mejoras de UI/UX
 
-### 🔐 Password Manager
-- **Sidebar Integrada**: Acceso rápido a tus credenciales desde el panel lateral
-- **Panel de Importación KeePass**: Interfaz intuitiva para importar bases de datos .kdbx
-- **Auto-completado Inteligente**: Rellena automáticamente formularios SSH/RDP
-- **Gestión Visual**: Lista organizada de todas tus credenciales
-- **Búsqueda Rápida**: Encuentra credenciales fácilmente
+### 🔄 Sistema de Actualizaciones
+- **Pestaña Dedicada**: Nueva sección en configuración para gestionar actualizaciones
+- **Estado Visual**: Indicadores claros del estado de actualizaciones
+- **Progreso en Tiempo Real**: Seguimiento del progreso de descarga e instalación
+- **Configuración Intuitiva**: Interfaz fácil de usar para personalizar el comportamiento
 
 ### 🔧 Mejoras de Rendimiento
-- **Carga Optimizada**: Mejor rendimiento al cargar bases de datos KeePass
-- **Gestión Eficiente**: Optimización en el manejo de credenciales en memoria
-- **Encriptación Rápida**: Procesamiento eficiente de datos sensibles
+- **Descarga Optimizada**: Mejor rendimiento en la descarga de actualizaciones
+- **Gestión Eficiente**: Optimización en el manejo de versiones
+- **Proceso No Intrusivo**: Actualizaciones sin interrumpir el trabajo
 
 ---
 
 ## 🔧 Mejoras Técnicas
 
-### 🔐 Integración de KeePass
-- **Librería kdbxweb**: Integración completa con la librería profesional de KeePass
-- **Gestión de Credenciales**: Sistema robusto para manejo de credenciales
-- **Encriptación AES-256**: Seguridad de nivel militar para tus contraseñas
-- **Compatibilidad Total**: Soporte completo para archivos .kdbx v3 y v4
+### 🔄 Integración de Actualizaciones
+- **electron-updater**: Integración completa con la librería profesional de actualizaciones
+- **Gestión de Versiones**: Sistema robusto para manejo de versiones
+- **Verificación de Firmas**: Seguridad de nivel militar para actualizaciones
+- **Compatibilidad Total**: Soporte completo para Windows, Linux y macOS
 
 ### 🏗️ Arquitectura Mejorada
-- **Nuevos Servicios**: ImportService para gestión de importación de credenciales
-- **Componentes Modulares**: PasswordManagerSidebar, KeePassImportDialog, KeePassImportPanel
-- **Estado Centralizado**: Mejor gestión del estado de credenciales
+- **Nuevos Servicios**: UpdateService para gestión de actualizaciones
+- **Componentes Modulares**: UpdatePanel, UpdateSettings para mejor organización
+- **Estado Centralizado**: Mejor gestión del estado de actualizaciones
 - **Código Más Limpio**: Refactorización completa de componentes relacionados
 
 ### 🧪 Seguridad y Privacidad
-- **Almacenamiento Seguro**: Todas las credenciales se almacenan encriptadas
-- **Sin Servicios Externos**: Todo se procesa y almacena localmente
-- **Master Password**: Protección adicional para acceder a credenciales
+- **Actualizaciones Firmadas**: Todas las actualizaciones están firmadas y verificadas
+- **Sin Servicios Externos**: Todo se procesa desde GitHub Releases oficial
+- **Verificación de Checksums**: Validación automática de integridad
 
 ---
 
 ## 🐛 Correcciones de Bugs
 
-### 🔐 Correcciones de Password Manager
-- **Importación de KeePass**: Corrección de problemas al importar bases de datos grandes
-- **Persistencia de Credenciales**: Las credenciales se mantienen correctamente al reiniciar
-- **Auto-completado**: Mejoras en el relleno automático de formularios
-- **Encriptación**: Corrección de problemas de encriptación en credenciales
+### 🔄 Correcciones de Actualizaciones
+- **Gestión de Versiones**: Corrección de problemas al verificar versiones
+- **Descarga de Actualizaciones**: Mejoras en el proceso de descarga
+- **Instalación**: Mejor manejo del proceso de instalación
+- **Notificaciones**: Corrección de problemas en notificaciones de actualización
 
 ### 🔧 Correcciones de Rendimiento
-- **Gestión de Memoria**: Optimización en el manejo de credenciales en memoria
-- **Carga de Datos**: Mejor rendimiento al cargar bases de datos KeePass
+- **Gestión de Memoria**: Optimización en el manejo de actualizaciones
+- **Carga de Datos**: Mejor rendimiento al verificar actualizaciones
 - **Renderizado**: Los componentes se renderizan más eficientemente
 
 ### 🎯 Correcciones Generales
 - **Estabilidad General**: Mejoras significativas en la estabilidad de la aplicación
 - **UI/UX**: Corrección de problemas visuales en la interfaz
-- **Compatibilidad**: Mejor compatibilidad con diferentes formatos de KeePass
+- **Compatibilidad**: Mejor compatibilidad con diferentes sistemas operativos
 
 ---
 
@@ -97,22 +97,22 @@ Esta versión introduce el **Password Manager integrado** con soporte completo p
 ### 🗂️ Nuevos Componentes
 ```
 src/components/
-├── PasswordManagerSidebar.js      # Panel lateral de password manager
-├── KeePassImportDialog.js         # Diálogo de importación KeePass
-└── KeePassImportPanel.js          # Panel de importación de credenciales
+├── UpdatePanel.js                    # Panel de actualizaciones
+├── UpdateSettings.js                 # Configuración de actualizaciones
+└── UpdateDialog.js                   # Diálogo de actualización
 
 src/services/
-└── ImportService.js               # Servicio de importación de credenciales
+└── UpdateService.js                  # Servicio de actualizaciones
 
 src/styles/components/
-└── password-manager.css           # Estilos del password manager
+└── update-panel.css                  # Estilos del panel de actualizaciones
 ```
 
 ### 📦 Componentes Actualizados
-- **App.js**: Integración del password manager
+- **App.js**: Integración del sistema de actualizaciones
 - **MainContentArea.js**: Soporte para nuevas funcionalidades
-- **DialogsManager.js**: Nuevos diálogos de KeePass
-- **Sidebar.js**: Integración con password manager sidebar
+- **DialogsManager.js**: Nuevos diálogos de actualización
+- **SettingsDialog.js**: Nueva pestaña de actualizaciones
 
 ---
 
@@ -124,10 +124,9 @@ src/styles/components/
 3. ¡Disfruta de las nuevas características!
 
 ### 🔄 Para Usuarios Existentes
-1. **Backup**: Haz una copia de seguridad de tus configuraciones
-2. **Descarga**: Obtén la nueva versión desde Releases
-3. **Instala**: Reemplaza la versión anterior
-4. **Configura**: Las configuraciones existentes se mantendrán
+1. **Actualización Automática**: La aplicación se actualizará automáticamente
+2. **Actualización Manual**: Ve a Configuración → Actualizaciones → Buscar Actualizaciones
+3. **Configuración**: Personaliza el comportamiento de actualizaciones según tus preferencias
 
 ### 🛠️ Para Desarrolladores
 ```bash
@@ -135,8 +134,8 @@ src/styles/components/
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Cambiar a la rama v1.5.9
-git checkout v1.5.9
+# Cambiar a la rama v1.6.0
+git checkout v1.6.0
 
 # Instalar dependencias
 npm install
@@ -152,12 +151,12 @@ npm run build
 
 ## 🎯 Próximas Versiones
 
-### v1.6.0 (Planificado)
+### v1.7.0 (Planificado)
 - 🔑 **Soporte para Llaves SSH**: Autenticación con claves privadas
 - 🔐 **Gestión de Credenciales**: Almacenamiento seguro de credenciales
 - 🌐 **Sincronización Cloud**: Sincronización con servicios en la nube
 
-### v1.7.0 (Concepto)
+### v1.8.0 (Concepto)
 - 🖥️ **Terminal Integrado**: Múltiples shells en una sola interfaz
 - 🐳 **Soporte Docker**: Integración con contenedores
 - 📊 **Analytics**: Estadísticas de uso y rendimiento
@@ -204,4 +203,4 @@ Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias!
 
 ---
 
-**¡Disfruta de NodeTerm v1.5.9!** 🚀
+**¡Disfruta de NodeTerm v1.6.0!** 🚀

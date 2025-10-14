@@ -5,6 +5,32 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-01-13
+
+### 🔄 Nuevas Características - Sistema de Actualización Automática
+- **Actualizaciones desde GitHub Releases**: Sistema completo de actualización automática
+- **Configuración Avanzada**: Control completo sobre cuándo y cómo actualizar
+- **Canales Stable/Beta**: Elige entre versiones estables o beta
+- **Notificaciones Inteligentes**: Recibe avisos de nuevas versiones sin interrupciones
+- **Actualizaciones Seguras**: Todas las actualizaciones están firmadas y verificadas
+- **Descarga en Background**: Sin interrumpir tu flujo de trabajo
+
+### 🎨 Mejoras de UI/UX
+- **Nueva Pestaña de Actualizaciones**: Interfaz dedicada en configuración
+- **Indicadores Visuales**: Estado claro de actualizaciones disponibles
+- **Proceso Transparente**: Información detallada del progreso de actualización
+- **Configuración Flexible**: Personaliza intervalos y canales de actualización
+
+### 🔧 Mejoras Técnicas
+- **Integración electron-updater**: Sistema robusto de actualización automática
+- **Gestión de Versiones**: Control avanzado de versiones y compatibilidad
+- **Seguridad Reforzada**: Verificación de firmas y checksums
+- **Arquitectura Mejorada**: Mejor separación de responsabilidades
+
+### 🐛 Correcciones de Bugs
+- **Estabilidad General**: Mejoras en la estabilidad de la aplicación
+- **Optimización de Rendimiento**: Mejoras en la carga de componentes
+
 ## [1.5.9] - 2025-01-13
 
 ### 🔐 Nuevas Características - Password Manager
@@ -27,6 +53,27 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ### 🐛 Correcciones de Bugs
 - **Estabilidad General**: Mejoras en la estabilidad de la aplicación
 - **Optimización de Rendimiento**: Mejoras en la carga de componentes
+
+## [1.5.8] - 2025-01-XX (En Desarrollo)
+
+### 🚧 Desarrollo
+- **Rama de Desarrollo**: Preparación para nuevas funcionalidades
+- **Mejoras de Estabilidad**: Correcciones y optimizaciones internas
+
+## [1.5.7] - 2025-10-02
+
+### 🔧 Correcciones de Bugs
+- **Fix de Checksum Final**: Versión definitiva con checksum corregido
+- **Actualización de Dependencias**: package-lock.json actualizado
+- **Instalador Funcional**: Resuelve problemas de actualización
+
+## [1.5.6] - 2025-10-02
+
+### 🐛 Correcciones de Bugs
+- **Fix de Checksum Issue**: Corrección del error "sha512 checksum mismatch"
+- **Instalador Corregido**: Nuevo instalador con checksum válido
+- **Mejor Manejo de Errores**: Enhanced error handling para futuros problemas de checksum
+- **Nota Importante**: Usuarios deben actualizar de v1.5.4 → v1.5.6 (saltar v1.5.5)
 
 ## [1.6.0] - 2025-01-11
 
