@@ -263,7 +263,7 @@ const QuickActions = ({
     });
   }
 
-  // Función helper para renderizar cards (versión adaptativa)
+  // Función helper para renderizar cards (versión compacta con iconos grandes)
   const renderActionCard = (item, index) => (
     <Card 
       key={index}
@@ -274,19 +274,19 @@ const QuickActions = ({
         background: 'var(--surface-card)',
         border: '1px solid var(--surface-border)',
         position: 'relative',
-        minHeight: '42px',
-        width: '100%', // Ocupa todo el ancho disponible del grid
-        borderRadius: '6px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        minHeight: '36px', // Cards más pequeñas
+        width: '100%',
+        borderRadius: '5px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+        e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.15)';
         e.currentTarget.style.borderColor = item.color;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
         e.currentTarget.style.borderColor = 'var(--surface-border)';
       }}
       onClick={item.action}
@@ -295,8 +295,8 @@ const QuickActions = ({
         display: 'flex', 
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '0.1rem',
-        padding: '0.2rem 0.1rem',
+        gap: '0.05rem',
+        padding: '0.15rem 0.05rem', // Padding más pequeño
         height: '100%',
         justifyContent: 'center'
       }}>
@@ -305,31 +305,31 @@ const QuickActions = ({
             value={item.badge} 
             style={{ 
               position: 'absolute',
-              top: '0.1rem',
-              right: '0.1rem',
-              fontSize: '0.5rem',
-              minWidth: '0.8rem',
-              height: '0.8rem',
-              lineHeight: '0.8rem'
+              top: '0.05rem',
+              right: '0.05rem',
+              fontSize: '0.45rem',
+              minWidth: '0.7rem',
+              height: '0.7rem',
+              lineHeight: '0.7rem'
             }}
           />
         )}
         
         <div style={{ 
-          width: '16px',
-          height: '16px',
+          width: '18px', // Icono más grande
+          height: '18px',
           borderRadius: '50%',
-          background: `${item.color}20`,
+          background: `${item.color}25`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '0.1rem',
-          border: `1px solid ${item.color}40`
+          marginBottom: '0.05rem',
+          border: `1px solid ${item.color}50`
         }}>
           <i 
             className={item.icon}
             style={{ 
-              fontSize: '0.7rem',
+              fontSize: '0.8rem', // Icono más grande
               color: item.color
             }}
           />
@@ -338,15 +338,15 @@ const QuickActions = ({
         <h4 style={{ 
           margin: 0,
           color: 'var(--text-color)',
-          fontSize: '0.45rem',
+          fontSize: '0.4rem', // Texto más pequeño
           fontWeight: '500',
           textAlign: 'center',
-          lineHeight: '1',
+          lineHeight: '0.9',
           letterSpacing: '0.01rem',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          width: '100%' // Ocupa todo el ancho disponible
+          width: '100%'
         }}>
           {item.label}
         </h4>
@@ -386,8 +386,8 @@ const QuickActions = ({
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
-          gap: '0.2rem',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))',
+          gap: '0.15rem',
           width: '100%'
         }}>
           {availableTerminals.map((item, index) => renderActionCard(item, index))}
@@ -411,8 +411,8 @@ const QuickActions = ({
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
-          gap: '0.2rem',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))',
+          gap: '0.15rem',
           width: '100%'
         }}>
           {quickActionItems.map((item, index) => renderActionCard(item, index))}
