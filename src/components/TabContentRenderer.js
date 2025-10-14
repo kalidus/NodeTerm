@@ -139,11 +139,61 @@ const TabContentRenderer = React.memo(({
           countFolders(nodes);
           return folderCount;
         })()}
+        rdpConnectionsCount={(() => {
+          // Contar RDP guardados en el árbol + RDP abiertos en pestañas (únicos por host:port+user)
+          const unique = new Set();
+          const add = (host, port, user) => {
+            const h = host || '';
+            const p = port || 3389;
+            const u = user || '';
+            unique.add(`${h}:${p}|${u}`);
+          };
+          const looksLikeRdp = (data) => {
+            if (!data) return false;
+            if (data.type === 'rdp' || data.type === 'rdp-guacamole') return true;
+            // Fallback heurística: servidor+puerto/clientType guacamole y NO ssh
+            const hasServer = (data.server || data.hostname || data.host);
+            const maybeRdpPort = (data.port && Number(data.port) === 3389);
+            const isGuac = (data.clientType === 'guacamole');
+            const nameLooksRdp = typeof data.name === 'string' && /rdp|windows|server|desktop|win/i.test(data.name);
+            return ((hasServer && (maybeRdpPort || isGuac)) || nameLooksRdp) && data.type !== 'ssh';
+          };
+
+          const countRdpNodes = (nodeList) => {
+            if (!Array.isArray(nodeList)) return;
+            nodeList.forEach(node => {
+              if (node && looksLikeRdp(node.data)) {
+                add(node.data.host || node.data.server || node.data.hostname, node.data.port, node.data.user || node.data.username);
+              }
+              if (node.children && node.children.length > 0) countRdpNodes(node.children);
+            });
+          };
+          countRdpNodes(nodes);
+          // Incluir pestañas RDP activas
+          if (Array.isArray(rdpTabs)) {
+            rdpTabs.forEach(tab => {
+              const cfg = tab.rdpConfig || {};
+              add(cfg.server || cfg.host || cfg.hostname, cfg.port, cfg.username || cfg.user);
+            });
+          }
+          return unique.size;
+        })()}
         localFontFamily={localFontFamily}
         localFontSize={localFontSize}
         localTerminalTheme={localLinuxTerminalTheme}
         localPowerShellTheme={localPowerShellTheme}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
+        onOpenFileExplorer={() => {
+          // Emit global intent; Sidebar/useConnectionManagement will handle actual opening
+          try {
+            window.dispatchEvent(new CustomEvent('open-explorer-dialog'));
+          } catch (e) { /* noop */ }
+        }}
+        onOpenSettings={() => {
+          try {
+            window.dispatchEvent(new CustomEvent('open-settings-dialog'));
+          } catch (e) { /* noop */ }
+        }}
       />
     );
   }
