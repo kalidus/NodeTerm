@@ -263,96 +263,285 @@ const QuickActions = ({
     });
   }
 
-  // Función helper para renderizar cards (versión compacta con iconos grandes)
-  const renderActionCard = (item, index) => (
-    <Card 
-      key={index}
-      className="quick-action-card"
-      style={{ 
-        cursor: 'pointer',
-        transition: 'all 0.15s ease',
-        background: 'var(--surface-card)',
-        border: '1px solid var(--surface-border)',
-        position: 'relative',
-        minHeight: '36px', // Cards más pequeñas
-        width: '100%',
-        borderRadius: '5px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.15)';
-        e.currentTarget.style.borderColor = item.color;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-        e.currentTarget.style.borderColor = 'var(--surface-border)';
-      }}
-      onClick={item.action}
-    >
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '0.05rem',
-        padding: '0.15rem 0.05rem', // Padding más pequeño
-        height: '100%',
-        justifyContent: 'center'
-      }}>
+  // Función helper para renderizar cards de TERMINALES (Glassmorphism)
+  const renderTerminalCard = (item, index) => {
+    const heights = ['55px', '58px', '60px', '57px', '59px'];
+    const randomHeight = heights[index % heights.length];
+    
+    return (
+      <div
+        key={index}
+        style={{ 
+          cursor: 'pointer',
+          transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          background: `linear-gradient(135deg, 
+            ${item.color}25 0%, 
+            ${item.color}15 50%, 
+            ${item.color}08 100%)`,
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: `1.5px solid ${item.color}40`,
+          position: 'relative',
+          minHeight: randomHeight,
+          width: '100%',
+          borderRadius: '16px',
+          boxShadow: `0 8px 32px ${item.color}20, 
+                      0 2px 8px rgba(0,0,0,0.1),
+                      inset 0 1px 0 rgba(255,255,255,0.1)`,
+          overflow: 'hidden'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-5px) scale(1.03)';
+          e.currentTarget.style.boxShadow = `0 15px 45px ${item.color}35, 
+                                              0 5px 15px rgba(0,0,0,0.2),
+                                              inset 0 1px 0 rgba(255,255,255,0.2)`;
+          e.currentTarget.style.borderColor = `${item.color}70`;
+          e.currentTarget.style.background = `linear-gradient(135deg, 
+            ${item.color}35 0%, 
+            ${item.color}25 50%, 
+            ${item.color}15 100%)`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.boxShadow = `0 8px 32px ${item.color}20, 
+                                              0 2px 8px rgba(0,0,0,0.1),
+                                              inset 0 1px 0 rgba(255,255,255,0.1)`;
+          e.currentTarget.style.borderColor = `${item.color}40`;
+          e.currentTarget.style.background = `linear-gradient(135deg, 
+            ${item.color}25 0%, 
+            ${item.color}15 50%, 
+            ${item.color}08 100%)`;
+        }}
+        onClick={item.action}
+      >
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: '10%',
+          right: '10%',
+          height: '2px',
+          background: `linear-gradient(90deg, 
+            transparent, 
+            rgba(255,255,255,0.6), 
+            transparent)`,
+          filter: 'blur(1px)'
+        }} />
+        
+        <div style={{
+          position: 'absolute',
+          top: '-10px',
+          right: '-10px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${item.color}20, transparent)`,
+          filter: 'blur(10px)'
+        }} />
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.25rem',
+          padding: '0.5rem 0.3rem',
+          height: '100%',
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <div style={{ 
+            width: '28px',
+            height: '28px',
+            borderRadius: '12px',
+            background: `linear-gradient(135deg, 
+              ${item.color}dd 0%, 
+              ${item.color} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '0.15rem',
+            boxShadow: `0 4px 15px ${item.color}50, 
+                        inset 0 1px 0 rgba(255,255,255,0.3),
+                        inset 0 -1px 0 rgba(0,0,0,0.2)`,
+            position: 'relative',
+            border: `1px solid ${item.color}80`
+          }}>
+            <i 
+              className={item.icon}
+              style={{ 
+                fontSize: '1rem',
+                color: 'white',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))'
+              }}
+            />
+            <div style={{
+              position: 'absolute',
+              top: '3px',
+              left: '3px',
+              right: '3px',
+              height: '2px',
+              background: 'rgba(255,255,255,0.5)',
+              borderRadius: '10px',
+              filter: 'blur(1px)'
+            }} />
+          </div>
+          
+          <h4 style={{ 
+            margin: 0,
+            color: 'var(--text-color)',
+            fontSize: '0.5rem',
+            fontWeight: '600',
+            textAlign: 'center',
+            lineHeight: '1.2',
+            letterSpacing: '0.03rem',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            width: '100%',
+            textShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
+          }}>
+            {item.label}
+          </h4>
+        </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `radial-gradient(circle at center, ${item.color}15, transparent)`,
+          opacity: 0,
+          transition: 'opacity 0.4s ease',
+          pointerEvents: 'none'
+        }} 
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '1';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '0';
+        }}
+        />
+      </div>
+    );
+  };
+
+  // Función helper para renderizar cards de ACCIONES PRINCIPALES (Estilo diferente)
+  const renderActionCard = (item, index) => {
+    return (
+      <div
+        key={index}
+        style={{ 
+          cursor: 'pointer',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: `linear-gradient(145deg, 
+            rgba(255,255,255,0.05) 0%, 
+            rgba(255,255,255,0.02) 100%)`,
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: `1px solid rgba(255,255,255,0.1)`,
+          position: 'relative',
+          minHeight: '70px',
+          width: '100%',
+          borderRadius: '14px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+          overflow: 'hidden'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-3px)';
+          e.currentTarget.style.boxShadow = `0 8px 24px ${item.color}25, 0 4px 12px rgba(0,0,0,0.3)`;
+          e.currentTarget.style.borderColor = `${item.color}50`;
+          e.currentTarget.style.background = `linear-gradient(145deg, 
+            ${item.color}15 0%, 
+            ${item.color}08 100%)`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+          e.currentTarget.style.background = `linear-gradient(145deg, 
+            rgba(255,255,255,0.05) 0%, 
+            rgba(255,255,255,0.02) 100%)`;
+        }}
+        onClick={item.action}
+      >
+        {/* Badge si existe */}
         {item.badge !== null && (
           <Badge 
             value={item.badge} 
             style={{ 
               position: 'absolute',
-              top: '0.05rem',
-              right: '0.05rem',
-              fontSize: '0.45rem',
-              minWidth: '0.7rem',
-              height: '0.7rem',
-              lineHeight: '0.7rem'
+              top: '0.4rem',
+              right: '0.4rem',
+              fontSize: '0.5rem',
+              minWidth: '0.9rem',
+              height: '0.9rem',
+              lineHeight: '0.9rem',
+              background: `linear-gradient(135deg, ${item.color}, ${item.color}dd)`,
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              boxShadow: `0 2px 8px ${item.color}40`,
+              fontWeight: '700'
             }}
           />
         )}
         
         <div style={{ 
-          width: '18px', // Icono más grande
-          height: '18px',
-          borderRadius: '50%',
-          background: `${item.color}25`,
-          display: 'flex',
+          display: 'flex', 
+          flexDirection: 'column',
           alignItems: 'center',
+          gap: '0.3rem',
+          padding: '0.6rem 0.4rem',
+          height: '100%',
           justifyContent: 'center',
-          marginBottom: '0.05rem',
-          border: `1px solid ${item.color}50`
+          position: 'relative',
+          zIndex: 1
         }}>
-          <i 
-            className={item.icon}
-            style={{ 
-              fontSize: '0.8rem', // Icono más grande
-              color: item.color
-            }}
-          />
+          {/* Icono estilo flat con sombra */}
+          <div style={{ 
+            width: '32px',
+            height: '32px',
+            borderRadius: '10px',
+            background: `${item.color}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '0.1rem',
+            boxShadow: `0 4px 12px ${item.color}40, 0 2px 4px rgba(0,0,0,0.2)`,
+            position: 'relative'
+          }}>
+            <i 
+              className={item.icon}
+              style={{ 
+                fontSize: '1.1rem',
+                color: 'white',
+                textShadow: '0 1px 3px rgba(0,0,0,0.4)'
+              }}
+            />
+          </div>
+          
+          <h4 style={{ 
+            margin: 0,
+            color: 'var(--text-color)',
+            fontSize: '0.5rem',
+            fontWeight: '600',
+            textAlign: 'center',
+            lineHeight: '1.2',
+            letterSpacing: '0.02rem',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            width: '100%',
+            textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+          }}>
+            {item.label}
+          </h4>
         </div>
-        
-        <h4 style={{ 
-          margin: 0,
-          color: 'var(--text-color)',
-          fontSize: '0.4rem', // Texto más pequeño
-          fontWeight: '500',
-          textAlign: 'center',
-          lineHeight: '0.9',
-          letterSpacing: '0.01rem',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          width: '100%'
-        }}>
-          {item.label}
-        </h4>
       </div>
-    </Card>
-  );
+    );
+  };
 
   return (
     <div style={{ padding: '0.75rem' }}>
@@ -386,11 +575,12 @@ const QuickActions = ({
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))',
-          gap: '0.15rem',
-          width: '100%'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))',
+          gap: '0.4rem',
+          width: '100%',
+          alignItems: 'start' // Para efecto masonry
         }}>
-          {availableTerminals.map((item, index) => renderActionCard(item, index))}
+          {availableTerminals.map((item, index) => renderTerminalCard(item, index))}
         </div>
       </div>
 
@@ -411,9 +601,10 @@ const QuickActions = ({
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))',
-          gap: '0.15rem',
-          width: '100%'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))',
+          gap: '0.4rem',
+          width: '100%',
+          alignItems: 'start' // Para efecto masonry
         }}>
           {quickActionItems.map((item, index) => renderActionCard(item, index))}
         </div>
