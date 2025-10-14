@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
@@ -11,6 +11,11 @@ const QuickActions = ({
   sshConnectionsCount = 0,
   foldersCount = 0 
 }) => {
+  // Estados para terminales detectados dinámicamente
+  const [wslDistributions, setWSLDistributions] = useState([]);
+  const [cygwinAvailable, setCygwinAvailable] = useState(false);
+  const [availableTerminals, setAvailableTerminals] = useState([]);
+
   // Handlers for actions that don't come from props
   const handleOpenPasswords = () => {
     try {
@@ -36,7 +41,158 @@ const QuickActions = ({
     } catch (e) { /* noop */ }
   };
 
-  // Build quick action items conditionally to avoid dead actions
+  // Handler genérico para abrir terminales
+  const handleOpenTerminal = (terminalType, distroInfo = null) => {
+    try {
+      window.dispatchEvent(new CustomEvent('create-terminal-tab', {
+        detail: { 
+          type: terminalType,
+          distroInfo: distroInfo
+        }
+      }));
+    } catch (e) { /* noop */ }
+  };
+
+  // Detectar distribuciones WSL usando el backend (EXACTA MISMA LÓGICA QUE TabbedTerminal.js)
+  useEffect(() => {
+    const detectWSLDistributions = async () => {
+      try {
+        if (window.electron && window.electron.ipcRenderer) {
+          const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+          console.log('✅ Distribuciones WSL detectadas:', distributions);
+          
+          // Verificar que recibimos un array válido
+          if (Array.isArray(distributions)) {
+            setWSLDistributions(distributions);
+            distributions.forEach(distro => console.log(`  - ${distro.label} (${distro.category})`));
+          } else {
+            console.log('⚠️ Respuesta no es un array, fallback a array vacío');
+            setWSLDistributions([]);
+          }
+        } else {
+          console.log('❌ No hay acceso a electron IPC');
+          setWSLDistributions([]);
+        }
+      } catch (error) {
+        console.error('❌ Error en detección de distribuciones WSL:', error);
+        setWSLDistributions([]);
+      }
+    };
+    
+    detectWSLDistributions();
+  }, []);
+
+  // Detectar disponibilidad de Cygwin embebido (EXACTA MISMA LÓGICA QUE TabbedTerminal.js)
+  useEffect(() => {
+    const detectCygwin = async () => {
+      if (window.electron && window.electron.platform === 'win32') {
+        try {
+          // Usar window.electronAPI.invoke que definimos en preload.js
+          const result = await window.electronAPI.invoke('cygwin:detect');
+          if (result && typeof result.available === 'boolean') {
+            setCygwinAvailable(result.available);
+            console.log('✅ Cygwin detectado:', result.available);
+          } else {
+            console.warn('⚠️ Cygwin: Respuesta inválida');
+            setCygwinAvailable(false);
+          }
+        } catch (error) {
+          console.error('❌ Error detectando Cygwin:', error);
+          setCygwinAvailable(false);
+        }
+      } else {
+        setCygwinAvailable(false);
+      }
+    };
+    
+    detectCygwin();
+  }, []);
+
+  // Generar lista de terminales disponibles (EXACTA MISMA LÓGICA QUE TabbedTerminal.js)
+  useEffect(() => {
+    const platform = window.electron?.platform || 'unknown';
+    const terminals = [];
+
+    console.log('🔧 Generando terminales para plataforma:', platform);
+    console.log('🔧 WSL Distributions:', wslDistributions);
+    console.log('🔧 Cygwin available:', cygwinAvailable);
+
+    if (platform === 'win32') {
+      // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
+      const options = [
+        { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
+        { label: 'WSL', value: 'wsl', icon: 'pi pi-server' },
+        // Cygwin siempre visible en Windows (se instalará bajo demanda si no existe)
+        { 
+          label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)', 
+          value: 'cygwin', 
+          icon: 'pi pi-code',
+          color: '#00FF00'
+        },
+      ];
+      
+      // Agregar cada distribución WSL como opción separada
+      options.push(...wslDistributions.map(distro => ({
+        label: distro.label,
+        value: `wsl-${distro.name}`,
+        icon: distro.icon,
+        executable: distro.executable,
+        category: distro.category,
+        distroName: distro.name,
+        distroInfo: distro
+      })));
+      
+      // Convertir a formato de terminales para QuickActions
+      options.forEach(option => {
+        terminals.push({
+          label: option.label,
+          value: option.value,
+          icon: option.icon,
+          color: getColorForCategory(option.category) || '#4fc3f7',
+          action: () => handleOpenTerminal(option.value, option.distroInfo),
+          distroInfo: option.distroInfo
+        });
+      });
+    } else if (platform === 'linux' || platform === 'darwin') {
+      // En Linux/macOS: mostrar terminal nativo
+      terminals.push({
+        label: 'Terminal',
+        value: 'linux-terminal',
+        icon: 'pi pi-desktop',
+        color: '#4fc3f7',
+        action: () => handleOpenTerminal('linux-terminal')
+      });
+    } else {
+      // Fallback para otros sistemas
+      terminals.push({
+        label: 'Terminal',
+        value: 'powershell',
+        icon: 'pi pi-desktop',
+        color: '#4fc3f7',
+        action: () => handleOpenTerminal('powershell')
+      });
+    }
+
+    console.log('🎯 Lista final de terminales:', terminals);
+    setAvailableTerminals(terminals);
+  }, [wslDistributions, cygwinAvailable]);
+
+  // Función para obtener colores según la categoría de distribución
+  const getColorForCategory = (category) => {
+    const colorMap = {
+      'ubuntu': '#E95420',
+      'debian': '#A81D33',
+      'kali': '#557C94',
+      'alpine': '#0D597F',
+      'opensuse': '#73BA25',
+      'fedora': '#294172',
+      'centos': '#262577',
+      'default': '#8ae234'
+    };
+    return colorMap[category] || colorMap.default;
+  };
+
+  // Segunda fila: Acciones principales
   const quickActionItems = [
     {
       label: 'Nueva Conexión SSH',
@@ -78,12 +234,11 @@ const QuickActions = ({
       action: handleOpenPasswords,
       badge: null
     },
-    // Extras pequeños solicitados
     {
       label: 'Historial',
       icon: 'pi pi-history',
       color: '#795548',
-      description: '',
+      description: 'Conexiones recientes',
       action: () => {},
       badge: null
     },
@@ -91,7 +246,7 @@ const QuickActions = ({
       label: 'Favoritos',
       icon: 'pi pi-star',
       color: '#FFD700',
-      description: '',
+      description: 'Acceso rápido',
       action: () => {},
       badge: null
     }
@@ -108,133 +263,161 @@ const QuickActions = ({
     });
   }
 
-  const systemTools = [
-    {
-      label: 'Monitor Sistema',
-      icon: 'pi pi-chart-line',
-      color: '#607D8B',
-      description: 'Estadísticas en tiempo real'
-    },
-    {
-      label: 'Historial',
-      icon: 'pi pi-history',
-      color: '#795548',
-      description: 'Conexiones recientes'
-    },
-    {
-      label: 'Favoritos',
-      icon: 'pi pi-star',
-      color: '#FFD700',
-      description: 'Acceso rápido'
-    },
-    {
-      label: 'Temas',
-      icon: 'pi pi-palette',
-      color: '#E91E63',
-      description: 'Personalizar apariencia'
-    }
-  ];
-
-  return (
-    <div style={{ padding: '1rem' }}>
-      {/* Acciones principales */}
-      <div style={{ marginBottom: '0.75rem' }}>
-        <h3 style={{ 
-          margin: '0 0 0.5rem 0', 
-          color: 'var(--text-color)',
-          fontSize: '0.95rem',
+  // Función helper para renderizar cards (versión adaptativa)
+  const renderActionCard = (item, index) => (
+    <Card 
+      key={index}
+      className="quick-action-card"
+      style={{ 
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        background: 'var(--surface-card)',
+        border: '1px solid var(--surface-border)',
+        position: 'relative',
+        minHeight: '42px',
+        width: '100%', // Ocupa todo el ancho disponible del grid
+        borderRadius: '6px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        e.currentTarget.style.borderColor = item.color;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        e.currentTarget.style.borderColor = 'var(--surface-border)';
+      }}
+      onClick={item.action}
+    >
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.1rem',
+        padding: '0.2rem 0.1rem',
+        height: '100%',
+        justifyContent: 'center'
+      }}>
+        {item.badge !== null && (
+          <Badge 
+            value={item.badge} 
+            style={{ 
+              position: 'absolute',
+              top: '0.1rem',
+              right: '0.1rem',
+              fontSize: '0.5rem',
+              minWidth: '0.8rem',
+              height: '0.8rem',
+              lineHeight: '0.8rem'
+            }}
+          />
+        )}
+        
+        <div style={{ 
+          width: '16px',
+          height: '16px',
+          borderRadius: '50%',
+          background: `${item.color}20`,
           display: 'flex',
           alignItems: 'center',
-          gap: '0.4rem'
+          justifyContent: 'center',
+          marginBottom: '0.1rem',
+          border: `1px solid ${item.color}40`
         }}>
-          <i className="pi pi-bolt" style={{ color: 'var(--primary-color)' }} />
-          Acciones Rápidas
-        </h3>
+          <i 
+            className={item.icon}
+            style={{ 
+              fontSize: '0.7rem',
+              color: item.color
+            }}
+          />
+        </div>
+        
+        <h4 style={{ 
+          margin: 0,
+          color: 'var(--text-color)',
+          fontSize: '0.45rem',
+          fontWeight: '500',
+          textAlign: 'center',
+          lineHeight: '1',
+          letterSpacing: '0.01rem',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          width: '100%' // Ocupa todo el ancho disponible
+        }}>
+          {item.label}
+        </h4>
+      </div>
+    </Card>
+  );
+
+  return (
+    <div style={{ padding: '0.75rem' }}>
+      <h3 style={{ 
+        margin: '0 0 0.6rem 0', 
+        color: 'var(--text-color)',
+        fontSize: '0.9rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.3rem',
+        fontWeight: '600'
+      }}>
+        <i className="pi pi-bolt" style={{ color: 'var(--primary-color)', fontSize: '0.8rem' }} />
+        Acciones Rápidas
+      </h3>
+      
+      {/* Primera fila: Terminales locales */}
+      <div style={{ marginBottom: '0.6rem' }}>
+        <h4 style={{ 
+          margin: '0 0 0.3rem 0', 
+          color: 'var(--text-color-secondary)',
+          fontSize: '0.7rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+          fontWeight: '500'
+        }}>
+          <i className="pi pi-terminal" style={{ color: 'var(--primary-color)', fontSize: '0.6rem' }} />
+          Terminales Locales
+        </h4>
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))',
-          gap: '0.25rem'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
+          gap: '0.2rem',
+          width: '100%'
         }}>
-          {quickActionItems.map((item, index) => (
-            <Card 
-              key={index}
-              className="quick-action-card"
-              style={{ 
-                cursor: 'pointer',
-                transition: 'all 0.12s ease',
-                background: 'var(--surface-card)',
-                border: '1px solid var(--surface-border)',
-                position: 'relative',
-                minHeight: '48px'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.12)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.08)';
-              }}
-              onClick={item.action}
-            >
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.15rem',
-                padding: '0.3rem 0.3rem'
-              }}>
-                {item.badge !== null && (
-                  <Badge 
-                    value={item.badge} 
-                    style={{ 
-                      position: 'absolute',
-                      top: '0.4rem',
-                      right: '0.4rem',
-                      fontSize: '0.65rem'
-                    }}
-                  />
-                )}
-                
-                <div style={{ 
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  background: `${item.color}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '0.35rem'
-                }}>
-                  <i 
-                    className={item.icon}
-                    style={{ 
-                      fontSize: '0.75rem',
-                      color: item.color
-                    }}
-                  />
-                </div>
-                
-                <h4 style={{ 
-                  margin: 0,
-                  color: 'var(--text-color)',
-                  fontSize: '0.56rem',
-                  fontWeight: '600',
-                  textAlign: 'center'
-                }}>
-                  {item.label}
-                </h4>
-
-              </div>
-            </Card>
-          ))}
+          {availableTerminals.map((item, index) => renderActionCard(item, index))}
         </div>
       </div>
 
-      {/* Herramientas del sistema - Eliminadas a petición */}
-
-      {/* Bloque de estadísticas rápidas eliminado por petición */}
+      {/* Segunda fila: Acciones principales */}
+      <div>
+        <h4 style={{ 
+          margin: '0 0 0.3rem 0', 
+          color: 'var(--text-color-secondary)',
+          fontSize: '0.7rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+          fontWeight: '500'
+        }}>
+          <i className="pi pi-cog" style={{ color: 'var(--primary-color)', fontSize: '0.6rem' }} />
+          Acciones Principales
+        </h4>
+        
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
+          gap: '0.2rem',
+          width: '100%'
+        }}>
+          {quickActionItems.map((item, index) => renderActionCard(item, index))}
+        </div>
+      </div>
     </div>
   );
 };
