@@ -330,6 +330,8 @@ function createWindow() {
     minHeight: 600,
     title: 'NodeTerm',
     frame: false, // Oculta la barra de título nativa para usar una personalizada
+    show: false, // mostrar solo cuando esté lista para evitar parpadeos
+    backgroundColor: '#0e1116', // fondo inicial oscuro consistente con splash
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -362,6 +364,11 @@ function createWindow() {
           slashes: true
         })
   );
+
+  // Mostrar ventana cuando esté lista para mostrar
+  mainWindow.once('ready-to-show', () => {
+    if (mainWindow) mainWindow.show();
+  });
 
   // Open the DevTools in development mode
   if (process.env.NODE_ENV === 'development') {
