@@ -11,6 +11,32 @@ const QuickActions = ({
   sshConnectionsCount = 0,
   foldersCount = 0 
 }) => {
+  // Handlers for actions that don't come from props
+  const handleOpenPasswords = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('open-password-manager'));
+    } catch (e) { /* noop */ }
+  };
+
+  const handleOpenAuditGlobal = async () => {
+    try {
+      if (window?.electron?.ipcRenderer) {
+        const result = await window.electron.ipcRenderer.invoke('recording:list', {});
+        if (result && result.success && Array.isArray(result.recordings) && result.recordings.length > 0) {
+          const auditTabId = `audit_global_${Date.now()}`;
+          window.dispatchEvent(new CustomEvent('create-audit-tab', {
+            detail: {
+              tabId: auditTabId,
+              title: 'Auditoría Global',
+              recordings: result.recordings
+            }
+          }));
+        }
+      }
+    } catch (e) { /* noop */ }
+  };
+
+  // Build quick action items conditionally to avoid dead actions
   const quickActionItems = [
     {
       label: 'Nueva Conexión SSH',
@@ -29,22 +55,58 @@ const QuickActions = ({
       badge: foldersCount
     },
     {
-      label: 'Explorador',
-      icon: 'pi pi-folder-open',
-      color: '#FF9800',
-      description: 'Explorar archivos',
-      action: onOpenFileExplorer,
-      badge: null
-    },
-    {
       label: 'Configuración',
       icon: 'pi pi-cog',
       color: '#9C27B0',
       description: 'Ajustes y preferencias',
       action: onOpenSettings,
       badge: null
+    },
+    {
+      label: 'Auditoría Global',
+      icon: 'pi pi-video',
+      color: '#EF5350',
+      description: 'Ver grabaciones y auditoría',
+      action: handleOpenAuditGlobal,
+      badge: null
+    },
+    {
+      label: 'Gestor de Contraseñas',
+      icon: 'pi pi-key',
+      color: '#FFC107',
+      description: 'Ver y gestionar passwords',
+      action: handleOpenPasswords,
+      badge: null
+    },
+    // Extras pequeños solicitados
+    {
+      label: 'Historial',
+      icon: 'pi pi-history',
+      color: '#795548',
+      description: '',
+      action: () => {},
+      badge: null
+    },
+    {
+      label: 'Favoritos',
+      icon: 'pi pi-star',
+      color: '#FFD700',
+      description: '',
+      action: () => {},
+      badge: null
     }
   ];
+
+  if (onOpenFileExplorer) {
+    quickActionItems.splice(2, 0, {
+      label: 'Explorador',
+      icon: 'pi pi-folder-open',
+      color: '#FF9800',
+      description: 'Explorar archivos',
+      action: onOpenFileExplorer,
+      badge: null
+    });
+  }
 
   const systemTools = [
     {
@@ -76,14 +138,14 @@ const QuickActions = ({
   return (
     <div style={{ padding: '1rem' }}>
       {/* Acciones principales */}
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '0.75rem' }}>
         <h3 style={{ 
-          margin: '0 0 1rem 0', 
+          margin: '0 0 0.5rem 0', 
           color: 'var(--text-color)',
-          fontSize: '1.1rem',
+          fontSize: '0.95rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem'
+          gap: '0.4rem'
         }}>
           <i className="pi pi-bolt" style={{ color: 'var(--primary-color)' }} />
           Acciones Rápidas
@@ -91,8 +153,8 @@ const QuickActions = ({
         
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1rem'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))',
+          gap: '0.25rem'
         }}>
           {quickActionItems.map((item, index) => (
             <Card 
@@ -100,18 +162,19 @@ const QuickActions = ({
               className="quick-action-card"
               style={{ 
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.12s ease',
                 background: 'var(--surface-card)',
                 border: '1px solid var(--surface-border)',
-                position: 'relative'
+                position: 'relative',
+                minHeight: '48px'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.12)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.08)';
               }}
               onClick={item.action}
             >
@@ -119,34 +182,35 @@ const QuickActions = ({
                 display: 'flex', 
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '1rem'
+                gap: '0.15rem',
+                padding: '0.3rem 0.3rem'
               }}>
                 {item.badge !== null && (
                   <Badge 
                     value={item.badge} 
                     style={{ 
                       position: 'absolute',
-                      top: '0.5rem',
-                      right: '0.5rem'
+                      top: '0.4rem',
+                      right: '0.4rem',
+                      fontSize: '0.65rem'
                     }}
                   />
                 )}
                 
                 <div style={{ 
-                  width: '50px',
-                  height: '50px',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: '50%',
                   background: `${item.color}20`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.35rem'
                 }}>
                   <i 
                     className={item.icon}
                     style={{ 
-                      fontSize: '1.5rem',
+                      fontSize: '0.75rem',
                       color: item.color
                     }}
                   />
@@ -155,151 +219,22 @@ const QuickActions = ({
                 <h4 style={{ 
                   margin: 0,
                   color: 'var(--text-color)',
-                  fontSize: '0.95rem',
+                  fontSize: '0.56rem',
                   fontWeight: '600',
                   textAlign: 'center'
                 }}>
                   {item.label}
                 </h4>
-                
-                <p style={{ 
-                  margin: 0,
-                  color: 'var(--text-color-secondary)',
-                  fontSize: '0.8rem',
-                  textAlign: 'center',
-                  lineHeight: '1.3'
-                }}>
-                  {item.description}
-                </p>
+
               </div>
             </Card>
           ))}
         </div>
       </div>
 
-      {/* Herramientas del sistema */}
-      <div>
-        <h3 style={{ 
-          margin: '0 0 1rem 0', 
-          color: 'var(--text-color)',
-          fontSize: '1.1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <i className="pi pi-wrench" style={{ color: 'var(--primary-color)' }} />
-          Herramientas
-        </h3>
-        
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: '0.75rem'
-        }}>
-          {systemTools.map((tool, index) => (
-            <Button
-              key={index}
-              className="p-button-outlined"
-              style={{ 
-                height: '80px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.25rem',
-                background: 'var(--surface-card)',
-                border: `1px solid ${tool.color}40`,
-                color: 'var(--text-color)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `${tool.color}10`;
-                e.currentTarget.style.borderColor = tool.color;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--surface-card)';
-                e.currentTarget.style.borderColor = `${tool.color}40`;
-              }}
-            >
-              <i 
-                className={tool.icon}
-                style={{ 
-                  fontSize: '1.2rem',
-                  color: tool.color
-                }}
-              />
-              <span style={{ 
-                fontSize: '0.8rem',
-                fontWeight: '600'
-              }}>
-                {tool.label}
-              </span>
-            </Button>
-          ))}
-        </div>
-      </div>
+      {/* Herramientas del sistema - Eliminadas a petición */}
 
-      {/* Estadísticas rápidas */}
-      <div style={{ 
-        marginTop: '2rem',
-        padding: '1rem',
-        background: 'var(--surface-section)',
-        borderRadius: '8px',
-        border: '1px solid var(--surface-border)'
-      }}>
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              color: 'var(--primary-color)'
-            }}>
-              {sshConnectionsCount}
-            </div>
-            <div style={{ 
-              fontSize: '0.8rem',
-              color: 'var(--text-color-secondary)'
-            }}>
-              Conexiones SSH
-            </div>
-          </div>
-          
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              color: 'var(--primary-color)'
-            }}>
-              {foldersCount}
-            </div>
-            <div style={{ 
-              fontSize: '0.8rem',
-              color: 'var(--text-color-secondary)'
-            }}>
-              Carpetas
-            </div>
-          </div>
-          
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              color: 'var(--primary-color)'
-            }}>
-              v1.5.5
-            </div>
-            <div style={{ 
-              fontSize: '0.8rem',
-              color: 'var(--text-color-secondary)'
-            }}>
-              NodeTerm
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Bloque de estadísticas rápidas eliminado por petición */}
     </div>
   );
 };

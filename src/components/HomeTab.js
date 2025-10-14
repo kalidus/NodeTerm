@@ -18,6 +18,7 @@ const HomeTab = ({
   onOpenSettings,
   sshConnectionsCount = 0,
   foldersCount = 0,
+  rdpConnectionsCount = 0,
   localFontFamily,
   localFontSize,
   localPowerShellTheme,
@@ -145,6 +146,25 @@ const HomeTab = ({
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
       <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+        <div style={{ marginBottom: '1rem' }}>
+          <QuickActions
+            onCreateSSHConnection={onCreateSSHConnection}
+            onCreateFolder={onCreateFolder}
+            onOpenFileExplorer={() => {
+              // Abrir un explorador vacío requiere un nodo SSH; si no hay, solo no-op
+              try {
+                window.dispatchEvent(new CustomEvent('open-explorer-dialog'));
+              } catch (e) { /* noop */ }
+            }}
+            onOpenSettings={() => {
+              try {
+                window.dispatchEvent(new CustomEvent('open-settings-dialog'));
+              } catch (e) { /* noop */ }
+            }}
+            sshConnectionsCount={sshConnectionsCount}
+            foldersCount={foldersCount}
+          />
+        </div>
         <ConnectionHistory 
           onConnectToHistory={handleConnectToHistory}
           layout="two-columns"
@@ -155,6 +175,9 @@ const HomeTab = ({
           favoritesColumns={2}
           recentsColumns={1}
           onEdit={onEditConnection}
+          sshConnectionsCount={sshConnectionsCount}
+          foldersCount={foldersCount}
+          rdpConnectionsCount={rdpConnectionsCount}
         />
       </div>
     </div>

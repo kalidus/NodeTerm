@@ -4,8 +4,9 @@ import { Badge } from 'primereact/badge';
 import { getFavorites, getRecents, toggleFavorite, isFavorite, onUpdate } from '../utils/connectionStore';
 import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
+import { getVersionInfo } from '../version-info';
 
-const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1 }) => {
+const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0 }) => {
 	const [recentConnections, setRecentConnections] = useState([]);
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [favType, setFavType] = useState(() => localStorage.getItem('nodeterm_fav_type') || 'all');
@@ -484,6 +485,42 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						<i className="pi pi-chart-bar" style={{ color: 'var(--primary-color)' }} />
 						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Estado de NodeTerm</h3>
 					</div>
+					{(() => {
+						const { appVersion } = getVersionInfo();
+						const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#3b82f6';
+						return (
+							<div style={{
+								display: 'grid',
+								gridTemplateColumns: '1fr 1fr 1fr 1fr',
+								alignItems: 'center',
+								gap: 8,
+								padding: '6px 10px',
+								borderRadius: 10,
+								border: `1px solid ${primary.trim()}55`,
+								background: `linear-gradient(135deg, ${primary.trim()}22, ${primary.trim()}11)`,
+								boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+								marginBottom: 10
+							}}>
+								<div style={{ textAlign: 'center' }}>
+									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{sshConnectionsCount}</div>
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Conexiones SSH</div>
+								</div>
+								<div style={{ textAlign: 'center' }}>
+									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{rdpConnectionsCount}</div>
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Conexiones RDP</div>
+								</div>
+								<div style={{ textAlign: 'center' }}>
+									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{foldersCount}</div>
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Carpetas</div>
+								</div>
+								<div style={{ textAlign: 'center' }}>
+									<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{`v${appVersion}`}</div>
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>NodeTerm</div>
+								</div>
+							</div>
+						);
+					})()}
+
 					<div style={{ display: 'grid', gap: 10 }}>
 							{/* Nextcloud */}
 							{(() => {

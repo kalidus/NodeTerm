@@ -792,6 +792,23 @@ const Sidebar = React.memo(({
     }
   }, [nodes]);
 
+  // Eventos globales para acciones de acceso rápido desde Home
+  useEffect(() => {
+    const handleOpenPasswords = () => setViewMode('passwords');
+    const handleOpenSettings = () => setShowSettingsDialog(true);
+    const handleOpenExplorerDialog = () => {
+      setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true);
+    };
+    window.addEventListener('open-password-manager', handleOpenPasswords);
+    window.addEventListener('open-settings-dialog', handleOpenSettings);
+    window.addEventListener('open-explorer-dialog', handleOpenExplorerDialog);
+    return () => {
+      window.removeEventListener('open-password-manager', handleOpenPasswords);
+      window.removeEventListener('open-settings-dialog', handleOpenSettings);
+      window.removeEventListener('open-explorer-dialog', handleOpenExplorerDialog);
+    };
+  }, [setShowSettingsDialog, setShowUnifiedConnectionDialog]);
+
 
   // Escuchar evento para abrir el diálogo de crear grupo desde la vista de passwords
   useEffect(() => {
