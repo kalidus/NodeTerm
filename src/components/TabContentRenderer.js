@@ -1,5 +1,5 @@
 import React from 'react';
-import HomeTab from './HomeTab';
+import HomeTabRedesigned from './HomeTabRedesigned';
 import FileExplorer from './FileExplorer';
 import SplitLayout from './SplitLayout';
 import RdpSessionTab from './RdpSessionTab';
@@ -57,7 +57,7 @@ const TabContentRenderer = React.memo(({
 }) => {
   if (tab.type === 'home') {
     return (
-      <HomeTab
+      <HomeTabRedesigned
         onCreateSSHConnection={onCreateSSHConnection}
         onCreateFolder={() => openFolderDialog(null)}
         onCreateRdpConnection={onOpenRdpConnection}
