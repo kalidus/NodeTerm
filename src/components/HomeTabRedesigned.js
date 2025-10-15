@@ -29,6 +29,7 @@ const HomeTabRedesigned = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal');
+  const [favType, setFavType] = useState('all');
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -151,177 +152,548 @@ const HomeTabRedesigned = ({
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem', 
-              marginBottom: '1rem' 
+            {/* Card de Favoritos con estilo glassmorphism */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              padding: '1rem',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column'
             }}>
-              <i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
-              <h3 style={{ 
-                margin: 0, 
-                color: 'var(--text-color)', 
-                fontSize: '1rem',
-                fontWeight: '600'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1rem'
               }}>
-                Conexiones Favoritas
-              </h3>
-            </div>
-            
-            {/* Grid de favoritos */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(2, 1fr)', 
-              gap: '0.75rem',
-              flex: 1
-            }}>
-              {/* Cards de favoritos - usando datos de ejemplo por ahora */}
-              {[
-                { id: '1', name: 'BeeSer', type: 'rdp-guacamole', status: 'mixed' },
-                { id: '2', name: 'Kepler', type: 'ssh', status: 'mixed' }
-              ].map(connection => (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
+                  <h3 style={{
+                    margin: 0,
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}>
+                    Conexiones Favoritas
+                  </h3>
+                </div>
+
+                {/* Filtros por tipo */}
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  {[
+                    { key: 'all', label: 'Todos' },
+                    { key: 'ssh', label: 'SSH' },
+                    { key: 'rdp-guacamole', label: 'RDP' }
+                  ].map(option => (
+                    <button
+                      key={option.key}
+                      onClick={() => setFavType(option.key)}
+                      style={{
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                        background: favType === option.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                        color: 'var(--text-color)',
+                        fontSize: '0.6rem',
+                        cursor: 'pointer',
+                        backdropFilter: 'blur(8px) saturate(130%)',
+                        transition: 'all 0.2s ease',
+                        fontWeight: '500'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (favType !== option.key) {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (favType !== option.key) {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)';
+                        }
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grid compacto 5x2 para favoritos - LISTA COMPACTA */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                gap: '0.6rem',
+                width: '100%',
+                flex: 1,
+                overflow: 'auto'
+              }}>
+              {/* Cards de favoritos ULTRA ELEGANTES */}
+              {(() => {
+                // Datos de ejemplo con más conexiones
+                const allConnections = [
+                  { id: '1', name: 'BeeSer', type: 'rdp-guacamole', status: 'mixed', host: '192.168.1.100' },
+                  { id: '2', name: 'Kepler', type: 'ssh', status: 'mixed', host: 'kepler.company.com' },
+                  { id: '3', name: 'Adienta', type: 'ssh', status: 'mixed', host: 'adienta.dev' },
+                  { id: '4', name: 'Aetins', type: 'ssh', status: 'mixed', host: 'aetins.local' },
+                  { id: '5', name: 'Server RDP', type: 'rdp-guacamole', status: 'mixed', host: 'server.company.com' },
+                  { id: '6', name: 'Dev Server', type: 'ssh', status: 'mixed', host: 'dev.internal' }
+                ];
+                
+                // Aplicar filtro
+                const filteredConnections = favType === 'all' 
+                  ? allConnections 
+                  : allConnections.filter(conn => conn.type === favType);
+                
+                return filteredConnections.map((connection, index) => (
                 <div
                   key={connection.id}
                   onClick={() => onConnectToHistory?.(connection)}
                   style={{
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    background: `linear-gradient(135deg, 
-                      rgba(16, 20, 28, 0.8) 0%, 
-                      rgba(16, 20, 28, 0.6) 100%)`,
-                    backdropFilter: 'blur(10px) saturate(140%)',
-                    WebkitBackdropFilter: 'blur(10px) saturate(140%)',
-                    border: `1px solid ${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}40`,
-                    borderRadius: '12px',
+                    transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    background: `linear-gradient(145deg, 
+                      rgba(0, 0, 0, 0.8) 0%, 
+                      rgba(20, 25, 35, 0.9) 50%,
+                      rgba(0, 0, 0, 0.9) 100%)`,
+                    backdropFilter: 'blur(20px) saturate(200%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+                    border: `1px solid ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}80`,
+                    borderRadius: '16px',
                     padding: '1rem',
-                    boxShadow: `0 4px 16px rgba(0,0,0,0.2), 
-                                 inset 0 1px 0 rgba(255,255,255,0.05)`,
+                    boxShadow: `0 8px 32px rgba(0,0,0,0.6), 
+                                0 4px 16px ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}30,
+                                inset 0 1px 0 rgba(255,255,255,0.1),
+                                inset 0 -1px 0 rgba(0,0,0,0.2)`,
                     overflow: 'hidden',
-                    position: 'relative'
+                    position: 'relative',
+                    height: '100px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    transform: `translateY(${index * 1}px)`,
+                    animation: `fadeInUp 0.6s ease-out ${index * 0.1}s both`
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = `0 8px 24px ${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}25, 
-                                                      0 4px 12px rgba(0,0,0,0.3),
-                                                      inset 0 1px 0 rgba(255,255,255,0.1)`;
-                    e.currentTarget.style.borderColor = `${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}70`;
+                    e.currentTarget.style.transform = 'translateY(-8px) scale(1.03)';
+                    e.currentTarget.style.boxShadow = `0 20px 60px rgba(0,0,0,0.8), 
+                                                      0 8px 24px ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}50,
+                                                      inset 0 1px 0 rgba(255,255,255,0.2),
+                                                      inset 0 -1px 0 rgba(0,0,0,0.3)`;
+                    e.currentTarget.style.borderColor = `${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}ff`;
+                    e.currentTarget.style.background = `linear-gradient(145deg, 
+                      rgba(0, 0, 0, 0.9) 0%, 
+                      rgba(20, 25, 35, 0.95) 50%,
+                      rgba(0, 0, 0, 0.95) 100%)`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.2), 
-                                                       inset 0 1px 0 rgba(255,255,255,0.05)`;
-                    e.currentTarget.style.borderColor = `${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}40`;
+                    e.currentTarget.style.transform = `translateY(${index * 1}px) scale(1)`;
+                    e.currentTarget.style.boxShadow = `0 8px 32px rgba(0,0,0,0.6), 
+                                                      0 4px 16px ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}30,
+                                                      inset 0 1px 0 rgba(255,255,255,0.1),
+                                                      inset 0 -1px 0 rgba(0,0,0,0.2)`;
+                    e.currentTarget.style.borderColor = `${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}80`;
+                    e.currentTarget.style.background = `linear-gradient(145deg, 
+                      rgba(0, 0, 0, 0.8) 0%, 
+                      rgba(20, 25, 35, 0.9) 50%,
+                      rgba(0, 0, 0, 0.9) 100%)`;
                   }}
                 >
-                  {/* Icono y título */}
+                  {/* Efecto de resplandor tecnológico */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-50px',
+                    right: '-50px',
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    background: `radial-gradient(circle, ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}40, transparent)`,
+                    filter: 'blur(30px)',
+                    opacity: 0.6
+                  }} />
+                  
+                  {/* Líneas de energía */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: `linear-gradient(90deg, 
+                      transparent, 
+                      ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}, 
+                      transparent)`,
+                    filter: 'blur(1px)',
+                    animation: 'pulse 2s infinite'
+                  }} />
+                  
+                  {/* Header tecnológico */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.75rem',
-                    marginBottom: '0.75rem'
+                    marginBottom: '0.5rem',
+                    position: 'relative',
+                    zIndex: 2
                   }}>
+                    {/* Icono holográfico */}
                     <div style={{
                       width: '40px',
                       height: '40px',
-                      borderRadius: '10px',
-                      background: `linear-gradient(135deg, ${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}88, ${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}44)`,
-                      border: '1px solid rgba(255,255,255,0.18)',
+                      borderRadius: '12px',
+                      background: `linear-gradient(145deg, ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}dd, ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}aa)`,
+                      border: `2px solid ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}60`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)'
+                      boxShadow: `0 6px 20px ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}60, 
+                                  0 2px 8px rgba(0,0,0,0.4),
+                                  inset 0 1px 0 rgba(255,255,255,0.3),
+                                  inset 0 -1px 0 rgba(0,0,0,0.2)`,
+                      flexShrink: 0,
+                      position: 'relative'
                     }}>
+                      {/* Efecto de escaneo */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '3px',
+                        left: '3px',
+                        right: '3px',
+                        height: '2px',
+                        background: 'rgba(255,255,255,0.8)',
+                        borderRadius: '6px',
+                        filter: 'blur(1px)',
+                        animation: 'scan 3s infinite'
+                      }} />
                       <i className={connection.type === 'ssh' ? 'pi pi-server' : 'pi pi-desktop'} style={{ 
                         color: '#fff', 
-                        fontSize: '1.2rem' 
+                        fontSize: '1.1rem',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
                       }} />
                     </div>
                     
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ 
-                        color: 'var(--text-color)', 
-                        fontWeight: '700', 
+                        color: '#ffffff', 
+                        fontWeight: '900', 
                         fontSize: '0.9rem',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        marginBottom: '0.25rem'
+                        lineHeight: '1.2',
+                        marginBottom: '0.3rem',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.7)',
+                        letterSpacing: '0.5px'
                       }}>
                         {connection.name}
                       </div>
                       <div style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.2rem',
                         padding: '0.2rem 0.5rem',
-                        borderRadius: '6px',
-                        background: `${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}20`,
-                        border: `1px solid ${connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35'}40`,
-                        color: connection.type === 'ssh' ? '#4fc3f7' : '#ff6b35',
+                        borderRadius: '8px',
+                        background: `${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}25`,
+                        border: `1px solid ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}60`,
+                        color: '#ffffff',
                         fontSize: '0.6rem',
-                        fontWeight: '600'
+                        fontWeight: '800',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        boxShadow: `0 3px 12px ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}40,
+                                    inset 0 1px 0 rgba(255,255,255,0.3)`
                       }}>
                         {connection.type === 'rdp-guacamole' ? 'RDP' : 'SSH'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Indicadores de estado */}
+                  {/* Información del host con estilo tecnológico */}
+                  <div style={{
+                    color: '#b0b0b0',
+                    fontSize: '0.6rem',
+                    fontFamily: 'monospace',
+                    background: 'rgba(0,0,0,0.4)',
+                    padding: '0.3rem 0.5rem',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    marginBottom: '0.5rem',
+                    textAlign: 'center',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '1px',
+                      background: `linear-gradient(90deg, transparent, ${connection.type === 'ssh' ? '#00d4ff' : '#ff6b00'}, transparent)`,
+                      opacity: 0.6
+                    }} />
+                    {connection.host}
+                  </div>
+
+                  {/* Footer con controles futuristas */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    zIndex: 2
                   }}>
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.25rem'
-                    }}>
-                      {[1, 2, 3].map((_, index) => (
+                    {/* Indicadores de estado holográficos */}
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      {[1, 2, 3].map((_, dotIndex) => (
                         <div
-                          key={index}
+                          key={dotIndex}
                           style={{
-                            width: '8px',
-                            height: '8px',
+                            width: '6px',
+                            height: '6px',
                             borderRadius: '50%',
-                            background: '#ef4444',
-                            boxShadow: 'none'
+                            background: dotIndex === 0 ? '#00ff88' : '#ff4444',
+                            boxShadow: dotIndex === 0 ? '0 0 12px rgba(0, 255, 136, 0.8)' : '0 0 8px rgba(255, 68, 68, 0.6)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            animation: dotIndex === 0 ? 'pulse 2s infinite' : 'none'
                           }}
                         />
                       ))}
                     </div>
                     
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditConnection?.(connection);
-                      }}
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '6px',
-                        background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(255,255,255,0.16)',
-                        color: 'var(--text-color)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.16)';
-                        e.currentTarget.style.color = '#fff';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                        e.currentTarget.style.color = 'var(--text-color)';
-                      }}
-                    >
-                      <i className="pi pi-pencil" style={{ fontSize: '0.6rem' }} />
-                    </button>
+                    {/* Controles futuristas */}
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditConnection?.(connection);
+                        }}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          background: 'rgba(0, 212, 255, 0.15)',
+                          border: '1px solid rgba(0, 212, 255, 0.4)',
+                          color: '#00d4ff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 3px 12px rgba(0, 212, 255, 0.3)',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 212, 255, 0.25)';
+                          e.currentTarget.style.borderColor = '#00d4ff';
+                          e.currentTarget.style.transform = 'scale(1.15)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 212, 255, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 212, 255, 0.15)';
+                          e.currentTarget.style.borderColor = 'rgba(0, 212, 255, 0.4)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = '0 3px 12px rgba(0, 212, 255, 0.3)';
+                        }}
+                      >
+                        <i className="pi pi-pencil" style={{ fontSize: '0.5rem' }} />
+                      </button>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Acción de favorito
+                        }}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          background: 'rgba(255, 215, 0, 0.15)',
+                          border: '1px solid rgba(255, 215, 0, 0.4)',
+                          color: '#FFD700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 3px 12px rgba(255, 215, 0, 0.3)',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 215, 0, 0.25)';
+                          e.currentTarget.style.borderColor = '#FFD700';
+                          e.currentTarget.style.transform = 'scale(1.15)';
+                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 215, 0, 0.5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 215, 0, 0.15)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = '0 3px 12px rgba(255, 215, 0, 0.3)';
+                        }}
+                      >
+                        <i className="pi pi-star-fill" style={{ fontSize: '0.5rem' }} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              ))}
+                ));
+              })()}
+              </div>
+            </div>
+
+            {/* Cards adicionales debajo de favoritos */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1rem',
+              marginTop: '1rem'
+            }}>
+              {/* Card de Conexiones Recientes */}
+              <div style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <i className="pi pi-history" style={{ color: 'var(--text-color-secondary)' }} />
+                  <h3 style={{
+                    margin: 0,
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}>
+                    Conexiones Recientes
+                  </h3>
+                </div>
+                {/* Lista de conexiones recientes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { id: 'r1', name: 'A Conex/bnd...', type: 'ssh' },
+                    { id: 'r2', name: 'G Cenexions RDP...', type: 'rdp-guacamole' },
+                    { id: 'r3', name: 'O Ubunt de activo', type: 'ssh' },
+                    { id: 'r4', name: 'P Peeqia de Global', type: 'rdp-guacamole' },
+                  ].map(recentConn => (
+                    <div key={recentConn.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '0.8rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    >
+                      <i className={recentConn.type === 'ssh' ? 'pi pi-server' : 'pi pi-desktop'} style={{
+                        color: recentConn.type === 'ssh' ? '#4fc3f7' : '#ff6b35',
+                        fontSize: '0.9rem'
+                      }} />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {recentConn.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card de Passwords Recientes */}
+              <div style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <i className="pi pi-key" style={{ color: 'var(--text-color-secondary)' }} />
+                  <h3 style={{
+                    margin: 0,
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}>
+                    Passwords Recientes
+                  </h3>
+                </div>
+                {/* Lista de passwords recientes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { id: 'p1', name: 'Gmail Account', type: 'web' },
+                    { id: 'p2', name: 'GitHub Token', type: 'dev' },
+                    { id: 'p3', name: 'AWS Access Key', type: 'cloud' },
+                    { id: 'p4', name: 'Database Root', type: 'db' },
+                  ].map(recentPass => (
+                    <div key={recentPass.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '0.8rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    >
+                      <i className={recentPass.type === 'web' ? 'pi pi-globe' : 
+                                   recentPass.type === 'dev' ? 'pi pi-code' :
+                                   recentPass.type === 'cloud' ? 'pi pi-cloud' : 'pi pi-database'} style={{
+                        color: recentPass.type === 'web' ? '#4fc3f7' : 
+                               recentPass.type === 'dev' ? '#66bb6a' :
+                               recentPass.type === 'cloud' ? '#ff7043' : '#ab47bc',
+                        fontSize: '0.9rem'
+                      }} />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {recentPass.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -331,128 +703,26 @@ const HomeTabRedesigned = ({
             padding: '1rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem',
-            background: 'rgba(16, 20, 28, 0.4)',
-            backdropFilter: 'blur(10px) saturate(140%)',
-            borderLeft: '1px solid rgba(255,255,255,0.1)'
+            gap: '1rem'
           }}>
             {/* Estado de NodeTerm */}
-            <NodeTermStatusRedesigned
-              sshConnectionsCount={sshConnectionsCount}
-              foldersCount={foldersCount}
-              rdpConnectionsCount={rdpConnectionsCount}
-            />
-
-            {/* Conexiones Recientes */}
             <div style={{
-              background: 'rgba(16, 20, 28, 0.6)',
-              backdropFilter: 'blur(8px) saturate(120%)',
-              borderRadius: '12px',
+              background: `linear-gradient(135deg, 
+                rgba(16, 20, 28, 0.6) 0%, 
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
               border: '1px solid rgba(255,255,255,0.1)',
-              padding: '1rem'
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
             }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem', 
-                marginBottom: '0.75rem' 
-              }}>
-                <i className="pi pi-clock" style={{ color: '#4fc3f7' }} />
-                <h3 style={{ 
-                  margin: 0, 
-                  color: 'var(--text-color)', 
-                  fontSize: '0.9rem',
-                  fontWeight: '600'
-                }}>
-                  Conexiones Recientes
-                </h3>
-              </div>
-              
-              {/* Lista de recientes simplificada */}
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '0.4rem' 
-              }}>
-                {[
-                  { id: '1', name: 'Conex/bnd conecatad', type: 'ssh', status: 'mixed' },
-                  { id: '2', name: 'Cenexions RDP aetad', type: 'rdp', status: 'mixed' },
-                  { id: '3', name: 'Ubunt de activo', type: 'ssh', status: 'mixed' },
-                  { id: '4', name: 'Peeqia de Global', type: 'ssh', status: 'mixed' }
-                ].map((item, index) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.4rem',
-                      borderRadius: '6px',
-                      background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'rgba(79, 195, 247, 0.3)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-                    }}
-                  >
-                    {/* Icono pequeño */}
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '3px',
-                      background: '#4fc3f7',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.5rem',
-                      fontWeight: 'bold',
-                      color: 'white'
-                    }}>
-                      {String.fromCharCode(65 + index)}
-                    </div>
-                    
-                    {/* Texto */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ 
-                        color: 'var(--text-color)', 
-                        fontSize: '0.6rem',
-                        fontWeight: '500',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {item.name}
-                      </div>
-                    </div>
-                    
-                    {/* Indicadores de estado */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.2rem'
-                    }}>
-                      {[1, 2].map((_, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            width: '4px',
-                            height: '4px',
-                            borderRadius: '50%',
-                            background: idx === 0 ? '#4fc3f7' : '#ef4444'
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <NodeTermStatusRedesigned
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+              />
             </div>
+
           </div>
         </div>
       </div>
