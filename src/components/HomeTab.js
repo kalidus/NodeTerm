@@ -6,7 +6,7 @@ import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
-import QuickActions from './QuickActions';
+import QuickAccessSidebar from './QuickAccessSidebar';
 import NodeTermStatus from './NodeTermStatus';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
@@ -154,7 +154,7 @@ const HomeTab = ({
           gap: '1rem', 
           marginBottom: '1rem' 
         }}>
-          <QuickActions
+          <QuickAccessSidebar
             onCreateSSHConnection={onCreateSSHConnection}
             onCreateFolder={onCreateFolder}
             onOpenFileExplorer={() => {
