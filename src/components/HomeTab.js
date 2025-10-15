@@ -202,6 +202,151 @@ const HomeTab = ({
                 rdpConnectionsCount={rdpConnectionsCount}
               />
             </div>
+
+            {/* Cards adicionales debajo de ConnectionHistory */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1rem',
+              marginTop: '1rem'
+            }}>
+              {/* Card de Conexiones Recientes */}
+              <div style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <i className="pi pi-history" style={{ color: 'var(--text-color-secondary)' }} />
+                  <h3 style={{
+                    margin: 0,
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}>
+                    Conexiones Recientes
+                  </h3>
+                </div>
+                {/* Lista de conexiones recientes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { id: 'r1', name: 'A Conex/bnd...', type: 'ssh' },
+                    { id: 'r2', name: 'G Cenexions RDP...', type: 'rdp-guacamole' },
+                    { id: 'r3', name: 'O Ubunt de activo', type: 'ssh' },
+                    { id: 'r4', name: 'P Peeqia de Global', type: 'rdp-guacamole' },
+                    { id: 'r5', name: 'Server Prod SSH', type: 'ssh' },
+                    { id: 'r6', name: 'Admin Panel RDP', type: 'rdp-guacamole' },
+                  ].map(recentConn => (
+                    <div key={recentConn.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '0.8rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onClick={() => handleConnectToHistory(recentConn)}
+                    >
+                      <i className={recentConn.type === 'ssh' ? 'pi pi-server' : 'pi pi-desktop'} style={{
+                        color: recentConn.type === 'ssh' ? '#4fc3f7' : '#ff6b35',
+                        fontSize: '0.9rem'
+                      }} />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {recentConn.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card de Passwords Recientes */}
+              <div style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                padding: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '0.75rem'
+                }}>
+                  <i className="pi pi-key" style={{ color: 'var(--text-color-secondary)' }} />
+                  <h3 style={{
+                    margin: 0,
+                    color: 'var(--text-color)',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}>
+                    Passwords Recientes
+                  </h3>
+                </div>
+                {/* Lista de passwords recientes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {[
+                    { id: 'p1', name: 'Gmail Account', type: 'web' },
+                    { id: 'p2', name: 'GitHub Token', type: 'dev' },
+                    { id: 'p3', name: 'AWS Access Key', type: 'cloud' },
+                    { id: 'p4', name: 'Database Root', type: 'db' },
+                    { id: 'p5', name: 'Office 365 Admin', type: 'web' },
+                    { id: 'p6', name: 'Docker Registry', type: 'dev' },
+                  ].map(recentPass => (
+                    <div key={recentPass.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      color: 'var(--text-color-secondary)',
+                      fontSize: '0.8rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    >
+                      <i className={recentPass.type === 'web' ? 'pi pi-globe' : 
+                                   recentPass.type === 'dev' ? 'pi pi-code' :
+                                   recentPass.type === 'cloud' ? 'pi pi-cloud' : 'pi pi-database'} style={{
+                        color: recentPass.type === 'web' ? '#4fc3f7' : 
+                               recentPass.type === 'dev' ? '#66bb6a' :
+                               recentPass.type === 'cloud' ? '#ff7043' : '#ab47bc',
+                        fontSize: '0.9rem'
+                      }} />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {recentPass.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Columna derecha: Estado y Recientes */}
