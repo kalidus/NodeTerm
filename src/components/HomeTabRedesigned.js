@@ -610,6 +610,8 @@ const HomeTabRedesigned = ({
                     { id: 'r2', name: 'G Cenexions RDP...', type: 'rdp-guacamole' },
                     { id: 'r3', name: 'O Ubunt de activo', type: 'ssh' },
                     { id: 'r4', name: 'P Peeqia de Global', type: 'rdp-guacamole' },
+                    { id: 'r5', name: 'Server Prod SSH', type: 'ssh' },
+                    { id: 'r6', name: 'Admin Panel RDP', type: 'rdp-guacamole' },
                   ].map(recentConn => (
                     <div key={recentConn.id} style={{
                       display: 'flex',
@@ -674,6 +676,8 @@ const HomeTabRedesigned = ({
                     { id: 'p2', name: 'GitHub Token', type: 'dev' },
                     { id: 'p3', name: 'AWS Access Key', type: 'cloud' },
                     { id: 'p4', name: 'Database Root', type: 'db' },
+                    { id: 'p5', name: 'Office 365 Admin', type: 'web' },
+                    { id: 'p6', name: 'Docker Registry', type: 'dev' },
                   ].map(recentPass => (
                     <div key={recentPass.id} style={{
                       display: 'flex',
