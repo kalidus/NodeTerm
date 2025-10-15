@@ -107,8 +107,8 @@ const QuickAccessSidebar = ({
       terminals.push({
         label: 'PowerShell',
         value: 'powershell',
-        icon: 'pi pi-desktop',
-        color: '#9C27B0',
+        icon: 'pi pi-microsoft',
+        color: '#0078D4',
         action: () => handleOpenTerminal('powershell')
       });
 
@@ -236,6 +236,7 @@ const QuickAccessSidebar = ({
     return (
       <div
         key={index}
+        title={action.description || action.label}
         style={{
           cursor: 'pointer',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -255,10 +256,8 @@ const QuickAccessSidebar = ({
                       inset 0 1px 0 rgba(255,255,255,0.1)`,
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '0.2rem',
           padding: '0.4rem'
         }}
         onMouseEnter={(e) => {
@@ -324,19 +323,6 @@ const QuickAccessSidebar = ({
             opacity: '0.8'
           }} />
         </div>
-        
-        {/* Texto de acción */}
-        <span style={{ 
-          color: 'rgba(255, 255, 255, 0.85)',
-          fontSize: '0.35rem',
-          fontWeight: '600',
-          textAlign: 'center',
-          lineHeight: '1.0',
-          letterSpacing: '0.005rem',
-          textShadow: '0 1px 2px rgba(0,0,0,0.6)'
-        }}>
-          {action.label}
-        </span>
       </div>
     );
   };
@@ -346,6 +332,7 @@ const QuickAccessSidebar = ({
     return (
       <div
         key={index}
+        title={terminal.label}
         style={{
           cursor: 'pointer',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -365,10 +352,8 @@ const QuickAccessSidebar = ({
                       inset 0 1px 0 rgba(255,255,255,0.1)`,
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '0.25rem',
           padding: '0.5rem'
         }}
         onMouseEnter={(e) => {
@@ -448,19 +433,6 @@ const QuickAccessSidebar = ({
             opacity: '0.8'
           }} />
         </div>
-        
-        {/* Texto mejorado */}
-        <span style={{ 
-          color: 'rgba(255, 255, 255, 0.85)',
-          fontSize: '0.45rem',
-          fontWeight: '600',
-          textAlign: 'center',
-          lineHeight: '1.0',
-          letterSpacing: '0.005rem',
-          textShadow: '0 2px 4px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4)'
-        }}>
-          {terminal.label}
-        </span>
       </div>
     );
   };
