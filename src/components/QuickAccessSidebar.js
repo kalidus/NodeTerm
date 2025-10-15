@@ -12,6 +12,7 @@ const QuickAccessSidebar = ({
   const [wslDistributions, setWSLDistributions] = useState([]);
   const [cygwinAvailable, setCygwinAvailable] = useState(false);
   const [availableTerminals, setAvailableTerminals] = useState([]);
+  const [quickActionItems, setQuickActionItems] = useState([]);
 
   // Handlers for actions that don't come from props
   const handleOpenPasswords = () => {
@@ -155,6 +156,54 @@ const QuickAccessSidebar = ({
     setAvailableTerminals(terminals);
   }, [wslDistributions, cygwinAvailable]);
 
+  // Configurar acciones principales
+  useEffect(() => {
+    const actions = [
+      {
+        label: 'Configuración',
+        icon: 'pi pi-cog',
+        color: '#9C27B0',
+        description: 'Ajustes y preferencias',
+        action: onOpenSettings,
+        badge: null
+      },
+      {
+        label: 'Auditoría Global',
+        icon: 'pi pi-video',
+        color: '#EF5350',
+        description: 'Ver grabaciones y auditoría',
+        action: handleOpenAuditGlobal,
+        badge: null
+      },
+      {
+        label: 'Gestor de Contraseñas',
+        icon: 'pi pi-key',
+        color: '#FFC107',
+        description: 'Ver y gestionar passwords',
+        action: handleOpenPasswords,
+        badge: null
+      },
+      {
+        label: 'Historial',
+        icon: 'pi pi-history',
+        color: '#795548',
+        description: 'Conexiones recientes',
+        action: () => {},
+        badge: null
+      },
+      {
+        label: 'Favoritos',
+        icon: 'pi pi-star',
+        color: '#FFD700',
+        description: 'Acceso rápido',
+        action: () => {},
+        badge: null
+      }
+    ];
+
+    setQuickActionItems(actions);
+  }, [onOpenSettings]);
+
   // Función para obtener colores según la categoría
   const getColorForCategory = (category) => {
     const colorMap = {
@@ -168,6 +217,116 @@ const QuickAccessSidebar = ({
       'default': '#8ae234'
     };
     return colorMap[category] || colorMap.default;
+  };
+
+  // Renderizar botón de acción principal
+  const renderActionButton = (action, index) => {
+    return (
+      <div
+        key={index}
+        style={{
+          cursor: 'pointer',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: `linear-gradient(135deg, 
+            ${action.color}25 0%, 
+            ${action.color}15 50%, 
+            ${action.color}08 100%)`,
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: `1.5px solid ${action.color}40`,
+          position: 'relative',
+          width: '100%',
+          height: '40px',
+          borderRadius: '8px',
+          boxShadow: `0 3px 12px ${action.color}20, 
+                      0 1px 4px rgba(0,0,0,0.1),
+                      inset 0 1px 0 rgba(255,255,255,0.1)`,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.2rem',
+          padding: '0.4rem'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)';
+          e.currentTarget.style.boxShadow = `0 6px 18px ${action.color}35, 
+                                              0 2px 6px rgba(0,0,0,0.2),
+                                              inset 0 1px 0 rgba(255,255,255,0.2)`;
+          e.currentTarget.style.borderColor = `${action.color}70`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.boxShadow = `0 3px 12px ${action.color}20, 
+                                              0 1px 4px rgba(0,0,0,0.1),
+                                              inset 0 1px 0 rgba(255,255,255,0.1)`;
+          e.currentTarget.style.borderColor = `${action.color}40`;
+        }}
+        onClick={action.action}
+      >
+        {/* Icono de acción */}
+        <div style={{ 
+          width: '20px',
+          height: '20px',
+          borderRadius: '5px',
+          background: `linear-gradient(145deg, 
+            ${action.color}ee 0%, 
+            ${action.color}cc 30%,
+            ${action.color}aa 70%,
+            ${action.color} 100%)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: `0 2px 8px ${action.color}50, 
+                      0 1px 2px ${action.color}30,
+                      inset 0 1px 0 rgba(255,255,255,0.4),
+                      inset 0 -1px 0 rgba(0,0,0,0.3)`,
+          border: `1px solid ${action.color}aa`,
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <i 
+            className={action.icon}
+            style={{ 
+              fontSize: '0.7rem',
+              color: 'white',
+              textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+              position: 'relative',
+              zIndex: 1
+            }}
+          />
+          
+          {/* Efecto de resplandor */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${action.color}40 0%, transparent 70%)`,
+            filter: 'blur(1px)',
+            opacity: '0.8'
+          }} />
+        </div>
+        
+        {/* Texto de acción */}
+        <span style={{ 
+          color: 'rgba(255, 255, 255, 0.85)',
+          fontSize: '0.35rem',
+          fontWeight: '600',
+          textAlign: 'center',
+          lineHeight: '1.0',
+          letterSpacing: '0.005rem',
+          textShadow: '0 1px 2px rgba(0,0,0,0.6)'
+        }}>
+          {action.label}
+        </span>
+      </div>
+    );
   };
 
   // Renderizar botón de terminal
@@ -353,13 +512,44 @@ const QuickAccessSidebar = ({
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.3rem',
-          flex: 1,
+          gap: '0.25rem',
           position: 'relative',
-          zIndex: 2
+          zIndex: 2,
+          marginBottom: '0.3rem'
         }}>
-        {availableTerminals.slice(0, 5).map((terminal, index) => 
+        {availableTerminals.slice(0, 4).map((terminal, index) => 
           renderTerminalButton(terminal, index)
+        )}
+      </div>
+
+      {/* Separador */}
+      <div style={{
+        position: 'relative',
+        zIndex: 2,
+        margin: '0.4rem 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          width: '100%',
+          height: '1px',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.3) 80%, transparent 100%)',
+          borderRadius: '1px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+        }} />
+      </div>
+
+      {/* Acciones principales */}
+      <div style={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.2rem',
+        position: 'relative',
+        zIndex: 2
+      }}>
+        {quickActionItems.map((action, index) => 
+          renderActionButton(action, index)
         )}
       </div>
     </div>
