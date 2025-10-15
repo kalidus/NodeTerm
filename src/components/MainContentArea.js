@@ -180,6 +180,21 @@ const MainContentArea = ({
       clearInterval(interval);
     };
   }, [homeButtonLocked]);
+
+  // Escuchar eventos para crear terminales desde QuickAccessSidebar
+  useEffect(() => {
+    const handleCreateLocalTerminal = (event) => {
+      const { terminalType, distroInfo } = event.detail;
+      console.log('Recibido evento create-local-terminal:', { terminalType, distroInfo });
+      createLocalTerminalTab(terminalType, distroInfo);
+    };
+    
+    window.addEventListener('create-local-terminal', handleCreateLocalTerminal);
+    
+    return () => {
+      window.removeEventListener('create-local-terminal', handleCreateLocalTerminal);
+    };
+  }, []);
   
   
   // Generar opciones del menú de terminales
