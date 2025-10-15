@@ -544,67 +544,87 @@ const QuickActions = ({
   };
 
   return (
-    <div style={{ padding: '0.75rem' }}>
-      <h3 style={{ 
-        margin: '0 0 0.6rem 0', 
-        color: 'var(--text-color)',
-        fontSize: '0.9rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.3rem',
-        fontWeight: '600'
-      }}>
-        <i className="pi pi-bolt" style={{ color: 'var(--primary-color)', fontSize: '0.8rem' }} />
-        Acciones Rápidas
-      </h3>
+    <div style={{
+      background: 'rgba(255, 255, 255, 0.1)',
+      border: '1px solid rgba(255, 255, 255, 0.15)',
+      borderRadius: '20px',
+      padding: '20px',
+      height: '100%',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      position: 'relative',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      minHeight: '400px',
+      margin: '0',
+      width: '100%'
+    }}>
       
-      {/* Primera fila: Terminales locales */}
-      <div style={{ marginBottom: '0.6rem' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '10px',
+        marginBottom: '10px'
+      }}>
+        <i className="pi pi-bolt" style={{ color: '#FFD700', fontSize: '1.2rem' }} />
+        <h3 style={{ 
+          margin: 0, 
+          color: 'white', 
+          fontSize: '1rem',
+          fontWeight: '600'
+        }}>
+          ACCESOS RÁPIDOS
+        </h3>
+      </div>
+      
+      {/* Terminales locales */}
+      <div>
         <h4 style={{ 
-          margin: '0 0 0.3rem 0', 
-          color: 'var(--text-color-secondary)',
-          fontSize: '0.7rem',
+          margin: '0 0 10px 0', 
+          color: 'white',
+          fontSize: '0.9rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.25rem',
+          gap: '8px',
           fontWeight: '500'
         }}>
-          <i className="pi pi-terminal" style={{ color: 'var(--primary-color)', fontSize: '0.6rem' }} />
+          <i className="pi pi-terminal" style={{ color: '#4fc3f7' }} />
           Terminales Locales
         </h4>
         
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))',
-          gap: '0.4rem',
-          width: '100%',
-          alignItems: 'start' // Para efecto masonry
+          display: 'flex', 
+          flexDirection: 'column',
+          gap: '8px',
+          width: '100%'
         }}>
           {availableTerminals.map((item, index) => renderTerminalCard(item, index))}
         </div>
       </div>
 
-      {/* Segunda fila: Acciones principales */}
+      {/* Acciones principales */}
       <div>
         <h4 style={{ 
-          margin: '0 0 0.3rem 0', 
-          color: 'var(--text-color-secondary)',
-          fontSize: '0.7rem',
+          margin: '0 0 10px 0', 
+          color: 'white',
+          fontSize: '0.9rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.25rem',
+          gap: '8px',
           fontWeight: '500'
         }}>
-          <i className="pi pi-cog" style={{ color: 'var(--primary-color)', fontSize: '0.6rem' }} />
+          <i className="pi pi-cog" style={{ color: '#9c27b0' }} />
           Acciones Principales
         </h4>
         
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))',
-          gap: '0.4rem',
-          width: '100%',
-          alignItems: 'start' // Para efecto masonry
+          display: 'flex', 
+          flexDirection: 'column',
+          gap: '8px',
+          width: '100%'
         }}>
           {quickActionItems.map((item, index) => renderActionCard(item, index))}
         </div>

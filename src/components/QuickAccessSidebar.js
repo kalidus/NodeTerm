@@ -187,8 +187,8 @@ const QuickAccessSidebar = ({
           border: `1.5px solid ${terminal.color}40`,
           position: 'relative',
           width: '100%',
-          height: '60px',
-          borderRadius: '12px',
+          height: '44px',
+          borderRadius: '9px',
           boxShadow: `0 4px 16px ${terminal.color}20, 
                       0 2px 8px rgba(0,0,0,0.1),
                       inset 0 1px 0 rgba(255,255,255,0.1)`,
@@ -216,42 +216,77 @@ const QuickAccessSidebar = ({
         }}
         onClick={terminal.action}
       >
-        {/* Icono */}
+        {/* Icono mejorado */}
         <div style={{ 
-          width: '32px',
-          height: '32px',
-          borderRadius: '10px',
-          background: `linear-gradient(135deg, 
-            ${terminal.color}dd 0%, 
+          width: '26px',
+          height: '26px',
+          borderRadius: '7px',
+          background: `linear-gradient(145deg, 
+            ${terminal.color}ee 0%, 
+            ${terminal.color}cc 30%,
+            ${terminal.color}aa 70%,
             ${terminal.color} 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 4px 12px ${terminal.color}50, 
-                      inset 0 1px 0 rgba(255,255,255,0.3),
-                      inset 0 -1px 0 rgba(0,0,0,0.2)`,
-          border: `1px solid ${terminal.color}80`
+          boxShadow: `0 3px 12px ${terminal.color}50, 
+                      0 1px 4px ${terminal.color}30,
+                      inset 0 1px 0 rgba(255,255,255,0.4),
+                      inset 0 -1px 0 rgba(0,0,0,0.3),
+                      inset 1px 0 0 rgba(255,255,255,0.2),
+                      inset -1px 0 0 rgba(0,0,0,0.1)`,
+          border: `1px solid ${terminal.color}aa`,
+          position: 'relative',
+          overflow: 'hidden'
         }}>
+          {/* Efecto de brillo en el icono */}
+          <div style={{
+            position: 'absolute',
+            top: '1px',
+            left: '1px',
+            right: '1px',
+            height: '1px',
+            background: 'rgba(255,255,255,0.6)',
+            borderRadius: '7px',
+            filter: 'blur(1px)'
+          }} />
+          
           <i 
             className={terminal.icon}
             style={{ 
-              fontSize: '1.2rem',
+              fontSize: '0.9rem',
               color: 'white',
-              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))'
+              textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
+              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+              position: 'relative',
+              zIndex: 1
             }}
           />
+          
+          {/* Efecto de resplandor */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '14px',
+            height: '14px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${terminal.color}40 0%, transparent 70%)`,
+            filter: 'blur(1px)',
+            opacity: '0.8'
+          }} />
         </div>
         
-        {/* Texto */}
+        {/* Texto mejorado */}
         <span style={{ 
-          color: 'var(--text-color)',
-          fontSize: '0.6rem',
+          color: 'rgba(255, 255, 255, 0.85)',
+          fontSize: '0.45rem',
           fontWeight: '600',
           textAlign: 'center',
-          lineHeight: '1.2',
-          letterSpacing: '0.02rem',
-          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+          lineHeight: '1.0',
+          letterSpacing: '0.005rem',
+          textShadow: '0 2px 4px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4)'
         }}>
           {terminal.label}
         </span>
@@ -260,56 +295,69 @@ const QuickAccessSidebar = ({
   };
 
   return (
-    <div style={{ 
-      width: '120px',
-      height: '100%',
-      background: 'rgba(16, 20, 28, 0.8)',
-      backdropFilter: 'blur(10px) saturate(140%)',
-      borderRight: '1px solid rgba(255,255,255,0.1)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '1rem 0.75rem',
-      gap: '0.5rem'
-    }}>
-      {/* Título */}
+      <div style={{
+        width: '60px',
+        height: '100%',
+        background: 'rgba(0, 0, 0, 0.25)',
+        backdropFilter: 'blur(30px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        borderRadius: '14px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '0.5rem 0.3rem',
+        gap: '0.25rem',
+        position: 'relative',
+        overflow: 'hidden',
+        margin: '10px 6px 10px 10px',
+        boxSizing: 'border-box'
+      }}>
+      {/* Overlay sutil para el efecto glassmorphism */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0.1) 100%)',
+        pointerEvents: 'none',
+        borderRadius: '14px'
+      }} />
+      
+      {/* Icono de título */}
       <div style={{
         textAlign: 'center',
-        marginBottom: '0.5rem'
-      }}>
-        <h3 style={{ 
-          margin: 0,
-          color: 'var(--text-color)',
-          fontSize: '0.7rem',
-          fontWeight: '600',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05rem'
-        }}>
-          Accesos Rápidos
-        </h3>
-      </div>
-
-      {/* Espacio vacío superior */}
-      <div style={{ 
-        height: '40px',
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px dashed rgba(255,255,255,0.1)',
+        marginBottom: '0.3rem',
+        position: 'relative',
+        zIndex: 2,
+        padding: '6px',
+        background: 'rgba(255, 255, 255, 0.08)',
         borderRadius: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--text-color-secondary)',
-        fontSize: '0.5rem'
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)'
       }}>
-        {/* Placeholder vacío */}
+        <i 
+          className="pi pi-bolt"
+          style={{ 
+            fontSize: '1.2rem',
+            color: 'rgba(255, 255, 255, 0.9)',
+            textShadow: '0 2px 4px rgba(0,0,0,0.4)',
+            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+          }}
+        />
       </div>
 
       {/* Terminales */}
-      <div style={{ 
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.4rem',
-        flex: 1
-      }}>
+        <div style={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.3rem',
+          flex: 1,
+          position: 'relative',
+          zIndex: 2
+        }}>
         {availableTerminals.slice(0, 5).map((terminal, index) => 
           renderTerminalButton(terminal, index)
         )}
