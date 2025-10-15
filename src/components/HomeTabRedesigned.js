@@ -28,7 +28,7 @@ const HomeTabRedesigned = ({
   onLoadGroup,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [terminalState, setTerminalState] = useState('normal');
+  const [terminalState, setTerminalState] = useState('minimized');
   const [favType, setFavType] = useState('all');
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
@@ -707,8 +707,8 @@ const HomeTabRedesigned = ({
           }}>
             {/* Estado de NodeTerm */}
             <div style={{
-              background: `linear-gradient(135deg, 
-                rgba(16, 20, 28, 0.6) 0%, 
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
                 rgba(16, 20, 28, 0.4) 100%)`,
               backdropFilter: 'blur(8px) saturate(140%)',
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
@@ -721,6 +721,45 @@ const HomeTabRedesigned = ({
                 foldersCount={foldersCount}
                 rdpConnectionsCount={rdpConnectionsCount}
               />
+            </div>
+
+            {/* Card adicional para otra funcionalidad */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              padding: '1rem',
+              minHeight: '120px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
+              }}>
+                <i className="pi pi-plus-circle" style={{ color: 'var(--text-color-secondary)' }} />
+                <h3 style={{
+                  margin: 0,
+                  color: 'var(--text-color)',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  Nueva Funcionalidad
+                </h3>
+              </div>
+              <div style={{
+                color: 'var(--text-color-secondary)',
+                fontSize: '0.8rem',
+                textAlign: 'center',
+                padding: '1rem 0'
+              }}>
+                Espacio reservado para futuras funcionalidades
+              </div>
             </div>
 
           </div>
