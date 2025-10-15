@@ -103,37 +103,49 @@ const QuickAccessSidebar = ({
     const terminals = [];
 
     if (platform === 'win32') {
-      const options = [
-        { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop', color: '#9C27B0' },
-        { label: 'WSP', value: 'wsl', icon: 'pi pi-server', color: '#4fc3f7' },
-        { label: 'Ubuntu', value: 'wsl-ubuntu', icon: 'pi pi-circle', color: '#E95420' },
-        { label: 'Debian', value: 'wsl-debian', icon: 'pi pi-circle', color: '#A81D33' },
-        { 
-          label: cygwinAvailable ? 'Cygwin' : 'Cygwin', 
-          value: 'cygwin', 
-          icon: 'pi pi-code',
-          color: '#00FF00'
-        },
-      ];
+      // PowerShell siempre disponible en Windows
+      terminals.push({
+        label: 'PowerShell',
+        value: 'powershell',
+        icon: 'pi pi-desktop',
+        color: '#9C27B0',
+        action: () => handleOpenTerminal('powershell')
+      });
+
+      // WSL genérico
+      terminals.push({
+        label: 'WSL',
+        value: 'wsl',
+        icon: 'pi pi-server',
+        color: '#4fc3f7',
+        action: () => handleOpenTerminal('wsl')
+      });
+
+      // Cygwin si está disponible
+      terminals.push({
+        label: cygwinAvailable ? 'Cygwin' : 'Cygwin',
+        value: 'cygwin',
+        icon: 'pi pi-code',
+        color: '#00FF00',
+        action: () => handleOpenTerminal('cygwin')
+      });
       
-      // Agregar distribuciones WSL detectadas
-      options.push(...wslDistributions.map(distro => ({
-        label: distro.label,
-        value: `wsl-${distro.name}`,
-        icon: distro.icon,
-        color: getColorForCategory(distro.category),
-        distroInfo: distro
-      })));
-      
-      options.forEach(option => {
-        terminals.push({
-          label: option.label,
-          value: option.value,
-          icon: option.icon,
-          color: option.color,
-          action: () => handleOpenTerminal(option.value, option.distroInfo),
-          distroInfo: option.distroInfo
-        });
+      // Agregar distribuciones WSL detectadas (sin duplicar las básicas)
+      wslDistributions.forEach(distro => {
+        // Evitar duplicados de Ubuntu y Debian básicos
+        const isBasicUbuntu = distro.name === 'ubuntu' && !distro.label.includes('24.04');
+        const isBasicDebian = distro.name === 'debian';
+        
+        if (!isBasicUbuntu && !isBasicDebian) {
+          terminals.push({
+            label: distro.label,
+            value: `wsl-${distro.name}`,
+            icon: distro.icon,
+            color: getColorForCategory(distro.category),
+            action: () => handleOpenTerminal(`wsl-${distro.name}`, distro),
+            distroInfo: distro
+          });
+        }
       });
     } else if (platform === 'linux' || platform === 'darwin') {
       terminals.push({
@@ -517,7 +529,7 @@ const QuickAccessSidebar = ({
           zIndex: 2,
           marginBottom: '0.3rem'
         }}>
-        {availableTerminals.slice(0, 4).map((terminal, index) => 
+        {availableTerminals.map((terminal, index) => 
           renderTerminalButton(terminal, index)
         )}
       </div>
