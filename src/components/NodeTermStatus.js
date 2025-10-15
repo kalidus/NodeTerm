@@ -20,7 +20,6 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 			const st = syncManagerRef.current.getSyncStatus();
 			setSyncState(prev => ({ ...prev, configured: st.configured, enabled: st.enabled, lastSync: st.lastSync, connectivity: st.configured ? 'checking' : 'unknown' }));
 			if (st.configured) {
-				// Probar conexión de forma asíncrona (no bloqueante)
 				setTimeout(async () => {
 					try {
 						const res = await syncManagerRef.current.nextcloudService.testConnection();
@@ -37,7 +36,6 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 			const hasKey = secureStorageRef.current.hasSavedMasterKey();
 			setVaultState({ configured: hasKey, unlocked: false });
 			if (hasKey) {
-				// Intentar cargar clave (si está desbloqueada en sesión)
 				secureStorageRef.current.getMasterKey().then(key => {
 					setVaultState({ configured: true, unlocked: !!key });
 				}).catch(() => {
@@ -78,37 +76,7 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 		} catch { return null; }
 	};
 
-	const StatusPill = ({ color, icon, label, sublabel }) => (
-		<div style={{
-			display: 'flex',
-			alignItems: 'center',
-			gap: 10,
-			padding: '8px 10px',
-			borderRadius: 10,
-			border: '1px solid rgba(255,255,255,0.12)',
-			background: `linear-gradient(135deg, ${color}22, ${color}11)`,
-			boxShadow: '0 4px 14px rgba(0,0,0,0.18)'
-		}}>
-			<span style={{
-				width: 28,
-				height: 28,
-				borderRadius: 8,
-				background: `${color}33`,
-				border: '1px solid rgba(255,255,255,0.14)',
-				display: 'inline-flex',
-				alignItems: 'center',
-				justifyContent: 'center'
-			}}>
-				<i className={icon} style={{ color, fontSize: 14 }} />
-			</span>
-			<div style={{ minWidth: 0 }}>
-				<div style={{ color: 'var(--text-color)', fontWeight: 700, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-				{sublabel && <div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>{sublabel}</div>}
-			</div>
-		</div>
-	);
-
-	// Obtener número de passwords (contador fiable o conteo en claro)
+	// Obtener número de passwords
 	let passwordsCount = 0;
 	try {
 		const stored = parseInt(localStorage.getItem('passwords_count'));
@@ -124,68 +92,256 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 		}
 	} catch {}
 
-	const { appVersion } = getVersionInfo();
-	const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#3b82f6';
+	// Calcular progreso (ejemplo: 677/1024)
+	const totalConnections = sshConnectionsCount + rdpConnectionsCount + passwordsCount + foldersCount;
+	const maxConnections = 1024; // Valor máximo para el progreso
+	const progressPercentage = Math.min((totalConnections / maxConnections) * 100, 100);
+	const progressValue = Math.min(totalConnections, maxConnections);
+
+	// Componente de progreso circular
+	const CircularProgress = ({ percentage, value, max, size = 80 }) => {
+		const radius = (size - 8) / 2;
+		const circumference = 2 * Math.PI * radius;
+		const strokeDasharray = circumference;
+		const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+		return (
+			<div style={{ position: 'relative', width: size, height: size }}>
+				<svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+					{/* Fondo del círculo */}
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						r={radius}
+						fill="none"
+						stroke="rgba(255,255,255,0.1)"
+						strokeWidth="4"
+					/>
+					{/* Progreso */}
+					<circle
+						cx={size / 2}
+						cy={size / 2}
+						r={radius}
+						fill="none"
+						stroke="#4fc3f7"
+						strokeWidth="4"
+						strokeLinecap="round"
+						strokeDasharray={strokeDasharray}
+						strokeDashoffset={strokeDashoffset}
+						style={{
+							filter: 'drop-shadow(0 0 8px rgba(79, 195, 247, 0.5))',
+							transition: 'stroke-dashoffset 0.5s ease'
+						}}
+					/>
+				</svg>
+				{/* Texto en el centro */}
+				<div style={{
+					position: 'absolute',
+					top: '50%',
+					left: '50%',
+					transform: 'translate(-50%, -50%)',
+					textAlign: 'center',
+					color: 'var(--text-color)'
+				}}>
+					<div style={{ fontSize: '0.8rem', fontWeight: '700', lineHeight: '1' }}>
+						{value}/{max}
+					</div>
+				</div>
+			</div>
+		);
+	};
+
+	// Componente de estadística
+	const StatItem = ({ icon, value, label, color = '#4fc3f7' }) => (
+		<div style={{
+			display: 'flex',
+			alignItems: 'center',
+			gap: '0.5rem',
+			padding: '0.5rem',
+			borderRadius: '8px',
+			background: 'rgba(255,255,255,0.02)',
+			border: '1px solid rgba(255,255,255,0.05)'
+		}}>
+			<div style={{
+				width: '20px',
+				height: '20px',
+				borderRadius: '4px',
+				background: `${color}20`,
+				display: 'flex',
+				alignItems: 'center',
+				justifyContent: 'center'
+			}}>
+				<i className={icon} style={{ color, fontSize: '0.6rem' }} />
+			</div>
+			<div>
+				<div style={{ color: 'var(--text-color)', fontWeight: '700', fontSize: '0.7rem' }}>
+					{value}
+				</div>
+				<div style={{ color: 'var(--text-color-secondary)', fontSize: '0.5rem' }}>
+					{label}
+				</div>
+			</div>
+		</div>
+	);
 
 	return (
-		<div style={{ padding: '1rem' }}>
-			<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-				<i className="pi pi-chart-bar" style={{ color: 'var(--primary-color)' }} />
-				<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Estado de NodeTerm</h3>
+		<div style={{ 
+			padding: '1rem',
+			background: 'rgba(16, 20, 28, 0.6)',
+			backdropFilter: 'blur(10px) saturate(140%)',
+			borderRadius: '12px',
+			border: '1px solid rgba(255,255,255,0.1)'
+		}}>
+			{/* Título */}
+			<div style={{ 
+				display: 'flex', 
+				alignItems: 'center', 
+				gap: '0.5rem', 
+				marginBottom: '1rem' 
+			}}>
+				<i className="pi pi-chart-bar" style={{ color: '#4fc3f7' }} />
+				<h3 style={{ 
+					margin: 0, 
+					color: 'var(--text-color)', 
+					fontSize: '0.9rem',
+					fontWeight: '600'
+				}}>
+					Estado de NodeTerm
+				</h3>
 			</div>
 			
-			{/* Estadísticas principales */}
+			{/* Progreso circular y estadísticas */}
 			<div style={{
-				display: 'grid',
-				gridTemplateColumns: '1fr 1fr 1fr 1fr',
+				display: 'flex',
 				alignItems: 'center',
-				gap: 8,
-				padding: '6px 10px',
-				borderRadius: 10,
-				border: `1px solid ${primary.trim()}55`,
-				background: `linear-gradient(135deg, ${primary.trim()}22, ${primary.trim()}11)`,
-				boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-				marginBottom: 10
+				gap: '1rem',
+				marginBottom: '1rem'
 			}}>
-				<div style={{ textAlign: 'center' }}>
-					<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{sshConnectionsCount}</div>
-					<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Conexiones SSH</div>
-				</div>
-				<div style={{ textAlign: 'center' }}>
-					<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{rdpConnectionsCount}</div>
-					<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Conexiones RDP</div>
-				</div>
-				<div style={{ textAlign: 'center' }}>
-					<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{passwordsCount}</div>
-					<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Passwords</div>
-				</div>
-				<div style={{ textAlign: 'center' }}>
-					<div style={{ color: primary, fontWeight: 800, fontSize: 14 }}>{foldersCount}</div>
-					<div style={{ color: 'var(--text-color-secondary)', fontSize: 11 }}>Carpetas</div>
+				{/* Progreso circular */}
+				<CircularProgress 
+					percentage={progressPercentage}
+					value={progressValue}
+					max={maxConnections}
+					size={80}
+				/>
+				
+				{/* Estadísticas */}
+				<div style={{
+					display: 'flex',
+					flexDirection: 'column',
+					gap: '0.3rem',
+					flex: 1
+				}}>
+					<StatItem 
+						icon="pi pi-server" 
+						value={sshConnectionsCount} 
+						label="Conexiones SSH" 
+						color="#4fc3f7"
+					/>
+					<StatItem 
+						icon="pi pi-desktop" 
+						value={rdpConnectionsCount} 
+						label="Conexiones RDP" 
+						color="#ff6b35"
+					/>
+					<StatItem 
+						icon="pi pi-key" 
+						value={passwordsCount} 
+						label="Passwords" 
+						color="#FFC107"
+					/>
 				</div>
 			</div>
 
 			{/* Estado de servicios */}
-			<div style={{ display: 'grid', gap: 10 }}>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
 				{/* Nextcloud */}
 				{(() => {
 					const ncConfigured = !!syncState.configured;
 					const ncColor = !ncConfigured ? '#9ca3af' : (syncState.connectivity === 'ok' ? '#22c55e' : (syncState.connectivity === 'checking' ? '#60a5fa' : '#ef4444'));
-					const ncLabel = ncConfigured ? (syncState.connectivity === 'ok' ? 'Nextcloud conectado' : (syncState.connectivity === 'checking' ? 'Comprobando Nextcloud…' : 'Error conectando a Nextcloud')) : 'Nextcloud no configurado';
+					const ncLabel = ncConfigured ? (syncState.connectivity === 'ok' ? 'nextcloud' : (syncState.connectivity === 'checking' ? 'Comprobando...' : 'Error')) : 'Nextcloud no configurado';
+					const ncStatus = ncConfigured ? (syncState.connectivity === 'ok' ? 'conectado' : (syncState.connectivity === 'checking' ? 'Verificando...' : 'Error de conexión')) : 'No configurado';
+					const ncSubStatus = ncConfigured && syncState.connectivity === 'ok' ? 'Sincronización activa' : '';
 					const last = getRelativeTime(syncState.lastSync);
+					
 					return (
-						<StatusPill color={ncColor} icon="pi pi-cloud" label={ncLabel} sublabel={last ? `Última sync: ${last}` : (ncConfigured ? 'Sync habilitada' : 'Configura Nextcloud en ajustes')} />
+						<div style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.5rem',
+							padding: '0.5rem',
+							borderRadius: '8px',
+							background: `${ncColor}15`,
+							border: `1px solid ${ncColor}30`
+						}}>
+							<div style={{
+								width: '24px',
+								height: '24px',
+								borderRadius: '6px',
+								background: `${ncColor}30`,
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center'
+							}}>
+								<i className="pi pi-cloud" style={{ color: ncColor, fontSize: '0.7rem' }} />
+							</div>
+							<div>
+								<div style={{ color: 'var(--text-color)', fontWeight: '600', fontSize: '0.6rem' }}>
+									{ncLabel}
+								</div>
+								<div style={{ color: 'var(--text-color-secondary)', fontSize: '0.5rem' }}>
+									{last ? `Última sync: ${last}` : ncStatus}
+								</div>
+								{ncSubStatus && (
+									<div style={{ color: 'var(--text-color-secondary)', fontSize: '0.4rem', marginTop: '0.1rem' }}>
+										{ncSubStatus}
+									</div>
+								)}
+							</div>
+						</div>
 					);
 				})()}
 
-				{/* Guacd */}
+				{/* Docker/Guacd */}
 				{(() => {
 					const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
-					const method = (guacdState.method || 'unknown').toUpperCase();
-					const label = guacdState.isRunning ? `Guacd activo (${method})` : 'Guacd detenido';
-					const sub = guacdState.isRunning ? `${guacdState.host}:${guacdState.port}` : 'Preferido: Docker/WSL';
+					const gLabel = guacdState.isRunning ? 'docker activo' : 'Docker detenido';
+					const gStatus = guacdState.isRunning ? 'Sesión activa' : 'Inactivo';
+					const gSubStatus = guacdState.isRunning ? `${guacdState.host}:${guacdState.port}` : 'Preferido: Docker/WSL';
+					
 					return (
-						<StatusPill color={gColor} icon="pi pi-desktop" label={label} sublabel={sub} />
+						<div style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.5rem',
+							padding: '0.5rem',
+							borderRadius: '8px',
+							background: `${gColor}15`,
+							border: `1px solid ${gColor}30`
+						}}>
+							<div style={{
+								width: '24px',
+								height: '24px',
+								borderRadius: '6px',
+								background: `${gColor}30`,
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center'
+							}}>
+								<i className="pi pi-desktop" style={{ color: gColor, fontSize: '0.7rem' }} />
+							</div>
+							<div>
+								<div style={{ color: 'var(--text-color)', fontWeight: '600', fontSize: '0.6rem' }}>
+									{gLabel}
+								</div>
+								<div style={{ color: 'var(--text-color-secondary)', fontSize: '0.5rem' }}>
+									{gStatus}
+								</div>
+								<div style={{ color: 'var(--text-color-secondary)', fontSize: '0.4rem', marginTop: '0.1rem' }}>
+									{gSubStatus}
+								</div>
+							</div>
+						</div>
 					);
 				})()}
 
@@ -195,9 +351,38 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 					const unlocked = vaultState.unlocked;
 					const vColor = !configured ? '#9ca3af' : (unlocked ? '#22c55e' : '#f59e0b');
 					const vLabel = !configured ? 'Vault no configurado' : (unlocked ? 'Vault desbloqueado' : 'Vault bloqueado');
-					const vSub = !configured ? 'Configura la clave maestra' : (unlocked ? 'Sesión activa' : 'Se requerirá clave maestra');
+					const vStatus = !configured ? 'Configura la clave maestra' : (unlocked ? 'Sesión activa' : 'Se requerirá clave maestra');
+					
 					return (
-						<StatusPill color={vColor} icon="pi pi-lock" label={vLabel} sublabel={vSub} />
+						<div style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.5rem',
+							padding: '0.5rem',
+							borderRadius: '8px',
+							background: `${vColor}15`,
+							border: `1px solid ${vColor}30`
+						}}>
+							<div style={{
+								width: '24px',
+								height: '24px',
+								borderRadius: '6px',
+								background: `${vColor}30`,
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center'
+							}}>
+								<i className="pi pi-lock" style={{ color: vColor, fontSize: '0.7rem' }} />
+							</div>
+							<div>
+								<div style={{ color: 'var(--text-color)', fontWeight: '600', fontSize: '0.6rem' }}>
+									{vLabel}
+								</div>
+								<div style={{ color: 'var(--text-color-secondary)', fontSize: '0.5rem' }}>
+									{vStatus}
+								</div>
+							</div>
+						</div>
 					);
 				})()}
 			</div>

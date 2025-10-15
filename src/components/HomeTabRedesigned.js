@@ -6,7 +6,7 @@ import { Divider } from 'primereact/divider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import QuickAccessSidebar from './QuickAccessSidebar';
-import NodeTermStatusRedesigned from './NodeTermStatusRedesigned';
+import NodeTermStatus from './NodeTermStatus';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
@@ -732,7 +732,7 @@ const HomeTabRedesigned = ({
               borderRadius: '12px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
             }}>
-              <NodeTermStatusRedesigned
+              <NodeTermStatus
                 sshConnectionsCount={sshConnectionsCount}
                 foldersCount={foldersCount}
                 rdpConnectionsCount={rdpConnectionsCount}
