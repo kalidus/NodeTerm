@@ -1506,9 +1506,22 @@ const App = () => {
     
     window.addEventListener('create-audit-tab', handleCreateAuditTab);
     
+    // Event listener para crear pestañas de terminal desde QuickAccessSidebar
+    const handleCreateTerminalTab = (event) => {
+      const { type, distroInfo } = event.detail;
+      
+      // Disparar evento para que MainContentArea maneje la creación del terminal
+      window.dispatchEvent(new CustomEvent('create-local-terminal', {
+        detail: { terminalType: type, distroInfo: distroInfo }
+      }));
+    };
+    
+    window.addEventListener('create-terminal-tab', handleCreateTerminalTab);
+    
     return () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
       window.removeEventListener('create-audit-tab', handleCreateAuditTab);
+      window.removeEventListener('create-terminal-tab', handleCreateTerminalTab);
     };
   }, [setExpandedKeys]);
 
