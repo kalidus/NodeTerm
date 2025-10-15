@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
-import { getFavorites, getRecents, toggleFavorite, isFavorite, onUpdate } from '../utils/connectionStore';
+import { getFavorites, toggleFavorite, onUpdate } from '../utils/connectionStore';
 
 const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0 }) => {
-	const [recentConnections, setRecentConnections] = useState([]);
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [favType, setFavType] = useState(() => localStorage.getItem('nodeterm_fav_type') || 'all');
-	const [recType, setRecType] = useState('all');
 	const [favQuery, setFavQuery] = useState('');
-	const [recQuery, setRecQuery] = useState('');
 
 	useEffect(() => {
 		loadConnectionHistory();
@@ -21,9 +18,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const loadConnectionHistory = () => {
 		try {
 			const favs = getFavorites();
-			const recents = getRecents(recentsLimit);
 			setFavoriteConnections(favs.map(c => ({ ...c, isFavorite: true, status: 'success' })));
-			setRecentConnections(recents.map(c => ({ ...c, isFavorite: isFavorite(c.id), status: 'success' })));
 		} catch (error) {
 			console.error('Error cargando historial de conexiones:', error);
 		}
@@ -100,59 +95,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		</>
 	);
 
-	// TypeChips específico para recientes (sin grupos)
-	const RecentsTypeChips = ({ value, onChange }) => (
-		<>
-			<div style={{ display: 'flex', gap: 6 }}>
-				{[
-					{ key: 'all', label: 'Todos' },
-					{ key: 'ssh', label: 'SSH' },
-					{ key: 'rdp-guacamole', label: 'RDP' },
-					{ key: 'explorer', label: 'SFTP' }
-				].map(opt => (
-					<button
-						key={opt.key}
-						onClick={() => { onChange(opt.key); }}
-						style={{
-							padding: '2px 8px',
-							borderRadius: 999,
-							border: '1px solid rgba(255,255,255,0.14)',
-							background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
-							color: 'var(--text-color)',
-							fontSize: 11,
-							cursor: 'pointer',
-							backdropFilter: 'blur(8px) saturate(130%)'
-						}}
-					>{opt.label}</button>
-				))}
-			</div>
-			{/* Línea separadora debajo de los botones de filtro */}
-			<div style={{ 
-				height: '0.5px', 
-				background: 'var(--ui-tabgroup-border, #444)', 
-				opacity: 0.6,
-				width: '100%',
-				margin: '8px 0 0 0',
-				padding: 0,
-				boxSizing: 'border-box',
-				border: 'none',
-				outline: 'none'
-			}} />
-		</>
-	);
 
 	const applyTypeFilter = (items, type) => {
 		if (type === 'all') return items;
 		return items.filter(c => c.type === type);
 	};
 
-	// Filtro específico para recientes que excluye grupos
-	const applyRecentsTypeFilter = (items, type) => {
-		// Primero excluir grupos de recientes
-		const nonGroupItems = items.filter(c => c.type !== 'group');
-		if (type === 'all') return nonGroupItems;
-		return nonGroupItems.filter(c => c.type === type);
-	};
 
 	const applyQueryFilter = (items, query) => {
 		if (!query) return items;
@@ -165,7 +113,6 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	const filteredFavorites = applyQueryFilter(applyTypeFilter(favoriteConnections, favType), favQuery);
-	const filteredRecents = applyQueryFilter(applyRecentsTypeFilter(recentConnections, recType), recQuery);
 
 	const ConnectionCard = ({ connection, showFavoriteAction = false, compact = false, micro = false, onEdit }) => {
 		const isActive = activeIds.has(`${connection.type}:${connection.host}:${connection.username}:${connection.port}`);
@@ -342,12 +289,10 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 		);
 	};
 
-	const twoColumns = layout === 'two-columns';
-
 	return (
 		<div style={{ padding: '1rem' }}>
-			<div style={{ display: 'grid', gridTemplateColumns: templateColumns ? templateColumns : (twoColumns ? '1fr 1fr' : '1fr'), gap: '1rem' }}>
-				{/* Columna izquierda: Favoritos */}
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+				{/* Columna única: Favoritos */}
 				<div>
 					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
 						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
@@ -368,31 +313,6 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<i className="pi pi-info-circle" style={{ fontSize: '3rem', color: 'var(--text-color-secondary)', marginBottom: '1rem', display: 'block' }} />
 							<h4 style={{ color: 'var(--text-color)', marginBottom: '0.5rem' }}>No hay favoritos</h4>
 							<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Marca conexiones desde la sidebar o desde estas tarjetas</p>
-						</Card>
-					)}
-				</div>
-
-				{/* Columna derecha: Recientes */}
-				<div>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-						<i className="pi pi-clock" style={{ color: 'var(--primary-color)' }} />
-						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Conexiones Recientes</h3>
-						<Badge value={filteredRecents.length} style={{ fontSize: 11, minWidth: '1.1rem', height: '1.1rem', lineHeight: '1.1rem' }} />
-						<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-							<RecentsTypeChips value={recType} onChange={setRecType} />
-						</div>
-					</div>
-					{filteredRecents.length > 0 ? (
-						<div style={{ display: 'grid', gridTemplateColumns: `repeat(${recentsColumns}, 1fr)`, gap: 6 }}>
-							{filteredRecents.map(connection => (
-								<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={true} onEdit={onEdit} />
-							))}
-						</div>
-					) : (
-						<Card style={{ textAlign: 'center', padding: '2rem', background: 'var(--surface-card)' }}>
-							<i className="pi pi-info-circle" style={{ fontSize: '3rem', color: 'var(--text-color-secondary)', marginBottom: '1rem', display: 'block' }} />
-							<h4 style={{ color: 'var(--text-color)', marginBottom: '0.5rem' }}>No hay conexiones recientes</h4>
-							<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Las conexiones aparecerán aquí después de usarlas</p>
 						</Card>
 					)}
 				</div>
