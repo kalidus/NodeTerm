@@ -30,6 +30,7 @@ const HomeTab = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
+  const [terminalHidden, setTerminalHidden] = useState(false); // Estado para ocultar completamente el terminal
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -105,8 +106,18 @@ const HomeTab = ({
     }
   };
 
+  // Función para toggle de visibilidad del terminal
+  const handleToggleTerminalVisibility = () => {
+    setTerminalHidden(prev => !prev);
+  };
+
   // Determinar el tamaño del panel superior (Dashboard) basado en el estado del terminal
   const getTopPanelSize = () => {
+    // Si el terminal está oculto, el dashboard ocupa toda la pantalla
+    if (terminalHidden) {
+      return null; // Ocupar todo el espacio disponible
+    }
+
     const containerHeight = window.innerHeight;
     let size;
 
@@ -168,6 +179,7 @@ const HomeTab = ({
                 window.dispatchEvent(new CustomEvent('open-settings-dialog'));
               } catch (e) { /* noop */ }
             }}
+            onToggleTerminalVisibility={handleToggleTerminalVisibility}
             sshConnectionsCount={sshConnectionsCount}
             foldersCount={foldersCount}
           />
@@ -202,7 +214,7 @@ const HomeTab = ({
     <div style={{
       height: '100%',
       width: '100%',
-      display: 'flex',
+      display: terminalHidden ? 'none' : 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       background: localTerminalBg

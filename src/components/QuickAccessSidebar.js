@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const QuickAccessSidebar = ({ 
   onCreateSSHConnection, 
@@ -6,7 +6,8 @@ const QuickAccessSidebar = ({
   onOpenFileExplorer,
   onOpenSettings,
   sshConnectionsCount = 0,
-  foldersCount = 0 
+  foldersCount = 0,
+  onToggleTerminalVisibility
 }) => {
   // Estados para terminales detectados dinámicamente
   const [wslDistributions, setWSLDistributions] = useState([]);
@@ -38,6 +39,14 @@ const QuickAccessSidebar = ({
       }
     } catch (e) { /* noop */ }
   };
+
+  const handleToggleTerminalVisibility = useCallback(() => {
+    try {
+      if (onToggleTerminalVisibility) {
+        onToggleTerminalVisibility();
+      }
+    } catch (e) { /* noop */ }
+  }, [onToggleTerminalVisibility]);
 
   // Handler genérico para abrir terminales
   const handleOpenTerminal = (terminalType, distroInfo = null) => {
@@ -210,11 +219,19 @@ const QuickAccessSidebar = ({
         description: 'Acceso rápido',
         action: () => {},
         badge: null
+      },
+      {
+        label: 'Ocultar Terminal',
+        icon: 'pi pi-eye-slash',
+        color: '#607D8B',
+        description: 'Ocultar/mostrar terminal local',
+        action: handleToggleTerminalVisibility,
+        badge: null
       }
     ];
 
     setQuickActionItems(actions);
-  }, [onOpenSettings]);
+  }, [onOpenSettings, handleToggleTerminalVisibility]);
 
   // Función para obtener colores según la categoría
   const getColorForCategory = (category) => {

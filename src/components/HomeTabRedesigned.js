@@ -29,6 +29,7 @@ const HomeTabRedesigned = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('minimized');
+  const [terminalHidden, setTerminalHidden] = useState(false); // Estado para ocultar completamente el terminal
   const [favType, setFavType] = useState('all');
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
@@ -97,8 +98,18 @@ const HomeTabRedesigned = ({
     }
   };
 
+  // Función para toggle de visibilidad del terminal
+  const handleToggleTerminalVisibility = () => {
+    setTerminalHidden(prev => !prev);
+  };
+
   // Determinar el tamaño del panel superior
   const getTopPanelSize = () => {
+    // Si el terminal está oculto, el dashboard ocupa toda la pantalla
+    if (terminalHidden) {
+      return window.innerHeight - 20; // Ocupar casi toda la pantalla, dejando un pequeño margen
+    }
+
     const containerHeight = window.innerHeight;
     let size;
 
@@ -141,6 +152,7 @@ const HomeTabRedesigned = ({
             onCreateFolder={onCreateFolder}
             onOpenFileExplorer={onOpenFileExplorer}
             onOpenSettings={onOpenSettings}
+            onToggleTerminalVisibility={handleToggleTerminalVisibility}
             sshConnectionsCount={sshConnectionsCount}
             foldersCount={foldersCount}
           />
@@ -773,7 +785,7 @@ const HomeTabRedesigned = ({
     <div style={{
       height: '100%',
       width: '100%',
-      display: 'flex',
+      display: terminalHidden ? 'none' : 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       background: localTerminalBg
@@ -794,6 +806,20 @@ const HomeTabRedesigned = ({
   const splitterColor = React.useMemo(() => {
     return currentTheme.colors?.splitter || localTerminalBg || dashboardBg || '#2d2d2d';
   }, [currentTheme, localTerminalBg, dashboardBg]);
+
+  // Si el terminal está oculto, renderizar solo el panel superior
+  if (terminalHidden) {
+    return (
+      <div style={{
+        height: '100%',
+        width: '100%',
+        background: dashboardBg,
+        overflow: 'hidden'
+      }}>
+        {topPanel}
+      </div>
+    );
+  }
 
   return (
     <>
