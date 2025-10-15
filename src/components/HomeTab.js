@@ -24,13 +24,14 @@ const HomeTab = ({
   localFontSize,
   localPowerShellTheme,
   localLinuxTerminalTheme,
-  onCreateRdpConnection, // Nuevo prop para crear conexiones RDP
-  onEditConnection, // Nuevo prop: editar conexión desde Home (se pasa directo a ConnectionHistory)
-  onLoadGroup, // Nuevo prop para cargar grupos desde favoritos
+  onCreateRdpConnection,
+  onEditConnection,
+  onLoadGroup,
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [terminalState, setTerminalState] = useState('normal'); // 'normal', 'minimized', 'maximized'
-  const [terminalHidden, setTerminalHidden] = useState(false); // Estado para ocultar completamente el terminal
+  const [terminalState, setTerminalState] = useState('minimized'); // Cambiado a 'minimized' como en redesigned
+  const [terminalHidden, setTerminalHidden] = useState(false);
+  const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -111,11 +112,11 @@ const HomeTab = ({
     setTerminalHidden(prev => !prev);
   };
 
-  // Determinar el tamaño del panel superior (Dashboard) basado en el estado del terminal
+  // Determinar el tamaño del panel superior
   const getTopPanelSize = () => {
     // Si el terminal está oculto, el dashboard ocupa toda la pantalla
     if (terminalHidden) {
-      return null; // Ocupar todo el espacio disponible
+      return window.innerHeight - 20; // Ocupar casi toda la pantalla, dejando un pequeño margen
     }
 
     const containerHeight = window.innerHeight;
@@ -123,29 +124,19 @@ const HomeTab = ({
 
     switch (terminalState) {
       case 'minimized':
-        // Terminal minimizado: Dashboard ocupa casi todo, terminal solo 40px (pestañas)
-        size = Math.max(containerHeight - 40, 100); // Mínimo 100px para el dashboard
+        size = Math.max(containerHeight - 40, 100);
         break;
       case 'maximized':
-        // Terminal maximizado: Dashboard desaparece, terminal ocupa todo
         size = 0;
         break;
       default:
-        // Estado normal: permitir redimensionamiento manual
-        return null; // No controlar externamente, usar redimensionamiento manual
+        return null;
     }
-
-    // console.log('📏 getTopPanelSize:', {
-    //   terminalState,
-    //   containerHeight,
-    //   topPanelSize: size,
-    //   terminalSize: containerHeight - size
-    // });
 
     return size;
   };
 
-  // Panel superior: Hub de conexiones con nuevo layout
+  // Panel superior: Nuevo layout con 3 columnas (basado en redesigned pero con ConnectionHistory)
   const topPanel = (
     <div style={{
       height: '100%',
@@ -157,54 +148,128 @@ const HomeTab = ({
       visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
       transition: 'opacity 0.1s ease, visibility 0.1s ease'
     }}>
-      <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
-        {/* Fila superior: Acciones Rápidas y Estado de NodeTerm */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '2fr 1fr', 
-          gap: '1rem', 
-          marginBottom: '1rem' 
+      <div className="home-page-scroll" style={{ flex: 1, overflow: 'auto' }}>
+        {/* Layout principal con 3 columnas */}
+        <div style={{
+          display: 'flex',
+          height: '100%',
+          minHeight: '600px'
         }}>
+          {/* Columna izquierda: Accesos Rápidos */}
           <QuickAccessSidebar
             onCreateSSHConnection={onCreateSSHConnection}
             onCreateFolder={onCreateFolder}
-            onOpenFileExplorer={() => {
-              // Abrir un explorador vacío requiere un nodo SSH; si no hay, solo no-op
-              try {
-                window.dispatchEvent(new CustomEvent('open-explorer-dialog'));
-              } catch (e) { /* noop */ }
-            }}
-            onOpenSettings={() => {
-              try {
-                window.dispatchEvent(new CustomEvent('open-settings-dialog'));
-              } catch (e) { /* noop */ }
-            }}
+            onOpenFileExplorer={onOpenFileExplorer}
+            onOpenSettings={onOpenSettings}
             onToggleTerminalVisibility={handleToggleTerminalVisibility}
             sshConnectionsCount={sshConnectionsCount}
             foldersCount={foldersCount}
           />
-          <NodeTermStatus
-            sshConnectionsCount={sshConnectionsCount}
-            foldersCount={foldersCount}
-            rdpConnectionsCount={rdpConnectionsCount}
-          />
+
+          {/* Columna central: ConnectionHistory con diseño mejorado */}
+          <div style={{
+            flex: 1,
+            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Card de ConnectionHistory con estilo glassmorphism */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              padding: '1rem',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <ConnectionHistory 
+                onConnectToHistory={handleConnectToHistory}
+                layout="two-columns"
+                recentsLimit={10}
+                activeIds={new Set()}
+                templateColumns="3fr 2fr"
+                favoritesColumns={2}
+                recentsColumns={1}
+                onEdit={onEditConnection}
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+              />
+            </div>
+          </div>
+
+          {/* Columna derecha: Estado y Recientes */}
+          <div style={{
+            width: '300px',
+            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            {/* Estado de NodeTerm */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
+            }}>
+              <NodeTermStatus
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+              />
+            </div>
+
+            {/* Card adicional para futuras funcionalidades */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              padding: '1rem',
+              minHeight: '120px'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
+              }}>
+                <i className="pi pi-plus-circle" style={{ color: 'var(--text-color-secondary)' }} />
+                <h3 style={{
+                  margin: 0,
+                  color: 'var(--text-color)',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  Nueva Funcionalidad
+                </h3>
+              </div>
+              <div style={{
+                color: 'var(--text-color-secondary)',
+                fontSize: '0.8rem',
+                textAlign: 'center',
+                padding: '1rem 0'
+              }}>
+                Espacio reservado para futuras funcionalidades
+              </div>
+            </div>
+          </div>
         </div>
-        
-        {/* Fila inferior: Conexiones Favoritas y Recientes */}
-        <ConnectionHistory 
-          onConnectToHistory={handleConnectToHistory}
-          layout="two-columns"
-          recentsLimit={10}
-          activeIds={new Set()}
-          // Layout: 3/2 para que favoritos tenga más ancho que recientes
-          templateColumns="3fr 2fr"
-          favoritesColumns={2}
-          recentsColumns={1}
-          onEdit={onEditConnection}
-          sshConnectionsCount={sshConnectionsCount}
-          foldersCount={foldersCount}
-          rdpConnectionsCount={rdpConnectionsCount}
-        />
       </div>
     </div>
   );
@@ -236,9 +301,23 @@ const HomeTab = ({
     return currentTheme.colors?.splitter || localTerminalBg || dashboardBg || '#2d2d2d';
   }, [currentTheme, localTerminalBg, dashboardBg]);
 
+  // Si el terminal está oculto, renderizar solo el panel superior
+  if (terminalHidden) {
+    return (
+      <div style={{
+        height: '100%',
+        width: '100%',
+        background: dashboardBg,
+        overflow: 'hidden'
+      }}>
+        {topPanel}
+      </div>
+    );
+  }
+
   return (
     <SplitLayout
-      key={`home-split-${themeVersion}`} // Forzar re-render al cambiar tema
+      key={`home-split-${themeVersion}`}
       leftTerminal={{ key: 'home_top', content: topPanel }}
       rightTerminal={{ key: 'home_bottom', content: bottomPanel }}
       orientation="horizontal"
