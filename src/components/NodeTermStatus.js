@@ -3,7 +3,7 @@ import { getVersionInfo } from '../version-info';
 import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
 
-const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0 }) => {
+const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {} }) => {
 	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
@@ -198,9 +198,9 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 				<i className="pi pi-chart-bar" style={{ color: '#4fc3f7' }} />
 				<h3 style={{ 
 					margin: 0, 
-					color: 'var(--text-color)', 
+					color: themeColors.textPrimary || 'var(--text-color)', 
 					fontSize: '0.9rem',
-					fontWeight: '600'
+					fontWeight: '700'
 				}}>
 					Estado de NodeTerm
 				</h3>

@@ -840,6 +840,7 @@ const HomeTab = ({
                 sshConnectionsCount={sshConnectionsCount}
                 foldersCount={foldersCount}
                 rdpConnectionsCount={rdpConnectionsCount}
+                themeColors={themeColors}
               />
             </div>
 
