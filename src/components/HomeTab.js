@@ -264,6 +264,19 @@ const HomeTab = ({
   const dashboardBg = React.useMemo(() => {
     return currentTheme.colors?.contentBackground || '#fafafa';
   }, [currentTheme]);
+
+  // Colores del tema para elementos de la lista
+  const themeColors = React.useMemo(() => {
+    return {
+      textPrimary: currentTheme.colors?.sidebarText || currentTheme.colors?.tabText || '#ffffff',
+      textSecondary: currentTheme.colors?.sidebarText || '#9E9E9E',
+      borderColor: currentTheme.colors?.sidebarBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
+      hoverBackground: currentTheme.colors?.sidebarHover || 'rgba(255,255,255,0.1)',
+      itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
+      cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
+      cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)'
+    };
+  }, [currentTheme]);
   
   const localTerminalBg = React.useMemo(() => {
     return themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
@@ -392,11 +405,11 @@ const HomeTab = ({
               {/* Card de Conexiones Recientes */}
               <div style={{
                 background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
+                  ${themeColors.cardBackground} 0%,
+                  ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
                 backdropFilter: 'blur(8px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: `1px solid ${themeColors.cardBorder}`,
                 borderRadius: '12px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
                 padding: '1rem'
@@ -442,7 +455,7 @@ const HomeTab = ({
                   {/* Título con mejor tipografía */}
                   <h3 style={{ 
                     margin: 0, 
-                    color: 'var(--text-color)', 
+                    color: themeColors.textPrimary, 
                     fontSize: '0.9rem',
                     fontWeight: '700',
                     letterSpacing: '0.1px',
@@ -466,17 +479,17 @@ const HomeTab = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        color: 'var(--text-color-secondary)',
+                        color: themeColors.textSecondary,
                         fontSize: '0.8rem',
-                        background: 'rgba(255,255,255,0.05)',
+                        background: themeColors.itemBackground,
                         padding: '0.4rem 0.6rem',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: `1px solid ${themeColors.borderColor}`,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = themeColors.hoverBackground}
+                      onMouseLeave={(e) => e.currentTarget.style.background = themeColors.itemBackground}
                       >
                         {/* Icono del tipo de conexión */}
                         <i className={getConnectionTypeIcon(recentConn.type)} style={{
@@ -504,14 +517,14 @@ const HomeTab = ({
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: 'var(--text-color)',
+                              color: themeColors.textPrimary,
                               background: 'rgba(255,255,255,0.08)',
-                              border: '1px solid rgba(255,255,255,0.16)',
+                              border: `1px solid ${themeColors.borderColor}`,
                               transition: 'all .15s ease',
                               cursor: 'pointer'
                             }}
-                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
-                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
+                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleToggleFavorite(recentConn)}
                           >
                             <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '10px' }} />
@@ -528,14 +541,14 @@ const HomeTab = ({
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: 'var(--text-color)',
+                                color: themeColors.textPrimary,
                                 background: 'rgba(255,255,255,0.08)',
-                                border: '1px solid rgba(255,255,255,0.16)',
+                                border: `1px solid ${themeColors.borderColor}`,
                                 transition: 'all .15s ease',
                                 cursor: 'pointer'
                               }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
+                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                               onClick={() => onEditConnection(recentConn)}
                             >
                               <i className="pi pi-pencil" style={{ fontSize: '10px' }} />
@@ -552,14 +565,14 @@ const HomeTab = ({
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: 'var(--text-color)',
+                              color: themeColors.textPrimary,
                               background: 'rgba(255,255,255,0.08)',
-                              border: '1px solid rgba(255,255,255,0.16)',
+                              border: `1px solid ${themeColors.borderColor}`,
                               transition: 'all .15s ease',
                               cursor: 'pointer'
                             }}
-                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
-                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
+                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                             onClick={() => handleConnectToHistory(recentConn)}
                           >
                             <i className="pi pi-external-link" style={{ fontSize: '10px' }} />
@@ -573,7 +586,7 @@ const HomeTab = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: '1rem',
-                      color: 'var(--text-color-secondary)',
+                      color: themeColors.textSecondary,
                       fontSize: '0.8rem',
                       fontStyle: 'italic'
                     }}>
@@ -586,11 +599,11 @@ const HomeTab = ({
               {/* Card de Passwords Recientes */}
               <div style={{
                 background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
+                  ${themeColors.cardBackground} 0%,
+                  ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
                 backdropFilter: 'blur(8px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: `1px solid ${themeColors.cardBorder}`,
                 borderRadius: '12px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
                 padding: '1rem'
@@ -636,7 +649,7 @@ const HomeTab = ({
                   {/* Título con mejor tipografía */}
                   <h3 style={{ 
                     margin: 0, 
-                    color: 'var(--text-color)', 
+                    color: themeColors.textPrimary, 
                     fontSize: '0.9rem',
                     fontWeight: '700',
                     letterSpacing: '0.1px',
@@ -660,17 +673,17 @@ const HomeTab = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        color: 'var(--text-color-secondary)',
+                        color: themeColors.textSecondary,
                         fontSize: '0.8rem',
-                        background: 'rgba(255,255,255,0.05)',
+                        background: themeColors.itemBackground,
                         padding: '0.4rem 0.6rem',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        border: `1px solid ${themeColors.borderColor}`,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = themeColors.hoverBackground}
+                      onMouseLeave={(e) => e.currentTarget.style.background = themeColors.itemBackground}
                       >
                         {/* Icono del tipo de password */}
                         <i className={getPasswordTypeIcon(recentPass.type)} style={{
@@ -700,14 +713,14 @@ const HomeTab = ({
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: 'var(--text-color)',
+                                color: themeColors.textPrimary,
                                 background: 'rgba(255,255,255,0.08)',
-                                border: '1px solid rgba(255,255,255,0.16)',
+                                border: `1px solid ${themeColors.borderColor}`,
                                 transition: 'all .15s ease',
                                 cursor: 'pointer'
                               }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
+                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                               onClick={() => copyToClipboard(recentPass.username, 'Usuario')}
                             >
                               <i className="pi pi-user" style={{ fontSize: '10px' }} />
@@ -725,14 +738,14 @@ const HomeTab = ({
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: 'var(--text-color)',
+                                color: themeColors.textPrimary,
                                 background: 'rgba(255,255,255,0.08)',
-                                border: '1px solid rgba(255,255,255,0.16)',
+                                border: `1px solid ${themeColors.borderColor}`,
                                 transition: 'all .15s ease',
                                 cursor: 'pointer'
                               }}
-                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
-                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground; e.style.color = themeColors.textPrimary; }}
+                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary; }}
                               onClick={() => copyToClipboard(recentPass.password, 'Contraseña')}
                             >
                               <i className="pi pi-key" style={{ fontSize: '10px' }} />
@@ -747,7 +760,7 @@ const HomeTab = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: '1rem',
-                      color: 'var(--text-color-secondary)',
+                      color: themeColors.textSecondary,
                       fontSize: '0.8rem',
                       fontStyle: 'italic'
                     }}>
@@ -765,7 +778,7 @@ const HomeTab = ({
                 rgba(16, 20, 28, 0.4) 100%)`,
               backdropFilter: 'blur(8px) saturate(140%)',
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: `1px solid ${themeColors.cardBorder}`,
               borderRadius: '12px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
               padding: '0.5rem',
@@ -787,6 +800,7 @@ const HomeTab = ({
                 sshConnectionsCount={sshConnectionsCount}
                 foldersCount={foldersCount}
                 rdpConnectionsCount={rdpConnectionsCount}
+                themeColors={themeColors}
               />
             </div>
           </div>
@@ -802,11 +816,11 @@ const HomeTab = ({
             {/* Estado de NodeTerm */}
             <div style={{
               background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
+                ${themeColors.cardBackground} 0%,
+                ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
               backdropFilter: 'blur(8px) saturate(140%)',
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: `1px solid ${themeColors.cardBorder}`,
               borderRadius: '12px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
             }}>
@@ -820,11 +834,11 @@ const HomeTab = ({
             {/* Card adicional para futuras funcionalidades */}
             <div style={{
               background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
+                ${themeColors.cardBackground} 0%,
+                ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
               backdropFilter: 'blur(8px) saturate(140%)',
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: `1px solid ${themeColors.cardBorder}`,
               borderRadius: '12px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
               padding: '1rem',
@@ -836,10 +850,10 @@ const HomeTab = ({
                 gap: '0.5rem',
                 marginBottom: '0.75rem'
               }}>
-                <i className="pi pi-plus-circle" style={{ color: 'var(--text-color-secondary)' }} />
+                <i className="pi pi-plus-circle" style={{ color: themeColors.textSecondary }} />
                 <h3 style={{
                   margin: 0,
-                  color: 'var(--text-color)',
+                  color: themeColors.textPrimary,
                   fontSize: '1rem',
                   fontWeight: '600'
                 }}>
@@ -847,7 +861,7 @@ const HomeTab = ({
                 </h3>
               </div>
               <div style={{
-                color: 'var(--text-color-secondary)',
+                color: themeColors.textSecondary,
                 fontSize: '0.8rem',
                 textAlign: 'center',
                 padding: '1rem 0'
