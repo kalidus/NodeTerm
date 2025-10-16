@@ -231,6 +231,34 @@ const HomeTab = ({
     }
   };
 
+  const openPasswordTab = (passwordData) => {
+    try {
+      // Crear el evento para abrir la pestaña de password
+      const event = new CustomEvent('open-password-tab', {
+        detail: {
+          key: passwordData.id,
+          label: passwordData.name,
+          data: {
+            username: passwordData.username,
+            password: passwordData.password,
+            url: passwordData.url,
+            group: passwordData.group,
+            notes: passwordData.notes,
+            type: passwordData.type,
+            icon: passwordData.icon
+          }
+        }
+      });
+      
+      // Dispatch del evento
+      window.dispatchEvent(event);
+      
+      console.log('🔑 Abriendo pestaña de password:', passwordData.name);
+    } catch (err) {
+      console.error('Error abriendo pestaña de password:', err);
+    }
+  };
+
   // Obtener el color de fondo del tema actual
   const currentTheme = React.useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
@@ -653,8 +681,12 @@ const HomeTab = ({
                           fontSize: '0.9rem'
                         }} />
                         
-                        {/* Nombre del password */}
-                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {/* Nombre del password - clickeable para abrir pestaña */}
+                        <span 
+                          style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                          onClick={() => openPasswordTab(recentPass)}
+                          title={`Abrir ${recentPass.name}`}
+                        >
                           {recentPass.name}
                         </span>
 
