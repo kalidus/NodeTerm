@@ -186,11 +186,7 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 
 	return (
 		<div style={{ 
-			padding: '1rem',
-			background: 'rgba(16, 20, 28, 0.6)',
-			backdropFilter: 'blur(10px) saturate(140%)',
-			borderRadius: '12px',
-			border: '1px solid rgba(255,255,255,0.1)'
+			padding: '1rem'
 		}}>
 			{/* Título */}
 			<div style={{ 
