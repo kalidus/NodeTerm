@@ -1449,7 +1449,6 @@ const App = () => {
   // Crear y activar pestaña de carpeta de passwords desde doble clic
   useEffect(() => {
     const handler = (e) => {
-      console.log('📁 Password folder tab event received:', e.detail);
       const info = e.detail || {};
       const tabId = `${info.folderKey}_${Date.now()}`;
       const folderData = {
@@ -1464,7 +1463,6 @@ const App = () => {
         folderData, 
         createdAt: Date.now() 
       };
-      console.log('📁 Creating password folder tab:', newTab);
       setSshTabs(prev => [newTab, ...prev]);
       // Activar la nueva pestaña usando la misma lógica que otras pestañas
       setTimeout(() => {
@@ -1472,7 +1470,6 @@ const App = () => {
         setOnCreateActivateTabKey(tabId);
         const allTabs = getAllTabs();
         const tabIndex = allTabs.findIndex(t => t.key === tabId);
-        console.log('📁 Tab index found:', tabIndex);
         if (tabIndex !== -1) {
           setActiveTabIndex(tabIndex);
           setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
