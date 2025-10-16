@@ -82,18 +82,6 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					>{opt.label}</button>
 				))}
 			</div>
-			{/* Línea separadora debajo de los botones de filtro */}
-			<div style={{ 
-				height: '0.5px', 
-				background: 'var(--ui-tabgroup-border, #444)', 
-				opacity: 0.6,
-				width: '100%',
-				margin: '6px 0 0 0',
-				padding: 0,
-				boxSizing: 'border-box',
-				border: 'none',
-				outline: 'none'
-			}} />
 		</>
 	);
 
@@ -307,13 +295,90 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.25rem', flex: '0 0 auto' }}>
 				{/* Columna única: Favoritos */}
 				<div style={{ display: 'flex', flexDirection: 'column' }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-						<i className="pi pi-star-fill" style={{ color: '#FFD700', fontSize: '1rem' }} />
-						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1rem' }}>Conexiones Favoritas</h3>
-						<Badge value={filteredFavorites.length} style={{ fontSize: 10, minWidth: '1rem', height: '1rem', lineHeight: '1rem' }} />
-						<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-							<TypeChips value={favType} onChange={setFavType} />
+					{/* Título mejorado con mejor separación visual */}
+					<div style={{ 
+						marginBottom: '0.9rem',
+						padding: '0.5rem 0',
+						position: 'relative'
+					}}>
+						<div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+							{/* Icono con efecto visual mejorado */}
+							<div style={{
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								width: '24px',
+								height: '24px',
+								borderRadius: '6px',
+								background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 193, 7, 0.1) 100%)',
+								border: '1px solid rgba(255, 215, 0, 0.3)',
+								boxShadow: '0 1px 4px rgba(255, 215, 0, 0.15)',
+								position: 'relative'
+							}}>
+								<i className="pi pi-star-fill" style={{ 
+									color: '#FFD700', 
+									fontSize: '0.9rem',
+									filter: 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.4))'
+								}} />
+								{/* Efecto de brillo sutil */}
+								<div style={{
+									position: 'absolute',
+									top: '12%',
+									left: '35%',
+									width: '4px',
+									height: '4px',
+									borderRadius: '50%',
+									background: 'rgba(255, 255, 255, 0.6)',
+									filter: 'blur(1px)',
+									animation: 'twinkle 4s infinite'
+								}} />
+							</div>
+							
+							{/* Título con mejor tipografía */}
+							<h3 style={{ 
+								margin: 0, 
+								color: 'var(--text-color)', 
+								fontSize: '0.9rem',
+								fontWeight: '700',
+								letterSpacing: '0.1px',
+								textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+							}}>
+								Conexiones Favoritas
+							</h3>
+							
+							{/* Badge mejorado */}
+							<div style={{
+								display: 'inline-flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								minWidth: '16px',
+								height: '16px',
+								padding: '0 4px',
+								borderRadius: '8px',
+								background: 'linear-gradient(135deg, #9c27b0 0%, #673ab7 100%)',
+								border: '1px solid rgba(156, 39, 176, 0.3)',
+								boxShadow: '0 1px 2px rgba(156, 39, 176, 0.2)',
+								color: '#ffffff',
+								fontSize: '9px',
+								fontWeight: '600',
+								letterSpacing: '0.1px'
+							}}>
+								{filteredFavorites.length}
+							</div>
+							
+							{/* Filtros con mejor espaciado */}
+							<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+								<TypeChips value={favType} onChange={setFavType} />
+							</div>
 						</div>
+						
+						{/* Línea decorativa con gradiente */}
+						<div style={{
+							height: '1px',
+							background: 'linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent)',
+							borderRadius: '1px',
+							marginTop: '0.3rem'
+						}} />
 					</div>
 					
 					{/* Contenedor con altura fija para los favoritos */}
