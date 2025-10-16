@@ -1399,7 +1399,6 @@ const App = () => {
   // Crear y activar pestaña de info de password desde doble clic
   useEffect(() => {
     const handler = (e) => {
-      console.log('🔑 Password tab event received:', e.detail);
       const info = e.detail || {};
       const tabId = `${info.key}_${Date.now()}`;
       const passwordData = {
@@ -1430,7 +1429,6 @@ const App = () => {
       
       // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
       const newTab = { key: tabId, label: `🔑 ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
-      console.log('🔑 Creating password tab:', newTab);
       setSshTabs(prev => [newTab, ...prev]);
       // Activar la nueva pestaña usando la misma lógica que otras pestañas
       setTimeout(() => {
@@ -1438,7 +1436,6 @@ const App = () => {
         setOnCreateActivateTabKey(tabId);
         const allTabs = getAllTabs();
         const tabIndex = allTabs.findIndex(t => t.key === tabId);
-        console.log('🔑 Tab index found:', tabIndex);
         if (tabIndex !== -1) {
           setActiveTabIndex(tabIndex);
           setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
