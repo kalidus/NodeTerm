@@ -249,15 +249,49 @@ const HomeTab = ({
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.6rem',
                   marginBottom: '0.75rem'
                 }}>
-                  <i className="pi pi-history" style={{ color: 'var(--text-color-secondary)' }} />
-                  <h3 style={{
-                    margin: 0,
-                    color: 'var(--text-color)',
-                    fontSize: '1rem',
-                    fontWeight: '600'
+                  {/* Icono con efecto visual mejorado */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '6px',
+                    background: 'linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(79, 195, 247, 0.1) 100%)',
+                    border: '1px solid rgba(79, 195, 247, 0.3)',
+                    boxShadow: '0 1px 4px rgba(79, 195, 247, 0.15)',
+                    position: 'relative'
+                  }}>
+                    <i className="pi pi-history" style={{ 
+                      color: '#4fc3f7', 
+                      fontSize: '0.9rem',
+                      filter: 'drop-shadow(0 0 2px rgba(79, 195, 247, 0.4))'
+                    }} />
+                    {/* Efecto de brillo sutil */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '12%',
+                      left: '35%',
+                      width: '4px',
+                      height: '4px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.6)',
+                      filter: 'blur(1px)',
+                      animation: 'twinkle 4s infinite'
+                    }} />
+                  </div>
+                  
+                  {/* Título con mejor tipografía */}
+                  <h3 style={{ 
+                    margin: 0, 
+                    color: 'var(--text-color)', 
+                    fontSize: '0.9rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.1px',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                   }}>
                     Conexiones Recientes
                   </h3>
@@ -409,15 +443,49 @@ const HomeTab = ({
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.6rem',
                   marginBottom: '0.75rem'
                 }}>
-                  <i className="pi pi-key" style={{ color: 'var(--text-color-secondary)' }} />
-                  <h3 style={{
-                    margin: 0,
-                    color: 'var(--text-color)',
-                    fontSize: '1rem',
-                    fontWeight: '600'
+                  {/* Icono con efecto visual mejorado */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '6px',
+                    background: 'linear-gradient(135deg, rgba(102, 187, 106, 0.2) 0%, rgba(102, 187, 106, 0.1) 100%)',
+                    border: '1px solid rgba(102, 187, 106, 0.3)',
+                    boxShadow: '0 1px 4px rgba(102, 187, 106, 0.15)',
+                    position: 'relative'
+                  }}>
+                    <i className="pi pi-key" style={{ 
+                      color: '#66bb6a', 
+                      fontSize: '0.9rem',
+                      filter: 'drop-shadow(0 0 2px rgba(102, 187, 106, 0.4))'
+                    }} />
+                    {/* Efecto de brillo sutil */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '12%',
+                      left: '35%',
+                      width: '4px',
+                      height: '4px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.6)',
+                      filter: 'blur(1px)',
+                      animation: 'twinkle 4s infinite'
+                    }} />
+                  </div>
+                  
+                  {/* Título con mejor tipografía */}
+                  <h3 style={{ 
+                    margin: 0, 
+                    color: 'var(--text-color)', 
+                    fontSize: '0.9rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.1px',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
                   }}>
                     Passwords Recientes
                   </h3>
