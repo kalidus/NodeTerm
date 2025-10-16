@@ -15,6 +15,7 @@ import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
+import { recordRecentPassword } from '../utils/connectionStore';
 
 const TabContentRenderer = React.memo(({
   tab,
@@ -221,6 +222,26 @@ const TabContentRenderer = React.memo(({
         } else {
           await navigator.clipboard.writeText(text);
         }
+        
+        // Registrar como password reciente cuando se copia la contraseña
+        if (fieldName === 'Contraseña') {
+          try {
+            recordRecentPassword({
+              id: p.id,
+              name: p.name || p.label,
+              username: p.username,
+              password: p.password,
+              url: p.url,
+              group: p.group,
+              notes: p.notes,
+              type: p.type || 'web',
+              icon: p.icon || 'pi-globe'
+            }, 5);
+          } catch (e) {
+            console.warn('Error registrando password reciente:', e);
+          }
+        }
+        
         // Show success toast if available
         if (window.toast?.current?.show) {
           window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
@@ -335,13 +356,33 @@ const TabContentRenderer = React.memo(({
       setCurrentPage(1);
     }, [tab.key]);
     
-    const copyToClipboard = async (text, fieldName) => {
+    const copyToClipboard = async (text, fieldName, passwordData = null) => {
       try {
         if (window.electron?.clipboard?.writeText) {
           await window.electron.clipboard.writeText(text);
         } else {
           await navigator.clipboard.writeText(text);
         }
+        
+        // Registrar como password reciente cuando se copia la contraseña
+        if (fieldName === 'Contraseña' && passwordData) {
+          try {
+            recordRecentPassword({
+              id: passwordData.id,
+              name: passwordData.name || passwordData.label,
+              username: passwordData.username,
+              password: passwordData.password,
+              url: passwordData.url,
+              group: passwordData.group,
+              notes: passwordData.notes,
+              type: passwordData.type || 'web',
+              icon: passwordData.icon || 'pi-globe'
+            }, 5);
+          } catch (e) {
+            console.warn('Error registrando password reciente:', e);
+          }
+        }
+        
         // Show success toast if available
         if (window.toast?.current?.show) {
           window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
@@ -586,7 +627,7 @@ const TabContentRenderer = React.memo(({
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  copyToClipboard(password.password, 'Contraseña');
+                  copyToClipboard(password.password, 'Contraseña', password);
                 }}
                 style={{ 
                   padding: '2px 6px', 

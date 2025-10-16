@@ -53,7 +53,7 @@ import GuacamoleTerminal from './GuacamoleTerminal';
 import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
-import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, helpers as connectionHelpers } from '../utils/connectionStore';
+import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, recordRecentPassword, helpers as connectionHelpers } from '../utils/connectionStore';
 import { 
   getTabTypeAndIndex, 
   moveTabToFirst, 
@@ -1410,6 +1410,24 @@ const App = () => {
         group: info.data?.group || '',
         notes: info.data?.notes || ''
       };
+      
+      // Registrar como password reciente cuando se abre la pestaña
+      try {
+        recordRecentPassword({
+          id: info.key,
+          name: info.label,
+          username: info.data?.username || '',
+          password: info.data?.password || '',
+          url: info.data?.url || '',
+          group: info.data?.group || '',
+          notes: info.data?.notes || '',
+          type: info.data?.type || 'web',
+          icon: info.data?.icon || 'pi-globe'
+        }, 5);
+      } catch (e) {
+        console.warn('Error registrando password reciente:', e);
+      }
+      
       // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
       const newTab = { key: tabId, label: `🔑 ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
       console.log('🔑 Creating password tab:', newTab);

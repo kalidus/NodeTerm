@@ -11,7 +11,7 @@ import NodeTermStatus from './NodeTermStatus';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
-import { getRecents, toggleFavorite, onUpdate } from '../utils/connectionStore';
+import { getRecents, toggleFavorite, onUpdate, getRecentPasswords } from '../utils/connectionStore';
 
 const HomeTab = ({
   onCreateSSHConnection,
@@ -34,6 +34,7 @@ const HomeTab = ({
   const [terminalHidden, setTerminalHidden] = useState(true);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
+  const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -49,10 +50,14 @@ const HomeTab = ({
     return () => window.removeEventListener('theme-changed', onThemeChanged);
   }, []);
 
-  // Cargar conexiones recientes
+  // Cargar conexiones recientes y passwords recientes
   useEffect(() => {
     loadRecentConnections();
-    const off = onUpdate(() => loadRecentConnections());
+    loadRecentPasswords();
+    const off = onUpdate(() => {
+      loadRecentConnections();
+      loadRecentPasswords();
+    });
     return () => off && off();
   }, []);
 
@@ -62,6 +67,16 @@ const HomeTab = ({
       setRecentConnections(recents);
     } catch (error) {
       console.error('Error cargando conexiones recientes:', error);
+    }
+  };
+
+  const loadRecentPasswords = () => {
+    try {
+      const passwords = getRecentPasswords(5); // Limitar a 5 passwords recientes
+      console.log('🔑 Passwords recientes cargados:', passwords);
+      setRecentPasswords(passwords);
+    } catch (error) {
+      console.error('Error cargando passwords recientes:', error);
     }
   };
 
@@ -99,6 +114,121 @@ const HomeTab = ({
   const handleToggleFavorite = (connection) => {
     toggleFavorite(connection);
     loadRecentConnections(); // Recargar para actualizar el estado
+  };
+
+  // Funciones auxiliares para tipos de passwords
+  const getPasswordTypeIcon = (type) => {
+    // Si no hay tipo definido, intentar inferirlo del nombre o usar icono por defecto
+    if (!type) return 'pi pi-key';
+    
+    switch (type.toLowerCase()) {
+      case 'web':
+      case 'website':
+      case 'site':
+        return 'pi pi-globe';
+      case 'dev':
+      case 'development':
+      case 'github':
+      case 'gitlab':
+      case 'bitbucket':
+        return 'pi pi-code';
+      case 'cloud':
+      case 'aws':
+      case 'azure':
+      case 'gcp':
+        return 'pi pi-cloud';
+      case 'db':
+      case 'database':
+      case 'mysql':
+      case 'postgresql':
+      case 'mongodb':
+        return 'pi pi-database';
+      case 'email':
+      case 'gmail':
+      case 'outlook':
+        return 'pi pi-envelope';
+      case 'social':
+      case 'facebook':
+      case 'twitter':
+      case 'instagram':
+        return 'pi pi-users';
+      case 'server':
+      case 'ssh':
+        return 'pi pi-server';
+      case 'admin':
+      case 'administrator':
+        return 'pi pi-shield';
+      default:
+        return 'pi pi-key';
+    }
+  };
+
+  const getPasswordTypeColor = (type) => {
+    // Si no hay tipo definido, usar color por defecto
+    if (!type) return '#9E9E9E';
+    
+    switch (type.toLowerCase()) {
+      case 'web':
+      case 'website':
+      case 'site':
+        return '#4fc3f7';
+      case 'dev':
+      case 'development':
+      case 'github':
+      case 'gitlab':
+      case 'bitbucket':
+        return '#66bb6a';
+      case 'cloud':
+      case 'aws':
+      case 'azure':
+      case 'gcp':
+        return '#ff7043';
+      case 'db':
+      case 'database':
+      case 'mysql':
+      case 'postgresql':
+      case 'mongodb':
+        return '#ab47bc';
+      case 'email':
+      case 'gmail':
+      case 'outlook':
+        return '#ff9800';
+      case 'social':
+      case 'facebook':
+      case 'twitter':
+      case 'instagram':
+        return '#e91e63';
+      case 'server':
+      case 'ssh':
+        return '#607d8b';
+      case 'admin':
+      case 'administrator':
+        return '#795548';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
+  const copyToClipboard = async (text, fieldName) => {
+    try {
+      if (window.electron?.clipboard?.writeText) {
+        await window.electron.clipboard.writeText(text);
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      
+      // Mostrar notificación si está disponible
+      if (window.toast?.current?.show) {
+        window.toast.current.show({ 
+          severity: 'success', 
+          summary: 'Copiado', 
+          detail: `${fieldName} copiado al portapapeles`, 
+          life: 1500 
+        });
+      }
+    } catch (err) {
+      console.error('Error copiando al portapapeles:', err);
+    }
   };
 
   // Obtener el color de fondo del tema actual
@@ -499,42 +629,102 @@ const HomeTab = ({
                 }} />
                 {/* Lista de passwords recientes */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {[
-                    { id: 'p1', name: 'Gmail Account', type: 'web' },
-                    { id: 'p2', name: 'GitHub Token', type: 'dev' },
-                    { id: 'p3', name: 'AWS Access Key', type: 'cloud' },
-                    { id: 'p4', name: 'Database Root', type: 'db' },
-                    { id: 'p5', name: 'Office 365 Admin', type: 'web' },
-                  ].map(recentPass => (
-                    <div key={recentPass.id} style={{
+                  {recentPasswords.length > 0 ? (
+                    recentPasswords.map(recentPass => (
+                      <div key={recentPass.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        color: 'var(--text-color-secondary)',
+                        fontSize: '0.8rem',
+                        background: 'rgba(255,255,255,0.05)',
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      >
+                        {/* Icono del tipo de password */}
+                        <i className={getPasswordTypeIcon(recentPass.type)} style={{
+                          color: getPasswordTypeColor(recentPass.type),
+                          fontSize: '0.9rem'
+                        }} />
+                        
+                        {/* Nombre del password */}
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {recentPass.name}
+                        </span>
+
+                        {/* Botones interactivos */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
+                          {/* Botón de copiar usuario */}
+                          {recentPass.username && (
+                            <span
+                              title="Copiar usuario"
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-color)',
+                                background: 'rgba(255,255,255,0.08)',
+                                border: '1px solid rgba(255,255,255,0.16)',
+                                transition: 'all .15s ease',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
+                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                              onClick={() => copyToClipboard(recentPass.username, 'Usuario')}
+                            >
+                              <i className="pi pi-user" style={{ fontSize: '10px' }} />
+                            </span>
+                          )}
+
+                          {/* Botón de copiar contraseña */}
+                          {recentPass.password && (
+                            <span
+                              title="Copiar contraseña"
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-color)',
+                                background: 'rgba(255,255,255,0.08)',
+                                border: '1px solid rgba(255,255,255,0.16)',
+                                transition: 'all .15s ease',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
+                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                              onClick={() => copyToClipboard(recentPass.password, 'Contraseña')}
+                            >
+                              <i className="pi pi-key" style={{ fontSize: '10px' }} />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
+                      justifyContent: 'center',
+                      padding: '1rem',
                       color: 'var(--text-color-secondary)',
                       fontSize: '0.8rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      padding: '0.4rem 0.6rem',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                    >
-                      <i className={recentPass.type === 'web' ? 'pi pi-globe' : 
-                                   recentPass.type === 'dev' ? 'pi pi-code' :
-                                   recentPass.type === 'cloud' ? 'pi pi-cloud' : 'pi pi-database'} style={{
-                        color: recentPass.type === 'web' ? '#4fc3f7' : 
-                               recentPass.type === 'dev' ? '#66bb6a' :
-                               recentPass.type === 'cloud' ? '#ff7043' : '#ab47bc',
-                        fontSize: '0.9rem'
-                      }} />
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {recentPass.name}
-                      </span>
+                      fontStyle: 'italic'
+                    }}>
+                      No hay passwords recientes
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>

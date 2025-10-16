@@ -3,6 +3,7 @@
 
 const FAVORITES_KEY = 'nodeterm_favorite_connections';
 const RECENTS_KEY = 'nodeterm_connection_history';
+const RECENT_PASSWORDS_KEY = 'nodeterm_recent_passwords';
 
 // Default max recents if caller does not specify
 const DEFAULT_RECENTS_LIMIT = 10;
@@ -275,6 +276,41 @@ export function clearRecents() {
   saveList(RECENTS_KEY, []);
 }
 
+// RECENT PASSWORDS
+export function getRecentPasswords(limit = 5) {
+  const list = loadList(RECENT_PASSWORDS_KEY);
+  if (typeof limit === 'number' && limit > 0) {
+    return list.slice(0, limit);
+  }
+  return list;
+}
+
+export function recordRecentPassword(passwordData, limit = 5) {
+  const passwordRecord = {
+    id: passwordData.id || `pwd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: passwordData.name || passwordData.label || 'Password',
+    username: passwordData.username || '',
+    password: passwordData.password || '',
+    url: passwordData.url || '',
+    group: passwordData.group || '',
+    notes: passwordData.notes || '',
+    type: passwordData.type || 'web', // web, dev, cloud, db, etc.
+    lastAccessed: new Date().toISOString(),
+    icon: passwordData.icon || 'pi-globe'
+  };
+  
+  const list = loadList(RECENT_PASSWORDS_KEY);
+  const filtered = list.filter(item => item.id !== passwordRecord.id);
+  const updated = [passwordRecord, ...filtered];
+  const trimmed = updated.slice(0, Math.max(1, limit));
+  saveList(RECENT_PASSWORDS_KEY, trimmed);
+  return trimmed;
+}
+
+export function clearRecentPasswords() {
+  saveList(RECENT_PASSWORDS_KEY, []);
+}
+
 
 
 
@@ -307,6 +343,7 @@ export const helpers = {
 export const constants = {
   FAVORITES_KEY,
   RECENTS_KEY,
+  RECENT_PASSWORDS_KEY,
   DEFAULT_RECENTS_LIMIT,
   UPDATED_EVENT
 };
@@ -323,6 +360,9 @@ export default {
   getRecents,
   recordRecent,
   clearRecents,
+  getRecentPasswords,
+  recordRecentPassword,
+  clearRecentPasswords,
   onUpdate,
   helpers,
   constants
