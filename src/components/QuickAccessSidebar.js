@@ -245,14 +245,6 @@ const QuickAccessSidebar = ({
         description: 'Acceso rápido',
         action: () => {},
         badge: null
-      },
-      {
-        label: 'Ocultar Terminal',
-        icon: 'pi pi-eye-slash',
-        color: '#607D8B',
-        description: 'Ocultar/mostrar terminal local',
-        action: handleToggleTerminalVisibility,
-        badge: null
       }
     ];
 
@@ -511,28 +503,100 @@ const QuickAccessSidebar = ({
         borderRadius: '14px'
       }} />
       
-      {/* Icono de título */}
+      {/* Botón de Terminal Local - mismo tamaño/estilo que los botones de terminal */}
+      <div
+        title={'Mostrar/ocultar terminal local'}
+        style={{
+          cursor: 'pointer',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: `linear-gradient(135deg, rgba(0,188,212,0.25) 0%, rgba(0,188,212,0.15) 50%, rgba(0,188,212,0.08) 100%)`,
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: '1.5px solid rgba(0,188,212,0.40)',
+          position: 'relative',
+          width: '100%',
+          height: '44px',
+          minHeight: '44px',
+          maxHeight: '44px',
+          borderRadius: '9px',
+          boxShadow: '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0.5rem',
+          marginBottom: '0.25rem',
+          flexShrink: 0,
+          boxSizing: 'border-box'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,188,212,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)';
+          e.currentTarget.style.borderColor = 'rgba(0,188,212,0.70)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
+          e.currentTarget.style.borderColor = 'rgba(0,188,212,0.40)';
+        }}
+        onClick={handleToggleTerminalVisibility}
+      >
+        <div style={{
+          width: '26px',
+          height: '26px',
+          borderRadius: '7px',
+          background: 'linear-gradient(145deg, rgba(0,188,212,0.93) 0%, rgba(0,188,212,0.80) 30%, rgba(0,188,212,0.67) 70%, rgba(0,188,212,1) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 3px 12px rgba(0,188,212,0.5), 0 1px 4px rgba(0,188,212,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.3), inset 1px 0 0 rgba(255,255,255,0.2), inset -1px 0 0 rgba(0,0,0,0.1)',
+          border: '1px solid rgba(0,188,212,0.67)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Fallback a icono compatible de PrimeIcons */}
+          <i
+            className="pi pi-desktop"
+            style={{
+              fontSize: '0.9rem',
+              color: 'white',
+              textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
+              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+              position: 'relative',
+              zIndex: 1
+            }}
+          />
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '14px',
+            height: '14px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(0,188,212,0.40) 0%, transparent 70%)',
+            filter: 'blur(1px)',
+            opacity: '0.8'
+          }} />
+        </div>
+      </div>
+
+      {/* Separador debajo del botón de Terminal Local */}
       <div style={{
-        textAlign: 'center',
-        marginBottom: '0.3rem',
         position: 'relative',
         zIndex: 2,
-        padding: '6px',
-        background: 'rgba(255, 255, 255, 0.08)',
-        borderRadius: '8px',
-        border: '1px solid rgba(255, 255, 255, 0.12)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)'
+        margin: '0.4rem 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        <i 
-          className="pi pi-bolt"
-          style={{ 
-            fontSize: '1.2rem',
-            color: 'rgba(255, 255, 255, 0.9)',
-            textShadow: '0 2px 4px rgba(0,0,0,0.4)',
-            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
-          }}
-        />
+        <div style={{
+          width: '100%',
+          height: '1px',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.3) 80%, transparent 100%)',
+          borderRadius: '1px',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+        }} />
       </div>
 
       {/* Terminales */}
