@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { uiThemes } from '../themes/ui-themes';
+import { themeManager } from '../utils/themeManager';
 
 const QuickAccessSidebar = ({ 
   onCreateSSHConnection, 
@@ -14,6 +16,30 @@ const QuickAccessSidebar = ({
   const [cygwinAvailable, setCygwinAvailable] = useState(false);
   const [availableTerminals, setAvailableTerminals] = useState([]);
   const [quickActionItems, setQuickActionItems] = useState([]);
+  
+  // Estado para el tema
+  const [themeVersion, setThemeVersion] = useState(0);
+
+  // Escuchar cambios en el tema
+  useEffect(() => {
+    const onThemeChanged = () => {
+      setThemeVersion(v => v + 1); // Forzar re-render
+    };
+    window.addEventListener('theme-changed', onThemeChanged);
+    return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
+
+  // Obtener el tema actual y colores
+  const currentTheme = React.useMemo(() => {
+    return themeManager.getCurrentTheme() || uiThemes['Light'];
+  }, [themeVersion]);
+
+  const themeColors = React.useMemo(() => {
+    return {
+      cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
+      primaryColor: currentTheme.colors?.primaryColor || '#2196f3'
+    };
+  }, [currentTheme]);
 
   // Handlers for actions that don't come from props
   const handleOpenPasswords = () => {
@@ -263,7 +289,7 @@ const QuickAccessSidebar = ({
             ${action.color}08 100%)`,
           backdropFilter: 'blur(20px) saturate(180%)',
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          border: `1.5px solid ${action.color}40`,
+          border: `1.5px solid ${themeColors.cardBorder}`,
           position: 'relative',
           width: '100%',
           height: '40px',
@@ -282,14 +308,14 @@ const QuickAccessSidebar = ({
           e.currentTarget.style.boxShadow = `0 6px 18px ${action.color}35, 
                                               0 2px 6px rgba(0,0,0,0.2),
                                               inset 0 1px 0 rgba(255,255,255,0.2)`;
-          e.currentTarget.style.borderColor = `${action.color}70`;
+          e.currentTarget.style.borderColor = `${themeColors.primaryColor}70`;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'translateY(0) scale(1)';
           e.currentTarget.style.boxShadow = `0 3px 12px ${action.color}20, 
                                               0 1px 4px rgba(0,0,0,0.1),
                                               inset 0 1px 0 rgba(255,255,255,0.1)`;
-          e.currentTarget.style.borderColor = `${action.color}40`;
+          e.currentTarget.style.borderColor = `${themeColors.cardBorder}`;
         }}
         onClick={action.action}
       >
