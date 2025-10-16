@@ -405,8 +405,8 @@ const HomeTab = ({
               {/* Card de Conexiones Recientes */}
               <div style={{
                 background: `linear-gradient(135deg,
-                  ${themeColors.cardBackground} 0%,
-                  ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
                 backdropFilter: 'blur(8px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(8px) saturate(140%)',
                 border: `1px solid ${themeColors.cardBorder}`,
@@ -599,8 +599,8 @@ const HomeTab = ({
               {/* Card de Passwords Recientes */}
               <div style={{
                 background: `linear-gradient(135deg,
-                  ${themeColors.cardBackground} 0%,
-                  ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
                 backdropFilter: 'blur(8px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(8px) saturate(140%)',
                 border: `1px solid ${themeColors.cardBorder}`,
@@ -816,8 +816,8 @@ const HomeTab = ({
             {/* Estado de NodeTerm */}
             <div style={{
               background: `linear-gradient(135deg,
-                ${themeColors.cardBackground} 0%,
-                ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
               backdropFilter: 'blur(8px) saturate(140%)',
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
               border: `1px solid ${themeColors.cardBorder}`,
@@ -834,8 +834,8 @@ const HomeTab = ({
             {/* Card adicional para futuras funcionalidades */}
             <div style={{
               background: `linear-gradient(135deg,
-                ${themeColors.cardBackground} 0%,
-                ${themeColors.cardBackground.replace('0.6', '0.4')} 100%)`,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
               backdropFilter: 'blur(8px) saturate(140%)',
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
               border: `1px solid ${themeColors.cardBorder}`,
