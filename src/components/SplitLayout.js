@@ -165,7 +165,7 @@ const SplitLayout = ({
   
   // Configuración del splitter basado en el sidebar que funciona perfecto
   const collapsedSize = 4; // Porcentaje cuando está colapsado (como el sidebar: 44px de ~1000px = ~4%)
-  const defaultSize = orientation === 'vertical' ? 30 : 50; // Tamaño por defecto (50% para horizontal como antes)
+  const defaultSize = orientation === 'vertical' ? 30 : 30; // Tamaño por defecto (30% para horizontal - 40% más pequeño)
   
   // Función para manejar resize del splitter
   const handleResize = useCallback((e) => {
@@ -283,7 +283,10 @@ const SplitLayout = ({
     };
 
     // Necesitamos agregar el handle de resize horizontal
-    const [internalPaneSize, setInternalPaneSize] = useState(400);
+    const [internalPaneSize, setInternalPaneSize] = useState(() => {
+      // Calcular 30% menos de la altura de la ventana (70% del tamaño original)
+      return Math.max(window.innerHeight * 0.7, 200);
+    });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0, size: 0 });
     
@@ -447,7 +450,7 @@ const SplitLayout = ({
 
   // Implementación simple sin PrimeReact para vertical
   if (orientation === 'vertical') {
-    const [leftSize, setLeftSize] = useState(50);
+    const [leftSize, setLeftSize] = useState(30); // 30% más pequeño
     const [isDragging, setIsDragging] = useState(false);
     const verticalSplitterColor = getSolidSplitterColor(theme, splitterColor);
     const bgForContrast = theme?.background || '#2d2d2d';

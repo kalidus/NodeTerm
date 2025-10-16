@@ -371,6 +371,7 @@ const HomeTab = ({
         size = 0;
         break;
       default:
+        // Para 'normal', no forzar tamaño fijo, dejar que SplitLayout maneje el redimensionamiento
         return null;
     }
 
@@ -906,7 +907,8 @@ const HomeTab = ({
               WebkitBackdropFilter: 'blur(8px) saturate(140%)',
               border: `1px solid ${themeColors.cardBorder}`,
               borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              position: 'relative'
             }}>
               <NodeTermStatus
                 sshConnectionsCount={sshConnectionsCount}
@@ -914,6 +916,48 @@ const HomeTab = ({
                 rdpConnectionsCount={rdpConnectionsCount}
                 themeColors={themeColors}
               />
+              
+              {/* Overlay de transición para Estado de NodeTerm */}
+              {isTerminalTransitioning && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  zIndex: 10
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    color: 'white'
+                  }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid rgba(255,255,255,0.3)',
+                      borderTop: '3px solid #00BCD4',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    <div style={{
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      textAlign: 'center'
+                    }}>
+                      Actualizando terminal...
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Card adicional para futuras funcionalidades */}
