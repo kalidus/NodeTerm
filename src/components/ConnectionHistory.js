@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from 'primereact/card';
 import { Badge } from 'primereact/badge';
 import { getFavorites, toggleFavorite, onUpdate } from '../utils/connectionStore';
 
-const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0 }) => {
+const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recentsLimit = 10, activeIds = new Set(), onEdit, templateColumns, favoritesColumns = 2, recentsColumns = 1, sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {} }) => {
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [favType, setFavType] = useState(() => localStorage.getItem('nodeterm_fav_type') || 'all');
 	const [favQuery, setFavQuery] = useState('');
@@ -72,9 +71,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						style={{
 							padding: '2px 7px',
 							borderRadius: 999,
-							border: '1px solid rgba(255,255,255,0.14)',
-							background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
-							color: 'var(--text-color)',
+							border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
+							background: value === opt.key ? (themeColors.hoverBackground || 'rgba(255,255,255,0.12)') : (themeColors.itemBackground || 'rgba(255,255,255,0.04)'),
+							color: themeColors.textPrimary || 'var(--text-color)',
 							fontSize: 10,
 							cursor: 'pointer',
 							backdropFilter: 'blur(8px) saturate(130%)'
@@ -127,9 +126,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					alignItems: 'center',
 					gap: micro ? '6px' : (compact ? '8px' : '12px'),
 					padding: micro ? '4px 8px' : (compact ? '6px 10px' : '10px 14px'),
-					border: '1px solid rgba(255,255,255,0.14)',
+					border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.14)'}`,
 					borderRadius: micro ? '8px' : (compact ? '10px' : '14px'),
-					background: 'rgba(16, 20, 28, 0.45)',
+					background: themeColors.itemBackground || 'rgba(16, 20, 28, 0.45)',
 					backdropFilter: 'blur(10px) saturate(140%)',
 					boxShadow: micro ? '0 3px 12px rgba(0,0,0,0.2)' : (compact ? '0 4px 16px rgba(0,0,0,0.22)' : '0 6px 24px rgba(0,0,0,0.25)'),
 					cursor: 'pointer',
@@ -161,7 +160,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 				<div style={{ minWidth: 0 }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-						<span style={{ color: 'var(--text-color)', fontWeight: 700, fontSize: micro ? 12 : (compact ? 13 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
+						<span style={{ color: themeColors.textPrimary || 'var(--text-color)', fontWeight: 700, fontSize: micro ? 12 : (compact ? 13 : 14), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{connection.name}</span>
 						<span style={{
 							display: 'inline-flex',
 							alignItems: 'center',
@@ -187,7 +186,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								borderRadius: 999,
 								background: 'rgba(255,255,255,0.08)',
 								border: '1px solid rgba(255,255,255,0.12)',
-								color: 'var(--text-color)',
+								color: themeColors.textPrimary || 'var(--text-color)',
 								fontSize: micro ? 8 : (compact ? 9 : 10),
 								fontWeight: 600
 							}}>
@@ -217,16 +216,14 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 									display: 'inline-flex',
 									alignItems: 'center',
 									justifyContent: 'center',
-									color: 'var(--text-color)',
+									color: themeColors.textPrimary || 'var(--text-color)',
 									background: 'rgba(255,255,255,0.08)',
-									border: '1px solid rgba(255,255,255,0.16)',
+									border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.16)'}`,
 									transition: 'all .15s ease',
 									cursor: 'pointer'
 								}}
-								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.16)'; e.style.color = '#fff'; }}
-								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.16)'; e.style.color = themeColors.textPrimary || '#fff'; }}
+								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
 								onClick={() => { toggleFavorite(connection); loadConnectionHistory(); }}
 							>
 								<i className={connection.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
@@ -242,16 +239,14 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 									display: 'inline-flex',
 									alignItems: 'center',
 									justifyContent: 'center',
-									color: 'var(--text-color)',
+									color: themeColors.textPrimary || 'var(--text-color)',
 									background: 'rgba(255,255,255,0.08)',
-									border: '1px solid rgba(255,255,255,0.16)',
+									border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.16)'}`,
 									transition: 'all .15s ease',
 									cursor: 'pointer'
 								}}
-								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.16)'; e.style.color = '#fff'; }}
-								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,\
-255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+								onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = themeColors.hoverBackground || 'rgba(255,255,255,0.16)'; e.style.color = themeColors.textPrimary || '#fff'; }}
+								onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = themeColors.textPrimary || 'var(--text-color)'; }}
 								onClick={() => onEdit(connection)}
 							>
 								<i className="pi pi-pencil" style={{ fontSize: micro ? 10 : (compact ? 12 : 14) }} />
@@ -291,10 +286,17 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	return (
-		<div style={{ padding: '0.5rem 0.5rem 0.25rem 0.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+		<div style={{ 
+			padding: '0.5rem 0.5rem 0.25rem 0.5rem', 
+			height: '100%', 
+			display: 'flex', 
+			flexDirection: 'column',
+			background: 'transparent !important',
+			backgroundColor: 'transparent !important'
+		}}>
 			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.25rem', flex: '0 0 auto' }}>
 				{/* Columna única: Favoritos */}
-				<div style={{ display: 'flex', flexDirection: 'column' }}>
+				<div style={{ display: 'flex', flexDirection: 'column', background: 'transparent !important', backgroundColor: 'transparent !important' }}>
 					{/* Título mejorado con mejor separación visual */}
 					<div style={{ 
 						marginBottom: '0.9rem',
@@ -337,7 +339,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							{/* Título con mejor tipografía */}
 							<h3 style={{ 
 								margin: 0, 
-								color: 'var(--text-color)', 
+								color: themeColors.textPrimary || 'var(--text-color)', 
 								fontSize: '0.9rem',
 								fontWeight: '700',
 								letterSpacing: '0.1px',
@@ -387,7 +389,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						minHeight: '380px',
 						overflow: 'hidden',
 						display: 'flex',
-						flexDirection: 'column'
+						flexDirection: 'column',
+						background: 'transparent !important',
+						backgroundColor: 'transparent !important'
 					}}>
 						{filteredFavorites.length > 0 ? (
 							<>
@@ -396,7 +400,9 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
 									gap: 4,
 									flex: '0 0 auto',
-									paddingRight: '4px'
+									paddingRight: '4px',
+									background: 'transparent !important',
+									backgroundColor: 'transparent !important'
 								}}>
 									{paginatedFavorites.map(connection => (
 										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={true} micro={true} onEdit={onEdit} />
@@ -422,7 +428,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 												borderRadius: '6px',
 												border: '1px solid rgba(255,255,255,0.14)',
 												background: currentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
-												color: currentPage === 1 ? 'rgba(255,255,255,0.3)' : 'var(--text-color)',
+												color: currentPage === 1 ? 'rgba(255,255,255,0.3)' : (themeColors.textPrimary || 'var(--text-color)'),
 												fontSize: '10px',
 												cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
 												transition: 'all 0.2s ease',
@@ -445,7 +451,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 														borderRadius: '6px',
 														border: '1px solid rgba(255,255,255,0.14)',
 														background: currentPage === page ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-														color: 'var(--text-color)',
+														color: themeColors.textPrimary || 'var(--text-color)',
 														fontSize: '10px',
 														fontWeight: currentPage === page ? '700' : '500',
 														cursor: 'pointer',
@@ -465,7 +471,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 												borderRadius: '6px',
 												border: '1px solid rgba(255,255,255,0.14)',
 												background: currentPage === totalPages ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
-												color: currentPage === totalPages ? 'rgba(255,255,255,0.3)' : 'var(--text-color)',
+												color: currentPage === totalPages ? 'rgba(255,255,255,0.3)' : (themeColors.textPrimary || 'var(--text-color)'),
 												fontSize: '10px',
 												cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
 												transition: 'all 0.2s ease',
@@ -483,7 +489,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 											borderRadius: '6px',
 											background: 'rgba(255,255,255,0.05)',
 											border: '1px solid rgba(255,255,255,0.1)',
-											color: 'var(--text-color-secondary)',
+											color: themeColors.textSecondary || 'var(--text-color-secondary)',
 											fontSize: '9px',
 											fontWeight: '500'
 										}}>
@@ -500,7 +506,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								justifyContent: 'center',
 								height: '100%',
 								padding: '2rem',
-								background: 'transparent'
+								background: 'transparent !important',
+								backgroundColor: 'transparent !important'
 							}}>
 								{/* Icono con gradiente y animación sutil */}
 								<div style={{
@@ -537,7 +544,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								
 								{/* Título principal */}
 								<h3 style={{ 
-									color: 'var(--text-color)', 
+									color: themeColors.textPrimary || 'var(--text-color)', 
 									margin: '0 0 0.5rem 0',
 									fontSize: '1.2rem',
 									fontWeight: '600',
@@ -548,7 +555,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								
 								{/* Descripción */}
 								<p style={{ 
-									color: 'var(--text-color-secondary)', 
+									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 									margin: '0 0 1.5rem 0',
 									fontSize: '0.9rem',
 									textAlign: 'center',
