@@ -484,12 +484,18 @@ const HomeTab = ({
                         background: themeColors.itemBackground,
                         padding: '0.4rem 0.6rem',
                         borderRadius: '8px',
-                        border: `1px solid ${themeColors.borderColor}`,
+                        border: '1px solid transparent',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = themeColors.hoverBackground}
-                      onMouseLeave={(e) => e.currentTarget.style.background = themeColors.itemBackground}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = themeColors.hoverBackground;
+                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = themeColors.itemBackground;
+                        e.currentTarget.style.border = '1px solid transparent';
+                      }}
                       >
                         {/* Icono del tipo de conexión */}
                         <i className={getConnectionTypeIcon(recentConn.type)} style={{
@@ -678,12 +684,18 @@ const HomeTab = ({
                         background: themeColors.itemBackground,
                         padding: '0.4rem 0.6rem',
                         borderRadius: '8px',
-                        border: `1px solid ${themeColors.borderColor}`,
+                        border: '1px solid transparent',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = themeColors.hoverBackground}
-                      onMouseLeave={(e) => e.currentTarget.style.background = themeColors.itemBackground}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = themeColors.hoverBackground;
+                        e.currentTarget.style.border = `1px solid ${themeColors.borderColor}`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = themeColors.itemBackground;
+                        e.currentTarget.style.border = '1px solid transparent';
+                      }}
                       >
                         {/* Icono del tipo de password */}
                         <i className={getPasswordTypeIcon(recentPass.type)} style={{
