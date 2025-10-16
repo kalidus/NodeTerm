@@ -58,7 +58,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 
 	const TypeChips = ({ value, onChange }) => (
 		<>
-			<div style={{ display: 'flex', gap: 6 }}>
+			<div style={{ display: 'flex', gap: 5 }}>
 				{[
 					{ key: 'all', label: 'Todos' },
 					{ key: 'ssh', label: 'SSH' },
@@ -70,12 +70,12 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 						key={opt.key}
 						onClick={() => { onChange(opt.key); if (onChange === setFavType) localStorage.setItem('nodeterm_fav_type', opt.key); }}
 						style={{
-							padding: '2px 8px',
+							padding: '2px 7px',
 							borderRadius: 999,
 							border: '1px solid rgba(255,255,255,0.14)',
 							background: value === opt.key ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
 							color: 'var(--text-color)',
-							fontSize: 11,
+							fontSize: 10,
 							cursor: 'pointer',
 							backdropFilter: 'blur(8px) saturate(130%)'
 						}}
@@ -88,7 +88,7 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 				background: 'var(--ui-tabgroup-border, #444)', 
 				opacity: 0.6,
 				width: '100%',
-				margin: '8px 0 0 0',
+				margin: '6px 0 0 0',
 				padding: 0,
 				boxSizing: 'border-box',
 				border: 'none',
@@ -303,14 +303,14 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	return (
-		<div style={{ padding: '0.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', flex: '0 0 auto' }}>
+		<div style={{ padding: '0.5rem 0.5rem 0.25rem 0.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.25rem', flex: '0 0 auto' }}>
 				{/* Columna única: Favoritos */}
 				<div style={{ display: 'flex', flexDirection: 'column' }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
-						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Conexiones Favoritas</h3>
-						<Badge value={filteredFavorites.length} style={{ fontSize: 11, minWidth: '1.1rem', height: '1.1rem', lineHeight: '1.1rem' }} />
+					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+						<i className="pi pi-star-fill" style={{ color: '#FFD700', fontSize: '1rem' }} />
+						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1rem' }}>Conexiones Favoritas</h3>
+						<Badge value={filteredFavorites.length} style={{ fontSize: 10, minWidth: '1rem', height: '1rem', lineHeight: '1rem' }} />
 						<div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
 							<TypeChips value={favType} onChange={setFavType} />
 						</div>
@@ -318,8 +318,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 					
 					{/* Contenedor con altura fija para los favoritos */}
 					<div style={{ 
-						maxHeight: '360px', 
-						minHeight: '360px',
+						maxHeight: '380px', 
+						minHeight: '380px',
 						overflow: 'hidden',
 						display: 'flex',
 						flexDirection: 'column'
@@ -344,44 +344,44 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 										display: 'flex', 
 										alignItems: 'center', 
 										justifyContent: 'center',
-										gap: '0.5rem',
-										marginTop: '0.5rem',
-										padding: '0.25rem 0',
+										gap: '0.4rem',
+										marginTop: '0.4rem',
+										padding: '0.2rem 0',
 										flex: '0 0 auto'
 									}}>
 										<button
 											onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
 											disabled={currentPage === 1}
 											style={{
-												padding: '4px 8px',
-												borderRadius: '8px',
+												padding: '3px 6px',
+												borderRadius: '6px',
 												border: '1px solid rgba(255,255,255,0.14)',
 												background: currentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
 												color: currentPage === 1 ? 'rgba(255,255,255,0.3)' : 'var(--text-color)',
-												fontSize: '11px',
+												fontSize: '10px',
 												cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
 												transition: 'all 0.2s ease',
 												display: 'flex',
 												alignItems: 'center',
-												gap: '4px'
+												gap: '3px'
 											}}
 										>
-											<i className="pi pi-chevron-left" style={{ fontSize: '10px' }} />
+											<i className="pi pi-chevron-left" style={{ fontSize: '9px' }} />
 										</button>
 										
-										<div style={{ display: 'flex', gap: '4px' }}>
+										<div style={{ display: 'flex', gap: '3px' }}>
 											{Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
 												<button
 													key={page}
 													onClick={() => setCurrentPage(page)}
 													style={{
-														padding: '4px 8px',
-														minWidth: '28px',
-														borderRadius: '8px',
+														padding: '3px 6px',
+														minWidth: '24px',
+														borderRadius: '6px',
 														border: '1px solid rgba(255,255,255,0.14)',
 														background: currentPage === page ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
 														color: 'var(--text-color)',
-														fontSize: '11px',
+														fontSize: '10px',
 														fontWeight: currentPage === page ? '700' : '500',
 														cursor: 'pointer',
 														transition: 'all 0.2s ease'
@@ -396,30 +396,30 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 											onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
 											disabled={currentPage === totalPages}
 											style={{
-												padding: '4px 8px',
-												borderRadius: '8px',
+												padding: '3px 6px',
+												borderRadius: '6px',
 												border: '1px solid rgba(255,255,255,0.14)',
 												background: currentPage === totalPages ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
 												color: currentPage === totalPages ? 'rgba(255,255,255,0.3)' : 'var(--text-color)',
-												fontSize: '11px',
+												fontSize: '10px',
 												cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
 												transition: 'all 0.2s ease',
 												display: 'flex',
 												alignItems: 'center',
-												gap: '4px'
+												gap: '3px'
 											}}
 										>
-											<i className="pi pi-chevron-right" style={{ fontSize: '10px' }} />
+											<i className="pi pi-chevron-right" style={{ fontSize: '9px' }} />
 										</button>
 										
 										<span style={{
-											marginLeft: '0.5rem',
-											padding: '4px 10px',
-											borderRadius: '8px',
+											marginLeft: '0.4rem',
+											padding: '3px 8px',
+											borderRadius: '6px',
 											background: 'rgba(255,255,255,0.05)',
 											border: '1px solid rgba(255,255,255,0.1)',
 											color: 'var(--text-color-secondary)',
-											fontSize: '10px',
+											fontSize: '9px',
 											fontWeight: '500'
 										}}>
 											{startIndex + 1}-{Math.min(endIndex, filteredFavorites.length)} de {filteredFavorites.length}

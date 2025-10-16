@@ -166,51 +166,19 @@ const HomeTab = ({
             foldersCount={foldersCount}
           />
 
-          {/* Columna central: ConnectionHistory con diseño mejorado */}
+          {/* Columna central: Layout reorganizado con tarjetas arriba y favoritos abajo */}
           <div style={{
             flex: 1,
             padding: '1rem',
             display: 'flex',
             flexDirection: 'column'
           }}>
-            {/* Card de ConnectionHistory con estilo glassmorphism */}
-            <div style={{
-              background: `linear-gradient(135deg,
-                rgba(16, 20, 28, 0.6) 0%,
-                rgba(16, 20, 28, 0.4) 100%)`,
-              backdropFilter: 'blur(8px) saturate(140%)',
-              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              padding: '0.75rem',
-              maxHeight: '440px',
-              minHeight: '440px',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden'
-            }}>
-              <ConnectionHistory 
-                onConnectToHistory={handleConnectToHistory}
-                layout="two-columns"
-                recentsLimit={10}
-                activeIds={new Set()}
-                templateColumns="3fr 2fr"
-                favoritesColumns={2}
-                recentsColumns={1}
-                onEdit={onEditConnection}
-                sshConnectionsCount={sshConnectionsCount}
-                foldersCount={foldersCount}
-                rdpConnectionsCount={rdpConnectionsCount}
-              />
-            </div>
-
-            {/* Cards adicionales debajo de ConnectionHistory */}
+            {/* Cards de Conexiones Recientes y Passwords Recientes en la parte superior */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gap: '1rem',
-              marginTop: '1rem'
+              marginBottom: '1rem'
             }}>
               {/* Card de Conexiones Recientes */}
               <div style={{
@@ -346,6 +314,38 @@ const HomeTab = ({
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Card de ConnectionHistory (Conexiones Favoritas) en la parte inferior */}
+            <div style={{
+              background: `linear-gradient(135deg,
+                rgba(16, 20, 28, 0.6) 0%,
+                rgba(16, 20, 28, 0.4) 100%)`,
+              backdropFilter: 'blur(8px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+              padding: '0.5rem',
+              maxHeight: '440px',
+              minHeight: '440px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}>
+              <ConnectionHistory 
+                onConnectToHistory={handleConnectToHistory}
+                layout="two-columns"
+                recentsLimit={10}
+                activeIds={new Set()}
+                templateColumns="3fr 2fr"
+                favoritesColumns={2}
+                recentsColumns={1}
+                onEdit={onEditConnection}
+                sshConnectionsCount={sshConnectionsCount}
+                foldersCount={foldersCount}
+                rdpConnectionsCount={rdpConnectionsCount}
+              />
             </div>
           </div>
 
