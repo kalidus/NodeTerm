@@ -7,6 +7,8 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [favType, setFavType] = useState(() => localStorage.getItem('nodeterm_fav_type') || 'all');
 	const [favQuery, setFavQuery] = useState('');
+	const [currentPage, setCurrentPage] = useState(1);
+	const itemsPerPage = 15;
 
 	useEffect(() => {
 		loadConnectionHistory();
@@ -113,6 +115,17 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	const filteredFavorites = applyQueryFilter(applyTypeFilter(favoriteConnections, favType), favQuery);
+	
+	// Resetear la página cuando cambian los filtros
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [favType, favQuery]);
+
+	// Calcular paginación
+	const totalPages = Math.ceil(filteredFavorites.length / itemsPerPage);
+	const startIndex = (currentPage - 1) * itemsPerPage;
+	const endIndex = startIndex + itemsPerPage;
+	const paginatedFavorites = filteredFavorites.slice(startIndex, endIndex);
 
 	const ConnectionCard = ({ connection, showFavoriteAction = false, compact = false, micro = false, onEdit }) => {
 		const isActive = activeIds.has(`${connection.type}:${connection.host}:${connection.username}:${connection.port}`);
@@ -290,11 +303,11 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 	};
 
 	return (
-		<div style={{ padding: '1rem' }}>
-			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+		<div style={{ padding: '0.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', flex: '0 0 auto' }}>
 				{/* Columna única: Favoritos */}
-				<div>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+				<div style={{ display: 'flex', flexDirection: 'column' }}>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
 						<i className="pi pi-star-fill" style={{ color: '#FFD700' }} />
 						<h3 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.1rem' }}>Conexiones Favoritas</h3>
 						<Badge value={filteredFavorites.length} style={{ fontSize: 11, minWidth: '1.1rem', height: '1.1rem', lineHeight: '1.1rem' }} />
@@ -302,19 +315,126 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 							<TypeChips value={favType} onChange={setFavType} />
 						</div>
 					</div>
-					{filteredFavorites.length > 0 ? (
-						<div style={{ display: 'grid', gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, gap: 4 }}>
-							{filteredFavorites.map(connection => (
-								<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={true} micro={true} onEdit={onEdit} />
-							))}
-						</div>
-					) : (
-						<Card style={{ textAlign: 'center', padding: '2rem', background: 'var(--surface-card)' }}>
-							<i className="pi pi-info-circle" style={{ fontSize: '3rem', color: 'var(--text-color-secondary)', marginBottom: '1rem', display: 'block' }} />
-							<h4 style={{ color: 'var(--text-color)', marginBottom: '0.5rem' }}>No hay favoritos</h4>
-							<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Marca conexiones desde la sidebar o desde estas tarjetas</p>
-						</Card>
-					)}
+					
+					{/* Contenedor con altura fija para los favoritos */}
+					<div style={{ 
+						maxHeight: '360px', 
+						minHeight: '360px',
+						overflow: 'hidden',
+						display: 'flex',
+						flexDirection: 'column'
+					}}>
+						{filteredFavorites.length > 0 ? (
+							<>
+								<div style={{ 
+									display: 'grid', 
+									gridTemplateColumns: `repeat(${favoritesColumns}, 1fr)`, 
+									gap: 4,
+									flex: '0 0 auto',
+									paddingRight: '4px'
+								}}>
+									{paginatedFavorites.map(connection => (
+										<ConnectionCard key={connection.id} connection={connection} showFavoriteAction={true} compact={true} micro={true} onEdit={onEdit} />
+									))}
+								</div>
+								
+								{/* Controles de paginación */}
+								{totalPages > 1 && (
+									<div style={{ 
+										display: 'flex', 
+										alignItems: 'center', 
+										justifyContent: 'center',
+										gap: '0.5rem',
+										marginTop: '0.5rem',
+										padding: '0.25rem 0',
+										flex: '0 0 auto'
+									}}>
+										<button
+											onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+											disabled={currentPage === 1}
+											style={{
+												padding: '4px 8px',
+												borderRadius: '8px',
+												border: '1px solid rgba(255,255,255,0.14)',
+												background: currentPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
+												color: currentPage === 1 ? 'rgba(255,255,255,0.3)' : 'var(--text-color)',
+												fontSize: '11px',
+												cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+												transition: 'all 0.2s ease',
+												display: 'flex',
+												alignItems: 'center',
+												gap: '4px'
+											}}
+										>
+											<i className="pi pi-chevron-left" style={{ fontSize: '10px' }} />
+										</button>
+										
+										<div style={{ display: 'flex', gap: '4px' }}>
+											{Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+												<button
+													key={page}
+													onClick={() => setCurrentPage(page)}
+													style={{
+														padding: '4px 8px',
+														minWidth: '28px',
+														borderRadius: '8px',
+														border: '1px solid rgba(255,255,255,0.14)',
+														background: currentPage === page ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+														color: 'var(--text-color)',
+														fontSize: '11px',
+														fontWeight: currentPage === page ? '700' : '500',
+														cursor: 'pointer',
+														transition: 'all 0.2s ease'
+													}}
+												>
+													{page}
+												</button>
+											))}
+										</div>
+										
+										<button
+											onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+											disabled={currentPage === totalPages}
+											style={{
+												padding: '4px 8px',
+												borderRadius: '8px',
+												border: '1px solid rgba(255,255,255,0.14)',
+												background: currentPage === totalPages ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.08)',
+												color: currentPage === totalPages ? 'rgba(255,255,255,0.3)' : 'var(--text-color)',
+												fontSize: '11px',
+												cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+												transition: 'all 0.2s ease',
+												display: 'flex',
+												alignItems: 'center',
+												gap: '4px'
+											}}
+										>
+											<i className="pi pi-chevron-right" style={{ fontSize: '10px' }} />
+										</button>
+										
+										<span style={{
+											marginLeft: '0.5rem',
+											padding: '4px 10px',
+											borderRadius: '8px',
+											background: 'rgba(255,255,255,0.05)',
+											border: '1px solid rgba(255,255,255,0.1)',
+											color: 'var(--text-color-secondary)',
+											fontSize: '10px',
+											fontWeight: '500'
+										}}>
+											{startIndex + 1}-{Math.min(endIndex, filteredFavorites.length)} de {filteredFavorites.length}
+										</span>
+									</div>
+								)}
+							</>
+						) : (
+							<Card style={{ textAlign: 'center', padding: '2rem', background: 'var(--surface-card)' }}>
+								<i className="pi pi-info-circle" style={{ fontSize: '3rem', color: 'var(--text-color-secondary)', marginBottom: '1rem', display: 'block' }} />
+								<h4 style={{ color: 'var(--text-color)', marginBottom: '0.5rem' }}>No hay favoritos</h4>
+								<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Marca conexiones desde la sidebar o desde estas tarjetas</p>
+							</Card>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>

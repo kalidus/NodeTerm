@@ -183,10 +183,12 @@ const HomeTab = ({
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '12px',
               boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-              padding: '1rem',
-              height: '100%',
+              padding: '0.75rem',
+              maxHeight: '440px',
+              minHeight: '440px',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}>
               <ConnectionHistory 
                 onConnectToHistory={handleConnectToHistory}
