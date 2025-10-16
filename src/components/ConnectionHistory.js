@@ -428,11 +428,119 @@ const ConnectionHistory = ({ onConnectToHistory, layout = 'two-columns', recents
 								)}
 							</>
 						) : (
-							<Card style={{ textAlign: 'center', padding: '2rem', background: 'var(--surface-card)' }}>
-								<i className="pi pi-info-circle" style={{ fontSize: '3rem', color: 'var(--text-color-secondary)', marginBottom: '1rem', display: 'block' }} />
-								<h4 style={{ color: 'var(--text-color)', marginBottom: '0.5rem' }}>No hay favoritos</h4>
-								<p style={{ color: 'var(--text-color-secondary)', margin: 0 }}>Marca conexiones desde la sidebar o desde estas tarjetas</p>
-							</Card>
+							<div style={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								justifyContent: 'center',
+								height: '100%',
+								padding: '2rem',
+								background: 'transparent'
+							}}>
+								{/* Icono con gradiente y animación sutil */}
+								<div style={{
+									width: '80px',
+									height: '80px',
+									borderRadius: '50%',
+									background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 193, 7, 0.1) 100%)',
+									border: '2px solid rgba(255, 215, 0, 0.2)',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									marginBottom: '1.5rem',
+									position: 'relative',
+									animation: 'pulse 2s infinite'
+								}}>
+									<i className="pi pi-star" style={{ 
+										fontSize: '2.5rem', 
+										color: '#FFD700',
+										filter: 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.3))'
+									}} />
+									{/* Efecto de brillo */}
+									<div style={{
+										position: 'absolute',
+										top: '10%',
+										left: '20%',
+										width: '20px',
+										height: '20px',
+										borderRadius: '50%',
+										background: 'rgba(255, 255, 255, 0.4)',
+										filter: 'blur(6px)',
+										animation: 'twinkle 3s infinite'
+									}} />
+								</div>
+								
+								{/* Título principal */}
+								<h3 style={{ 
+									color: 'var(--text-color)', 
+									margin: '0 0 0.5rem 0',
+									fontSize: '1.2rem',
+									fontWeight: '600',
+									textAlign: 'center'
+								}}>
+									¡Comienza a marcar tus favoritos!
+								</h3>
+								
+								{/* Descripción */}
+								<p style={{ 
+									color: 'var(--text-color-secondary)', 
+									margin: '0 0 1.5rem 0',
+									fontSize: '0.9rem',
+									textAlign: 'center',
+									lineHeight: '1.4',
+									maxWidth: '280px'
+								}}>
+									Marca conexiones desde la sidebar o desde las tarjetas para tener acceso rápido a ellas
+								</p>
+								
+								{/* Botones de acción sugeridos */}
+								<div style={{
+									display: 'flex',
+									gap: '0.75rem',
+									flexWrap: 'wrap',
+									justifyContent: 'center'
+								}}>
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.5rem',
+										padding: '0.5rem 1rem',
+										background: 'rgba(255, 215, 0, 0.1)',
+										border: '1px solid rgba(255, 215, 0, 0.2)',
+										borderRadius: '20px',
+										color: '#FFD700',
+										fontSize: '0.8rem',
+										fontWeight: '500'
+									}}>
+										<i className="pi pi-bars" style={{ fontSize: '0.9rem' }} />
+										<span>Sidebar</span>
+									</div>
+									<div style={{
+										display: 'flex',
+										alignItems: 'center',
+										gap: '0.5rem',
+										padding: '0.5rem 1rem',
+										background: 'rgba(79, 195, 247, 0.1)',
+										border: '1px solid rgba(79, 195, 247, 0.2)',
+										borderRadius: '20px',
+										color: '#4fc3f7',
+										fontSize: '0.8rem',
+										fontWeight: '500'
+									}}>
+										<i className="pi pi-id-card" style={{ fontSize: '0.9rem' }} />
+										<span>Tarjetas</span>
+									</div>
+								</div>
+								
+								{/* Línea decorativa */}
+								<div style={{
+									width: '60px',
+									height: '2px',
+									background: 'linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent)',
+									marginTop: '1.5rem',
+									borderRadius: '1px'
+								}} />
+							</div>
 						)}
 					</div>
 				</div>
