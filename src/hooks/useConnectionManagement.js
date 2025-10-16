@@ -24,14 +24,20 @@ export const useConnectionManagement = ({
 
   // === FUNCIÓN PARA ABRIR EXPLORADOR DE ARCHIVOS ===
   const openFileExplorer = useCallback((sshNode) => {
-    // Registrar reciente (Explorer)
+    // Registrar reciente (Explorer) - incluir todas las credenciales SSH
     try {
       connectionStore.recordRecent({
         type: 'explorer',
         name: sshNode.label,
         host: sshNode.data?.host,
         username: sshNode.data?.user,
-        port: sshNode.data?.port || 22
+        port: sshNode.data?.port || 22,
+        password: sshNode.data?.password || '',
+        useBastionWallix: sshNode.data?.useBastionWallix || false,
+        bastionHost: sshNode.data?.bastionHost || '',
+        bastionUser: sshNode.data?.bastionUser || '',
+        targetServer: sshNode.data?.targetServer || '',
+        remoteFolder: sshNode.data?.remoteFolder || ''
       }, 10);
     } catch (e) { /* noop */ }
 
@@ -153,14 +159,20 @@ export const useConnectionManagement = ({
       return;
     }
 
-    // Registrar como reciente (SSH)
+    // Registrar como reciente (SSH) - incluir todas las credenciales y configuración
     try {
       connectionStore.recordRecent({
         type: 'ssh',
         name: conn.name,
         host: conn.host,
         username: conn.username,
-        port: conn.port
+        port: conn.port,
+        password: isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || ''),
+        useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
+        bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
+        bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
+        targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
+        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || '')
       }, 10);
     } catch (e) { /* noop */ }
 
@@ -360,14 +372,42 @@ export const useConnectionManagement = ({
     }
     const isGuacamoleRDP = baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
     
-    // Registrar como reciente (RDP)
+    // Registrar como reciente (RDP) - incluir todas las credenciales y configuración
     try {
       connectionStore.recordRecent({
         type: 'rdp-guacamole',
         name: node.label || node.name,
         host: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
-        port: baseRdp.port || 3389
+        port: baseRdp.port || 3389,
+        password: baseRdp.password || '',
+        clientType: baseRdp.clientType || 'guacamole',
+        domain: baseRdp.domain || '',
+        resolution: baseRdp.resolution || '1024x768',
+        colors: baseRdp.colors || '32',
+        // Opciones avanzadas de RDP
+        guacEnableWallpaper: baseRdp.guacEnableWallpaper || false,
+        guacEnableDesktopComposition: baseRdp.guacEnableDesktopComposition || false,
+        guacEnableFontSmoothing: baseRdp.guacEnableFontSmoothing || false,
+        guacEnableTheming: baseRdp.guacEnableTheming || false,
+        guacEnableFullWindowDrag: baseRdp.guacEnableFullWindowDrag || false,
+        guacEnableMenuAnimations: baseRdp.guacEnableMenuAnimations || false,
+        guacEnableGfx: baseRdp.guacEnableGfx || false,
+        guacDisableGlyphCaching: baseRdp.guacDisableGlyphCaching || false,
+        guacDisableOffscreenCaching: baseRdp.guacDisableOffscreenCaching || false,
+        guacDisableBitmapCaching: baseRdp.guacDisableBitmapCaching || false,
+        guacDisableCopyRect: baseRdp.guacDisableCopyRect || false,
+        autoResize: baseRdp.autoResize !== false,
+        guacDpi: baseRdp.guacDpi || 96,
+        guacSecurity: baseRdp.guacSecurity || 'any',
+        redirectFolders: baseRdp.redirectFolders !== false,
+        redirectClipboard: baseRdp.redirectClipboard !== false,
+        redirectPrinters: baseRdp.redirectPrinters || false,
+        redirectAudio: baseRdp.redirectAudio !== false,
+        fullscreen: baseRdp.fullscreen || false,
+        smartSizing: baseRdp.smartSizing !== false,
+        span: baseRdp.span || false,
+        admin: baseRdp.admin || false
       }, 10);
     } catch (e) { /* noop */ }
     
