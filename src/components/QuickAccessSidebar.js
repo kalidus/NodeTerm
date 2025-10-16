@@ -457,7 +457,7 @@ const QuickAccessSidebar = ({
   return (
       <div style={{
         width: '60px',
-        height: '100%',
+        height: 'calc(100% - 120px)',
         background: 'rgba(0, 0, 0, 0.25)',
         backdropFilter: 'blur(30px) saturate(180%)',
         WebkitBackdropFilter: 'blur(30px) saturate(180%)',
