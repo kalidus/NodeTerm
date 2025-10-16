@@ -575,6 +575,10 @@ export const useTabManagement = (toast, {
       // Cerrar pestañas de información de contraseñas (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'password-folder') {
+      // Cerrar pestañas de carpetas de contraseñas (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else if (isAuditTab) {
       // Cerrar pestañas de auditoría y reproductor de grabaciones (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
