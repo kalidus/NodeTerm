@@ -73,7 +73,6 @@ const HomeTab = ({
   const loadRecentPasswords = () => {
     try {
       const passwords = getRecentPasswords(5); // Limitar a 5 passwords recientes
-      console.log('🔑 Passwords recientes cargados:', passwords);
       setRecentPasswords(passwords);
     } catch (error) {
       console.error('Error cargando passwords recientes:', error);
@@ -252,8 +251,6 @@ const HomeTab = ({
       
       // Dispatch del evento
       window.dispatchEvent(event);
-      
-      console.log('🔑 Abriendo pestaña de password:', passwordData.name);
     } catch (err) {
       console.error('Error abriendo pestaña de password:', err);
     }
