@@ -11,6 +11,7 @@ import NodeTermStatus from './NodeTermStatus';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
+import { getRecents, toggleFavorite, onUpdate } from '../utils/connectionStore';
 
 const HomeTab = ({
   onCreateSSHConnection,
@@ -32,6 +33,7 @@ const HomeTab = ({
   const [terminalState, setTerminalState] = useState('minimized'); // Cambiado a 'minimized' como en redesigned
   const [terminalHidden, setTerminalHidden] = useState(true);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
+  const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -46,6 +48,58 @@ const HomeTab = ({
     window.addEventListener('theme-changed', onThemeChanged);
     return () => window.removeEventListener('theme-changed', onThemeChanged);
   }, []);
+
+  // Cargar conexiones recientes
+  useEffect(() => {
+    loadRecentConnections();
+    const off = onUpdate(() => loadRecentConnections());
+    return () => off && off();
+  }, []);
+
+  const loadRecentConnections = () => {
+    try {
+      const recents = getRecents(5); // Limitar a 5 conexiones recientes
+      setRecentConnections(recents);
+    } catch (error) {
+      console.error('Error cargando conexiones recientes:', error);
+    }
+  };
+
+  // Funciones auxiliares para tipos de conexión
+  const getConnectionTypeIcon = (type) => {
+    switch (type) {
+      case 'ssh':
+        return 'pi pi-server';
+      case 'rdp-guacamole':
+        return 'pi pi-desktop';
+      case 'explorer':
+        return 'pi pi-folder-open';
+      case 'group':
+        return 'pi pi-th-large';
+      default:
+        return 'pi pi-circle';
+    }
+  };
+
+  const getConnectionTypeColor = (type) => {
+    switch (type) {
+      case 'ssh':
+        return '#4fc3f7';
+      case 'rdp-guacamole':
+        return '#ff6b35';
+      case 'explorer':
+        return '#FFB300';
+      case 'group':
+        return '#9c27b0';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
+  const handleToggleFavorite = (connection) => {
+    toggleFavorite(connection);
+    loadRecentConnections(); // Recargar para actualizar el estado
+  };
 
   // Obtener el color de fondo del tema actual
   const currentTheme = React.useMemo(() => {
@@ -217,39 +271,126 @@ const HomeTab = ({
                 }} />
                 {/* Lista de conexiones recientes */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {[
-                    { id: 'r1', name: 'A Conex/bnd...', type: 'ssh' },
-                    { id: 'r2', name: 'G Cenexions RDP...', type: 'rdp-guacamole' },
-                    { id: 'r3', name: 'O Ubunt de activo', type: 'ssh' },
-                    { id: 'r4', name: 'P Peeqia de Global', type: 'rdp-guacamole' },
-                    { id: 'r5', name: 'Server Prod SSH', type: 'ssh' },
-                  ].map(recentConn => (
-                    <div key={recentConn.id} style={{
+                  {recentConnections.length > 0 ? (
+                    recentConnections.map(recentConn => (
+                      <div key={recentConn.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        color: 'var(--text-color-secondary)',
+                        fontSize: '0.8rem',
+                        background: 'rgba(255,255,255,0.05)',
+                        padding: '0.4rem 0.6rem',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      >
+                        {/* Icono del tipo de conexión */}
+                        <i className={getConnectionTypeIcon(recentConn.type)} style={{
+                          color: getConnectionTypeColor(recentConn.type),
+                          fontSize: '0.9rem'
+                        }} />
+                        
+                        {/* Nombre de la conexión */}
+                        <span 
+                          style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          onClick={() => handleConnectToHistory(recentConn)}
+                        >
+                          {recentConn.name}
+                        </span>
+
+                        {/* Botones interactivos */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={(e) => e.stopPropagation()}>
+                          {/* Botón de favorito */}
+                          <span
+                            title={recentConn.isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'var(--text-color)',
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.16)',
+                              transition: 'all .15s ease',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
+                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                            onClick={() => handleToggleFavorite(recentConn)}
+                          >
+                            <i className={recentConn.isFavorite ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '10px' }} />
+                          </span>
+
+                          {/* Botón de editar */}
+                          {onEditConnection && (
+                            <span
+                              title="Editar"
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-color)',
+                                background: 'rgba(255,255,255,0.08)',
+                                border: '1px solid rgba(255,255,255,0.16)',
+                                transition: 'all .15s ease',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
+                              onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                              onClick={() => onEditConnection(recentConn)}
+                            >
+                              <i className="pi pi-pencil" style={{ fontSize: '10px' }} />
+                            </span>
+                          )}
+
+                          {/* Botón de conectar */}
+                          <span
+                            title="Conectar"
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'var(--text-color)',
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.16)',
+                              transition: 'all .15s ease',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.16)'; e.style.color = '#fff'; }}
+                            onMouseLeave={(el) => { const e = el.currentTarget; e.style.background = 'rgba(255,255,255,0.08)'; e.style.color = 'var(--text-color)'; }}
+                            onClick={() => handleConnectToHistory(recentConn)}
+                          >
+                            <i className="pi pi-external-link" style={{ fontSize: '10px' }} />
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
+                      justifyContent: 'center',
+                      padding: '1rem',
                       color: 'var(--text-color-secondary)',
                       fontSize: '0.8rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      padding: '0.4rem 0.6rem',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                    onClick={() => handleConnectToHistory(recentConn)}
-                    >
-                      <i className={recentConn.type === 'ssh' ? 'pi pi-server' : 'pi pi-desktop'} style={{
-                        color: recentConn.type === 'ssh' ? '#4fc3f7' : '#ff6b35',
-                        fontSize: '0.9rem'
-                      }} />
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {recentConn.name}
-                      </span>
+                      fontStyle: 'italic'
+                    }}>
+                      No hay conexiones recientes
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
