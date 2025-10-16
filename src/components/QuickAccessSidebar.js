@@ -19,6 +19,15 @@ const QuickAccessSidebar = ({
   
   // Estado para el tema
   const [themeVersion, setThemeVersion] = useState(0);
+  
+  // Estado para manejar la transición del botón
+  const [isToggling, setIsToggling] = useState(false);
+  
+  // Estado para mantener los datos durante la transición
+  const [cachedQuickActions, setCachedQuickActions] = useState([]);
+  
+  // Estado global de transición para evitar re-renders
+  const [isGlobalTransition, setIsGlobalTransition] = useState(false);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -27,6 +36,23 @@ const QuickAccessSidebar = ({
     };
     window.addEventListener('theme-changed', onThemeChanged);
     return () => window.removeEventListener('theme-changed', onThemeChanged);
+  }, []);
+
+  // Detectar estado de transición desde localStorage
+  useEffect(() => {
+    const checkTransitionState = () => {
+      const isTransitioning = localStorage.getItem('quickaccess_transition') === 'true';
+      setIsGlobalTransition(isTransitioning);
+    };
+    
+    checkTransitionState();
+    
+    // Verificar cada 100ms durante la transición
+    const interval = setInterval(() => {
+      checkTransitionState();
+    }, 100);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Obtener el tema actual y colores
@@ -66,13 +92,35 @@ const QuickAccessSidebar = ({
     } catch (e) { /* noop */ }
   };
 
-  const handleToggleTerminalVisibility = useCallback(() => {
+  const handleToggleTerminalVisibility = useCallback(async () => {
     try {
+      if (isToggling || isGlobalTransition) return; // Evitar múltiples clicks
+      
+      setIsToggling(true);
+      setIsGlobalTransition(true);
+      
+      // Guardar estado actual en localStorage
+      localStorage.setItem('quickaccess_transition', 'true');
+      
+      // Usar requestAnimationFrame para una transición más suave
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
       if (onToggleTerminalVisibility) {
         onToggleTerminalVisibility();
       }
-    } catch (e) { /* noop */ }
-  }, [onToggleTerminalVisibility]);
+      
+      // Transición más larga para dar tiempo a que se estabilice el estado
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setIsToggling(false);
+      setIsGlobalTransition(false);
+      localStorage.removeItem('quickaccess_transition');
+    } catch (e) { 
+      setIsToggling(false);
+      setIsGlobalTransition(false);
+      localStorage.removeItem('quickaccess_transition');
+    }
+  }, [onToggleTerminalVisibility, isToggling, isGlobalTransition]);
 
   // Handler genérico para abrir terminales
   const handleOpenTerminal = (terminalType, distroInfo = null) => {
@@ -249,6 +297,7 @@ const QuickAccessSidebar = ({
     ];
 
     setQuickActionItems(actions);
+    setCachedQuickActions(actions);
   }, [onOpenSettings, handleToggleTerminalVisibility]);
 
   // Función para obtener colores según la categoría
@@ -473,7 +522,17 @@ const QuickAccessSidebar = ({
   };
 
   return (
-      <div style={{
+      <>
+        {/* Estilos para la animación del spinner */}
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+        <div style={{
         width: '60px',
         height: 'calc(100% - 120px)',
         background: 'rgba(0, 0, 0, 0.25)',
@@ -507,19 +566,25 @@ const QuickAccessSidebar = ({
       <div
         title={'Mostrar/ocultar terminal local'}
         style={{
-          cursor: 'pointer',
+          cursor: isToggling ? 'wait' : 'pointer',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          background: `linear-gradient(135deg, rgba(0,188,212,0.25) 0%, rgba(0,188,212,0.15) 50%, rgba(0,188,212,0.08) 100%)`,
+          background: isToggling 
+            ? `linear-gradient(135deg, rgba(0,188,212,0.35) 0%, rgba(0,188,212,0.25) 50%, rgba(0,188,212,0.15) 100%)`
+            : `linear-gradient(135deg, rgba(0,188,212,0.25) 0%, rgba(0,188,212,0.15) 50%, rgba(0,188,212,0.08) 100%)`,
           backdropFilter: 'blur(20px) saturate(180%)',
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          border: '1.5px solid rgba(0,188,212,0.40)',
+          border: isToggling 
+            ? '1.5px solid rgba(0,188,212,0.60)'
+            : '1.5px solid rgba(0,188,212,0.40)',
           position: 'relative',
           width: '100%',
           height: '44px',
           minHeight: '44px',
           maxHeight: '44px',
           borderRadius: '9px',
-          boxShadow: '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
+          boxShadow: isToggling 
+            ? '0 6px 20px rgba(0,188,212,0.30), 0 3px 10px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)'
+            : '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -527,17 +592,23 @@ const QuickAccessSidebar = ({
           padding: '0.5rem',
           marginBottom: '0.25rem',
           flexShrink: 0,
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          opacity: isToggling ? 0.8 : 1,
+          transform: isToggling ? 'scale(0.98)' : 'scale(1)'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,188,212,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)';
-          e.currentTarget.style.borderColor = 'rgba(0,188,212,0.70)';
+          if (!isToggling) {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,188,212,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)';
+            e.currentTarget.style.borderColor = 'rgba(0,188,212,0.70)';
+          }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
-          e.currentTarget.style.borderColor = 'rgba(0,188,212,0.40)';
+          if (!isToggling) {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
+            e.currentTarget.style.borderColor = 'rgba(0,188,212,0.40)';
+          }
         }}
         onClick={handleToggleTerminalVisibility}
       >
@@ -554,18 +625,32 @@ const QuickAccessSidebar = ({
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {/* Fallback a icono compatible de PrimeIcons */}
-          <i
-            className="pi pi-desktop"
-            style={{
-              fontSize: '0.9rem',
-              color: 'white',
-              textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
-              position: 'relative',
-              zIndex: 1
-            }}
-          />
+          {/* Icono con indicador de carga */}
+          {isToggling ? (
+            <i
+              className="pi pi-spin pi-spinner"
+              style={{
+                fontSize: '0.9rem',
+                color: 'white',
+                textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
+                filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+                position: 'relative',
+                zIndex: 1
+              }}
+            />
+          ) : (
+            <i
+              className="pi pi-desktop"
+              style={{
+                fontSize: '0.9rem',
+                color: 'white',
+                textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
+                filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+                position: 'relative',
+                zIndex: 1
+              }}
+            />
+          )}
           <div style={{
             position: 'absolute',
             top: '50%',
@@ -637,13 +722,43 @@ const QuickAccessSidebar = ({
         flexDirection: 'column',
         gap: '0.2rem',
         position: 'relative',
-        zIndex: 2
+        zIndex: 2,
+        opacity: (isToggling || isGlobalTransition) ? 0.7 : 1,
+        transition: 'opacity 0.3s ease'
       }}>
-        {quickActionItems.map((action, index) => 
+        {((isToggling || isGlobalTransition) && cachedQuickActions.length > 0 ? cachedQuickActions : quickActionItems).map((action, index) => 
           renderActionButton(action, index)
+        )}
+        
+        {/* Overlay de carga durante la transición */}
+        {(isToggling || isGlobalTransition) && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px',
+            zIndex: 10
+          }}>
+            <div style={{
+              width: '24px',
+              height: '24px',
+              border: '3px solid rgba(255,255,255,0.3)',
+              borderTop: '3px solid #00BCD4',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+          </div>
         )}
       </div>
     </div>
+      </>
   );
 };
 

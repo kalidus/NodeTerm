@@ -32,6 +32,7 @@ const HomeTab = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('minimized'); // Cambiado a 'minimized' como en redesigned
   const [terminalHidden, setTerminalHidden] = useState(true);
+  const [isTerminalTransitioning, setIsTerminalTransitioning] = useState(false);
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
@@ -330,8 +331,26 @@ const HomeTab = ({
   };
 
   // Función para toggle de visibilidad del terminal
-  const handleToggleTerminalVisibility = () => {
-    setTerminalHidden(prev => !prev);
+  const handleToggleTerminalVisibility = async () => {
+    if (isTerminalTransitioning) return; // Evitar múltiples clicks
+    
+    setIsTerminalTransitioning(true);
+    
+    // Pequeña transición antes del cambio
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    setTerminalHidden(prev => {
+      const newHidden = !prev;
+      // Si se está mostrando el terminal, cambiar el estado a 'normal' (1/4 de página)
+      if (!newHidden) {
+        setTerminalState('normal');
+      }
+      return newHidden;
+    });
+    
+    // Transición más larga para estabilizar
+    await new Promise(resolve => setTimeout(resolve, 600));
+    setIsTerminalTransitioning(false);
   };
 
   // Determinar el tamaño del panel superior
@@ -360,6 +379,16 @@ const HomeTab = ({
 
   // Panel superior: Nuevo layout con 3 columnas (basado en redesigned pero con ConnectionHistory)
   const topPanel = (
+    <>
+      {/* Estilos para la animación del spinner */}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     <div style={{
       height: '100%',
       overflow: 'hidden',
@@ -798,7 +827,8 @@ const HomeTab = ({
               minHeight: '440px',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              position: 'relative'
             }}>
               <ConnectionHistory 
                 onConnectToHistory={handleConnectToHistory}
@@ -814,6 +844,48 @@ const HomeTab = ({
                 rdpConnectionsCount={rdpConnectionsCount}
                 themeColors={themeColors}
               />
+              
+              {/* Overlay de transición para favoritos */}
+              {isTerminalTransitioning && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '12px',
+                  zIndex: 10
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    color: 'white'
+                  }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid rgba(255,255,255,0.3)',
+                      borderTop: '3px solid #00BCD4',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    <div style={{
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      textAlign: 'center'
+                    }}>
+                      Actualizando terminal...
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -886,6 +958,7 @@ const HomeTab = ({
         </div>
       </div>
     </div>
+    </>
   );
 
   // Panel inferior: Terminal con pestañas
