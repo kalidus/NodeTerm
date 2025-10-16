@@ -208,6 +208,13 @@ const HomeTab = ({
                     Conexiones Recientes
                   </h3>
                 </div>
+                {/* Línea decorativa con gradiente azul */}
+                <div style={{
+                  height: '1px',
+                  background: 'linear-gradient(90deg, transparent, rgba(79, 195, 247, 0.3), transparent)',
+                  borderRadius: '1px',
+                  marginBottom: '0.75rem'
+                }} />
                 {/* Lista de conexiones recientes */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {[
@@ -274,6 +281,13 @@ const HomeTab = ({
                     Passwords Recientes
                   </h3>
                 </div>
+                {/* Línea decorativa con gradiente verde */}
+                <div style={{
+                  height: '1px',
+                  background: 'linear-gradient(90deg, transparent, rgba(102, 187, 106, 0.3), transparent)',
+                  borderRadius: '1px',
+                  marginBottom: '0.75rem'
+                }} />
                 {/* Lista de passwords recientes */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {[
