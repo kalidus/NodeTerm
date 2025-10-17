@@ -288,10 +288,18 @@ const QuickAccessSidebar = ({
       },
       {
         label: 'Historial',
-        icon: 'pi pi-history',
+        icon: 'pi pi-list',
         color: primaryColor,
-        description: 'Conexiones recientes',
-        action: () => {},
+        description: 'Ver y gestionar sesiones',
+        action: () => {
+          // Expandir la sidebar si está colapsada
+          const expandSidebarEvent = new CustomEvent('expand-sidebar');
+          window.dispatchEvent(expandSidebarEvent);
+          
+          // Cambiar a vista de conexiones si está en vista de passwords
+          const switchToConnectionsEvent = new CustomEvent('switch-to-connections');
+          window.dispatchEvent(switchToConnectionsEvent);
+        },
         badge: null
       },
       {
