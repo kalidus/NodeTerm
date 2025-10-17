@@ -544,7 +544,9 @@ const QuickAccessSidebar = ({
         </style>
         <div style={{
         width: '60px',
-        height: 'calc(100% - 120px)',
+        height: 'auto',
+        maxHeight: 'calc(100% - 120px)',
+        minHeight: '200px',
         background: 'rgba(0, 0, 0, 0.25)',
         backdropFilter: 'blur(30px) saturate(180%)',
         WebkitBackdropFilter: 'blur(30px) saturate(180%)',
@@ -558,7 +560,8 @@ const QuickAccessSidebar = ({
         position: 'relative',
         overflow: 'hidden',
         margin: '10px 6px 10px 10px',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        alignSelf: 'flex-start'
       }}>
       {/* Overlay sutil para el efecto glassmorphism */}
       <div style={{
