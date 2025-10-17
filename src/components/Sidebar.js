@@ -119,6 +119,19 @@ const Sidebar = React.memo(({
   // Estado para modo de visualización (conexiones o passwords)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords'
   
+  // Escuchar evento para cambiar a vista de conexiones
+  useEffect(() => {
+    const handleSwitchToConnections = () => {
+      setViewMode('connections');
+    };
+    
+    window.addEventListener('switch-to-connections', handleSwitchToConnections);
+    
+    return () => {
+      window.removeEventListener('switch-to-connections', handleSwitchToConnections);
+    };
+  }, []);
+  
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
     const theme = iconThemes[themeName];
