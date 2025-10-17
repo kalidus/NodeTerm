@@ -268,11 +268,14 @@ const HomeTab = ({
 
   // Colores del tema para elementos de la lista
   const themeColors = React.useMemo(() => {
+    // Special handling for Nord theme to ensure visible hover effects
+    const isNordTheme = currentTheme.name === 'Nord';
+    
     return {
       textPrimary: currentTheme.colors?.sidebarText || currentTheme.colors?.tabText || '#ffffff',
       textSecondary: currentTheme.colors?.sidebarText || '#9E9E9E',
       borderColor: currentTheme.colors?.sidebarBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
-      hoverBackground: currentTheme.colors?.sidebarHover || 'rgba(255,255,255,0.1)',
+      hoverBackground: isNordTheme ? '#4c566a' : (currentTheme.colors?.sidebarHover || 'rgba(255,255,255,0.1)'),
       itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
       cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)'
