@@ -331,62 +331,66 @@ const QuickAccessSidebar = ({
         title={action.description || action.label}
         style={{
           cursor: 'pointer',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           background: `linear-gradient(135deg, 
-            ${action.color}25 0%, 
-            ${action.color}15 50%, 
-            ${action.color}08 100%)`,
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          border: `1.5px solid ${themeColors.cardBorder}`,
+            rgba(255,255,255,0.08) 0%, 
+            rgba(255,255,255,0.04) 50%, 
+            rgba(255,255,255,0.02) 100%)`,
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          border: `1px solid rgba(255,255,255,0.12)`,
           position: 'relative',
           width: '100%',
-          height: '44px',
-          borderRadius: '9px',
-          boxShadow: `0 4px 16px ${action.color}20, 
-                      0 2px 8px rgba(0,0,0,0.1),
-                      inset 0 1px 0 rgba(255,255,255,0.1)`,
+          height: '48px',
+          borderRadius: '12px',
+          boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
+                      0 1px 3px rgba(0,0,0,0.12),
+                      inset 0 1px 0 rgba(255,255,255,0.15)`,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0.5rem'
+          padding: '0.75rem',
+          marginBottom: '0.125rem'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)';
-          e.currentTarget.style.boxShadow = `0 6px 18px ${action.color}35, 
-                                              0 2px 6px rgba(0,0,0,0.2),
+          e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.background = `linear-gradient(135deg, 
+            rgba(255,255,255,0.12) 0%, 
+            rgba(255,255,255,0.08) 50%, 
+            rgba(255,255,255,0.04) 100%)`;
+          e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
+                                              0 2px 8px rgba(0,0,0,0.16),
                                               inset 0 1px 0 rgba(255,255,255,0.2)`;
-          e.currentTarget.style.borderColor = `${themeColors.primaryColor}70`;
+          e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          e.currentTarget.style.boxShadow = `0 3px 12px ${action.color}20, 
-                                              0 1px 4px rgba(0,0,0,0.1),
-                                              inset 0 1px 0 rgba(255,255,255,0.1)`;
-          e.currentTarget.style.borderColor = `${themeColors.cardBorder}`;
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.background = `linear-gradient(135deg, 
+            rgba(255,255,255,0.08) 0%, 
+            rgba(255,255,255,0.04) 50%, 
+            rgba(255,255,255,0.02) 100%)`;
+          e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
+                                              0 1px 3px rgba(0,0,0,0.12),
+                                              inset 0 1px 0 rgba(255,255,255,0.15)`;
+          e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
         }}
         onClick={action.action}
       >
-        {/* Icono de acción */}
+        {/* Icono de acción con diseño más sutil */}
         <div style={{ 
-          width: '26px',
-          height: '26px',
-          borderRadius: '7px',
-          background: `linear-gradient(145deg, 
-            ${action.color}ee 0%, 
-            ${action.color}cc 30%,
-            ${action.color}aa 70%,
-            ${action.color} 100%)`,
+          width: '28px',
+          height: '28px',
+          borderRadius: '8px',
+          background: `linear-gradient(135deg, 
+            ${action.color} 0%, 
+            ${action.color}dd 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 3px 12px ${action.color}50, 
-                      0 1px 4px ${action.color}30,
-                      inset 0 1px 0 rgba(255,255,255,0.4),
-                      inset 0 -1px 0 rgba(0,0,0,0.3),
-                      inset 1px 0 0 rgba(255,255,255,0.2),
-                      inset -1px 0 0 rgba(0,0,0,0.1)`,
+          boxShadow: `0 2px 8px ${action.color}30, 
+                      0 1px 3px ${action.color}20,
+                      inset 0 1px 0 rgba(255,255,255,0.25)`,
           border: `1px solid ${action.color}aa`,
           position: 'relative',
           overflow: 'hidden'
@@ -394,27 +398,27 @@ const QuickAccessSidebar = ({
           <i 
             className={action.icon}
             style={{ 
-              fontSize: '0.9rem',
+              fontSize: '1rem',
               color: 'white',
-              textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+              textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
               position: 'relative',
               zIndex: 1
             }}
           />
           
-          {/* Efecto de resplandor */}
+          {/* Efecto de resplandor más sutil */}
           <div style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '14px',
-            height: '14px',
+            width: '16px',
+            height: '16px',
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${action.color}40 0%, transparent 70%)`,
+            background: `radial-gradient(circle, ${action.color}30 0%, transparent 60%)`,
             filter: 'blur(1px)',
-            opacity: '0.8'
+            opacity: '0.6'
           }} />
         </div>
       </div>
@@ -429,102 +433,94 @@ const QuickAccessSidebar = ({
         title={terminal.label}
         style={{
           cursor: 'pointer',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           background: `linear-gradient(135deg, 
-            ${terminal.color}25 0%, 
-            ${terminal.color}15 50%, 
-            ${terminal.color}08 100%)`,
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          border: `1.5px solid ${terminal.color}40`,
+            rgba(255,255,255,0.06) 0%, 
+            rgba(255,255,255,0.03) 50%, 
+            rgba(255,255,255,0.01) 100%)`,
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          border: `1px solid rgba(255,255,255,0.1)`,
           position: 'relative',
           width: '100%',
-          height: '44px',
-          borderRadius: '9px',
-          boxShadow: `0 4px 16px ${terminal.color}20, 
-                      0 2px 8px rgba(0,0,0,0.1),
-                      inset 0 1px 0 rgba(255,255,255,0.1)`,
+          height: '48px',
+          borderRadius: '12px',
+          boxShadow: `0 2px 8px rgba(0,0,0,0.06), 
+                      0 1px 3px rgba(0,0,0,0.1),
+                      inset 0 1px 0 rgba(255,255,255,0.12)`,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0.5rem'
+          padding: '0.75rem',
+          marginBottom: '0.125rem'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-          e.currentTarget.style.boxShadow = `0 8px 24px ${terminal.color}35, 
-                                              0 4px 12px rgba(0,0,0,0.2),
-                                              inset 0 1px 0 rgba(255,255,255,0.2)`;
-          e.currentTarget.style.borderColor = `${terminal.color}70`;
+          e.currentTarget.style.transform = 'translateY(-1px)';
+          e.currentTarget.style.background = `linear-gradient(135deg, 
+            rgba(255,255,255,0.1) 0%, 
+            rgba(255,255,255,0.06) 50%, 
+            rgba(255,255,255,0.03) 100%)`;
+          e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.1), 
+                                              0 2px 8px rgba(0,0,0,0.14),
+                                              inset 0 1px 0 rgba(255,255,255,0.18)`;
+          e.currentTarget.style.borderColor = `rgba(255,255,255,0.15)`;
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          e.currentTarget.style.boxShadow = `0 4px 16px ${terminal.color}20, 
-                                              0 2px 8px rgba(0,0,0,0.1),
-                                              inset 0 1px 0 rgba(255,255,255,0.1)`;
-          e.currentTarget.style.borderColor = `${terminal.color}40`;
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.background = `linear-gradient(135deg, 
+            rgba(255,255,255,0.06) 0%, 
+            rgba(255,255,255,0.03) 50%, 
+            rgba(255,255,255,0.01) 100%)`;
+          e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.06), 
+                                              0 1px 3px rgba(0,0,0,0.1),
+                                              inset 0 1px 0 rgba(255,255,255,0.12)`;
+          e.currentTarget.style.borderColor = `rgba(255,255,255,0.1)`;
         }}
         onClick={terminal.action}
       >
-        {/* Icono mejorado */}
+        {/* Icono con diseño más sutil */}
         <div style={{ 
-          width: '26px',
-          height: '26px',
-          borderRadius: '7px',
-          background: `linear-gradient(145deg, 
-            ${terminal.color}ee 0%, 
-            ${terminal.color}cc 30%,
-            ${terminal.color}aa 70%,
-            ${terminal.color} 100%)`,
+          width: '28px',
+          height: '28px',
+          borderRadius: '8px',
+          background: `linear-gradient(135deg, 
+            ${terminal.color} 0%, 
+            ${terminal.color}dd 100%)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 3px 12px ${terminal.color}50, 
-                      0 1px 4px ${terminal.color}30,
-                      inset 0 1px 0 rgba(255,255,255,0.4),
-                      inset 0 -1px 0 rgba(0,0,0,0.3),
-                      inset 1px 0 0 rgba(255,255,255,0.2),
-                      inset -1px 0 0 rgba(0,0,0,0.1)`,
+          boxShadow: `0 2px 8px ${terminal.color}25, 
+                      0 1px 3px ${terminal.color}15,
+                      inset 0 1px 0 rgba(255,255,255,0.25)`,
           border: `1px solid ${terminal.color}aa`,
           position: 'relative',
           overflow: 'hidden'
         }}>
-          {/* Efecto de brillo en el icono */}
-          <div style={{
-            position: 'absolute',
-            top: '1px',
-            left: '1px',
-            right: '1px',
-            height: '1px',
-            background: 'rgba(255,255,255,0.6)',
-            borderRadius: '7px',
-            filter: 'blur(1px)'
-          }} />
-          
           <i 
             className={terminal.icon}
             style={{ 
-              fontSize: '0.9rem',
+              fontSize: '1rem',
               color: 'white',
-              textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+              textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
               position: 'relative',
               zIndex: 1
             }}
           />
           
-          {/* Efecto de resplandor */}
+          {/* Efecto de resplandor más sutil */}
           <div style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '14px',
-            height: '14px',
+            width: '16px',
+            height: '16px',
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${terminal.color}40 0%, transparent 70%)`,
+            background: `radial-gradient(circle, ${terminal.color}25 0%, transparent 60%)`,
             filter: 'blur(1px)',
-            opacity: '0.8'
+            opacity: '0.6'
           }} />
         </div>
       </div>
@@ -575,66 +571,68 @@ const QuickAccessSidebar = ({
         borderRadius: '14px'
       }} />
       
-      {/* Botón de Terminal Local - mismo tamaño/estilo que los botones de terminal */}
+      {/* Botón de Terminal Local - diseño moderno */}
       <div
         title={'Mostrar/ocultar terminal local'}
         style={{
           cursor: isToggling ? 'wait' : 'pointer',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           background: isToggling 
-            ? `linear-gradient(135deg, rgba(0,188,212,0.35) 0%, rgba(0,188,212,0.25) 50%, rgba(0,188,212,0.15) 100%)`
-            : `linear-gradient(135deg, rgba(0,188,212,0.25) 0%, rgba(0,188,212,0.15) 50%, rgba(0,188,212,0.08) 100%)`,
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            ? `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`
+            : `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`,
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           border: isToggling 
-            ? '1.5px solid rgba(0,188,212,0.60)'
-            : '1.5px solid rgba(0,188,212,0.40)',
+            ? '1px solid rgba(0,188,212,0.4)'
+            : '1px solid rgba(255,255,255,0.12)',
           position: 'relative',
           width: '100%',
-          height: '44px',
-          minHeight: '44px',
-          maxHeight: '44px',
-          borderRadius: '9px',
+          height: '48px',
+          minHeight: '48px',
+          maxHeight: '48px',
+          borderRadius: '12px',
           boxShadow: isToggling 
-            ? '0 6px 20px rgba(0,188,212,0.30), 0 3px 10px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)'
-            : '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
+            ? '0 4px 16px rgba(0,188,212,0.2), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
+            : '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0.5rem',
-          marginBottom: '0.25rem',
+          padding: '0.75rem',
+          marginBottom: '0.125rem',
           flexShrink: 0,
           boxSizing: 'border-box',
-          opacity: isToggling ? 0.8 : 1,
-          transform: isToggling ? 'scale(0.98)' : 'scale(1)'
+          opacity: isToggling ? 0.9 : 1,
+          transform: isToggling ? 'scale(0.99)' : 'scale(1)'
         }}
         onMouseEnter={(e) => {
           if (!isToggling) {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,188,212,0.35), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)';
-            e.currentTarget.style.borderColor = 'rgba(0,188,212,0.70)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.background = `linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)`;
+            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.2)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
           }
         }}
         onMouseLeave={(e) => {
           if (!isToggling) {
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,188,212,0.20), 0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)';
-            e.currentTarget.style.borderColor = 'rgba(0,188,212,0.40)';
+            e.currentTarget.style.background = `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)`;
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.15)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
           }
         }}
         onClick={handleToggleTerminalVisibility}
       >
         <div style={{
-          width: '26px',
-          height: '26px',
-          borderRadius: '7px',
-          background: 'linear-gradient(145deg, rgba(0,188,212,0.93) 0%, rgba(0,188,212,0.80) 30%, rgba(0,188,212,0.67) 70%, rgba(0,188,212,1) 100%)',
+          width: '28px',
+          height: '28px',
+          borderRadius: '8px',
+          background: 'linear-gradient(135deg, #00BCD4 0%, #00BCD4dd 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 3px 12px rgba(0,188,212,0.5), 0 1px 4px rgba(0,188,212,0.3), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.3), inset 1px 0 0 rgba(255,255,255,0.2), inset -1px 0 0 rgba(0,0,0,0.1)',
-          border: '1px solid rgba(0,188,212,0.67)',
+          boxShadow: '0 2px 8px rgba(0,188,212,0.3), 0 1px 3px rgba(0,188,212,0.2), inset 0 1px 0 rgba(255,255,255,0.25)',
+          border: '1px solid rgba(0,188,212,0.7)',
           position: 'relative',
           overflow: 'hidden'
         }}>
@@ -643,10 +641,10 @@ const QuickAccessSidebar = ({
             <i
               className="pi pi-spin pi-spinner"
               style={{
-                fontSize: '0.9rem',
+                fontSize: '1rem',
                 color: 'white',
-                textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-                filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
                 position: 'relative',
                 zIndex: 1
               }}
@@ -655,10 +653,10 @@ const QuickAccessSidebar = ({
             <i
               className="pi pi-desktop"
               style={{
-                fontSize: '0.9rem',
+                fontSize: '1rem',
                 color: 'white',
-                textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
-                filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
+                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
                 position: 'relative',
                 zIndex: 1
               }}
@@ -669,12 +667,12 @@ const QuickAccessSidebar = ({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '14px',
-            height: '14px',
+            width: '16px',
+            height: '16px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(0,188,212,0.40) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(0,188,212,0.3) 0%, transparent 60%)',
             filter: 'blur(1px)',
-            opacity: '0.8'
+            opacity: '0.6'
           }} />
         </div>
       </div>
@@ -683,17 +681,16 @@ const QuickAccessSidebar = ({
       <div style={{
         position: 'relative',
         zIndex: 2,
-        margin: '0.4rem 0',
+        margin: '0.5rem 0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
         <div style={{
-          width: '100%',
+          width: '70%',
           height: '1px',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.3) 80%, transparent 100%)',
-          borderRadius: '1px',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 70%, transparent 100%)',
+          borderRadius: '1px'
         }} />
       </div>
 
@@ -701,10 +698,10 @@ const QuickAccessSidebar = ({
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.25rem',
+          gap: '0.125rem',
           position: 'relative',
           zIndex: 2,
-          marginBottom: '0.3rem'
+          marginBottom: '0.25rem'
         }}>
         {availableTerminals.map((terminal, index) => 
           renderTerminalButton(terminal, index)
@@ -715,17 +712,16 @@ const QuickAccessSidebar = ({
       <div style={{
         position: 'relative',
         zIndex: 2,
-        margin: '0.4rem 0',
+        margin: '0.5rem 0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
         <div style={{
-          width: '100%',
+          width: '70%',
           height: '1px',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 20%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.3) 80%, transparent 100%)',
-          borderRadius: '1px',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 70%, transparent 100%)',
+          borderRadius: '1px'
         }} />
       </div>
 
@@ -733,7 +729,7 @@ const QuickAccessSidebar = ({
       <div style={{ 
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.2rem',
+        gap: '0.125rem',
         position: 'relative',
         zIndex: 2,
         opacity: (isToggling || isGlobalTransition) ? 0.7 : 1,
