@@ -25,6 +25,7 @@ import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import FontPreview, { MonospaceFontPreview } from './FontPreview';
 import { STORAGE_KEYS } from '../utils/constants';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
@@ -710,53 +711,57 @@ const SettingsDialog = ({
     return (
       <div style={{
         padding: '12px',
-        border: '1px solid #ccc',
-        borderRadius: '6px',
+        border: '1px solid var(--surface-300)',
+        borderRadius: '8px',
         marginTop: '10px',
-        fontFamily: localFontFamily,
-        fontSize: `${localFontSize}px`
+        background: 'var(--surface-100)'
       }}>
         <div style={{
-          background: (themes[localTerminalTheme]?.theme?.background) || '#000',
-          color: (themes[localTerminalTheme]?.theme?.foreground) || '#fff',
+          background: colors.background || '#1e1e1e',
+          color: colors.foreground || '#d4d4d4',
           padding: '12px',
-          borderRadius: '4px',
-          fontFamily: 'inherit',
-          fontSize: 'inherit',
-          lineHeight: '1.4'
+          borderRadius: '6px',
+          fontFamily: fontFamily,
+          fontSize: `${fontSize}px`,
+          lineHeight: '1.4',
+          border: '1px solid var(--surface-200)'
         }}>
-          <div style={{ marginBottom: '4px' }}>
-            <span style={{ color: colors.green || '#00ff00' }}>user@hostname</span>
-            <span style={{ color: colors.white || '#ffffff' }}>:</span>
-            <span style={{ color: colors.blue || '#0000ff' }}>~/project</span>
-            <span style={{ color: colors.white || '#ffffff' }}>$ </span>
-            <span style={{ color: colors.yellow || '#ffff00' }}>ls -la</span>
+          <div style={{ marginBottom: '6px' }}>
+            <span style={{ color: colors.green || '#4ec9b0' }}>user@hostname</span>
+            <span style={{ color: colors.foreground || '#d4d4d4' }}>:</span>
+            <span style={{ color: colors.blue || '#569cd6' }}>~/project</span>
+            <span style={{ color: colors.foreground || '#d4d4d4' }}>$ </span>
+            <span style={{ color: colors.yellow || '#dcdcaa' }}>ls -la</span>
           </div>
-          <div style={{ color: colors.cyan || '#00ffff', marginBottom: '2px' }}>
+          <div style={{ color: colors.cyan || '#4ec9b0', marginBottom: '2px' }}>
             total 24
           </div>
-          <div style={{ color: colors.blue || '#0000ff', marginBottom: '2px' }}>
+          <div style={{ color: colors.blue || '#569cd6', marginBottom: '2px' }}>
             drwxr-xr-x 3 user user 4096 Dec 25 10:30 .
           </div>
-          <div style={{ color: colors.blue || '#0000ff', marginBottom: '2px' }}>
+          <div style={{ color: colors.blue || '#569cd6', marginBottom: '2px' }}>
             drwxr-xr-x 5 user user 4096 Dec 25 10:25 ..
           </div>
-          <div style={{ color: colors.green || '#00ff00', marginBottom: '2px' }}>
+          <div style={{ color: colors.green || '#4ec9b0', marginBottom: '2px' }}>
             -rw-r--r-- 1 user user  256 Dec 25 10:30 README.md
           </div>
-          <div style={{ color: colors.red || '#ff0000', marginBottom: '4px' }}>
+          <div style={{ color: colors.red || '#f44747', marginBottom: '6px' }}>
             -rwxr-xr-x 1 user user 1024 Dec 25 10:28 script.sh
           </div>
           <div>
-            <span style={{ color: colors.green || '#00ff00' }}>user@hostname</span>
-            <span style={{ color: colors.white || '#ffffff' }}>:</span>
-            <span style={{ color: colors.blue || '#0000ff' }}>~/project</span>
-            <span style={{ color: colors.white || '#ffffff' }}>$ </span>
+            <span style={{ color: colors.green || '#4ec9b0' }}>user@hostname</span>
+            <span style={{ color: colors.foreground || '#d4d4d4' }}>:</span>
+            <span style={{ color: colors.blue || '#569cd6' }}>~/project</span>
+            <span style={{ color: colors.foreground || '#d4d4d4' }}>$ </span>
+            <span style={{ color: '#6a9955', fontSize: '11px', opacity: 0.8 }}>
+              // {fontFamily} • {fontSize}px
+            </span>
             <span
               style={{
                 background: colors.cursor || colors.foreground || '#ffffff',
                 color: colors.background || '#000000',
-                animation: 'blink 1s infinite'
+                animation: 'blink 1s infinite',
+                marginLeft: '4px'
               }}
             >
               ▋
@@ -1583,6 +1588,30 @@ const SettingsDialog = ({
                           onChange={handleFontFamilyChange}
                           placeholder="Selecciona una fuente"
                           style={{ width: '100%' }}
+                          itemTemplate={option => (
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'space-between',
+                              padding: '4px 0'
+                            }}>
+                              <span style={{ 
+                                fontFamily: option.value,
+                                fontSize: '14px',
+                                fontWeight: '400'
+                              }}>
+                                {option.label}
+                              </span>
+                              <span style={{ 
+                                fontSize: '11px',
+                                color: 'var(--text-color-secondary)',
+                                opacity: 0.7,
+                                fontFamily: option.value
+                              }}>
+                                123
+                              </span>
+                            </div>
+                          )}
                         />
                       </div>
 
@@ -2065,7 +2094,28 @@ const SettingsDialog = ({
                           placeholder="Selecciona una fuente"
                           style={{ width: '100%' }}
                           itemTemplate={option => (
-                            <span style={{ fontFamily: option.value }}>{option.label}</span>
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'space-between',
+                              padding: '4px 0'
+                            }}>
+                              <span style={{ 
+                                fontFamily: option.value,
+                                fontSize: '14px',
+                                fontWeight: '500'
+                              }}>
+                                {option.label}
+                              </span>
+                              <span style={{ 
+                                fontSize: '11px',
+                                color: 'var(--text-color-secondary)',
+                                opacity: 0.7,
+                                fontFamily: 'monospace'
+                              }}>
+                                Aa
+                              </span>
+                            </div>
                           )}
                         />
                       </div>
@@ -2088,9 +2138,12 @@ const SettingsDialog = ({
                         />
                       </div>
                     </div>
-                    <div style={{ marginTop: 12, fontFamily: explorerFont, fontSize: `${explorerFontSize}px`, textAlign: 'center' }}>
-                      Ejemplo de fuente: <span style={{ fontWeight: 'bold' }}>{explorerFont}</span>
-                    </div>
+                    <FontPreview 
+                      fontFamily={explorerFont}
+                      fontSize={explorerFontSize}
+                      sampleText="Explorador de Sesiones"
+                      style={{ marginTop: 16 }}
+                    />
                   </div>
                   <div style={{ marginBottom: '2rem', width: '100%', maxWidth: 400 }}>
                     <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text-color)' }}>
