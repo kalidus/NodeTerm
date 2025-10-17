@@ -70,6 +70,11 @@ const QuickAccessSidebar = ({
   // Handlers for actions that don't come from props
   const handleOpenPasswords = () => {
     try {
+      // Expandir la sidebar si está colapsada
+      const expandSidebarEvent = new CustomEvent('expand-sidebar');
+      window.dispatchEvent(expandSidebarEvent);
+      
+      // Abrir el gestor de contraseñas
       window.dispatchEvent(new CustomEvent('open-password-manager'));
     } catch (e) { /* noop */ }
   };
@@ -253,11 +258,14 @@ const QuickAccessSidebar = ({
 
   // Configurar acciones principales
   useEffect(() => {
+    // Obtener el color primario del tema actual
+    const primaryColor = currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3';
+    
     const actions = [
       {
         label: 'Configuración',
         icon: 'pi pi-cog',
-        color: '#9C27B0',
+        color: primaryColor,
         description: 'Ajustes y preferencias',
         action: onOpenSettings,
         badge: null
@@ -265,7 +273,7 @@ const QuickAccessSidebar = ({
       {
         label: 'Auditoría Global',
         icon: 'pi pi-video',
-        color: '#EF5350',
+        color: primaryColor,
         description: 'Ver grabaciones y auditoría',
         action: handleOpenAuditGlobal,
         badge: null
@@ -273,7 +281,7 @@ const QuickAccessSidebar = ({
       {
         label: 'Gestor de Contraseñas',
         icon: 'pi pi-key',
-        color: '#FFC107',
+        color: primaryColor,
         description: 'Ver y gestionar passwords',
         action: handleOpenPasswords,
         badge: null
@@ -281,7 +289,7 @@ const QuickAccessSidebar = ({
       {
         label: 'Historial',
         icon: 'pi pi-history',
-        color: '#795548',
+        color: primaryColor,
         description: 'Conexiones recientes',
         action: () => {},
         badge: null
@@ -289,7 +297,7 @@ const QuickAccessSidebar = ({
       {
         label: 'Favoritos',
         icon: 'pi pi-star',
-        color: '#FFD700',
+        color: primaryColor,
         description: 'Acceso rápido',
         action: () => {},
         badge: null
@@ -298,7 +306,7 @@ const QuickAccessSidebar = ({
 
     setQuickActionItems(actions);
     setCachedQuickActions(actions);
-  }, [onOpenSettings, handleToggleTerminalVisibility]);
+  }, [onOpenSettings, handleToggleTerminalVisibility, currentTheme]);
 
   // Función para obtener colores según la categoría
   const getColorForCategory = (category) => {
@@ -333,16 +341,16 @@ const QuickAccessSidebar = ({
           border: `1.5px solid ${themeColors.cardBorder}`,
           position: 'relative',
           width: '100%',
-          height: '40px',
-          borderRadius: '8px',
-          boxShadow: `0 3px 12px ${action.color}20, 
-                      0 1px 4px rgba(0,0,0,0.1),
+          height: '44px',
+          borderRadius: '9px',
+          boxShadow: `0 4px 16px ${action.color}20, 
+                      0 2px 8px rgba(0,0,0,0.1),
                       inset 0 1px 0 rgba(255,255,255,0.1)`,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0.4rem'
+          padding: '0.5rem'
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)';
@@ -362,9 +370,9 @@ const QuickAccessSidebar = ({
       >
         {/* Icono de acción */}
         <div style={{ 
-          width: '20px',
-          height: '20px',
-          borderRadius: '5px',
+          width: '26px',
+          height: '26px',
+          borderRadius: '7px',
           background: `linear-gradient(145deg, 
             ${action.color}ee 0%, 
             ${action.color}cc 30%,
@@ -373,10 +381,12 @@ const QuickAccessSidebar = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: `0 2px 8px ${action.color}50, 
-                      0 1px 2px ${action.color}30,
+          boxShadow: `0 3px 12px ${action.color}50, 
+                      0 1px 4px ${action.color}30,
                       inset 0 1px 0 rgba(255,255,255,0.4),
-                      inset 0 -1px 0 rgba(0,0,0,0.3)`,
+                      inset 0 -1px 0 rgba(0,0,0,0.3),
+                      inset 1px 0 0 rgba(255,255,255,0.2),
+                      inset -1px 0 0 rgba(0,0,0,0.1)`,
           border: `1px solid ${action.color}aa`,
           position: 'relative',
           overflow: 'hidden'
@@ -384,10 +394,10 @@ const QuickAccessSidebar = ({
           <i 
             className={action.icon}
             style={{ 
-              fontSize: '0.7rem',
+              fontSize: '0.9rem',
               color: 'white',
-              textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+              textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3)',
+              filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.3))',
               position: 'relative',
               zIndex: 1
             }}
@@ -399,8 +409,8 @@ const QuickAccessSidebar = ({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '10px',
-            height: '10px',
+            width: '14px',
+            height: '14px',
             borderRadius: '50%',
             background: `radial-gradient(circle, ${action.color}40 0%, transparent 70%)`,
             filter: 'blur(1px)',

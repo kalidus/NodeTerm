@@ -32,6 +32,23 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     localStorage.setItem(EXPANDED_KEYS_STORAGE_KEY, JSON.stringify(expandedKeys));
   }, [expandedKeys]);
 
+  // ============ EFECTOS PARA EVENTOS GLOBALES ============
+  
+  // Escuchar evento para expandir sidebar
+  useEffect(() => {
+    const handleExpandSidebar = () => {
+      if (sidebarCollapsed) {
+        setSidebarCollapsed(false);
+      }
+    };
+    
+    window.addEventListener('expand-sidebar', handleExpandSidebar);
+    
+    return () => {
+      window.removeEventListener('expand-sidebar', handleExpandSidebar);
+    };
+  }, [sidebarCollapsed]);
+
   // ============ FUNCIONES DE RESIZE ============
   
   // Función principal de resize (optimizada para fluidez)
