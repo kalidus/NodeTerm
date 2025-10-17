@@ -407,7 +407,7 @@ export const classicUiThemes = {
       sidebarBackground: '#2e3440',
       sidebarBorder: '#3b4252',
       sidebarText: '#d8dee9',
-      sidebarHover: '#3b4252',
+      sidebarHover: '#434c5e',
       sidebarSelected: '#5e81ac',
       sidebarGutter: '#3b4252',
       
