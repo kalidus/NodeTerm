@@ -19,11 +19,25 @@ export const useThemeManagement = () => {
 
   // Available fonts
   const availableFonts = [
+    // Fuentes monoespaciadas modernas y populares
     { label: 'FiraCode Nerd Font', value: '"FiraCode Nerd Font", monospace' },
+    { label: 'JetBrains Mono', value: '"JetBrains Mono", monospace' },
     { label: 'Cascadia Code', value: '"Cascadia Code", monospace' },
+    { label: 'SF Mono', value: '"SF Mono", monospace' },
     { label: 'Source Code Pro', value: '"Source Code Pro", monospace' },
     { label: 'Roboto Mono', value: '"Roboto Mono", monospace' },
+    { label: 'Fira Code', value: '"Fira Code", monospace' },
+    { label: 'Victor Mono', value: '"Victor Mono", monospace' },
+    { label: 'Operator Mono', value: '"Operator Mono", monospace' },
+    { label: 'Dank Mono', value: '"Dank Mono", monospace' },
+    { label: 'Recursive', value: '"Recursive", monospace' },
+    { label: 'IBM Plex Mono', value: '"IBM Plex Mono", monospace' },
+    { label: 'Space Mono', value: '"Space Mono", monospace' },
+    { label: 'Overpass Mono', value: '"Overpass Mono", monospace' },
     { label: 'Inconsolata', value: 'Inconsolata, monospace' },
+    { label: 'Hack', value: 'Hack, monospace' },
+    { label: 'Monoid', value: 'Monoid, monospace' },
+    { label: 'Anonymous Pro', value: '"Anonymous Pro", monospace' },
     { label: 'DejaVu Sans Mono', value: '"DejaVu Sans Mono", monospace' },
     { label: 'Liberation Mono', value: '"Liberation Mono", monospace' },
     { label: 'Ubuntu Mono', value: '"Ubuntu Mono", monospace' },
@@ -31,7 +45,9 @@ export const useThemeManagement = () => {
     { label: 'Consolas', value: 'Consolas, monospace' },
     { label: 'Courier New', value: '"Courier New", monospace' },
     { label: 'Lucida Console', value: '"Lucida Console", monospace' },
-    { label: 'Menlo', value: 'Menlo, monospace' }
+    { label: 'Menlo', value: 'Menlo, monospace' },
+    { label: 'Andale Mono', value: '"Andale Mono", monospace' },
+    { label: 'PT Mono', value: '"PT Mono", monospace' }
   ];
 
   // Terminal themes
