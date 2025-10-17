@@ -263,30 +263,6 @@ const QuickAccessSidebar = ({
     
     const actions = [
       {
-        label: 'Configuración',
-        icon: 'pi pi-cog',
-        color: primaryColor,
-        description: 'Ajustes y preferencias',
-        action: onOpenSettings,
-        badge: null
-      },
-      {
-        label: 'Auditoría Global',
-        icon: 'pi pi-video',
-        color: primaryColor,
-        description: 'Ver grabaciones y auditoría',
-        action: handleOpenAuditGlobal,
-        badge: null
-      },
-      {
-        label: 'Gestor de Contraseñas',
-        icon: 'pi pi-key',
-        color: primaryColor,
-        description: 'Ver y gestionar passwords',
-        action: handleOpenPasswords,
-        badge: null
-      },
-      {
         label: 'Historial',
         icon: 'pi pi-list',
         color: primaryColor,
@@ -303,11 +279,27 @@ const QuickAccessSidebar = ({
         badge: null
       },
       {
-        label: 'Favoritos',
-        icon: 'pi pi-star',
+        label: 'Gestor de Contraseñas',
+        icon: 'pi pi-key',
         color: primaryColor,
-        description: 'Acceso rápido',
-        action: () => {},
+        description: 'Ver y gestionar passwords',
+        action: handleOpenPasswords,
+        badge: null
+      },
+      {
+        label: 'Auditoría Global',
+        icon: 'pi pi-video',
+        color: primaryColor,
+        description: 'Ver grabaciones y auditoría',
+        action: handleOpenAuditGlobal,
+        badge: null
+      },
+      {
+        label: 'Configuración',
+        icon: 'pi pi-cog',
+        color: primaryColor,
+        description: 'Ajustes y preferencias',
+        action: onOpenSettings,
         badge: null
       }
     ];
