@@ -1620,8 +1620,43 @@ const Sidebar = React.memo(({
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                background: `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`,
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: `1px solid rgba(255,255,255,0.12)`,
+                borderRadius: '12px',
+                boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
+                            0 1px 3px rgba(0,0,0,0.12),
+                            inset 0 1px 0 rgba(255,255,255,0.15)`,
+                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                overflow: 'hidden'
               }} 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.12) 0%, 
+                  rgba(255,255,255,0.08) 50%, 
+                  rgba(255,255,255,0.04) 100%)`;
+                e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
+                                                    0 2px 8px rgba(0,0,0,0.16),
+                                                    inset 0 1px 0 rgba(255,255,255,0.2)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`;
+                e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
+                                                    0 1px 3px rgba(0,0,0,0.12),
+                                                    inset 0 1px 0 rgba(255,255,255,0.15)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+              }}
             />
             
             {/* Botón de nuevo grupo */}
@@ -1643,8 +1678,43 @@ const Sidebar = React.memo(({
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                background: `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`,
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: `1px solid rgba(255,255,255,0.12)`,
+                borderRadius: '12px',
+                boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
+                            0 1px 3px rgba(0,0,0,0.12),
+                            inset 0 1px 0 rgba(255,255,255,0.15)`,
+                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                overflow: 'hidden'
               }} 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.12) 0%, 
+                  rgba(255,255,255,0.08) 50%, 
+                  rgba(255,255,255,0.04) 100%)`;
+                e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
+                                                    0 2px 8px rgba(0,0,0,0.16),
+                                                    inset 0 1px 0 rgba(255,255,255,0.2)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`;
+                e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
+                                                    0 1px 3px rgba(0,0,0,0.12),
+                                                    inset 0 1px 0 rgba(255,255,255,0.15)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+              }}
             />
             
             {/* Botón de gestor de passwords */}
@@ -1667,8 +1737,43 @@ const Sidebar = React.memo(({
                 justifyContent: 'center',
                 visibility: 'visible !important',
                 opacity: '1 !important',
-                color: '#ffc107'
+                color: '#ffc107',
+                background: `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`,
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: `1px solid rgba(255,255,255,0.12)`,
+                borderRadius: '12px',
+                boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
+                            0 1px 3px rgba(0,0,0,0.12),
+                            inset 0 1px 0 rgba(255,255,255,0.15)`,
+                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                overflow: 'hidden'
               }} 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,193,7,0.15) 0%, 
+                  rgba(255,193,7,0.1) 50%, 
+                  rgba(255,193,7,0.05) 100%)`;
+                e.currentTarget.style.boxShadow = `0 4px 16px rgba(255,193,7,0.2), 
+                                                    0 2px 8px rgba(0,0,0,0.16),
+                                                    inset 0 1px 0 rgba(255,255,255,0.2)`;
+                e.currentTarget.style.borderColor = `rgba(255,193,7,0.3)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`;
+                e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
+                                                    0 1px 3px rgba(0,0,0,0.12),
+                                                    inset 0 1px 0 rgba(255,255,255,0.15)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+              }}
             />
           </div>
 
@@ -1764,32 +1869,53 @@ const Sidebar = React.memo(({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
                   <Button 
                     icon="pi pi-desktop" 
-                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
                     tooltip="Nueva conexión" 
-                    tooltipOptions={{ position: 'bottom' }} 
+                    tooltipOptions={{ position: 'bottom' }}
                   />
                   <Button 
                     icon="pi pi-folder" 
-                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowFolderDialog(true)} 
                     tooltip="Crear carpeta" 
-                    tooltipOptions={{ position: 'bottom' }} 
+                    tooltipOptions={{ position: 'bottom' }}
                   />
                   <Button 
                     icon="pi pi-th-large" 
-                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button" 
                     onClick={() => setShowCreateGroupDialog(true)} 
                     tooltip="Crear grupo de pestañas" 
-                    tooltipOptions={{ position: 'bottom' }} 
+                    tooltipOptions={{ position: 'bottom' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.background = `linear-gradient(135deg, 
+                        rgba(255,255,255,0.12) 0%, 
+                        rgba(255,255,255,0.08) 50%, 
+                        rgba(255,255,255,0.04) 100%)`;
+                      e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
+                                                        0 2px 8px rgba(0,0,0,0.16),
+                                                        inset 0 1px 0 rgba(255,255,255,0.2)`;
+                      e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.background = `linear-gradient(135deg, 
+                        rgba(255,255,255,0.08) 0%, 
+                        rgba(255,255,255,0.04) 50%, 
+                        rgba(255,255,255,0.02) 100%)`;
+                      e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
+                                                        0 1px 3px rgba(0,0,0,0.12),
+                                                        inset 0 1px 0 rgba(255,255,255,0.15)`;
+                      e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+                    }}
                   />
                   <Button 
                     icon="pi pi-key" 
-                    className="p-button-rounded p-button-text sidebar-action-button" 
+                    className="p-button-rounded p-button-text sidebar-action-button glass-button key-button" 
                     onClick={() => setViewMode('passwords')} 
                     tooltip="Gestor de passwords" 
-                    tooltipOptions={{ position: 'bottom' }} 
-                    style={{ color: '#ffc107' }}
+                    tooltipOptions={{ position: 'bottom' }}
                   />
                 </div>
               </div>
