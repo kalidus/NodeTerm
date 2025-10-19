@@ -1468,47 +1468,22 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: `1px solid rgba(255,255,255,0.12)`,
-            borderRadius: 8,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 6,
             margin: 0,
             padding: 0,
-            transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            transition: 'all 0.2s ease',
             cursor: 'pointer',
             verticalAlign: 'middle',
             position: 'relative',
-            top: '1px',
-            boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
-                        0 1px 3px rgba(0,0,0,0.12),
-                        inset 0 1px 0 rgba(255,255,255,0.15)`,
-            overflow: 'hidden'
+            top: '1px'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.12) 0%, 
-              rgba(255,255,255,0.08) 50%, 
-              rgba(255,255,255,0.04) 100%)`;
-            e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
-                                                0 2px 8px rgba(0,0,0,0.16),
-                                                inset 0 1px 0 rgba(255,255,255,0.2)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`;
-            e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
-                                                0 1px 3px rgba(0,0,0,0.12),
-                                                inset 0 1px 0 rgba(255,255,255,0.15)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <svg width="12" height="12" viewBox="0 0 12 12"><circle cy="6" cx="2.5" r="1.2" fill="var(--ui-titlebar-text, #fff)"/><circle cy="6" cx="6" r="1.2" fill="var(--ui-titlebar-text, #fff)"/><circle cy="6" cx="9.5" r="1.2" fill="var(--ui-titlebar-text, #fff)"/></svg>
@@ -1523,47 +1498,22 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: `1px solid rgba(255,255,255,0.12)`,
-            borderRadius: 8,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 6,
             margin: 0,
             padding: 0,
-            transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            transition: 'all 0.2s ease',
             cursor: 'pointer',
             verticalAlign: 'middle',
             position: 'relative',
-            top: '1px',
-            boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
-                        0 1px 3px rgba(0,0,0,0.12),
-                        inset 0 1px 0 rgba(255,255,255,0.15)`,
-            overflow: 'hidden'
+            top: '1px'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.12) 0%, 
-              rgba(255,255,255,0.08) 50%, 
-              rgba(255,255,255,0.04) 100%)`;
-            e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
-                                                0 2px 8px rgba(0,0,0,0.16),
-                                                inset 0 1px 0 rgba(255,255,255,0.2)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`;
-            e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
-                                                0 1px 3px rgba(0,0,0,0.12),
-                                                inset 0 1px 0 rgba(255,255,255,0.15)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3" y="6.5" width="8" height="1.7" rx="0.85" fill="var(--ui-titlebar-text, #fff)" /></svg>
@@ -1578,44 +1528,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: `1px solid rgba(255,255,255,0.12)`,
-            borderRadius: 8,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 6,
             margin: 0,
             padding: 0,
-            transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            cursor: 'pointer',
-            boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
-                        0 1px 3px rgba(0,0,0,0.12),
-                        inset 0 1px 0 rgba(255,255,255,0.15)`,
-            overflow: 'hidden'
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.12) 0%, 
-              rgba(255,255,255,0.08) 50%, 
-              rgba(255,255,255,0.04) 100%)`;
-            e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
-                                                0 2px 8px rgba(0,0,0,0.16),
-                                                inset 0 1px 0 rgba(255,255,255,0.2)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`;
-            e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
-                                                0 1px 3px rgba(0,0,0,0.12),
-                                                inset 0 1px 0 rgba(255,255,255,0.15)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" /></svg>
@@ -1630,44 +1555,19 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`,
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: `1px solid rgba(255,255,255,0.12)`,
-            borderRadius: 8,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 6,
             margin: 0,
             padding: 0,
-            transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            cursor: 'pointer',
-            boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
-                        0 1px 3px rgba(0,0,0,0.12),
-                        inset 0 1px 0 rgba(255,255,255,0.15)`,
-            overflow: 'hidden'
+            transition: 'all 0.2s ease',
+            cursor: 'pointer'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(229,115,115,0.15) 0%, 
-              rgba(229,115,115,0.1) 50%, 
-              rgba(229,115,115,0.05) 100%)`;
-            e.currentTarget.style.boxShadow = `0 4px 16px rgba(229,115,115,0.2), 
-                                                0 2px 8px rgba(0,0,0,0.16),
-                                                inset 0 1px 0 rgba(255,255,255,0.2)`;
-            e.currentTarget.style.borderColor = `rgba(229,115,115,0.3)`;
+            e.currentTarget.style.backgroundColor = 'rgba(229,115,115,0.2)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.background = `linear-gradient(135deg, 
-              rgba(255,255,255,0.08) 0%, 
-              rgba(255,255,255,0.04) 50%, 
-              rgba(255,255,255,0.02) 100%)`;
-            e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
-                                                0 1px 3px rgba(0,0,0,0.12),
-                                                inset 0 1px 0 rgba(255,255,255,0.15)`;
-            e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <svg width="12" height="12" viewBox="0 0 14 14"><line x1="4" y1="4" x2="10" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.8" strokeLinecap="round" /><line x1="10" y1="4" x2="4" y2="10" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.8" strokeLinecap="round" /></svg>
