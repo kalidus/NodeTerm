@@ -6,8 +6,9 @@
 class AIService {
   constructor() {
     this.currentModel = null;
-    this.modelType = 'remote'; // 'remote' o 'local'
+    this.modelType = 'remote'; // 'remote', 'local' o 'remote-ollama'
     this.apiKey = null;
+    this.remoteOllamaUrl = null;
     this.models = {
       remote: [
         { id: 'gpt-4', name: 'GPT-4', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions' },
@@ -41,6 +42,7 @@ class AIService {
         this.currentModel = parsed.currentModel || null;
         this.modelType = parsed.modelType || 'remote';
         this.apiKey = parsed.apiKey || null;
+        this.remoteOllamaUrl = parsed.remoteOllamaUrl || null;
         
         // Cargar estado de modelos locales descargados
         if (parsed.localModels) {
@@ -64,6 +66,7 @@ class AIService {
         currentModel: this.currentModel,
         modelType: this.modelType,
         apiKey: this.apiKey,
+        remoteOllamaUrl: this.remoteOllamaUrl,
         localModels: this.models.local.map(m => ({ id: m.id, downloaded: m.downloaded }))
       };
       localStorage.setItem('ai-service-config', JSON.stringify(config));
@@ -90,9 +93,10 @@ class AIService {
    */
   async detectOllamaModels() {
     try {
-      const response = await fetch('http://localhost:11434/api/tags');
+      const ollamaUrl = this.getOllamaUrl();
+      const response = await fetch(`${ollamaUrl}/api/tags`);
       if (!response.ok) {
-        throw new Error('No se pudo conectar con Ollama');
+        throw new Error(`No se pudo conectar con Ollama en ${ollamaUrl}`);
       }
       
       const data = await response.json();
@@ -180,6 +184,21 @@ class AIService {
    */
   getApiKey(provider) {
     return this.apiKey?.[provider] || null;
+  }
+
+  /**
+   * Configurar URL de Ollama remoto
+   */
+  setRemoteOllamaUrl(url) {
+    this.remoteOllamaUrl = url;
+    this.saveConfig();
+  }
+
+  /**
+   * Obtener URL de Ollama (local o remoto)
+   */
+  getOllamaUrl() {
+    return this.remoteOllamaUrl || 'http://localhost:11434';
   }
 
   /**
@@ -318,11 +337,12 @@ class AIService {
         content: msg.content
       }));
 
-      const response = await fetch('http://localhost:11434/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+       const ollamaUrl = this.getOllamaUrl();
+       const response = await fetch(`${ollamaUrl}/api/chat`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json'
+         },
         body: JSON.stringify({
           model: model.id,
           messages: messages,
@@ -372,12 +392,13 @@ class AIService {
     }
 
     try {
-      // Usar la API de Ollama para descargar el modelo
-      const response = await fetch('http://localhost:11434/api/pull', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+       // Usar la API de Ollama para descargar el modelo
+       const ollamaUrl = this.getOllamaUrl();
+       const response = await fetch(`${ollamaUrl}/api/pull`, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json'
+         },
         body: JSON.stringify({
           name: modelId,
           stream: true
@@ -465,12 +486,13 @@ class AIService {
     }
 
     try {
-      // Eliminar modelo usando Ollama
-      const response = await fetch('http://localhost:11434/api/delete', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+       // Eliminar modelo usando Ollama
+       const ollamaUrl = this.getOllamaUrl();
+       const response = await fetch(`${ollamaUrl}/api/delete`, {
+         method: 'DELETE',
+         headers: {
+           'Content-Type': 'application/json'
+         },
         body: JSON.stringify({
           name: modelId
         })
