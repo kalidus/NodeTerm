@@ -16,11 +16,14 @@ class AIService {
         { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages' },
       ],
       local: [
-        { id: 'llama-3-8b', name: 'Llama 3 8B', size: '4.7GB', downloaded: false },
-        { id: 'llama-3-70b', name: 'Llama 3 70B', size: '40GB', downloaded: false },
-        { id: 'qwen-7b', name: 'Qwen 7B', size: '4.5GB', downloaded: false },
-        { id: 'deepseek-33b', name: 'DeepSeek 33B', size: '20GB', downloaded: false },
-        { id: 'mistral-7b', name: 'Mistral 7B', size: '4.1GB', downloaded: false },
+        { id: 'llama3.2', name: 'Llama 3.2 (3B)', size: '2GB', downloaded: false },
+        { id: 'llama3.1', name: 'Llama 3.1 (8B)', size: '4.7GB', downloaded: false },
+        { id: 'llama3', name: 'Llama 3 (8B)', size: '4.7GB', downloaded: false },
+        { id: 'mistral', name: 'Mistral (7B)', size: '4.1GB', downloaded: false },
+        { id: 'qwen2.5', name: 'Qwen 2.5 (7B)', size: '4.5GB', downloaded: false },
+        { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', size: '4.7GB', downloaded: false },
+        { id: 'gemma2', name: 'Gemma 2 (9B)', size: '5.4GB', downloaded: false },
+        { id: 'phi3', name: 'Phi-3 (3.8B)', size: '2.3GB', downloaded: false },
       ]
     };
     this.conversationHistory = [];
@@ -80,6 +83,76 @@ class AIService {
       remote: this.models.remote,
       local: this.models.local
     };
+  }
+
+  /**
+   * Detectar modelos instalados en Ollama
+   */
+  async detectOllamaModels() {
+    try {
+      const response = await fetch('http://localhost:11434/api/tags');
+      if (!response.ok) {
+        throw new Error('No se pudo conectar con Ollama');
+      }
+      
+      const data = await response.json();
+      
+      // Actualizar lista de modelos locales con los detectados
+      if (data.models && Array.isArray(data.models)) {
+        const installedModels = data.models.map(model => {
+          const existingModel = this.models.local.find(m => m.id === model.name);
+          if (existingModel) {
+            return { ...existingModel, downloaded: true };
+          } else {
+            // Modelo no conocido, agregarlo
+            return {
+              id: model.name,
+              name: model.name,
+              size: model.size ? `${(model.size / 1e9).toFixed(1)}GB` : 'Desconocido',
+              downloaded: true
+            };
+          }
+        });
+        
+        // Combinar modelos predefinidos con los detectados
+        const allModels = [...this.models.local];
+        installedModels.forEach(installed => {
+          const index = allModels.findIndex(m => m.id === installed.id);
+          if (index >= 0) {
+            allModels[index] = installed;
+          } else {
+            allModels.push(installed);
+          }
+        });
+        
+        this.models.local = allModels;
+        this.saveConfig();
+        
+        return installedModels;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error detectando modelos de Ollama:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Agregar modelo personalizado
+   */
+  addCustomModel(modelId, modelName = null) {
+    const existingModel = this.models.local.find(m => m.id === modelId);
+    if (!existingModel) {
+      this.models.local.push({
+        id: modelId,
+        name: modelName || modelId,
+        size: 'Personalizado',
+        downloaded: true,
+        custom: true
+      });
+      this.saveConfig();
+    }
   }
 
   /**
@@ -237,36 +310,60 @@ class AIService {
       throw new Error('El modelo local no está descargado');
     }
 
-    // Aquí se implementaría la comunicación con Ollama o el servidor local
-    // Por ahora, retornamos un placeholder
+    // Comunicación con Ollama usando la API /api/chat
     try {
-      const response = await fetch('http://localhost:11434/api/generate', {
+      // Preparar mensajes en el formato que espera Ollama
+      const messages = this.conversationHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      }));
+
+      const response = await fetch('http://localhost:11434/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: model.id,
-          prompt: message,
-          stream: false
+          messages: messages,
+          stream: false,
+          options: {
+            temperature: options.temperature || 0.7,
+            num_predict: options.maxTokens || 2000
+          }
         })
       });
 
       if (!response.ok) {
-        throw new Error('Error en modelo local');
+        const errorText = await response.text();
+        console.error('Error de Ollama:', errorText);
+        throw new Error(`Error del servidor Ollama (${response.status})`);
       }
 
       const data = await response.json();
-      return data.response;
+      
+      // La respuesta de Ollama viene en data.message.content
+      if (data.message && data.message.content) {
+        return data.message.content;
+      } else {
+        throw new Error('Respuesta inválida del modelo local');
+      }
     } catch (error) {
       console.error('Error llamando a modelo local:', error);
-      // Retornar mensaje de error más amigable
-      throw new Error('No se pudo conectar con el modelo local. Asegúrate de que Ollama esté ejecutándose.');
+      
+      // Mensajes de error más específicos
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error('No se pudo conectar con Ollama. Verifica que esté ejecutándose en http://localhost:11434');
+      } else if (error.message.includes('404')) {
+        throw new Error('Modelo no encontrado en Ollama. Verifica que el modelo esté descargado correctamente.');
+      } else {
+        throw error;
+      }
     }
   }
 
   /**
-   * Descargar modelo local
+   * Descargar modelo local usando Ollama
    */
   async downloadLocalModel(modelId, onProgress = null) {
     const model = this.models.local.find(m => m.id === modelId);
@@ -275,28 +372,85 @@ class AIService {
     }
 
     try {
-      // Simular descarga (en producción, esto llamaría a Ollama)
+      // Usar la API de Ollama para descargar el modelo
       const response = await fetch('http://localhost:11434/api/pull', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: modelId
+          name: modelId,
+          stream: true
         })
       });
 
       if (!response.ok) {
-        throw new Error('Error descargando modelo');
+        const errorText = await response.text();
+        console.error('Error de Ollama al descargar:', errorText);
+        throw new Error(`Error descargando modelo (${response.status})`);
       }
 
-      // Marcar como descargado
-      model.downloaded = true;
-      this.saveConfig();
+      // Leer el stream de respuesta para mostrar progreso
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let downloadComplete = false;
 
-      return true;
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          downloadComplete = true;
+          break;
+        }
+
+        // Decodificar el chunk y procesar el progreso
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+        
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            
+            // Llamar callback de progreso si está disponible
+            if (onProgress && data.status) {
+              const progress = {
+                status: data.status,
+                total: data.total,
+                completed: data.completed,
+                percent: data.total ? (data.completed / data.total) * 100 : 0
+              };
+              onProgress(progress);
+            }
+            
+            // Verificar si la descarga está completa
+            if (data.status === 'success' || data.status === 'complete') {
+              downloadComplete = true;
+            }
+          } catch (e) {
+            // Ignorar líneas que no sean JSON válido
+          }
+        }
+      }
+
+      if (downloadComplete) {
+        // Marcar como descargado
+        model.downloaded = true;
+        this.saveConfig();
+        
+        // Refrescar la lista de modelos instalados
+        await this.detectOllamaModels();
+        
+        return true;
+      } else {
+        throw new Error('La descarga no se completó correctamente');
+      }
     } catch (error) {
       console.error('Error descargando modelo local:', error);
+      
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('No se pudo conectar con Ollama. Verifica que esté ejecutándose.');
+      }
+      
       throw error;
     }
   }

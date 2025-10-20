@@ -19,7 +19,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
     anthropic: ''
   });
   const [downloading, setDownloading] = useState({});
+  const [downloadProgress, setDownloadProgress] = useState({});
   const [themeVersion, setThemeVersion] = useState(0);
+  const [customModelId, setCustomModelId] = useState('');
+  const [detectingModels, setDetectingModels] = useState(false);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -53,7 +56,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
     }
   }, [visible]);
 
-  const loadConfig = () => {
+  const loadConfig = async () => {
     const models = aiService.getAvailableModels();
     setRemoteModels(models.remote);
     setLocalModels(models.local);
@@ -67,6 +70,58 @@ const AIConfigDialog = ({ visible, onHide }) => {
       openai: openaiKey || '',
       anthropic: anthropicKey || ''
     });
+
+    // Detectar modelos de Ollama automáticamente
+    await handleDetectModels();
+  };
+
+  const handleDetectModels = async () => {
+    setDetectingModels(true);
+    try {
+      await aiService.detectOllamaModels();
+      const models = aiService.getAvailableModels();
+      setLocalModels(models.local);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Modelos detectados',
+          detail: 'Se detectaron los modelos instalados en Ollama',
+          life: 2000
+        });
+      }
+    } catch (error) {
+      console.error('Error detectando modelos:', error);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'warn',
+          summary: 'No se pudo detectar',
+          detail: 'Verifica que Ollama esté ejecutándose',
+          life: 3000
+        });
+      }
+    } finally {
+      setDetectingModels(false);
+    }
+  };
+
+  const handleAddCustomModel = async () => {
+    if (customModelId.trim()) {
+      const modelName = customModelId.trim();
+      aiService.addCustomModel(modelName);
+      setCustomModelId('');
+      
+      // Detectar modelos nuevamente para refrescar
+      await handleDetectModels();
+      
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Modelo agregado',
+          detail: `Modelo ${modelName} agregado. Asegúrate de que esté instalado en Ollama.`,
+          life: 3000
+        });
+      }
+    }
   };
 
   const handleSelectModel = (modelId, type) => {
@@ -89,25 +144,55 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
   const handleDownloadModel = async (modelId) => {
     setDownloading(prev => ({ ...prev, [modelId]: true }));
+    setDownloadProgress(prev => ({ ...prev, [modelId]: { status: 'Iniciando...', percent: 0 } }));
+    
     try {
-      await aiService.downloadLocalModel(modelId);
+      await aiService.downloadLocalModel(modelId, (progress) => {
+        // Actualizar progreso en tiempo real
+        setDownloadProgress(prev => ({
+          ...prev,
+          [modelId]: {
+            status: progress.status || 'Descargando...',
+            percent: Math.round(progress.percent || 0),
+            completed: progress.completed,
+            total: progress.total
+          }
+        }));
+      });
+      
+      // Limpiar progreso
+      setDownloadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[modelId];
+        return newProgress;
+      });
+      
       loadConfig(); // Recargar configuración
+      
       if (window.toast?.current?.show) {
         window.toast.current.show({
           severity: 'success',
           summary: 'Modelo descargado',
-          detail: 'El modelo se descargó correctamente',
-          life: 2000
+          detail: `${modelId} se descargó correctamente`,
+          life: 3000
         });
       }
     } catch (error) {
       console.error('Error descargando modelo:', error);
+      
+      // Limpiar progreso en caso de error
+      setDownloadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[modelId];
+        return newProgress;
+      });
+      
       if (window.toast?.current?.show) {
         window.toast.current.show({
           severity: 'error',
-          summary: 'Error',
+          summary: 'Error descargando',
           detail: error.message || 'No se pudo descargar el modelo',
-          life: 3000
+          life: 4000
         });
       }
     } finally {
@@ -238,9 +323,18 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const renderLocalModels = () => {
     return (
       <div style={{ padding: '1rem' }}>
-        <h3 style={{ color: themeColors.textPrimary, marginBottom: '1rem' }}>
-          Modelos Locales
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ color: themeColors.textPrimary, margin: 0 }}>
+            Modelos Locales
+          </h3>
+          <Button
+            label="Detectar Modelos"
+            icon={detectingModels ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
+            size="small"
+            onClick={handleDetectModels}
+            disabled={detectingModels}
+          />
+        </div>
 
         <div style={{
           background: 'rgba(255, 193, 7, 0.1)',
@@ -260,6 +354,35 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
         </div>
 
+        {/* Agregar modelo personalizado */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+            Agregar modelo personalizado
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <InputText
+              value={customModelId}
+              onChange={(e) => setCustomModelId(e.target.value)}
+              placeholder="Ej: llama3.2, mistral, qwen2.5"
+              style={{ flex: 1 }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddCustomModel();
+                }
+              }}
+            />
+            <Button
+              label="Agregar"
+              icon="pi pi-plus"
+              onClick={handleAddCustomModel}
+              disabled={!customModelId.trim()}
+            />
+          </div>
+          <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+            Escribe el nombre exacto del modelo instalado en Ollama
+          </small>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {localModels.map(model => (
             <div
@@ -271,14 +394,30 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
                 borderRadius: '8px',
                 padding: '1rem',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                opacity: model.downloaded ? 1 : 0.6
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <div>
-                  <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
-                    {model.name}
-                  </h4>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
+                      {model.name}
+                    </h4>
+                    {model.downloaded && (
+                      <span style={{
+                        background: 'rgba(76, 175, 80, 0.2)',
+                        color: '#4CAF50',
+                        padding: '0.1rem 0.5rem',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        fontWeight: '500',
+                        border: '1px solid rgba(76, 175, 80, 0.4)'
+                      }}>
+                        ✓ Instalado
+                      </span>
+                    )}
+                  </div>
                   <p style={{ margin: '0.25rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
                     Tamaño: {model.size}
                   </p>
@@ -315,14 +454,49 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 </div>
               </div>
               
-              {downloading[model.id] && (
-                <ProgressBar mode="indeterminate" style={{ height: '4px', marginTop: '0.5rem' }} />
+              {downloading[model.id] && downloadProgress[model.id] && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    marginBottom: '0.25rem',
+                    fontSize: '0.75rem',
+                    color: themeColors.textSecondary
+                  }}>
+                    <span>{downloadProgress[model.id].status}</span>
+                    <span>{downloadProgress[model.id].percent}%</span>
+                  </div>
+                  <ProgressBar 
+                    value={downloadProgress[model.id].percent} 
+                    style={{ height: '6px' }}
+                    showValue={false}
+                  />
+                  {downloadProgress[model.id].total && (
+                    <div style={{ 
+                      fontSize: '0.7rem', 
+                      color: themeColors.textSecondary,
+                      marginTop: '0.25rem',
+                      textAlign: 'right'
+                    }}>
+                      {formatBytes(downloadProgress[model.id].completed)} / {formatBytes(downloadProgress[model.id].total)}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ))}
         </div>
       </div>
     );
+  };
+
+  // Función auxiliar para formatear bytes
+  const formatBytes = (bytes) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   return (
