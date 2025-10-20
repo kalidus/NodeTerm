@@ -23,6 +23,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [themeVersion, setThemeVersion] = useState(0);
   const [customModelId, setCustomModelId] = useState('');
   const [detectingModels, setDetectingModels] = useState(false);
+  const [remoteOllamaUrl, setRemoteOllamaUrl] = useState('');
+  const [testingConnection, setTestingConnection] = useState(false);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -70,6 +72,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
       openai: openaiKey || '',
       anthropic: anthropicKey || ''
     });
+
+    // Cargar URL de Ollama remoto
+    setRemoteOllamaUrl(aiService.remoteOllamaUrl || '');
 
     // Detectar modelos de Ollama automáticamente
     await handleDetectModels();
@@ -121,6 +126,78 @@ const AIConfigDialog = ({ visible, onHide }) => {
           life: 3000
         });
       }
+    }
+  };
+
+  const handleSaveRemoteOllamaUrl = () => {
+    if (remoteOllamaUrl.trim()) {
+      aiService.setRemoteOllamaUrl(remoteOllamaUrl.trim());
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'URL guardada',
+          detail: `Ollama remoto configurado: ${remoteOllamaUrl}`,
+          life: 2000
+        });
+      }
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!remoteOllamaUrl.trim()) {
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'warn',
+          summary: 'URL requerida',
+          detail: 'Ingresa una URL de Ollama remoto',
+          life: 2000
+        });
+      }
+      return;
+    }
+
+    setTestingConnection(true);
+    try {
+      // Configurar temporalmente la URL para probar
+      const originalUrl = aiService.remoteOllamaUrl;
+      aiService.setRemoteOllamaUrl(remoteOllamaUrl.trim());
+      
+      // Probar conexión
+      await aiService.detectOllamaModels();
+      
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Conexión exitosa',
+          detail: `Conectado a Ollama en ${remoteOllamaUrl}`,
+          life: 3000
+        });
+      }
+    } catch (error) {
+      console.error('Error probando conexión:', error);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'error',
+          summary: 'Error de conexión',
+          detail: `No se pudo conectar a ${remoteOllamaUrl}`,
+          life: 4000
+        });
+      }
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleClearRemoteOllama = () => {
+    aiService.setRemoteOllamaUrl(null);
+    setRemoteOllamaUrl('');
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'info',
+        summary: 'Configuración limpiada',
+        detail: 'Ahora se usará Ollama local',
+        life: 2000
+      });
     }
   };
 
@@ -336,6 +413,51 @@ const AIConfigDialog = ({ visible, onHide }) => {
           />
         </div>
 
+        {/* Configuración de Ollama Remoto */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ color: themeColors.textPrimary, marginBottom: '0.5rem' }}>
+            Ollama Remoto
+          </h4>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <InputText
+              value={remoteOllamaUrl}
+              onChange={(e) => setRemoteOllamaUrl(e.target.value)}
+              placeholder="http://192.168.1.100:11434"
+              style={{ flex: 1 }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveRemoteOllamaUrl();
+                }
+              }}
+            />
+            <Button
+              label="Guardar"
+              icon="pi pi-check"
+              onClick={handleSaveRemoteOllamaUrl}
+              disabled={!remoteOllamaUrl.trim()}
+            />
+            <Button
+              label="Probar"
+              icon={testingConnection ? 'pi pi-spin pi-spinner' : 'pi pi-wifi'}
+              onClick={handleTestConnection}
+              disabled={!remoteOllamaUrl.trim() || testingConnection}
+              severity="secondary"
+            />
+            {remoteOllamaUrl && (
+              <Button
+                label="Limpiar"
+                icon="pi pi-times"
+                onClick={handleClearRemoteOllama}
+                severity="danger"
+                outlined
+              />
+            )}
+          </div>
+          <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+            Configura la URL de un servidor Ollama remoto (ej: http://192.168.1.100:11434)
+          </small>
+        </div>
+
         <div style={{
           background: 'rgba(255, 193, 7, 0.1)',
           border: '1px solid rgba(255, 193, 7, 0.3)',
@@ -348,9 +470,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         }}>
           <i className="pi pi-info-circle" style={{ color: '#FFC107', marginTop: '0.1rem' }} />
           <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
-            Los modelos locales requieren <strong>Ollama</strong> ejecutándose en tu sistema.
+            Los modelos locales requieren <strong>Ollama</strong> ejecutándose.
             <br />
-            Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
+            Puedes usar Ollama local o remoto. Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
           </div>
         </div>
 
@@ -499,6 +621,156 @@ const AIConfigDialog = ({ visible, onHide }) => {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const renderRemoteOllamaConfig = () => {
+    return (
+      <div style={{ padding: '1rem' }}>
+        <h3 style={{ color: themeColors.textPrimary, marginBottom: '1rem' }}>
+          Configuración de Ollama Remoto
+        </h3>
+
+        <div style={{
+          background: 'rgba(33, 150, 243, 0.1)',
+          border: '1px solid rgba(33, 150, 243, 0.3)',
+          borderRadius: '8px',
+          padding: '0.75rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          gap: '0.5rem',
+          alignItems: 'flex-start'
+        }}>
+          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.1rem' }} />
+          <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
+            <strong>Ollama Remoto</strong> te permite usar modelos de IA instalados en otro servidor.
+            <br />
+            Útil para usar modelos más potentes o compartir recursos entre equipos.
+          </div>
+        </div>
+
+        {/* Configuración de URL */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+            URL del servidor Ollama
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <InputText
+              value={remoteOllamaUrl}
+              onChange={(e) => setRemoteOllamaUrl(e.target.value)}
+              placeholder="http://192.168.1.100:11434"
+              style={{ flex: 1 }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveRemoteOllamaUrl();
+                }
+              }}
+            />
+            <Button
+              label="Guardar"
+              icon="pi pi-check"
+              onClick={handleSaveRemoteOllamaUrl}
+              disabled={!remoteOllamaUrl.trim()}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <Button
+              label="Probar Conexión"
+              icon={testingConnection ? 'pi pi-spin pi-spinner' : 'pi pi-wifi'}
+              onClick={handleTestConnection}
+              disabled={!remoteOllamaUrl.trim() || testingConnection}
+              severity="secondary"
+              style={{ flex: 1 }}
+            />
+            {remoteOllamaUrl && (
+              <Button
+                label="Limpiar"
+                icon="pi pi-times"
+                onClick={handleClearRemoteOllama}
+                severity="danger"
+                outlined
+              />
+            )}
+          </div>
+          <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+            Ejemplos: http://192.168.1.100:11434, http://servidor.local:11434, https://ollama.miempresa.com
+          </small>
+        </div>
+
+        {/* Estado actual */}
+        <div style={{
+          background: themeColors.cardBackground,
+          border: `1px solid ${themeColors.borderColor}`,
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1rem'
+        }}>
+          <h4 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0' }}>
+            Estado Actual
+          </h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <i className="pi pi-server" style={{ color: themeColors.primaryColor }} />
+            <span style={{ color: themeColors.textSecondary }}>
+              {aiService.remoteOllamaUrl || 'http://localhost:11434'}
+            </span>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>
+            {aiService.remoteOllamaUrl ? 'Usando servidor Ollama remoto' : 'Usando Ollama local'}
+          </div>
+        </div>
+
+        {/* Instrucciones */}
+        <div style={{
+          background: 'rgba(76, 175, 80, 0.1)',
+          border: '1px solid rgba(76, 175, 80, 0.3)',
+          borderRadius: '8px',
+          padding: '0.75rem'
+        }}>
+          <h4 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
+            Configuración del servidor remoto
+          </h4>
+          <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>
+            <p style={{ margin: '0 0 0.5rem 0' }}>
+              <strong>1. Instalar Ollama en el servidor:</strong>
+            </p>
+            <code style={{ 
+              background: 'rgba(0,0,0,0.1)', 
+              padding: '0.2rem 0.4rem', 
+              borderRadius: '4px',
+              display: 'block',
+              margin: '0.25rem 0'
+            }}>
+              curl -fsSL https://ollama.ai/install.sh | sh
+            </code>
+            
+            <p style={{ margin: '0.5rem 0 0.25rem 0' }}>
+              <strong>2. Configurar acceso remoto:</strong>
+            </p>
+            <code style={{ 
+              background: 'rgba(0,0,0,0.1)', 
+              padding: '0.2rem 0.4rem', 
+              borderRadius: '4px',
+              display: 'block',
+              margin: '0.25rem 0'
+            }}>
+              OLLAMA_HOST=0.0.0.0:11434 ollama serve
+            </code>
+            
+            <p style={{ margin: '0.5rem 0 0.25rem 0' }}>
+              <strong>3. Descargar modelos en el servidor:</strong>
+            </p>
+            <code style={{ 
+              background: 'rgba(0,0,0,0.1)', 
+              padding: '0.2rem 0.4rem', 
+              borderRadius: '4px',
+              display: 'block',
+              margin: '0.25rem 0'
+            }}>
+              ollama pull llama3.2
+            </code>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog
       header="Configuración de IA"
@@ -513,6 +785,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="Modelos Locales">
           {renderLocalModels()}
+        </TabPanel>
+        <TabPanel header="Ollama Remoto">
+          {renderRemoteOllamaConfig()}
         </TabPanel>
       </TabView>
     </Dialog>
