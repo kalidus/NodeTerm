@@ -9,22 +9,23 @@ class AIService {
     this.modelType = 'remote'; // 'remote', 'local' o 'remote-ollama'
     this.apiKey = null;
     this.remoteOllamaUrl = null;
+    this.performanceConfig = null; // Configuración manual de rendimiento
     this.models = {
       remote: [
-        { id: 'gpt-4', name: 'GPT-4', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions' },
-        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions' },
-        { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages' },
-        { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages' },
+        { id: 'gpt-4', name: 'GPT-4', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', performance: 'high' },
+        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', performance: 'medium' },
+        { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages', performance: 'high' },
+        { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages', performance: 'medium' },
       ],
       local: [
-        { id: 'llama3.2', name: 'Llama 3.2 (3B)', size: '2GB', downloaded: false },
-        { id: 'llama3.1', name: 'Llama 3.1 (8B)', size: '4.7GB', downloaded: false },
-        { id: 'llama3', name: 'Llama 3 (8B)', size: '4.7GB', downloaded: false },
-        { id: 'mistral', name: 'Mistral (7B)', size: '4.1GB', downloaded: false },
-        { id: 'qwen2.5', name: 'Qwen 2.5 (7B)', size: '4.5GB', downloaded: false },
-        { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', size: '4.7GB', downloaded: false },
-        { id: 'gemma2', name: 'Gemma 2 (9B)', size: '5.4GB', downloaded: false },
-        { id: 'phi3', name: 'Phi-3 (3.8B)', size: '2.3GB', downloaded: false },
+        { id: 'llama3.2', name: 'Llama 3.2 (3B)', size: '2GB', downloaded: false, performance: 'low' },
+        { id: 'llama3.1', name: 'Llama 3.1 (8B)', size: '4.7GB', downloaded: false, performance: 'high' },
+        { id: 'llama3', name: 'Llama 3 (8B)', size: '4.7GB', downloaded: false, performance: 'high' },
+        { id: 'mistral', name: 'Mistral (7B)', size: '4.1GB', downloaded: false, performance: 'medium' },
+        { id: 'qwen2.5', name: 'Qwen 2.5 (7B)', size: '4.5GB', downloaded: false, performance: 'medium' },
+        { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', size: '4.7GB', downloaded: false, performance: 'high' },
+        { id: 'gemma2', name: 'Gemma 2 (9B)', size: '5.4GB', downloaded: false, performance: 'high' },
+        { id: 'phi3', name: 'Phi-3 (3.8B)', size: '2.3GB', downloaded: false, performance: 'low' },
       ]
     };
     this.conversationHistory = [];
@@ -43,6 +44,7 @@ class AIService {
         this.modelType = parsed.modelType || 'remote';
         this.apiKey = parsed.apiKey || null;
         this.remoteOllamaUrl = parsed.remoteOllamaUrl || null;
+        this.performanceConfig = parsed.performanceConfig || null;
         
         // Cargar estado de modelos locales descargados
         if (parsed.localModels) {
@@ -67,6 +69,7 @@ class AIService {
         modelType: this.modelType,
         apiKey: this.apiKey,
         remoteOllamaUrl: this.remoteOllamaUrl,
+        performanceConfig: this.performanceConfig,
         localModels: this.models.local.map(m => ({ id: m.id, downloaded: m.downloaded }))
       };
       localStorage.setItem('ai-service-config', JSON.stringify(config));
@@ -118,6 +121,84 @@ class AIService {
     });
     
     return functional;
+  }
+
+  /**
+   * Obtener configuración de rendimiento para un modelo
+   */
+  getModelPerformanceConfig(modelId, modelType) {
+    // Si hay configuración manual, usarla
+    if (this.performanceConfig) {
+      return this.performanceConfig;
+    }
+
+    // Si no, usar configuración automática
+    const model = this.models[modelType].find(m => m.id === modelId);
+    if (!model) return this.getDefaultPerformanceConfig();
+
+    const performanceLevel = model.performance || 'medium';
+    
+    const configs = {
+      low: {
+        maxTokens: 1000,
+        temperature: 0.7,
+        maxHistory: 5,
+        useStreaming: false,
+        contextLimit: 2000
+      },
+      medium: {
+        maxTokens: 1500,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 4000
+      },
+      high: {
+        maxTokens: 2000,
+        temperature: 0.7,
+        maxHistory: 10,
+        useStreaming: true,
+        contextLimit: 8000
+      }
+    };
+
+    return configs[performanceLevel] || configs.medium;
+  }
+
+  /**
+   * Configuración por defecto
+   */
+  getDefaultPerformanceConfig() {
+    return {
+      maxTokens: 1500,
+      temperature: 0.7,
+      maxHistory: 8,
+      useStreaming: true,
+      contextLimit: 4000
+    };
+  }
+
+  /**
+   * Establecer configuración manual de rendimiento
+   */
+  setPerformanceConfig(config) {
+    this.performanceConfig = config;
+    this.saveConfig();
+  }
+
+  /**
+   * Obtener configuración manual de rendimiento
+   */
+  getPerformanceConfig() {
+    return this.performanceConfig;
+  }
+
+  /**
+   * Limpiar configuración manual (volver a automática)
+   */
+  clearPerformanceConfig() {
+    this.performanceConfig = null;
+    this.saveConfig();
   }
 
   /**
@@ -241,6 +322,20 @@ class AIService {
       throw new Error('No se ha seleccionado ningún modelo');
     }
 
+    // Obtener configuración de rendimiento automática
+    const perfConfig = this.getModelPerformanceConfig(this.currentModel, this.modelType);
+    
+    // Combinar opciones con configuración automática
+    const finalOptions = {
+      ...perfConfig,
+      ...options
+    };
+
+    // Limitar historial si es necesario
+    if (this.conversationHistory.length > finalOptions.maxHistory) {
+      this.conversationHistory = this.conversationHistory.slice(-finalOptions.maxHistory);
+    }
+
     // Agregar mensaje al historial
     this.conversationHistory.push({
       role: 'user',
@@ -252,9 +347,9 @@ class AIService {
       let response;
       
       if (this.modelType === 'remote') {
-        response = await this.sendToRemoteModel(message, options);
+        response = await this.sendToRemoteModel(message, finalOptions);
       } else {
-        response = await this.sendToLocalModel(message, options);
+        response = await this.sendToLocalModel(message, finalOptions);
       }
 
       // Agregar respuesta al historial
@@ -369,36 +464,13 @@ class AIService {
         content: msg.content
       }));
 
-       const ollamaUrl = this.getOllamaUrl();
-       const response = await fetch(`${ollamaUrl}/api/chat`, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json'
-         },
-        body: JSON.stringify({
-          model: model.id,
-          messages: messages,
-          stream: false,
-          options: {
-            temperature: options.temperature || 0.7,
-            num_predict: options.maxTokens || 2000
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error de Ollama:', errorText);
-        throw new Error(`Error del servidor Ollama (${response.status})`);
-      }
-
-      const data = await response.json();
+      const ollamaUrl = this.getOllamaUrl();
       
-      // La respuesta de Ollama viene en data.message.content
-      if (data.message && data.message.content) {
-        return data.message.content;
+      // Usar streaming si está habilitado
+      if (options.useStreaming) {
+        return await this.sendToLocalModelStreaming(model.id, messages, options);
       } else {
-        throw new Error('Respuesta inválida del modelo local');
+        return await this.sendToLocalModelNonStreaming(model.id, messages, options);
       }
     } catch (error) {
       console.error('Error llamando a modelo local:', error);
@@ -412,6 +484,102 @@ class AIService {
         throw error;
       }
     }
+  }
+
+  /**
+   * Enviar mensaje a modelo local sin streaming
+   */
+  async sendToLocalModelNonStreaming(modelId, messages, options) {
+    const ollamaUrl = this.getOllamaUrl();
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: messages,
+        stream: false,
+        options: {
+          temperature: options.temperature || 0.7,
+          num_predict: options.maxTokens || 1500
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error de Ollama:', errorText);
+      throw new Error(`Error del servidor Ollama (${response.status})`);
+    }
+
+    const data = await response.json();
+    
+    // La respuesta de Ollama viene en data.message.content
+    if (data.message && data.message.content) {
+      return data.message.content;
+    } else {
+      throw new Error('Respuesta inválida del modelo local');
+    }
+  }
+
+  /**
+   * Enviar mensaje a modelo local con streaming
+   */
+  async sendToLocalModelStreaming(modelId, messages, options) {
+    const ollamaUrl = this.getOllamaUrl();
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: messages,
+        stream: true,
+        options: {
+          temperature: options.temperature || 0.7,
+          num_predict: options.maxTokens || 1500
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error de Ollama:', errorText);
+      throw new Error(`Error del servidor Ollama (${response.status})`);
+    }
+
+    // Leer el stream de respuesta
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+        
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.message && data.message.content) {
+              fullResponse += data.message.content;
+            }
+          } catch (e) {
+            // Ignorar líneas que no sean JSON válido
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return fullResponse;
   }
 
   /**

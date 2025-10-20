@@ -25,6 +25,14 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [detectingModels, setDetectingModels] = useState(false);
   const [remoteOllamaUrl, setRemoteOllamaUrl] = useState('');
   const [testingConnection, setTestingConnection] = useState(false);
+  const [performanceConfig, setPerformanceConfig] = useState({
+    maxTokens: 1500,
+    temperature: 0.7,
+    maxHistory: 8,
+    useStreaming: true,
+    contextLimit: 4000
+  });
+  const [useManualConfig, setUseManualConfig] = useState(false);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -75,6 +83,13 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
     // Cargar URL de Ollama remoto
     setRemoteOllamaUrl(aiService.remoteOllamaUrl || '');
+
+    // Cargar configuración de rendimiento
+    const perfConfig = aiService.getPerformanceConfig();
+    if (perfConfig) {
+      setPerformanceConfig(perfConfig);
+      setUseManualConfig(true);
+    }
 
     // Detectar modelos de Ollama automáticamente
     await handleDetectModels();
@@ -300,6 +315,36 @@ const AIConfigDialog = ({ visible, onHide }) => {
         });
       }
     }
+  };
+
+  const handleSavePerformanceConfig = () => {
+    if (useManualConfig) {
+      aiService.setPerformanceConfig(performanceConfig);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Configuración guardada',
+          detail: 'Configuración de rendimiento guardada correctamente',
+          life: 2000
+        });
+      }
+    } else {
+      aiService.clearPerformanceConfig();
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'info',
+          summary: 'Configuración automática',
+          detail: 'Se usará la configuración automática por modelo',
+          life: 2000
+        });
+      }
+    }
+  };
+
+  const handleResetPerformanceConfig = () => {
+    const defaultConfig = aiService.getDefaultPerformanceConfig();
+    setPerformanceConfig(defaultConfig);
+    setUseManualConfig(false);
   };
 
   const renderRemoteModels = () => {
@@ -621,6 +666,187 @@ const AIConfigDialog = ({ visible, onHide }) => {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const renderPerformanceConfig = () => {
+    return (
+      <div style={{ padding: '1rem' }}>
+        <h3 style={{ color: themeColors.textPrimary, marginBottom: '1rem' }}>
+          Configuración de Rendimiento
+        </h3>
+
+        <div style={{
+          background: 'rgba(33, 150, 243, 0.1)',
+          border: '1px solid rgba(33, 150, 243, 0.3)',
+          borderRadius: '8px',
+          padding: '0.75rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          gap: '0.5rem',
+          alignItems: 'flex-start'
+        }}>
+          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.1rem' }} />
+          <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
+            <strong>Configuración automática:</strong> Se ajusta automáticamente según el modelo seleccionado.
+            <br />
+            <strong>Configuración manual:</strong> Ajusta manualmente los parámetros de rendimiento.
+          </div>
+        </div>
+
+        {/* Toggle para configuración manual */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <input
+              type="checkbox"
+              id="useManualConfig"
+              checked={useManualConfig}
+              onChange={(e) => setUseManualConfig(e.target.checked)}
+              style={{ transform: 'scale(1.2)' }}
+            />
+            <label htmlFor="useManualConfig" style={{ color: themeColors.textPrimary, cursor: 'pointer' }}>
+              Usar configuración manual de rendimiento
+            </label>
+          </div>
+        </div>
+
+        {useManualConfig && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Max Tokens */}
+            <div>
+              <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+                Máximo de tokens (100-4000)
+              </label>
+              <InputText
+                type="number"
+                value={performanceConfig.maxTokens}
+                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, maxTokens: parseInt(e.target.value) || 1500 }))}
+                min="100"
+                max="4000"
+                style={{ width: '100%' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+                Número máximo de tokens en la respuesta (menos = más rápido)
+              </small>
+            </div>
+
+            {/* Temperature */}
+            <div>
+              <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+                Temperatura (0.1-2.0)
+              </label>
+              <InputText
+                type="number"
+                step="0.1"
+                value={performanceConfig.temperature}
+                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, temperature: parseFloat(e.target.value) || 0.7 }))}
+                min="0.1"
+                max="2.0"
+                style={{ width: '100%' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+                Creatividad de las respuestas (0.1 = conservador, 2.0 = muy creativo)
+              </small>
+            </div>
+
+            {/* Max History */}
+            <div>
+              <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+                Máximo de mensajes en historial (3-20)
+              </label>
+              <InputText
+                type="number"
+                value={performanceConfig.maxHistory}
+                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, maxHistory: parseInt(e.target.value) || 8 }))}
+                min="3"
+                max="20"
+                style={{ width: '100%' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+                Número de mensajes anteriores a recordar (menos = menos memoria)
+              </small>
+            </div>
+
+            {/* Context Limit */}
+            <div>
+              <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+                Límite de contexto (1000-16000)
+              </label>
+              <InputText
+                type="number"
+                value={performanceConfig.contextLimit}
+                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, contextLimit: parseInt(e.target.value) || 4000 }))}
+                min="1000"
+                max="16000"
+                style={{ width: '100%' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+                Límite total de caracteres en el contexto (menos = más rápido)
+              </small>
+            </div>
+
+            {/* Use Streaming */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  id="useStreaming"
+                  checked={performanceConfig.useStreaming}
+                  onChange={(e) => setPerformanceConfig(prev => ({ ...prev, useStreaming: e.target.checked }))}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <label htmlFor="useStreaming" style={{ color: themeColors.textPrimary, cursor: 'pointer' }}>
+                  Usar streaming (recomendado para modelos locales)
+                </label>
+              </div>
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+                El streaming reduce el uso de memoria y mejora la respuesta
+              </small>
+            </div>
+          </div>
+        )}
+
+        {/* Botones de acción */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+          <Button
+            label="Guardar"
+            icon="pi pi-check"
+            onClick={handleSavePerformanceConfig}
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Restablecer"
+            icon="pi pi-refresh"
+            onClick={handleResetPerformanceConfig}
+            severity="secondary"
+            outlined
+          />
+        </div>
+
+        {/* Información adicional */}
+        <div style={{
+          background: 'rgba(76, 175, 80, 0.1)',
+          border: '1px solid rgba(76, 175, 80, 0.3)',
+          borderRadius: '8px',
+          padding: '0.75rem',
+          marginTop: '1rem'
+        }}>
+          <h4 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
+            Consejos de rendimiento
+          </h4>
+          <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>
+            <p style={{ margin: '0 0 0.5rem 0' }}>
+              <strong>Para modelos pesados (Llama 3.1, GPT-4):</strong> Reduce maxTokens (1000-1500) y maxHistory (5-8)
+            </p>
+            <p style={{ margin: '0 0 0.5rem 0' }}>
+              <strong>Para modelos ligeros (Llama 3.2, Phi-3):</strong> Puedes usar valores más altos
+            </p>
+            <p style={{ margin: '0' }}>
+              <strong>Streaming:</strong> Siempre activado para modelos locales mejora la experiencia
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderRemoteOllamaConfig = () => {
     return (
       <div style={{ padding: '1rem' }}>
@@ -788,6 +1014,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="Ollama Remoto">
           {renderRemoteOllamaConfig()}
+        </TabPanel>
+        <TabPanel header="Rendimiento">
+          {renderPerformanceConfig()}
         </TabPanel>
       </TabView>
     </Dialog>
