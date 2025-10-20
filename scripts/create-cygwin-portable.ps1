@@ -2,7 +2,7 @@
 # Ejecutar: .\scripts\create-cygwin-portable.ps1
 
 param(
-    [string]$OutputDir = ".\resources\cygwin64",
+    [string]$OutputDir = "",
     [switch]$Minimal,
     [switch]$NoUltraComplete,
     [switch]$UseTemp
@@ -10,13 +10,22 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Obtener la ruta absoluta del directorio raíz del proyecto
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = Split-Path -Parent $ScriptDir
+
+# Si no se especifica OutputDir, usar la ruta por defecto en la raíz del proyecto
+if ([string]::IsNullOrEmpty($OutputDir)) {
+    $OutputDir = Join-Path $ProjectRoot "resources\cygwin64"
+}
+
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host "  Creando Cygwin Portable para NodeTerm" -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""
 
 $CYGWIN_URL = "https://cygwin.com/setup-x86_64.exe"
-$SETUP_FILE = ".\cygwin-setup-temp.exe"
+$SETUP_FILE = Join-Path $ProjectRoot "cygwin-setup-temp.exe"
 
 # Paquetes minimos
 $MINIMAL_PACKAGES = "bash,coreutils,grep,sed,gawk,findutils,which,less,ncurses"
@@ -47,6 +56,7 @@ if ($UseTemp) {
 }
 
 Write-Host "Configuracion:" -ForegroundColor Yellow
+Write-Host "   Proyecto: $ProjectRoot"
 Write-Host "   Output: $OutputDir"
 $mode = if ($Minimal) { 'Minimal' } elseif ($NoUltraComplete) { 'Full' } else { 'Ultra Complete' }
 Write-Host "   Mode: $mode"
@@ -179,7 +189,7 @@ Write-Host "   Setup eliminado" -ForegroundColor Green
 # Limpiar directorios basura creados por el instalador
 Write-Host ""
 Write-Host "Limpiando directorios basura..." -ForegroundColor Cyan
-Get-ChildItem -Path "." -Directory | Where-Object { 
+Get-ChildItem -Path $ProjectRoot -Directory | Where-Object { 
     $_.Name -like "http*" -or 
     $_.Name -like "ftp*" -or 
     $_.Name -like "*%*" 
