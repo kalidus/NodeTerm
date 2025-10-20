@@ -89,6 +89,38 @@ class AIService {
   }
 
   /**
+   * Obtener solo los modelos funcionales (con API key o descargados)
+   */
+  getFunctionalModels() {
+    const functional = [];
+    
+    // Modelos remotos con API key configurada
+    this.models.remote.forEach(model => {
+      const apiKey = this.getApiKey(model.provider);
+      if (apiKey) {
+        functional.push({
+          ...model,
+          type: 'remote',
+          displayName: `${model.name} (${model.provider})`
+        });
+      }
+    });
+    
+    // Modelos locales descargados
+    this.models.local.forEach(model => {
+      if (model.downloaded) {
+        functional.push({
+          ...model,
+          type: 'local',
+          displayName: `${model.name} (Local)`
+        });
+      }
+    });
+    
+    return functional;
+  }
+
+  /**
    * Detectar modelos instalados en Ollama
    */
   async detectOllamaModels() {

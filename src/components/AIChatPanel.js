@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Dropdown } from 'primereact/dropdown';
 import { aiService } from '../services/AIService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -12,6 +13,7 @@ const AIChatPanel = () => {
   const [modelType, setModelType] = useState('remote');
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [themeVersion, setThemeVersion] = useState(0);
+  const [functionalModels, setFunctionalModels] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -46,6 +48,10 @@ const AIChatPanel = () => {
     const config = aiService.loadConfig();
     setCurrentModel(aiService.currentModel);
     setModelType(aiService.modelType);
+    
+    // Cargar modelos funcionales
+    const functional = aiService.getFunctionalModels();
+    setFunctionalModels(functional);
     
     // Cargar historial si existe
     const history = aiService.getHistory();
@@ -118,6 +124,12 @@ const AIChatPanel = () => {
   const handleClearChat = () => {
     setMessages([]);
     aiService.clearHistory();
+  };
+
+  const handleModelChange = (modelId, modelType) => {
+    aiService.setCurrentModel(modelId, modelType);
+    setCurrentModel(modelId);
+    setModelType(modelType);
   };
 
   const formatTimestamp = (timestamp) => {
@@ -214,6 +226,75 @@ const AIChatPanel = () => {
 
           .ai-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(255,255,255,0.3);
+          }
+
+          .ai-model-dropdown .p-dropdown {
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid ${themeColors.borderColor} !important;
+            border-radius: 12px !important;
+            color: ${themeColors.textPrimary} !important;
+            transition: all 0.2s ease !important;
+          }
+
+          .ai-model-dropdown .p-dropdown:not(.p-disabled):hover {
+            background: rgba(255,255,255,0.08) !important;
+            border-color: ${themeColors.borderColor} !important;
+          }
+
+          .ai-model-dropdown .p-dropdown:not(.p-disabled).p-focus {
+            border-color: ${themeColors.primaryColor} !important;
+            box-shadow: 0 0 0 2px ${themeColors.primaryColor}33 !important;
+          }
+
+          .ai-model-dropdown .p-dropdown-label {
+            color: ${themeColors.textPrimary} !important;
+            padding: 0.75rem 1rem !important;
+            font-size: 0.9rem !important;
+          }
+
+          .ai-model-dropdown .p-dropdown-trigger {
+            color: ${themeColors.textPrimary} !important;
+          }
+
+          .ai-model-dropdown .p-dropdown.p-disabled {
+            opacity: 0.5;
+            background: rgba(255,255,255,0.03) !important;
+          }
+
+          .p-dropdown-panel {
+            background: ${themeColors.cardBackground} !important;
+            border: 1px solid ${themeColors.borderColor} !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+          }
+
+          .p-dropdown-panel .p-dropdown-items {
+            padding: 0.5rem !important;
+          }
+
+          .p-dropdown-panel .p-dropdown-item {
+            color: ${themeColors.textPrimary} !important;
+            background: transparent !important;
+            padding: 0.75rem 1rem !important;
+            border-radius: 8px !important;
+            margin: 0.25rem 0 !important;
+            transition: all 0.2s ease !important;
+            font-size: 0.9rem !important;
+          }
+
+          .p-dropdown-panel .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
+            background: ${themeColors.hoverBackground} !important;
+            color: ${themeColors.textPrimary} !important;
+          }
+
+          .p-dropdown-panel .p-dropdown-item.p-highlight {
+            background: ${themeColors.primaryColor}40 !important;
+            color: ${themeColors.textPrimary} !important;
+          }
+
+          .p-dropdown-panel .p-dropdown-empty-message {
+            color: ${themeColors.textSecondary} !important;
+            padding: 0.75rem 1rem !important;
           }
         `}
       </style>
@@ -426,6 +507,34 @@ const AIChatPanel = () => {
               rows={1}
             />
 
+            {/* Selector de modelos */}
+            <Dropdown
+              value={currentModel || null}
+              options={functionalModels}
+              onChange={(e) => {
+                const selectedModel = functionalModels.find(m => m.id === e.value);
+                if (selectedModel) {
+                  handleModelChange(selectedModel.id, selectedModel.type);
+                }
+              }}
+              optionLabel="displayName"
+              optionValue="id"
+              placeholder={functionalModels.length === 0 ? "Sin modelos" : "Selecciona modelo"}
+              disabled={isLoading || functionalModels.length === 0}
+              className="ai-model-dropdown"
+              style={{
+                minWidth: '180px',
+                maxWidth: '220px',
+                height: '48px'
+              }}
+              panelStyle={{
+                background: themeColors.cardBackground,
+                border: `1px solid ${themeColors.borderColor}`,
+                borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+              }}
+            />
+
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !inputValue.trim() || !currentModel}
@@ -453,7 +562,7 @@ const AIChatPanel = () => {
             </button>
           </div>
 
-          {!currentModel && (
+          {!currentModel && functionalModels.length === 0 && (
             <div
               style={{
                 marginTop: '0.5rem',
@@ -478,6 +587,9 @@ const AIChatPanel = () => {
             // Recargar configuración después de cerrar el diálogo
             setCurrentModel(aiService.currentModel);
             setModelType(aiService.modelType);
+            // Recargar modelos funcionales
+            const functional = aiService.getFunctionalModels();
+            setFunctionalModels(functional);
           }}
         />
       </div>
