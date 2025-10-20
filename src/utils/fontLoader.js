@@ -38,7 +38,6 @@ class FontLoader {
       link.onload = () => {
         link.media = 'all';
         this.loadedFonts.add(fontKey);
-        console.log(`[FontLoader] Fuente Google Fonts cargada: ${fontFamily}`);
       };
       
       // Agregar al head
@@ -49,7 +48,6 @@ class FontLoader {
         link.onload = () => {
           link.media = 'all';
           this.loadedFonts.add(fontKey);
-          console.log(`[FontLoader] Fuente Google Fonts cargada: ${fontFamily}`);
           resolve(true);
         };
         link.onerror = () => {
@@ -100,7 +98,6 @@ class FontLoader {
         link.onload = () => {
           link.media = 'all';
           this.loadedFonts.add(fontFamily);
-          console.log(`[FontLoader] Fuente personalizada cargada: ${fontFamily}`);
           resolve(true);
         };
         link.onerror = () => {
@@ -155,10 +152,8 @@ class FontLoader {
       { family: 'Cascadia Code', weights: [400, 600] }
     ];
 
-    console.log('[FontLoader] Precargando fuentes comunes...');
     const results = await this.loadMultipleGoogleFonts(commonFonts);
     const loadedCount = results.filter(result => result).length;
-    console.log(`[FontLoader] ${loadedCount}/${commonFonts.length} fuentes precargadas`);
   }
 
   /**
