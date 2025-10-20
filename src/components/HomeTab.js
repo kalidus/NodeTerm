@@ -8,6 +8,7 @@ import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
 import QuickAccessSidebar from './QuickAccessSidebar';
 import NodeTermStatus from './NodeTermStatus';
+import AIChatPanel from './AIChatPanel';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
@@ -36,6 +37,7 @@ const HomeTab = ({
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
+  const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
   const versionInfo = getVersionInfo();
   const tabbedTerminalRef = useRef();
 
@@ -356,6 +358,11 @@ const HomeTab = ({
     setIsTerminalTransitioning(false);
   };
 
+  // Función para toggle del chat de IA
+  const handleToggleAIChat = () => {
+    setShowAIChat(prev => !prev);
+  };
+
   // Determinar el tamaño del panel superior
   const getTopPanelSize = () => {
     // Si el terminal está oculto, el dashboard ocupa toda la pantalla
@@ -417,10 +424,41 @@ const HomeTab = ({
             onOpenFileExplorer={onOpenFileExplorer}
             onOpenSettings={onOpenSettings}
             onToggleTerminalVisibility={handleToggleTerminalVisibility}
+            onToggleAIChat={handleToggleAIChat}
+            showAIChat={showAIChat}
             sshConnectionsCount={sshConnectionsCount}
             foldersCount={foldersCount}
           />
 
+          {/* Mostrar Chat de IA o contenido normal */}
+          {showAIChat ? (
+            // Panel de Chat de IA
+            <div style={{
+              flex: 1,
+              padding: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                flex: 1,
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: `1px solid ${themeColors.cardBorder}`,
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                overflow: 'hidden'
+              }}>
+                <AIChatPanel />
+              </div>
+            </div>
+          ) : (
+            // Contenido normal de la página de inicio
+            <>
           {/* Columna central: Layout reorganizado con tarjetas arriba y favoritos abajo */}
           <div style={{
             flex: 1,
@@ -1002,6 +1040,8 @@ const HomeTab = ({
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>
