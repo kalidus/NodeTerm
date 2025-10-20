@@ -30,6 +30,7 @@ export function SSHDialog({
   loading = false
 }) {
   const isEdit = mode === 'edit';
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <Dialog header={isEdit ? 'Editar conexión SSH' : 'Nueva conexión SSH'} visible={visible} style={{ width: '370px', borderRadius: 16 }} modal onHide={onHide}>
       <div className="p-fluid" style={{ padding: 8 }}>
@@ -47,7 +48,22 @@ export function SSHDialog({
         </div>
         <div className="p-field" style={{ marginBottom: 14 }}>
           <label htmlFor="sshPassword">Contraseña</label>
-          <InputText id="sshPassword" type="password" value={password} onChange={e => setPassword(e.target.value)} />
+          <div className="p-inputgroup">
+            <InputText 
+              id="sshPassword" 
+              type={showPassword ? "text" : "password"} 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+            />
+            <Button 
+              type="button" 
+              icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+              className="p-button-outlined"
+              onClick={() => setShowPassword(!showPassword)}
+              tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              tooltipOptions={{ position: 'top' }}
+            />
+          </div>
         </div>
         <div className="p-field" style={{ marginBottom: 14 }}>
           <label htmlFor="sshPort">Puerto</label>
@@ -301,6 +317,7 @@ export function UnifiedConnectionDialog({
 }) {
   const [activeTabIndex, setActiveTabIndex] = useState(0); // 0 = SSH, 1 = RDP, 2 = Password
   const [isExpanded, setIsExpanded] = useState(false); // Estado para controlar si está expandido
+  const [showRdpPassword, setShowRdpPassword] = useState(false); // Estado para mostrar/ocultar contraseña RDP
   
   // Estados para RDP
   const [formData, setFormData] = useState({
@@ -562,14 +579,24 @@ export function UnifiedConnectionDialog({
                       </div>
                       <div className="field col-12">
                         <label htmlFor="password-edit">Contraseña</label>
-                        <InputText
-                          id="password-edit"
-                          type="password"
-                          value={formData.password}
-                          onChange={handleTextChange('password')}
-                          placeholder="Contraseña (opcional)"
-                          autoComplete="off"
-                        />
+                        <div className="p-inputgroup">
+                          <InputText
+                            id="password-edit"
+                            type={showRdpPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={handleTextChange('password')}
+                            placeholder="Contraseña (opcional)"
+                            autoComplete="off"
+                          />
+                          <Button 
+                            type="button" 
+                            icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                            className="p-button-outlined"
+                            onClick={() => setShowRdpPassword(!showRdpPassword)}
+                            tooltip={showRdpPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            tooltipOptions={{ position: 'top' }}
+                          />
+                        </div>
                       </div>
                       <div className="field col-12">
                         <label htmlFor="clientType-edit">💻 Cliente</label>
@@ -858,14 +885,24 @@ export function UnifiedConnectionDialog({
                       </div>
                       <div className="field col-12">
                         <label htmlFor="password-edit">Contraseña</label>
-                        <InputText
-                          id="password-edit"
-                          type="password"
-                          value={formData.password}
-                          onChange={handleTextChange('password')}
-                          placeholder="Contraseña (opcional)"
-                          autoComplete="off"
-                        />
+                        <div className="p-inputgroup">
+                          <InputText
+                            id="password-edit"
+                            type={showRdpPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={handleTextChange('password')}
+                            placeholder="Contraseña (opcional)"
+                            autoComplete="off"
+                          />
+                          <Button 
+                            type="button" 
+                            icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                            className="p-button-outlined"
+                            onClick={() => setShowRdpPassword(!showRdpPassword)}
+                            tooltip={showRdpPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                            tooltipOptions={{ position: 'top' }}
+                          />
+                        </div>
                       </div>
                       <div className="field col-12">
                         <label htmlFor="clientType-edit">💻 Cliente</label>
@@ -1096,6 +1133,7 @@ function PasswordCreateForm({ foldersOptions = [], onCreate }) {
   const [group, setGroup] = React.useState('');
   const [notes, setNotes] = React.useState('');
   const [targetFolder, setTargetFolder] = React.useState(null);
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const canCreate = title.trim().length > 0;
 
@@ -1112,7 +1150,22 @@ function PasswordCreateForm({ foldersOptions = [], onCreate }) {
         </div>
         <div className="field col-6">
           <label htmlFor="pwdPass">Contraseña</label>
-          <InputText id="pwdPass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div className="p-inputgroup">
+            <InputText 
+              id="pwdPass" 
+              type={showPassword ? "text" : "password"} 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
+            <Button 
+              type="button" 
+              icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+              className="p-button-outlined"
+              onClick={() => setShowPassword(!showPassword)}
+              tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              tooltipOptions={{ position: 'top' }}
+            />
+          </div>
         </div>
         <div className="field col-12">
           <label htmlFor="pwdUrl">URL</label>
@@ -1157,6 +1210,7 @@ export function EnhancedSSHForm({
   const [authMethod, setAuthMethod] = useState('password'); // 'password' | 'key'
   const [sshPrivateKey, setSSHPrivateKey] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   // Validación solo al intentar crear la conexión
   const validateForm = () => {
@@ -1287,14 +1341,24 @@ export function EnhancedSSHForm({
                 {authMethod === 'password' && (
                   <div className="field col-12">
                     <label htmlFor="sshPassword">Contraseña *</label>
-                    <InputText 
-                      id="sshPassword"
-                      type="password" 
-                      value={sshPassword} 
-                      onChange={(e) => setSSHPassword(e.target.value)}
-                      placeholder="Ingresa tu contraseña"
-                      className={validationErrors.auth ? 'p-invalid' : ''}
-                    />
+                    <div className="p-inputgroup">
+                      <InputText 
+                        id="sshPassword"
+                        type={showPassword ? "text" : "password"} 
+                        value={sshPassword} 
+                        onChange={(e) => setSSHPassword(e.target.value)}
+                        placeholder="Ingresa tu contraseña"
+                        className={validationErrors.auth ? 'p-invalid' : ''}
+                      />
+                      <Button 
+                        type="button" 
+                        icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
+                        className="p-button-outlined"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tooltip={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        tooltipOptions={{ position: 'top' }}
+                      />
+                    </div>
                     {validationErrors.auth && <small className="p-error">{validationErrors.auth}</small>}
                   </div>
                 )}
