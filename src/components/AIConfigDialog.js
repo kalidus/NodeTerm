@@ -352,10 +352,29 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
   const renderRemoteModels = () => {
     return (
-      <div style={{ padding: '1rem' }}>
-        <h3 style={{ color: themeColors.textPrimary, marginBottom: '1rem' }}>
-          Modelos Remotos
-        </h3>
+      <div style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
+            borderRadius: '12px',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '80px',
+            height: '80px'
+          }}>
+            <i className="pi pi-cloud" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+          </div>
+          <div>
+            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+              Modelos Remotos
+            </h2>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+              Conecta con servicios de IA en la nube para acceso a modelos avanzados
+            </p>
+          </div>
+        </div>
 
         {/* API Keys */}
         <div style={{ marginBottom: '2rem' }}>
@@ -434,7 +453,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </div>
 
         {/* Lista de modelos remotos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {remoteModels.map(model => (
             <div
               key={model.id}
@@ -443,8 +462,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
                   : themeColors.cardBackground,
                 border: `1px solid ${currentModel === model.id && modelType === 'remote' ? themeColors.primaryColor : themeColors.borderColor}`,
-                borderRadius: '8px',
-                padding: '1rem',
+                borderRadius: '12px',
+                padding: '1.25rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
@@ -529,11 +548,28 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
   const renderLocalModels = () => {
     return (
-      <div style={{ padding: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ color: themeColors.textPrimary, margin: 0 }}>
-            Modelos Locales
-          </h3>
+      <div style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
+            borderRadius: '12px',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '80px',
+            height: '80px'
+          }}>
+            <i className="pi pi-desktop" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+              Modelos Locales
+            </h2>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+              Modelos de IA ejecutados localmente en tu dispositivo para máxima privacidad
+            </p>
+          </div>
           <Button
             label="Detectar Modelos"
             icon={detectingModels ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
@@ -543,66 +579,24 @@ const AIConfigDialog = ({ visible, onHide }) => {
           />
         </div>
 
-        {/* Configuración de Ollama Remoto */}
-        <div style={{ marginBottom: '1rem' }}>
-          <h4 style={{ color: themeColors.textPrimary, marginBottom: '0.5rem' }}>
-            Ollama Remoto
-          </h4>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <InputText
-              value={remoteOllamaUrl}
-              onChange={(e) => setRemoteOllamaUrl(e.target.value)}
-              placeholder="http://192.168.1.100:11434"
-              style={{ flex: 1 }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSaveRemoteOllamaUrl();
-                }
-              }}
-            />
-            <Button
-              label="Guardar"
-              icon="pi pi-check"
-              onClick={handleSaveRemoteOllamaUrl}
-              disabled={!remoteOllamaUrl.trim()}
-            />
-            <Button
-              label="Probar"
-              icon={testingConnection ? 'pi pi-spin pi-spinner' : 'pi pi-wifi'}
-              onClick={handleTestConnection}
-              disabled={!remoteOllamaUrl.trim() || testingConnection}
-              severity="secondary"
-            />
-            {remoteOllamaUrl && (
-              <Button
-                label="Limpiar"
-                icon="pi pi-times"
-                onClick={handleClearRemoteOllama}
-                severity="danger"
-                outlined
-              />
-            )}
-          </div>
-          <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
-            Configura la URL de un servidor Ollama remoto (ej: http://192.168.1.100:11434)
-          </small>
-        </div>
 
         <div style={{
           background: 'rgba(255, 193, 7, 0.1)',
           border: '1px solid rgba(255, 193, 7, 0.3)',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '1rem',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
           display: 'flex',
-          gap: '0.5rem',
+          gap: '0.75rem',
           alignItems: 'flex-start'
         }}>
-          <i className="pi pi-info-circle" style={{ color: '#FFC107', marginTop: '0.1rem' }} />
-          <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
-            Los modelos locales requieren <strong>Ollama</strong> ejecutándose.
-            <br />
-            Puedes usar Ollama local o remoto. Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
+          <i className="pi pi-lightbulb" style={{ color: '#FFC107', marginTop: '0.2rem', fontSize: '1.1rem' }} />
+          <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
+            <strong>💡 Información importante:</strong><br />
+            • <strong>Modelos Ollama:</strong> Requieren Ollama instalado y ejecutándose localmente<br />
+            • <strong>Modelos Independientes:</strong> No requieren Ollama, funcionan directamente<br />
+            • Puedes usar Ollama local o remoto para los modelos Ollama<br />
+            • Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
           </div>
         </div>
 
@@ -635,8 +629,24 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </small>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {localModels.map(model => (
+        {/* Modelos Ollama */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h4 style={{ color: themeColors.textPrimary, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <i className="pi pi-server" style={{ color: themeColors.primaryColor }} />
+            Modelos Ollama
+            <span style={{ 
+              background: 'rgba(33, 150, 243, 0.1)', 
+              color: themeColors.primaryColor, 
+              padding: '0.1rem 0.5rem', 
+              borderRadius: '12px', 
+              fontSize: '0.7rem',
+              border: `1px solid ${themeColors.primaryColor}30`
+            }}>
+              Requiere Ollama
+            </span>
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {localModels.filter(model => model.platform === 'ollama').map(model => (
             <div
               key={model.id}
               style={{
@@ -644,8 +654,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
                   : themeColors.cardBackground,
                 border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
-                borderRadius: '8px',
-                padding: '1rem',
+                borderRadius: '12px',
+                padding: '1.25rem',
                 transition: 'all 0.2s ease',
                 opacity: model.downloaded ? 1 : 0.6
               }}
@@ -791,6 +801,164 @@ const AIConfigDialog = ({ visible, onHide }) => {
               )}
             </div>
           ))}
+          </div>
+        </div>
+
+        {/* Modelos Independientes */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h4 style={{ color: themeColors.textPrimary, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <i className="pi pi-desktop" style={{ color: '#4CAF50' }} />
+            Modelos Independientes
+            <span style={{ 
+              background: 'rgba(76, 175, 80, 0.1)', 
+              color: '#4CAF50', 
+              padding: '0.1rem 0.5rem', 
+              borderRadius: '12px', 
+              fontSize: '0.7rem',
+              border: '1px solid rgba(76, 175, 80, 0.3)'
+            }}>
+              No requiere Ollama
+            </span>
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {localModels.filter(model => model.platform === 'independent').map(model => (
+            <div
+              key={model.id}
+              style={{
+                background: currentModel === model.id && modelType === 'local'
+                  ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
+                  : themeColors.cardBackground,
+                border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
+                borderRadius: '12px',
+                padding: '1.25rem',
+                transition: 'all 0.2s ease',
+                opacity: model.downloaded ? 1 : 0.6
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
+                      {model.name}
+                    </h4>
+                    <span style={{
+                      background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                      color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
+                      padding: '0.1rem 0.5rem',
+                      borderRadius: '12px',
+                      fontSize: '0.7rem',
+                      fontWeight: '500',
+                      border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                    }}>
+                      {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
+                    </span>
+                    <span style={{
+                      background: 'rgba(76, 175, 80, 0.2)',
+                      color: '#4CAF50',
+                      padding: '0.1rem 0.5rem',
+                      borderRadius: '12px',
+                      fontSize: '0.7rem',
+                      fontWeight: '500',
+                      border: '1px solid rgba(76, 175, 80, 0.4)'
+                    }}>
+                      🚀 {model.platformName}
+                    </span>
+                    {model.downloaded && (
+                      <span style={{
+                        background: 'rgba(76, 175, 80, 0.2)',
+                        color: '#4CAF50',
+                        padding: '0.1rem 0.5rem',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        fontWeight: '500',
+                        border: '1px solid rgba(76, 175, 80, 0.4)'
+                      }}>
+                        ✓ Instalado
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                    💾 Tamaño: {model.size}
+                  </p>
+                  
+                  {model.description && (
+                    <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
+                      {model.description}
+                    </p>
+                  )}
+                  
+                  {model.useCases && model.useCases.length > 0 && (
+                    <div style={{ margin: '0.5rem 0' }}>
+                      <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
+                        💼 Casos de uso:
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                        {model.useCases.slice(0, 3).map((useCase, index) => (
+                          <span key={index} style={{
+                            background: themeColors.primaryColor + '20',
+                            color: themeColors.primaryColor,
+                            padding: '0.1rem 0.4rem',
+                            borderRadius: '8px',
+                            fontSize: '0.7rem',
+                            border: `1px solid ${themeColors.primaryColor}40`
+                          }}>
+                            {useCase}
+                          </span>
+                        ))}
+                        {model.useCases.length > 3 && (
+                          <span style={{
+                            color: themeColors.textSecondary,
+                            fontSize: '0.7rem'
+                          }}>
+                            +{model.useCases.length - 3} más
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {model.bestFor && (
+                    <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      👤 {model.bestFor}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {model.downloaded ? (
+                    <>
+                      {currentModel === model.id && modelType === 'local' && (
+                        <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
+                      )}
+                      <Button
+                        label="Usar"
+                        icon="pi pi-play"
+                        onClick={() => handleSelectModel(model.id, 'local')}
+                        size="small"
+                        disabled={currentModel === model.id}
+                      />
+                      <Button
+                        label="Eliminar"
+                        icon="pi pi-trash"
+                        onClick={() => handleDeleteModel(model.id)}
+                        severity="danger"
+                        outlined
+                        size="small"
+                      />
+                    </>
+                  ) : (
+                    <Button
+                      label="Descargar"
+                      icon="pi pi-download"
+                      onClick={() => handleDownloadModel(model.id)}
+                      size="small"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -807,10 +975,29 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
   const renderPerformanceConfig = () => {
     return (
-      <div style={{ padding: '1rem' }}>
-        <h3 style={{ color: themeColors.textPrimary, marginBottom: '1rem' }}>
-          Configuración de Rendimiento
-        </h3>
+      <div style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
+            borderRadius: '12px',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '80px',
+            height: '80px'
+          }}>
+            <i className="pi pi-cog" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+          </div>
+          <div>
+            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+              Configuración de Rendimiento
+            </h2>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+              Ajusta parámetros de rendimiento para optimizar la experiencia de uso
+            </p>
+          </div>
+        </div>
 
         <div style={{
           background: 'rgba(33, 150, 243, 0.1)',
@@ -988,96 +1175,200 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
   const renderRemoteOllamaConfig = () => {
     return (
-      <div style={{ padding: '1rem' }}>
-        <h3 style={{ color: themeColors.textPrimary, marginBottom: '1rem' }}>
-          Configuración de Ollama Remoto
-        </h3>
+      <div style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
+            borderRadius: '12px',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '80px',
+            height: '80px'
+          }}>
+            <i className="pi pi-server" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+          </div>
+          <div>
+            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+              Ollama Remoto
+            </h2>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+              Conecta con servidores Ollama remotos para usar modelos más potentes o compartir recursos
+            </p>
+          </div>
+        </div>
 
         <div style={{
-          background: 'rgba(33, 150, 243, 0.1)',
-          border: '1px solid rgba(33, 150, 243, 0.3)',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '1rem',
+          background: 'rgba(33, 150, 243, 0.08)',
+          border: '1px solid rgba(33, 150, 243, 0.2)',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
           display: 'flex',
-          gap: '0.5rem',
+          gap: '0.75rem',
           alignItems: 'flex-start'
         }}>
-          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.1rem' }} />
-          <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
-            <strong>Ollama Remoto</strong> te permite usar modelos de IA instalados en otro servidor.
-            <br />
-            Útil para usar modelos más potentes o compartir recursos entre equipos.
+          <i className="pi pi-lightbulb" style={{ color: '#2196F3', marginTop: '0.2rem', fontSize: '1.1rem' }} />
+          <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
+            <strong>¿Cuándo usar Ollama Remoto?</strong><br />
+            • Usar modelos más potentes sin instalar localmente<br />
+            • Compartir recursos entre equipos<br />
+            • Aprovechar servidores dedicados con más RAM/GPU<br />
+            • Acceso a modelos desde múltiples dispositivos
           </div>
         </div>
 
         {/* Configuración de URL */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
-            URL del servidor Ollama
-          </label>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <InputText
-              value={remoteOllamaUrl}
-              onChange={(e) => setRemoteOllamaUrl(e.target.value)}
-              placeholder="http://192.168.1.100:11434"
-              style={{ flex: 1 }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSaveRemoteOllamaUrl();
-                }
-              }}
-            />
-            <Button
-              label="Guardar"
-              icon="pi pi-check"
-              onClick={handleSaveRemoteOllamaUrl}
-              disabled={!remoteOllamaUrl.trim()}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <Button
-              label="Probar Conexión"
-              icon={testingConnection ? 'pi pi-spin pi-spinner' : 'pi pi-wifi'}
-              onClick={handleTestConnection}
-              disabled={!remoteOllamaUrl.trim() || testingConnection}
-              severity="secondary"
-              style={{ flex: 1 }}
-            />
-            {remoteOllamaUrl && (
-              <Button
-                label="Limpiar"
-                icon="pi pi-times"
-                onClick={handleClearRemoteOllama}
-                severity="danger"
-                outlined
+        <div style={{
+          background: themeColors.cardBackground,
+          border: `1px solid ${themeColors.borderColor}`,
+          borderRadius: '12px',
+          padding: '1.5rem',
+          marginBottom: '1.5rem'
+        }}>
+          <h3 style={{ color: themeColors.textPrimary, margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
+            🔗 Configuración del Servidor
+          </h3>
+          
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block', fontWeight: '500' }}>
+              URL del servidor Ollama
+            </label>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <InputText
+                value={remoteOllamaUrl}
+                onChange={(e) => setRemoteOllamaUrl(e.target.value)}
+                placeholder="http://192.168.1.100:11434"
+                style={{ flex: 1, padding: '0.75rem' }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveRemoteOllamaUrl();
+                  }
+                }}
               />
-            )}
+              <Button
+                label="Guardar"
+                icon="pi pi-check"
+                onClick={handleSaveRemoteOllamaUrl}
+                disabled={!remoteOllamaUrl.trim()}
+                style={{ minWidth: '100px' }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <Button
+                label="Probar Conexión"
+                icon={testingConnection ? 'pi pi-spin pi-spinner' : 'pi pi-wifi'}
+                onClick={handleTestConnection}
+                disabled={!remoteOllamaUrl.trim() || testingConnection}
+                severity="secondary"
+                style={{ flex: 1 }}
+              />
+              {remoteOllamaUrl && (
+                <Button
+                  label="Limpiar"
+                  icon="pi pi-times"
+                  onClick={handleClearRemoteOllama}
+                  severity="danger"
+                  outlined
+                  style={{ minWidth: '100px' }}
+                />
+              )}
+            </div>
+            
+            <div style={{
+              background: 'rgba(33, 150, 243, 0.05)',
+              border: '1px solid rgba(33, 150, 243, 0.15)',
+              borderRadius: '8px',
+              padding: '0.75rem'
+            }}>
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '500', display: 'block', marginBottom: '0.25rem' }}>
+                💡 Ejemplos de URLs válidas:
+              </small>
+              <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, fontFamily: 'monospace' }}>
+                • http://192.168.1.100:11434<br />
+                • http://servidor.local:11434<br />
+                • https://ollama.miempresa.com<br />
+                • http://10.0.0.50:11434
+              </div>
+            </div>
           </div>
-          <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
-            Ejemplos: http://192.168.1.100:11434, http://servidor.local:11434, https://ollama.miempresa.com
-          </small>
         </div>
 
         {/* Estado actual */}
         <div style={{
           background: themeColors.cardBackground,
           border: `1px solid ${themeColors.borderColor}`,
-          borderRadius: '8px',
-          padding: '1rem',
-          marginBottom: '1rem'
+          borderRadius: '12px',
+          padding: '1.5rem',
+          marginBottom: '1.5rem'
         }}>
-          <h4 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0' }}>
-            Estado Actual
-          </h4>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <i className="pi pi-server" style={{ color: themeColors.primaryColor }} />
-            <span style={{ color: themeColors.textSecondary }}>
-              {aiService.remoteOllamaUrl || 'http://localhost:11434'}
-            </span>
+          <h3 style={{ color: themeColors.textPrimary, margin: '0 0 1rem 0', fontSize: '1.1rem' }}>
+            📊 Estado Actual
+          </h3>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{
+              background: aiService.remoteOllamaUrl ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+              border: `1px solid ${aiService.remoteOllamaUrl ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 193, 7, 0.3)'}`,
+              borderRadius: '8px',
+              padding: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              flex: 1
+            }}>
+              <i 
+                className={aiService.remoteOllamaUrl ? 'pi pi-cloud' : 'pi pi-desktop'} 
+                style={{ 
+                  color: aiService.remoteOllamaUrl ? '#4CAF50' : '#FFC107',
+                  fontSize: '1.2rem'
+                }} 
+              />
+              <div>
+                <div style={{ 
+                  color: themeColors.textPrimary, 
+                  fontWeight: '600', 
+                  fontSize: '0.9rem',
+                  marginBottom: '0.25rem'
+                }}>
+                  {aiService.remoteOllamaUrl ? '🌐 Servidor Remoto' : '💻 Servidor Local'}
+                </div>
+                <div style={{ 
+                  color: themeColors.textSecondary, 
+                  fontSize: '0.8rem',
+                  fontFamily: 'monospace'
+                }}>
+                  {aiService.remoteOllamaUrl || 'http://localhost:11434'}
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>
-            {aiService.remoteOllamaUrl ? 'Usando servidor Ollama remoto' : 'Usando Ollama local'}
+          
+          <div style={{
+            background: aiService.remoteOllamaUrl ? 'rgba(76, 175, 80, 0.05)' : 'rgba(255, 193, 7, 0.05)',
+            border: `1px solid ${aiService.remoteOllamaUrl ? 'rgba(76, 175, 80, 0.15)' : 'rgba(255, 193, 7, 0.15)'}`,
+            borderRadius: '8px',
+            padding: '0.75rem'
+          }}>
+            <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary, lineHeight: '1.4' }}>
+              {aiService.remoteOllamaUrl ? (
+                <>
+                  ✅ <strong>Conectado a servidor remoto</strong><br />
+                  • Acceso a modelos instalados en el servidor remoto<br />
+                  • Mejor rendimiento si el servidor tiene más recursos<br />
+                  • Requiere conexión de red estable
+                </>
+              ) : (
+                <>
+                  🏠 <strong>Usando Ollama local</strong><br />
+                  • Modelos instalados en tu dispositivo<br />
+                  • No requiere conexión de red<br />
+                  • Rendimiento limitado por recursos locales
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1141,20 +1432,20 @@ const AIConfigDialog = ({ visible, onHide }) => {
       header="Configuración de IA"
       visible={visible}
       onHide={onHide}
-      style={{ width: '600px', maxWidth: '90vw' }}
+      style={{ width: '85vw', minWidth: '900px', maxWidth: '1200px' }}
       modal
     >
       <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
-        <TabPanel header="Modelos Remotos">
+        <TabPanel header="☁️ Modelos Remotos">
           {renderRemoteModels()}
         </TabPanel>
-        <TabPanel header="Modelos Locales">
+        <TabPanel header="💻 Modelos Locales">
           {renderLocalModels()}
         </TabPanel>
-        <TabPanel header="Ollama Remoto">
+        <TabPanel header="🌐 Ollama Remoto">
           {renderRemoteOllamaConfig()}
         </TabPanel>
-        <TabPanel header="Rendimiento">
+        <TabPanel header="⚙️ Rendimiento">
           {renderPerformanceConfig()}
         </TabPanel>
       </TabView>
