@@ -101,96 +101,250 @@ class AIService {
           bestFor: 'Usuarios que buscan estabilidad, programación básica y uso general confiable'
         },
       ],
-      local: [
-        { 
-          id: 'llama3.2', 
-          name: 'Llama 3.2 (3B)', 
-          size: '2GB', 
-          downloaded: false, 
-          performance: 'low',
-          description: 'Modelo ligero y rápido de Meta. Ideal para dispositivos con recursos limitados y tareas básicas.',
-          useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos con poca RAM', 'Tareas simples'],
-          strengths: ['Muy ligero', 'Velocidad alta', 'Bajo consumo', 'Fácil de ejecutar'],
-          bestFor: 'Dispositivos con poca RAM, tareas básicas y usuarios que priorizan la velocidad'
-        },
-        { 
-          id: 'llama3.1', 
-          name: 'Llama 3.1 (8B)', 
-          size: '4.7GB', 
-          downloaded: false, 
-          performance: 'high',
-          description: 'Modelo avanzado de Meta con excelente rendimiento. Ideal para programación y análisis complejos.',
-          useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos'],
-          strengths: ['Excelente programación', 'Razonamiento sólido', 'Código de calidad', 'Análisis profundo'],
-          bestFor: 'Desarrolladores, programadores y usuarios que necesitan análisis de código de calidad'
-        },
-        { 
-          id: 'llama3', 
-          name: 'Llama 3 (8B)', 
-          size: '4.7GB', 
-          downloaded: false, 
-          performance: 'high',
-          description: 'Modelo estable y confiable de Meta. Buen balance entre rendimiento y recursos para uso general.',
-          useCases: ['Programación general', 'Asistencia técnica', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
-          strengths: ['Estabilidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
-          bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad'
-        },
-        { 
-          id: 'mistral', 
-          name: 'Mistral (7B)', 
-          size: '4.1GB', 
-          downloaded: false, 
-          performance: 'medium',
-          description: 'Modelo europeo eficiente. Excelente para programación y tareas técnicas con buen rendimiento.',
-          useCases: ['Programación', 'Análisis técnico', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
-          strengths: ['Eficiencia', 'Buena programación', 'Análisis técnico', 'Respuestas precisas'],
-          bestFor: 'Desarrolladores, técnicos y usuarios que buscan eficiencia en programación'
-        },
-        { 
-          id: 'qwen2.5', 
-          name: 'Qwen 2.5 (7B)', 
-          size: '4.5GB', 
-          downloaded: false, 
-          performance: 'medium',
-          description: 'Modelo chino con capacidades multilingües. Excelente para programación y análisis en múltiples idiomas.',
-          useCases: ['Programación multilingüe', 'Análisis de código', 'Traducción técnica', 'Asistencia general'],
-          strengths: ['Multilingüe', 'Buena programación', 'Análisis de código', 'Flexibilidad'],
-          bestFor: 'Desarrolladores internacionales, programación multilingüe y análisis de código'
-        },
-        { 
-          id: 'deepseek-r1:8b', 
-          name: 'DeepSeek R1 (8B)', 
-          size: '4.7GB', 
-          downloaded: false, 
-          performance: 'high',
-          description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
-          useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
-          strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
-          bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo'
-        },
-        { 
-          id: 'gemma2', 
-          name: 'Gemma 2 (9B)', 
-          size: '5.4GB', 
-          downloaded: false, 
-          performance: 'high',
-          description: 'Modelo de Google optimizado para eficiencia. Excelente para programación y análisis con recursos moderados.',
-          useCases: ['Programación eficiente', 'Análisis de datos', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
-          strengths: ['Eficiencia', 'Buena programación', 'Análisis sólido', 'Optimización'],
-          bestFor: 'Desarrolladores que buscan eficiencia, análisis de datos y programación optimizada'
-        },
-        { 
-          id: 'phi3', 
-          name: 'Phi-3 (3.8B)', 
-          size: '2.3GB', 
-          downloaded: false, 
-          performance: 'low',
-          description: 'Modelo compacto de Microsoft. Ideal para dispositivos con recursos limitados y tareas básicas.',
-          useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Tareas simples', 'Prototipado'],
-          strengths: ['Muy compacto', 'Velocidad alta', 'Bajo consumo', 'Fácil instalación'],
-          bestFor: 'Dispositivos con recursos limitados, desarrollo móvil y tareas básicas rápidas'
-        },
-      ]
+      local: {
+        ollama: [
+          { 
+            id: 'llama3.2', 
+            name: 'Llama 3.2 (3B)', 
+            size: '2GB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo ligero y rápido de Meta. Ideal para dispositivos con recursos limitados y tareas básicas.',
+            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos con poca RAM', 'Tareas simples'],
+            strengths: ['Muy ligero', 'Velocidad alta', 'Bajo consumo', 'Fácil de ejecutar'],
+            bestFor: 'Dispositivos con poca RAM, tareas básicas y usuarios que priorizan la velocidad'
+          },
+          { 
+            id: 'llama3.1', 
+            name: 'Llama 3.1 (8B)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo avanzado de Meta con excelente rendimiento. Ideal para programación y análisis complejos.',
+            useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos'],
+            strengths: ['Excelente programación', 'Razonamiento sólido', 'Código de calidad', 'Análisis profundo'],
+            bestFor: 'Desarrolladores, programadores y usuarios que necesitan análisis de código de calidad'
+          },
+          { 
+            id: 'llama3', 
+            name: 'Llama 3 (8B)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo estable y confiable de Meta. Buen balance entre rendimiento y recursos para uso general.',
+            useCases: ['Programación general', 'Asistencia técnica', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
+            strengths: ['Estabilidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
+            bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad'
+          },
+          { 
+            id: 'mistral', 
+            name: 'Mistral (7B)', 
+            size: '4.1GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo europeo eficiente. Excelente para programación y tareas técnicas con buen rendimiento.',
+            useCases: ['Programación', 'Análisis técnico', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
+            strengths: ['Eficiencia', 'Buena programación', 'Análisis técnico', 'Respuestas precisas'],
+            bestFor: 'Desarrolladores, técnicos y usuarios que buscan eficiencia en programación'
+          },
+          { 
+            id: 'qwen2.5', 
+            name: 'Qwen 2.5 (7B)', 
+            size: '4.5GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo chino con capacidades multilingües. Excelente para programación y análisis en múltiples idiomas.',
+            useCases: ['Programación multilingüe', 'Análisis de código', 'Traducción técnica', 'Asistencia general'],
+            strengths: ['Multilingüe', 'Buena programación', 'Análisis de código', 'Flexibilidad'],
+            bestFor: 'Desarrolladores internacionales, programación multilingüe y análisis de código'
+          },
+          { 
+            id: 'gemma2', 
+            name: 'Gemma 2 (9B)', 
+            size: '5.4GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo de Google optimizado para eficiencia. Excelente para programación y análisis con recursos moderados.',
+            useCases: ['Programación eficiente', 'Análisis de datos', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
+            strengths: ['Eficiencia', 'Buena programación', 'Análisis sólido', 'Optimización'],
+            bestFor: 'Desarrolladores que buscan eficiencia, análisis de datos y programación optimizada'
+          },
+          { 
+            id: 'phi3', 
+            name: 'Phi-3 (3.8B)', 
+            size: '2.3GB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo compacto de Microsoft. Ideal para dispositivos con recursos limitados y tareas básicas.',
+            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Tareas simples', 'Prototipado'],
+            strengths: ['Muy compacto', 'Velocidad alta', 'Bajo consumo', 'Fácil instalación'],
+            bestFor: 'Dispositivos con recursos limitados, desarrollo móvil y tareas básicas rápidas'
+          },
+          { 
+            id: 'codellama', 
+            name: 'Code Llama (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo de programación de Meta basado en Llama. Excelente para generación y comprensión de código.',
+            useCases: ['Programación en múltiples lenguajes', 'Generación de código', 'Explicación de código', 'Refactoring', 'Debugging'],
+            strengths: ['Multilenguaje', 'Comprensión de código', 'Generación eficiente', 'Soporte para múltiples paradigmas'],
+            bestFor: 'Desarrolladores que trabajan con múltiples lenguajes de programación'
+          },
+          { 
+            id: 'wizardcoder', 
+            name: 'WizardCoder (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo especializado en programación con capacidades avanzadas de generación de código.',
+            useCases: ['Generación de código', 'Programación asistida', 'Resolución de problemas', 'Optimización de código'],
+            strengths: ['Generación de código limpio', 'Comprensión de requerimientos', 'Optimización', 'Buena documentación'],
+            bestFor: 'Desarrolladores que buscan asistencia inteligente en programación'
+          },
+          { 
+            id: 'starcoder', 
+            name: 'StarCoder (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo de código de BigCode entrenado en repositorios públicos. Excelente para programación.',
+            useCases: ['Programación en múltiples lenguajes', 'Generación de código', 'Completado de código', 'Refactoring'],
+            strengths: ['Gran conocimiento de código', 'Soporte multilenguaje', 'Comprensión de patrones', 'Generación eficiente'],
+            bestFor: 'Desarrolladores que necesitan un modelo con amplio conocimiento de código'
+          }
+        ],
+        independent: [
+          { 
+            id: 'deepseek-r1:8b', 
+            name: 'DeepSeek R1 (8B)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
+            useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
+            strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
+            bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo'
+          },
+          { 
+            id: 'deepseek-coder:6.7b', 
+            name: 'DeepSeek Coder (6.7B)', 
+            size: '4.1GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Modelo especializado en programación y generación de código. Optimizado para tareas de desarrollo.',
+            useCases: ['Generación de código', 'Refactoring', 'Debugging', 'Documentación técnica', 'Análisis de código'],
+            strengths: ['Excelente en programación', 'Generación de código de calidad', 'Comprensión de sintaxis', 'Refactoring inteligente'],
+            bestFor: 'Desarrolladores, programadores y equipos de desarrollo que necesitan asistencia en código'
+          },
+          { 
+            id: 'magicoder:7b', 
+            name: 'Magicoder (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Modelo de programación con capacidades mágicas para generación de código y resolución de problemas.',
+            useCases: ['Generación de código', 'Resolución de bugs', 'Optimización', 'Documentación automática'],
+            strengths: ['Generación creativa', 'Resolución de problemas', 'Optimización inteligente', 'Código bien documentado'],
+            bestFor: 'Desarrolladores que buscan soluciones creativas y optimizadas'
+          },
+          { 
+            id: 'phind-codellama:7b', 
+            name: 'Phind CodeLlama (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Versión optimizada de CodeLlama por Phind. Mejorado para búsqueda y generación de código.',
+            useCases: ['Búsqueda de código', 'Generación eficiente', 'Análisis de código', 'Documentación'],
+            strengths: ['Búsqueda inteligente', 'Generación rápida', 'Análisis profundo', 'Documentación clara'],
+            bestFor: 'Desarrolladores que necesitan búsqueda y análisis eficiente de código'
+          },
+          { 
+            id: 'octocoder:7b', 
+            name: 'OctoCoder (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Modelo especializado en desarrollo web y aplicaciones. Optimizado para tecnologías modernas.',
+            useCases: ['Desarrollo web', 'Aplicaciones modernas', 'Frontend/Backend', 'APIs', 'Frameworks populares'],
+            strengths: ['Conocimiento web', 'Frameworks modernos', 'APIs y servicios', 'Desarrollo full-stack'],
+            bestFor: 'Desarrolladores web y de aplicaciones modernas'
+          },
+          { 
+            id: 'sqlcoder:7b', 
+            name: 'SQLCoder (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Modelo especializado en SQL y bases de datos. Excelente para consultas y optimización de bases de datos.',
+            useCases: ['Consultas SQL', 'Optimización de bases de datos', 'Análisis de datos', 'Diseño de esquemas', 'Migración de datos'],
+            strengths: ['SQL avanzado', 'Optimización de consultas', 'Análisis de rendimiento', 'Diseño de bases de datos'],
+            bestFor: 'Desarrolladores de bases de datos, analistas de datos y administradores de sistemas'
+          },
+          { 
+            id: 'python-coder:7b', 
+            name: 'Python Coder (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'independent',
+            platformName: 'Independiente',
+            platformDescription: 'No requiere Ollama - Funciona directamente',
+            description: 'Modelo especializado en Python. Optimizado para desarrollo, análisis de datos y machine learning.',
+            useCases: ['Desarrollo Python', 'Data Science', 'Machine Learning', 'Automatización', 'Scripting'],
+            strengths: ['Python puro', 'Librerías populares', 'Data Science', 'ML/AI', 'Automatización'],
+            bestFor: 'Desarrolladores Python, científicos de datos y profesionales de ML/AI'
+          }
+        ]
+      }
     };
     this.conversationHistory = [];
     this.loadConfig();
@@ -212,9 +366,12 @@ class AIService {
         
         // Cargar estado de modelos locales descargados
         if (parsed.localModels) {
-          this.models.local = this.models.local.map(model => {
+          const allLocalModels = this.getAllLocalModels();
+          allLocalModels.forEach(model => {
             const saved = parsed.localModels.find(m => m.id === model.id);
-            return saved ? { ...model, downloaded: saved.downloaded } : model;
+            if (saved) {
+              model.downloaded = saved.downloaded;
+            }
           });
         }
       }
@@ -234,7 +391,7 @@ class AIService {
         apiKey: this.apiKey,
         remoteOllamaUrl: this.remoteOllamaUrl,
         performanceConfig: this.performanceConfig,
-        localModels: this.models.local.map(m => ({ id: m.id, downloaded: m.downloaded }))
+        localModels: this.getAllLocalModels().map(m => ({ id: m.id, downloaded: m.downloaded }))
       };
       localStorage.setItem('ai-service-config', JSON.stringify(config));
     } catch (error) {
@@ -243,15 +400,25 @@ class AIService {
   }
 
   /**
+   * Obtener todos los modelos locales (Ollama + Independientes)
+   */
+  getAllLocalModels() {
+    return [...this.models.local.ollama, ...this.models.local.independent];
+  }
+
+  /**
    * Obtener lista de modelos disponibles
    */
   getAvailableModels(type = null) {
     if (type) {
+      if (type === 'local') {
+        return this.getAllLocalModels();
+      }
       return this.models[type] || [];
     }
     return {
       remote: this.models.remote,
-      local: this.models.local
+      local: this.getAllLocalModels()
     };
   }
 
@@ -274,7 +441,7 @@ class AIService {
     });
     
     // Modelos locales descargados
-    this.models.local.forEach(model => {
+    this.getAllLocalModels().forEach(model => {
       if (model.downloaded) {
         functional.push({
           ...model,
@@ -297,7 +464,13 @@ class AIService {
     }
 
     // Si no, usar configuración automática
-    const model = this.models[modelType].find(m => m.id === modelId);
+    let model;
+    if (modelType === 'local') {
+      model = this.getAllLocalModels().find(m => m.id === modelId);
+    } else {
+      model = this.models[modelType].find(m => m.id === modelId);
+    }
+    
     if (!model) return this.getDefaultPerformanceConfig();
 
     const performanceLevel = model.performance || 'medium';
@@ -381,7 +554,7 @@ class AIService {
       // Actualizar lista de modelos locales con los detectados
       if (data.models && Array.isArray(data.models)) {
         const installedModels = data.models.map(model => {
-          const existingModel = this.models.local.find(m => m.id === model.name);
+          const existingModel = this.getAllLocalModels().find(m => m.id === model.name);
           if (existingModel) {
             return { ...existingModel, downloaded: true };
           } else {
@@ -395,18 +568,23 @@ class AIService {
           }
         });
         
-        // Combinar modelos predefinidos con los detectados
-        const allModels = [...this.models.local];
+        // Actualizar estado de modelos existentes
         installedModels.forEach(installed => {
-          const index = allModels.findIndex(m => m.id === installed.id);
-          if (index >= 0) {
-            allModels[index] = installed;
+          // Buscar en modelos de Ollama
+          const ollamaIndex = this.models.local.ollama.findIndex(m => m.id === installed.id);
+          if (ollamaIndex >= 0) {
+            this.models.local.ollama[ollamaIndex] = installed;
           } else {
-            allModels.push(installed);
+            // Buscar en modelos independientes
+            const independentIndex = this.models.local.independent.findIndex(m => m.id === installed.id);
+            if (independentIndex >= 0) {
+              this.models.local.independent[independentIndex] = installed;
+            } else {
+              // Modelo no conocido, agregarlo a Ollama por defecto
+              this.models.local.ollama.push(installed);
+            }
           }
         });
-        
-        this.models.local = allModels;
         this.saveConfig();
         
         return installedModels;
@@ -423,9 +601,9 @@ class AIService {
    * Agregar modelo personalizado
    */
   addCustomModel(modelId, modelName = null) {
-    const existingModel = this.models.local.find(m => m.id === modelId);
+    const existingModel = this.getAllLocalModels().find(m => m.id === modelId);
     if (!existingModel) {
-      this.models.local.push({
+      this.models.local.ollama.push({
         id: modelId,
         name: modelName || modelId,
         size: 'Personalizado',
@@ -612,13 +790,13 @@ class AIService {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           const response = await fetch(requestUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(requestBody)
-          });
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(requestBody)
+      });
 
-          if (!response.ok) {
-            const error = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
             const errorMessage = error.error?.message || 'Error en la API';
             
             // Si es error 503 (modelo sobrecargado) y no es el último intento, reintentar
@@ -629,15 +807,15 @@ class AIService {
             }
             
             throw new Error(errorMessage);
-          }
+      }
 
-          const data = await response.json();
-          
-          // Extraer respuesta según el proveedor
-          if (model.provider === 'openai') {
-            return data.choices[0].message.content;
-          } else if (model.provider === 'anthropic') {
-            return data.content[0].text;
+      const data = await response.json();
+      
+      // Extraer respuesta según el proveedor
+      if (model.provider === 'openai') {
+        return data.choices[0].message.content;
+      } else if (model.provider === 'anthropic') {
+        return data.content[0].text;
           } else if (model.provider === 'google') {
             return data.candidates[0].content.parts[0].text;
           }
@@ -706,7 +884,7 @@ class AIService {
    * Enviar mensaje a modelo local
    */
   async sendToLocalModel(message, options = {}) {
-    const model = this.models.local.find(m => m.id === this.currentModel);
+    const model = this.getAllLocalModels().find(m => m.id === this.currentModel);
     if (!model) {
       throw new Error('Modelo local no encontrado');
     }
@@ -845,7 +1023,7 @@ class AIService {
    * Descargar modelo local usando Ollama
    */
   async downloadLocalModel(modelId, onProgress = null) {
-    const model = this.models.local.find(m => m.id === modelId);
+    const model = this.getAllLocalModels().find(m => m.id === modelId);
     if (!model) {
       throw new Error('Modelo no encontrado');
     }
@@ -939,7 +1117,7 @@ class AIService {
    * Eliminar modelo local
    */
   async deleteLocalModel(modelId) {
-    const model = this.models.local.find(m => m.id === modelId);
+    const model = this.getAllLocalModels().find(m => m.id === modelId);
     if (!model) {
       throw new Error('Modelo no encontrado');
     }
