@@ -12,20 +12,184 @@ class AIService {
     this.performanceConfig = null; // Configuración manual de rendimiento
     this.models = {
       remote: [
-        { id: 'gpt-4', name: 'GPT-4', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', performance: 'high' },
-        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai', endpoint: 'https://api.openai.com/v1/chat/completions', performance: 'medium' },
-        { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages', performance: 'high' },
-        { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic', endpoint: 'https://api.anthropic.com/v1/messages', performance: 'medium' },
+        { 
+          id: 'gpt-4', 
+          name: 'GPT-4', 
+          provider: 'openai', 
+          endpoint: 'https://api.openai.com/v1/chat/completions', 
+          performance: 'high',
+          description: 'El modelo más avanzado de OpenAI. Excelente para tareas complejas, programación, análisis y razonamiento profundo.',
+          useCases: ['Programación avanzada', 'Análisis de datos', 'Investigación', 'Escritura técnica', 'Resolución de problemas complejos'],
+          strengths: ['Razonamiento superior', 'Código de alta calidad', 'Análisis detallado', 'Creatividad avanzada'],
+          bestFor: 'Desarrolladores, investigadores, analistas y usuarios que necesitan la máxima calidad'
+        },
+        { 
+          id: 'gpt-3.5-turbo', 
+          name: 'GPT-3.5 Turbo', 
+          provider: 'openai', 
+          endpoint: 'https://api.openai.com/v1/chat/completions', 
+          performance: 'medium',
+          description: 'Modelo rápido y eficiente de OpenAI. Ideal para uso general, programación básica y conversaciones.',
+          useCases: ['Programación básica', 'Asistencia general', 'Escritura', 'Traducción', 'Resumen de textos'],
+          strengths: ['Velocidad alta', 'Costo eficiente', 'Buena calidad general', 'Respuestas rápidas'],
+          bestFor: 'Uso diario, programación básica, estudiantes y usuarios que buscan velocidad'
+        },
+        { 
+          id: 'claude-3-opus', 
+          name: 'Claude 3 Opus', 
+          provider: 'anthropic', 
+          endpoint: 'https://api.anthropic.com/v1/messages', 
+          performance: 'high',
+          description: 'El modelo más potente de Anthropic. Destaca en análisis, escritura creativa y comprensión de contexto.',
+          useCases: ['Análisis profundo', 'Escritura creativa', 'Investigación académica', 'Edición de textos', 'Análisis de documentos'],
+          strengths: ['Comprensión superior', 'Escritura excelente', 'Análisis detallado', 'Creatividad'],
+          bestFor: 'Escritores, investigadores, analistas y usuarios que necesitan análisis profundo'
+        },
+        { 
+          id: 'claude-3-sonnet', 
+          name: 'Claude 3 Sonnet', 
+          provider: 'anthropic', 
+          endpoint: 'https://api.anthropic.com/v1/messages', 
+          performance: 'medium',
+          description: 'Modelo equilibrado de Anthropic. Buen balance entre velocidad y calidad para uso general.',
+          useCases: ['Programación', 'Asistencia general', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
+          strengths: ['Balance velocidad/calidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
+          bestFor: 'Desarrolladores, profesionales y usuarios que buscan un buen balance'
+        },
+        { 
+          id: 'gemini-2.5-flash', 
+          name: 'Gemini 2.5 Flash', 
+          provider: 'google', 
+          endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', 
+          performance: 'high',
+          description: 'El modelo más reciente y rápido de Google. Excelente para tareas generales y programación con velocidad superior.',
+          useCases: ['Programación rápida', 'Análisis de datos', 'Investigación', 'Escritura técnica', 'Resolución de problemas'],
+          strengths: ['Velocidad excepcional', 'Código de calidad', 'Análisis rápido', 'Multimodal'],
+          bestFor: 'Desarrolladores que necesitan velocidad, analistas y usuarios que buscan respuestas rápidas'
+        },
+        { 
+          id: 'gemini-2.5-pro', 
+          name: 'Gemini 2.5 Pro', 
+          provider: 'google', 
+          endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent', 
+          performance: 'high',
+          description: 'El modelo más potente de Google. Máxima calidad para tareas complejas y análisis profundos.',
+          useCases: ['Programación avanzada', 'Análisis complejo', 'Investigación profunda', 'Escritura técnica', 'Resolución de problemas difíciles'],
+          strengths: ['Máxima calidad', 'Razonamiento superior', 'Análisis profundo', 'Código avanzado'],
+          bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan la máxima calidad'
+        },
+        { 
+          id: 'gemini-2.0-flash-exp', 
+          name: 'Gemini 2.0 Flash', 
+          provider: 'google', 
+          endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent', 
+          performance: 'high',
+          description: 'Modelo experimental de Google con capacidades avanzadas. Ideal para probar nuevas funcionalidades.',
+          useCases: ['Experimentación', 'Funcionalidades nuevas', 'Análisis innovador', 'Programación experimental'],
+          strengths: ['Funcionalidades nuevas', 'Capacidades experimentales', 'Innovación', 'Tecnología de vanguardia'],
+          bestFor: 'Usuarios avanzados, investigadores y desarrolladores que quieren probar lo último'
+        },
+        { 
+          id: 'gemini-1.0-pro', 
+          name: 'Gemini 1.0 Pro', 
+          provider: 'google', 
+          endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent', 
+          performance: 'medium',
+          description: 'Modelo estable y confiable de Google. Buena opción para uso general y programación.',
+          useCases: ['Programación general', 'Asistencia', 'Análisis básico', 'Escritura', 'Resolución de problemas'],
+          strengths: ['Estabilidad', 'Confiabilidad', 'Buena calidad', 'Costo eficiente'],
+          bestFor: 'Usuarios que buscan estabilidad, programación básica y uso general confiable'
+        },
       ],
       local: [
-        { id: 'llama3.2', name: 'Llama 3.2 (3B)', size: '2GB', downloaded: false, performance: 'low' },
-        { id: 'llama3.1', name: 'Llama 3.1 (8B)', size: '4.7GB', downloaded: false, performance: 'high' },
-        { id: 'llama3', name: 'Llama 3 (8B)', size: '4.7GB', downloaded: false, performance: 'high' },
-        { id: 'mistral', name: 'Mistral (7B)', size: '4.1GB', downloaded: false, performance: 'medium' },
-        { id: 'qwen2.5', name: 'Qwen 2.5 (7B)', size: '4.5GB', downloaded: false, performance: 'medium' },
-        { id: 'deepseek-r1:8b', name: 'DeepSeek R1 (8B)', size: '4.7GB', downloaded: false, performance: 'high' },
-        { id: 'gemma2', name: 'Gemma 2 (9B)', size: '5.4GB', downloaded: false, performance: 'high' },
-        { id: 'phi3', name: 'Phi-3 (3.8B)', size: '2.3GB', downloaded: false, performance: 'low' },
+        { 
+          id: 'llama3.2', 
+          name: 'Llama 3.2 (3B)', 
+          size: '2GB', 
+          downloaded: false, 
+          performance: 'low',
+          description: 'Modelo ligero y rápido de Meta. Ideal para dispositivos con recursos limitados y tareas básicas.',
+          useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos con poca RAM', 'Tareas simples'],
+          strengths: ['Muy ligero', 'Velocidad alta', 'Bajo consumo', 'Fácil de ejecutar'],
+          bestFor: 'Dispositivos con poca RAM, tareas básicas y usuarios que priorizan la velocidad'
+        },
+        { 
+          id: 'llama3.1', 
+          name: 'Llama 3.1 (8B)', 
+          size: '4.7GB', 
+          downloaded: false, 
+          performance: 'high',
+          description: 'Modelo avanzado de Meta con excelente rendimiento. Ideal para programación y análisis complejos.',
+          useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos'],
+          strengths: ['Excelente programación', 'Razonamiento sólido', 'Código de calidad', 'Análisis profundo'],
+          bestFor: 'Desarrolladores, programadores y usuarios que necesitan análisis de código de calidad'
+        },
+        { 
+          id: 'llama3', 
+          name: 'Llama 3 (8B)', 
+          size: '4.7GB', 
+          downloaded: false, 
+          performance: 'high',
+          description: 'Modelo estable y confiable de Meta. Buen balance entre rendimiento y recursos para uso general.',
+          useCases: ['Programación general', 'Asistencia técnica', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
+          strengths: ['Estabilidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
+          bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad'
+        },
+        { 
+          id: 'mistral', 
+          name: 'Mistral (7B)', 
+          size: '4.1GB', 
+          downloaded: false, 
+          performance: 'medium',
+          description: 'Modelo europeo eficiente. Excelente para programación y tareas técnicas con buen rendimiento.',
+          useCases: ['Programación', 'Análisis técnico', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
+          strengths: ['Eficiencia', 'Buena programación', 'Análisis técnico', 'Respuestas precisas'],
+          bestFor: 'Desarrolladores, técnicos y usuarios que buscan eficiencia en programación'
+        },
+        { 
+          id: 'qwen2.5', 
+          name: 'Qwen 2.5 (7B)', 
+          size: '4.5GB', 
+          downloaded: false, 
+          performance: 'medium',
+          description: 'Modelo chino con capacidades multilingües. Excelente para programación y análisis en múltiples idiomas.',
+          useCases: ['Programación multilingüe', 'Análisis de código', 'Traducción técnica', 'Asistencia general'],
+          strengths: ['Multilingüe', 'Buena programación', 'Análisis de código', 'Flexibilidad'],
+          bestFor: 'Desarrolladores internacionales, programación multilingüe y análisis de código'
+        },
+        { 
+          id: 'deepseek-r1:8b', 
+          name: 'DeepSeek R1 (8B)', 
+          size: '4.7GB', 
+          downloaded: false, 
+          performance: 'high',
+          description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
+          useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
+          strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
+          bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo'
+        },
+        { 
+          id: 'gemma2', 
+          name: 'Gemma 2 (9B)', 
+          size: '5.4GB', 
+          downloaded: false, 
+          performance: 'high',
+          description: 'Modelo de Google optimizado para eficiencia. Excelente para programación y análisis con recursos moderados.',
+          useCases: ['Programación eficiente', 'Análisis de datos', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
+          strengths: ['Eficiencia', 'Buena programación', 'Análisis sólido', 'Optimización'],
+          bestFor: 'Desarrolladores que buscan eficiencia, análisis de datos y programación optimizada'
+        },
+        { 
+          id: 'phi3', 
+          name: 'Phi-3 (3.8B)', 
+          size: '2.3GB', 
+          downloaded: false, 
+          performance: 'low',
+          description: 'Modelo compacto de Microsoft. Ideal para dispositivos con recursos limitados y tareas básicas.',
+          useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Tareas simples', 'Prototipado'],
+          strengths: ['Muy compacto', 'Velocidad alta', 'Bajo consumo', 'Fácil instalación'],
+          bestFor: 'Dispositivos con recursos limitados, desarrollo móvil y tareas básicas rápidas'
+        },
       ]
     };
     this.conversationHistory = [];
@@ -383,6 +547,7 @@ class AIService {
     // Preparar mensajes según el proveedor
     let requestBody;
     let headers;
+    let endpointWithKey = null;
 
     if (model.provider === 'openai') {
       headers = {
@@ -415,30 +580,124 @@ class AIService {
         })),
         max_tokens: options.maxTokens || 2000
       };
+    } else if (model.provider === 'google') {
+      headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Gemini usa un formato diferente - necesita el API key como parámetro de query
+      endpointWithKey = `${model.endpoint}?key=${apiKey}`;
+      
+      // Convertir historial de conversación al formato de Gemini
+      const contents = this.conversationHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+      
+      requestBody = {
+        contents: contents,
+        generationConfig: {
+          temperature: options.temperature || 0.7,
+          maxOutputTokens: options.maxTokens || 2000
+        }
+      };
     }
 
     try {
-      const response = await fetch(model.endpoint, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Error en la API');
-      }
-
-      const data = await response.json();
+      // Usar la URL correcta según el proveedor
+      const requestUrl = model.provider === 'google' ? endpointWithKey : model.endpoint;
       
-      // Extraer respuesta según el proveedor
-      if (model.provider === 'openai') {
-        return data.choices[0].message.content;
-      } else if (model.provider === 'anthropic') {
-        return data.content[0].text;
+      // Intentar con reintentos para errores 503 (modelo sobrecargado)
+      let lastError;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetch(requestUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            const errorMessage = error.error?.message || 'Error en la API';
+            
+            // Si es error 503 (modelo sobrecargado) y no es el último intento, reintentar
+            if (response.status === 503 && attempt < 3) {
+              console.log(`⚠️ Modelo ${model.id} sobrecargado, reintentando en ${attempt * 2} segundos... (intento ${attempt}/3)`);
+              await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Esperar 2, 4 segundos
+              continue;
+            }
+            
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json();
+          
+          // Extraer respuesta según el proveedor
+          if (model.provider === 'openai') {
+            return data.choices[0].message.content;
+          } else if (model.provider === 'anthropic') {
+            return data.content[0].text;
+          } else if (model.provider === 'google') {
+            return data.candidates[0].content.parts[0].text;
+          }
+        } catch (error) {
+          lastError = error;
+          
+          // Si es error de modelo sobrecargado y no es el último intento, reintentar
+          if (error.message.includes('overloaded') && attempt < 3) {
+            console.log(`⚠️ Modelo ${model.id} sobrecargado, reintentando en ${attempt * 2} segundos... (intento ${attempt}/3)`);
+            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+            continue;
+          }
+          
+          // Si no es el último intento, continuar con el siguiente intento
+          if (attempt < 3) {
+            continue;
+          }
+          
+          throw error;
+        }
       }
+      
+      throw lastError;
     } catch (error) {
       console.error('Error llamando a API remota:', error);
+      
+      // Si es error de modelo sobrecargado, intentar con otro modelo del mismo proveedor
+      if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
+        console.log(`🔄 Modelo ${model.id} sobrecargado, intentando fallback automático...`);
+        
+        // Buscar otros modelos del mismo proveedor que no hayan sido intentados
+        const alternativeModels = this.models.remote.filter(m => 
+          m.provider === model.provider && 
+          m.id !== model.id && 
+          this.getApiKey(m.provider) // Que tenga API key configurada
+        );
+        
+        if (alternativeModels.length > 0) {
+          const fallbackModel = alternativeModels[0];
+          console.log(`🔄 Cambiando a modelo fallback: ${fallbackModel.name}`);
+          
+          // Temporalmente cambiar el modelo actual para el fallback
+          const originalModel = this.currentModel;
+          this.currentModel = fallbackModel.id;
+          
+          try {
+            const result = await this.sendToRemoteModel(message, options);
+            
+            // Restaurar modelo original
+            this.currentModel = originalModel;
+            return result;
+          } catch (fallbackError) {
+            // Restaurar modelo original
+            this.currentModel = originalModel;
+            console.error('Error en modelo fallback:', fallbackError);
+            throw new Error(`Todos los modelos de ${model.provider} están sobrecargados. Por favor, intenta más tarde o cambia a otro proveedor (OpenAI, Anthropic).`);
+          }
+        }
+      }
+      
       throw error;
     }
   }

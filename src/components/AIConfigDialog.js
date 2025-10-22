@@ -16,7 +16,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [modelType, setModelType] = useState('remote');
   const [apiKeys, setApiKeys] = useState({
     openai: '',
-    anthropic: ''
+    anthropic: '',
+    google: ''
   });
   const [downloading, setDownloading] = useState({});
   const [downloadProgress, setDownloadProgress] = useState({});
@@ -76,9 +77,11 @@ const AIConfigDialog = ({ visible, onHide }) => {
     // Cargar API keys
     const openaiKey = aiService.getApiKey('openai');
     const anthropicKey = aiService.getApiKey('anthropic');
+    const googleKey = aiService.getApiKey('google');
     setApiKeys({
       openai: openaiKey || '',
-      anthropic: anthropicKey || ''
+      anthropic: anthropicKey || '',
+      google: googleKey || ''
     });
 
     // Cargar URL de Ollama remoto
@@ -403,6 +406,31 @@ const AIConfigDialog = ({ visible, onHide }) => {
               />
             </div>
           </div>
+
+          {/* Google */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+              Google API Key (Gemini 2.5)
+            </label>
+            <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
+              Incluye: Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.0 Flash, Gemini 1.0 Pro
+            </small>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <InputText
+                value={apiKeys.google}
+                onChange={(e) => setApiKeys(prev => ({ ...prev, google: e.target.value }))}
+                placeholder="AIza..."
+                type="password"
+                style={{ flex: 1 }}
+              />
+              <Button
+                label="Guardar"
+                icon="pi pi-check"
+                onClick={() => handleSaveApiKey('google')}
+                disabled={!apiKeys.google}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Lista de modelos remotos */}
@@ -422,17 +450,74 @@ const AIConfigDialog = ({ visible, onHide }) => {
               }}
               onClick={() => handleSelectModel(model.id, 'remote')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
-                    {model.name}
-                  </h4>
-                  <p style={{ margin: '0.25rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
+                      {model.name}
+                    </h4>
+                    <span style={{
+                      background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                      color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
+                      padding: '0.1rem 0.5rem',
+                      borderRadius: '12px',
+                      fontSize: '0.7rem',
+                      fontWeight: '500',
+                      border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                    }}>
+                      {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
+                    </span>
+                  </div>
+                  
+                  <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
                     Provider: {model.provider}
                   </p>
+                  
+                  {model.description && (
+                    <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
+                      {model.description}
+                    </p>
+                  )}
+                  
+                  {model.useCases && model.useCases.length > 0 && (
+                    <div style={{ margin: '0.5rem 0' }}>
+                      <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
+                        💼 Casos de uso:
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                        {model.useCases.slice(0, 3).map((useCase, index) => (
+                          <span key={index} style={{
+                            background: themeColors.primaryColor + '20',
+                            color: themeColors.primaryColor,
+                            padding: '0.1rem 0.4rem',
+                            borderRadius: '8px',
+                            fontSize: '0.7rem',
+                            border: `1px solid ${themeColors.primaryColor}40`
+                          }}>
+                            {useCase}
+                          </span>
+                        ))}
+                        {model.useCases.length > 3 && (
+                          <span style={{
+                            color: themeColors.textSecondary,
+                            fontSize: '0.7rem'
+                          }}>
+                            +{model.useCases.length - 3} más
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {model.bestFor && (
+                    <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      👤 {model.bestFor}
+                    </p>
+                  )}
                 </div>
+                
                 {currentModel === model.id && modelType === 'remote' && (
-                  <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
+                  <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem', marginLeft: '1rem' }} />
                 )}
               </div>
             </div>
@@ -565,12 +650,23 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 opacity: model.downloaded ? 1 : 0.6
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
                       {model.name}
                     </h4>
+                    <span style={{
+                      background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                      color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
+                      padding: '0.1rem 0.5rem',
+                      borderRadius: '12px',
+                      fontSize: '0.7rem',
+                      fontWeight: '500',
+                      border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                    }}>
+                      {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
+                    </span>
                     {model.downloaded && (
                       <span style={{
                         background: 'rgba(76, 175, 80, 0.2)',
@@ -585,9 +681,52 @@ const AIConfigDialog = ({ visible, onHide }) => {
                       </span>
                     )}
                   </div>
-                  <p style={{ margin: '0.25rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
-                    Tamaño: {model.size}
+                  
+                  <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                    💾 Tamaño: {model.size}
                   </p>
+                  
+                  {model.description && (
+                    <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
+                      {model.description}
+                    </p>
+                  )}
+                  
+                  {model.useCases && model.useCases.length > 0 && (
+                    <div style={{ margin: '0.5rem 0' }}>
+                      <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
+                        💼 Casos de uso:
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                        {model.useCases.slice(0, 3).map((useCase, index) => (
+                          <span key={index} style={{
+                            background: themeColors.primaryColor + '20',
+                            color: themeColors.primaryColor,
+                            padding: '0.1rem 0.4rem',
+                            borderRadius: '8px',
+                            fontSize: '0.7rem',
+                            border: `1px solid ${themeColors.primaryColor}40`
+                          }}>
+                            {useCase}
+                          </span>
+                        ))}
+                        {model.useCases.length > 3 && (
+                          <span style={{
+                            color: themeColors.textSecondary,
+                            fontSize: '0.7rem'
+                          }}>
+                            +{model.useCases.length - 3} más
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {model.bestFor && (
+                    <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      👤 {model.bestFor}
+                    </p>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   {model.downloaded ? (
