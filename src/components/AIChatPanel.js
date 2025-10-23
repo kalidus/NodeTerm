@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { marked } from 'marked';
+import hljs from 'highlight.js';
+import DOMPurify from 'dompurify';
 import { Dropdown } from 'primereact/dropdown';
 import { aiService } from '../services/AIService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
+
+// Importar tema de highlight.js
+import 'highlight.js/styles/github-dark.css';
 
 const AIChatPanel = () => {
   const [messages, setMessages] = useState([]);
@@ -16,6 +22,30 @@ const AIChatPanel = () => {
   const [functionalModels, setFunctionalModels] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Configurar marked con resaltado de sintaxis
+  useEffect(() => {
+    marked.setOptions({
+      highlight: function(code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+          try {
+            return hljs.highlight(code, { language: lang }).value;
+          } catch (err) {
+            console.error('Error highlighting code:', err);
+          }
+        }
+        try {
+          return hljs.highlightAuto(code).value;
+        } catch (err) {
+          console.error('Error auto-highlighting code:', err);
+          return code;
+        }
+      },
+      breaks: true,
+      gfm: true,
+      langPrefix: 'hljs language-'
+    });
+  }, []);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -137,6 +167,54 @@ const AIChatPanel = () => {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Función para renderizar Markdown de forma segura
+  const renderMarkdown = (content) => {
+    if (!content) return '';
+    
+    try {
+      // Procesar el markdown con marked
+      const html = marked(content);
+      
+      // Sanitizar el HTML para seguridad
+      const cleanHtml = DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+      });
+      
+      return cleanHtml;
+    } catch (error) {
+      console.error('Error rendering markdown:', error);
+      return content;
+    }
+  };
+
+  // Componente para bloques de código con botón copiar
+  const CodeBlockWithCopy = ({ code, language }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch {}
+    };
+
+    return (
+      <div className="ai-codeblock">
+        <pre className="hljs">
+          <code dangerouslySetInnerHTML={{ __html: code }} />
+        </pre>
+        <button className="ai-copy-btn" onClick={handleCopy} title="Copiar código">
+          <i className={copied ? 'pi pi-check' : 'pi pi-copy'} />
+        </button>
+        {language && (
+          <span className="ai-code-lang">{language}</span>
+        )}
+      </div>
+    );
+  };
+
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
@@ -154,24 +232,34 @@ const AIChatPanel = () => {
       >
         {/* Mensaje */}
         <div
+          className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'}`}
           style={{
             maxWidth: '75%',
             background: isSystem
               ? 'rgba(255, 107, 53, 0.1)'
               : isUser
-              ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}99 100%)`
+              ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
               : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             color: themeColors.textPrimary,
-            padding: '0.75rem 1rem',
-            borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-            border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            wordWrap: 'break-word',
-            whiteSpace: 'pre-wrap'
+            border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`
           }}
         >
-          {message.content}
+          {isUser || isSystem ? (
+            <div className="ai-md">{message.content}</div>
+          ) : (
+            <div 
+              className="ai-md" 
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+              ref={(el) => {
+                if (el) {
+                  // Aplicar resaltado de sintaxis a los bloques de código
+                  el.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                  });
+                }
+              }}
+            />
+          )}
         </div>
 
         {/* Timestamp */}
