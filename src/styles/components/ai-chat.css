@@ -1,0 +1,164 @@
+/* Estilos compactos y profesionales para el chat de IA */
+
+.ai-bubble {
+  position: relative;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.ai-bubble.user {
+  border-radius: 14px 14px 4px 14px;
+}
+
+.ai-bubble.assistant {
+  border-radius: 14px 14px 14px 4px;
+}
+
+.ai-bubble.system {
+  border-radius: 10px;
+}
+
+.ai-md {
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.ai-md p, .ai-md-p { margin: 0 0 0.5rem 0; }
+.ai-md ul, .ai-md ol { margin: 0.25rem 0 0.5rem 1.25rem; }
+.ai-md li { margin: 0.15rem 0; }
+.ai-md blockquote { 
+  border-left: 4px solid rgba(255,255,255,0.3);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+  background: rgba(255,255,255,0.03);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border-radius: 0 6px 6px 0;
+}
+.ai-md hr { 
+  border: none; 
+  height: 1px; 
+  background: rgba(255,255,255,0.2); 
+  margin: 1rem 0; 
+}
+.ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, 
+.ai-md-h1, .ai-md-h2, .ai-md-h3, .ai-md-h4 { 
+  margin: 0.6rem 0 0.4rem; 
+  font-weight: 600;
+}
+.ai-md-h1 { font-size: 1.4rem; }
+.ai-md-h2 { font-size: 1.2rem; }
+.ai-md-h3 { font-size: 1.1rem; }
+.ai-table-wrapper { 
+  overflow-x: auto; 
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.ai-md table { 
+  border-collapse: collapse; 
+  width: 100%; 
+  font-size: 0.9rem; 
+  margin: 0;
+}
+.ai-md th, .ai-md td { 
+  border: 1px solid rgba(255,255,255,0.1); 
+  padding: 0.6rem 0.8rem; 
+  text-align: left;
+}
+.ai-md th { 
+  background: rgba(255,255,255,0.05);
+  font-weight: 600;
+}
+
+.ai-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.ai-codeblock {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+  margin: 0.5rem 0;
+}
+
+.ai-codeblock pre,
+.ai-code-pre {
+  margin: 0;
+  max-height: 520px;
+  overflow: auto;
+  padding: 0.9rem 1rem;
+  background: rgba(0,0,0,0.35);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.ai-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ai-copy-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.ai-code-lang {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 0.7rem;
+  opacity: 0.8;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+}
+
+/* Highlight.js base tune (dark overlay friendly) */
+.ai-codeblock .hljs {
+  color: #e6edf3;
+  background: transparent !important;
+  padding: 0;
+}
+
+/* Override highlight.js styles for better integration */
+.ai-codeblock pre.hljs {
+  background: rgba(0,0,0,0.35) !important;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin: 0;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Syntax highlighting colors */
+.ai-codeblock .hljs-keyword, .ai-codeblock .hljs-selector-tag, .ai-codeblock .hljs-literal { color: #c678dd; }
+.ai-codeblock .hljs-name, .ai-codeblock .hljs-attr { color: #61afef; }
+.ai-codeblock .hljs-string, .ai-codeblock .hljs-meta, .ai-codeblock .hljs-template-tag, .ai-codeblock .hljs-template-variable, .ai-codeblock .hljs-addition { color: #98c379; }
+.ai-codeblock .hljs-comment, .ai-codeblock .hljs-quote { color: #7f848e; }
+.ai-codeblock .hljs-variable, .ai-codeblock .hljs-type, .ai-codeblock .hljs-selector-class, .ai-codeblock .hljs-selector-attr, .ai-codeblock .hljs-selector-pseudo { color: #e5c07b; }
+.ai-codeblock .hljs-symbol, .ai-codeblock .hljs-bullet, .ai-codeblock .hljs-link, .ai-codeblock .hljs-deletion { color: #e06c75; }
+.ai-codeblock .hljs-number { color: #f97583; }
+.ai-codeblock .hljs-function { color: #79b8ff; }
+.ai-codeblock .hljs-title { color: #b392f0; }
+
+
