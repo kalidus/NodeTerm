@@ -1692,12 +1692,12 @@ class AIService {
         let bestBlock = null;
         let bestScore = 0;
         
-        codeBlocks.forEach((block, index) => {
-          const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
-          if (match) {
-            const language = match[1] || 'txt';
-            const code = match[2].trim();
-            
+      codeBlocks.forEach((block, index) => {
+        const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
+        if (match) {
+          const language = match[1] || 'txt';
+          const code = match[2].trim();
+          
             if (this.isSignificantCode(code, language)) {
               const score = this.calculateCodeSignificance(code, language);
               if (score > bestScore) {
@@ -1927,7 +1927,13 @@ class AIService {
       'web_scraper': ['scraper', 'web scraping', 'extraer datos', 'scraping'],
       'api_client': ['api', 'cliente api', 'llamar api', 'consumir api'],
       'base_datos': ['base de datos', 'database', 'sql', 'consulta'],
-      'automatizacion': ['automatizar', 'automatizacion', 'tarea automatica', 'cron']
+      'automatizacion': ['automatizar', 'automatizacion', 'tarea automatica', 'cron'],
+      'escaner_redes': ['escanear redes', 'escanear red', 'redes locales', 'escanear dispositivos', 'red local', 'escanear red local', 'dispositivos red', 'redes', 'escanear'],
+      'monitor_sistema': ['monitor', 'monitorear', 'sistema', 'recursos', 'cpu', 'memoria', 'disco'],
+      'backup_archivos': ['backup', 'respaldo', 'copiar archivos', 'respaldo archivos'],
+      'conversor_archivos': ['convertir archivos', 'conversor archivos', 'formato archivo'],
+      'generador_passwords': ['generar contraseñas', 'passwords', 'contraseñas', 'generar password'],
+      'analizador_logs': ['analizar logs', 'logs', 'analizar archivos log', 'log files']
     };
     
     // Buscar el patrón que mejor coincida con la solicitud del usuario
@@ -2119,7 +2125,11 @@ class AIService {
     const genericTitles = [
       'script', 'program', 'code', 'example', 'ejemplo',
       'import', 'definir', 'funcion', 'function', 'class',
-      'main', 'principal', 'basic', 'basico', 'simple'
+      'main', 'principal', 'basic', 'basico', 'simple',
+      'configuracion', 'configuracion de', 'configuracion de la',
+      'configuracion de la interfaz', 'configuracion de la red',
+      'configuracion de la red local', 'configuracion de la red local',
+      'configuracion de la red local', 'configuracion de la red local'
     ];
     
     return genericTitles.some(generic => 
