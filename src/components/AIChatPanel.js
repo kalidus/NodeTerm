@@ -26,7 +26,6 @@ const AIChatPanel = () => {
   // Estados avanzados para Fase 2
   const [currentStatus, setCurrentStatus] = useState(null);
   const [abortController, setAbortController] = useState(null);
-  const [detectedFiles, setDetectedFiles] = useState([]);
 
   // Configurar marked con resaltado de sintaxis
   useEffect(() => {
@@ -134,7 +133,7 @@ const AIChatPanel = () => {
     setInputValue('');
     setIsLoading(true);
     setCurrentStatus(null);
-    setDetectedFiles([]);
+    // No limpiar detectedFiles aquí - mantener archivos de conversaciones anteriores
 
     // Crear AbortController para cancelar si es necesario
     const controller = new AbortController();
@@ -202,11 +201,8 @@ const AIChatPanel = () => {
         },
         onComplete: (data) => {
           const files = aiService.detectFilesInResponse(data.response);
-          if (files.length > 0) {
-            setDetectedFiles(files);
-          }
           
-          // Actualizar mensaje final
+          // Actualizar mensaje final con archivos asociados
           setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId ? {
               ...msg,
@@ -306,7 +302,6 @@ const AIChatPanel = () => {
 
   const handleClearChat = () => {
     setMessages([]);
-    setDetectedFiles([]);
     aiService.clearHistory();
   };
 
@@ -502,12 +497,22 @@ const AIChatPanel = () => {
             )}
           </div>
         )}
+
+        {/* Archivos del mensaje específico */}
+        {!isStreaming && message.metadata && message.metadata.files && message.metadata.files.length > 0 && (
+          <div style={{ marginTop: '0.5rem' }}>
+            {renderFileDownloads(message.metadata.files, message.content)}
+          </div>
+        )}
       </div>
     );
   };
 
-  const renderFileDownloads = (files) => {
+  const renderFileDownloads = (files, messageContent) => {
     if (!files || files.length === 0) return null;
+
+    // Eliminar duplicados basándose en el nombre del archivo
+    const uniqueFiles = [...new Set(files)];
 
     const getFileIcon = (fileName) => {
       const ext = fileName.split('.').pop().toLowerCase();
@@ -541,14 +546,12 @@ const AIChatPanel = () => {
     };
 
     const handleDownload = (fileName) => {
-      // Buscar el código correspondiente en los mensajes
+      // Buscar el código correspondiente en el contenido del mensaje específico
       let fileContent = '';
       const extension = fileName.split('.').pop();
       
-      // Buscar en el último mensaje del asistente
-      const lastAssistantMessage = messages.filter(msg => msg.role === 'assistant').pop();
-      if (lastAssistantMessage && lastAssistantMessage.content) {
-        const codeBlocks = lastAssistantMessage.content.match(/```(\w+)?\n([\s\S]*?)```/g);
+      if (messageContent) {
+        const codeBlocks = messageContent.match(/```(\w+)?\n([\s\S]*?)```/g);
         if (codeBlocks) {
           // Encontrar el bloque de código que corresponde a este archivo
           const blockIndex = parseInt(fileName.match(/script_(\d+)\./)?.[1]) - 1;
@@ -612,11 +615,11 @@ const AIChatPanel = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <i className="pi pi-download" style={{ color: '#66bb6a', fontSize: '1rem' }} />
           <span style={{ fontWeight: '600', color: themeColors.textPrimary, fontSize: '0.95rem' }}>
-            Archivos generados ({files.length})
+            Archivos generados ({uniqueFiles.length})
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {files.map((file, idx) => (
+          {uniqueFiles.map((file, idx) => (
             <button
               key={idx}
               onClick={() => handleDownload(file)}
@@ -797,66 +800,78 @@ const AIChatPanel = () => {
 
           /* Estilos ultra compactos y profesionales para el contenido markdown */
           .ai-md {
-            font-size: 0.85rem !important;
-            line-height: 1.3 !important;
+            font-size: 0.9rem !important;
+            line-height: 1.35 !important;
+            max-width: 100% !important;
+            word-wrap: break-word !important;
           }
 
           .ai-md p {
-            margin: 0.2rem 0 !important;
-            line-height: 1.3 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.35 !important;
             color: ${themeColors.textPrimary} !important;
+            text-align: left !important;
+          }
+
+          /* Agregar espacio solo entre párrafos separados por saltos de línea */
+          .ai-md p + p {
+            margin-top: 0.5rem !important;
           }
 
           .ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, .ai-md h5, .ai-md h6 {
-            margin: 0.3rem 0 0.2rem 0 !important;
+            margin: 0.5rem 0 0.3rem 0 !important;
             line-height: 1.2 !important;
             color: ${themeColors.textPrimary} !important;
             font-weight: 600 !important;
+            text-align: left !important;
           }
 
-          .ai-md h1 { font-size: 1.1rem !important; }
-          .ai-md h2 { font-size: 1.05rem !important; }
-          .ai-md h3 { font-size: 1rem !important; }
-          .ai-md h4, .ai-md h5, .ai-md h6 { font-size: 0.95rem !important; }
+          .ai-md h1 { font-size: 1.2rem !important; }
+          .ai-md h2 { font-size: 1.1rem !important; }
+          .ai-md h3 { font-size: 1.05rem !important; }
+          .ai-md h4, .ai-md h5, .ai-md h6 { font-size: 1rem !important; }
 
           .ai-md ul, .ai-md ol {
-            margin: 0.2rem 0 !important;
-            padding-left: 1rem !important;
+            margin: 0.3rem 0 !important;
+            padding-left: 1.2rem !important;
           }
 
           .ai-md li {
-            margin: 0.05rem 0 !important;
-            line-height: 1.25 !important;
+            margin: 0 !important;
+            padding: 0.08rem 0 !important;
+            line-height: 1.35 !important;
             color: ${themeColors.textPrimary} !important;
-            padding: 0.1rem 0 !important;
           }
 
           .ai-md li::marker {
             color: ${themeColors.primaryColor} !important;
-            font-size: 0.8rem !important;
+            font-size: 0.85rem !important;
           }
 
           .ai-md blockquote {
-            margin: 0.2rem 0 !important;
-            padding: 0.3rem 0.6rem !important;
+            margin: 0.4rem 0 !important;
+            padding: 0.4rem 0.8rem !important;
             border-left: 2px solid ${themeColors.primaryColor} !important;
             background: rgba(255,255,255,0.02) !important;
             border-radius: 0 4px 4px 0 !important;
             font-style: italic !important;
             color: ${themeColors.textSecondary} !important;
-            font-size: 0.8rem !important;
+            font-size: 0.85rem !important;
           }
 
           .ai-md pre {
-            margin: 0.2rem 0 !important;
-            padding: 0.4rem !important;
-            background: rgba(0,0,0,0.1) !important;
+            margin: 0.4rem 0 !important;
+            padding: 0.6rem !important;
+            background: rgba(0,0,0,0.15) !important;
             border-radius: 4px !important;
             border: 1px solid rgba(255,255,255,0.1) !important;
+            overflow-x: auto !important;
+            line-height: 1.3 !important;
           }
 
           .ai-md code {
-            padding: 0.1rem 0.3rem !important;
+            padding: 0.15rem 0.3rem !important;
             font-size: 0.8em !important;
             background: rgba(255,255,255,0.1) !important;
             border-radius: 2px !important;
@@ -868,6 +883,8 @@ const AIChatPanel = () => {
             background: transparent !important;
             padding: 0 !important;
             border-radius: 0 !important;
+            font-size: 0.8rem !important;
+            line-height: 1.3 !important;
           }
 
           .ai-md strong, .ai-md b {
@@ -895,7 +912,7 @@ const AIChatPanel = () => {
           .ai-md table {
             width: 100% !important;
             border-collapse: collapse !important;
-            margin: 0.2rem 0 !important;
+            margin: 0.4rem 0 !important;
             background: rgba(255,255,255,0.02) !important;
             border-radius: 4px !important;
             overflow: hidden !important;
@@ -903,7 +920,7 @@ const AIChatPanel = () => {
           }
 
           .ai-md th, .ai-md td {
-            padding: 0.2rem 0.4rem !important;
+            padding: 0.3rem 0.5rem !important;
             border: 1px solid rgba(255,255,255,0.1) !important;
             text-align: left !important;
           }
@@ -918,32 +935,28 @@ const AIChatPanel = () => {
             color: ${themeColors.textSecondary} !important;
           }
 
-          /* Estilos específicos para listas más compactas */
-          .ai-md ul li, .ai-md ol li {
-            margin-bottom: 0 !important;
-            padding-bottom: 0.05rem !important;
+          /* Espaciado mejorado entre diferentes tipos de elementos */
+          .ai-md p + ul, .ai-md p + ol {
+            margin-top: 0.3rem !important;
           }
 
-          /* Reducir espaciado entre párrafos consecutivos */
-          .ai-md p + p {
-            margin-top: 0.1rem !important;
-          }
-
-          /* Reducir espaciado entre listas y párrafos */
-          .ai-md p + ul, .ai-md p + ol,
           .ai-md ul + p, .ai-md ol + p {
-            margin-top: 0.1rem !important;
+            margin-top: 0.4rem !important;
           }
 
-          /* Reducir espaciado entre títulos y contenido */
           .ai-md h1 + p, .ai-md h2 + p, .ai-md h3 + p,
           .ai-md h4 + p, .ai-md h5 + p, .ai-md h6 + p {
-            margin-top: 0.1rem !important;
+            margin-top: 0.2rem !important;
           }
 
           .ai-md h1 + ul, .ai-md h2 + ul, .ai-md h3 + ul,
           .ai-md h4 + ul, .ai-md h5 + ul, .ai-md h6 + ul {
-            margin-top: 0.1rem !important;
+            margin-top: 0.3rem !important;
+          }
+
+          .ai-md ul + ul, .ai-md ol + ol,
+          .ai-md ul + ol, .ai-md ol + ul {
+            margin-top: 0.3rem !important;
           }
         `}
       </style>
@@ -957,10 +970,10 @@ const AIChatPanel = () => {
           position: 'relative'
         }}
       >
-        {/* Header */}
+        {/* Header Compacto */}
         <div
           style={{
-            padding: '1rem',
+            padding: '0.6rem 1rem',
             background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             backdropFilter: 'blur(8px)',
             borderBottom: `1px solid ${themeColors.borderColor}`,
@@ -969,48 +982,49 @@ const AIChatPanel = () => {
             justifyContent: 'space-between'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {/* Icono de IA */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            {/* Icono de IA más pequeño */}
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
                 background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: `0 2px 8px ${themeColors.primaryColor}30`
+                boxShadow: `0 2px 6px ${themeColors.primaryColor}30`
               }}
             >
-              <i className="pi pi-comments" style={{ color: 'white', fontSize: '1.2rem' }} />
+              <i className="pi pi-comments" style={{ color: 'white', fontSize: '1rem' }} />
             </div>
 
             <div>
-              <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1.2rem', fontWeight: '600' }}>
+              <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1rem', fontWeight: '600', lineHeight: '1.2' }}>
                 Chat de IA
               </h2>
-              <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.75rem' }}>
+              <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.7rem', lineHeight: '1.1' }}>
                 {currentModel ? `Modelo: ${currentModel}` : 'Selecciona un modelo en configuración'}
               </p>
             </div>
           </div>
 
-          {/* Botones de acción */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {/* Botones de acción más compactos */}
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
             <button
               onClick={() => setShowConfigDialog(true)}
               style={{
                 background: 'rgba(255,255,255,0.1)',
                 border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '8px',
-                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
+                padding: '0.4rem 0.6rem',
                 color: themeColors.textPrimary,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.4rem',
+                fontSize: '0.8rem'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = themeColors.hoverBackground;
@@ -1019,7 +1033,7 @@ const AIChatPanel = () => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
               }}
             >
-              <i className="pi pi-cog" />
+              <i className="pi pi-cog" style={{ fontSize: '0.8rem' }} />
               <span>Config</span>
             </button>
 
@@ -1028,14 +1042,15 @@ const AIChatPanel = () => {
               style={{
                 background: 'rgba(255,107,53,0.2)',
                 border: '1px solid rgba(255,107,53,0.4)',
-                borderRadius: '8px',
-                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
+                padding: '0.4rem 0.6rem',
                 color: themeColors.textPrimary,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.4rem',
+                fontSize: '0.8rem'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(255,107,53,0.3)';
@@ -1044,32 +1059,32 @@ const AIChatPanel = () => {
                 e.currentTarget.style.background = 'rgba(255,107,53,0.2)';
               }}
             >
-              <i className="pi pi-trash" />
+              <i className="pi pi-trash" style={{ fontSize: '0.8rem' }} />
               <span>Limpiar</span>
             </button>
           </div>
         </div>
 
-        {/* Indicador de Pensamiento Profesional */}
+        {/* Indicador de Estado Compacto */}
         {isLoading && (
           <div
             style={{
-              padding: '1rem 1.5rem',
+              padding: '0.6rem 1rem',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               background: `linear-gradient(135deg, ${themeColors.primaryColor}15 0%, ${themeColors.primaryColor}08 100%)`,
-              borderBottom: `2px solid ${themeColors.primaryColor}40`,
+              borderBottom: `1px solid ${themeColors.primaryColor}40`,
               backdropFilter: 'blur(10px)',
               animation: 'fadeIn 0.3s ease-in'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-              {/* Indicador visual animado */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flex: 1 }}>
+              {/* Indicador visual más pequeño */}
               <div style={{ 
                 position: 'relative',
-                width: '48px',
-                height: '48px',
+                width: '32px',
+                height: '32px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1087,61 +1102,61 @@ const AIChatPanel = () => {
                 {/* Icono central */}
                 <div style={{
                   position: 'relative',
-                  width: '36px',
-                  height: '36px',
+                  width: '24px',
+                  height: '24px',
                   borderRadius: '50%',
                   background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}cc 100%)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: `0 4px 12px ${themeColors.primaryColor}40`
+                  boxShadow: `0 2px 8px ${themeColors.primaryColor}40`
                 }}>
-                  {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: '#fff', fontSize: '1rem' }} />}
-                  {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '1rem' }} />}
-                  {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '1rem' }} />}
-                  {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '1rem' }} />}
-                  {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '1rem' }} />}
+                  {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                 </div>
               </div>
 
-              {/* Información del estado */}
+              {/* Información del estado más compacta */}
               <div style={{ flex: 1 }}>
                 <div style={{ 
-                  fontSize: '1rem', 
+                  fontSize: '0.85rem', 
                   fontWeight: '600', 
                   color: themeColors.textPrimary,
-                  marginBottom: '0.25rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem'
+                  gap: '0.4rem',
+                  lineHeight: '1.2'
                 }}>
-                  {currentStatus?.status === 'connecting' ? 'Conectando con IA' :
-                   currentStatus?.status === 'generating' ? 'Generando respuesta' :
-                   currentStatus?.status === 'streaming' ? 'Transmitiendo respuesta' :
-                   currentStatus?.status === 'retrying' ? 'Reintentando conexión' :
-                   'Procesando solicitud'}
+                  {currentStatus?.status === 'connecting' ? 'Conectando...' :
+                   currentStatus?.status === 'generating' ? 'Generando respuesta...' :
+                   currentStatus?.status === 'streaming' ? 'Recibiendo respuesta...' :
+                   currentStatus?.status === 'retrying' ? 'Reintentando...' :
+                   'Procesando...'}
                   
-                  {/* Puntos animados */}
-                  <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                  {/* Puntos animados más pequeños */}
+                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
                     <span style={{ 
-                      width: '4px', 
-                      height: '4px', 
+                      width: '3px', 
+                      height: '3px', 
                       borderRadius: '50%', 
                       background: themeColors.primaryColor,
                       animation: 'dot-pulse 1.4s ease-in-out infinite',
                       animationDelay: '0s'
                     }}></span>
                     <span style={{ 
-                      width: '4px', 
-                      height: '4px', 
+                      width: '3px', 
+                      height: '3px', 
                       borderRadius: '50%', 
                       background: themeColors.primaryColor,
                       animation: 'dot-pulse 1.4s ease-in-out infinite',
                       animationDelay: '0.2s'
                     }}></span>
                     <span style={{ 
-                      width: '4px', 
-                      height: '4px', 
+                      width: '3px', 
+                      height: '3px', 
                       borderRadius: '50%', 
                       background: themeColors.primaryColor,
                       animation: 'dot-pulse 1.4s ease-in-out infinite',
@@ -1149,21 +1164,10 @@ const AIChatPanel = () => {
                     }}></span>
                   </div>
                 </div>
-                <div style={{ 
-                  fontSize: '0.85rem', 
-                  color: themeColors.textSecondary,
-                  opacity: 0.9
-                }}>
-                  {currentStatus?.status === 'connecting' ? 'Estableciendo conexión con el modelo...' :
-                   currentStatus?.status === 'generating' ? 'Analizando y procesando tu solicitud...' :
-                   currentStatus?.status === 'streaming' ? 'Recibiendo respuesta en tiempo real...' :
-                   currentStatus?.status === 'retrying' ? `Reintento ${currentStatus.attempt || 1}/3 - Reestableciendo conexión...` :
-                   'Preparando respuesta inteligente...'}
-                </div>
               </div>
             </div>
 
-            {/* Botón Detener */}
+            {/* Botón Detener más compacto */}
             {abortController && (
               <button
                 onClick={handleStopGeneration}
@@ -1171,13 +1175,13 @@ const AIChatPanel = () => {
                   background: 'rgba(244, 67, 54, 0.1)',
                   border: '1px solid rgba(244, 67, 54, 0.3)',
                   color: '#f44336',
-                  padding: '0.6rem 1rem',
-                  borderRadius: '8px',
-                  fontSize: '0.9rem',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  gap: '0.4rem',
                   fontWeight: '600',
                   transition: 'all 0.2s ease',
                   whiteSpace: 'nowrap'
@@ -1191,7 +1195,7 @@ const AIChatPanel = () => {
                   e.currentTarget.style.transform = 'scale(1)';
                 }}
               >
-                <i className="pi pi-stop-circle" style={{ fontSize: '1.1rem' }} />
+                <i className="pi pi-stop-circle" style={{ fontSize: '0.9rem' }} />
                 Detener
               </button>
             )}
@@ -1267,21 +1271,20 @@ const AIChatPanel = () => {
             </div>
           )}
 
-          {detectedFiles.length > 0 && renderFileDownloads(detectedFiles)}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input área */}
+        {/* Input área compacta */}
         <div
           style={{
-            padding: '1rem',
+            padding: '0.6rem 1rem',
             background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             backdropFilter: 'blur(8px)',
             borderTop: `1px solid ${themeColors.borderColor}`
           }}
         >
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
             <textarea
               ref={inputRef}
               value={inputValue}
@@ -1292,21 +1295,21 @@ const AIChatPanel = () => {
               className="ai-input"
               style={{
                 flex: 1,
-                padding: '0.75rem',
+                padding: '0.6rem',
                 background: 'rgba(255,255,255,0.05)',
                 border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '12px',
+                borderRadius: '8px',
                 color: themeColors.textPrimary,
-                fontSize: '0.95rem',
+                fontSize: '0.9rem',
                 resize: 'none',
-                minHeight: '48px',
-                maxHeight: '120px',
+                minHeight: '40px',
+                maxHeight: '100px',
                 transition: 'all 0.2s ease'
               }}
               rows={1}
             />
 
-            {/* Selector de modelos */}
+            {/* Selector de modelos más compacto */}
             <Dropdown
               value={currentModel || null}
               options={functionalModels}
@@ -1318,18 +1321,18 @@ const AIChatPanel = () => {
               }}
               optionLabel="displayName"
               optionValue="id"
-              placeholder={functionalModels.length === 0 ? "Sin modelos" : "Selecciona modelo"}
+              placeholder={functionalModels.length === 0 ? "Sin modelos" : "Modelo"}
               disabled={isLoading || functionalModels.length === 0}
               className="ai-model-dropdown"
               style={{
-                minWidth: '180px',
-                maxWidth: '220px',
-                height: '48px'
+                minWidth: '140px',
+                maxWidth: '180px',
+                height: '40px'
               }}
               panelStyle={{
                 background: themeColors.cardBackground,
                 border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '12px',
+                borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
               }}
             />
@@ -1342,17 +1345,17 @@ const AIChatPanel = () => {
                   ? `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`
                   : 'rgba(255,255,255,0.1)',
                 border: 'none',
-                borderRadius: '12px',
-                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                padding: '0.6rem 1.2rem',
                 color: 'white',
                 cursor: currentModel && inputValue.trim() && !isLoading ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.95rem',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
                 fontWeight: '500',
-                boxShadow: currentModel && inputValue.trim() ? `0 2px 8px ${themeColors.primaryColor}30` : 'none',
+                boxShadow: currentModel && inputValue.trim() ? `0 2px 6px ${themeColors.primaryColor}30` : 'none',
                 opacity: currentModel && inputValue.trim() && !isLoading ? 1 : 0.5
               }}
             >
@@ -1364,15 +1367,15 @@ const AIChatPanel = () => {
           {!currentModel && functionalModels.length === 0 && (
             <div
               style={{
-                marginTop: '0.5rem',
-                fontSize: '0.8rem',
+                marginTop: '0.4rem',
+                fontSize: '0.75rem',
                 color: 'rgba(255,107,53,0.8)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.4rem'
               }}
             >
-              <i className="pi pi-exclamation-triangle" />
+              <i className="pi pi-exclamation-triangle" style={{ fontSize: '0.8rem' }} />
               <span>Configura un modelo de IA para comenzar</span>
             </div>
           )}
