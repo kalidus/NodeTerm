@@ -1657,7 +1657,73 @@ class AIService {
       }
     }
     
+    // Detectar código que podría ser un archivo (bloques de código con import/def/class)
+    const codeBlocks = content.match(/```(\w+)?\n([\s\S]*?)```/g);
+    if (codeBlocks) {
+      codeBlocks.forEach((block, index) => {
+        const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
+        if (match) {
+          const language = match[1] || 'txt';
+          const code = match[2].trim();
+          
+          // Detectar si es código que merece ser un archivo
+          const isSignificantCode = (
+            code.includes('import ') || 
+            code.includes('def ') || 
+            code.includes('class ') || 
+            code.includes('function ') || 
+            code.includes('const ') || 
+            code.includes('let ') || 
+            code.includes('var ') ||
+            code.includes('public class') ||
+            code.includes('#include') ||
+            code.includes('package ') ||
+            code.length > 100 // Código sustancial
+          );
+          
+          if (isSignificantCode) {
+            const extension = this.getLanguageExtension(language);
+            const fileName = `script_${index + 1}.${extension}`;
+            if (!files.includes(fileName)) {
+              files.push(fileName);
+            }
+          }
+        }
+      });
+    }
+    
     return [...new Set(files)]; // Remover duplicados
+  }
+
+  /**
+   * Obtener extensión de archivo basada en el lenguaje
+   */
+  getLanguageExtension(language) {
+    const extensions = {
+      'python': 'py',
+      'javascript': 'js',
+      'typescript': 'ts',
+      'jsx': 'jsx',
+      'tsx': 'tsx',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c': 'c',
+      'go': 'go',
+      'rust': 'rs',
+      'php': 'php',
+      'ruby': 'rb',
+      'bash': 'sh',
+      'shell': 'sh',
+      'sql': 'sql',
+      'html': 'html',
+      'css': 'css',
+      'json': 'json',
+      'yaml': 'yml',
+      'xml': 'xml',
+      'markdown': 'md',
+      'txt': 'txt'
+    };
+    return extensions[language] || 'txt';
   }
 }
 
