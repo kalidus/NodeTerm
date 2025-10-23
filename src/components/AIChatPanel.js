@@ -200,7 +200,7 @@ const AIChatPanel = () => {
           });
         },
         onComplete: (data) => {
-          const files = aiService.detectFilesInResponse(data.response);
+          const files = aiService.detectFilesInResponse(data.response, userMessage);
           
           // Actualizar mensaje final con archivos asociados
           setMessages(prev => prev.map(msg => 
@@ -553,14 +553,61 @@ const AIChatPanel = () => {
       if (messageContent) {
         const codeBlocks = messageContent.match(/```(\w+)?\n([\s\S]*?)```/g);
         if (codeBlocks) {
-          // Encontrar el bloque de código que corresponde a este archivo
-          const blockIndex = parseInt(fileName.match(/script_(\d+)\./)?.[1]) - 1;
-          if (blockIndex >= 0 && codeBlocks[blockIndex]) {
-            const match = codeBlocks[blockIndex].match(/```(\w+)?\n([\s\S]*?)```/);
-            if (match) {
-              fileContent = match[2].trim();
+          // Buscar el bloque de código que corresponde a este archivo
+          let foundBlock = null;
+          
+          // Primero intentar encontrar por nombre descriptivo
+          if (fileName.includes('_')) {
+            const nameParts = fileName.split('_');
+            const baseName = nameParts[0];
+            const expectedExtension = fileName.split('.').pop();
+            
+            for (let i = 0; i < codeBlocks.length; i++) {
+              const match = codeBlocks[i].match(/```(\w+)?\n([\s\S]*?)```/);
+              if (match) {
+                const language = match[1] || 'txt';
+                const code = match[2].trim();
+                const actualExtension = getLanguageExtension(language);
+                
+                // Verificar si el código contiene patrones que coincidan con el nombre
+                if (actualExtension === expectedExtension) {
+                  const hasMatchingPattern = checkCodePatterns(code, baseName, language);
+                  if (hasMatchingPattern) {
+                    foundBlock = code;
+                    break;
+                  }
+                }
+              }
             }
           }
+          
+          // Si no se encontró por nombre descriptivo, usar el índice tradicional
+          if (!foundBlock) {
+            const blockIndex = parseInt(fileName.match(/script_(\d+)\./)?.[1]) - 1;
+            if (blockIndex >= 0 && codeBlocks[blockIndex]) {
+              const match = codeBlocks[blockIndex].match(/```(\w+)?\n([\s\S]*?)```/);
+              if (match) {
+                foundBlock = match[2].trim();
+              }
+            }
+          }
+          
+          // Si aún no se encontró, buscar por extensión
+          if (!foundBlock) {
+            for (let i = 0; i < codeBlocks.length; i++) {
+              const match = codeBlocks[i].match(/```(\w+)?\n([\s\S]*?)```/);
+              if (match) {
+                const language = match[1] || 'txt';
+                const actualExtension = this.getLanguageExtension(language);
+                if (actualExtension === extension) {
+                  foundBlock = match[2].trim();
+                  break;
+                }
+              }
+            }
+          }
+          
+          fileContent = foundBlock || '';
         }
       }
       
@@ -600,6 +647,51 @@ const AIChatPanel = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+    };
+
+    // Función auxiliar para verificar patrones en el código
+    const checkCodePatterns = (code, baseName, language) => {
+      const patterns = {
+        'func': /def\s+\w+|function\s+\w+/,
+        'class': /class\s+\w+/,
+        'main': /if\s+__name__\s*==\s*['"]__main__['"]|public\s+static\s+void\s+main/,
+        'import': /import\s+\w+/,
+        'export': /export\s+(?:default\s+)?\w+/,
+        'const': /const\s+\w+/,
+        'script': /import\s+\w+|def\s+\w+|function\s+\w+/
+      };
+      
+      const pattern = patterns[baseName];
+      return pattern ? pattern.test(code) : false;
+    };
+
+    // Función auxiliar para obtener extensión de archivo basada en el lenguaje
+    const getLanguageExtension = (language) => {
+      const extensions = {
+        'python': 'py',
+        'javascript': 'js',
+        'typescript': 'ts',
+        'jsx': 'jsx',
+        'tsx': 'tsx',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c',
+        'go': 'go',
+        'rust': 'rs',
+        'php': 'php',
+        'ruby': 'rb',
+        'bash': 'sh',
+        'shell': 'sh',
+        'sql': 'sql',
+        'html': 'html',
+        'css': 'css',
+        'json': 'json',
+        'yaml': 'yml',
+        'xml': 'xml',
+        'markdown': 'md',
+        'txt': 'txt'
+      };
+      return extensions[language] || 'txt';
     };
 
     return (

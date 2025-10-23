@@ -1632,12 +1632,13 @@ class AIService {
   /**
    * Detectar archivos mencionados en la respuesta
    */
-  detectFilesInResponse(content) {
+  detectFilesInResponse(content, userMessage = '') {
     if (!content) return [];
     
     const files = [];
+    const seenFiles = new Set(); // Para evitar duplicados
     
-    // Patrones para detectar archivos
+    // Patrones para detectar archivos explícitos mencionados
     const patterns = [
       // Rutas de archivo: /ruta/a/archivo.ext o C:\ruta\archivo.ext
       /(?:^|\s)((?:[a-zA-Z]:)?(?:\/|\\)[^\s<>"{}|\\^`\[\]]*\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf))\b/gmi,
@@ -1647,27 +1648,90 @@ class AIService {
       /(?:src|lib|dist|build|out|output|downloads|files)\/[^\s<>"{}|\\^`\[\]]*\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf)/gmi
     ];
     
+    // Primero, detectar archivos explícitos mencionados
     for (const pattern of patterns) {
       let match;
       while ((match = pattern.exec(content)) !== null) {
         const filePath = match[1] || match[0].trim();
-        if (!files.includes(filePath)) {
+        if (!seenFiles.has(filePath)) {
           files.push(filePath);
+          seenFiles.add(filePath);
         }
       }
     }
     
+    // Si ya se encontraron archivos explícitos, no buscar en bloques de código
+    if (files.length > 0) {
+      return files;
+    }
+    
     // Detectar código que podría ser un archivo (bloques de código con import/def/class)
     const codeBlocks = content.match(/```(\w+)?\n([\s\S]*?)```/g);
-    if (codeBlocks) {
-      codeBlocks.forEach((block, index) => {
-        const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
+    if (codeBlocks && codeBlocks.length > 0) {
+      // Si hay múltiples bloques de código, ser más selectivo
+      if (codeBlocks.length === 1) {
+        // Solo un bloque de código, crear archivo si es significativo
+        const match = codeBlocks[0].match(/```(\w+)?\n([\s\S]*?)```/);
         if (match) {
           const language = match[1] || 'txt';
           const code = match[2].trim();
           
-          // Detectar si es código que merece ser un archivo
-          const isSignificantCode = (
+          if (this.isSignificantCode(code, language)) {
+            const extension = this.getLanguageExtension(language);
+            const descriptiveName = this.generateDescriptiveFileName(code, language, 0, userMessage);
+            const fileName = descriptiveName || `script.${extension}`;
+            
+            if (!seenFiles.has(fileName)) {
+              files.push(fileName);
+              seenFiles.add(fileName);
+            }
+          }
+        }
+      } else {
+        // Múltiples bloques, ser MUY selectivo - solo el más significativo
+        let bestBlock = null;
+        let bestScore = 0;
+        
+        codeBlocks.forEach((block, index) => {
+          const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
+          if (match) {
+            const language = match[1] || 'txt';
+            const code = match[2].trim();
+            
+            if (this.isSignificantCode(code, language)) {
+              const score = this.calculateCodeSignificance(code, language);
+              if (score > bestScore) {
+                bestScore = score;
+                bestBlock = { code, language, index };
+              }
+            }
+          }
+        });
+        
+        // Solo crear archivo para el bloque más significativo
+        if (bestBlock) {
+          const extension = this.getLanguageExtension(bestBlock.language);
+          const descriptiveName = this.generateDescriptiveFileName(bestBlock.code, bestBlock.language, bestBlock.index, userMessage);
+          const fileName = descriptiveName || `script.${extension}`;
+          
+          if (!seenFiles.has(fileName)) {
+            files.push(fileName);
+            seenFiles.add(fileName);
+          }
+        }
+      }
+    }
+    
+    return files;
+  }
+
+  /**
+   * Verificar si el código es significativo y merece ser un archivo
+   */
+  isSignificantCode(code, language) {
+    // Criterios más estrictos para evitar archivos innecesarios
+    const minLength = 50; // Reducir de 100 a 50 caracteres
+    const hasStructure = (
             code.includes('import ') || 
             code.includes('def ') || 
             code.includes('class ') || 
@@ -1678,21 +1742,459 @@ class AIService {
             code.includes('public class') ||
             code.includes('#include') ||
             code.includes('package ') ||
-            code.length > 100 // Código sustancial
-          );
-          
-          if (isSignificantCode) {
+      code.includes('export ') ||
+      code.includes('module.exports') ||
+      code.includes('require(') ||
+      code.includes('from ') ||
+      code.includes('@') // Decoradores
+    );
+    
+    const hasContent = code.length > minLength;
+    const hasMultipleLines = code.split('\n').length > 3;
+    
+    return hasStructure && hasContent && hasMultipleLines;
+  }
+
+  /**
+   * Calcular la significancia del código para seleccionar el mejor
+   */
+  calculateCodeSignificance(code, language) {
+    let score = 0;
+    
+    // Puntuación por longitud (más código = más significativo)
+    score += Math.min(code.length / 100, 10);
+    
+    // Puntuación por estructura
+    const structureKeywords = {
+      'python': ['def ', 'class ', 'import ', 'if __name__', 'main()'],
+      'javascript': ['function', 'const ', 'class ', 'export ', 'import '],
+      'java': ['public class', 'public static void main', 'import '],
+      'cpp': ['int main', 'class ', '#include']
+    };
+    
+    const keywords = structureKeywords[language] || structureKeywords['python'];
+    keywords.forEach(keyword => {
+      if (code.includes(keyword)) {
+        score += 2;
+      }
+    });
+    
+    // Puntuación por funcionalidad específica
+    const functionalityKeywords = {
+      'python': ['random', 'randint', 'suma', 'resta', 'multiplicacion', 'division', 'celsius', 'fahrenheit'],
+      'javascript': ['express', 'react', 'vue', 'angular', 'api', 'server'],
+      'java': ['@SpringBootApplication', '@RestController', '@Service', '@Entity'],
+      'cpp': ['iostream', 'vector', 'string', 'algorithm']
+    };
+    
+    const funcKeywords = functionalityKeywords[language] || functionalityKeywords['python'];
+    funcKeywords.forEach(keyword => {
+      if (code.toLowerCase().includes(keyword.toLowerCase())) {
+        score += 3;
+      }
+    });
+    
+    // Puntuación por comentarios y documentación
+    const commentCount = (code.match(/#|\/\/|\/\*/g) || []).length;
+    score += Math.min(commentCount, 5);
+    
+    // Puntuación por líneas de código
+    const lineCount = code.split('\n').length;
+    score += Math.min(lineCount / 10, 5);
+    
+    return score;
+  }
+
+  /**
+   * Verificar si se debe crear un archivo (evitar duplicados innecesarios)
+   */
+  shouldCreateFile(code, language, existingFiles) {
             const extension = this.getLanguageExtension(language);
-            const fileName = `script_${index + 1}.${extension}`;
-            if (!files.includes(fileName)) {
-              files.push(fileName);
-            }
-          }
-        }
-      });
+    
+    // Si ya hay archivos del mismo tipo, ser más selectivo
+    const sameTypeFiles = existingFiles.filter(f => f.endsWith(`.${extension}`));
+    if (sameTypeFiles.length >= 1) {
+      // Solo crear si es realmente único o importante
+      return this.isUniqueCode(code, language) || this.isImportantCode(code, language);
     }
     
-    return [...new Set(files)]; // Remover duplicados
+    // Si es el primer archivo de este tipo, permitir si es significativo
+    return this.isSignificantCode(code, language);
+  }
+
+  /**
+   * Verificar si el código es único (no duplicado)
+   */
+  isUniqueCode(code, language) {
+    // Buscar características únicas del código
+    const uniquePatterns = {
+      'python': [/def\s+\w+/, /class\s+\w+/, /import\s+\w+/],
+      'javascript': [/function\s+\w+/, /const\s+\w+/, /class\s+\w+/],
+      'java': [/public\s+class\s+\w+/, /public\s+static\s+void\s+main/],
+      'cpp': [/int\s+main\s*\(/, /class\s+\w+/, /#include/]
+    };
+    
+    const patterns = uniquePatterns[language] || [];
+    return patterns.some(pattern => pattern.test(code));
+  }
+
+  /**
+   * Verificar si el código es importante (merece ser archivo)
+   */
+  isImportantCode(code, language) {
+    const importantKeywords = {
+      'python': ['def ', 'class ', 'import ', 'if __name__'],
+      'javascript': ['function', 'const ', 'class ', 'export '],
+      'java': ['public class', 'public static void main'],
+      'cpp': ['int main', 'class ', '#include'],
+      'html': ['<!DOCTYPE', '<html', '<head', '<body'],
+      'css': ['@media', '@keyframes', 'body', 'html'],
+      'sql': ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE']
+    };
+    
+    const keywords = importantKeywords[language] || [];
+    return keywords.some(keyword => code.includes(keyword));
+  }
+
+  /**
+   * Generar nombre de archivo descriptivo basado en el contenido del código
+   */
+  generateDescriptiveFileName(code, language, index, userMessage = '') {
+    const extension = this.getLanguageExtension(language);
+    
+    // 1. PRIMERO: Intentar generar nombre basado en la solicitud del usuario
+    const nameFromUserRequest = this.extractNameFromUserRequest(userMessage, language);
+    if (nameFromUserRequest) {
+      return `${nameFromUserRequest}.${extension}`;
+    }
+    
+    // 2. Buscar títulos y descripciones en comentarios
+    const titleFromComments = this.extractTitleFromComments(code, language);
+    if (titleFromComments) {
+      return `${titleFromComments}.${extension}`;
+    }
+    
+    // 3. Buscar descripción del propósito en el contexto (más específico)
+    const purposeFromContext = this.extractPurposeFromContext(code, language);
+    if (purposeFromContext) {
+      return `${purposeFromContext}.${extension}`;
+    }
+    
+    // 4. Buscar patrones específicos de funcionalidad
+    const functionalityName = this.extractFunctionalityName(code, language);
+    if (functionalityName) {
+      return `${functionalityName}.${extension}`;
+    }
+    
+    // 5. Buscar nombres de funciones principales
+    const mainFunctionName = this.extractMainFunctionName(code, language);
+    if (mainFunctionName) {
+      return `${mainFunctionName}.${extension}`;
+    }
+    
+    // 6. Si no se encuentra nada descriptivo, usar un nombre genérico pero más específico
+    const genericNames = {
+      'python': 'script_python',
+      'javascript': 'script_js',
+      'typescript': 'script_ts',
+      'java': 'script_java',
+      'cpp': 'script_cpp',
+      'html': 'page_html',
+      'css': 'styles_css',
+      'sql': 'query_sql'
+    };
+    
+    const baseName = genericNames[language] || 'script';
+    return `${baseName}.${extension}`;
+  }
+
+  /**
+   * Extraer nombre basado en la solicitud del usuario
+   */
+  extractNameFromUserRequest(userMessage, language) {
+    if (!userMessage) return null;
+    
+    const message = userMessage.toLowerCase();
+    
+    // Patrones de solicitudes comunes del usuario
+    const requestPatterns = {
+      'calculadora': ['calculadora', 'calculadora basica', 'operaciones basicas', 'sumar restar multiplicar dividir', 'calculadora simple'],
+      'generador_numeros': ['generar numeros', 'numeros aleatorios', 'random', 'generar numero', 'numero aleatorio'],
+      'sumador': ['sumar numeros', 'suma', 'sumar', 'suma de numeros'],
+      'conversor_temperatura': ['conversor', 'temperatura', 'celsius fahrenheit', 'convertir temperatura'],
+      'promedio': ['promedio', 'calcular promedio', 'media'],
+      'manejador_archivos': ['manejar archivos', 'leer archivo', 'escribir archivo', 'archivos'],
+      'web_scraper': ['scraper', 'web scraping', 'extraer datos', 'scraping'],
+      'api_client': ['api', 'cliente api', 'llamar api', 'consumir api'],
+      'base_datos': ['base de datos', 'database', 'sql', 'consulta'],
+      'automatizacion': ['automatizar', 'automatizacion', 'tarea automatica', 'cron']
+    };
+    
+    // Buscar el patrón que mejor coincida con la solicitud del usuario
+    let bestMatch = null;
+    let bestScore = 0;
+    
+    for (const [name, keywords] of Object.entries(requestPatterns)) {
+      let score = 0;
+      keywords.forEach(keyword => {
+        if (message.includes(keyword)) {
+          score += keyword.length; // Puntuación basada en la longitud de la palabra clave
+        }
+      });
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = name;
+      }
+    }
+    
+    // Solo devolver si hay una coincidencia significativa
+    return bestScore > 5 ? bestMatch : null;
+  }
+
+  /**
+   * Extraer nombre basado en la funcionalidad específica del código
+   */
+  extractFunctionalityName(code, language) {
+    const functionalityPatterns = {
+      'python': {
+        'generador_numeros': ['random', 'randint', 'aleatorio', 'generar_numero', 'numero_aleatorio'],
+        'calculadora_basica': ['suma', 'resta', 'multiplicacion', 'division', 'calculadora', 'operaciones', 'opcion', 'elija'],
+        'sumador_numeros': ['sumar', 'suma', 'numeros', 'cantidad', 'ingrese'],
+        'promedio_numeros': ['promedio', 'calcular_promedio', 'numeros', 'promediar'],
+        'conversor_temperatura': ['celsius', 'fahrenheit', 'convertir', 'temperatura', 'grados'],
+        'manejador_archivos': ['open', 'read', 'write', 'file', 'path', 'os'],
+        'web_scraper': ['requests', 'beautifulsoup', 'scrape', 'url', 'html'],
+        'api_client': ['requests', 'api', 'http', 'get', 'post', 'json'],
+        'base_datos': ['sqlite', 'mysql', 'postgres', 'database', 'db'],
+        'automatizacion': ['schedule', 'cron', 'automate', 'task', 'job']
+      },
+      'javascript': {
+        'web_app': ['express', 'react', 'vue', 'angular', 'dom', 'html'],
+        'api_server': ['express', 'fastify', 'koa', 'api', 'server'],
+        'procesador_datos': ['json', 'array', 'map', 'filter', 'reduce'],
+        'utilidad': ['util', 'helper', 'common', 'shared', 'tool']
+      },
+      'java': {
+        'aplicacion_spring': ['@SpringBootApplication', '@RestController', '@Service'],
+        'modelo_datos': ['@Entity', '@Table', '@Column', 'model', 'entity'],
+        'utilidad': ['util', 'helper', 'common', 'shared', 'tool']
+      }
+    };
+    
+    const patterns = functionalityPatterns[language] || functionalityPatterns['python'];
+    
+    // Buscar el patrón con más coincidencias
+    let bestMatch = null;
+    let bestScore = 0;
+    
+    for (const [name, keywords] of Object.entries(patterns)) {
+      let score = 0;
+      keywords.forEach(keyword => {
+        if (code.toLowerCase().includes(keyword.toLowerCase())) {
+          score++;
+        }
+      });
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = name;
+      }
+    }
+    
+    // Solo devolver si hay al menos 2 coincidencias
+    return bestScore >= 2 ? bestMatch : null;
+  }
+
+  /**
+   * Extraer nombre de la función principal
+   */
+  extractMainFunctionName(code, language) {
+    const mainFunctionPatterns = {
+      'python': [
+        /def\s+(\w+)\s*\([^)]*\):/,  // def function_name():
+        /def\s+main\s*\([^)]*\):/,   // def main():
+        /def\s+(\w+)\s*\([^)]*\):\s*"""/  // def function_name(): """
+      ],
+      'javascript': [
+        /function\s+(\w+)\s*\([^)]*\)/,  // function functionName()
+        /const\s+(\w+)\s*=\s*\([^)]*\)\s*=>/,  // const functionName = () =>
+        /export\s+(?:default\s+)?function\s+(\w+)/  // export function functionName
+      ],
+      'java': [
+        /public\s+static\s+void\s+(\w+)\s*\([^)]*\)/,  // public static void methodName()
+        /public\s+class\s+(\w+)/  // public class ClassName
+      ]
+    };
+    
+    const patterns = mainFunctionPatterns[language] || mainFunctionPatterns['python'];
+    
+    // Lista de nombres de funciones genéricas que no deben usarse
+    const genericFunctionNames = [
+      'suma', 'resta', 'multiplicacion', 'division', 'main', 'test', 'example',
+      'demo', 'sample', 'temp', 'tmp', 'func', 'function', 'method'
+    ];
+    
+    for (const pattern of patterns) {
+      const match = code.match(pattern);
+      if (match) {
+        const functionName = match[1];
+        if (functionName && 
+            !genericFunctionNames.includes(functionName.toLowerCase()) &&
+            functionName.length > 3) {
+          return functionName.toLowerCase();
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Extraer título de comentarios en el código
+   */
+  extractTitleFromComments(code, language) {
+    // Buscar títulos más específicos y descriptivos
+    const titlePatterns = {
+      'python': [
+        /#\s*Ejemplo:\s*([^#\n]+)/,        // Ejemplo: Título
+        /#\s*Script:\s*([^#\n]+)/,         // Script: Título
+        /#\s*Programa:\s*([^#\n]+)/,       // Programa: Título
+        /#\s*Calculadora\s+([^#\n]+)/,      // Calculadora Título
+        /#\s*Sumador\s+([^#\n]+)/,         // Sumador Título
+        /#\s*Conversor\s+([^#\n]+)/,       // Conversor Título
+        /#\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,  // Títulos con mayúsculas
+        /"""\s*([^"]{3,30})\s*"""/         // Docstrings
+      ],
+      'javascript': [
+        /\/\/\s*Ejemplo:\s*([^\/\n]+)/,    // Ejemplo: Título
+        /\/\/\s*Script:\s*([^\/\n]+)/,     // Script: Título
+        /\/\/\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,  // Títulos con mayúsculas
+        /\/\*\s*([^*]{3,30})\s*\*\//       // Comentarios de bloque
+      ],
+      'java': [
+        /\/\/\s*Ejemplo:\s*([^\/\n]+)/,    // Ejemplo: Título
+        /\/\/\s*Class:\s*([^\/\n]+)/,      // Class: Título
+        /\/\/\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,  // Títulos con mayúsculas
+        /\/\*\s*([^*]{3,30})\s*\*\//       // Comentarios de bloque
+      ],
+      'cpp': [
+        /\/\/\s*Ejemplo:\s*([^\/\n]+)/,    // Ejemplo: Título
+        /\/\/\s*Program:\s*([^\/\n]+)/,    // Program: Título
+        /\/\/\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/,  // Títulos con mayúsculas
+        /\/\*\s*([^*]{3,30})\s*\*\//       // Comentarios de bloque
+      ]
+    };
+    
+    const patterns = titlePatterns[language] || titlePatterns['python'];
+    
+    for (const pattern of patterns) {
+      const match = code.match(pattern);
+      if (match) {
+        let title = match[1].trim();
+        
+        // Limpiar y formatear el título de manera más inteligente
+        title = title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '')  // Solo letras, números y espacios
+          .replace(/\s+/g, '_')         // Espacios a guiones bajos
+          .replace(/_+/g, '_')          // Múltiples guiones bajos a uno
+          .replace(/^_|_$/g, '')        // Quitar guiones al inicio y final
+          .substring(0, 30);           // Limitar longitud
+        
+        // Solo usar si es un título válido (no muy corto ni genérico)
+        if (title.length > 3 && !this.isGenericTitle(title)) {
+          return title;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Verificar si un título es genérico y no debe usarse
+   */
+  isGenericTitle(title) {
+    const genericTitles = [
+      'script', 'program', 'code', 'example', 'ejemplo',
+      'import', 'definir', 'funcion', 'function', 'class',
+      'main', 'principal', 'basic', 'basico', 'simple'
+    ];
+    
+    return genericTitles.some(generic => 
+      title.toLowerCase().includes(generic) || 
+      title.toLowerCase() === generic
+    );
+  }
+
+  /**
+   * Extraer propósito del contexto del código
+   */
+  extractPurposeFromContext(code, language) {
+    // Buscar palabras clave que indiquen el propósito específico
+    const purposeKeywords = {
+      'python': {
+        'calculadora_basica': ['suma', 'resta', 'multiplicacion', 'division', 'calculadora', 'operaciones'],
+        'sumador_numeros': ['sumar', 'suma', 'numeros', 'cantidad', 'ingrese'],
+        'promedio_numeros': ['promedio', 'calcular_promedio', 'numeros', 'promediar'],
+        'conversor_temperatura': ['celsius', 'fahrenheit', 'convertir', 'temperatura', 'grados'],
+        'data_analysis': ['pandas', 'numpy', 'dataframe', 'csv', 'json', 'analysis'],
+        'web_scraper': ['requests', 'beautifulsoup', 'scrape', 'url', 'html'],
+        'api_client': ['requests', 'api', 'http', 'get', 'post', 'json'],
+        'file_handler': ['open', 'read', 'write', 'file', 'path', 'os'],
+        'database': ['sqlite', 'mysql', 'postgres', 'database', 'db'],
+        'automation': ['schedule', 'cron', 'automate', 'task', 'job']
+      },
+      'javascript': {
+        'web_app': ['express', 'react', 'vue', 'angular', 'dom', 'html'],
+        'api_server': ['express', 'fastify', 'koa', 'api', 'server'],
+        'data_processor': ['json', 'array', 'map', 'filter', 'reduce'],
+        'utility': ['util', 'helper', 'common', 'shared', 'tool']
+      },
+      'java': {
+        'spring_app': ['@SpringBootApplication', '@RestController', '@Service'],
+        'data_model': ['@Entity', '@Table', '@Column', 'model', 'entity'],
+        'utility': ['util', 'helper', 'common', 'shared', 'tool']
+      }
+    };
+    
+    const keywords = purposeKeywords[language] || purposeKeywords['python'];
+    
+    // Buscar el propósito más específico primero
+    for (const [purpose, words] of Object.entries(keywords)) {
+      const hasKeywords = words.some(word => 
+        code.toLowerCase().includes(word.toLowerCase())
+      );
+      
+      if (hasKeywords) {
+        return purpose;
+      }
+    }
+    
+    // Si no encuentra propósito específico, buscar patrones generales
+    const generalPatterns = {
+      'python': {
+        'script_basico': ['def ', 'if __name__', 'main()'],
+        'calculadora': ['suma', 'resta', 'multiplicacion', 'division'],
+        'sumador': ['sumar', 'suma', 'numeros'],
+        'conversor': ['convertir', 'celsius', 'fahrenheit', 'grados']
+      }
+    };
+    
+    const patterns = generalPatterns[language] || generalPatterns['python'];
+    
+    for (const [purpose, words] of Object.entries(patterns)) {
+      const hasPatterns = words.some(word => 
+        code.toLowerCase().includes(word.toLowerCase())
+      );
+      
+      if (hasPatterns) {
+        return purpose;
+      }
+    }
+    
+    return null;
   }
 
   /**
