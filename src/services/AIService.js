@@ -709,6 +709,100 @@ class AIService {
   }
 
   /**
+   * Enviar mensaje con callbacks de estado
+   */
+  async sendMessageWithCallbacks(message, callbacks = {}, options = {}) {
+    if (!this.currentModel) {
+      throw new Error('No se ha seleccionado ningún modelo');
+    }
+
+    // Obtener configuración de rendimiento automática
+    const perfConfig = this.getModelPerformanceConfig(this.currentModel, this.modelType);
+    
+    // Combinar opciones con configuración automática
+    const finalOptions = {
+      ...perfConfig,
+      ...options
+    };
+
+    // Limitar historial si es necesario
+    if (this.conversationHistory.length > finalOptions.maxHistory) {
+      this.conversationHistory = this.conversationHistory.slice(-finalOptions.maxHistory);
+    }
+
+    // Agregar mensaje al historial
+    this.conversationHistory.push({
+      role: 'user',
+      content: message,
+      timestamp: Date.now()
+    });
+
+    const startTime = Date.now();
+    
+    try {
+      let response;
+      
+      // Callback de inicio
+      if (callbacks.onStart) {
+        callbacks.onStart({
+          model: this.currentModel,
+          modelType: this.modelType,
+          message: message
+        });
+      }
+
+      if (this.modelType === 'remote') {
+        response = await this.sendToRemoteModelWithCallbacks(message, callbacks, finalOptions);
+      } else {
+        response = await this.sendToLocalModelWithCallbacks(message, callbacks, finalOptions);
+      }
+
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+
+      // Callback de finalización
+      if (callbacks.onComplete) {
+        callbacks.onComplete({
+          response,
+          latency,
+          model: this.currentModel,
+          modelType: this.modelType
+        });
+      }
+
+      // Agregar respuesta al historial
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: response,
+        timestamp: Date.now(),
+        metadata: {
+          latency,
+          model: this.currentModel,
+          modelType: this.modelType
+        }
+      });
+
+      return response;
+    } catch (error) {
+      const endTime = Date.now();
+      const latency = endTime - startTime;
+      
+      // Callback de error
+      if (callbacks.onError) {
+        callbacks.onError({
+          error,
+          latency,
+          model: this.currentModel,
+          modelType: this.modelType
+        });
+      }
+      
+      console.error('Error enviando mensaje a IA:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Enviar mensaje a modelo remoto
    */
   async sendToRemoteModel(message, options = {}) {
@@ -912,7 +1006,226 @@ class AIService {
     } catch (error) {
       console.error('Error llamando a modelo local:', error);
       
-      // Mensajes de error más específicos
+      // Isajes de error más específicos
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        throw new Error('No se pudo conectar con Ollama. Verifica que esté ejecutándose en http://localhost:11434');
+      } else if (error.message.includes('404')) {
+        throw new Error('Modelo no encontrado en Ollama. Verifica que el modelo esté descargado correctamente.');
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Enviar mensaje a modelo remoto con callbacks
+   */
+  async sendToRemoteModelWithCallbacks(message, callbacks = {}, options = {}) {
+    const model = this.models.remote.find(m => m.id === this.currentModel);
+    if (!model) {
+      throw new Error('Modelo remoto no encontrado');
+    }
+
+    const apiKey = this.getApiKey(model.provider);
+    if (!apiKey) {
+      throw new Error(`API Key no configurada para ${model.provider}`);
+    }
+
+    // Callback de estado: conectando
+    if (callbacks.onStatus) {
+      callbacks.onStatus({
+        status: 'connecting',
+        message: `Conectando con ${model.name}...`,
+        model: model.name,
+        provider: model.provider
+      });
+    }
+
+    try {
+      // Preparar mensajes según el proveedor
+      let requestBody;
+      let headers;
+      let endpointWithKey = null;
+
+      if (model.provider === 'openai') {
+        headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        };
+        
+        requestBody = {
+          model: model.id,
+          messages: this.conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          stream: false,
+          temperature: options.temperature || 0.7,
+          max_tokens: options.maxTokens || 2000
+        };
+      } else if (model.provider === 'anthropic') {
+        headers = {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        };
+        
+        requestBody = {
+          model: model.id,
+          messages: this.conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          max_tokens: options.maxTokens || 2000
+        };
+      } else if (model.provider === 'google') {
+        headers = {
+          'Content-Type': 'application/json'
+        };
+        
+        endpointWithKey = `${model.endpoint}?key=${apiKey}`;
+        
+        const contents = this.conversationHistory.map(msg => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        }));
+        
+        requestBody = {
+          contents: contents,
+          generationConfig: {
+            temperature: options.temperature || 0.7,
+            maxOutputTokens: options.maxTokens || 2000
+          }
+        };
+      }
+
+      // Callback de estado: generando
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'generating',
+          message: `Generando respuesta con ${model.name}...`,
+          model: model.name,
+          provider: model.provider
+        });
+      }
+
+      // Usar la URL correcta según el proveedor
+      const requestUrl = model.provider === 'google' ? endpointWithKey : model.endpoint;
+      
+      // Intentar con reintentos para errores 503
+      let lastError;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          // Callback de reintento si no es el primer intento
+          if (attempt > 1 && callbacks.onStatus) {
+            callbacks.onStatus({
+              status: 'retrying',
+              message: `Reintentando con ${model.name}... (${attempt}/3)`,
+              model: model.name,
+              provider: model.provider,
+              attempt
+            });
+          }
+
+          const response = await fetch(requestUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            const errorMessage = error.error?.message || 'Error en la API';
+            
+            if (response.status === 503 && attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+              continue;
+            }
+            
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json();
+          
+          // Extraer respuesta según el proveedor
+          if (model.provider === 'openai') {
+            return data.choices[0].message.content;
+          } else if (model.provider === 'anthropic') {
+            return data.content[0].text;
+          } else if (model.provider === 'google') {
+            return data.candidates[0].content.parts[0].text;
+          }
+        } catch (error) {
+          lastError = error;
+          
+          if (error.message.includes('overloaded') && attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+            continue;
+          }
+          
+          if (attempt < 3) {
+            continue;
+          }
+          
+          throw error;
+        }
+      }
+      
+      throw lastError;
+    } catch (error) {
+      // Callback de error
+      if (callbacks.onError) {
+        callbacks.onError({
+          error,
+          model: model.name,
+          provider: model.provider
+        });
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Enviar mensaje a modelo local con callbacks
+   */
+  async sendToLocalModelWithCallbacks(message, callbacks = {}, options = {}) {
+    const model = this.getAllLocalModels().find(m => m.id === this.currentModel);
+    if (!model) {
+      throw new Error('Modelo local no encontrado');
+    }
+
+    if (!model.downloaded) {
+      throw new Error('El modelo local no está descargado');
+    }
+
+    try {
+      const messages = this.conversationHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
+      }));
+
+      const ollamaUrl = this.getOllamaUrl();
+      
+      // Callback de estado: conectando
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'connecting',
+          message: `Conectando con ${model.name} local...`,
+          model: model.name,
+          provider: 'local'
+        });
+      }
+      
+      // Usar streaming si está habilitado
+      if (options.useStreaming) {
+        return await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, options);
+      } else {
+        return await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, options);
+      }
+    } catch (error) {
+      console.error('Error llamando a modelo local:', error);
+      
       if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
         throw new Error('No se pudo conectar con Ollama. Verifica que esté ejecutándose en http://localhost:11434');
       } else if (error.message.includes('404')) {
@@ -1017,6 +1330,133 @@ class AIService {
     }
 
     return fullResponse;
+  }
+
+  /**
+   * Enviar mensaje a modelo local con streaming y callbacks
+   */
+  async sendToLocalModelStreamingWithCallbacks(modelId, messages, callbacks = {}, options = {}) {
+    const ollamaUrl = this.getOllamaUrl();
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: messages,
+        stream: true,
+        options: {
+          temperature: options.temperature || 0.7,
+          num_predict: options.maxTokens || 1500
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error de Ollama:', errorText);
+      throw new Error(`Error del servidor Ollama (${response.status})`);
+    }
+
+    // Callback de estado: generando
+    if (callbacks.onStatus) {
+      callbacks.onStatus({
+        status: 'generating',
+        message: 'Generando respuesta...',
+        model: modelId,
+        provider: 'local'
+      });
+    }
+
+    // Leer el stream de respuesta
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+        
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.message && data.message.content) {
+              fullResponse += data.message.content;
+              
+              // Callback de streaming
+              if (callbacks.onStream) {
+                callbacks.onStream({
+                  content: data.message.content,
+                  fullResponse,
+                  model: modelId,
+                  provider: 'local'
+                });
+              }
+            }
+          } catch (e) {
+            // Ignorar líneas que no sean JSON válido
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return fullResponse;
+  }
+
+  /**
+   * Enviar mensaje a modelo local sin streaming con callbacks
+   */
+  async sendToLocalModelNonStreamingWithCallbacks(modelId, messages, callbacks = {}, options = {}) {
+    const ollamaUrl = this.getOllamaUrl();
+    
+    // Callback de estado: generando
+    if (callbacks.onStatus) {
+      callbacks.onStatus({
+        status: 'generating',
+        message: 'Generando respuesta...',
+        model: modelId,
+        provider: 'local'
+      });
+    }
+
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: messages,
+        stream: false,
+        options: {
+          temperature: options.temperature || 0.7,
+          num_predict: options.maxTokens || 1500
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error de Ollama:', errorText);
+      throw new Error(`Error del servidor Ollama (${response.status})`);
+    }
+
+    const data = await response.json();
+    
+    // La respuesta de Ollama viene en data.message.content
+    if (data.message && data.message.content) {
+      return data.message.content;
+    } else {
+      throw new Error('Respuesta inválida del modelo local');
+    }
   }
 
   /**
@@ -1187,6 +1627,37 @@ class AIService {
     } catch (error) {
       console.error('Error guardando historial:', error);
     }
+  }
+
+  /**
+   * Detectar archivos mencionados en la respuesta
+   */
+  detectFilesInResponse(content) {
+    if (!content) return [];
+    
+    const files = [];
+    
+    // Patrones para detectar archivos
+    const patterns = [
+      // Rutas de archivo: /ruta/a/archivo.ext o C:\ruta\archivo.ext
+      /(?:^|\s)((?:[a-zA-Z]:)?(?:\/|\\)[^\s<>"{}|\\^`\[\]]*\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf))\b/gmi,
+      // Nombres de archivo con extensión: nombre.ext (si está entre backticks o después de "archivo:" o similar)
+      /(?:(?:archivo|file|documento):\s*)?[`]?([a-zA-Z0-9_\-\.]+\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf))[`]?/gmi,
+      // Rutas en formato de código: path/to/file.ext
+      /(?:src|lib|dist|build|out|output|downloads|files)\/[^\s<>"{}|\\^`\[\]]*\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf)/gmi
+    ];
+    
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        const filePath = match[1] || match[0].trim();
+        if (!files.includes(filePath)) {
+          files.push(filePath);
+        }
+      }
+    }
+    
+    return [...new Set(files)]; // Remover duplicados
   }
 }
 
