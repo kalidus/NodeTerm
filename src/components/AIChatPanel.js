@@ -375,6 +375,11 @@ const AIChatPanel = () => {
     const isStreaming = message.streaming;
     const hasContent = message.content && message.content.trim().length > 0;
 
+    // No renderizar mensajes vacíos en streaming (el indicador está arriba)
+    if (isStreaming && !hasContent) {
+      return null;
+    }
+
     return (
       <div
         key={message.id || `msg-${index}-${message.timestamp}`}
@@ -387,7 +392,7 @@ const AIChatPanel = () => {
           animation: 'slideIn 0.3s ease-out'
         }}
       >
-        {/* Mostrar siempre la burbuja con contenido o estado */}
+        {/* Burbuja de mensaje con contenido */}
         <div
           className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''}`}
           style={{
@@ -400,63 +405,23 @@ const AIChatPanel = () => {
             color: themeColors.textPrimary,
             border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
             borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            alignItems: hasContent ? 'flex-start' : 'center',
-            gap: '1rem'
+            padding: '1rem'
           }}
         >
-          {/* CASO 1: Streaming sin contenido = Mostrar puntos + mensajes descriptivos */}
-          {isStreaming && !hasContent && (
-            <>
-              <div className="ai-streaming-dots" style={{ scale: '1.4', flexShrink: 0, marginTop: '0.2rem' }}>
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: '600', color: themeColors.textPrimary, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: themeColors.primaryColor }} />}
-                  {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: themeColors.primaryColor }} />}
-                  {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: themeColors.primaryColor }} />}
-                  {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#ffa726' }} />}
-                  {currentStatus?.status === 'error' && <i className="pi pi-exclamation-triangle" style={{ color: '#f44336' }} />}
-                  {!currentStatus?.status && <i className="pi pi-brain" style={{ color: themeColors.primaryColor }} />}
-                  {currentStatus?.status === 'connecting' ? 'Conectando...' :
-                   currentStatus?.status === 'generating' ? 'Generando...' :
-                   currentStatus?.status === 'streaming' ? 'Transmitiendo...' :
-                   currentStatus?.status === 'retrying' ? 'Reintentando...' :
-                   currentStatus?.status === 'error' ? 'Error' : 'Pensando...'}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, opacity: 0.85 }}>
-                  {currentStatus?.status === 'connecting' ? 'Estableciendo conexión...' :
-                   currentStatus?.status === 'generating' ? 'Analizando tu solicitud...' :
-                   currentStatus?.status === 'streaming' ? 'Recibiendo respuesta...' :
-                   currentStatus?.status === 'retrying' ? `Reintento ${currentStatus.attempt || 1}/3` :
-                   currentStatus?.status === 'error' ? currentStatus.message :
-                   'Procesando...'}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* CASO 2: Contenido (streaming o completado) = Mostrar texto renderizado */}
-          {hasContent && (
-            <div 
-              className="ai-md" 
-              dangerouslySetInnerHTML={{ 
-                __html: isUser || isSystem ? message.content : renderMarkdown(message.content)
-              }}
-              ref={(el) => {
-                if (el && !isUser && !isSystem) {
-                  el.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                  });
-                }
-              }}
-              style={{ width: '100%' }}
-            />
-          )}
+          <div 
+            className="ai-md" 
+            dangerouslySetInnerHTML={{ 
+              __html: isUser || isSystem ? message.content : renderMarkdown(message.content)
+            }}
+            ref={(el) => {
+              if (el && !isUser && !isSystem) {
+                el.querySelectorAll('pre code').forEach((block) => {
+                  hljs.highlightElement(block);
+                });
+              }
+            }}
+            style={{ width: '100%' }}
+          />
         </div>
 
         {/* Timestamp y métricas solo después de completar */}
@@ -608,6 +573,39 @@ const AIChatPanel = () => {
             to {
               opacity: 1;
               transform: translateY(0);
+            }
+          }
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes pulse {
+            0%, 100% {
+              transform: scale(1);
+              opacity: 0.8;
+            }
+            50% {
+              transform: scale(1.1);
+              opacity: 0.4;
+            }
+          }
+
+          @keyframes dot-pulse {
+            0%, 80%, 100% {
+              opacity: 0.3;
+              transform: scale(0.8);
+            }
+            40% {
+              opacity: 1;
+              transform: scale(1);
             }
           }
 
@@ -808,45 +806,151 @@ const AIChatPanel = () => {
           </div>
         </div>
 
-        {/* Indicador simplificado - Solo botón Detener */}
-        {isLoading && abortController && (
+        {/* Indicador de Pensamiento Profesional */}
+        {isLoading && (
           <div
             style={{
-              padding: '0.5rem 1rem',
+              padding: '1rem 1.5rem',
               display: 'flex',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              background: `rgba(244, 67, 54, 0.05)`,
-              borderBottom: `1px solid rgba(244, 67, 54, 0.2)`
+              background: `linear-gradient(135deg, ${themeColors.primaryColor}15 0%, ${themeColors.primaryColor}08 100%)`,
+              borderBottom: `2px solid ${themeColors.primaryColor}40`,
+              backdropFilter: 'blur(10px)',
+              animation: 'fadeIn 0.3s ease-in'
             }}
           >
-            <button
-              onClick={handleStopGeneration}
-              style={{
-                background: 'rgba(244, 67, 54, 0.15)',
-                border: '1px solid rgba(244, 67, 54, 0.4)',
-                color: '#f44336',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '6px',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+              {/* Indicador visual animado */}
+              <div style={{ 
+                position: 'relative',
+                width: '48px',
+                height: '48px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = 'rgba(244, 67, 54, 0.25)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'rgba(244, 67, 54, 0.15)';
-              }}
-            >
-              <i className="pi pi-stop" />
-              Detener
-            </button>
+                justifyContent: 'center'
+              }}>
+                {/* Círculo exterior pulsante */}
+                <div style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  background: `${themeColors.primaryColor}20`,
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}></div>
+                
+                {/* Icono central */}
+                <div style={{
+                  position: 'relative',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}cc 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 4px 12px ${themeColors.primaryColor}40`
+                }}>
+                  {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: '#fff', fontSize: '1rem' }} />}
+                  {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '1rem' }} />}
+                  {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '1rem' }} />}
+                  {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '1rem' }} />}
+                  {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '1rem' }} />}
+                </div>
+              </div>
+
+              {/* Información del estado */}
+              <div style={{ flex: 1 }}>
+                <div style={{ 
+                  fontSize: '1rem', 
+                  fontWeight: '600', 
+                  color: themeColors.textPrimary,
+                  marginBottom: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  {currentStatus?.status === 'connecting' ? 'Conectando con IA' :
+                   currentStatus?.status === 'generating' ? 'Generando respuesta' :
+                   currentStatus?.status === 'streaming' ? 'Transmitiendo respuesta' :
+                   currentStatus?.status === 'retrying' ? 'Reintentando conexión' :
+                   'Procesando solicitud'}
+                  
+                  {/* Puntos animados */}
+                  <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                    <span style={{ 
+                      width: '4px', 
+                      height: '4px', 
+                      borderRadius: '50%', 
+                      background: themeColors.primaryColor,
+                      animation: 'dot-pulse 1.4s ease-in-out infinite',
+                      animationDelay: '0s'
+                    }}></span>
+                    <span style={{ 
+                      width: '4px', 
+                      height: '4px', 
+                      borderRadius: '50%', 
+                      background: themeColors.primaryColor,
+                      animation: 'dot-pulse 1.4s ease-in-out infinite',
+                      animationDelay: '0.2s'
+                    }}></span>
+                    <span style={{ 
+                      width: '4px', 
+                      height: '4px', 
+                      borderRadius: '50%', 
+                      background: themeColors.primaryColor,
+                      animation: 'dot-pulse 1.4s ease-in-out infinite',
+                      animationDelay: '0.4s'
+                    }}></span>
+                  </div>
+                </div>
+                <div style={{ 
+                  fontSize: '0.85rem', 
+                  color: themeColors.textSecondary,
+                  opacity: 0.9
+                }}>
+                  {currentStatus?.status === 'connecting' ? 'Estableciendo conexión con el modelo...' :
+                   currentStatus?.status === 'generating' ? 'Analizando y procesando tu solicitud...' :
+                   currentStatus?.status === 'streaming' ? 'Recibiendo respuesta en tiempo real...' :
+                   currentStatus?.status === 'retrying' ? `Reintento ${currentStatus.attempt || 1}/3 - Reestableciendo conexión...` :
+                   'Preparando respuesta inteligente...'}
+                </div>
+              </div>
+            </div>
+
+            {/* Botón Detener */}
+            {abortController && (
+              <button
+                onClick={handleStopGeneration}
+                style={{
+                  background: 'rgba(244, 67, 54, 0.1)',
+                  border: '1px solid rgba(244, 67, 54, 0.3)',
+                  color: '#f44336',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(244, 67, 54, 0.2)';
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(244, 67, 54, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <i className="pi pi-stop-circle" style={{ fontSize: '1.1rem' }} />
+                Detener
+              </button>
+            )}
           </div>
         )}
 
