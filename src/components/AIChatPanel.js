@@ -22,6 +22,11 @@ const AIChatPanel = () => {
   const [functionalModels, setFunctionalModels] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  
+  // Estados avanzados para Fase 2
+  const [currentStatus, setCurrentStatus] = useState(null);
+  const [abortController, setAbortController] = useState(null);
+  const [detectedFiles, setDetectedFiles] = useState([]);
 
   // Configurar marked con resaltado de sintaxis
   useEffect(() => {
@@ -99,8 +104,27 @@ const AIChatPanel = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-scroll cuando hay estado actual
+  useEffect(() => {
+    if (currentStatus && isLoading) {
+      scrollToBottom();
+    }
+  }, [currentStatus, isLoading]);
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Múltiples intentos para asegurar que funciona
+    requestAnimationFrame(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    });
+    
+    // Fallback con setTimeout
+    setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    }, 100);
   };
 
   const handleSendMessage = async () => {
@@ -109,38 +133,167 @@ const AIChatPanel = () => {
     const userMessage = inputValue.trim();
     setInputValue('');
     setIsLoading(true);
+    setCurrentStatus(null);
+    setDetectedFiles([]);
+
+    // Crear AbortController para cancelar si es necesario
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
-      // Agregar mensaje del usuario
-      const newUserMessage = {
+      // Agregar mensaje del usuario inmediatamente
+      const userMessageId = Date.now();
+      setMessages(prev => [...prev, {
+        id: userMessageId,
         role: 'user',
         content: userMessage,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, newUserMessage]);
+        timestamp: userMessageId
+      }]);
 
-      // Enviar a la IA
-      const response = await aiService.sendMessage(userMessage);
-
-      // Agregar respuesta de la IA
-      const aiMessage = {
+      // Pequeño delay para asegurar ID único para el mensaje de la IA
+      await new Promise(resolve => setTimeout(resolve, 1));
+      
+      // Crear placeholder para la respuesta de la IA que se irá actualizando
+      const assistantMessageId = Date.now();
+      setMessages(prev => [...prev, {
+        id: assistantMessageId,
         role: 'assistant',
-        content: response,
-        timestamp: Date.now()
+        content: '',
+        timestamp: assistantMessageId,
+        streaming: true
+      }]);
+
+      // Mostrar estado inicial
+      setCurrentStatus({
+        status: 'connecting',
+        message: `Conectando...`,
+        model: aiService.currentModel,
+        provider: aiService.modelType
+      });
+
+      // Configurar callbacks
+      const callbacks = {
+        onStart: (data) => {
+          setCurrentStatus({
+            status: 'connecting',
+            message: `Conectando con ${data.model}...`,
+            model: data.model,
+            provider: data.provider
+          });
+        },
+        onStatus: (statusData) => {
+          setCurrentStatus(statusData);
+        },
+        onStream: (streamData) => {
+          // Actualizar mensaje con contenido streaming
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId ? {
+              ...msg,
+              content: streamData.fullResponse,
+              streaming: true
+            } : msg
+          ));
+          setCurrentStatus({
+            status: 'streaming',
+            message: 'Recibiendo respuesta...',
+            model: streamData.model,
+            provider: streamData.provider
+          });
+        },
+        onComplete: (data) => {
+          const files = aiService.detectFilesInResponse(data.response);
+          if (files.length > 0) {
+            setDetectedFiles(files);
+          }
+          
+          // Actualizar mensaje final
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId ? {
+              ...msg,
+              content: data.response,
+              streaming: false,
+              metadata: {
+                latency: data.latency,
+                model: data.model,
+                provider: data.provider,
+                tokens: Math.ceil(data.response.length / 4),
+                files: files.length > 0 ? files : undefined
+              }
+            } : msg
+          ));
+          
+          setCurrentStatus({
+            status: 'complete',
+            message: `Completado en ${data.latency}ms`,
+            latency: data.latency
+          });
+        },
+        onError: (errorData) => {
+          setCurrentStatus({
+            status: 'error',
+            message: `Error: ${errorData.error.message}`,
+            model: errorData.model,
+            provider: errorData.provider
+          });
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId ? {
+              ...msg,
+              content: `❌ Error: ${errorData.error.message}`,
+              streaming: false,
+              role: 'system'
+            } : msg
+          ));
+        }
       };
-      setMessages(prev => [...prev, aiMessage]);
+
+      // Enviar a la IA con callbacks
+      await aiService.sendMessageWithCallbacks(userMessage, callbacks);
+
     } catch (error) {
       console.error('Error enviando mensaje:', error);
       
-      // Mostrar error al usuario
-      const errorMessage = {
+      setCurrentStatus({
+        status: 'error',
+        message: `Error: ${error.message}`
+      });
+      
+      const errorMessageId = Date.now();
+      setMessages(prev => [...prev, {
+        id: errorMessageId,
         role: 'system',
-        content: `Error: ${error.message}`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+        content: `❌ Error: ${error.message}`,
+        timestamp: errorMessageId
+      }]);
     } finally {
       setIsLoading(false);
+      setCurrentStatus(null);
+      setAbortController(null);
+      
+      // Limpiar estado después de 2 segundos
+      setTimeout(() => {
+        setCurrentStatus(null);
+      }, 2000);
+    }
+  };
+
+  const handleStopGeneration = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsLoading(false);
+      setCurrentStatus(null);
+      setStreamingContent('');
+      setAbortController(null);
+      
+      // Actualizar el mensaje placeholder
+      setMessages(prev => prev.map(msg => 
+        msg.streaming ? {
+          ...msg,
+          content: 'Generación cancelada por el usuario.',
+          streaming: false,
+          role: 'system'
+        } : msg
+      ));
     }
   };
 
@@ -153,6 +306,7 @@ const AIChatPanel = () => {
 
   const handleClearChat = () => {
     setMessages([]);
+    setDetectedFiles([]);
     aiService.clearHistory();
   };
 
@@ -218,60 +372,225 @@ const AIChatPanel = () => {
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
+    const isStreaming = message.streaming;
+    const hasContent = message.content && message.content.trim().length > 0;
 
     return (
       <div
-        key={index}
+        key={message.id || `msg-${index}-${message.timestamp}`}
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: isUser ? 'flex-end' : 'flex-start',
-          marginBottom: '1rem',
+          marginBottom: '1.5rem',
+          width: '100%',
           animation: 'slideIn 0.3s ease-out'
         }}
       >
-        {/* Mensaje */}
+        {/* Mostrar siempre la burbuja con contenido o estado */}
         <div
-          className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'}`}
+          className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''}`}
           style={{
-            maxWidth: '75%',
+            width: isUser ? 'auto' : '100%',
             background: isSystem
               ? 'rgba(255, 107, 53, 0.1)'
               : isUser
               ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
               : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             color: themeColors.textPrimary,
-            border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`
+            border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
+            borderRadius: '12px',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: hasContent ? 'flex-start' : 'center',
+            gap: '1rem'
           }}
         >
-          {isUser || isSystem ? (
-            <div className="ai-md">{message.content}</div>
-          ) : (
+          {/* CASO 1: Streaming sin contenido = Mostrar puntos + mensajes descriptivos */}
+          {isStreaming && !hasContent && (
+            <>
+              <div className="ai-streaming-dots" style={{ scale: '1.4', flexShrink: 0, marginTop: '0.2rem' }}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: '600', color: themeColors.textPrimary, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: themeColors.primaryColor }} />}
+                  {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: themeColors.primaryColor }} />}
+                  {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: themeColors.primaryColor }} />}
+                  {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#ffa726' }} />}
+                  {currentStatus?.status === 'error' && <i className="pi pi-exclamation-triangle" style={{ color: '#f44336' }} />}
+                  {!currentStatus?.status && <i className="pi pi-brain" style={{ color: themeColors.primaryColor }} />}
+                  {currentStatus?.status === 'connecting' ? 'Conectando...' :
+                   currentStatus?.status === 'generating' ? 'Generando...' :
+                   currentStatus?.status === 'streaming' ? 'Transmitiendo...' :
+                   currentStatus?.status === 'retrying' ? 'Reintentando...' :
+                   currentStatus?.status === 'error' ? 'Error' : 'Pensando...'}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, opacity: 0.85 }}>
+                  {currentStatus?.status === 'connecting' ? 'Estableciendo conexión...' :
+                   currentStatus?.status === 'generating' ? 'Analizando tu solicitud...' :
+                   currentStatus?.status === 'streaming' ? 'Recibiendo respuesta...' :
+                   currentStatus?.status === 'retrying' ? `Reintento ${currentStatus.attempt || 1}/3` :
+                   currentStatus?.status === 'error' ? currentStatus.message :
+                   'Procesando...'}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* CASO 2: Contenido (streaming o completado) = Mostrar texto renderizado */}
+          {hasContent && (
             <div 
               className="ai-md" 
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+              dangerouslySetInnerHTML={{ 
+                __html: isUser || isSystem ? message.content : renderMarkdown(message.content)
+              }}
               ref={(el) => {
-                if (el) {
-                  // Aplicar resaltado de sintaxis a los bloques de código
+                if (el && !isUser && !isSystem) {
                   el.querySelectorAll('pre code').forEach((block) => {
                     hljs.highlightElement(block);
                   });
                 }
               }}
+              style={{ width: '100%' }}
             />
           )}
         </div>
 
-        {/* Timestamp */}
-        <div
-          style={{
-            fontSize: '0.7rem',
-            color: themeColors.textSecondary,
-            marginTop: '0.25rem',
-            opacity: 0.7
-          }}
-        >
-          {formatTimestamp(message.timestamp)}
+        {/* Timestamp y métricas solo después de completar */}
+        {!isStreaming && hasContent && (
+          <div
+            style={{
+              fontSize: '0.7rem',
+              color: themeColors.textSecondary,
+              marginTop: '0.4rem',
+              opacity: 0.7,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <span>{formatTimestamp(message.timestamp)}</span>
+            {message.metadata && (
+              <>
+                <span>•</span>
+                <span>{message.metadata.latency}ms</span>
+                {message.metadata.tokens && (
+                  <>
+                    <span>•</span>
+                    <span>~{message.metadata.tokens} tokens</span>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderFileDownloads = (files) => {
+    if (!files || files.length === 0) return null;
+
+    const getFileIcon = (fileName) => {
+      const ext = fileName.split('.').pop().toLowerCase();
+      const iconMap = {
+        'py': 'pi-file-code',
+        'js': 'pi-file-code',
+        'ts': 'pi-file-code',
+        'jsx': 'pi-file-code',
+        'tsx': 'pi-file-code',
+        'html': 'pi-file-code',
+        'css': 'pi-file-code',
+        'json': 'pi-file-code',
+        'java': 'pi-file-code',
+        'cpp': 'pi-file-code',
+        'c': 'pi-file-code',
+        'go': 'pi-file-code',
+        'rb': 'pi-file-code',
+        'php': 'pi-file-code',
+        'sh': 'pi-file-code',
+        'bash': 'pi-file-code',
+        'sql': 'pi-file-database',
+        'csv': 'pi-file-csv',
+        'txt': 'pi-file-text',
+        'md': 'pi-file-text',
+        'pdf': 'pi-file-pdf',
+        'yaml': 'pi-file-code',
+        'yml': 'pi-file-code',
+        'xml': 'pi-file-code'
+      };
+      return iconMap[ext] || 'pi-file';
+    };
+
+    const handleDownload = (fileName) => {
+      // Crear contenido simulado para el archivo
+      const content = `# Archivo generado: ${fileName}\n\nEste archivo fue generado por la IA.\nPuede contener código, datos u otro contenido.`;
+      
+      // Crear blob y descargar
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    };
+
+    return (
+      <div
+        style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          background: `linear-gradient(135deg, rgba(100, 200, 100, 0.1) 0%, rgba(100, 200, 100, 0.05) 100%)`,
+          border: '1px solid rgba(100, 200, 100, 0.3)',
+          borderRadius: '12px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <i className="pi pi-download" style={{ color: '#66bb6a', fontSize: '1rem' }} />
+          <span style={{ fontWeight: '600', color: themeColors.textPrimary, fontSize: '0.95rem' }}>
+            Archivos generados ({files.length})
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {files.map((file, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleDownload(file)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.6rem 0.8rem',
+                background: `rgba(100, 200, 100, 0.08)`,
+                border: '1px solid rgba(100, 200, 100, 0.2)',
+                borderRadius: '8px',
+                color: themeColors.textPrimary,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                textAlign: 'left'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'rgba(100, 200, 100, 0.15)';
+                e.target.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'rgba(100, 200, 100, 0.08)';
+                e.target.style.borderColor = 'rgba(100, 200, 100, 0.2)';
+              }}
+            >
+              <i className={`pi ${getFileIcon(file)}`} style={{ color: '#66bb6a' }} />
+              <span style={{ flex: 1 }}>{file}</span>
+              <i className="pi pi-download" style={{ color: '#66bb6a', fontSize: '0.85rem' }} />
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -489,6 +808,48 @@ const AIChatPanel = () => {
           </div>
         </div>
 
+        {/* Indicador simplificado - Solo botón Detener */}
+        {isLoading && abortController && (
+          <div
+            style={{
+              padding: '0.5rem 1rem',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              background: `rgba(244, 67, 54, 0.05)`,
+              borderBottom: `1px solid rgba(244, 67, 54, 0.2)`
+            }}
+          >
+            <button
+              onClick={handleStopGeneration}
+              style={{
+                background: 'rgba(244, 67, 54, 0.15)',
+                border: '1px solid rgba(244, 67, 54, 0.4)',
+                color: '#f44336',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'rgba(244, 67, 54, 0.25)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'rgba(244, 67, 54, 0.15)';
+              }}
+            >
+              <i className="pi pi-stop" />
+              Detener
+            </button>
+          </div>
+        )}
+
         {/* Mensajes */}
         <div
           className="ai-scrollbar"
@@ -557,6 +918,8 @@ const AIChatPanel = () => {
               />
             </div>
           )}
+
+          {detectedFiles.length > 0 && renderFileDownloads(detectedFiles)}
 
           <div ref={messagesEndRef} />
         </div>
