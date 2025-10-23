@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
@@ -342,6 +342,58 @@ const AIChatPanel = () => {
     }
   };
 
+  // Función para escapar HTML de forma segura
+  const escapeHtml = (text) => {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
+  // Función para limpiar y preparar el contenido de código
+  const sanitizeCodeContent = (block) => {
+    // Obtener el contenido de texto puro
+    const textContent = block.textContent || block.innerText || '';
+    
+    // Limpiar cualquier HTML existente
+    block.innerHTML = '';
+    
+    // Establecer el contenido de texto escapado
+    block.textContent = textContent;
+    
+    return textContent;
+  };
+
+  // Función memoizada para resaltar código de forma segura
+  const highlightCodeBlocks = useCallback((element) => {
+    if (!element) return;
+    
+    const codeBlocks = element.querySelectorAll('pre code');
+    codeBlocks.forEach((block) => {
+      // Limpiar el estado de resaltado previo si existe
+      if (block.dataset.highlighted === 'yes') {
+        delete block.dataset.highlighted;
+        // Limpiar las clases de highlight.js
+        block.className = block.className.replace(/hljs\s*/, '').replace(/language-\w+\s*/, '').trim();
+      }
+      
+      // Aplicar el resaltado solo si no está ya resaltado
+      if (!block.dataset.highlighted) {
+        try {
+          // Sanitizar el contenido del bloque de código
+          sanitizeCodeContent(block);
+          
+          // Aplicar el resaltado de forma segura
+          hljs.highlightElement(block);
+        } catch (error) {
+          console.warn('Error highlighting code block:', error);
+          // En caso de error, asegurar que el contenido esté limpio y escapado
+          sanitizeCodeContent(block);
+        }
+      }
+    });
+  }, []);
+
   // Componente para bloques de código con botón copiar
   const CodeBlockWithCopy = ({ code, language }) => {
     const [copied, setCopied] = useState(false);
@@ -387,7 +439,7 @@ const AIChatPanel = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: isUser ? 'flex-end' : 'flex-start',
-          marginBottom: '1.5rem',
+          marginBottom: '0.8rem',
           width: '100%',
           animation: 'slideIn 0.3s ease-out'
         }}
@@ -404,8 +456,8 @@ const AIChatPanel = () => {
               : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             color: themeColors.textPrimary,
             border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
-            borderRadius: '12px',
-            padding: '1rem'
+            borderRadius: '8px',
+            padding: '0.6rem 0.8rem'
           }}
         >
           <div 
@@ -415,9 +467,7 @@ const AIChatPanel = () => {
             }}
             ref={(el) => {
               if (el && !isUser && !isSystem) {
-                el.querySelectorAll('pre code').forEach((block) => {
-                  hljs.highlightElement(block);
-                });
+                highlightCodeBlocks(el);
               }
             }}
             style={{ width: '100%' }}
@@ -428,13 +478,13 @@ const AIChatPanel = () => {
         {!isStreaming && hasContent && (
           <div
             style={{
-              fontSize: '0.7rem',
+              fontSize: '0.65rem',
               color: themeColors.textSecondary,
-              marginTop: '0.4rem',
+              marginTop: '0.25rem',
               opacity: 0.7,
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.4rem'
             }}
           >
             <span>{formatTimestamp(message.timestamp)}</span>
@@ -491,11 +541,54 @@ const AIChatPanel = () => {
     };
 
     const handleDownload = (fileName) => {
-      // Crear contenido simulado para el archivo
-      const content = `# Archivo generado: ${fileName}\n\nEste archivo fue generado por la IA.\nPuede contener código, datos u otro contenido.`;
+      // Buscar el código correspondiente en los mensajes
+      let fileContent = '';
+      const extension = fileName.split('.').pop();
+      
+      // Buscar en el último mensaje del asistente
+      const lastAssistantMessage = messages.filter(msg => msg.role === 'assistant').pop();
+      if (lastAssistantMessage && lastAssistantMessage.content) {
+        const codeBlocks = lastAssistantMessage.content.match(/```(\w+)?\n([\s\S]*?)```/g);
+        if (codeBlocks) {
+          // Encontrar el bloque de código que corresponde a este archivo
+          const blockIndex = parseInt(fileName.match(/script_(\d+)\./)?.[1]) - 1;
+          if (blockIndex >= 0 && codeBlocks[blockIndex]) {
+            const match = codeBlocks[blockIndex].match(/```(\w+)?\n([\s\S]*?)```/);
+            if (match) {
+              fileContent = match[2].trim();
+            }
+          }
+        }
+      }
+      
+      // Si no se encontró contenido específico, crear contenido genérico
+      if (!fileContent) {
+        fileContent = `# Archivo generado: ${fileName}\n\nEste archivo fue generado por la IA.\nPuede contener código, datos u otro contenido.`;
+      }
+      
+      // Determinar el tipo MIME basado en la extensión
+      const mimeTypes = {
+        'py': 'text/x-python',
+        'js': 'text/javascript',
+        'ts': 'text/typescript',
+        'jsx': 'text/javascript',
+        'tsx': 'text/typescript',
+        'html': 'text/html',
+        'css': 'text/css',
+        'json': 'application/json',
+        'xml': 'text/xml',
+        'md': 'text/markdown',
+        'txt': 'text/plain',
+        'sh': 'text/x-shellscript',
+        'sql': 'text/x-sql',
+        'yaml': 'text/x-yaml',
+        'yml': 'text/x-yaml'
+      };
+      
+      const mimeType = mimeTypes[extension] || 'text/plain';
       
       // Crear blob y descargar
-      const blob = new Blob([content], { type: 'text/plain' });
+      const blob = new Blob([fileContent], { type: mimeType });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -700,6 +793,157 @@ const AIChatPanel = () => {
           .p-dropdown-panel .p-dropdown-empty-message {
             color: ${themeColors.textSecondary} !important;
             padding: 0.75rem 1rem !important;
+          }
+
+          /* Estilos ultra compactos y profesionales para el contenido markdown */
+          .ai-md {
+            font-size: 0.85rem !important;
+            line-height: 1.3 !important;
+          }
+
+          .ai-md p {
+            margin: 0.2rem 0 !important;
+            line-height: 1.3 !important;
+            color: ${themeColors.textPrimary} !important;
+          }
+
+          .ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, .ai-md h5, .ai-md h6 {
+            margin: 0.3rem 0 0.2rem 0 !important;
+            line-height: 1.2 !important;
+            color: ${themeColors.textPrimary} !important;
+            font-weight: 600 !important;
+          }
+
+          .ai-md h1 { font-size: 1.1rem !important; }
+          .ai-md h2 { font-size: 1.05rem !important; }
+          .ai-md h3 { font-size: 1rem !important; }
+          .ai-md h4, .ai-md h5, .ai-md h6 { font-size: 0.95rem !important; }
+
+          .ai-md ul, .ai-md ol {
+            margin: 0.2rem 0 !important;
+            padding-left: 1rem !important;
+          }
+
+          .ai-md li {
+            margin: 0.05rem 0 !important;
+            line-height: 1.25 !important;
+            color: ${themeColors.textPrimary} !important;
+            padding: 0.1rem 0 !important;
+          }
+
+          .ai-md li::marker {
+            color: ${themeColors.primaryColor} !important;
+            font-size: 0.8rem !important;
+          }
+
+          .ai-md blockquote {
+            margin: 0.2rem 0 !important;
+            padding: 0.3rem 0.6rem !important;
+            border-left: 2px solid ${themeColors.primaryColor} !important;
+            background: rgba(255,255,255,0.02) !important;
+            border-radius: 0 4px 4px 0 !important;
+            font-style: italic !important;
+            color: ${themeColors.textSecondary} !important;
+            font-size: 0.8rem !important;
+          }
+
+          .ai-md pre {
+            margin: 0.2rem 0 !important;
+            padding: 0.4rem !important;
+            background: rgba(0,0,0,0.1) !important;
+            border-radius: 4px !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+          }
+
+          .ai-md code {
+            padding: 0.1rem 0.3rem !important;
+            font-size: 0.8em !important;
+            background: rgba(255,255,255,0.1) !important;
+            border-radius: 2px !important;
+            color: ${themeColors.textPrimary} !important;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+          }
+
+          .ai-md pre code {
+            background: transparent !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+          }
+
+          .ai-md strong, .ai-md b {
+            color: ${themeColors.textPrimary} !important;
+            font-weight: 600 !important;
+          }
+
+          .ai-md em, .ai-md i {
+            color: ${themeColors.textSecondary} !important;
+            font-style: italic !important;
+          }
+
+          .ai-md a {
+            color: ${themeColors.primaryColor} !important;
+            text-decoration: none !important;
+            border-bottom: 1px solid transparent !important;
+            transition: all 0.2s ease !important;
+          }
+
+          .ai-md a:hover {
+            border-bottom-color: ${themeColors.primaryColor} !important;
+            opacity: 0.8 !important;
+          }
+
+          .ai-md table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 0.2rem 0 !important;
+            background: rgba(255,255,255,0.02) !important;
+            border-radius: 4px !important;
+            overflow: hidden !important;
+            font-size: 0.8rem !important;
+          }
+
+          .ai-md th, .ai-md td {
+            padding: 0.2rem 0.4rem !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            text-align: left !important;
+          }
+
+          .ai-md th {
+            background: rgba(255,255,255,0.05) !important;
+            font-weight: 600 !important;
+            color: ${themeColors.textPrimary} !important;
+          }
+
+          .ai-md td {
+            color: ${themeColors.textSecondary} !important;
+          }
+
+          /* Estilos específicos para listas más compactas */
+          .ai-md ul li, .ai-md ol li {
+            margin-bottom: 0 !important;
+            padding-bottom: 0.05rem !important;
+          }
+
+          /* Reducir espaciado entre párrafos consecutivos */
+          .ai-md p + p {
+            margin-top: 0.1rem !important;
+          }
+
+          /* Reducir espaciado entre listas y párrafos */
+          .ai-md p + ul, .ai-md p + ol,
+          .ai-md ul + p, .ai-md ol + p {
+            margin-top: 0.1rem !important;
+          }
+
+          /* Reducir espaciado entre títulos y contenido */
+          .ai-md h1 + p, .ai-md h2 + p, .ai-md h3 + p,
+          .ai-md h4 + p, .ai-md h5 + p, .ai-md h6 + p {
+            margin-top: 0.1rem !important;
+          }
+
+          .ai-md h1 + ul, .ai-md h2 + ul, .ai-md h3 + ul,
+          .ai-md h4 + ul, .ai-md h5 + ul, .ai-md h6 + ul {
+            margin-top: 0.1rem !important;
           }
         `}
       </style>
