@@ -4,6 +4,7 @@ import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
 import { Dropdown } from 'primereact/dropdown';
 import { aiService } from '../services/AIService';
+import { conversationService } from '../services/ConversationService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
@@ -26,6 +27,10 @@ const AIChatPanel = () => {
   // Estados avanzados para Fase 2
   const [currentStatus, setCurrentStatus] = useState(null);
   const [abortController, setAbortController] = useState(null);
+  
+  // Estados para historial de conversaciones
+  const [currentConversationId, setCurrentConversationId] = useState(null);
+  const [conversationTitle, setConversationTitle] = useState('');
 
   // Configurar marked con resaltado de sintaxis
   useEffect(() => {
@@ -87,15 +92,51 @@ const AIChatPanel = () => {
     const functional = aiService.getFunctionalModels();
     setFunctionalModels(functional);
     
-    // Cargar historial si existe
-    const history = aiService.getHistory();
-    if (history && history.length > 0) {
-      setMessages(history.map(msg => ({
+    // Cargar conversación actual o crear nueva
+    const currentConversation = conversationService.getCurrentConversation();
+    if (currentConversation) {
+      setCurrentConversationId(currentConversation.id);
+      setConversationTitle(currentConversation.title);
+      setMessages(currentConversation.messages.map(msg => ({
+        id: msg.id,
         role: msg.role,
         content: msg.content,
-        timestamp: msg.timestamp
+        timestamp: msg.timestamp,
+        metadata: msg.metadata
       })));
+    } else {
+      // Solo crear nueva conversación si realmente no hay ninguna
+      const allConversations = conversationService.getAllConversations();
+      if (allConversations.length === 0) {
+        const newConversation = conversationService.createConversation(
+          null, 
+          aiService.currentModel, 
+          aiService.modelType
+        );
+        setCurrentConversationId(newConversation.id);
+        setConversationTitle(newConversation.title);
+      }
     }
+  }, []);
+
+  // Escuchar eventos del historial de conversaciones
+  useEffect(() => {
+    const handleLoadConversationEvent = (event) => {
+      const conversationId = event.detail.conversationId;
+      handleLoadConversation(conversationId);
+    };
+
+    const handleNewConversationEvent = () => {
+      handleNewConversation();
+    };
+
+    window.addEventListener('load-conversation', handleLoadConversationEvent);
+    window.addEventListener('new-conversation', handleNewConversationEvent);
+
+    return () => {
+      window.removeEventListener('load-conversation', handleLoadConversationEvent);
+      window.removeEventListener('new-conversation', handleNewConversationEvent);
+    };
   }, []);
 
   // Auto-scroll al final de los mensajes
@@ -140,13 +181,13 @@ const AIChatPanel = () => {
     setAbortController(controller);
 
     try {
-      // Agregar mensaje del usuario inmediatamente
-      const userMessageId = Date.now();
+      // Agregar mensaje del usuario a la conversación
+      const userMessageObj = conversationService.addMessage('user', userMessage);
       setMessages(prev => [...prev, {
-        id: userMessageId,
+        id: userMessageObj.id,
         role: 'user',
         content: userMessage,
-        timestamp: userMessageId
+        timestamp: userMessageObj.timestamp
       }]);
 
       // Pequeño delay para asegurar ID único para el mensaje de la IA
@@ -202,10 +243,20 @@ const AIChatPanel = () => {
         onComplete: (data) => {
           const files = aiService.detectFilesInResponse(data.response, userMessage);
           
+          // Agregar respuesta del asistente a la conversación
+          const assistantMessageObj = conversationService.addMessage('assistant', data.response, {
+            latency: data.latency,
+            model: data.model,
+            provider: data.provider,
+            tokens: Math.ceil(data.response.length / 4),
+            files: files.length > 0 ? files : undefined
+          });
+          
           // Actualizar mensaje final con archivos asociados
           setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId ? {
               ...msg,
+              id: assistantMessageObj.id,
               content: data.response,
               streaming: false,
               metadata: {
@@ -303,6 +354,47 @@ const AIChatPanel = () => {
   const handleClearChat = () => {
     setMessages([]);
     aiService.clearHistory();
+    
+    // Crear nueva conversación
+    const newConversation = conversationService.createConversation(
+      null, 
+      currentModel, 
+      modelType
+    );
+    setCurrentConversationId(newConversation.id);
+    setConversationTitle(newConversation.title);
+    
+    // Disparar evento para actualizar el historial
+    window.dispatchEvent(new CustomEvent('conversation-updated'));
+  };
+
+  const handleNewConversation = () => {
+    const newConversation = conversationService.createConversation(
+      null, 
+      currentModel, 
+      modelType
+    );
+    setCurrentConversationId(newConversation.id);
+    setConversationTitle(newConversation.title);
+    setMessages([]);
+    
+    // Disparar evento para actualizar el historial
+    window.dispatchEvent(new CustomEvent('conversation-updated'));
+  };
+
+  const handleLoadConversation = (conversationId) => {
+    const conversation = conversationService.loadConversation(conversationId);
+    if (conversation) {
+      setCurrentConversationId(conversation.id);
+      setConversationTitle(conversation.title);
+      setMessages(conversation.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        metadata: msg.metadata
+      })));
+    }
   };
 
   const handleOpenInTab = () => {
@@ -1110,7 +1202,7 @@ const AIChatPanel = () => {
 
             <div>
               <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1rem', fontWeight: '600', lineHeight: '1.2' }}>
-                Chat de IA
+                {conversationTitle || 'Chat de IA'}
               </h2>
               <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.7rem', lineHeight: '1.1' }}>
                 {currentModel ? `Modelo: ${currentModel}` : 'Selecciona un modelo en configuración'}
@@ -1120,6 +1212,35 @@ const AIChatPanel = () => {
 
           {/* Botones de acción más compactos */}
           <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {/* Botón nueva conversación */}
+            <button
+              onClick={handleNewConversation}
+              style={{
+                background: 'rgba(100, 200, 100, 0.2)',
+                border: '1px solid rgba(100, 200, 100, 0.4)',
+                borderRadius: '6px',
+                padding: '0.4rem 0.6rem',
+                color: themeColors.textPrimary,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                width: '32px',
+                height: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 200, 100, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 200, 100, 0.2)';
+              }}
+              title="Nueva conversación"
+            >
+              <i className="pi pi-plus" style={{ fontSize: '0.8rem' }} />
+            </button>
+
             {/* Botón para abrir en pestaña nueva */}
             <button
               onClick={handleOpenInTab}
