@@ -305,6 +305,23 @@ const AIChatPanel = () => {
     aiService.clearHistory();
   };
 
+  const handleOpenInTab = () => {
+    // Crear nueva pestaña de IA
+    const tabId = `ai-chat-${Date.now()}`;
+    const newAITab = {
+      key: tabId,
+      label: 'Chat IA',
+      type: 'ai-chat',
+      createdAt: Date.now(),
+      groupId: null
+    };
+
+    // Disparar evento para crear la pestaña
+    window.dispatchEvent(new CustomEvent('create-ai-tab', {
+      detail: { tab: newAITab }
+    }));
+  };
+
   const handleModelChange = (modelId, modelType) => {
     aiService.setCurrentModel(modelId, modelType);
     setCurrentModel(modelId);
@@ -1103,6 +1120,35 @@ const AIChatPanel = () => {
 
           {/* Botones de acción más compactos */}
           <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {/* Botón para abrir en pestaña nueva */}
+            <button
+              onClick={handleOpenInTab}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: `1px solid ${themeColors.borderColor}`,
+                borderRadius: '6px',
+                padding: '0.4rem 0.6rem',
+                color: themeColors.textPrimary,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                width: '32px',
+                height: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              }}
+              title="Abrir Chat IA en pestaña nueva"
+            >
+              <i className="pi pi-external-link" style={{ fontSize: '0.8rem' }} />
+            </button>
+
             <button
               onClick={() => setShowConfigDialog(true)}
               style={{
@@ -1115,8 +1161,10 @@ const AIChatPanel = () => {
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.8rem'
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                width: '32px',
+                height: '32px'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = themeColors.hoverBackground;
@@ -1124,9 +1172,9 @@ const AIChatPanel = () => {
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
               }}
+              title="Configuración"
             >
               <i className="pi pi-cog" style={{ fontSize: '0.8rem' }} />
-              <span>Config</span>
             </button>
 
             <button
@@ -1141,8 +1189,10 @@ const AIChatPanel = () => {
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.8rem'
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                width: '32px',
+                height: '32px'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(255,107,53,0.3)';
@@ -1150,9 +1200,9 @@ const AIChatPanel = () => {
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,107,53,0.2)';
               }}
+              title="Limpiar chat"
             >
               <i className="pi pi-trash" style={{ fontSize: '0.8rem' }} />
-              <span>Limpiar</span>
             </button>
           </div>
         </div>

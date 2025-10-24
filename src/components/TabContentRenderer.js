@@ -13,6 +13,7 @@ import CygwinTerminal from './CygwinTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
+import AIChatTab from './AIChatTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
@@ -1119,6 +1120,11 @@ const TabContentRenderer = React.memo(({
         statusBarIconTheme={statusBarIconTheme}
       />
     );
+  }
+
+  // Pestaña de Chat de IA
+  if (tab.type === 'ai-chat') {
+    return <AIChatTab />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error
