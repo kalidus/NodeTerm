@@ -135,6 +135,20 @@ class AIService {
             bestFor: 'Usuarios que quieren lo mejor de Llama 3.1 sin configurar versiones específicas'
           },
           { 
+            id: 'llama3.1:8b', 
+            name: 'Llama 3.1 (8B)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo estándar de Llama 3.1 con excelente rendimiento. Ideal para programación y análisis complejos.',
+            useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos'],
+            strengths: ['Excelente programación', 'Razonamiento sólido', 'Código de calidad', 'Análisis profundo'],
+            bestFor: 'Desarrolladores, programadores y usuarios que necesitan análisis de código de calidad'
+          },
+          { 
             id: 'llama3.1:70b', 
             name: 'Llama 3.1 (70B)', 
             size: '40GB', 
@@ -161,6 +175,20 @@ class AIService {
             useCases: ['Programación general', 'Asistencia técnica', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
             strengths: ['Estabilidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
             bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad'
+          },
+          { 
+            id: 'llama3:70b', 
+            name: 'Llama 3 (70B)', 
+            size: '40GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo más potente de Llama 3. Excelente para programación avanzada y análisis complejos con máxima calidad.',
+            useCases: ['Programación avanzada', 'Análisis de código complejo', 'Investigación', 'Razonamiento profundo', 'Tareas de alta complejidad'],
+            strengths: ['Excelente programación', 'Razonamiento superior', 'Código de máxima calidad', 'Análisis profundo', 'Máxima potencia'],
+            bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan máxima calidad en programación'
           },
           { 
             id: 'llama2', 
