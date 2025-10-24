@@ -93,7 +93,35 @@ class AIService {
       local: {
         ollama: [
           { 
-            id: 'llama3.2', 
+            id: 'llama3.2:70b', 
+            name: 'Llama 3.2 (70B)', 
+            size: '40GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo más potente de Llama 3.2 con capacidades multimodales. Excelente para tareas complejas y análisis profundo.',
+            useCases: ['Análisis complejo', 'Programación avanzada', 'Investigación', 'Tareas multimodales', 'Razonamiento profundo'],
+            strengths: ['Capacidades multimodales', 'Razonamiento superior', 'Análisis profundo', 'Excelente programación'],
+            bestFor: 'Investigadores, desarrolladores senior y usuarios que necesitan máxima potencia'
+          },
+          { 
+            id: 'llama3.2:11b', 
+            name: 'Llama 3.2 (11B)', 
+            size: '6.5GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo intermedio de Llama 3.2 con capacidades multimodales. Buen balance entre rendimiento y recursos.',
+            useCases: ['Programación intermedia', 'Análisis de imágenes', 'Asistencia técnica', 'Tareas multimodales'],
+            strengths: ['Capacidades multimodales', 'Buen rendimiento', 'Balance recursos/potencia', 'Versatilidad'],
+            bestFor: 'Desarrolladores intermedios y usuarios que necesitan capacidades multimodales'
+          },
+          { 
+            id: 'llama3.2:3b', 
             name: 'Llama 3.2 (3B)', 
             size: '2GB', 
             downloaded: false, 
@@ -101,13 +129,27 @@ class AIService {
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Modelo ligero y rápido de Meta. Ideal para dispositivos con recursos limitados y tareas básicas.',
-            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos con poca RAM', 'Tareas simples'],
-            strengths: ['Muy ligero', 'Velocidad alta', 'Bajo consumo', 'Fácil de ejecutar'],
+            description: 'Modelo ligero y rápido de Llama 3.2 con capacidades multimodales. Ideal para dispositivos con recursos limitados.',
+            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos con poca RAM', 'Tareas simples multimodales'],
+            strengths: ['Muy ligero', 'Velocidad alta', 'Capacidades multimodales', 'Bajo consumo'],
             bestFor: 'Dispositivos con poca RAM, tareas básicas y usuarios que priorizan la velocidad'
           },
           { 
-            id: 'llama3.1', 
+            id: 'llama3.1:70b', 
+            name: 'Llama 3.1 (70B)', 
+            size: '40GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo más potente de Llama 3.1. Excelente para programación avanzada y análisis complejos con máxima calidad.',
+            useCases: ['Programación avanzada', 'Análisis de código complejo', 'Investigación', 'Razonamiento profundo', 'Tareas de alta complejidad'],
+            strengths: ['Excelente programación', 'Razonamiento superior', 'Código de máxima calidad', 'Análisis profundo', 'Máxima potencia'],
+            bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan máxima calidad en programación'
+          },
+          { 
+            id: 'llama3.1:8b', 
             name: 'Llama 3.1 (8B)', 
             size: '4.7GB', 
             downloaded: false, 
