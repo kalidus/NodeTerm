@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify';
 import { Dropdown } from 'primereact/dropdown';
 import { aiService } from '../services/AIService';
 import { conversationService } from '../services/ConversationService';
+import { markdownFormatter } from '../services/MarkdownFormatter';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
@@ -32,7 +33,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [conversationTitle, setConversationTitle] = useState('');
 
-  // Configurar marked con resaltado de sintaxis
+  // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
     marked.setOptions({
       highlight: function(code, lang) {
@@ -52,7 +53,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       },
       breaks: true,
       gfm: true,
-      langPrefix: 'hljs language-'
+      langPrefix: 'hljs language-',
+      // Opciones adicionales para mejor manejo de formato
+      pedantic: false,
+      sanitize: false,
+      smartLists: true,
+      smartypants: true,
+      // Mejorar el manejo de tablas
+      tables: true,
+      // Mejorar el manejo de enlaces
+      linkify: true,
+      // Configuración para mejor consistencia
+      headerIds: false,
+      mangle: false
     });
   }, []);
 
@@ -425,15 +438,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Función para renderizar Markdown de forma segura
+  // Función para renderizar Markdown de forma segura con post-procesamiento
   const renderMarkdown = (content) => {
     if (!content) return '';
     
     try {
-      // Procesar el markdown con marked
+      // TEMPORALMENTE DESACTIVADO - CAUSABA BUCLE INFINITO
+      // TODO: Arreglar el MarkdownFormatter antes de reactivar
+      
+      // Paso 1: Procesar el markdown con marked (sin corrección por ahora)
       const html = marked(content);
       
-      // Sanitizar el HTML para seguridad
+      // Paso 3: Sanitizar el HTML para seguridad
       const cleanHtml = DOMPurify.sanitize(html, {
         ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'],
         ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
