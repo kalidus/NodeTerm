@@ -676,6 +676,51 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       return iconMap[ext] || 'pi-file';
     };
 
+    // Función auxiliar para verificar patrones en el código
+    const checkCodePatterns = (code, baseName, language) => {
+      const patterns = {
+        'func': /def\s+\w+|function\s+\w+/,
+        'class': /class\s+\w+/,
+        'main': /if\s+__name__\s*==\s*['"]__main__['"]|public\s+static\s+void\s+main/,
+        'import': /import\s+\w+/,
+        'export': /export\s+(?:default\s+)?\w+/,
+        'const': /const\s+\w+/,
+        'script': /import\s+\w+|def\s+\w+|function\s+\w+/
+      };
+      
+      const pattern = patterns[baseName];
+      return pattern ? pattern.test(code) : false;
+    };
+
+    // Función auxiliar para obtener extensión de archivo basada en el lenguaje
+    const getLanguageExtension = (language) => {
+      const extensions = {
+        'python': 'py',
+        'javascript': 'js',
+        'typescript': 'ts',
+        'jsx': 'jsx',
+        'tsx': 'tsx',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c',
+        'go': 'go',
+        'rust': 'rs',
+        'php': 'php',
+        'ruby': 'rb',
+        'bash': 'sh',
+        'shell': 'sh',
+        'sql': 'sql',
+        'html': 'html',
+        'css': 'css',
+        'json': 'json',
+        'yaml': 'yml',
+        'xml': 'xml',
+        'markdown': 'md',
+        'txt': 'txt'
+      };
+      return extensions[language] || 'txt';
+    };
+
     const handleDownload = (fileName) => {
       // Buscar el código correspondiente en el contenido del mensaje específico
       let fileContent = '';
@@ -729,7 +774,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               const match = codeBlocks[i].match(/```(\w+)?\n([\s\S]*?)```/);
               if (match) {
                 const language = match[1] || 'txt';
-                const actualExtension = this.getLanguageExtension(language);
+                const actualExtension = getLanguageExtension(language);
                 if (actualExtension === extension) {
                   foundBlock = match[2].trim();
                   break;
@@ -778,51 +823,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-    };
-
-    // Función auxiliar para verificar patrones en el código
-    const checkCodePatterns = (code, baseName, language) => {
-      const patterns = {
-        'func': /def\s+\w+|function\s+\w+/,
-        'class': /class\s+\w+/,
-        'main': /if\s+__name__\s*==\s*['"]__main__['"]|public\s+static\s+void\s+main/,
-        'import': /import\s+\w+/,
-        'export': /export\s+(?:default\s+)?\w+/,
-        'const': /const\s+\w+/,
-        'script': /import\s+\w+|def\s+\w+|function\s+\w+/
-      };
-      
-      const pattern = patterns[baseName];
-      return pattern ? pattern.test(code) : false;
-    };
-
-    // Función auxiliar para obtener extensión de archivo basada en el lenguaje
-    const getLanguageExtension = (language) => {
-      const extensions = {
-        'python': 'py',
-        'javascript': 'js',
-        'typescript': 'ts',
-        'jsx': 'jsx',
-        'tsx': 'tsx',
-        'java': 'java',
-        'cpp': 'cpp',
-        'c': 'c',
-        'go': 'go',
-        'rust': 'rs',
-        'php': 'php',
-        'ruby': 'rb',
-        'bash': 'sh',
-        'shell': 'sh',
-        'sql': 'sql',
-        'html': 'html',
-        'css': 'css',
-        'json': 'json',
-        'yaml': 'yml',
-        'xml': 'xml',
-        'markdown': 'md',
-        'txt': 'txt'
-      };
-      return extensions[language] || 'txt';
     };
 
     return (
