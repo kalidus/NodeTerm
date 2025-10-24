@@ -11,6 +11,11 @@ class ConversationService {
     this.maxConversations = 50; // Límite de conversaciones almacenadas
     this.maxMessagesPerConversation = 100; // Límite de mensajes por conversación
     
+    // Sistema de agrupación híbrida
+    this.folders = new Map(); // Carpetas personalizadas
+    this.favorites = new Set(); // IDs de conversaciones favoritas
+    this.tags = new Map(); // Etiquetas por conversación
+    
     this.loadConversations();
   }
 
@@ -323,6 +328,256 @@ class ConversationService {
     };
   }
 
+  // ===== SISTEMA DE AGRUPACIÓN HÍBRIDA =====
+
+  /**
+   * Obtener conversaciones agrupadas automáticamente
+   */
+  getGroupedConversations() {
+    const allConversations = this.getAllConversations('lastMessageAt', 'desc');
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const oneWeek = 7 * oneDay;
+    const oneMonth = 30 * oneDay;
+
+    const grouped = {
+      recent: [], // Últimas 10 conversaciones activas
+      favorites: [], // Conversaciones favoritas
+      today: [],
+      yesterday: [],
+      thisWeek: [],
+      thisMonth: [],
+      older: [],
+      archived: []
+    };
+
+    allConversations.forEach(conv => {
+      const timeDiff = now - conv.lastMessageAt;
+
+      // Favoritas (independiente de fecha)
+      if (this.favorites.has(conv.id)) {
+        grouped.favorites.push(conv);
+        return;
+      }
+
+      // Archivadas
+      if (!conv.isActive) {
+        grouped.archived.push(conv);
+        return;
+      }
+
+      // Recientes (últimas 10)
+      if (grouped.recent.length < 10) {
+        grouped.recent.push(conv);
+      }
+
+      // Agrupación temporal
+      if (timeDiff < oneDay) {
+        grouped.today.push(conv);
+      } else if (timeDiff < 2 * oneDay) {
+        grouped.yesterday.push(conv);
+      } else if (timeDiff < oneWeek) {
+        grouped.thisWeek.push(conv);
+      } else if (timeDiff < oneMonth) {
+        grouped.thisMonth.push(conv);
+      } else {
+        grouped.older.push(conv);
+      }
+    });
+
+    return grouped;
+  }
+
+  /**
+   * Gestión de favoritos
+   */
+  toggleFavorite(conversationId) {
+    if (this.favorites.has(conversationId)) {
+      this.favorites.delete(conversationId);
+    } else {
+      this.favorites.add(conversationId);
+    }
+    this.saveConversations();
+    return this.favorites.has(conversationId);
+  }
+
+  isFavorite(conversationId) {
+    return this.favorites.has(conversationId);
+  }
+
+  /**
+   * Gestión de carpetas personalizadas
+   */
+  createFolder(name, description = '') {
+    const folderId = this.generateFolderId();
+    const folder = {
+      id: folderId,
+      name: name.trim(),
+      description: description.trim(),
+      createdAt: Date.now(),
+      conversationIds: []
+    };
+    this.folders.set(folderId, folder);
+    this.saveConversations();
+    return folder;
+  }
+
+  deleteFolder(folderId) {
+    if (this.folders.has(folderId)) {
+      this.folders.delete(folderId);
+      this.saveConversations();
+      return true;
+    }
+    return false;
+  }
+
+  renameFolder(folderId, newName) {
+    const folder = this.folders.get(folderId);
+    if (folder) {
+      folder.name = newName.trim();
+      this.saveConversations();
+      return true;
+    }
+    return false;
+  }
+
+  addConversationToFolder(conversationId, folderId) {
+    const folder = this.folders.get(folderId);
+    if (folder && !folder.conversationIds.includes(conversationId)) {
+      folder.conversationIds.push(conversationId);
+      this.saveConversations();
+      return true;
+    }
+    return false;
+  }
+
+  removeConversationFromFolder(conversationId, folderId) {
+    const folder = this.folders.get(folderId);
+    if (folder) {
+      folder.conversationIds = folder.conversationIds.filter(id => id !== conversationId);
+      this.saveConversations();
+      return true;
+    }
+    return false;
+  }
+
+  getFolderConversations(folderId) {
+    const folder = this.folders.get(folderId);
+    if (!folder) return [];
+
+    return folder.conversationIds
+      .map(id => this.conversations.get(id))
+      .filter(conv => conv !== undefined)
+      .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+  }
+
+  getAllFolders() {
+    return Array.from(this.folders.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Gestión de etiquetas
+   */
+  addTag(conversationId, tag) {
+    if (!this.tags.has(conversationId)) {
+      this.tags.set(conversationId, []);
+    }
+    const tags = this.tags.get(conversationId);
+    if (!tags.includes(tag)) {
+      tags.push(tag);
+      this.saveConversations();
+    }
+    return tags;
+  }
+
+  removeTag(conversationId, tag) {
+    if (this.tags.has(conversationId)) {
+      const tags = this.tags.get(conversationId);
+      const index = tags.indexOf(tag);
+      if (index > -1) {
+        tags.splice(index, 1);
+        if (tags.length === 0) {
+          this.tags.delete(conversationId);
+        }
+        this.saveConversations();
+      }
+    }
+  }
+
+  getConversationTags(conversationId) {
+    return this.tags.get(conversationId) || [];
+  }
+
+  getAllTags() {
+    const allTags = new Set();
+    this.tags.forEach(tags => {
+      tags.forEach(tag => allTags.add(tag));
+    });
+    return Array.from(allTags).sort();
+  }
+
+  /**
+   * Búsqueda avanzada con filtros
+   */
+  advancedSearch(options = {}) {
+    let results = Array.from(this.conversations.values());
+
+    // Filtro por texto
+    if (options.query && options.query.trim()) {
+      const searchTerm = options.query.toLowerCase();
+      results = results.filter(conversation => 
+        conversation.title.toLowerCase().includes(searchTerm) ||
+        conversation.messages.some(msg => 
+          msg.content.toLowerCase().includes(searchTerm)
+        )
+      );
+    }
+
+    // Filtro por etiquetas
+    if (options.tags && options.tags.length > 0) {
+      results = results.filter(conversation => {
+        const conversationTags = this.getConversationTags(conversation.id);
+        return options.tags.some(tag => conversationTags.includes(tag));
+      });
+    }
+
+    // Filtro por favoritos
+    if (options.favoritesOnly) {
+      results = results.filter(conversation => this.favorites.has(conversation.id));
+    }
+
+    // Filtro por carpeta
+    if (options.folderId) {
+      const folderConversations = this.getFolderConversations(options.folderId);
+      const folderIds = folderConversations.map(conv => conv.id);
+      results = results.filter(conversation => folderIds.includes(conversation.id));
+    }
+
+    // Filtro por fecha
+    if (options.dateFrom) {
+      results = results.filter(conv => conv.createdAt >= options.dateFrom);
+    }
+    if (options.dateTo) {
+      results = results.filter(conv => conv.createdAt <= options.dateTo);
+    }
+
+    // Filtro por modelo
+    if (options.modelId) {
+      results = results.filter(conv => conv.modelId === options.modelId);
+    }
+
+    // Ordenamiento
+    const sortBy = options.sortBy || 'lastMessageAt';
+    const order = options.order || 'desc';
+    results.sort((a, b) => {
+      const aValue = a[sortBy] || 0;
+      const bValue = b[sortBy] || 0;
+      return order === 'desc' ? bValue - aValue : aValue - bValue;
+    });
+
+    return results;
+  }
+
   // Métodos privados
 
   generateConversationId() {
@@ -331,6 +586,10 @@ class ConversationService {
 
   generateMessageId() {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  generateFolderId() {
+    return `folder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   generateDefaultTitle() {
@@ -413,6 +672,21 @@ class ConversationService {
           this.currentConversationId = data.currentConversationId;
         }
         
+        // Cargar carpetas
+        if (data.folders) {
+          this.folders = new Map(data.folders);
+        }
+        
+        // Cargar favoritos
+        if (data.favorites) {
+          this.favorites = new Set(data.favorites);
+        }
+        
+        // Cargar etiquetas
+        if (data.tags) {
+          this.tags = new Map(data.tags);
+        }
+        
         // Limpiar duplicados después de cargar
         this.cleanupDuplicateConversations();
       }
@@ -420,6 +694,9 @@ class ConversationService {
       console.error('Error cargando conversaciones:', error);
       this.conversations = new Map();
       this.conversationIndex = [];
+      this.folders = new Map();
+      this.favorites = new Set();
+      this.tags = new Map();
     }
   }
 
@@ -429,6 +706,9 @@ class ConversationService {
         conversations: Array.from(this.conversations.entries()),
         index: this.conversationIndex,
         currentConversationId: this.currentConversationId,
+        folders: Array.from(this.folders.entries()),
+        favorites: Array.from(this.favorites),
+        tags: Array.from(this.tags.entries()),
         lastSaved: Date.now()
       };
       
