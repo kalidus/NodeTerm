@@ -480,6 +480,42 @@ const AIConfigDialog = ({ visible, onHide }) => {
                         {model.description}
                       </p>
                     )}
+                    
+                    {model.useCases && model.useCases.length > 0 && (
+                      <div style={{ margin: '0.5rem 0' }}>
+                        <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
+                          💼 Casos de uso:
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                          {model.useCases.slice(0, 3).map((useCase, index) => (
+                            <span key={index} style={{
+                              background: themeColors.primaryColor + '20',
+                              color: themeColors.primaryColor,
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '8px',
+                              fontSize: '0.7rem',
+                              border: `1px solid ${themeColors.primaryColor}40`
+                            }}>
+                              {useCase}
+                            </span>
+                          ))}
+                          {model.useCases.length > 3 && (
+                            <span style={{
+                              color: themeColors.textSecondary,
+                              fontSize: '0.7rem'
+                            }}>
+                              +{model.useCases.length - 3} más
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {model.bestFor && (
+                      <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                        👤 {model.bestFor}
+                      </p>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     {model.downloaded ? (
@@ -961,6 +997,42 @@ const AIConfigDialog = ({ visible, onHide }) => {
                       {model.description && (
                         <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
                           {model.description}
+                        </p>
+                      )}
+                      
+                      {model.useCases && model.useCases.length > 0 && (
+                        <div style={{ margin: '0.5rem 0' }}>
+                          <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
+                            💼 Casos de uso:
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                            {model.useCases.slice(0, 3).map((useCase, index) => (
+                              <span key={index} style={{
+                                background: themeColors.primaryColor + '20',
+                                color: themeColors.primaryColor,
+                                padding: '0.1rem 0.4rem',
+                                borderRadius: '8px',
+                                fontSize: '0.7rem',
+                                border: `1px solid ${themeColors.primaryColor}40`
+                              }}>
+                                {useCase}
+                              </span>
+                            ))}
+                            {model.useCases.length > 3 && (
+                              <span style={{
+                                color: themeColors.textSecondary,
+                                fontSize: '0.7rem'
+                              }}>
+                                +{model.useCases.length - 3} más
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {model.bestFor && (
+                        <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
+                          👤 {model.bestFor}
                         </p>
                       )}
                     </div>
