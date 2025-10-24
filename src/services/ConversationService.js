@@ -112,6 +112,12 @@ class ConversationService {
     conversation.lastMessageAt = Date.now();
     conversation.metadata.messageCount = conversation.messages.length;
 
+    // Si es el primer mensaje del usuario y el título es el por defecto, actualizarlo
+    if (role === 'user' && conversation.messages.length === 1) {
+      const newTitle = this.generateTitleFromFirstPrompt(content);
+      conversation.title = newTitle;
+    }
+
     // Actualizar metadatos
     if (metadata.tokens) {
       conversation.metadata.totalTokens += metadata.tokens;
@@ -594,7 +600,39 @@ class ConversationService {
 
   generateDefaultTitle() {
     const now = new Date();
-    return `Conversación ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    return `Nueva conversación - ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  /**
+   * Generar título basado en el primer prompt del usuario
+   */
+  generateTitleFromFirstPrompt(firstMessage) {
+    if (!firstMessage || !firstMessage.trim()) {
+      return this.generateDefaultTitle();
+    }
+
+    // Limpiar el mensaje: remover saltos de línea, espacios extra, y caracteres especiales
+    let cleanMessage = firstMessage
+      .replace(/\s+/g, ' ') // Reemplazar múltiples espacios con uno solo
+      .replace(/\n+/g, ' ') // Reemplazar saltos de línea con espacios
+      .trim();
+
+    // Remover caracteres especiales al inicio y final
+    cleanMessage = cleanMessage.replace(/^[^\w\s]+|[^\w\s]+$/g, '');
+
+    // Si el mensaje está vacío después de limpiar, usar título por defecto
+    if (!cleanMessage) {
+      return this.generateDefaultTitle();
+    }
+
+    // Truncar a 50 caracteres máximo
+    const maxLength = 50;
+    if (cleanMessage.length <= maxLength) {
+      return cleanMessage;
+    }
+
+    // Truncar y agregar puntos suspensivos
+    return cleanMessage.substring(0, maxLength - 3) + '...';
   }
 
   addToIndex(conversation) {
