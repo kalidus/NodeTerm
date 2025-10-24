@@ -686,7 +686,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             </span>
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {localModels.filter(model => model.platform === 'ollama').map(model => (
+            {localModels.filter(model => model.platform === 'ollama' && model.downloaded).map(model => (
             <div
               key={model.id}
               style={{
@@ -861,7 +861,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             </span>
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {localModels.filter(model => model.platform === 'independent').map(model => (
+            {localModels.filter(model => model.platform === 'independent' && model.downloaded).map(model => (
             <div
               key={model.id}
               style={{
