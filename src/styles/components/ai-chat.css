@@ -190,6 +190,17 @@
   background: rgba(0,0,0,0.4);
 }
 
+/* Header del bloque de código */
+.ai-code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-size: 0.8rem;
+}
+
 .ai-codeblock pre,
 .ai-code-pre {
   margin: 0;
@@ -205,52 +216,46 @@
 
 /* ChatGPT-like Copy Button */
 .ai-copy-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.2);
   color: #fff;
-  border-radius: 8px;
-  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  gap: 0.3rem;
+  font-size: 0.75rem;
   font-weight: 500;
   transition: all 0.2s ease;
   backdrop-filter: blur(10px);
-  opacity: 0;
-  transform: translateY(-2px);
-}
-
-.ai-codeblock:hover .ai-copy-btn {
-  opacity: 1;
-  transform: translateY(0);
+  opacity: 0.8;
 }
 
 .ai-copy-btn:hover {
   background: rgba(255,255,255,0.2);
   border-color: rgba(255,255,255,0.3);
+  opacity: 1;
   transform: translateY(-1px);
+}
+
+.ai-copy-btn i {
+  font-size: 0.7rem;
 }
 
 /* Language indicator */
 .ai-code-lang {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   opacity: 0.9;
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
   border: 1px solid rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(10px);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.8);
 }
 
 /* Highlight.js base tune (dark overlay friendly) */
