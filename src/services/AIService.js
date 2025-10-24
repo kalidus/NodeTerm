@@ -135,6 +135,34 @@ class AIService {
             bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad'
           },
           { 
+            id: 'llama2', 
+            name: 'Llama 2 (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo clásico de Meta. Versión anterior estable y confiable para uso general.',
+            useCases: ['Programación básica', 'Asistencia general', 'Análisis de texto', 'Resolución de problemas'],
+            strengths: ['Estabilidad', 'Buena comprensión', 'Respuestas coherentes', 'Amplio conocimiento'],
+            bestFor: 'Uso general, programación básica y usuarios que buscan estabilidad'
+          },
+          { 
+            id: 'deepseek-r1:8b', 
+            name: 'DeepSeek R1 (8B)', 
+            size: '5.2GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
+            useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
+            strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
+            bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo'
+          },
+          { 
             id: 'mistral', 
             name: 'Mistral (7B)', 
             size: '4.1GB', 
@@ -234,20 +262,6 @@ class AIService {
           }
         ],
         independent: [
-          { 
-            id: 'deepseek-r1:8b', 
-            name: 'DeepSeek R1 (8B)', 
-            size: '4.7GB', 
-            downloaded: false, 
-            performance: 'high',
-            platform: 'independent',
-            platformName: 'Independiente',
-            platformDescription: 'No requiere Ollama - Funciona directamente',
-            description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
-            useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
-            strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
-            bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo'
-          },
           { 
             id: 'deepseek-coder:6.7b', 
             name: 'DeepSeek Coder (6.7B)', 
@@ -542,41 +556,68 @@ class AIService {
       
       // Actualizar lista de modelos locales con los detectados
       if (data.models && Array.isArray(data.models)) {
-        const installedModels = data.models.map(model => {
-          const existingModel = this.getAllLocalModels().find(m => m.id === model.name);
-          if (existingModel) {
-            return { ...existingModel, downloaded: true };
-          } else {
-            // Modelo no conocido, agregarlo
-            return {
-              id: model.name,
-              name: model.name,
-              size: model.size ? `${(model.size / 1e9).toFixed(1)}GB` : 'Desconocido',
-              downloaded: true
-            };
-          }
+        // Primero marcar todos los modelos como no instalados
+        this.models.local.ollama.forEach(model => {
+          model.downloaded = false;
+        });
+        this.models.local.independent.forEach(model => {
+          model.downloaded = false;
         });
         
-        // Actualizar estado de modelos existentes
-        installedModels.forEach(installed => {
-          // Buscar en modelos de Ollama
-          const ollamaIndex = this.models.local.ollama.findIndex(m => m.id === installed.id);
+        // Luego marcar como instalados solo los que están en Ollama
+        const installedModelNames = data.models.map(model => model.name);
+        
+        installedModelNames.forEach(modelName => {
+          // Extraer el nombre base del modelo (sin tags como :latest, :8b, etc.)
+          const baseModelName = modelName.split(':')[0];
+          
+          // Buscar en modelos de Ollama prefiriendo coincidencia exacta, luego coincidencia de nombre base
+          let ollamaIndex = this.models.local.ollama.findIndex(m => m.id === modelName);
+          if (ollamaIndex === -1) {
+            ollamaIndex = this.models.local.ollama.findIndex(m => m.id === baseModelName);
+          }
+          
           if (ollamaIndex >= 0) {
-            this.models.local.ollama[ollamaIndex] = installed;
+            this.models.local.ollama[ollamaIndex].downloaded = true;
+            // Actualizar el ID para que coincida con el nombre exacto instalado
+            this.models.local.ollama[ollamaIndex].id = modelName;
+            this.models.local.ollama[ollamaIndex].name = modelName;
           } else {
             // Buscar en modelos independientes
-            const independentIndex = this.models.local.independent.findIndex(m => m.id === installed.id);
+            let independentIndex = this.models.local.independent.findIndex(m => m.id === modelName);
+            if (independentIndex === -1) {
+              independentIndex = this.models.local.independent.findIndex(m => m.id === baseModelName);
+            }
+            
             if (independentIndex >= 0) {
-              this.models.local.independent[independentIndex] = installed;
+              this.models.local.independent[independentIndex].downloaded = true;
+              // Actualizar el ID para que coincida con el nombre exacto instalado
+              this.models.local.independent[independentIndex].id = modelName;
+              this.models.local.independent[independentIndex].name = modelName;
             } else {
-              // Modelo no conocido, agregarlo a Ollama por defecto
-              this.models.local.ollama.push(installed);
+              // Modelo no conocido, agregarlo al principio de la lista de Ollama
+              const modelInfo = data.models.find(m => m.name === modelName);
+              this.models.local.ollama.unshift({
+                id: modelName,
+                name: modelName,
+                size: modelInfo?.size ? `${(modelInfo.size / 1e9).toFixed(1)}GB` : 'Desconocido',
+                downloaded: true,
+                performance: 'medium',
+                platform: 'ollama',
+                platformName: 'Ollama',
+                platformDescription: 'Requiere Ollama instalado localmente',
+                description: 'Modelo instalado localmente en Ollama'
+              });
             }
           }
         });
+        
+        // Limpiar duplicados - remover modelos predefinidos que ya están instalados con tags
+        this.cleanDuplicateModels();
+        
         this.saveConfig();
         
-        return installedModels;
+        return installedModelNames;
       }
       
       return [];
@@ -584,6 +625,28 @@ class AIService {
       console.error('Error detectando modelos de Ollama:', error);
       return [];
     }
+  }
+
+  /**
+   * Limpiar modelos duplicados - remover modelos predefinidos que ya están instalados con tags
+   */
+  cleanDuplicateModels() {
+    // Crear un mapa de modelos instalados por nombre base
+    const installedBaseNames = new Set();
+    this.models.local.ollama.forEach(model => {
+      if (model.downloaded && model.id.includes(':')) {
+        const baseName = model.id.split(':')[0];
+        installedBaseNames.add(baseName);
+      }
+    });
+
+    // Remover modelos predefinidos que ya están instalados con tags
+    this.models.local.ollama = this.models.local.ollama.filter(model => {
+      if (!model.downloaded && installedBaseNames.has(model.id)) {
+        return false; // Remover modelo predefinido que ya está instalado con tag
+      }
+      return true;
+    });
   }
 
   /**
