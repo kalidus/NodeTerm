@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { conversationService } from '../services/ConversationService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import FolderManager from './FolderManager';
+import FolderMenu from './FolderMenu';
 
 const ConversationHistory = ({ onConversationSelect, onNewConversation, currentConversationId }) => {
   const [conversations, setConversations] = useState([]);
@@ -11,6 +13,16 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [editingConversation, setEditingConversation] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  
+  // Estados para el sistema de agrupación híbrida
+  const [activeTab, setActiveTab] = useState('recent'); // 'recent', 'favorites', 'folders', 'search'
+  const [groupedConversations, setGroupedConversations] = useState({});
+  const [folders, setFolders] = useState([]);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [editingFolder, setEditingFolder] = useState(null);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [showFolderMenu, setShowFolderMenu] = useState(null); // ID de la conversación para mostrar el menú
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -38,10 +50,15 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
     };
   }, [currentTheme]);
 
-  // Cargar conversaciones
+  // Cargar conversaciones con agrupación
   const loadConversations = useCallback(() => {
     const allConversations = conversationService.getAllConversations('lastMessageAt', 'desc');
+    const grouped = conversationService.getGroupedConversations();
+    const folders = conversationService.getAllFolders();
+    
     setConversations(allConversations);
+    setGroupedConversations(grouped);
+    setFolders(folders);
   }, []);
 
   useEffect(() => {
@@ -58,8 +75,24 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
     return () => window.removeEventListener('conversation-updated', handleConversationUpdate);
   }, [loadConversations]);
 
-  // Filtrar conversaciones
-  const filteredConversations = conversations.filter(conv => {
+  // Obtener conversaciones según la pestaña activa
+  const getCurrentConversations = () => {
+    switch (activeTab) {
+      case 'recent':
+        return groupedConversations.recent || [];
+      case 'favorites':
+        return groupedConversations.favorites || [];
+      case 'folders':
+        return conversations; // Se mostrarán las carpetas en lugar de conversaciones
+      case 'search':
+        return conversationService.advancedSearch({ query: searchQuery });
+      default:
+        return conversations;
+    }
+  };
+
+  // Filtrar conversaciones según búsqueda y estado de archivo
+  const filteredConversations = getCurrentConversations().filter(conv => {
     const matchesSearch = !searchQuery || 
       conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       conv.messages.some(msg => 
@@ -114,6 +147,53 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
   const handleCancelEdit = () => {
     setEditingConversation(null);
     setEditTitle('');
+  };
+
+  // Métodos para favoritos
+  const handleToggleFavorite = (conversationId, event) => {
+    event.stopPropagation();
+    conversationService.toggleFavorite(conversationId);
+    loadConversations();
+  };
+
+  // Métodos para carpetas
+  const handleCreateFolder = () => {
+    if (newFolderName.trim()) {
+      conversationService.createFolder(newFolderName.trim());
+      setNewFolderName('');
+      setShowCreateFolder(false);
+      loadConversations();
+    }
+  };
+
+  const handleDeleteFolder = (folderId) => {
+    conversationService.deleteFolder(folderId);
+    loadConversations();
+  };
+
+  const handleRenameFolder = (folderId, newName) => {
+    conversationService.renameFolder(folderId, newName);
+    loadConversations();
+  };
+
+  const handleMoveToFolder = (conversationId, folderId) => {
+    conversationService.addConversationToFolder(conversationId, folderId);
+    loadConversations();
+  };
+
+  const handleRemoveFromFolder = (conversationId, folderId) => {
+    conversationService.removeConversationFromFolder(conversationId, folderId);
+    loadConversations();
+  };
+
+  // Métodos para el menú de carpetas
+  const handleShowFolderMenu = (conversationId, event) => {
+    event.stopPropagation();
+    setShowFolderMenu(conversationId);
+  };
+
+  const handleCloseFolderMenu = () => {
+    setShowFolderMenu(null);
   };
 
   const formatDate = (timestamp) => {
@@ -176,10 +256,43 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             box-shadow: 0 0 0 2px ${themeColors.primaryColor}33;
           }
 
+          .conversation-tabs {
+            display: flex;
+            gap: 0.3rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 1px solid ${themeColors.borderColor};
+          }
+
+          .conversation-tab {
+            padding: 0.5rem 0.8rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: ${themeColors.textSecondary};
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+          }
+
+          .conversation-tab:hover {
+            color: ${themeColors.textPrimary};
+            background: rgba(255,255,255,0.05);
+          }
+
+          .conversation-tab.active {
+            color: ${themeColors.primaryColor};
+            border-bottom-color: ${themeColors.primaryColor};
+            background: rgba(255,255,255,0.05);
+          }
+
           .conversation-filters {
             display: flex;
             gap: 0.5rem;
             align-items: center;
+            margin-top: 0.5rem;
           }
 
           .conversation-filter-btn {
@@ -290,6 +403,15 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             color: #f44336;
           }
 
+          .conversation-action-btn.favorite {
+            color: #ffc107;
+          }
+
+          .conversation-action-btn.favorite:hover {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+          }
+
           .new-conversation-btn {
             width: 100%;
             padding: 0.8rem;
@@ -388,16 +510,61 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
       </style>
 
       <div className="conversation-history">
-        {/* Header con búsqueda y filtros */}
-        <div className="conversation-header">
-          <input
-            type="text"
-            placeholder="Buscar conversaciones..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="conversation-search"
+        {/* Mostrar FolderManager si la pestaña de carpetas está activa */}
+        {activeTab === 'folders' ? (
+          <FolderManager
+            onConversationSelect={onConversationSelect}
+            currentConversationId={currentConversationId}
+            onBack={() => setActiveTab('recent')}
           />
-          
+        ) : (
+          <>
+            {/* Header con pestañas de agrupación */}
+            <div className="conversation-header">
+          {/* Pestañas de agrupación */}
+          <div className="conversation-tabs">
+            <button
+              className={`conversation-tab ${activeTab === 'recent' ? 'active' : ''}`}
+              onClick={() => setActiveTab('recent')}
+            >
+              <i className="pi pi-clock" style={{ marginRight: '0.5rem' }} />
+              Recientes
+            </button>
+            <button
+              className={`conversation-tab ${activeTab === 'favorites' ? 'active' : ''}`}
+              onClick={() => setActiveTab('favorites')}
+            >
+              <i className="pi pi-star" style={{ marginRight: '0.5rem' }} />
+              Favoritas
+            </button>
+            <button
+              className={`conversation-tab ${activeTab === 'folders' ? 'active' : ''}`}
+              onClick={() => setActiveTab('folders')}
+            >
+              <i className="pi pi-folder" style={{ marginRight: '0.5rem' }} />
+              Carpetas
+            </button>
+            <button
+              className={`conversation-tab ${activeTab === 'search' ? 'active' : ''}`}
+              onClick={() => setActiveTab('search')}
+            >
+              <i className="pi pi-search" style={{ marginRight: '0.5rem' }} />
+              Buscar
+            </button>
+          </div>
+
+          {/* Barra de búsqueda */}
+          {activeTab === 'search' && (
+            <input
+              type="text"
+              placeholder="Buscar conversaciones..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="conversation-search"
+            />
+          )}
+
+          {/* Filtros de estado */}
           <div className="conversation-filters">
             <button
               className={`conversation-filter-btn ${!showArchived ? 'active' : ''}`}
@@ -456,18 +623,40 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
                   
                   <div className="conversation-actions">
                     <button
+                      className={`conversation-action-btn ${conversationService.isFavorite(conversation.id) ? 'favorite' : ''}`}
+                      onClick={(e) => handleToggleFavorite(conversation.id, e)}
+                      title={conversationService.isFavorite(conversation.id) ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                    >
+                      <i className={`pi ${conversationService.isFavorite(conversation.id) ? 'pi-star-fill' : 'pi-star'}`} />
+                    </button>
+                    <button
                       className="conversation-action-btn"
                       onClick={(e) => handleEditConversation(conversation, e)}
                       title="Renombrar"
                     >
-                      ✏️
+                      <i className="pi pi-pencil" />
+                    </button>
+                    <button
+                      className="conversation-action-btn"
+                      onClick={(e) => handleShowFolderMenu(conversation.id, e)}
+                      title="Mover a carpeta"
+                      style={{ position: 'relative' }}
+                    >
+                      <i className="pi pi-folder" />
+                      {showFolderMenu === conversation.id && (
+                        <FolderMenu
+                          conversationId={conversation.id}
+                          onClose={handleCloseFolderMenu}
+                          onMoveToFolder={(folderId) => handleMoveToFolder(conversation.id, folderId)}
+                        />
+                      )}
                     </button>
                     <button
                       className="conversation-action-btn delete"
                       onClick={(e) => handleDeleteConversation(conversation.id, e)}
                       title="Eliminar"
                     >
-                      🗑️
+                      <i className="pi pi-trash" />
                     </button>
                   </div>
                 </>
@@ -498,10 +687,12 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
           </button>
         </div>
 
-        {/* Estadísticas */}
-        <div className="conversation-stats">
-          {conversations.length} conversaciones
-        </div>
+            {/* Estadísticas */}
+            <div className="conversation-stats">
+              {conversations.length} conversaciones
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modal de confirmación de eliminación */}
