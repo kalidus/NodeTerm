@@ -1601,12 +1601,15 @@ const Sidebar = React.memo(({
               }} 
             />
             
-            {/* Botón de nueva conexión */}
+            {/* Botón de conexiones */}
             <Button 
               icon="pi pi-desktop" 
               className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true)} 
-              tooltip="Nueva conexión" 
+              onClick={() => {
+                setViewMode('connections');
+                setSidebarCollapsed(false);
+              }} 
+              tooltip="Conexiones" 
               tooltipOptions={{ position: 'right' }} 
               style={{ 
                 margin: 0, 
@@ -1656,6 +1659,139 @@ const Sidebar = React.memo(({
                                                     0 1px 3px rgba(0,0,0,0.12),
                                                     inset 0 1px 0 rgba(255,255,255,0.15)`;
                 e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+              }}
+            />
+            
+            {/* Botón de passwords */}
+            <Button 
+              icon="pi pi-key" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={() => {
+                setViewMode('passwords');
+                setSidebarCollapsed(false);
+              }} 
+              tooltip="Passwords" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                border: 'none',
+                display: 'flex !important',
+                alignItems: 'center',
+                justifyContent: 'center',
+                visibility: 'visible !important',
+                opacity: '1 !important',
+                background: `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`,
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: `1px solid rgba(255,255,255,0.12)`,
+                borderRadius: '12px',
+                boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
+                            0 1px 3px rgba(0,0,0,0.12),
+                            inset 0 1px 0 rgba(255,255,255,0.15)`,
+                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                overflow: 'hidden'
+              }} 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.12) 0%, 
+                  rgba(255,255,255,0.08) 50%, 
+                  rgba(255,255,255,0.04) 100%)`;
+                e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.12), 
+                                                    0 2px 8px rgba(0,0,0,0.16),
+                                                    inset 0 1px 0 rgba(255,255,255,0.2)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(255,255,255,0.08) 0%, 
+                  rgba(255,255,255,0.04) 50%, 
+                  rgba(255,255,255,0.02) 100%)`;
+                e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
+                                                    0 1px 3px rgba(0,0,0,0.12),
+                                                    inset 0 1px 0 rgba(255,255,255,0.15)`;
+                e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
+              }}
+            />
+            
+            {/* Botón de Chat de IA */}
+            <Button 
+              icon="pi pi-comments" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={() => {
+                // Crear pestaña de IA
+                const newAITab = {
+                  key: `ai-chat-${Date.now()}`,
+                  label: 'Chat IA',
+                  type: 'ai-chat',
+                  createdAt: Date.now(),
+                  groupId: null
+                };
+
+                // Disparar evento para crear la pestaña
+                window.dispatchEvent(new CustomEvent('create-ai-tab', {
+                  detail: { tab: newAITab }
+                }));
+              }} 
+              tooltip="Chat de IA" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                border: 'none',
+                display: 'flex !important',
+                alignItems: 'center',
+                justifyContent: 'center',
+                visibility: 'visible !important',
+                opacity: '1 !important',
+                background: `linear-gradient(135deg, 
+                  rgba(138, 43, 226, 0.15) 0%, 
+                  rgba(138, 43, 226, 0.08) 50%, 
+                  rgba(138, 43, 226, 0.04) 100%)`,
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: `1px solid rgba(138, 43, 226, 0.3)`,
+                borderRadius: '12px',
+                boxShadow: `0 2px 8px rgba(138, 43, 226, 0.2), 
+                            0 1px 3px rgba(0,0,0,0.12),
+                            inset 0 1px 0 rgba(255,255,255,0.15)`,
+                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                overflow: 'hidden'
+              }} 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(138, 43, 226, 0.25) 0%, 
+                  rgba(138, 43, 226, 0.15) 50%, 
+                  rgba(138, 43, 226, 0.08) 100%)`;
+                e.currentTarget.style.boxShadow = `0 4px 16px rgba(138, 43, 226, 0.3), 
+                                                    0 2px 8px rgba(0,0,0,0.16),
+                                                    inset 0 1px 0 rgba(255,255,255,0.2)`;
+                e.currentTarget.style.borderColor = `rgba(138, 43, 226, 0.5)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = `linear-gradient(135deg, 
+                  rgba(138, 43, 226, 0.15) 0%, 
+                  rgba(138, 43, 226, 0.08) 50%, 
+                  rgba(138, 43, 226, 0.04) 100%)`;
+                e.currentTarget.style.boxShadow = `0 2px 8px rgba(138, 43, 226, 0.2), 
+                                                    0 1px 3px rgba(0,0,0,0.12),
+                                                    inset 0 1px 0 rgba(255,255,255,0.15)`;
+                e.currentTarget.style.borderColor = `rgba(138, 43, 226, 0.3)`;
               }}
             />
             
@@ -1703,65 +1839,6 @@ const Sidebar = React.memo(({
                                                     0 2px 8px rgba(0,0,0,0.16),
                                                     inset 0 1px 0 rgba(255,255,255,0.2)`;
                 e.currentTarget.style.borderColor = `rgba(255,255,255,0.18)`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.background = `linear-gradient(135deg, 
-                  rgba(255,255,255,0.08) 0%, 
-                  rgba(255,255,255,0.04) 50%, 
-                  rgba(255,255,255,0.02) 100%)`;
-                e.currentTarget.style.boxShadow = `0 2px 8px rgba(0,0,0,0.08), 
-                                                    0 1px 3px rgba(0,0,0,0.12),
-                                                    inset 0 1px 0 rgba(255,255,255,0.15)`;
-                e.currentTarget.style.borderColor = `rgba(255,255,255,0.12)`;
-              }}
-            />
-            
-            {/* Botón de gestor de passwords */}
-            <Button 
-              icon="pi pi-key" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setViewMode('passwords')} 
-              tooltip="Gestor de passwords" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#ffc107',
-                background: `linear-gradient(135deg, 
-                  rgba(255,255,255,0.08) 0%, 
-                  rgba(255,255,255,0.04) 50%, 
-                  rgba(255,255,255,0.02) 100%)`,
-                backdropFilter: 'blur(24px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                border: `1px solid rgba(255,255,255,0.12)`,
-                borderRadius: '12px',
-                boxShadow: `0 2px 8px rgba(0,0,0,0.08), 
-                            0 1px 3px rgba(0,0,0,0.12),
-                            inset 0 1px 0 rgba(255,255,255,0.15)`,
-                transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                overflow: 'hidden'
-              }} 
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.background = `linear-gradient(135deg, 
-                  rgba(255,193,7,0.15) 0%, 
-                  rgba(255,193,7,0.1) 50%, 
-                  rgba(255,193,7,0.05) 100%)`;
-                e.currentTarget.style.boxShadow = `0 4px 16px rgba(255,193,7,0.2), 
-                                                    0 2px 8px rgba(0,0,0,0.16),
-                                                    inset 0 1px 0 rgba(255,255,255,0.2)`;
-                e.currentTarget.style.borderColor = `rgba(255,193,7,0.3)`;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
