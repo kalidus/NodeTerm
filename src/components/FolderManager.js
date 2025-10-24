@@ -3,7 +3,7 @@ import { conversationService } from '../services/ConversationService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 
-const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) => {
+const FolderManager = ({ onConversationSelect, currentConversationId, onBack, showHeader = true }) => {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [editingFolder, setEditingFolder] = useState(null);
@@ -614,30 +614,46 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
       </style>
 
       <div className="folder-manager">
-        {/* Header */}
-        <div className="folder-header">
-          <div className="folder-header-left">
-            <button className="back-btn" onClick={onBack} title="Volver">
-              <i className="pi pi-arrow-left" />
-            </button>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <h3 className="folder-title">Carpetas</h3>
-              <span className="folder-stats">
-                {folders.length} {folders.length === 1 ? 'carpeta' : 'carpetas'}
-              </span>
+        {/* Header - solo se muestra si showHeader es true */}
+        {showHeader && (
+          <div className="folder-header">
+            <div className="folder-header-left">
+              <button className="back-btn" onClick={onBack} title="Volver">
+                <i className="pi pi-arrow-left" />
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <h3 className="folder-title">Carpetas</h3>
+                <span className="folder-stats">
+                  {folders.length} {folders.length === 1 ? 'carpeta' : 'carpetas'}
+                </span>
+              </div>
+            </div>
+            <div className="folder-header-right">
+              <button
+                className="create-folder-btn"
+                onClick={() => setShowCreateFolder(true)}
+                title="Nueva Carpeta"
+              >
+                <i className="pi pi-plus" />
+                Nueva
+              </button>
             </div>
           </div>
-          <div className="folder-header-right">
+        )}
+
+        {/* Botón de nueva carpeta cuando no hay header */}
+        {!showHeader && (
+          <div style={{ padding: '1rem', borderBottom: `1px solid ${themeColors.borderColor}` }}>
             <button
               className="create-folder-btn"
               onClick={() => setShowCreateFolder(true)}
-              title="Nueva Carpeta"
+              style={{ width: '100%' }}
             >
               <i className="pi pi-plus" />
-              Nueva
+              Nueva Carpeta
             </button>
           </div>
-        </div>
+        )}
 
         {/* Lista de carpetas */}
         <div className="folder-list">

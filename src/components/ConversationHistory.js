@@ -513,17 +513,8 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
       </style>
 
       <div className="conversation-history">
-        {/* Mostrar FolderManager si la pestaña de carpetas está activa */}
-        {activeTab === 'folders' ? (
-          <FolderManager
-            onConversationSelect={onConversationSelect}
-            currentConversationId={currentConversationId}
-            onBack={() => setActiveTab('recent')}
-          />
-        ) : (
-          <>
-            {/* Header con pestañas de agrupación */}
-            <div className="conversation-header">
+        {/* Header con pestañas de agrupación - SIEMPRE visible */}
+        <div className="conversation-header">
           {/* Pestañas de agrupación */}
           <div className="conversation-tabs">
             <button
@@ -567,128 +558,139 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             />
           )}
 
-          {/* Filtros de estado */}
-          <div className="conversation-filters">
-            <button
-              className={`conversation-filter-btn ${!showArchived ? 'active' : ''}`}
-              onClick={() => setShowArchived(false)}
-            >
-              Activas
-            </button>
-            <button
-              className={`conversation-filter-btn ${showArchived ? 'active' : ''}`}
-              onClick={() => setShowArchived(true)}
-            >
-              Archivadas
-            </button>
-          </div>
-        </div>
-
-        {/* Lista de conversaciones */}
-        <div className="conversation-list">
-          {filteredConversations.map((conversation) => (
-            <div
-              key={conversation.id}
-              className={`conversation-item ${conversation.id === currentConversationId ? 'active' : ''}`}
-              onClick={() => handleConversationClick(conversation.id)}
-            >
-              {editingConversation === conversation.id ? (
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  onBlur={handleSaveEdit}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') handleSaveEdit();
-                    if (e.key === 'Escape') handleCancelEdit();
-                  }}
-                  style={{
-                    width: '100%',
-                    background: 'transparent',
-                    border: '1px solid ' + themeColors.primaryColor,
-                    color: themeColors.textPrimary,
-                    padding: '0.3rem',
-                    borderRadius: '4px',
-                    fontSize: '0.9rem'
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <>
-                  <div className="conversation-title">{conversation.title}</div>
-                  <div className="conversation-preview">
-                    {getConversationPreview(conversation)}
-                  </div>
-                  <div className="conversation-meta">
-                    <span>{formatDate(conversation.lastMessageAt)}</span>
-                    <span>{conversation.messages.length} mensajes</span>
-                  </div>
-                  
-                  <div className="conversation-actions">
-                    <button
-                      className={`conversation-action-btn ${conversationService.isFavorite(conversation.id) ? 'favorite' : ''}`}
-                      onClick={(e) => handleToggleFavorite(conversation.id, e)}
-                      title={conversationService.isFavorite(conversation.id) ? 'Quitar de favoritos' : 'Marcar como favorito'}
-                    >
-                      <i className={`pi ${conversationService.isFavorite(conversation.id) ? 'pi-star-fill' : 'pi-star'}`} />
-                    </button>
-                    <button
-                      className="conversation-action-btn"
-                      onClick={(e) => handleEditConversation(conversation, e)}
-                      title="Renombrar"
-                    >
-                      <i className="pi pi-pencil" />
-                    </button>
-                    <button
-                      className="conversation-action-btn"
-                      onClick={(e) => handleShowFolderMenu(conversation.id, e)}
-                      title="Mover a carpeta"
-                      style={{ position: 'relative' }}
-                    >
-                      <i className="pi pi-folder" />
-                      {showFolderMenu === conversation.id && (
-                        <FolderMenu
-                          conversationId={conversation.id}
-                          onClose={handleCloseFolderMenu}
-                          onMoveToFolder={(folderId) => handleMoveToFolder(conversation.id, folderId)}
-                        />
-                      )}
-                    </button>
-                    <button
-                      className="conversation-action-btn delete"
-                      onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                      title="Eliminar"
-                    >
-                      <i className="pi pi-trash" />
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-
-          {filteredConversations.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              color: themeColors.textSecondary,
-              padding: '2rem',
-              fontSize: '0.9rem'
-            }}>
-              {searchQuery ? 'No se encontraron conversaciones' : 'No hay conversaciones'}
+          {/* Filtros de estado - solo para pestañas que no sean carpetas */}
+          {activeTab !== 'folders' && (
+            <div className="conversation-filters">
+              <button
+                className={`conversation-filter-btn ${!showArchived ? 'active' : ''}`}
+                onClick={() => setShowArchived(false)}
+              >
+                Activas
+              </button>
+              <button
+                className={`conversation-filter-btn ${showArchived ? 'active' : ''}`}
+                onClick={() => setShowArchived(true)}
+              >
+                Archivadas
+              </button>
             </div>
           )}
         </div>
 
-        {/* Botón nueva conversación */}
-        <div style={{ padding: '1rem' }}>
-          <button
-            className="new-conversation-btn"
-            onClick={handleNewConversation}
-          >
-            <i className="pi pi-plus" style={{ fontSize: '1rem' }} />
-            Nueva Conversación
-          </button>
-        </div>
+        {/* Contenido según la pestaña activa */}
+        {activeTab === 'folders' ? (
+          <FolderManager
+            onConversationSelect={onConversationSelect}
+            currentConversationId={currentConversationId}
+            showHeader={false}
+          />
+        ) : (
+          <>
+            {/* Lista de conversaciones */}
+            <div className="conversation-list">
+              {filteredConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  className={`conversation-item ${conversation.id === currentConversationId ? 'active' : ''}`}
+                  onClick={() => handleConversationClick(conversation.id)}
+                >
+                  {editingConversation === conversation.id ? (
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onBlur={handleSaveEdit}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleSaveEdit();
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: '1px solid ' + themeColors.primaryColor,
+                        color: themeColors.textPrimary,
+                        padding: '0.3rem',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem'
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <div className="conversation-title">{conversation.title}</div>
+                      <div className="conversation-preview">
+                        {getConversationPreview(conversation)}
+                      </div>
+                      <div className="conversation-meta">
+                        <span>{formatDate(conversation.lastMessageAt)}</span>
+                        <span>{conversation.messages.length} mensajes</span>
+                      </div>
+                      
+                      <div className="conversation-actions">
+                        <button
+                          className={`conversation-action-btn ${conversationService.isFavorite(conversation.id) ? 'favorite' : ''}`}
+                          onClick={(e) => handleToggleFavorite(conversation.id, e)}
+                          title={conversationService.isFavorite(conversation.id) ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                        >
+                          <i className={`pi ${conversationService.isFavorite(conversation.id) ? 'pi-star-fill' : 'pi-star'}`} />
+                        </button>
+                        <button
+                          className="conversation-action-btn"
+                          onClick={(e) => handleEditConversation(conversation, e)}
+                          title="Renombrar"
+                        >
+                          <i className="pi pi-pencil" />
+                        </button>
+                        <button
+                          className="conversation-action-btn"
+                          onClick={(e) => handleShowFolderMenu(conversation.id, e)}
+                          title="Mover a carpeta"
+                          style={{ position: 'relative' }}
+                        >
+                          <i className="pi pi-folder" />
+                          {showFolderMenu === conversation.id && (
+                            <FolderMenu
+                              conversationId={conversation.id}
+                              onClose={handleCloseFolderMenu}
+                              onMoveToFolder={(folderId) => handleMoveToFolder(conversation.id, folderId)}
+                            />
+                          )}
+                        </button>
+                        <button
+                          className="conversation-action-btn delete"
+                          onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                          title="Eliminar"
+                        >
+                          <i className="pi pi-trash" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+
+              {filteredConversations.length === 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  color: themeColors.textSecondary,
+                  padding: '2rem',
+                  fontSize: '0.9rem'
+                }}>
+                  {searchQuery ? 'No se encontraron conversaciones' : 'No hay conversaciones'}
+                </div>
+              )}
+            </div>
+
+            {/* Botón nueva conversación */}
+            <div style={{ padding: '1rem' }}>
+              <button
+                className="new-conversation-btn"
+                onClick={handleNewConversation}
+              >
+                <i className="pi pi-plus" style={{ fontSize: '1rem' }} />
+                Nueva Conversación
+              </button>
+            </div>
 
             {/* Estadísticas */}
             <div className="conversation-stats">
