@@ -203,6 +203,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         timestamp: userMessageObj.timestamp
       }]);
 
+      // Actualizar el título de la conversación si es el primer mensaje
+      const currentConversation = conversationService.getCurrentConversation();
+      if (currentConversation && currentConversation.title !== conversationTitle) {
+        setConversationTitle(currentConversation.title);
+      }
+
       // Pequeño delay para asegurar ID único para el mensaje de la IA
       await new Promise(resolve => setTimeout(resolve, 1));
       
