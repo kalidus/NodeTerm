@@ -151,19 +151,21 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
           }
 
           .folder-header {
-            padding: 1rem;
+            padding: 1rem 1.2rem;
             border-bottom: 1px solid ${themeColors.borderColor};
             background: ${themeColors.cardBackground};
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
+            backdrop-filter: blur(10px);
+            border-radius: 0 0 8px 8px;
           }
 
           .folder-header-left {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.8rem;
           }
 
           .folder-header-right {
@@ -175,14 +177,16 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
           .folder-title {
             margin: 0;
             color: ${themeColors.textPrimary};
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: 600;
+            line-height: 1.2;
           }
 
           .folder-stats {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: ${themeColors.textSecondary};
-            margin-left: 0.5rem;
+            font-weight: 400;
+            opacity: 0.8;
           }
 
           .folder-list {
@@ -298,8 +302,6 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
           }
 
           .create-folder-btn {
-            width: 100%;
-            padding: 0.6rem;
             background: ${themeColors.primaryColor};
             border: none;
             border-radius: 6px;
@@ -307,15 +309,24 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
-            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
+            gap: 0.3rem;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.8rem;
+            min-width: auto;
+            height: 36px;
           }
 
           .create-folder-btn:hover {
             background: ${themeColors.primaryColor}dd;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px ${themeColors.primaryColor}40;
+          }
+
+          .create-folder-btn i {
+            font-size: 0.8rem;
           }
 
           .create-folder-input {
@@ -358,19 +369,22 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
           .back-btn {
             background: rgba(255,255,255,0.1);
             border: 1px solid ${themeColors.borderColor};
-            border-radius: 4px;
-            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            padding: 0.5rem;
             color: ${themeColors.textPrimary};
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.8rem;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            font-size: 0.9rem;
           }
 
           .back-btn:hover {
             background: ${themeColors.hoverBackground};
+            transform: translateY(-1px);
           }
 
           .folder-item-header {
@@ -603,23 +617,24 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
         {/* Header */}
         <div className="folder-header">
           <div className="folder-header-left">
-            <button className="back-btn" onClick={onBack}>
+            <button className="back-btn" onClick={onBack} title="Volver">
               <i className="pi pi-arrow-left" />
-              Volver
             </button>
-            <h3 className="folder-title">Carpetas</h3>
-            <span className="folder-stats">
-              ({folders.length} carpetas)
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <h3 className="folder-title">Carpetas</h3>
+              <span className="folder-stats">
+                {folders.length} {folders.length === 1 ? 'carpeta' : 'carpetas'}
+              </span>
+            </div>
           </div>
           <div className="folder-header-right">
             <button
               className="create-folder-btn"
               onClick={() => setShowCreateFolder(true)}
-              style={{ width: 'auto', padding: '0.4rem 0.8rem' }}
+              title="Nueva Carpeta"
             >
               <i className="pi pi-plus" />
-              Nueva Carpeta
+              Nueva
             </button>
           </div>
         </div>
