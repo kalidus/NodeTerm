@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { STORAGE_KEYS } from '../utils/constants';
 
 const EXPANDED_KEYS_STORAGE_KEY = 'basicapp2_sidebar_expanded_keys';
 
@@ -6,7 +7,15 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
   // ============ ESTADOS DE VENTANA Y SIDEBAR ============
   
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
+      return saved ? JSON.parse(saved) : true; // Por defecto true (colapsada)
+    } catch (error) {
+      console.error('Error loading sidebar collapsed state from localStorage:', error);
+      return true; // Por defecto colapsada
+    }
+  });
   const [allExpanded, setAllExpanded] = useState(false);
 
   // Estado para expandedKeys, inicializado desde localStorage si existe

@@ -111,6 +111,12 @@ const SettingsDialog = ({
     return saved ? JSON.parse(saved) : false;
   });
 
+  // Configuración para sidebar colapsada por defecto
+  const [sidebarStartCollapsed, setSidebarStartCollapsed] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
+    return saved ? JSON.parse(saved) : true; // Por defecto true (colapsada)
+  });
+
   // Configuración del icono de la pestaña de inicio
   const [selectedHomeIcon, setSelectedHomeIcon] = useState(() => {
     return localStorage.getItem(STORAGE_KEYS.HOME_TAB_ICON) || 'wifiHeartHome';
@@ -351,6 +357,11 @@ const SettingsDialog = ({
       }
     }
   }, [interactiveIcon]);
+
+  // Persistir configuración de sidebar colapsada
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED, JSON.stringify(sidebarStartCollapsed));
+  }, [sidebarStartCollapsed]);
 
   // Persistir configuración del icono de inicio
   useEffect(() => {
@@ -894,6 +905,30 @@ const SettingsDialog = ({
                         id="interactive-icon"
                         checked={interactiveIcon}
                         onChange={(e) => setInteractiveIcon(e.checked)}
+                        className="modern-checkbox"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="setting-card">
+                  <div className="setting-content">
+                    <div className="setting-icon">
+                      <i className="pi pi-angle-left"></i>
+                    </div>
+                    <div className="setting-info">
+                      <label htmlFor="sidebar-start-collapsed" className="setting-label">
+                        Iniciar con Sidebar Colapsada
+                      </label>
+                      <p className="setting-description">
+                        La barra lateral se iniciará colapsada por defecto al abrir la aplicación
+                      </p>
+                    </div>
+                    <div className="setting-control">
+                      <Checkbox
+                        id="sidebar-start-collapsed"
+                        checked={sidebarStartCollapsed}
+                        onChange={(e) => setSidebarStartCollapsed(e.checked)}
                         className="modern-checkbox"
                       />
                     </div>
