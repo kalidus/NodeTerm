@@ -93,6 +93,20 @@ class AIService {
       local: {
         ollama: [
           { 
+            id: 'llama3.2:latest', 
+            name: 'Llama 3.2 (Latest - 8B)', 
+            size: '1.9GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo predeterminado de Llama 3.2 con capacidades multimodales. Versión recomendada para la mayoría de usuarios.',
+            useCases: ['Programación general', 'Asistencia técnica', 'Análisis de imágenes', 'Tareas multimodales', 'Uso general'],
+            strengths: ['Versión recomendada', 'Capacidades multimodales', 'Excelente balance', 'Versatilidad'],
+            bestFor: 'Usuarios que quieren lo mejor de Llama 3.2 sin configurar versiones específicas'
+          },
+          { 
             id: 'llama3.2:70b', 
             name: 'Llama 3.2 (70B)', 
             size: '40GB', 
@@ -135,6 +149,20 @@ class AIService {
             bestFor: 'Dispositivos con poca RAM, tareas básicas y usuarios que priorizan la velocidad'
           },
           { 
+            id: 'llama3.1:latest', 
+            name: 'Llama 3.1 (Latest - 8B)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo predeterminado de Llama 3.1 con excelente rendimiento. Versión recomendada para la mayoría de usuarios.',
+            useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos', 'Uso general'],
+            strengths: ['Versión recomendada', 'Excelente programación', 'Razonamiento sólido', 'Código de calidad'],
+            bestFor: 'Usuarios que quieren lo mejor de Llama 3.1 sin configurar versiones específicas'
+          },
+          { 
             id: 'llama3.1:70b', 
             name: 'Llama 3.1 (70B)', 
             size: '40GB', 
@@ -161,6 +189,20 @@ class AIService {
             useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos'],
             strengths: ['Excelente programación', 'Razonamiento sólido', 'Código de calidad', 'Análisis profundo'],
             bestFor: 'Desarrolladores, programadores y usuarios que necesitan análisis de código de calidad'
+          },
+          { 
+            id: 'llama3.1:1b', 
+            name: 'Llama 3.1 (1B)', 
+            size: '1.3GB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo ligero de Llama 3.1. Ideal para dispositivos con recursos limitados y tareas básicas.',
+            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos con poca RAM', 'Tareas simples'],
+            strengths: ['Muy ligero', 'Velocidad alta', 'Bajo consumo', 'Fácil de ejecutar'],
+            bestFor: 'Dispositivos con poca RAM, tareas básicas y usuarios que priorizan la velocidad'
           },
           { 
             id: 'llama3', 
