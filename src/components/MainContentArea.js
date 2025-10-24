@@ -243,9 +243,31 @@ const MainContentArea = ({
         });
       }
       
+      // Agregar AI Chat al final
+      menuItems.push({
+        label: 'AI Chat',
+        icon: 'pi pi-comments',
+        command: () => {
+          // Crear nueva pestaña de IA
+          const tabId = `ai-chat-${Date.now()}`;
+          const newAITab = {
+            key: tabId,
+            label: 'Chat IA',
+            type: 'ai-chat',
+            createdAt: Date.now(),
+            groupId: null
+          };
+
+          // Disparar evento para crear la pestaña
+          window.dispatchEvent(new CustomEvent('create-ai-tab', {
+            detail: { tab: newAITab }
+          }));
+        }
+      });
+      
       setTerminalMenuItems(menuItems);
     } else {
-      setTerminalMenuItems([
+      const linuxMenuItems = [
         {
           label: 'Terminal',
           icon: 'pi pi-desktop',
@@ -254,7 +276,31 @@ const MainContentArea = ({
             createLocalTerminalTab('linux-terminal');
           }
         }
-      ]);
+      ];
+      
+      // Agregar AI Chat al final
+      linuxMenuItems.push({
+        label: 'AI Chat',
+        icon: 'pi pi-comments',
+        command: () => {
+          // Crear nueva pestaña de IA
+          const tabId = `ai-chat-${Date.now()}`;
+          const newAITab = {
+            key: tabId,
+            label: 'Chat IA',
+            type: 'ai-chat',
+            createdAt: Date.now(),
+            groupId: null
+          };
+
+          // Disparar evento para crear la pestaña
+          window.dispatchEvent(new CustomEvent('create-ai-tab', {
+            detail: { tab: newAITab }
+          }));
+        }
+      });
+      
+      setTerminalMenuItems(linuxMenuItems);
     }
   }, [wslDistributions]);
   
