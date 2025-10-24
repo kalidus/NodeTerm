@@ -8,7 +8,7 @@ import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
 import QuickAccessSidebar from './QuickAccessSidebar';
 import NodeTermStatus from './NodeTermStatus';
-import AIChatPanel from './AIChatPanel';
+import AIChatWithHistory from './AIChatWithHistory';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
@@ -453,7 +453,7 @@ const HomeTab = ({
                 boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
                 overflow: 'hidden'
               }}>
-                <AIChatPanel />
+                <AIChatWithHistory />
               </div>
             </div>
           ) : (
