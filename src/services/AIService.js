@@ -89,17 +89,6 @@ class AIService {
           strengths: ['Funcionalidades nuevas', 'Capacidades experimentales', 'Innovación', 'Tecnología de vanguardia'],
           bestFor: 'Usuarios avanzados, investigadores y desarrolladores que quieren probar lo último'
         },
-        { 
-          id: 'gemini-1.0-pro', 
-          name: 'Gemini 1.0 Pro', 
-          provider: 'google', 
-          endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent', 
-          performance: 'medium',
-          description: 'Modelo estable y confiable de Google. Buena opción para uso general y programación.',
-          useCases: ['Programación general', 'Asistencia', 'Análisis básico', 'Escritura', 'Resolución de problemas'],
-          strengths: ['Estabilidad', 'Confiabilidad', 'Buena calidad', 'Costo eficiente'],
-          bestFor: 'Usuarios que buscan estabilidad, programación básica y uso general confiable'
-        },
       ],
       local: {
         ollama: [

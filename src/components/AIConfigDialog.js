@@ -432,7 +432,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
               Google API Key (Gemini 2.5)
             </label>
             <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
-              Incluye: Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.0 Flash, Gemini 1.0 Pro
+              Incluye: Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.0 Flash
             </small>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <InputText
