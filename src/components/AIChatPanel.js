@@ -12,7 +12,7 @@ import AIConfigDialog from './AIConfigDialog';
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
 
-const AIChatPanel = () => {
+const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1212,6 +1212,37 @@ const AIChatPanel = () => {
 
           {/* Botones de acción más compactos */}
           <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {/* Botón historial */}
+            {onToggleHistory && (
+              <button
+                onClick={onToggleHistory}
+                style={{
+                  background: showHistory ? themeColors.primaryColor : 'rgba(255,255,255,0.1)',
+                  border: `1px solid ${showHistory ? themeColors.primaryColor : themeColors.borderColor}`,
+                  borderRadius: '6px',
+                  padding: '0.4rem 0.6rem',
+                  color: showHistory ? 'white' : themeColors.textPrimary,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.8rem',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = showHistory ? themeColors.primaryColor + 'dd' : 'rgba(255,255,255,0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = showHistory ? themeColors.primaryColor : 'rgba(255,255,255,0.1)';
+                }}
+                title={showHistory ? 'Ocultar historial' : 'Mostrar historial'}
+              >
+                <i className={`pi ${showHistory ? 'pi-eye-slash' : 'pi-eye'}`} style={{ fontSize: '0.8rem' }} />
+              </button>
+            )}
+
             {/* Botón nueva conversación */}
             <button
               onClick={handleNewConversation}

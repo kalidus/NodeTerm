@@ -5,7 +5,7 @@ import { conversationService } from '../services/ConversationService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 
-const AIChatTab = () => {
+const AIChatWithHistory = () => {
   const [showHistory, setShowHistory] = useState(true);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [themeVersion, setThemeVersion] = useState(0);
@@ -91,4 +91,4 @@ const AIChatTab = () => {
   );
 };
 
-export default AIChatTab;
+export default AIChatWithHistory;
