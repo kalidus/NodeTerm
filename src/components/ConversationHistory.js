@@ -264,17 +264,20 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
           }
 
           .conversation-tab {
-            padding: 0.5rem 0.8rem;
+            padding: 0.5rem;
             background: transparent;
             border: none;
             border-bottom: 2px solid transparent;
             color: ${themeColors.textSecondary};
-            font-size: 0.8rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            white-space: nowrap;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            border-radius: 6px;
           }
 
           .conversation-tab:hover {
@@ -284,8 +287,8 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
 
           .conversation-tab.active {
             color: ${themeColors.primaryColor};
-            border-bottom-color: ${themeColors.primaryColor};
-            background: rgba(255,255,255,0.05);
+            background: ${themeColors.primaryColor}20;
+            border: 1px solid ${themeColors.primaryColor}40;
           }
 
           .conversation-filters {
@@ -526,30 +529,30 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             <button
               className={`conversation-tab ${activeTab === 'recent' ? 'active' : ''}`}
               onClick={() => setActiveTab('recent')}
+              title="Recientes"
             >
-              <i className="pi pi-clock" style={{ marginRight: '0.5rem' }} />
-              Recientes
+              <i className="pi pi-clock" />
             </button>
             <button
               className={`conversation-tab ${activeTab === 'favorites' ? 'active' : ''}`}
               onClick={() => setActiveTab('favorites')}
+              title="Favoritas"
             >
-              <i className="pi pi-star" style={{ marginRight: '0.5rem' }} />
-              Favoritas
+              <i className="pi pi-star" />
             </button>
             <button
               className={`conversation-tab ${activeTab === 'folders' ? 'active' : ''}`}
               onClick={() => setActiveTab('folders')}
+              title="Carpetas"
             >
-              <i className="pi pi-folder" style={{ marginRight: '0.5rem' }} />
-              Carpetas
+              <i className="pi pi-folder" />
             </button>
             <button
               className={`conversation-tab ${activeTab === 'search' ? 'active' : ''}`}
               onClick={() => setActiveTab('search')}
+              title="Buscar"
             >
-              <i className="pi pi-search" style={{ marginRight: '0.5rem' }} />
-              Buscar
+              <i className="pi pi-search" />
             </button>
           </div>
 
