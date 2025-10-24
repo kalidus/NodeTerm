@@ -493,6 +493,101 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
+
+  // Función para copiar código al portapapeles
+  const copyCode = (codeId) => {
+    const codeElement = document.getElementById(codeId);
+    if (codeElement) {
+      const codeText = codeElement.textContent;
+      navigator.clipboard.writeText(codeText).then(() => {
+        // Mostrar feedback visual
+        const button = document.querySelector(`[data-code-id="${codeId}"]`);
+        if (button) {
+          const originalText = button.innerHTML;
+          button.innerHTML = '<i class="pi pi-check"></i> Copiado';
+          button.style.background = 'rgba(100, 200, 100, 0.2)';
+          button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+          
+          setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = '';
+            button.style.borderColor = '';
+          }, 2000);
+        }
+      }).catch(err => {
+        console.error('Error copying code:', err);
+      });
+    }
+  };
+
+  // Hacer la función copyCode global para que sea accesible desde el HTML
+  useEffect(() => {
+    window.copyCode = copyCode;
+    return () => {
+      delete window.copyCode;
+    };
+  }, []);
+
+  // Función para procesar bloques de código después del renderizado
+  const processCodeBlocksAfterRender = (htmlContent) => {
+    // Crear un elemento temporal para manipular el HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    
+    // Buscar todos los bloques de código
+    const codeBlocks = tempDiv.querySelectorAll('pre code');
+    
+    codeBlocks.forEach((codeBlock) => {
+      const pre = codeBlock.parentElement;
+      const language = codeBlock.className.match(/language-(\w+)/)?.[1] || 'text';
+      const codeId = `code-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Crear el contenedor del bloque de código
+      const codeContainer = document.createElement('div');
+      codeContainer.className = 'ai-codeblock';
+      codeContainer.setAttribute('data-language', language);
+      
+      // Crear el header
+      const header = document.createElement('div');
+      header.className = 'ai-code-header';
+      
+      // Crear el indicador de lenguaje
+      const langSpan = document.createElement('span');
+      langSpan.className = 'ai-code-lang';
+      langSpan.textContent = language.toUpperCase();
+      
+      // Crear el botón de copiar
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'ai-copy-btn';
+      copyBtn.setAttribute('data-code-id', codeId);
+      copyBtn.innerHTML = '<i class="pi pi-copy"></i> Copiar';
+      copyBtn.onclick = () => copyCode(codeId);
+      
+      // Ensamblar el header
+      header.appendChild(langSpan);
+      header.appendChild(copyBtn);
+      
+      // Crear el nuevo pre con el código
+      const newPre = document.createElement('pre');
+      newPre.className = `hljs language-${language}`;
+      
+      const newCode = document.createElement('code');
+      newCode.id = codeId;
+      newCode.textContent = codeBlock.textContent;
+      
+      newPre.appendChild(newCode);
+      
+      // Ensamblar el contenedor
+      codeContainer.appendChild(header);
+      codeContainer.appendChild(newPre);
+      
+      // Reemplazar el elemento original
+      pre.parentNode.replaceChild(codeContainer, pre);
+    });
+    
+    return tempDiv.innerHTML;
+  };
+
   // Función para renderizar Markdown con formato ChatGPT-like
   const renderMarkdown = (content) => {
     if (!content) return '';
@@ -529,10 +624,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // Procesar el markdown
       const html = marked(processedContent);
       
+      // Procesar bloques de código después del renderizado
+      const processedHtml = processCodeBlocksAfterRender(html);
+      
       // Sanitizar el HTML para seguridad
-      const cleanHtml = DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id']
+      const cleanHtml = DOMPurify.sanitize(processedHtml, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div', 'button', 'i'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id', 'onclick', 'data-language', 'data-code-id', 'data-code'],
+        ALLOW_DATA_ATTR: true,
+        ALLOW_UNKNOWN_PROTOCOLS: false,
+        SANITIZE_DOM: false
       });
       
       return cleanHtml;
