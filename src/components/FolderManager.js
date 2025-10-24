@@ -9,6 +9,9 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
   const [editingFolder, setEditingFolder] = useState(null);
   const [editFolderName, setEditFolderName] = useState('');
   const [themeVersion, setThemeVersion] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [expandedFolders, setExpandedFolders] = useState(new Set());
+  const [selectedConversations, setSelectedConversations] = useState(new Set());
 
   // Escuchar cambios en el tema
   React.useEffect(() => {
@@ -47,9 +50,61 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
   };
 
   const handleDeleteFolder = (folderId) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta carpeta? Las conversaciones no se eliminarán.')) {
-      conversationService.deleteFolder(folderId);
+    setShowDeleteConfirm(folderId);
+  };
+
+  const confirmDeleteFolder = () => {
+    if (showDeleteConfirm) {
+      conversationService.deleteFolder(showDeleteConfirm);
+      setShowDeleteConfirm(null);
     }
+  };
+
+  const toggleFolderExpansion = (folderId) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(folderId)) {
+      newExpanded.delete(folderId);
+    } else {
+      newExpanded.add(folderId);
+    }
+    setExpandedFolders(newExpanded);
+  };
+
+  const handleMoveConversation = (conversationId, targetFolderId) => {
+    conversationService.addConversationToFolder(conversationId, targetFolderId);
+  };
+
+  const handleRemoveFromFolder = (conversationId, folderId) => {
+    conversationService.removeConversationFromFolder(conversationId, folderId);
+  };
+
+  const toggleConversationSelection = (conversationId) => {
+    const newSelected = new Set(selectedConversations);
+    if (newSelected.has(conversationId)) {
+      newSelected.delete(conversationId);
+    } else {
+      newSelected.add(conversationId);
+    }
+    setSelectedConversations(newSelected);
+  };
+
+  const handleBulkMove = (targetFolderId) => {
+    selectedConversations.forEach(conversationId => {
+      conversationService.addConversationToFolder(conversationId, targetFolderId);
+    });
+    setSelectedConversations(new Set());
+  };
+
+  const handleBulkRemove = () => {
+    selectedConversations.forEach(conversationId => {
+      // Remove from all folders
+      folders.forEach(folder => {
+        if (folder.conversationIds.includes(conversationId)) {
+          conversationService.removeConversationFromFolder(conversationId, folder.id);
+        }
+      });
+    });
+    setSelectedConversations(new Set());
   };
 
   const handleRenameFolder = (folderId) => {
@@ -102,6 +157,32 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1rem;
+          }
+
+          .folder-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .folder-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .folder-title {
+            margin: 0;
+            color: ${themeColors.textPrimary};
+            font-size: 1.1rem;
+            font-weight: 600;
+          }
+
+          .folder-stats {
+            font-size: 0.8rem;
+            color: ${themeColors.textSecondary};
+            margin-left: 0.5rem;
           }
 
           .folder-list {
@@ -291,27 +372,256 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
           .back-btn:hover {
             background: ${themeColors.hoverBackground};
           }
+
+          .folder-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid ${themeColors.borderColor};
+          }
+
+          .folder-item-header:hover {
+            background: ${themeColors.hoverBackground};
+          }
+
+          .folder-item-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+          }
+
+          .folder-expand-btn {
+            background: none;
+            border: none;
+            color: ${themeColors.textSecondary};
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+          }
+
+          .folder-expand-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: ${themeColors.textPrimary};
+          }
+
+          .conversation-item {
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid ${themeColors.borderColor};
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+
+          .conversation-item:hover {
+            background: ${themeColors.hoverBackground};
+          }
+
+          .conversation-item.selected {
+            background: ${themeColors.primaryColor}20;
+            border-left: 3px solid ${themeColors.primaryColor};
+          }
+
+          .conversation-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+          }
+
+          .conversation-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .conversation-actions {
+            display: flex;
+            gap: 0.3rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+          }
+
+          .conversation-item:hover .conversation-actions {
+            opacity: 1;
+          }
+
+          .conversation-action-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: ${themeColors.textPrimary};
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            transition: all 0.2s ease;
+          }
+
+          .conversation-action-btn:hover {
+            background: rgba(255,255,255,0.2);
+          }
+
+          .conversation-action-btn.remove:hover {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+          }
+
+          .bulk-actions {
+            padding: 0.5rem;
+            background: ${themeColors.cardBackground};
+            border-bottom: 1px solid ${themeColors.borderColor};
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .bulk-actions-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: ${themeColors.textSecondary};
+          }
+
+          .bulk-actions-right {
+            display: flex;
+            gap: 0.3rem;
+          }
+
+          .bulk-action-btn {
+            padding: 0.3rem 0.6rem;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid ${themeColors.borderColor};
+            border-radius: 4px;
+            color: ${themeColors.textPrimary};
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+          }
+
+          .bulk-action-btn:hover {
+            background: ${themeColors.hoverBackground};
+          }
+
+          .bulk-action-btn.primary {
+            background: ${themeColors.primaryColor};
+            border-color: ${themeColors.primaryColor};
+            color: white;
+          }
+
+          .bulk-action-btn.danger {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: #f44336;
+            color: #f44336;
+          }
+
+          .bulk-action-btn.danger:hover {
+            background: #f44336;
+            color: white;
+          }
+
+          .delete-confirm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+          }
+
+          .delete-confirm-content {
+            background: ${themeColors.cardBackground};
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid ${themeColors.borderColor};
+            max-width: 400px;
+            width: 90%;
+          }
+
+          .delete-confirm-title {
+            color: ${themeColors.textPrimary};
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+          }
+
+          .delete-confirm-message {
+            color: ${themeColors.textSecondary};
+            margin-bottom: 1rem;
+            line-height: 1.4;
+          }
+
+          .delete-confirm-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+          }
+
+          .delete-confirm-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+          }
+
+          .delete-confirm-btn.cancel {
+            background: rgba(255,255,255,0.1);
+            color: ${themeColors.textPrimary};
+            border: 1px solid ${themeColors.borderColor};
+          }
+
+          .delete-confirm-btn.delete {
+            background: #f44336;
+            color: white;
+          }
+
+          .delete-confirm-btn:hover {
+            opacity: 0.8;
+          }
         `}
       </style>
 
       <div className="folder-manager">
         {/* Header */}
         <div className="folder-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="folder-header-left">
             <button className="back-btn" onClick={onBack}>
               <i className="pi pi-arrow-left" />
               Volver
             </button>
-            <h3 style={{ margin: 0, color: themeColors.textPrimary }}>Carpetas</h3>
+            <h3 className="folder-title">Carpetas</h3>
+            <span className="folder-stats">
+              ({folders.length} carpetas)
+            </span>
           </div>
-          <button
-            className="create-folder-btn"
-            onClick={() => setShowCreateFolder(true)}
-            style={{ width: 'auto', padding: '0.4rem 0.8rem' }}
-          >
-            <i className="pi pi-plus" />
-            Nueva Carpeta
-          </button>
+          <div className="folder-header-right">
+            <button
+              className="create-folder-btn"
+              onClick={() => setShowCreateFolder(true)}
+              style={{ width: 'auto', padding: '0.4rem 0.8rem' }}
+            >
+              <i className="pi pi-plus" />
+              Nueva Carpeta
+            </button>
+          </div>
         </div>
 
         {/* Lista de carpetas */}
@@ -353,42 +663,54 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
           {/* Carpetas existentes */}
           {folders.map((folder) => (
             <div key={folder.id} className="folder-item">
-              <div className="folder-header-item">
-                {editingFolder === folder.id ? (
-                  <input
-                    type="text"
-                    value={editFolderName}
-                    onChange={(e) => setEditFolderName(e.target.value)}
-                    className="create-folder-input"
-                    autoFocus
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') handleRenameFolder(folder.id);
-                      if (e.key === 'Escape') handleCancelEdit();
-                    }}
-                  />
-                ) : (
-                  <div className="folder-name">
-                    <i className="pi pi-folder" />
-                    {folder.name}
-                    <span style={{ fontSize: '0.7rem', color: themeColors.textSecondary }}>
-                      ({folder.conversationIds.length})
-                    </span>
-                  </div>
-                )}
+              <div className="folder-item-header" onClick={() => toggleFolderExpansion(folder.id)}>
+                <div className="folder-item-info">
+                  <button className="folder-expand-btn">
+                    <i className={`pi ${expandedFolders.has(folder.id) ? 'pi-chevron-down' : 'pi-chevron-right'}`} />
+                  </button>
+                  {editingFolder === folder.id ? (
+                    <input
+                      type="text"
+                      value={editFolderName}
+                      onChange={(e) => setEditFolderName(e.target.value)}
+                      className="create-folder-input"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleRenameFolder(folder.id);
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                    />
+                  ) : (
+                    <div className="folder-name">
+                      <i className="pi pi-folder" />
+                      {folder.name}
+                      <span style={{ fontSize: '0.7rem', color: themeColors.textSecondary }}>
+                        ({folder.conversationIds.length})
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="folder-actions">
                   {editingFolder === folder.id ? (
                     <>
                       <button
                         className="folder-action-btn"
-                        onClick={() => handleRenameFolder(folder.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRenameFolder(folder.id);
+                        }}
                         title="Guardar"
                       >
                         <i className="pi pi-check" />
                       </button>
                       <button
                         className="folder-action-btn"
-                        onClick={handleCancelEdit}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelEdit();
+                        }}
                         title="Cancelar"
                       >
                         <i className="pi pi-times" />
@@ -398,14 +720,20 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
                     <>
                       <button
                         className="folder-action-btn"
-                        onClick={() => handleStartEdit(folder)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartEdit(folder);
+                        }}
                         title="Renombrar"
                       >
                         <i className="pi pi-pencil" />
                       </button>
                       <button
                         className="folder-action-btn delete"
-                        onClick={() => handleDeleteFolder(folder.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFolder(folder.id);
+                        }}
                         title="Eliminar"
                       >
                         <i className="pi pi-trash" />
@@ -416,19 +744,67 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
               </div>
 
               {/* Conversaciones en la carpeta */}
-              {folder.conversationIds.length > 0 && (
+              {folder.conversationIds.length > 0 && expandedFolders.has(folder.id) && (
                 <div className="conversations-in-folder expanded">
+                  {/* Bulk actions bar */}
+                  {selectedConversations.size > 0 && (
+                    <div className="bulk-actions">
+                      <div className="bulk-actions-left">
+                        <span>{selectedConversations.size} seleccionadas</span>
+                      </div>
+                      <div className="bulk-actions-right">
+                        <button
+                          className="bulk-action-btn primary"
+                          onClick={() => handleBulkMove(folder.id)}
+                          title="Mover a esta carpeta"
+                        >
+                          <i className="pi pi-folder" />
+                          Mover aquí
+                        </button>
+                        <button
+                          className="bulk-action-btn danger"
+                          onClick={handleBulkRemove}
+                          title="Quitar de carpetas"
+                        >
+                          <i className="pi pi-times" />
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {conversationService.getFolderConversations(folder.id).map((conversation) => (
                     <div
                       key={conversation.id}
-                      className={`conversation-in-folder ${conversation.id === currentConversationId ? 'active' : ''}`}
+                      className={`conversation-item ${conversation.id === currentConversationId ? 'active' : ''} ${selectedConversations.has(conversation.id) ? 'selected' : ''}`}
                       onClick={() => onConversationSelect(conversation.id)}
                     >
-                      <div>
+                      <input
+                        type="checkbox"
+                        className="conversation-checkbox"
+                        checked={selectedConversations.has(conversation.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleConversationSelection(conversation.id);
+                        }}
+                      />
+                      <div className="conversation-info">
                         <div className="conversation-title-small">{conversation.title}</div>
                         <div className="conversation-preview-small">
                           {getConversationPreview(conversation)}
                         </div>
+                      </div>
+                      <div className="conversation-actions">
+                        <button
+                          className="conversation-action-btn remove"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFromFolder(conversation.id, folder.id);
+                          }}
+                          title="Quitar de esta carpeta"
+                        >
+                          <i className="pi pi-times" />
+                        </button>
                       </div>
                       <div style={{ fontSize: '0.7rem', color: themeColors.textSecondary }}>
                         {formatDate(conversation.lastMessageAt)}
@@ -451,6 +827,32 @@ const FolderManager = ({ onConversationSelect, currentConversationId, onBack }) 
             </div>
           )}
         </div>
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteConfirm && (
+          <div className="delete-confirm">
+            <div className="delete-confirm-content">
+              <div className="delete-confirm-title">Eliminar carpeta</div>
+              <div className="delete-confirm-message">
+                ¿Estás seguro de que quieres eliminar esta carpeta? Las conversaciones no se eliminarán, solo se quitarán de la carpeta.
+              </div>
+              <div className="delete-confirm-actions">
+                <button
+                  className="delete-confirm-btn cancel"
+                  onClick={() => setShowDeleteConfirm(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="delete-confirm-btn delete"
+                  onClick={confirmDeleteFolder}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
