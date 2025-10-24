@@ -237,6 +237,19 @@ const AIConfigDialog = ({ visible, onHide }) => {
     }
   };
 
+  const handleClearApiKey = (provider) => {
+    setApiKeys(prev => ({ ...prev, [provider]: '' }));
+    aiService.setApiKey(provider, '');
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'info',
+        summary: 'API Key borrada',
+        detail: `API Key de ${provider} ha sido borrada`,
+        life: 3000
+      });
+    }
+  };
+
   const handleDownloadModel = async (modelId) => {
     setDownloading(prev => ({ ...prev, [modelId]: true }));
     setDownloadProgress(prev => ({ ...prev, [modelId]: { status: 'Iniciando...', percent: 0 } }));
@@ -399,8 +412,17 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 label="Guardar"
                 icon="pi pi-check"
                 onClick={() => handleSaveApiKey('openai')}
-                disabled={!apiKeys.openai}
+                style={{ minWidth: '80px' }}
               />
+              {apiKeys.openai && (
+                <Button
+                  label="Borrar"
+                  icon="pi pi-trash"
+                  onClick={() => handleClearApiKey('openai')}
+                  severity="danger"
+                  style={{ minWidth: '80px' }}
+                />
+              )}
             </div>
           </div>
 
@@ -421,8 +443,17 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 label="Guardar"
                 icon="pi pi-check"
                 onClick={() => handleSaveApiKey('anthropic')}
-                disabled={!apiKeys.anthropic}
+                style={{ minWidth: '80px' }}
               />
+              {apiKeys.anthropic && (
+                <Button
+                  label="Borrar"
+                  icon="pi pi-trash"
+                  onClick={() => handleClearApiKey('anthropic')}
+                  severity="danger"
+                  style={{ minWidth: '80px' }}
+                />
+              )}
             </div>
           </div>
 
@@ -446,8 +477,17 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 label="Guardar"
                 icon="pi pi-check"
                 onClick={() => handleSaveApiKey('google')}
-                disabled={!apiKeys.google}
+                style={{ minWidth: '80px' }}
               />
+              {apiKeys.google && (
+                <Button
+                  label="Borrar"
+                  icon="pi pi-trash"
+                  onClick={() => handleClearApiKey('google')}
+                  severity="danger"
+                  style={{ minWidth: '80px' }}
+                />
+              )}
             </div>
           </div>
         </div>
