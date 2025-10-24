@@ -403,6 +403,7 @@ export const useTabManagement = (toast, {
     const isSSHTab = closedTab.type === 'terminal' || closedTab.type === 'split' || closedTab.isExplorerInSSH;
     const isLocalTerminal = closedTab.type === 'local-terminal';
     const isAuditTab = closedTab.type === 'audit' || closedTab.type === 'recording-player' || closedTab.type === 'audit-global';
+    const isAIChatTab = closedTab.type === 'ai-chat';
     
     if (isHomeTab) {
       // Las pestañas de inicio NUNCA se pueden cerrar, independientemente del estado de bloqueo
@@ -581,6 +582,10 @@ export const useTabManagement = (toast, {
       setSshTabs(newSshTabs);
     } else if (isAuditTab) {
       // Cerrar pestañas de auditoría y reproductor de grabaciones (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
+    } else if (isAIChatTab) {
+      // Cerrar pestañas de chat de IA (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
     } else {
