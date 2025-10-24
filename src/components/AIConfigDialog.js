@@ -514,6 +514,36 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     )}
                   </div>
                 </div>
+                
+                {downloading[model.id] && downloadProgress[model.id] && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      marginBottom: '0.25rem',
+                      fontSize: '0.75rem',
+                      color: themeColors.textSecondary
+                    }}>
+                      <span>{downloadProgress[model.id].status}</span>
+                      <span>{downloadProgress[model.id].percent}%</span>
+                    </div>
+                    <ProgressBar 
+                      value={downloadProgress[model.id].percent} 
+                      style={{ height: '6px' }}
+                      showValue={false}
+                    />
+                    {downloadProgress[model.id].total && (
+                      <div style={{ 
+                        fontSize: '0.7rem', 
+                        color: themeColors.textSecondary,
+                        marginTop: '0.25rem',
+                        textAlign: 'right'
+                      }}>
+                        {formatBytes(downloadProgress[model.id].completed)} / {formatBytes(downloadProgress[model.id].total)}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -965,6 +995,36 @@ const AIConfigDialog = ({ visible, onHide }) => {
                       )}
                     </div>
                   </div>
+                  
+                  {downloading[model.id] && downloadProgress[model.id] && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        marginBottom: '0.25rem',
+                        fontSize: '0.75rem',
+                        color: themeColors.textSecondary
+                      }}>
+                        <span>{downloadProgress[model.id].status}</span>
+                        <span>{downloadProgress[model.id].percent}%</span>
+                      </div>
+                      <ProgressBar 
+                        value={downloadProgress[model.id].percent} 
+                        style={{ height: '6px' }}
+                        showValue={false}
+                      />
+                      {downloadProgress[model.id].total && (
+                        <div style={{ 
+                          fontSize: '0.7rem', 
+                          color: themeColors.textSecondary,
+                          marginTop: '0.25rem',
+                          textAlign: 'right'
+                        }}>
+                          {formatBytes(downloadProgress[model.id].completed)} / {formatBytes(downloadProgress[model.id].total)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1123,6 +1183,36 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   )}
                 </div>
               </div>
+              
+              {downloading[model.id] && downloadProgress[model.id] && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    marginBottom: '0.25rem',
+                    fontSize: '0.75rem',
+                    color: themeColors.textSecondary
+                  }}>
+                    <span>{downloadProgress[model.id].status}</span>
+                    <span>{downloadProgress[model.id].percent}%</span>
+                  </div>
+                  <ProgressBar 
+                    value={downloadProgress[model.id].percent} 
+                    style={{ height: '6px' }}
+                    showValue={false}
+                  />
+                  {downloadProgress[model.id].total && (
+                    <div style={{ 
+                      fontSize: '0.7rem', 
+                      color: themeColors.textSecondary,
+                      marginTop: '0.25rem',
+                      textAlign: 'right'
+                    }}>
+                      {formatBytes(downloadProgress[model.id].completed)} / {formatBytes(downloadProgress[model.id].total)}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             ))}
           </div>
