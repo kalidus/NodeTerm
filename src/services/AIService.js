@@ -135,20 +135,6 @@ class AIService {
             bestFor: 'Usuarios que quieren lo mejor de Llama 3.1 sin configurar versiones específicas'
           },
           { 
-            id: 'llama3.1:8b', 
-            name: 'Llama 3.1 (8B)', 
-            size: '4.7GB', 
-            downloaded: false, 
-            performance: 'high',
-            platform: 'ollama',
-            platformName: 'Ollama',
-            platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Modelo estándar de Llama 3.1 con excelente rendimiento. Ideal para programación y análisis complejos.',
-            useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos'],
-            strengths: ['Excelente programación', 'Razonamiento sólido', 'Código de calidad', 'Análisis profundo'],
-            bestFor: 'Desarrolladores, programadores y usuarios que necesitan análisis de código de calidad'
-          },
-          { 
             id: 'llama3.1:70b', 
             name: 'Llama 3.1 (70B)', 
             size: '40GB', 
@@ -637,7 +623,7 @@ class AIService {
             this.models.local.ollama[ollamaIndex].downloaded = true;
             // Actualizar el ID para que coincida con el nombre exacto instalado
             this.models.local.ollama[ollamaIndex].id = modelName;
-            this.models.local.ollama[ollamaIndex].name = modelName;
+            // NO actualizar el nombre para mantener el nombre configurado con el número de B
           } else {
             // Buscar en modelos independientes
             let independentIndex = this.models.local.independent.findIndex(m => m.id === modelName);
@@ -649,7 +635,7 @@ class AIService {
               this.models.local.independent[independentIndex].downloaded = true;
               // Actualizar el ID para que coincida con el nombre exacto instalado
               this.models.local.independent[independentIndex].id = modelName;
-              this.models.local.independent[independentIndex].name = modelName;
+              // NO actualizar el nombre para mantener el nombre configurado
             } else {
               // Modelo no conocido, no agregarlo a la lista predefinida
               // Solo marcar como no disponible en la configuración
