@@ -204,14 +204,37 @@
 .ai-codeblock pre,
 .ai-code-pre {
   margin: 0;
-  max-height: 600px;
+  max-height: 500px;
   overflow: auto;
-  padding: 1.2rem 1.5rem;
+  padding: 1rem 1.2rem;
   background: rgba(0,0,0,0.4);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
   font-size: 0.9rem;
   line-height: 1.5;
   color: #e6edf3;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Scroll personalizado para bloques de código */
+.ai-codeblock pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ai-codeblock pre::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.ai-codeblock pre::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+}
+
+.ai-codeblock pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
 }
 
 /* ChatGPT-like Copy Button */

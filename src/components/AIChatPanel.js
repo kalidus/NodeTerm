@@ -495,28 +495,91 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
 
   // Función para copiar código al portapapeles
-  const copyCode = (codeId) => {
+  const copyCode = useCallback((codeId) => {
+    console.log('copyCode called with ID:', codeId);
     const codeElement = document.getElementById(codeId);
+    console.log('Code element found:', codeElement);
+    
     if (codeElement) {
-      const codeText = codeElement.textContent;
-      navigator.clipboard.writeText(codeText).then(() => {
-        // Mostrar feedback visual
-        const button = document.querySelector(`[data-code-id="${codeId}"]`);
-        if (button) {
-          const originalText = button.innerHTML;
-          button.innerHTML = '<i class="pi pi-check"></i> Copiado';
-          button.style.background = 'rgba(100, 200, 100, 0.2)';
-          button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
-          
-          setTimeout(() => {
-            button.innerHTML = originalText;
-            button.style.background = '';
-            button.style.borderColor = '';
-          }, 2000);
+      const codeText = codeElement.textContent || codeElement.innerText;
+      console.log('Code text to copy:', codeText);
+      
+      // Mostrar feedback visual inmediatamente
+      const button = document.querySelector(`[data-code-id="${codeId}"]`);
+      if (button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="pi pi-spin pi-spinner"></i> Copiando...';
+        button.style.background = 'rgba(255, 193, 7, 0.2)';
+        button.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+        
+        // Intentar copiar con Clipboard API
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(codeText).then(() => {
+            console.log('Code copied successfully');
+            button.innerHTML = '<i class="pi pi-check"></i> Copiado';
+            button.style.background = 'rgba(100, 200, 100, 0.2)';
+            button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+            
+            setTimeout(() => {
+              button.innerHTML = originalText;
+              button.style.background = '';
+              button.style.borderColor = '';
+            }, 2000);
+          }).catch(err => {
+            console.error('Clipboard API error:', err);
+            // Fallback
+            fallbackCopy(codeText, button, originalText);
+          });
+        } else {
+          // Fallback para navegadores que no soportan Clipboard API
+          fallbackCopy(codeText, button, originalText);
         }
-      }).catch(err => {
-        console.error('Error copying code:', err);
-      });
+      }
+    } else {
+      console.error('Code element not found with ID:', codeId);
+    }
+  }, []);
+
+  // Función de respaldo para copiar
+  const fallbackCopy = (text, button, originalText) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        console.log('Code copied with fallback method');
+        button.innerHTML = '<i class="pi pi-check"></i> Copiado';
+        button.style.background = 'rgba(100, 200, 100, 0.2)';
+        button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+      } else {
+        throw new Error('execCommand failed');
+      }
+      
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = '';
+        button.style.borderColor = '';
+      }, 2000);
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      button.innerHTML = '<i class="pi pi-times"></i> Error';
+      button.style.background = 'rgba(220, 53, 69, 0.2)';
+      button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+      
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = '';
+        button.style.borderColor = '';
+      }, 2000);
     }
   };
 
@@ -526,7 +589,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => {
       delete window.copyCode;
     };
-  }, []);
+  }, [copyCode]);
 
   // Función para procesar bloques de código después del renderizado
   const processCodeBlocksAfterRender = (htmlContent) => {
@@ -556,12 +619,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       langSpan.className = 'ai-code-lang';
       langSpan.textContent = language.toUpperCase();
       
-      // Crear el botón de copiar
+      // Crear el botón de copiar con onclick inline
       const copyBtn = document.createElement('button');
       copyBtn.className = 'ai-copy-btn';
       copyBtn.setAttribute('data-code-id', codeId);
       copyBtn.innerHTML = '<i class="pi pi-copy"></i> Copiar';
-      copyBtn.onclick = () => copyCode(codeId);
+      copyBtn.setAttribute('onclick', `window.copyCode('${codeId}')`);
       
       // Ensamblar el header
       header.appendChild(langSpan);
