@@ -1,13 +1,15 @@
 /* Estilos compactos y profesionales para el chat de IA */
 
-/* AI Chat Bubble Styles */
+/* AI Chat Bubble Styles - ChatGPT-like formatting */
 .ai-bubble {
-  padding: 1rem;
-  border-radius: 12px;
+  padding: 1.5rem;
+  border-radius: 16px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
   animation: bubble-appear 0.3s ease-out;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 @keyframes bubble-appear {
@@ -41,115 +43,214 @@
   max-width: 100%;
 }
 
+/* ChatGPT-like Markdown Styling */
 .ai-md {
-  line-height: 1.5;
+  line-height: 1.7;
   font-size: 0.95rem;
+  color: inherit;
 }
 
-.ai-md p, .ai-md-p { margin: 0 0 0.5rem 0; }
-.ai-md ul, .ai-md ol { margin: 0.25rem 0 0.5rem 1.25rem; }
-.ai-md li { margin: 0.15rem 0; }
+/* Paragraphs with proper spacing */
+.ai-md p { 
+  margin: 0 0 1rem 0; 
+  line-height: 1.7;
+}
+
+/* Headers with ChatGPT-like styling */
+.ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, .ai-md h5, .ai-md h6 {
+  margin: 1.5rem 0 0.8rem 0;
+  font-weight: 700;
+  line-height: 1.3;
+  color: inherit;
+}
+
+.ai-md h1 { 
+  font-size: 1.5rem; 
+  margin-top: 0;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+  padding-bottom: 0.5rem;
+}
+
+.ai-md h2 { 
+  font-size: 1.3rem; 
+  margin-top: 1.8rem;
+}
+
+.ai-md h3 { 
+  font-size: 1.15rem; 
+  margin-top: 1.5rem;
+}
+
+.ai-md h4 { 
+  font-size: 1.05rem; 
+  margin-top: 1.2rem;
+}
+
+/* Lists with better spacing */
+.ai-md ul, .ai-md ol { 
+  margin: 0.8rem 0 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.ai-md li { 
+  margin: 0.4rem 0;
+  line-height: 1.6;
+}
+
+.ai-md ul li {
+  list-style-type: disc;
+}
+
+.ai-md ol li {
+  list-style-type: decimal;
+}
+
+/* Nested lists */
+.ai-md ul ul, .ai-md ol ol, .ai-md ul ol, .ai-md ol ul {
+  margin: 0.3rem 0;
+}
+
+/* Blockquotes with ChatGPT styling */
 .ai-md blockquote { 
-  border-left: 4px solid rgba(255,255,255,0.3);
-  padding-left: 1rem;
-  margin: 0.5rem 0;
+  border-left: 4px solid rgba(255,255,255,0.4);
+  padding: 1rem 1.5rem;
+  margin: 1.2rem 0;
   font-style: italic;
-  background: rgba(255,255,255,0.03);
-  padding: 0.5rem 0.5rem 0.5rem 1rem;
-  border-radius: 0 6px 6px 0;
-}
-.ai-md hr { 
-  border: none; 
-  height: 1px; 
-  background: rgba(255,255,255,0.2); 
-  margin: 1rem 0; 
-}
-.ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, 
-.ai-md-h1, .ai-md-h2, .ai-md-h3, .ai-md-h4 { 
-  margin: 0.6rem 0 0.4rem; 
-  font-weight: 600;
-}
-.ai-md-h1 { font-size: 1.4rem; }
-.ai-md-h2 { font-size: 1.2rem; }
-.ai-md-h3 { font-size: 1.1rem; }
-.ai-table-wrapper { 
-  overflow-x: auto; 
-  margin: 0.5rem 0;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 0 8px 8px 0;
   border: 1px solid rgba(255,255,255,0.1);
 }
+
+.ai-md blockquote p {
+  margin: 0;
+}
+
+/* Horizontal rules */
+.ai-md hr { 
+  border: none; 
+  height: 2px; 
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  margin: 2rem 0; 
+}
+/* ChatGPT-like Tables */
+.ai-table-wrapper { 
+  overflow-x: auto; 
+  margin: 1.2rem 0;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 .ai-md table { 
   border-collapse: collapse; 
   width: 100%; 
   font-size: 0.9rem; 
   margin: 0;
+  background: rgba(255,255,255,0.02);
 }
+
 .ai-md th, .ai-md td { 
   border: 1px solid rgba(255,255,255,0.1); 
-  padding: 0.6rem 0.8rem; 
+  padding: 0.8rem 1rem; 
   text-align: left;
-}
-.ai-md th { 
-  background: rgba(255,255,255,0.05);
-  font-weight: 600;
+  line-height: 1.5;
 }
 
-.ai-inline-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.ai-md th { 
   background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  padding: 0.1rem 0.35rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.ai-md tr:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+
+/* ChatGPT-like Inline Code */
+.ai-inline-code {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 0.2rem 0.5rem;
   border-radius: 6px;
   font-size: 0.9em;
+  font-weight: 500;
+  color: #e6edf3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* ChatGPT-like Code Blocks */
 .ai-codeblock {
   position: relative;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.15);
-  margin: 0.5rem 0;
+  border: 1px solid rgba(255,255,255,0.2);
+  margin: 1rem 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.4);
 }
 
 .ai-codeblock pre,
 .ai-code-pre {
   margin: 0;
-  max-height: 520px;
+  max-height: 600px;
   overflow: auto;
-  padding: 0.9rem 1rem;
-  background: rgba(0,0,0,0.35);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  padding: 1.2rem 1.5rem;
+  background: rgba(0,0,0,0.4);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #e6edf3;
 }
 
+/* ChatGPT-like Copy Button */
 .ai-copy-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.25);
+  top: 12px;
+  right: 12px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
   color: #fff;
   border-radius: 8px;
-  padding: 0.25rem 0.5rem;
+  padding: 0.4rem 0.8rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: translateY(-2px);
+}
+
+.ai-codeblock:hover .ai-copy-btn {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .ai-copy-btn:hover {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.3);
+  transform: translateY(-1px);
 }
 
+/* Language indicator */
 .ai-code-lang {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
-  font-size: 0.7rem;
-  opacity: 0.8;
-  padding: 0.1rem 0.4rem;
+  bottom: 12px;
+  right: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.9;
+  padding: 0.3rem 0.6rem;
   border-radius: 6px;
   border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Highlight.js base tune (dark overlay friendly) */
@@ -293,6 +394,154 @@
 .ai-status-description {
   font-size: 0.75rem;
   opacity: 0.8;
+}
+
+/* === CHATGPT-LIKE ENHANCEMENTS === */
+
+/* Mejoras adicionales para formato ChatGPT */
+.ai-md strong, .ai-md b {
+  font-weight: 700;
+  color: inherit;
+}
+
+.ai-md em, .ai-md i {
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* Mejorar enlaces */
+.ai-md a {
+  color: #58a6ff;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.ai-md a:hover {
+  border-bottom-color: #58a6ff;
+  opacity: 0.8;
+}
+
+/* Estilos para texto resaltado */
+.ai-md mark {
+  background: rgba(255, 255, 0, 0.2);
+  padding: 0.1rem 0.2rem;
+  border-radius: 3px;
+}
+
+/* Mejorar espaciado entre secciones */
+.ai-md > *:first-child {
+  margin-top: 0;
+}
+
+.ai-md > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Estilos para elementos de lista con mejor presentación */
+.ai-md li::marker {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Mejorar presentación de listas anidadas */
+.ai-md ul ul, .ai-md ol ol, .ai-md ul ol, .ai-md ol ul {
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+/* Estilos para elementos de lista con viñetas personalizadas */
+.ai-md ul li {
+  position: relative;
+  padding-left: 0.5rem;
+}
+
+.ai-md ul li::before {
+  content: "•";
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: bold;
+  position: absolute;
+  left: -1rem;
+}
+
+/* Estilos para listas numeradas */
+.ai-md ol li {
+  position: relative;
+  padding-left: 0.5rem;
+}
+
+/* Mejorar presentación de tablas */
+.ai-md table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ai-md table thead {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ai-md table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Animaciones suaves para elementos interactivos */
+.ai-md a, .ai-copy-btn, .ai-file-item {
+  transition: all 0.2s ease;
+}
+
+/* Mejorar presentación de código inline en contexto */
+.ai-md p code, .ai-md li code, .ai-md td code {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+}
+
+/* Estilos para elementos de código en contexto de texto */
+.ai-md code:not(pre code) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+}
+
+/* Mejorar presentación de bloques de código en contexto */
+.ai-md pre {
+  margin: 1rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Estilos para elementos de lista con mejor jerarquía visual */
+.ai-md ul li, .ai-md ol li {
+  line-height: 1.6;
+  margin: 0.3rem 0;
+}
+
+/* Mejorar presentación de elementos de lista con contenido complejo */
+.ai-md li p {
+  margin: 0.2rem 0;
+}
+
+.ai-md li ul, .ai-md li ol {
+  margin: 0.3rem 0;
+}
+
+/* Estilos para elementos de lista con mejor espaciado */
+.ai-md ul, .ai-md ol {
+  margin: 0.8rem 0 1rem 0;
+}
+
+/* Mejorar presentación de elementos de lista con contenido mixto */
+.ai-md li > *:first-child {
+  margin-top: 0;
+}
+
+.ai-md li > *:last-child {
+  margin-bottom: 0;
 }
 
 
