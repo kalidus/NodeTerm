@@ -1881,13 +1881,20 @@ class AIService {
       return `${mainFunctionName}.${extension}`;
     }
     
-    // 6. Si no se encuentra nada descriptivo, usar un nombre genérico pero más específico
+    // 6. Analizar el contenido del código para generar nombre descriptivo
+    const contentBasedName = this.generateNameFromCodeContent(code, language, userMessage);
+    if (contentBasedName) {
+      return `${contentBasedName}.${extension}`;
+    }
+    
+    // 7. Si no se encuentra nada descriptivo, usar un nombre genérico pero más específico
     const genericNames = {
       'python': 'script_python',
       'javascript': 'script_js',
       'typescript': 'script_ts',
       'java': 'script_java',
       'cpp': 'script_cpp',
+      'c': 'script_c',
       'html': 'page_html',
       'css': 'styles_css',
       'sql': 'query_sql'
@@ -1895,6 +1902,57 @@ class AIService {
     
     const baseName = genericNames[language] || 'script';
     return `${baseName}.${extension}`;
+  }
+
+  /**
+   * Generar nombre basado en el contenido del código
+   */
+  generateNameFromCodeContent(code, language, userMessage = '') {
+    const codeLower = code.toLowerCase();
+    const messageLower = userMessage.toLowerCase();
+    
+    // Patrones específicos para diferentes tipos de código
+    if (codeLower.includes('csv') || messageLower.includes('csv')) {
+      return 'procesar_csv';
+    }
+    if (codeLower.includes('pandas') || codeLower.includes('dataframe')) {
+      return 'analisis_datos';
+    }
+    if (codeLower.includes('import csv') || codeLower.includes('csv.reader')) {
+      return 'lector_csv';
+    }
+    if (codeLower.includes('def ') && codeLower.includes('csv')) {
+      return 'funciones_csv';
+    }
+    if (codeLower.includes('class ') && codeLower.includes('csv')) {
+      return 'clase_csv';
+    }
+    if (codeLower.includes('pandas') && codeLower.includes('read_csv')) {
+      return 'pandas_csv';
+    }
+    if (codeLower.includes('to_excel') || codeLower.includes('excel')) {
+      return 'exportar_excel';
+    }
+    if (codeLower.includes('json') && codeLower.includes('load')) {
+      return 'procesar_json';
+    }
+    if (codeLower.includes('api') || codeLower.includes('requests')) {
+      return 'cliente_api';
+    }
+    if (codeLower.includes('web') || codeLower.includes('scraping')) {
+      return 'web_scraper';
+    }
+    if (codeLower.includes('database') || codeLower.includes('sql')) {
+      return 'base_datos';
+    }
+    if (codeLower.includes('test') || codeLower.includes('unittest')) {
+      return 'test_unitario';
+    }
+    if (codeLower.includes('main') && codeLower.includes('if __name__')) {
+      return 'script_principal';
+    }
+    
+    return null;
   }
 
   /**
@@ -2209,10 +2267,58 @@ class AIService {
       'java': 'java',
       'cpp': 'cpp',
       'c': 'c',
-      'go': 'go',
-      'rust': 'rs',
-      'php': 'php',
+      'csharp': 'cs',
+      'perl': 'pl',
       'ruby': 'rb',
+      'swift': 'swift',
+      'kotlin': 'kt',
+      'scala': 'scala',
+      'rust': 'rs',
+      'dart': 'dart',
+      'php': 'php',
+      'lua': 'lua',
+      'r': 'r',
+      'matlab': 'm',
+      'octave': 'm',
+      'fortran': 'f90',
+      'haskell': 'hs',
+      'erlang': 'erl',
+      'elixir': 'ex',
+      'clojure': 'clj',
+      'fsharp': 'fs',
+      'ocaml': 'ml',
+      'prolog': 'pl',
+      'lisp': 'lisp',
+      'scheme': 'scm',
+      'racket': 'rkt',
+      'd': 'd',
+      'nim': 'nim',
+      'crystal': 'cr',
+      'zig': 'zig',
+      'v': 'v',
+      'julia': 'jl',
+      'powershell': 'ps1',
+      'batch': 'bat',
+      'cmd': 'cmd',
+      'assembly': 'asm',
+      'vhdl': 'vhdl',
+      'verilog': 'v',
+      'tcl': 'tcl',
+      'ada': 'adb',
+      'cobol': 'cob',
+      'pascal': 'pas',
+      'smalltalk': 'st',
+      'forth': 'fth',
+      'apl': 'apl',
+      'j': 'ijs',
+      'k': 'k',
+      'q': 'q',
+      'wolfram': 'wl',
+      'maxima': 'mac',
+      'sage': 'sage',
+      'maple': 'mpl',
+      'mathematica': 'nb',
+      'go': 'go',
       'bash': 'sh',
       'shell': 'sh',
       'sql': 'sql',

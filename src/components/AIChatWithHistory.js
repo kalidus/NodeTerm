@@ -4,6 +4,8 @@ import ConversationHistory from './ConversationHistory';
 import { conversationService } from '../services/ConversationService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+// Importar estilos del AI chat
+import '../styles/components/ai-chat.css';
 
 const AIChatWithHistory = () => {
   const [showHistory, setShowHistory] = useState(true);

@@ -14,6 +14,8 @@ import smartFileDetectionService from '../services/SmartFileDetectionService';
 
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
+// Importar estilos del AI chat
+import '../styles/components/ai-chat.css';
 
 const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [messages, setMessages] = useState([]);
@@ -491,21 +493,46 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Función para renderizar Markdown de forma segura con post-procesamiento
+  // Función para renderizar Markdown con formato ChatGPT-like
   const renderMarkdown = (content) => {
     if (!content) return '';
     
     try {
-      // TEMPORALMENTE DESACTIVADO - CAUSABA BUCLE INFINITO
-      // TODO: Arreglar el MarkdownFormatter antes de reactivar
+      // Pre-procesar el contenido para mejorar el formato
+      let processedContent = preprocessMarkdown(content);
       
-      // Paso 1: Procesar el markdown con marked (sin corrección por ahora)
-      const html = marked(content);
+      // Configurar marked con opciones mejoradas
+      marked.setOptions({
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return hljs.highlight(code, { language: lang }).value;
+            } catch (err) {
+              console.error('Error highlighting code:', err);
+            }
+          }
+          try {
+            return hljs.highlightAuto(code).value;
+          } catch (err) {
+            console.error('Error auto-highlighting code:', err);
+            return code;
+          }
+        },
+        breaks: true,
+        gfm: true,
+        pedantic: false,
+        sanitize: false,
+        smartLists: true,
+        smartypants: true
+      });
       
-      // Paso 3: Sanitizar el HTML para seguridad
+      // Procesar el markdown
+      const html = marked(processedContent);
+      
+      // Sanitizar el HTML para seguridad
       const cleanHtml = DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id']
       });
       
       return cleanHtml;
@@ -513,6 +540,50 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       console.error('Error rendering markdown:', error);
       return content;
     }
+  };
+
+  // Función para pre-procesar el markdown y mejorar el formato
+  const preprocessMarkdown = (content) => {
+    if (!content) return '';
+    
+    let processed = content;
+    
+    // Mejorar encabezados con emojis y formato
+    processed = processed.replace(/^#{1,6}\s*(.+)$/gm, (match, text) => {
+      const level = match.match(/^#+/)[0].length;
+      const cleanText = text.trim();
+      
+      // Añadir emojis a encabezados comunes
+      if (cleanText.toLowerCase().includes('versión') || cleanText.toLowerCase().includes('version')) {
+        return match.replace(cleanText, `✨ ${cleanText}`);
+      }
+      if (cleanText.toLowerCase().includes('qué hace') || cleanText.toLowerCase().includes('what it does')) {
+        return match.replace(cleanText, `✅ ${cleanText}`);
+      }
+      if (cleanText.toLowerCase().includes('ejemplo') || cleanText.toLowerCase().includes('example')) {
+        return match.replace(cleanText, `📝 ${cleanText}`);
+      }
+      
+      return match;
+    });
+    
+    // Mejorar listas con mejor espaciado
+    processed = processed.replace(/^(\s*)([-*+])\s+(.+)$/gm, (match, indent, marker, text) => {
+      return `${indent}${marker} ${text.trim()}`;
+    });
+    
+    // Mejorar listas numeradas
+    processed = processed.replace(/^(\s*)(\d+\.)\s+(.+)$/gm, (match, indent, number, text) => {
+      return `${indent}${number} ${text.trim()}`;
+    });
+    
+    // Mejorar bloques de código
+    processed = processed.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+      const language = lang || 'text';
+      return `\`\`\`${language}\n${code.trim()}\n\`\`\``;
+    });
+    
+    return processed;
   };
 
   // Función para escapar HTML de forma segura
@@ -567,7 +638,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     });
   }, []);
 
-  // Componente para bloques de código con botón copiar
+  // Componente para bloques de código con formato ChatGPT-like
   const CodeBlockWithCopy = ({ code, language }) => {
     const [copied, setCopied] = useState(false);
 
@@ -575,8 +646,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       try {
         await navigator.clipboard.writeText(code);
         setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      } catch {}
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Error copying code:', err);
+        // Fallback para navegadores que no soportan clipboard API
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
     };
 
     return (
@@ -584,8 +666,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         <pre className="hljs">
           <code dangerouslySetInnerHTML={{ __html: code }} />
         </pre>
-        <button className="ai-copy-btn" onClick={handleCopy} title="Copiar código">
+        <button 
+          className="ai-copy-btn" 
+          onClick={handleCopy} 
+          title={copied ? "¡Copiado!" : "Copiar código"}
+        >
           <i className={copied ? 'pi pi-check' : 'pi pi-copy'} />
+          {copied ? 'Copiado' : 'Copiar'}
         </button>
         {language && (
           <span className="ai-code-lang">{language}</span>

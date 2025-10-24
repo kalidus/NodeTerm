@@ -103,6 +103,1665 @@ class SmartFileDetectionService {
         icon: 'pi pi-code',
         color: '#239120'
       },
+      'perl': {
+        extensions: ['.pl', '.pm', '.t', '.pod'],
+        keywords: ['perl', 'cpan', 'cpanm', 'perldoc', 'perlbrew', 'moose', 'catalyst', 'dancer', 'template toolkit'],
+        patterns: [
+          /#!\/usr\/bin\/perl/,
+          /use\s+\w+/,
+          /my\s+\$/,
+          /print\s+/,
+          /chomp\s*\(/,
+          /if\s*\(/,
+          /while\s*\(/,
+          /foreach\s+/,
+          /sub\s+\w+/,
+          /package\s+\w+/
+        ],
+        description: 'Archivos Perl',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#39457e'
+      },
+      'ruby': {
+        extensions: ['.rb', '.rbw', '.rake', '.gemspec'],
+        keywords: ['ruby', 'rails', 'gem', 'bundler', 'rake', 'rspec', 'sinatra', 'haml', 'sass', 'coffeescript'],
+        patterns: [
+          /def\s+\w+/,
+          /class\s+\w+/,
+          /module\s+\w+/,
+          /require\s+/,
+          /puts\s+/,
+          /@\w+/,
+          /attr_accessor/,
+          /include\s+/,
+          /extend\s+/
+        ],
+        description: 'Archivos Ruby',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#cc342d'
+      },
+      'swift': {
+        extensions: ['.swift'],
+        keywords: ['swift', 'ios', 'macos', 'xcode', 'cocoa', 'swiftui', 'combine', 'alamofire'],
+        patterns: [
+          /import\s+\w+/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /func\s+\w+/,
+          /var\s+\w+/,
+          /let\s+\w+/,
+          /@IBOutlet/,
+          /@IBAction/,
+          /guard\s+let/,
+          /if\s+let/
+        ],
+        description: 'Archivos Swift',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#fa7343'
+      },
+      'kotlin': {
+        extensions: ['.kt', '.kts'],
+        keywords: ['kotlin', 'android', 'jetpack', 'compose', 'gradle', 'maven', 'intellij'],
+        patterns: [
+          /fun\s+\w+/,
+          /class\s+\w+/,
+          /data\s+class/,
+          /object\s+\w+/,
+          /val\s+\w+/,
+          /var\s+\w+/,
+          /import\s+\w+/,
+          /package\s+\w+/,
+          /when\s*\(/,
+          /suspend\s+fun/
+        ],
+        description: 'Archivos Kotlin',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#7f52ff'
+      },
+      'scala': {
+        extensions: ['.scala', '.sc'],
+        keywords: ['scala', 'akka', 'play', 'sbt', 'spark', 'cats', 'zio', 'scalaz'],
+        patterns: [
+          /object\s+\w+/,
+          /class\s+\w+/,
+          /trait\s+\w+/,
+          /def\s+\w+/,
+          /val\s+\w+/,
+          /var\s+\w+/,
+          /import\s+\w+/,
+          /package\s+\w+/,
+          /case\s+class/,
+          /implicit\s+def/
+        ],
+        description: 'Archivos Scala',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#dc322f'
+      },
+      'rust': {
+        extensions: ['.rs'],
+        keywords: ['rust', 'cargo', 'tokio', 'serde', 'actix', 'rocket', 'diesel', 'clap'],
+        patterns: [
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /impl\s+\w+/,
+          /let\s+\w+/,
+          /use\s+\w+/,
+          /mod\s+\w+/,
+          /pub\s+fn/,
+          /match\s+/,
+          /if\s+let/
+        ],
+        description: 'Archivos Rust',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#dea584'
+      },
+      'dart': {
+        extensions: ['.dart'],
+        keywords: ['dart', 'flutter', 'pub', 'get', 'riverpod', 'bloc', 'provider'],
+        patterns: [
+          /import\s+'/,
+          /class\s+\w+/,
+          /void\s+main/,
+          /Widget\s+\w+/,
+          /StatefulWidget/,
+          /StatelessWidget/,
+          /Future\s*</,
+          /Stream\s*</,
+          /async\s+fn/,
+          /await\s+/
+        ],
+        description: 'Archivos Dart',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#0175c2'
+      },
+      'php': {
+        extensions: ['.php', '.phtml', '.php3', '.php4', '.php5', '.phps'],
+        keywords: ['php', 'laravel', 'symfony', 'composer', 'twig', 'doctrine', 'eloquent', 'codeigniter'],
+        patterns: [
+          /<\?php/,
+          /function\s+\w+/,
+          /class\s+\w+/,
+          /namespace\s+\w+/,
+          /use\s+\w+/,
+          /\$[a-zA-Z_][a-zA-Z0-9_]*/,
+          /echo\s+/,
+          /print\s+/,
+          /if\s*\(/,
+          /foreach\s*\(/
+        ],
+        description: 'Archivos PHP',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#777bb4'
+      },
+      'lua': {
+        extensions: ['.lua'],
+        keywords: ['lua', 'luajit', 'love2d', 'corona', 'defold', 'openresty'],
+        patterns: [
+          /function\s+\w+/,
+          /local\s+\w+/,
+          /if\s+then/,
+          /for\s+\w+\s*=/,
+          /while\s+do/,
+          /end\s*$/,
+          /require\s*\(/,
+          /return\s+/,
+          /table\./,
+          /string\./
+        ],
+        description: 'Archivos Lua',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000080'
+      },
+      'r': {
+        extensions: ['.r', '.R'],
+        keywords: ['r', 'rstudio', 'shiny', 'ggplot2', 'dplyr', 'tidyverse', 'cran', 'bioconductor'],
+        patterns: [
+          /library\s*\(/,
+          /require\s*\(/,
+          /function\s*\(/,
+          /<-/,
+          /data\.frame/,
+          /ggplot\s*\(/,
+          /lm\s*\(/,
+          /summary\s*\(/,
+          /plot\s*\(/,
+          /if\s*\(/
+        ],
+        description: 'Archivos R',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#276dc3'
+      },
+      'matlab': {
+        extensions: ['.m'],
+        keywords: ['matlab', 'simulink', 'octave', 'matlab compiler', 'toolbox'],
+        patterns: [
+          /function\s+\w+/,
+          /end\s*$/,
+          /if\s+.*end/,
+          /for\s+.*end/,
+          /while\s+.*end/,
+          /plot\s*\(/,
+          /fprintf\s*\(/,
+          /disp\s*\(/,
+          /zeros\s*\(/,
+          /ones\s*\(/
+        ],
+        description: 'Archivos MATLAB',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#e16737'
+      },
+      'octave': {
+        extensions: ['.m'],
+        keywords: ['octave', 'gnu octave', 'matlab compatible'],
+        patterns: [
+          /function\s+\w+/,
+          /end\s*$/,
+          /if\s+.*end/,
+          /for\s+.*end/,
+          /while\s+.*end/,
+          /plot\s*\(/,
+          /fprintf\s*\(/,
+          /disp\s*\(/,
+          /zeros\s*\(/,
+          /ones\s*\(/
+        ],
+        description: 'Archivos GNU Octave',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#0790c3'
+      },
+      'fortran': {
+        extensions: ['.f', '.f90', '.f95', '.f03', '.f08'],
+        keywords: ['fortran', 'gfortran', 'intel fortran', 'openmp', 'mpi'],
+        patterns: [
+          /program\s+\w+/,
+          /subroutine\s+\w+/,
+          /function\s+\w+/,
+          /integer\s*::/,
+          /real\s*::/,
+          /character\s*::/,
+          /if\s*\(/,
+          /do\s+\w+/,
+          /end\s+program/,
+          /end\s+subroutine/
+        ],
+        description: 'Archivos Fortran',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#734f96'
+      },
+      'haskell': {
+        extensions: ['.hs', '.lhs'],
+        keywords: ['haskell', 'ghc', 'cabal', 'stack', 'hackage', 'purescript'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /data\s+\w+/,
+          /type\s+\w+/,
+          /class\s+\w+/,
+          /instance\s+\w+/,
+          /where\s*$/,
+          /let\s+\w+/,
+          /in\s+/,
+          /case\s+\w+/
+        ],
+        description: 'Archivos Haskell',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#5d4f85'
+      },
+      'erlang': {
+        extensions: ['.erl', '.hrl'],
+        keywords: ['erlang', 'otp', 'elixir', 'rebar3', 'cowboy', 'phoenix'],
+        patterns: [
+          /-module\s*\(/,
+          /-export\s*\(/,
+          /-import\s*\(/,
+          /-record\s*\(/,
+          /-define\s*\(/,
+          /fun\s*\(/,
+          /case\s+\w+/,
+          /if\s+.*end/,
+          /receive\s+.*end/,
+          /spawn\s*\(/
+        ],
+        description: 'Archivos Erlang',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#a90533'
+      },
+      'elixir': {
+        extensions: ['.ex', '.exs'],
+        keywords: ['elixir', 'phoenix', 'ecto', 'plug', 'cowboy', 'nerves'],
+        patterns: [
+          /defmodule\s+\w+/,
+          /def\s+\w+/,
+          /defp\s+\w+/,
+          /use\s+\w+/,
+          /import\s+\w+/,
+          /alias\s+\w+/,
+          /require\s+\w+/,
+          /case\s+\w+/,
+          /cond\s+do/,
+          /with\s+do/
+        ],
+        description: 'Archivos Elixir',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#4e2a8e'
+      },
+      'clojure': {
+        extensions: ['.clj', '.cljs', '.cljc', '.edn'],
+        keywords: ['clojure', 'clojurescript', 'leiningen', 'boot', 'reagent', 're-frame'],
+        patterns: [
+          /\(def\s+\w+/,
+          /\(defn\s+\w+/,
+          /\(defmacro\s+\w+/,
+          /\(defprotocol\s+\w+/,
+          /\(defrecord\s+\w+/,
+          /\(defstruct\s+\w+/,
+          /\(let\s*\[/,
+          /\(if\s+/,
+          /\(when\s+/,
+          /\(cond\s+/
+        ],
+        description: 'Archivos Clojure',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#5881d8'
+      },
+      'fsharp': {
+        extensions: ['.fs', '.fsi', '.fsx'],
+        keywords: ['f#', 'fsharp', 'dotnet', 'paket', 'fake', 'suave'],
+        patterns: [
+          /module\s+\w+/,
+          /open\s+\w+/,
+          /let\s+\w+/,
+          /type\s+\w+/,
+          /interface\s+\w+/,
+          /class\s+\w+/,
+          /member\s+\w+/,
+          /static\s+member/,
+          /match\s+with/,
+          /if\s+then/
+        ],
+        description: 'Archivos F#',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#378bba'
+      },
+      'ocaml': {
+        extensions: ['.ml', '.mli', '.mll', '.mly'],
+        keywords: ['ocaml', 'opam', 'dune', 'reason', 'bucklescript'],
+        patterns: [
+          /module\s+\w+/,
+          /open\s+\w+/,
+          /let\s+\w+/,
+          /type\s+\w+/,
+          /exception\s+\w+/,
+          /match\s+with/,
+          /if\s+then/,
+          /fun\s+->/,
+          /List\./,
+          /Array\./
+        ],
+        description: 'Archivos OCaml',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ec6813'
+      },
+      'prolog': {
+        extensions: ['.pl', '.pro'],
+        keywords: ['prolog', 'swi-prolog', 'gprolog', 'yap', 'sicstus'],
+        patterns: [
+          /:-/,
+          /\.\s*$/,
+          /:-/,
+          /\[/,
+          /\]/,
+          /,/,
+          /;/,
+          /!/,
+          /fail/,
+          /true/
+        ],
+        description: 'Archivos Prolog',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#74283c'
+      },
+      'lisp': {
+        extensions: ['.lisp', '.lsp', '.cl', '.el'],
+        keywords: ['lisp', 'common lisp', 'emacs lisp', 'scheme', 'racket', 'clojure'],
+        patterns: [
+          /\(defun\s+\w+/,
+          /\(defvar\s+\w+/,
+          /\(defparameter\s+\w+/,
+          /\(defconstant\s+\w+/,
+          /\(defmacro\s+\w+/,
+          /\(defstruct\s+\w+/,
+          /\(defclass\s+\w+/,
+          /\(defmethod\s+\w+/,
+          /\(if\s+/,
+          /\(when\s+/
+        ],
+        description: 'Archivos Lisp',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000080'
+      },
+      'scheme': {
+        extensions: ['.scm', '.ss', '.sls'],
+        keywords: ['scheme', 'racket', 'guile', 'chicken', 'gambit'],
+        patterns: [
+          /\(define\s+\w+/,
+          /\(define-syntax\s+\w+/,
+          /\(lambda\s+/,
+          /\(let\s+/,
+          /\(let\*/,
+          /\(if\s+/,
+          /\(cond\s+/,
+          /\(case\s+/,
+          /\(and\s+/,
+          /\(or\s+/
+        ],
+        description: 'Archivos Scheme',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#1e4a72'
+      },
+      'racket': {
+        extensions: ['.rkt', '.rktl', '.rktd'],
+        keywords: ['racket', 'drracket', 'raco', 'planet', 'typed racket'],
+        patterns: [
+          /#lang\s+\w+/,
+          /\(define\s+\w+/,
+          /\(define-syntax\s+\w+/,
+          /\(lambda\s+/,
+          /\(let\s+/,
+          /\(let\*/,
+          /\(if\s+/,
+          /\(cond\s+/,
+          /\(case\s+/,
+          /\(and\s+/
+        ],
+        description: 'Archivos Racket',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#9f1d35'
+      },
+      'd': {
+        extensions: ['.d', '.di'],
+        keywords: ['d', 'dlang', 'dub', 'phobos', 'druntime'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /interface\s+\w+/,
+          /enum\s+\w+/,
+          /alias\s+\w+/,
+          /template\s+\w+/,
+          /mixin\s+\w+/,
+          /version\s+/
+        ],
+        description: 'Archivos D',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ba595e'
+      },
+      'nim': {
+        extensions: ['.nim', '.nims'],
+        keywords: ['nim', 'nimble', 'nimscript', 'nimpy', 'nimx'],
+        patterns: [
+          /import\s+\w+/,
+          /proc\s+\w+/,
+          /func\s+\w+/,
+          /method\s+\w+/,
+          /type\s+\w+/,
+          /object\s+\w+/,
+          /enum\s+\w+/,
+          /var\s+\w+/,
+          /let\s+\w+/,
+          /const\s+\w+/
+        ],
+        description: 'Archivos Nim',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ffc200'
+      },
+      'crystal': {
+        extensions: ['.cr'],
+        keywords: ['crystal', 'shards', 'kemal', 'lucky', 'amber'],
+        patterns: [
+          /require\s+"\w+"/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /module\s+\w+/,
+          /def\s+\w+/,
+          /def\s+self\./,
+          /property\s+\w+/,
+          /getter\s+\w+/,
+          /setter\s+\w+/,
+          /include\s+\w+/
+        ],
+        description: 'Archivos Crystal',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000100'
+      },
+      'zig': {
+        extensions: ['.zig'],
+        keywords: ['zig', 'zls', 'zigmod', 'ziggy'],
+        patterns: [
+          /const\s+\w+/,
+          /var\s+\w+/,
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /union\s+\w+/,
+          /comptime\s+/,
+          /inline\s+/,
+          /export\s+/,
+          /extern\s+/
+        ],
+        description: 'Archivos Zig',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#f7a41d'
+      },
+      'v': {
+        extensions: ['.v'],
+        keywords: ['v', 'vlang', 'vpm', 'vls'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /interface\s+\w+/,
+          /type\s+\w+/,
+          /mut\s+\w+/,
+          /const\s+\w+/,
+          /pub\s+/
+        ],
+        description: 'Archivos V',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#4dabf7'
+      },
+      'julia': {
+        extensions: ['.jl'],
+        keywords: ['julia', 'jupyter', 'pluto', 'genie', 'turing'],
+        patterns: [
+          /function\s+\w+/,
+          /struct\s+\w+/,
+          /mutable\s+struct/,
+          /abstract\s+type/,
+          /primitive\s+type/,
+          /using\s+\w+/,
+          /import\s+\w+/,
+          /export\s+\w+/,
+          /macro\s+\w+/,
+          /if\s+.*end/
+        ],
+        description: 'Archivos Julia',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#9558b2'
+      },
+      'powershell': {
+        extensions: ['.ps1', '.psm1', '.psd1', '.ps1xml'],
+        keywords: ['powershell', 'ps1', 'windows', 'cmdlet', 'module', 'script'],
+        patterns: [
+          /function\s+\w+/,
+          /param\s*\(/,
+          /Write-Host/,
+          /Get-Content/,
+          /Set-Content/,
+          /Import-Module/,
+          /Export-Module/,
+          /if\s*\(/,
+          /foreach\s*\(/,
+          /try\s*{/
+        ],
+        description: 'Archivos PowerShell',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#012456'
+      },
+      'batch': {
+        extensions: ['.bat', '.cmd'],
+        keywords: ['batch', 'cmd', 'windows', 'dos', 'script'],
+        patterns: [
+          /@echo\s+off/,
+          /echo\s+/,
+          /set\s+\w+/,
+          /if\s+.*goto/,
+          /goto\s+\w+/,
+          /call\s+/,
+          /start\s+/,
+          /pause/,
+          /exit/,
+          /rem\s+/
+        ],
+        description: 'Archivos Batch',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#c1c1c1'
+      },
+      'assembly': {
+        extensions: ['.asm', '.s', '.S'],
+        keywords: ['assembly', 'asm', 'x86', 'x64', 'arm', 'mips', 'gas', 'nasm'],
+        patterns: [
+          /\.section/,
+          /\.global/,
+          /\.extern/,
+          /\.data/,
+          /\.text/,
+          /\.bss/,
+          /mov\s+/,
+          /add\s+/,
+          /sub\s+/,
+          /call\s+/
+        ],
+        description: 'Archivos Assembly',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#6e4c13'
+      },
+      'vhdl': {
+        extensions: ['.vhdl', '.vhd'],
+        keywords: ['vhdl', 'fpga', 'verilog', 'quartus', 'vivado', 'modelsim'],
+        patterns: [
+          /library\s+\w+/,
+          /use\s+\w+/,
+          /entity\s+\w+/,
+          /architecture\s+\w+/,
+          /process\s*\(/,
+          /signal\s+\w+/,
+          /variable\s+\w+/,
+          /if\s+.*then/,
+          /case\s+\w+/,
+          /end\s+\w+/
+        ],
+        description: 'Archivos VHDL',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#8b4513'
+      },
+      'verilog': {
+        extensions: ['.v', '.sv'],
+        keywords: ['verilog', 'systemverilog', 'fpga', 'quartus', 'vivado', 'modelsim'],
+        patterns: [
+          /module\s+\w+/,
+          /input\s+/,
+          /output\s+/,
+          /wire\s+/,
+          /reg\s+/,
+          /always\s*@/,
+          /if\s*\(/,
+          /case\s*\(/,
+          /assign\s+/,
+          /endmodule/
+        ],
+        description: 'Archivos Verilog',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#8b4513'
+      },
+      'tcl': {
+        extensions: ['.tcl', '.tk'],
+        keywords: ['tcl', 'tk', 'expect', 'tclsh', 'wish'],
+        patterns: [
+          /proc\s+\w+/,
+          /set\s+\w+/,
+          /if\s*\{/,
+          /while\s*\{/,
+          /foreach\s+\w+/,
+          /puts\s+/,
+          /gets\s+/,
+          /expr\s+/,
+          /source\s+/,
+          /package\s+require/
+        ],
+        description: 'Archivos TCL',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#e4cc98'
+      },
+      'ada': {
+        extensions: ['.adb', '.ads'],
+        keywords: ['ada', 'spark', 'gnat', 'ada 95', 'ada 2005', 'ada 2012'],
+        patterns: [
+          /package\s+\w+/,
+          /procedure\s+\w+/,
+          /function\s+\w+/,
+          /type\s+\w+/,
+          /subtype\s+\w+/,
+          /if\s+.*then/,
+          /loop\s+.*end/,
+          /case\s+\w+/,
+          /begin\s+.*end/,
+          /with\s+\w+/
+        ],
+        description: 'Archivos Ada',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#02f88c'
+      },
+      'cobol': {
+        extensions: ['.cob', '.cbl', '.cobol'],
+        keywords: ['cobol', 'mainframe', 'ibm', 'micro focus', 'gnu cobol'],
+        patterns: [
+          /IDENTIFICATION\s+DIVISION/,
+          /PROGRAM-ID\s*\./,
+          /DATA\s+DIVISION/,
+          /PROCEDURE\s+DIVISION/,
+          /WORKING-STORAGE\s+SECTION/,
+          /01\s+\w+/,
+          /IF\s+.*THEN/,
+          /PERFORM\s+/,
+          /MOVE\s+/,
+          /DISPLAY\s+/
+        ],
+        description: 'Archivos COBOL',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ff6b6b'
+      },
+      'pascal': {
+        extensions: ['.pas', '.pp', '.p'],
+        keywords: ['pascal', 'delphi', 'free pascal', 'lazarus', 'object pascal'],
+        patterns: [
+          /program\s+\w+/,
+          /unit\s+\w+/,
+          /procedure\s+\w+/,
+          /function\s+\w+/,
+          /var\s+/,
+          /const\s+/,
+          /type\s+\w+/,
+          /begin\s+.*end/,
+          /if\s+.*then/,
+          /while\s+.*do/
+        ],
+        description: 'Archivos Pascal',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#b0ce4e'
+      },
+      'smalltalk': {
+        extensions: ['.st', '.cs'],
+        keywords: ['smalltalk', 'pharo', 'squeak', 'visualworks', 'gnu smalltalk'],
+        patterns: [
+          /Object\s+subclass:/,
+          /self\s+/,
+          /super\s+/,
+          /^[a-zA-Z][a-zA-Z0-9]*\s*$/,
+          /ifTrue:/,
+          /ifFalse:/,
+          /do:/,
+          /collect:/,
+          /select:/,
+          /reject:/
+        ],
+        description: 'Archivos Smalltalk',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#596706'
+      },
+      'forth': {
+        extensions: ['.fth', '.fs', '.f'],
+        keywords: ['forth', 'gforth', 'pforth', 'swiftforth'],
+        patterns: [
+          /:.*;/,
+          /variable\s+/,
+          /constant\s+/,
+          /create\s+/,
+          /does>/,
+          /if\s+.*then/,
+          /begin\s+.*until/,
+          /begin\s+.*while/,
+          /do\s+.*loop/,
+          /dup\s+drop/
+        ],
+        description: 'Archivos Forth',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#341f97'
+      },
+      'apl': {
+        extensions: ['.apl', '.dyalog'],
+        keywords: ['apl', 'dyalog', 'gnu apl', 'j', 'k'],
+        patterns: [
+          /[⍺⍵]/,
+          /[⍳⍴⍉]/,
+          /[⌈⌊]/,
+          /[∧∨]/,
+          /[×÷]/,
+          /[+-]/,
+          /[<≤=≥>≠]/,
+          /[⊢⊣]/,
+          /[⊂⊃]/,
+          /[⌽⊖]/
+        ],
+        description: 'Archivos APL',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#5a4fcf'
+      },
+      'j': {
+        extensions: ['.ijs'],
+        keywords: ['j', 'jsoftware', 'j language', 'array programming'],
+        patterns: [
+          /NB\./,
+          /3\s*:\s*0/,
+          /4\s*:\s*0/,
+          /13\s*:\s*0/,
+          /if\./,
+          /do\./,
+          /while\./,
+          /for\./,
+          /select\./,
+          /case\./
+        ],
+        description: 'Archivos J',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#9e9e9e'
+      },
+      'k': {
+        extensions: ['.k'],
+        keywords: ['k', 'kdb+', 'q', 'kx systems', 'array programming'],
+        patterns: [
+          /\\d/,
+          /\\l/,
+          /\\p/,
+          /\\q/,
+          /\\t/,
+          /\\v/,
+          /\\w/,
+          /\\x/,
+          /\\z/,
+          /\\[0-9]/
+        ],
+        description: 'Archivos K',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#3d9970'
+      },
+      'q': {
+        extensions: ['.q'],
+        keywords: ['q', 'kdb+', 'kx systems', 'array programming', 'time series'],
+        patterns: [
+          /\\d/,
+          /\\l/,
+          /\\p/,
+          /\\q/,
+          /\\t/,
+          /\\v/,
+          /\\w/,
+          /\\x/,
+          /\\z/,
+          /\\[0-9]/
+        ],
+        description: 'Archivos Q',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#3d9970'
+      },
+      'wolfram': {
+        extensions: ['.wl', '.wls', '.nb'],
+        keywords: ['wolfram', 'mathematica', 'wolfram language', 'notebook'],
+        patterns: [
+          /Set\s*\[/,
+          /Get\s*\[/,
+          /Module\s*\[/,
+          /With\s*\[/,
+          /Block\s*\[/,
+          /If\s*\[/,
+          /Which\s*\[/,
+          /Switch\s*\[/,
+          /Do\s*\[/,
+          /While\s*\[/
+        ],
+        description: 'Archivos Wolfram',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#dd1100'
+      },
+      'maxima': {
+        extensions: ['.mac', '.max'],
+        keywords: ['maxima', 'computer algebra', 'symbolic math', 'wxmaxima'],
+        patterns: [
+          /kill\s*\(/,
+          /load\s*\(/,
+          /save\s*\(/,
+          /batch\s*\(/,
+          /batchload\s*\(/,
+          /batchrun\s*\(/,
+          /if\s+.*then/,
+          /for\s+.*do/,
+          /while\s+.*do/,
+          /block\s*\(/
+        ],
+        description: 'Archivos Maxima',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#8b4513'
+      },
+      'sage': {
+        extensions: ['.sage', '.sagews'],
+        keywords: ['sage', 'sagemath', 'computer algebra', 'python'],
+        patterns: [
+          /load\s*\(/,
+          /save\s*\(/,
+          /attach\s*\(/,
+          /detach\s*\(/,
+          /if\s+.*:/,
+          /for\s+.*:/,
+          /while\s+.*:/,
+          /def\s+\w+/,
+          /class\s+\w+/,
+          /import\s+\w+/
+        ],
+        description: 'Archivos Sage',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#4c4c4c'
+      },
+      'maple': {
+        extensions: ['.mpl', '.mws'],
+        keywords: ['maple', 'maplesoft', 'computer algebra', 'symbolic math'],
+        patterns: [
+          /restart:/,
+          /with\s*\(/,
+          /read\s*\(/,
+          /save\s*\(/,
+          /if\s+.*then/,
+          /for\s+.*do/,
+          /while\s+.*do/,
+          /proc\s*\(/,
+          /end\s+proc/,
+          /local\s+/
+        ],
+        description: 'Archivos Maple',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#d7191c'
+      },
+      'mathematica': {
+        extensions: ['.nb', '.m', '.wl'],
+        keywords: ['mathematica', 'wolfram', 'notebook', 'computer algebra'],
+        patterns: [
+          /Set\s*\[/,
+          /Get\s*\[/,
+          /Module\s*\[/,
+          /With\s*\[/,
+          /Block\s*\[/,
+          /If\s*\[/,
+          /Which\s*\[/,
+          /Switch\s*\[/,
+          /Do\s*\[/,
+          /While\s*\[/
+        ],
+        description: 'Archivos Mathematica',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#dd1100'
+      },
+      'perl': {
+        extensions: ['.pl', '.pm', '.t', '.pod'],
+        keywords: ['perl', 'cpan', 'cpanm', 'perldoc', 'perlbrew', 'moose', 'catalyst', 'dancer', 'template toolkit'],
+        patterns: [
+          /#!\/usr\/bin\/perl/,
+          /use\s+\w+/,
+          /my\s+\$/,
+          /print\s+/,
+          /chomp\s*\(/,
+          /if\s*\(/,
+          /while\s*\(/,
+          /foreach\s+/,
+          /sub\s+\w+/,
+          /package\s+\w+/
+        ],
+        description: 'Archivos Perl',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#39457e'
+      },
+      'ruby': {
+        extensions: ['.rb', '.rbw', '.rake', '.gemspec'],
+        keywords: ['ruby', 'rails', 'gem', 'bundler', 'rake', 'rspec', 'sinatra', 'haml', 'sass', 'coffeescript'],
+        patterns: [
+          /def\s+\w+/,
+          /class\s+\w+/,
+          /module\s+\w+/,
+          /require\s+/,
+          /puts\s+/,
+          /puts\s+/,
+          /@\w+/,
+          /attr_accessor/,
+          /include\s+/,
+          /extend\s+/
+        ],
+        description: 'Archivos Ruby',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#cc342d'
+      },
+      'swift': {
+        extensions: ['.swift'],
+        keywords: ['swift', 'ios', 'macos', 'xcode', 'cocoa', 'swiftui', 'combine', 'alamofire'],
+        patterns: [
+          /import\s+\w+/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /func\s+\w+/,
+          /var\s+\w+/,
+          /let\s+\w+/,
+          /@IBOutlet/,
+          /@IBAction/,
+          /guard\s+let/,
+          /if\s+let/
+        ],
+        description: 'Archivos Swift',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#fa7343'
+      },
+      'kotlin': {
+        extensions: ['.kt', '.kts'],
+        keywords: ['kotlin', 'android', 'jetpack', 'compose', 'gradle', 'maven', 'intellij'],
+        patterns: [
+          /fun\s+\w+/,
+          /class\s+\w+/,
+          /data\s+class/,
+          /object\s+\w+/,
+          /val\s+\w+/,
+          /var\s+\w+/,
+          /import\s+\w+/,
+          /package\s+\w+/,
+          /when\s*\(/,
+          /suspend\s+fun/
+        ],
+        description: 'Archivos Kotlin',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#7f52ff'
+      },
+      'scala': {
+        extensions: ['.scala', '.sc'],
+        keywords: ['scala', 'akka', 'play', 'sbt', 'spark', 'cats', 'zio', 'scalaz'],
+        patterns: [
+          /object\s+\w+/,
+          /class\s+\w+/,
+          /trait\s+\w+/,
+          /def\s+\w+/,
+          /val\s+\w+/,
+          /var\s+\w+/,
+          /import\s+\w+/,
+          /package\s+\w+/,
+          /case\s+class/,
+          /implicit\s+def/
+        ],
+        description: 'Archivos Scala',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#dc322f'
+      },
+      'rust': {
+        extensions: ['.rs'],
+        keywords: ['rust', 'cargo', 'tokio', 'serde', 'actix', 'rocket', 'diesel', 'clap'],
+        patterns: [
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /impl\s+\w+/,
+          /let\s+\w+/,
+          /use\s+\w+/,
+          /mod\s+\w+/,
+          /pub\s+fn/,
+          /match\s+/,
+          /if\s+let/
+        ],
+        description: 'Archivos Rust',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#dea584'
+      },
+      'dart': {
+        extensions: ['.dart'],
+        keywords: ['dart', 'flutter', 'pub', 'get', 'riverpod', 'bloc', 'provider'],
+        patterns: [
+          /import\s+'/,
+          /class\s+\w+/,
+          /void\s+main/,
+          /Widget\s+\w+/,
+          /StatefulWidget/,
+          /StatelessWidget/,
+          /Future\s*</,
+          /Stream\s*</,
+          /async\s+fn/,
+          /await\s+/
+        ],
+        description: 'Archivos Dart',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#0175c2'
+      },
+      'php': {
+        extensions: ['.php', '.phtml', '.php3', '.php4', '.php5', '.phps'],
+        keywords: ['php', 'laravel', 'symfony', 'composer', 'twig', 'doctrine', 'eloquent', 'codeigniter'],
+        patterns: [
+          /<\?php/,
+          /function\s+\w+/,
+          /class\s+\w+/,
+          /namespace\s+\w+/,
+          /use\s+\w+/,
+          /\$[a-zA-Z_][a-zA-Z0-9_]*/,
+          /echo\s+/,
+          /print\s+/,
+          /if\s*\(/,
+          /foreach\s*\(/
+        ],
+        description: 'Archivos PHP',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#777bb4'
+      },
+      'lua': {
+        extensions: ['.lua'],
+        keywords: ['lua', 'luajit', 'love2d', 'corona', 'defold', 'openresty'],
+        patterns: [
+          /function\s+\w+/,
+          /local\s+\w+/,
+          /if\s+then/,
+          /for\s+\w+\s*=/,
+          /while\s+do/,
+          /end\s*$/,
+          /require\s*\(/,
+          /return\s+/,
+          /table\./,
+          /string\./
+        ],
+        description: 'Archivos Lua',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000080'
+      },
+      'r': {
+        extensions: ['.r', '.R'],
+        keywords: ['r', 'rstudio', 'shiny', 'ggplot2', 'dplyr', 'tidyverse', 'cran', 'bioconductor'],
+        patterns: [
+          /library\s*\(/,
+          /require\s*\(/,
+          /function\s*\(/,
+          /<-/,
+          /data\.frame/,
+          /ggplot\s*\(/,
+          /lm\s*\(/,
+          /summary\s*\(/,
+          /plot\s*\(/,
+          /if\s*\(/
+        ],
+        description: 'Archivos R',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#276dc3'
+      },
+      'matlab': {
+        extensions: ['.m'],
+        keywords: ['matlab', 'simulink', 'octave', 'matlab compiler', 'toolbox'],
+        patterns: [
+          /function\s+\w+/,
+          /end\s*$/,
+          /if\s+.*end/,
+          /for\s+.*end/,
+          /while\s+.*end/,
+          /plot\s*\(/,
+          /fprintf\s*\(/,
+          /disp\s*\(/,
+          /zeros\s*\(/,
+          /ones\s*\(/
+        ],
+        description: 'Archivos MATLAB',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#e16737'
+      },
+      'octave': {
+        extensions: ['.m'],
+        keywords: ['octave', 'gnu octave', 'matlab compatible'],
+        patterns: [
+          /function\s+\w+/,
+          /end\s*$/,
+          /if\s+.*end/,
+          /for\s+.*end/,
+          /while\s+.*end/,
+          /plot\s*\(/,
+          /fprintf\s*\(/,
+          /disp\s*\(/,
+          /zeros\s*\(/,
+          /ones\s*\(/
+        ],
+        description: 'Archivos GNU Octave',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#0790c3'
+      },
+      'fortran': {
+        extensions: ['.f', '.f90', '.f95', '.f03', '.f08'],
+        keywords: ['fortran', 'gfortran', 'intel fortran', 'openmp', 'mpi'],
+        patterns: [
+          /program\s+\w+/,
+          /subroutine\s+\w+/,
+          /function\s+\w+/,
+          /integer\s*::/,
+          /real\s*::/,
+          /character\s*::/,
+          /if\s*\(/,
+          /do\s+\w+/,
+          /end\s+program/,
+          /end\s+subroutine/
+        ],
+        description: 'Archivos Fortran',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#734f96'
+      },
+      'haskell': {
+        extensions: ['.hs', '.lhs'],
+        keywords: ['haskell', 'ghc', 'cabal', 'stack', 'hackage', 'purescript'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /data\s+\w+/,
+          /type\s+\w+/,
+          /class\s+\w+/,
+          /instance\s+\w+/,
+          /where\s*$/,
+          /let\s+\w+/,
+          /in\s+/,
+          /case\s+\w+/
+        ],
+        description: 'Archivos Haskell',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#5d4f85'
+      },
+      'erlang': {
+        extensions: ['.erl', '.hrl'],
+        keywords: ['erlang', 'otp', 'elixir', 'rebar3', 'cowboy', 'phoenix'],
+        patterns: [
+          /-module\s*\(/,
+          /-export\s*\(/,
+          /-import\s*\(/,
+          /-record\s*\(/,
+          /-define\s*\(/,
+          /fun\s*\(/,
+          /case\s+\w+/,
+          /if\s+.*end/,
+          /receive\s+.*end/,
+          /spawn\s*\(/
+        ],
+        description: 'Archivos Erlang',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#a90533'
+      },
+      'elixir': {
+        extensions: ['.ex', '.exs'],
+        keywords: ['elixir', 'phoenix', 'ecto', 'plug', 'cowboy', 'nerves'],
+        patterns: [
+          /defmodule\s+\w+/,
+          /def\s+\w+/,
+          /defp\s+\w+/,
+          /use\s+\w+/,
+          /import\s+\w+/,
+          /alias\s+\w+/,
+          /require\s+\w+/,
+          /case\s+\w+/,
+          /cond\s+do/,
+          /with\s+do/
+        ],
+        description: 'Archivos Elixir',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#4e2a8e'
+      },
+      'clojure': {
+        extensions: ['.clj', '.cljs', '.cljc', '.edn'],
+        keywords: ['clojure', 'clojurescript', 'leiningen', 'boot', 'reagent', 're-frame'],
+        patterns: [
+          /\(def\s+\w+/,
+          /\(defn\s+\w+/,
+          /\(defmacro\s+\w+/,
+          /\(defprotocol\s+\w+/,
+          /\(defrecord\s+\w+/,
+          /\(defstruct\s+\w+/,
+          /\(let\s*\[/,
+          /\(if\s+/,
+          /\(when\s+/,
+          /\(cond\s+/
+        ],
+        description: 'Archivos Clojure',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#5881d8'
+      },
+      'fsharp': {
+        extensions: ['.fs', '.fsi', '.fsx'],
+        keywords: ['f#', 'fsharp', 'dotnet', 'paket', 'fake', 'suave'],
+        patterns: [
+          /module\s+\w+/,
+          /open\s+\w+/,
+          /let\s+\w+/,
+          /type\s+\w+/,
+          /interface\s+\w+/,
+          /class\s+\w+/,
+          /member\s+\w+/,
+          /static\s+member/,
+          /match\s+with/,
+          /if\s+then/
+        ],
+        description: 'Archivos F#',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#378bba'
+      },
+      'ocaml': {
+        extensions: ['.ml', '.mli', '.mll', '.mly'],
+        keywords: ['ocaml', 'opam', 'dune', 'reason', 'bucklescript'],
+        patterns: [
+          /module\s+\w+/,
+          /open\s+\w+/,
+          /let\s+\w+/,
+          /type\s+\w+/,
+          /exception\s+\w+/,
+          /match\s+with/,
+          /if\s+then/,
+          /fun\s+->/,
+          /List\./,
+          /Array\./
+        ],
+        description: 'Archivos OCaml',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ec6813'
+      },
+      'prolog': {
+        extensions: ['.pl', '.pro'],
+        keywords: ['prolog', 'swi-prolog', 'gprolog', 'yap', 'sicstus'],
+        patterns: [
+          /:-/,
+          /\.\s*$/,
+          /:-/,
+          /\[/,
+          /\]/,
+          /,/,
+          /;/,
+          /!/,
+          /fail/,
+          /true/
+        ],
+        description: 'Archivos Prolog',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#74283c'
+      },
+      'lisp': {
+        extensions: ['.lisp', '.lsp', '.cl', '.el'],
+        keywords: ['lisp', 'common lisp', 'emacs lisp', 'scheme', 'racket', 'clojure'],
+        patterns: [
+          /\(defun\s+\w+/,
+          /\(defvar\s+\w+/,
+          /\(defparameter\s+\w+/,
+          /\(defconstant\s+\w+/,
+          /\(defmacro\s+\w+/,
+          /\(defstruct\s+\w+/,
+          /\(defclass\s+\w+/,
+          /\(defmethod\s+\w+/,
+          /\(if\s+/,
+          /\(when\s+/
+        ],
+        description: 'Archivos Lisp',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000080'
+      },
+      'scheme': {
+        extensions: ['.scm', '.ss', '.sls'],
+        keywords: ['scheme', 'racket', 'guile', 'chicken', 'gambit'],
+        patterns: [
+          /\(define\s+\w+/,
+          /\(define-syntax\s+\w+/,
+          /\(lambda\s+/,
+          /\(let\s+/,
+          /\(let\*/,
+          /\(if\s+/,
+          /\(cond\s+/,
+          /\(case\s+/,
+          /\(and\s+/,
+          /\(or\s+/
+        ],
+        description: 'Archivos Scheme',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#1e4a72'
+      },
+      'racket': {
+        extensions: ['.rkt', '.rktl', '.rktd'],
+        keywords: ['racket', 'drracket', 'raco', 'planet', 'typed racket'],
+        patterns: [
+          /#lang\s+\w+/,
+          /\(define\s+\w+/,
+          /\(define-syntax\s+\w+/,
+          /\(lambda\s+/,
+          /\(let\s+/,
+          /\(let\*/,
+          /\(if\s+/,
+          /\(cond\s+/,
+          /\(case\s+/,
+          /\(and\s+/
+        ],
+        description: 'Archivos Racket',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#9f1d35'
+      },
+      'd': {
+        extensions: ['.d', '.di'],
+        keywords: ['d', 'dlang', 'dub', 'phobos', 'druntime'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /interface\s+\w+/,
+          /enum\s+\w+/,
+          /alias\s+\w+/,
+          /template\s+\w+/,
+          /mixin\s+\w+/,
+          /version\s+/
+        ],
+        description: 'Archivos D',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ba595e'
+      },
+      'nim': {
+        extensions: ['.nim', '.nims'],
+        keywords: ['nim', 'nimble', 'nimscript', 'nimpy', 'nimx'],
+        patterns: [
+          /import\s+\w+/,
+          /proc\s+\w+/,
+          /func\s+\w+/,
+          /method\s+\w+/,
+          /type\s+\w+/,
+          /object\s+\w+/,
+          /enum\s+\w+/,
+          /var\s+\w+/,
+          /let\s+\w+/,
+          /const\s+\w+/
+        ],
+        description: 'Archivos Nim',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ffc200'
+      },
+      'crystal': {
+        extensions: ['.cr'],
+        keywords: ['crystal', 'shards', 'kemal', 'lucky', 'amber'],
+        patterns: [
+          /require\s+"\w+"/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /module\s+\w+/,
+          /def\s+\w+/,
+          /def\s+self\./,
+          /property\s+\w+/,
+          /getter\s+\w+/,
+          /setter\s+\w+/,
+          /include\s+\w+/
+        ],
+        description: 'Archivos Crystal',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000100'
+      },
+      'zig': {
+        extensions: ['.zig'],
+        keywords: ['zig', 'zls', 'zigmod', 'ziggy'],
+        patterns: [
+          /const\s+\w+/,
+          /var\s+\w+/,
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /union\s+\w+/,
+          /comptime\s+/,
+          /inline\s+/,
+          /export\s+/,
+          /extern\s+/
+        ],
+        description: 'Archivos Zig',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#f7a41d'
+      },
+      'v': {
+        extensions: ['.v'],
+        keywords: ['v', 'vlang', 'vpm', 'vls'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /interface\s+\w+/,
+          /type\s+\w+/,
+          /mut\s+\w+/,
+          /const\s+\w+/,
+          /pub\s+/
+        ],
+        description: 'Archivos V',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#4dabf7'
+      },
+      'julia': {
+        extensions: ['.jl'],
+        keywords: ['julia', 'jupyter', 'pluto', 'genie', 'turing'],
+        patterns: [
+          /function\s+\w+/,
+          /struct\s+\w+/,
+          /mutable\s+struct/,
+          /abstract\s+type/,
+          /primitive\s+type/,
+          /using\s+\w+/,
+          /import\s+\w+/,
+          /export\s+\w+/,
+          /macro\s+\w+/,
+          /if\s+.*end/
+        ],
+        description: 'Archivos Julia',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#9558b2'
+      },
+      'nim': {
+        extensions: ['.nim', '.nims'],
+        keywords: ['nim', 'nimble', 'nimscript', 'nimpy', 'nimx'],
+        patterns: [
+          /import\s+\w+/,
+          /proc\s+\w+/,
+          /func\s+\w+/,
+          /method\s+\w+/,
+          /type\s+\w+/,
+          /object\s+\w+/,
+          /enum\s+\w+/,
+          /var\s+\w+/,
+          /let\s+\w+/,
+          /const\s+\w+/
+        ],
+        description: 'Archivos Nim',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#ffc200'
+      },
+      'crystal': {
+        extensions: ['.cr'],
+        keywords: ['crystal', 'shards', 'kemal', 'lucky', 'amber'],
+        patterns: [
+          /require\s+"\w+"/,
+          /class\s+\w+/,
+          /struct\s+\w+/,
+          /module\s+\w+/,
+          /def\s+\w+/,
+          /def\s+self\./,
+          /property\s+\w+/,
+          /getter\s+\w+/,
+          /setter\s+\w+/,
+          /include\s+\w+/
+        ],
+        description: 'Archivos Crystal',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#000100'
+      },
+      'zig': {
+        extensions: ['.zig'],
+        keywords: ['zig', 'zls', 'zigmod', 'ziggy'],
+        patterns: [
+          /const\s+\w+/,
+          /var\s+\w+/,
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /union\s+\w+/,
+          /comptime\s+/,
+          /inline\s+/,
+          /export\s+/,
+          /extern\s+/
+        ],
+        description: 'Archivos Zig',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#f7a41d'
+      },
+      'v': {
+        extensions: ['.v'],
+        keywords: ['v', 'vlang', 'vpm', 'vls'],
+        patterns: [
+          /module\s+\w+/,
+          /import\s+\w+/,
+          /fn\s+\w+/,
+          /struct\s+\w+/,
+          /enum\s+\w+/,
+          /interface\s+\w+/,
+          /type\s+\w+/,
+          /mut\s+\w+/,
+          /const\s+\w+/,
+          /pub\s+/
+        ],
+        description: 'Archivos V',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#4dabf7'
+      },
+      'julia': {
+        extensions: ['.jl'],
+        keywords: ['julia', 'jupyter', 'pluto', 'genie', 'turing'],
+        patterns: [
+          /function\s+\w+/,
+          /struct\s+\w+/,
+          /mutable\s+struct/,
+          /abstract\s+type/,
+          /primitive\s+type/,
+          /using\s+\w+/,
+          /import\s+\w+/,
+          /export\s+\w+/,
+          /macro\s+\w+/,
+          /if\s+.*end/
+        ],
+        description: 'Archivos Julia',
+        category: 'programming',
+        icon: 'pi pi-code',
+        color: '#9558b2'
+      },
       'php': {
         extensions: ['.php', '.phtml', '.php3', '.php4', '.php5'],
         keywords: ['php', 'laravel', 'symfony', 'codeigniter', 'wordpress', 'drupal', 'composer', 'apache', 'nginx'],
