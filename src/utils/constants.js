@@ -3,7 +3,8 @@ export const STORAGE_KEYS = {
   TREE_DATA: 'basicapp2_tree_data',
   UI_THEME: 'ui_theme',
   LOCK_HOME_BUTTON: 'lock_home_button',
-  HOME_TAB_ICON: 'home_tab_icon'
+  HOME_TAB_ICON: 'home_tab_icon',
+  SIDEBAR_START_COLLAPSED: 'sidebar_start_collapsed'
 };
 
 // Constantes de grupos
