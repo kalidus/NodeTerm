@@ -34,6 +34,12 @@ const AIConfigDialog = ({ visible, onHide }) => {
     contextLimit: 4000
   });
   const [useManualConfig, setUseManualConfig] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    'llama3.2': true,
+    'llama3.1': true,
+    'llama3': true,
+    'llama2': false
+  });
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -363,6 +369,159 @@ const AIConfigDialog = ({ visible, onHide }) => {
     setUseManualConfig(false);
   };
 
+  const toggleSection = (sectionKey) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey]
+    }));
+  };
+
+  const renderCollapsibleSection = (sectionKey, title, icon, models) => {
+    const isExpanded = expandedSections[sectionKey];
+    
+    return (
+      <div key={sectionKey} style={{ marginBottom: '1rem' }}>
+        <div
+          onClick={() => toggleSection(sectionKey)}
+          style={{
+            background: themeColors.cardBackground,
+            border: `1px solid ${themeColors.borderColor}`,
+            borderRadius: '12px',
+            padding: '1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            transition: 'all 0.2s ease',
+            marginBottom: isExpanded ? '0.5rem' : '0'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <i className={icon} style={{ fontSize: '1.2rem', color: themeColors.primaryColor }} />
+            <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
+              {title}
+            </h4>
+            <span style={{
+              background: 'rgba(33, 150, 243, 0.1)',
+              color: themeColors.primaryColor,
+              padding: '0.1rem 0.5rem',
+              borderRadius: '12px',
+              fontSize: '0.7rem',
+              border: `1px solid ${themeColors.primaryColor}30`
+            }}>
+              {models.length} modelo{models.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <i 
+            className={isExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'} 
+            style={{ 
+              fontSize: '1rem', 
+              color: themeColors.textSecondary,
+              transition: 'transform 0.2s ease'
+            }} 
+          />
+        </div>
+
+        {isExpanded && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {models.map(model => (
+              <div
+                key={model.id}
+                style={{
+                  background: currentModel === model.id && modelType === 'local'
+                    ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
+                    : themeColors.cardBackground,
+                  border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
+                  borderRadius: '12px',
+                  padding: '1.25rem',
+                  transition: 'all 0.2s ease',
+                  opacity: model.downloaded ? 1 : 0.6,
+                  marginLeft: '1rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <h5 style={{ margin: 0, color: themeColors.textPrimary }}>
+                        {model.name}
+                      </h5>
+                      <span style={{
+                        background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                        color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
+                        padding: '0.1rem 0.5rem',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        fontWeight: '500',
+                        border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                      }}>
+                        {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
+                      </span>
+                      {model.downloaded && (
+                        <span style={{
+                          background: 'rgba(76, 175, 80, 0.2)',
+                          color: '#4CAF50',
+                          padding: '0.1rem 0.5rem',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: '500',
+                          border: '1px solid rgba(76, 175, 80, 0.4)'
+                        }}>
+                          ✓ Instalado
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                      💾 Tamaño: {model.size}
+                    </p>
+                    
+                    {model.description && (
+                      <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
+                        {model.description}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {model.downloaded ? (
+                      <>
+                        {currentModel === model.id && modelType === 'local' && (
+                          <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
+                        )}
+                        <Button
+                          label="Usar"
+                          icon="pi pi-play"
+                          size="small"
+                          onClick={() => handleSelectModel(model.id, 'local')}
+                          style={{ minWidth: '80px' }}
+                        />
+                        <Button
+                          icon="pi pi-trash"
+                          size="small"
+                          severity="danger"
+                          onClick={() => handleDeleteModel(model.id)}
+                          style={{ minWidth: '40px' }}
+                        />
+                      </>
+                    ) : (
+                      <Button
+                        label="Descargar"
+                        icon="pi pi-download"
+                        size="small"
+                        onClick={() => handleDownloadModel(model.id)}
+                        loading={downloading[model.id]}
+                        style={{ minWidth: '120px' }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderRemoteModels = () => {
     return (
       <div style={{ padding: '1.5rem' }}>
@@ -685,163 +844,131 @@ const AIConfigDialog = ({ visible, onHide }) => {
               Requiere Ollama
             </span>
           </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {localModels.filter(model => model.platform === 'ollama').map(model => (
-            <div
-              key={model.id}
-              style={{
-                background: currentModel === model.id && modelType === 'local'
-                  ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
-                  : themeColors.cardBackground,
-                border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
-                borderRadius: '12px',
-                padding: '1.25rem',
-                transition: 'all 0.2s ease',
-                opacity: model.downloaded ? 1 : 0.6
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
-                      {model.name}
-                    </h4>
-                    <span style={{
-                      background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-                      color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
-                      padding: '0.1rem 0.5rem',
-                      borderRadius: '12px',
-                      fontSize: '0.7rem',
-                      fontWeight: '500',
-                      border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
-                    }}>
-                      {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
-                    </span>
-                    {model.downloaded && (
-                      <span style={{
-                        background: 'rgba(76, 175, 80, 0.2)',
-                        color: '#4CAF50',
-                        padding: '0.1rem 0.5rem',
-                        borderRadius: '12px',
-                        fontSize: '0.7rem',
-                        fontWeight: '500',
-                        border: '1px solid rgba(76, 175, 80, 0.4)'
-                      }}>
-                        ✓ Instalado
-                      </span>
-                    )}
-                  </div>
-                  
-                  <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
-                    💾 Tamaño: {model.size}
-                  </p>
-                  
-                  {model.description && (
-                    <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
-                      {model.description}
-                    </p>
-                  )}
-                  
-                  {model.useCases && model.useCases.length > 0 && (
-                    <div style={{ margin: '0.5rem 0' }}>
-                      <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
-                        💼 Casos de uso:
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                        {model.useCases.slice(0, 3).map((useCase, index) => (
-                          <span key={index} style={{
-                            background: themeColors.primaryColor + '20',
-                            color: themeColors.primaryColor,
-                            padding: '0.1rem 0.4rem',
-                            borderRadius: '8px',
-                            fontSize: '0.7rem',
-                            border: `1px solid ${themeColors.primaryColor}40`
-                          }}>
-                            {useCase}
-                          </span>
-                        ))}
-                        {model.useCases.length > 3 && (
+          
+          {renderCollapsibleSection(
+            'llama3.2',
+            'Llama 3.2 (Multimodal - Más Reciente)',
+            'pi pi-star',
+            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama3.2'))
+          )}
+          
+          {renderCollapsibleSection(
+            'llama3.1',
+            'Llama 3.1 (Avanzado)',
+            'pi pi-bolt',
+            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama3.1'))
+          )}
+          
+          {renderCollapsibleSection(
+            'llama3',
+            'Llama 3 (Estable)',
+            'pi pi-shield',
+            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama3') && !model.id.includes('llama3.1') && !model.id.includes('llama3.2'))
+          )}
+          
+          {renderCollapsibleSection(
+            'llama2',
+            'Llama 2 (Clásico)',
+            'pi pi-book',
+            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama2'))
+          )}
+          
+          {localModels.filter(model => model.platform === 'ollama' && !model.id.includes('llama')).length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h5 style={{ color: themeColors.textPrimary, marginBottom: '0.5rem' }}>
+                Otros Modelos Ollama
+              </h5>
+              {localModels.filter(model => model.platform === 'ollama' && !model.id.includes('llama')).map(model => (
+                <div
+                  key={model.id}
+                  style={{
+                    background: currentModel === model.id && modelType === 'local'
+                      ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
+                      : themeColors.cardBackground,
+                    border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    transition: 'all 0.2s ease',
+                    opacity: model.downloaded ? 1 : 0.6
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
+                          {model.name}
+                        </h4>
+                        <span style={{
+                          background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                          color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
+                          padding: '0.1rem 0.5rem',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: '500',
+                          border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                        }}>
+                          {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
+                        </span>
+                        {model.downloaded && (
                           <span style={{
-                            color: themeColors.textSecondary,
-                            fontSize: '0.7rem'
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            color: '#4CAF50',
+                            padding: '0.1rem 0.5rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '500',
+                            border: '1px solid rgba(76, 175, 80, 0.4)'
                           }}>
-                            +{model.useCases.length - 3} más
+                            ✓ Instalado
                           </span>
                         )}
                       </div>
-                    </div>
-                  )}
-                  
-                  {model.bestFor && (
-                    <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
-                      👤 {model.bestFor}
-                    </p>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  {model.downloaded ? (
-                    <>
-                      {currentModel === model.id && modelType === 'local' && (
-                        <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
+                      
+                      <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                        💾 Tamaño: {model.size}
+                      </p>
+                      
+                      {model.description && (
+                        <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
+                          {model.description}
+                        </p>
                       )}
-                      <Button
-                        label="Usar"
-                        size="small"
-                        onClick={() => handleSelectModel(model.id, 'local')}
-                        disabled={currentModel === model.id && modelType === 'local'}
-                      />
-                      <Button
-                        icon="pi pi-trash"
-                        size="small"
-                        severity="danger"
-                        outlined
-                        onClick={() => handleDeleteModel(model.id)}
-                      />
-                    </>
-                  ) : (
-                    <Button
-                      label={downloading[model.id] ? 'Descargando...' : 'Descargar'}
-                      icon={downloading[model.id] ? 'pi pi-spin pi-spinner' : 'pi pi-download'}
-                      size="small"
-                      onClick={() => handleDownloadModel(model.id)}
-                      disabled={downloading[model.id]}
-                    />
-                  )}
-                </div>
-              </div>
-              
-              {downloading[model.id] && downloadProgress[model.id] && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    marginBottom: '0.25rem',
-                    fontSize: '0.75rem',
-                    color: themeColors.textSecondary
-                  }}>
-                    <span>{downloadProgress[model.id].status}</span>
-                    <span>{downloadProgress[model.id].percent}%</span>
-                  </div>
-                  <ProgressBar 
-                    value={downloadProgress[model.id].percent} 
-                    style={{ height: '6px' }}
-                    showValue={false}
-                  />
-                  {downloadProgress[model.id].total && (
-                    <div style={{ 
-                      fontSize: '0.7rem', 
-                      color: themeColors.textSecondary,
-                      marginTop: '0.25rem',
-                      textAlign: 'right'
-                    }}>
-                      {formatBytes(downloadProgress[model.id].completed)} / {formatBytes(downloadProgress[model.id].total)}
                     </div>
-                  )}
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      {model.downloaded ? (
+                        <>
+                          {currentModel === model.id && modelType === 'local' && (
+                            <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
+                          )}
+                          <Button
+                            label="Usar"
+                            size="small"
+                            onClick={() => handleSelectModel(model.id, 'local')}
+                            disabled={currentModel === model.id && modelType === 'local'}
+                          />
+                          <Button
+                            icon="pi pi-trash"
+                            size="small"
+                            severity="danger"
+                            outlined
+                            onClick={() => handleDeleteModel(model.id)}
+                          />
+                        </>
+                      ) : (
+                        <Button
+                          label={downloading[model.id] ? 'Descargando...' : 'Descargar'}
+                          icon={downloading[model.id] ? 'pi pi-spin pi-spinner' : 'pi pi-download'}
+                          size="small"
+                          onClick={() => handleDownloadModel(model.id)}
+                          disabled={downloading[model.id]}
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
-          </div>
+          )}
         </div>
 
         {/* Modelos Independientes */}
