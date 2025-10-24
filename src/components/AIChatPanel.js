@@ -9,6 +9,8 @@ import { markdownFormatter } from '../services/MarkdownFormatter';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
+import FileTypeDetectionPanel from './FileTypeDetectionPanel';
+import smartFileDetectionService from '../services/SmartFileDetectionService';
 
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
@@ -32,6 +34,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [conversationTitle, setConversationTitle] = useState('');
+  
+  // Estados para detección inteligente de archivos
+  const [detectedFileTypes, setDetectedFileTypes] = useState([]);
+  const [showFileTypeSuggestions, setShowFileTypeSuggestions] = useState(false);
+  const [fileTypeSuggestions, setFileTypeSuggestions] = useState([]);
+  const [detectionConfidence, setDetectionConfidence] = useState(0);
+  const [showDetailedFileTypes, setShowDetailedFileTypes] = useState(false);
 
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
@@ -179,6 +188,44 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
     }, 100);
   };
+
+  // Función para analizar el contexto y detectar tipos de archivos
+  const analyzeFileTypes = useCallback((inputText) => {
+    if (!inputText.trim()) return;
+    
+    try {
+      const suggestions = smartFileDetectionService.getSmartSuggestions(messages, inputText);
+      
+      setDetectedFileTypes(suggestions.detected);
+      setFileTypeSuggestions(suggestions.suggestions);
+      setDetectionConfidence(suggestions.confidence);
+      
+      // Mostrar sugerencias si hay confianza suficiente
+      if (suggestions.confidence > 0.3 && suggestions.suggestions.length > 0) {
+        setShowFileTypeSuggestions(true);
+      } else {
+        setShowFileTypeSuggestions(false);
+      }
+    } catch (error) {
+      console.error('Error analizando tipos de archivos:', error);
+    }
+  }, [messages]);
+
+  // Analizar tipos de archivos cuando cambia el input
+  useEffect(() => {
+    if (inputValue.trim()) {
+      const timeoutId = setTimeout(() => {
+        analyzeFileTypes(inputValue);
+      }, 500); // Debounce de 500ms
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      setShowFileTypeSuggestions(false);
+      setDetectedFileTypes([]);
+      setFileTypeSuggestions([]);
+      setDetectionConfidence(0);
+    }
+  }, [inputValue, analyzeFileTypes]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -1592,6 +1639,137 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         </div>
 
         {/* Input área compacta */}
+        {/* Componente de sugerencias de tipos de archivos */}
+        {showFileTypeSuggestions && fileTypeSuggestions.length > 0 && (
+          <div
+            style={{
+              padding: '0.8rem 1rem',
+              background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}ee 100%)`,
+              backdropFilter: 'blur(8px)',
+              borderTop: `1px solid ${themeColors.borderColor}`,
+              borderBottom: `1px solid ${themeColors.borderColor}`
+            }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              marginBottom: '0.6rem'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                color: themeColors.textSecondary,
+                fontSize: '0.85rem'
+              }}>
+                <i className="pi pi-lightbulb" style={{ color: themeColors.primaryColor }}></i>
+                <span>Tipos de archivos que puedo generar:</span>
+                <span style={{ 
+                  background: themeColors.primaryColor, 
+                  color: 'white', 
+                  padding: '0.2rem 0.5rem', 
+                  borderRadius: '12px', 
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold'
+                }}>
+                  {Math.round(detectionConfidence * 100)}% confianza
+                </span>
+              </div>
+              
+              <button
+                onClick={() => setShowDetailedFileTypes(true)}
+                style={{
+                  background: 'none',
+                  border: `1px solid ${themeColors.borderColor}`,
+                  color: themeColors.textSecondary,
+                  padding: '0.3rem 0.6rem',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = themeColors.hoverBackground;
+                  e.target.style.color = themeColors.textPrimary;
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'none';
+                  e.target.style.color = themeColors.textSecondary;
+                }}
+              >
+                <i className="pi pi-eye"></i>
+                Ver todos
+              </button>
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: '0.4rem' 
+            }}>
+              {fileTypeSuggestions.slice(0, 6).map((suggestion, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.3rem 0.6rem',
+                    background: `${suggestion.color}20`,
+                    border: `1px solid ${suggestion.color}40`,
+                    borderRadius: '16px',
+                    fontSize: '0.8rem',
+                    color: themeColors.textPrimary,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: suggestion.confidence
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = `${suggestion.color}30`;
+                    e.target.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = `${suggestion.color}20`;
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                  onClick={() => {
+                    // Añadir el tipo de archivo al input
+                    const fileTypeText = `Genera un archivo ${suggestion.type}${suggestion.extensions[0] || ''}`;
+                    setInputValue(prev => prev + (prev ? ' ' : '') + fileTypeText);
+                    setShowFileTypeSuggestions(false);
+                    inputRef.current?.focus();
+                  }}
+                >
+                  <i className={suggestion.icon} style={{ color: suggestion.color, fontSize: '0.9rem' }}></i>
+                  <span style={{ fontWeight: '500' }}>{suggestion.type}</span>
+                  <span style={{ 
+                    color: themeColors.textSecondary, 
+                    fontSize: '0.75rem',
+                    opacity: 0.8
+                  }}>
+                    {suggestion.extensions.slice(0, 2).join(', ')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            
+            {fileTypeSuggestions.length > 6 && (
+              <div style={{ 
+                marginTop: '0.4rem', 
+                fontSize: '0.75rem', 
+                color: themeColors.textSecondary,
+                textAlign: 'center'
+              }}>
+                +{fileTypeSuggestions.length - 6} tipos más disponibles
+              </div>
+            )}
+          </div>
+        )}
+
         <div
           style={{
             padding: '0.6rem 1rem',
@@ -1710,6 +1888,24 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             setFunctionalModels(functional);
           }}
         />
+
+        {/* Panel detallado de tipos de archivos */}
+        {showDetailedFileTypes && (
+          <FileTypeDetectionPanel
+            detectedFileTypes={detectedFileTypes}
+            fileTypeSuggestions={fileTypeSuggestions}
+            detectionConfidence={detectionConfidence}
+            themeColors={themeColors}
+            onClose={() => setShowDetailedFileTypes(false)}
+            onSelectFileType={(suggestion) => {
+              const fileTypeText = `Genera un archivo ${suggestion.type}${suggestion.extensions[0] || ''}`;
+              setInputValue(prev => prev + (prev ? ' ' : '') + fileTypeText);
+              setShowDetailedFileTypes(false);
+              setShowFileTypeSuggestions(false);
+              inputRef.current?.focus();
+            }}
+          />
+        )}
       </div>
     </>
   );
