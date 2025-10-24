@@ -190,6 +190,25 @@
   background: rgba(0,0,0,0.4);
 }
 
+/* Indicador de scroll en la parte inferior */
+.ai-codeblock::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ai-codeblock:hover::after {
+  opacity: 1;
+}
+
 /* Header del bloque de código */
 .ai-code-header {
   display: flex;
@@ -204,37 +223,51 @@
 .ai-codeblock pre,
 .ai-code-pre {
   margin: 0;
-  max-height: 500px;
-  overflow: auto;
+  max-height: 600px;
+  overflow: auto !important;
   padding: 1rem 1.2rem;
   background: rgba(0,0,0,0.4);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
   font-size: 0.9rem;
   line-height: 1.5;
   color: #e6edf3;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre;
+  word-wrap: normal;
   border-radius: 0 0 8px 8px;
+  /* Forzar scrollbar nativo */
+  scrollbar-width: auto;
+  scrollbar-color: #666 #333;
 }
 
-/* Scroll personalizado para bloques de código */
+/* Scroll simple y funcional */
 .ai-codeblock pre::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 .ai-codeblock pre::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.1);
-  border-radius: 4px;
+  background: rgba(0,0,0,0.3);
 }
 
 .ai-codeblock pre::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.5);
   border-radius: 4px;
 }
 
 .ai-codeblock pre::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.7);
+}
+
+/* Forzar scroll en todos los casos */
+.ai-codeblock pre {
+  overflow: auto !important;
+  max-height: 600px !important;
+  position: relative;
+}
+
+/* Scroll de emergencia si no funciona el anterior */
+.ai-codeblock pre[style*="overflow"] {
+  overflow: auto !important;
 }
 
 /* ChatGPT-like Copy Button */
