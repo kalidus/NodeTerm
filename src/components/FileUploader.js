@@ -203,7 +203,7 @@ const FileUploader = ({
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.txt,.doc,.docx,.csv,.json,.xml,.rtf,.odt,.jpg,.jpeg,.png,.gif,.webp,.svg"
+            accept=".pdf,.txt,.doc,.docx,.docm,.odt,.rtf,.xml,.csv,.json,.jpg,.jpeg,.png,.gif,.webp,.svg"
             onChange={handleFileSelect}
             style={{ display: 'none' }}
             disabled={disabled}
