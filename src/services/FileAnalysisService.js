@@ -3,6 +3,8 @@
  * Soporta PDF, TXT, DOC, DOCX, CSV, JSON, XML, RTF, ODT, imágenes y más
  */
 
+import pako from 'pako';
+
 class FileAnalysisService {
   constructor() {
     this.supportedTypes = {
@@ -16,6 +18,7 @@ class FileAnalysisService {
       // Documentos de Microsoft
       'application/msword': { type: 'doc', processor: 'processDocFile' },
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { type: 'docx', processor: 'processDocxFile' },
+      'application/vnd.ms-word.document.macroEnabled.12': { type: 'docm', processor: 'processDocxFile' },
       
       // Documentos OpenDocument
       'application/vnd.oasis.opendocument.text': { type: 'odt', processor: 'processOdtFile' },
@@ -31,6 +34,7 @@ class FileAnalysisService {
       // Hojas de cálculo
       'text/csv': { type: 'csv', processor: 'processCSVFile' },
       'application/csv': { type: 'csv', processor: 'processCSVFile' },
+      'application/vnd.ms-excel': { type: 'xls', processor: 'processCSVFile' }, // Fallback a CSV para hojas
       
       // JSON
       'application/json': { type: 'json', processor: 'processJSONFile' },
@@ -44,7 +48,35 @@ class FileAnalysisService {
       'image/svg+xml': { type: 'image', processor: 'processImageFile' }
     };
     
+    // Mapeo de extensiones de archivo a tipos MIME (para fallback cuando el navegador no detecta)
+    this.extensionMimeTypes = {
+      'txt': 'text/plain',
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+      'odt': 'application/vnd.oasis.opendocument.text',
+      'rtf': 'application/rtf',
+      'xml': 'application/xml',
+      'csv': 'text/csv',
+      'json': 'application/json',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml'
+    };
+    
     this.maxFileSize = 50 * 1024 * 1024; // 50MB por defecto
+  }
+
+  /**
+   * Obtener MIME type desde la extensión del archivo
+   */
+  getMimeTypeFromExtension(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    return this.extensionMimeTypes[ext] || null;
   }
 
   /**
@@ -60,10 +92,18 @@ class FileAnalysisService {
       }
 
       // Obtener información del tipo de archivo
-      const fileInfo = this.getFileInfo(file);
+      let fileInfo = this.getFileInfo(file);
+      
+      // Si no se detectó el tipo MIME, intentar por extensión
+      if (!fileInfo && file.name) {
+        const mimeFromExt = this.getMimeTypeFromExtension(file.name);
+        if (mimeFromExt) {
+          fileInfo = this.supportedTypes[mimeFromExt];
+        }
+      }
       
       if (!fileInfo) {
-        throw new Error(`Tipo de archivo no soportado: ${file.type}`);
+        throw new Error(`Tipo de archivo no soportado: ${file.type || 'desconocido'} (${file.name})`);
       }
 
       // Procesar según el tipo
@@ -77,7 +117,7 @@ class FileAnalysisService {
       return {
         id: this.generateFileId(),
         name: file.name,
-        type: file.type,
+        type: file.type || this.getMimeTypeFromExtension(file.name) || 'application/octet-stream',
         size: file.size,
         sizeFormatted: this.formatFileSize(file.size),
         category: fileInfo.type,
@@ -205,29 +245,300 @@ class FileAnalysisService {
   }
 
   /**
-   * Procesar archivos DOCX (básico - sin mammoth.js)
+   * Procesar archivos DOCX - Extrae texto del XML interno
    */
   async processDocxFile(file) {
     try {
-      // Los archivos DOCX son ZIP que contienen XML
-      // Por ahora, proporcionamos información básica
-      return {
-        text: '[Documento DOCX detectado]',
-        isDocx: true,
-        size: file.size,
-        note: 'Los archivos DOCX requieren procesamiento especializado. Se recomienda convertir a TXT para análisis completo.',
-        extracted: false
-      };
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Verificar que es un ZIP válido (comienza con PK)
+      if (uint8Array[0] !== 0x50 || uint8Array[1] !== 0x4B) {
+        return {
+          text: '[Archivo DOCX detectado pero no es un ZIP válido]',
+          isDocx: true,
+          size: file.size,
+          extracted: false,
+          note: 'El archivo DOCX no tiene formato ZIP válido'
+        };
+      }
+
+      // Usar fallback para extraer contenido del ZIP
+      return await this.fallbackDocxExtraction(file, arrayBuffer);
+      
     } catch (error) {
       console.error('Error procesando DOCX:', error);
       return {
-        text: '[Error procesando documento DOCX]',
+        text: '[Error procesando archivo DOCX]',
         isDocx: true,
         size: file.size,
         error: error.message,
-        extracted: false
+        extracted: false,
+        note: 'Hubo un error al intentar extraer el contenido'
       };
     }
+  }
+
+  /**
+   * Método fallback para extraer DOCX en el navegador sin dependencias externas
+   */
+  async fallbackDocxExtraction(file, arrayBuffer) {
+    try {
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Buscar archivos dentro del ZIP usando su estructura
+      // Un archivo ZIP tiene: local file headers, data, central directory
+      // Cada archivo comienza con: 50 4B 03 04 (PK\003\004)
+      // Y contiene el nombre del archivo como string ASCII
+      
+      let text = '';
+      
+      // Buscar la entrada de "document.xml" o "word/document.xml"
+      const documentXmlStart = this.findFileInZip(uint8Array, 'document.xml');
+      
+      if (documentXmlStart >= 0) {
+        // Extraer el contenido del archivo encontrado
+        const fileContent = this.extractFileFromZip(uint8Array, documentXmlStart);
+        
+        if (fileContent && fileContent.length > 0) {
+          // Parsear el XML y extraer texto
+          try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(fileContent, 'text/xml');
+            
+            // Verificar que no hay errores de parsing
+            const parseError = xmlDoc.getElementsByTagName('parsererror');
+            if (parseError.length === 0) {
+              // Extraer texto de todos los elementos w:t
+              const textElements = xmlDoc.getElementsByTagName('w:t');
+              const paraElements = xmlDoc.getElementsByTagName('w:p');
+              
+              if (textElements.length > 0) {
+                // Extraer párrafo por párrafo
+                for (let i = 0; i < paraElements.length; i++) {
+                  const para = paraElements[i];
+                  const textsInPara = para.getElementsByTagName('w:t');
+                  let paraText = '';
+                  
+                  for (let j = 0; j < textsInPara.length; j++) {
+                    paraText += textsInPara[j].textContent || '';
+                  }
+                  
+                  if (paraText.trim()) {
+                    text += paraText + '\n';
+                  }
+                }
+              }
+            }
+          } catch (xmlError) {
+            console.warn('Error parseando XML, usando texto plano:', xmlError);
+            // Fallback: extraer texto plano del contenido del archivo
+            text = this.extractPlainTextFromXML(fileContent);
+          }
+        }
+      }
+      
+      // Si no encontramos texto aún, intentar método alternativo
+      if (text.length < 20) {
+        text = this.extractAllTextFromDocx(uint8Array);
+      }
+      
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      if (text.length > 20) {
+        const words = text.split(/\s+/).length;
+        const lines = text.split('\n').length;
+        
+        return {
+          text: text,
+          isDocx: true,
+          size: file.size,
+          extracted: true,
+          lines: lines,
+          words: words,
+          characters: text.length,
+          note: 'Texto extraído del DOCX correctamente'
+        };
+      } else {
+        return {
+          text: '[Archivo DOCX sin contenido de texto extraíble]',
+          isDocx: true,
+          size: file.size,
+          extracted: false,
+          note: 'No se pudo extraer contenido de texto válido del documento'
+        };
+      }
+    } catch (error) {
+      console.error('Error en fallback de extracción DOCX:', error);
+      return {
+        text: '[Error en fallback de extracción DOCX]',
+        isDocx: true,
+        size: file.size,
+        error: error.message,
+        extracted: false,
+        note: 'Error: ' + error.message
+      };
+    }
+  }
+
+  /**
+   * Buscar un archivo dentro de un ZIP por su nombre
+   */
+  findFileInZip(uint8Array, fileName) {
+    const fileNameBytes = new TextEncoder().encode(fileName);
+    
+    for (let i = 0; i < uint8Array.length - fileNameBytes.length; i++) {
+      // Buscar la secuencia del nombre del archivo
+      let matches = true;
+      for (let j = 0; j < fileNameBytes.length; j++) {
+        if (uint8Array[i + j] !== fileNameBytes[j]) {
+          matches = false;
+          break;
+        }
+      }
+      
+      if (matches) {
+        // Encontramos el nombre del archivo, ahora buscar el inicio del archivo
+        // Retroceder para encontrar el local file header (PK\003\004)
+        for (let k = i - 30; k >= Math.max(0, i - 100); k--) {
+          if (uint8Array[k] === 0x50 && uint8Array[k + 1] === 0x4B && 
+              uint8Array[k + 2] === 0x03 && uint8Array[k + 3] === 0x04) {
+            return k;
+          }
+        }
+      }
+    }
+    
+    return -1;
+  }
+
+  /**
+   * Extraer el contenido de un archivo desde su posición en el ZIP
+   */
+  extractFileFromZip(uint8Array, startPos) {
+    try {
+      // Saltar el local file header (30 bytes mínimo + nombre del archivo)
+      // Estructura: signature(4) + version(2) + flags(2) + compression(2) + time(4) + crc(4) + size(4) + uncompressed(4) + name_len(2) + extra_len(2) + name + extra + data
+      
+      if (startPos + 30 > uint8Array.length) return '';
+      
+      // Obtener el método de compresión (offset 8, 2 bytes, little-endian)
+      const compressionMethod = uint8Array[startPos + 8] | (uint8Array[startPos + 9] << 8);
+      
+      // Obtener la longitud del nombre del archivo (offset 26, 2 bytes, little-endian)
+      const nameLength = uint8Array[startPos + 26] | (uint8Array[startPos + 27] << 8);
+      
+      // Obtener la longitud de campos extra (offset 28, 2 bytes, little-endian)
+      const extraLength = uint8Array[startPos + 28] | (uint8Array[startPos + 29] << 8);
+      
+      // Obtener el tamaño comprimido (offset 18, 4 bytes, little-endian)
+      const compressedSize = uint8Array[startPos + 18] | 
+                             (uint8Array[startPos + 19] << 8) |
+                             (uint8Array[startPos + 20] << 16) |
+                             (uint8Array[startPos + 21] << 24);
+      
+      // Obtener el tamaño sin comprimir (offset 22, 4 bytes, little-endian)
+      const uncompressedSize = uint8Array[startPos + 22] | 
+                               (uint8Array[startPos + 23] << 8) |
+                               (uint8Array[startPos + 24] << 16) |
+                               (uint8Array[startPos + 25] << 24);
+      
+      // El contenido del archivo comienza después del header + nombre + extra
+      const dataStart = startPos + 30 + nameLength + extraLength;
+      const dataEnd = Math.min(dataStart + compressedSize, uint8Array.length);
+      
+      if (dataStart >= uint8Array.length) return '';
+      
+      let data = uint8Array.slice(dataStart, dataEnd);
+      
+      // Si el archivo está comprimido (método 8 = DEFLATE, 0 = sin comprimir)
+      if (compressionMethod === 8) {
+        try {
+          // Descomprimir usando pako
+          data = pako.inflate(data);
+        } catch (deflateError) {
+          console.warn('Error descomprimiendo con pako, intentando con inflateRaw:', deflateError);
+          try {
+            data = pako.inflateRaw(data);
+          } catch (inflateRawError) {
+            console.error('Error descomprimiendo:', inflateRawError);
+            return '';
+          }
+        }
+      } else if (compressionMethod !== 0) {
+        console.warn('Método de compresión no soportado:', compressionMethod);
+        return '';
+      }
+      
+      // Extraer como texto UTF-8
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      return decoder.decode(data);
+      
+    } catch (error) {
+      console.error('Error extrayendo archivo del ZIP:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Extraer texto plano desde contenido XML (limpiando etiquetas)
+   */
+  extractPlainTextFromXML(xmlContent) {
+    // Remover etiquetas XML y mantener solo el texto
+    return xmlContent
+      .replace(/<\?xml[^?]*\?>/g, '')           // Remover declaración XML
+      .replace(/<!--[\s\S]*?-->/g, '')          // Remover comentarios
+      .replace(/<[^>]+>/g, ' ')                  // Remover etiquetas
+      .replace(/&quot;/g, '"')                   // Decodificar entidades
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&apos;/g, "'")
+      .replace(/\s+/g, ' ')                      // Normalizar espacios
+      .trim();
+  }
+
+  /**
+   * Método alternativo: extraer TODO el texto del DOCX sin parsear
+   */
+  extractAllTextFromDocx(uint8Array) {
+    let text = '';
+    
+    // Buscar solo texto dentro de etiquetas w:t (Word text)
+    for (let i = 0; i < uint8Array.length - 10; i++) {
+      // Detectar </w:t> 
+      if (uint8Array[i] === 0x3C &&      // '<'
+          uint8Array[i + 1] === 0x2F &&  // '/'
+          uint8Array[i + 2] === 0x77 &&  // 'w'
+          uint8Array[i + 3] === 0x3A &&  // ':'
+          uint8Array[i + 4] === 0x74) {  // 't'
+        
+        // Retroceder para encontrar <w:t> anterior
+        let j = i - 1;
+        while (j >= 0 && uint8Array[j] !== 0x3E) j--;
+        
+        // Extraer el contenido entre >...< 
+        let content = '';
+        for (let k = j + 1; k < i; k++) {
+          const byte = uint8Array[k];
+          if ((byte >= 0x20 && byte <= 0x7E) || byte === 0x0A || byte === 0x0D) {
+            if (byte === 0x0A || byte === 0x0D) {
+              if (content.trim()) {
+                text += content.trim() + ' ';
+                content = '';
+              }
+            } else {
+              content += String.fromCharCode(byte);
+            }
+          }
+        }
+        if (content.trim()) {
+          text += content.trim() + ' ';
+        }
+      }
+    }
+    
+    return text.trim();
   }
 
   /**
@@ -324,7 +635,7 @@ class FileAnalysisService {
   }
 
   /**
-   * Procesar archivos XML (parser simple para navegador)
+   * Procesar archivos XML (parser mejorado para namespaces)
    */
   async processXMLFile(file) {
     return new Promise((resolve, reject) => {
@@ -333,40 +644,83 @@ class FileAnalysisService {
         try {
           const xmlText = e.target.result;
           
-          // Parser XML simple usando DOMParser del navegador
+          // Parser XML del navegador
           const parser = new DOMParser();
           const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
           
           // Verificar si hay errores de parsing
           const parseError = xmlDoc.getElementsByTagName('parsererror');
           if (parseError.length > 0) {
-            throw new Error('XML no válido: ' + parseError[0].textContent);
+            // Si hay error, intentar extraer texto de todas formas
+            const text = xmlText
+              .replace(/<\?xml[^?]*\?>/g, '')
+              .replace(/<!--[\s\S]*?-->/g, '')
+              .replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            if (text.length > 0) {
+              resolve({
+                text: text,
+                parsed: null,
+                isValid: false,
+                error: parseError[0].textContent,
+                note: 'XML con formato incompleto pero se extrajo contenido',
+                size: file.size,
+                nodeCount: (xmlText.match(/<[^/][^>]*>/g) || []).length,
+                characterCount: text.length
+              });
+            } else {
+              throw new Error('XML no válido: ' + parseError[0].textContent);
+            }
+            return;
           }
           
           // Extraer información del XML
           const rootElement = xmlDoc.documentElement;
-          const elementInfo = this.extractXMLElements(rootElement);
-          const attributes = this.extractXMLAttributes(rootElement);
+          
+          // Extraer todo el texto sin importar namespaces
+          const allText = this.extractAllTextFromXML(rootElement);
+          
+          // Extraer elementos (incluyendo con namespaces)
+          const elementInfo = this.extractXMLElementsAdvanced(rootElement);
+          const attributes = this.extractXMLAttributesAdvanced(rootElement);
           
           resolve({
             text: xmlText,
+            plainText: allText, // Texto extraído sin etiquetas
             parsed: this.xmlToObject(rootElement),
             isValid: true,
             rootElement: rootElement.tagName,
             elements: elementInfo,
             attributes: attributes,
             size: file.size,
-            nodeCount: this.countXMLNodes(rootElement)
+            nodeCount: this.countXMLNodes(rootElement),
+            characterCount: allText.length
           });
         } catch (error) {
-          // Si falla el parsing, devolver el XML como texto
-          resolve({
-            text: e.target.result,
-            parsed: null,
-            isValid: false,
-            error: error.message,
-            note: 'XML no válido o con formato complejo'
-          });
+          // Fallback: intentar extraer solo el texto del XML
+          try {
+            const xmlText = e.target.result;
+            const text = xmlText
+              .replace(/<\?xml[^?]*\?>/g, '')
+              .replace(/<!--[\s\S]*?-->/g, '')
+              .replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            resolve({
+              text: xmlText,
+              plainText: text,
+              parsed: null,
+              isValid: false,
+              error: error.message,
+              note: 'XML parseado como texto plano',
+              characterCount: text.length
+            });
+          } catch (fallbackError) {
+            reject(new Error('Error leyendo archivo XML: ' + fallbackError.message));
+          }
         }
       };
       reader.onerror = () => reject(new Error('Error leyendo archivo XML'));
@@ -375,7 +729,103 @@ class FileAnalysisService {
   }
 
   /**
-   * Procesar archivos RTF (Rich Text Format)
+   * Extraer todo el texto de un elemento XML (sin importar namespaces)
+   */
+  extractAllTextFromXML(element, depth = 0, maxDepth = 50) {
+    if (depth > maxDepth) return '';
+    
+    let text = '';
+    
+    // Procesar el contenido de texto del elemento actual
+    if (element.nodeType === Node.TEXT_NODE) {
+      const nodeText = element.textContent.trim();
+      if (nodeText) {
+        text += nodeText + ' ';
+      }
+    }
+    
+    // Procesar todos los nodos hijos
+    for (let i = 0; i < element.childNodes.length; i++) {
+      const child = element.childNodes[i];
+      if (child.nodeType === Node.ELEMENT_NODE || child.nodeType === Node.TEXT_NODE) {
+        text += this.extractAllTextFromXML(child, depth + 1, maxDepth);
+      }
+    }
+    
+    return text.trim();
+  }
+
+  /**
+   * Extraer elementos XML de forma mejorada (con namespaces)
+   */
+  extractXMLElementsAdvanced(element, path = '', maxItems = 50, currentCount = { count: 0 }) {
+    if (currentCount.count >= maxItems) return [];
+    
+    const elements = [];
+    const children = element.children;
+    
+    for (let i = 0; i < children.length && currentCount.count < maxItems; i++) {
+      const child = children[i];
+      const tagName = child.tagName;
+      const fullPath = path ? `${path}/${tagName}` : tagName;
+      
+      currentCount.count++;
+      
+      // Obtener atributos
+      const attrs = child.attributes.length > 0 
+        ? Array.from(child.attributes).map(a => `${a.name}="${a.value}"`).join(', ')
+        : '';
+      
+      // Obtener contenido de texto
+      const textContent = child.textContent?.trim();
+      
+      if (child.children.length > 0) {
+        const attrStr = attrs ? ` [${attrs}]` : '';
+        elements.push(`${fullPath}${attrStr} (${child.children.length} hijos)`);
+        elements.push(...this.extractXMLElementsAdvanced(child, fullPath, maxItems, currentCount));
+      } else {
+        const preview = textContent ? textContent.substring(0, 50) : '[vacío]';
+        const attrStr = attrs ? ` [${attrs}]` : '';
+        elements.push(`${fullPath}${attrStr}: ${preview}`);
+      }
+    }
+    
+    if (currentCount.count >= maxItems && elements.length > 0) {
+      elements.push(`... (y ${Math.max(0, this.countXMLNodes(element) - maxItems)} elementos más)`);
+    }
+    
+    return elements;
+  }
+
+  /**
+   * Extraer atributos XML de forma mejorada
+   */
+  extractXMLAttributesAdvanced(element) {
+    const attributes = [];
+    
+    const processAttributes = (el, path = '') => {
+      const attrs = el.attributes;
+      for (let i = 0; i < attrs.length; i++) {
+        const attr = attrs[i];
+        attributes.push({
+          path: path || el.tagName,
+          name: attr.name,
+          value: attr.value.substring(0, 50)
+        });
+      }
+      
+      // Procesar atributos de elementos hijos
+      for (let i = 0; i < el.children.length && attributes.length < 20; i++) {
+        processAttributes(el.children[i], (path ? path + '/' : '') + el.tagName);
+      }
+    };
+    
+    processAttributes(element);
+    return attributes;
+  }
+
+  /**
+   * Procesar archivos RTF (Rich Text Format) - Mejorado
    */
   async processRtfFile(file) {
     return new Promise((resolve, reject) => {
@@ -384,29 +834,42 @@ class FileAnalysisService {
         try {
           const rtfText = e.target.result;
           
-          // Extraer texto básico del RTF (remover códigos de formato)
-          const cleanText = rtfText
-            .replace(/\\[a-z]+\d*\s?/g, ' ') // Remover códigos RTF
-            .replace(/[{}]/g, ' ') // Remover llaves
-            .replace(/\s+/g, ' ') // Normalizar espacios
-            .trim();
+          // Extraer texto de RTF de forma más robusta
+          let cleanText = rtfText;
           
-          const lines = cleanText.split('\n').length;
+          // Remover el encabezado RTF
+          cleanText = cleanText.replace(/\{\\\*?[a-z]+\s?.*?\}/gi, ''); // Remover propiedades especiales
+          cleanText = cleanText.replace(/\\\'([0-9a-f]{2})/gi, (match, hex) => {
+            // Convertir caracteres escapados en hexadecimal
+            try {
+              return String.fromCharCode(parseInt(hex, 16));
+            } catch {
+              return '';
+            }
+          });
+          
+          // Remover códigos de formato RTF
+          cleanText = cleanText.replace(/\\[a-z]+\d*\s?/g, ' '); // Remover comandos RTF
+          cleanText = cleanText.replace(/[{}\\]/g, ' '); // Remover caracteres especiales
+          cleanText = cleanText.replace(/\s+/g, ' '); // Normalizar espacios
+          cleanText = cleanText.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, ''); // Remover caracteres de control
+          cleanText = cleanText.trim();
+          
+          const lines = cleanText.split('\n').filter(l => l.trim()).length;
           const words = cleanText.split(/\s+/).filter(word => word.length > 0).length;
           
           resolve({
             text: cleanText,
-            originalRtf: rtfText,
             isRtf: true,
             size: file.size,
             extracted: cleanText.length > 10,
             lines: lines,
             words: words,
             characters: cleanText.length,
-            note: cleanText.length > 10 ? 'Texto extraído del RTF' : 'RTF sin texto extraíble'
+            note: cleanText.length > 10 ? 'Texto extraído del RTF correctamente' : 'RTF sin texto extraíble'
           });
         } catch (error) {
-          reject(new Error('Error procesando RTF'));
+          reject(new Error('Error procesando RTF: ' + error.message));
         }
       };
       reader.onerror = () => reject(new Error('Error leyendo archivo RTF'));
@@ -415,27 +878,118 @@ class FileAnalysisService {
   }
 
   /**
-   * Procesar archivos ODT (OpenDocument Text)
+   * Procesar archivos ODT (OpenDocument Text) - Extrae texto del XML interno
    */
   async processOdtFile(file) {
     try {
-      // Los archivos ODT son ZIP que contienen XML
-      // Por ahora, proporcionamos información básica
-      return {
-        text: '[Documento ODT detectado]',
-        isOdt: true,
-        size: file.size,
-        note: 'Los archivos ODT requieren procesamiento especializado. Se recomienda convertir a DOCX o TXT para análisis completo.',
-        extracted: false
-      };
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Verificar que es un ZIP válido (comienza con PK)
+      if (uint8Array[0] !== 0x50 || uint8Array[1] !== 0x4B) {
+        return {
+          text: '[Archivo ODT detectado pero no es un ZIP válido]',
+          isOdt: true,
+          size: file.size,
+          extracted: false,
+          note: 'El archivo ODT no tiene formato ZIP válido'
+        };
+      }
+
+      // Usar fallback para extraer contenido del ZIP
+      return await this.fallbackOdtExtraction(file, arrayBuffer);
+      
     } catch (error) {
       console.error('Error procesando ODT:', error);
       return {
-        text: '[Error procesando documento ODT]',
+        text: '[Error procesando archivo ODT]',
         isOdt: true,
         size: file.size,
         error: error.message,
-        extracted: false
+        extracted: false,
+        note: 'Hubo un error al intentar extraer el contenido'
+      };
+    }
+  }
+
+  /**
+   * Método fallback para extraer ODT en el navegador sin dependencias externas
+   */
+  async fallbackOdtExtraction(file, arrayBuffer) {
+    try {
+      // Intentar extraer directamente del ArrayBuffer
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let text = '';
+      let inTag = false;
+      let currentText = '';
+      let buffer = '';
+      
+      // Buscar etiquetas específicas de ODT (text:p, text:span)
+      for (let i = 0; i < uint8Array.length; i++) {
+        const byte = uint8Array[i];
+        
+        if (byte === 0x3C) { // '<'
+          buffer = '';
+          inTag = true;
+          if (currentText.trim()) {
+            text += currentText + ' ';
+            currentText = '';
+          }
+        } else if (byte === 0x3E) { // '>'
+          // Si está dentro de text:p o text:span, estará en contenido
+          inTag = false;
+          buffer = '';
+        } else if (inTag && byte >= 0x20 && byte <= 0x7E && buffer.length < 50) {
+          buffer += String.fromCharCode(byte);
+        } else if (!inTag && byte >= 0x20 && byte <= 0x7E) {
+          currentText += String.fromCharCode(byte);
+        } else if (!inTag && (byte === 0x0A || byte === 0x0D)) {
+          if (currentText.trim()) {
+            text += currentText + '\n';
+            currentText = '';
+          }
+        }
+      }
+      
+      // Agregar cualquier texto restante
+      if (currentText.trim()) {
+        text += currentText;
+      }
+      
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      if (text.length > 20) {
+        const words = text.split(/\s+/).length;
+        const lines = text.split('\n').length;
+        
+        return {
+          text: text,
+          isOdt: true,
+          size: file.size,
+          extracted: true,
+          lines: lines,
+          words: words,
+          characters: text.length,
+          note: 'Texto extraído del ODT correctamente'
+        };
+      } else {
+        return {
+          text: '[Archivo ODT sin contenido de texto extraíble]',
+          isOdt: true,
+          size: file.size,
+          extracted: false,
+          note: 'No se pudo extraer contenido de texto válido'
+        };
+      }
+    } catch (error) {
+      console.error('Error en fallback de extracción ODT:', error);
+      return {
+        text: '[Error en fallback de extracción ODT]',
+        isOdt: true,
+        size: file.size,
+        error: error.message,
+        extracted: false,
+        note: 'Error: ' + error.message
       };
     }
   }
@@ -660,16 +1214,16 @@ class FileAnalysisService {
         break;
         
       case 'xml':
-        if (content.isValid && content.parsed) {
-          aiContent += `**Estructura XML:**\n`;
-          aiContent += `🏷️ Elemento raíz: ${content.rootElement}\n`;
-          aiContent += `📊 Nodos totales: ${content.nodeCount}\n`;
-          aiContent += `📋 Elementos: ${content.elements.length}\n`;
-          if (content.attributes && content.attributes.length > 0) {
-            aiContent += `🔧 Atributos: ${content.attributes.join(', ')}\n`;
+        if (content.plainText && content.plainText.length > 0) {
+          aiContent += `**Contenido de texto XML:**\n`;
+          aiContent += `📊 ${content.characterCount || content.plainText.length} caracteres | ${content.nodeCount || 0} nodos\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.plainText.substring(0, 2000)}${content.plainText.length > 2000 ? '\n...' : ''}\n\`\`\`\n`;
+          if (content.isValid) {
+            aiContent += `🏷️ Raíz: ${content.rootElement}\n`;
+            if (content.elements && content.elements.length > 0) {
+              aiContent += `📋 Estructura:\n\`\`\`\n${content.elements.slice(0, 10).join('\n')}${content.elements.length > 10 ? '\n...' : ''}\n\`\`\`\n`;
+            }
           }
-          aiContent += `\n**Estructura detallada:**\n\`\`\`\n${content.elements.slice(0, 20).join('\n')}${content.elements.length > 20 ? '\n...' : ''}\n\`\`\`\n`;
-          aiContent += `\n**Contenido XML (primeros 1000 caracteres):**\n\`\`\`xml\n${content.text.substring(0, 1000)}${content.text.length > 1000 ? '...' : ''}\n\`\`\`\n`;
         } else {
           aiContent += `**XML detectado:**\n`;
           aiContent += `📄 ${content.note}\n`;
@@ -691,10 +1245,19 @@ class FileAnalysisService {
         break;
         
       case 'odt':
-        aiContent += `**Documento ODT:**\n`;
-        aiContent += `📄 ${content.note}\n`;
-        if (content.error) {
-          aiContent += `⚠️ Error: ${content.error}\n`;
+        if (content.extracted && content.text) {
+          aiContent += `**Contenido del ODT:**\n`;
+          aiContent += `📊 ${content.lines} líneas | ${content.words} palabras | ${content.characters} caracteres\n\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.text}\n\`\`\`\n`;
+          if (content.warnings && content.warnings.length > 0) {
+            aiContent += `⚠️ Advertencias: ${content.warnings.length}\n`;
+          }
+        } else {
+          aiContent += `**ODT detectado:**\n`;
+          aiContent += `📄 ${content.note}\n`;
+          if (content.error) {
+            aiContent += `⚠️ Error: ${content.error}\n`;
+          }
         }
         break;
         
@@ -709,7 +1272,18 @@ class FileAnalysisService {
    * Validar si un archivo es soportado
    */
   isFileSupported(file) {
-    return this.supportedTypes.hasOwnProperty(file.type);
+    // Primero validar por MIME type
+    if (this.supportedTypes.hasOwnProperty(file.type)) {
+      return true;
+    }
+    
+    // Si el navegador no detectó el MIME type, validar por extensión
+    if (file.name) {
+      const mimeFromExt = this.getMimeTypeFromExtension(file.name);
+      return mimeFromExt !== null && this.supportedTypes.hasOwnProperty(mimeFromExt);
+    }
+    
+    return false;
   }
 
   /**
