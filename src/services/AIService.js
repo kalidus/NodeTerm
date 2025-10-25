@@ -1720,41 +1720,13 @@ class AIService {
     if (!content) return [];
     
     const files = [];
-    const seenFiles = new Set(); // Para evitar duplicados
+    const seenFiles = new Set();
     
-    // Patrones para detectar archivos explícitos mencionados
-    const patterns = [
-      // Rutas de archivo: /ruta/a/archivo.ext o C:\ruta\archivo.ext
-      /(?:^|\s)((?:[a-zA-Z]:)?(?:\/|\\)[^\s<>"{}|\\^`\[\]]*\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf))\b/gmi,
-      // Nombres de archivo con extensión: nombre.ext (si está entre backticks o después de "archivo:" o similar)
-      /(?:(?:archivo|file|documento):\s*)?[`]?([a-zA-Z0-9_\-\.]+\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf))[`]?/gmi,
-      // Rutas en formato de código: path/to/file.ext
-      /(?:src|lib|dist|build|out|output|downloads|files)\/[^\s<>"{}|\\^`\[\]]*\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|c|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md|pdf)/gmi
-    ];
-    
-    // Primero, detectar archivos explícitos mencionados
-    for (const pattern of patterns) {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const filePath = match[1] || match[0].trim();
-        if (!seenFiles.has(filePath)) {
-          files.push(filePath);
-          seenFiles.add(filePath);
-        }
-      }
-    }
-    
-    // Si ya se encontraron archivos explícitos, no buscar en bloques de código
-    if (files.length > 0) {
-      return files;
-    }
-    
-    // Detectar código que podría ser un archivo (bloques de código con import/def/class)
+    // PRIORIDAD 1: Detectar bloques de código (lo más confiable)
     const codeBlocks = content.match(/```(\w+)?\n([\s\S]*?)```/g);
     if (codeBlocks && codeBlocks.length > 0) {
-      // Si hay múltiples bloques de código, ser más selectivo
+      // Si hay UN SOLO bloque de código, crear archivo si es significativo
       if (codeBlocks.length === 1) {
-        // Solo un bloque de código, crear archivo si es significativo
         const match = codeBlocks[0].match(/```(\w+)?\n([\s\S]*?)```/);
         if (match) {
           const language = match[1] || 'txt';
@@ -1771,17 +1743,21 @@ class AIService {
             }
           }
         }
+        // Si hay UN bloque y generamos archivo, RETORNAR AQUÍ
+        if (files.length > 0) {
+          return files;
+        }
       } else {
-        // Múltiples bloques, ser MUY selectivo - solo el más significativo
+        // Múltiples bloques: ser EXTREMADAMENTE selectivo - SOLO el más significativo
         let bestBlock = null;
         let bestScore = 0;
         
-      codeBlocks.forEach((block, index) => {
-        const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
-        if (match) {
-          const language = match[1] || 'txt';
-          const code = match[2].trim();
-          
+        codeBlocks.forEach((block, index) => {
+          const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
+          if (match) {
+            const language = match[1] || 'txt';
+            const code = match[2].trim();
+            
             if (this.isSignificantCode(code, language)) {
               const score = this.calculateCodeSignificance(code, language);
               if (score > bestScore) {
@@ -1792,8 +1768,8 @@ class AIService {
           }
         });
         
-        // Solo crear archivo para el bloque más significativo
-        if (bestBlock) {
+        // Solo crear archivo para el bloque MEJOR clasificado
+        if (bestBlock && bestScore > 5) { // Umbral mínimo de significancia
           const extension = this.getLanguageExtension(bestBlock.language);
           const descriptiveName = this.generateDescriptiveFileName(bestBlock.code, bestBlock.language, bestBlock.index, userMessage);
           const fileName = descriptiveName || `script.${extension}`;
@@ -1801,6 +1777,34 @@ class AIService {
           if (!seenFiles.has(fileName)) {
             files.push(fileName);
             seenFiles.add(fileName);
+          }
+        }
+        
+        // Si hay múltiples bloques y generamos archivo, RETORNAR AQUÍ
+        if (files.length > 0) {
+          return files;
+        }
+      }
+    }
+    
+    // PRIORIDAD 2: Solo detectar archivos EXPLÍCITAMENTE mencionados (muy restrictivo)
+    // Solo si NO hay bloques de código significativos
+    const patterns = [
+      // Rutas explícitas: /ruta/a/archivo.ext o C:\ruta\archivo.ext (requieren separador)
+      /(?:^|\s)((?:[a-zA-Z]:)?(?:\/|\\)[^\s<>"{}|\\^`\[\]]+\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md))\b/gmi,
+      // Rutas en formato de código: src/lib/dist/etc (requieren prefijo específico)
+      /(?:src|lib|dist|build|out|output|downloads|files)\/[^\s<>"{}|\\^`\[\]]+\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md)/gmi
+    ];
+    
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        const filePath = match[1] || match[0].trim();
+        // Validar que parezca una ruta real (no solo una palabra con punto)
+        if (filePath && (filePath.includes('/') || filePath.includes('\\') || filePath.startsWith('C:'))) {
+          if (!seenFiles.has(filePath)) {
+            files.push(filePath);
+            seenFiles.add(filePath);
           }
         }
       }
