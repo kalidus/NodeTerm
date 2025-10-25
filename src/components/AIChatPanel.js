@@ -11,6 +11,7 @@ import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
 import FileTypeDetectionPanel from './FileTypeDetectionPanel';
 import FileUploader from './FileUploader';
+import AttachedFilesDisplay from './AttachedFilesDisplay';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 
@@ -249,13 +250,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAbortController(controller);
 
     try {
-      // Agregar mensaje del usuario a la conversación
-      const userMessageObj = conversationService.addMessage('user', userMessage);
+      // Agregar mensaje del usuario a la conversación con archivos adjuntos
+      const userMessageObj = conversationService.addMessage('user', userMessage, {
+        attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
+      });
       setMessages(prev => [...prev, {
         id: userMessageObj.id,
         role: 'user',
         content: userMessage,
-        timestamp: userMessageObj.timestamp
+        timestamp: userMessageObj.timestamp,
+        attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
       }]);
 
       // Actualizar el título de la conversación si es el primer mensaje
@@ -377,14 +381,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         finalMessage = `${userMessage}\n\n${fileContents}`;
       }
 
+      // Ocultar el área de subida antes de enviar
+      setShowFileUploader(false);
+
       // Enviar a la IA con callbacks
       await aiService.sendMessageWithCallbacks(finalMessage, callbacks);
-
-      // Limpiar archivos adjuntos después de enviar
-      if (attachedFiles.length > 0) {
-        setAttachedFiles([]);
-        setShowFileUploader(false);
-      }
 
     } catch (error) {
       console.error('Error enviando mensaje:', error);
@@ -428,6 +429,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
   const clearAttachedFiles = () => {
     setAttachedFiles([]);
+    setShowFileUploader(false);
   };
 
   const handleStopGeneration = () => {
@@ -934,6 +936,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             }}
             style={{ width: '100%' }}
           />
+          
+          {/* Mostrar archivos adjuntos para mensajes del usuario */}
+          {isUser && message.attachedFiles && message.attachedFiles.length > 0 && (
+            <AttachedFilesDisplay 
+              attachedFiles={message.attachedFiles} 
+              compact={true}
+            />
+          )}
         </div>
 
         {/* Timestamp y métricas solo después de completar */}
@@ -2062,6 +2072,37 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         {/* Área de archivos adjuntos */}
         {showFileUploader && (
           <div style={{ padding: '0 1rem 0.5rem 1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <span style={{ 
+                fontSize: '0.9rem', 
+                color: themeColors.textPrimary, 
+                fontWeight: '500' 
+              }}>
+                Archivos adjuntos
+              </span>
+              {attachedFiles.length > 0 && (
+                <button
+                  onClick={clearAttachedFiles}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: themeColors.textSecondary,
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    borderRadius: '4px',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Limpiar archivos adjuntos"
+                >
+                  <i className="pi pi-times" />
+                  Limpiar
+                </button>
+              )}
+            </div>
             <FileUploader
               onFilesAdded={handleFilesAdded}
               onFileRemoved={handleFileRemoved}
