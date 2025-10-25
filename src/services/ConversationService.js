@@ -47,6 +47,7 @@ class ConversationService {
       modelId: modelId,
       modelType: modelType,
       messages: [],
+      attachedFiles: [],
       isActive: true,
       metadata: {
         messageCount: 0,
@@ -584,6 +585,106 @@ class ConversationService {
     return results;
   }
 
+  // ===== GESTIÓN DE ARCHIVOS ADJUNTOS POR CONVERSACIÓN =====
+
+  /**
+   * Agregar archivos adjuntos a la conversación actual
+   */
+  addAttachedFiles(files) {
+    if (!this.currentConversationId) {
+      console.warn('No hay conversación activa para agregar archivos');
+      return false;
+    }
+
+    const conversation = this.conversations.get(this.currentConversationId);
+    if (!conversation) return false;
+
+    // Asegurar que el array exista
+    if (!conversation.attachedFiles) {
+      conversation.attachedFiles = [];
+    }
+
+    // Agregar archivos nuevos, evitando duplicados por ID
+    const existingIds = new Set(conversation.attachedFiles.map(f => f.id));
+    files.forEach(file => {
+      if (!existingIds.has(file.id)) {
+        conversation.attachedFiles.push(file);
+      }
+    });
+
+    conversation.updatedAt = Date.now();
+    this.saveConversations();
+    return true;
+  }
+
+  /**
+   * Remover archivo adjunto de la conversación actual
+   */
+  removeAttachedFile(fileId) {
+    if (!this.currentConversationId) return false;
+
+    const conversation = this.conversations.get(this.currentConversationId);
+    if (!conversation) return false;
+
+    const initialLength = conversation.attachedFiles?.length || 0;
+    conversation.attachedFiles = (conversation.attachedFiles || []).filter(f => f.id !== fileId);
+    
+    if (conversation.attachedFiles.length < initialLength) {
+      conversation.updatedAt = Date.now();
+      this.saveConversations();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Obtener archivos adjuntos de la conversación actual
+   */
+  getAttachedFiles() {
+    if (!this.currentConversationId) return [];
+
+    const conversation = this.conversations.get(this.currentConversationId);
+    return conversation?.attachedFiles || [];
+  }
+
+  /**
+   * Obtener archivos adjuntos de una conversación específica
+   */
+  getAttachedFilesForConversation(conversationId) {
+    const conversation = this.conversations.get(conversationId);
+    return conversation?.attachedFiles || [];
+  }
+
+  /**
+   * Limpiar todos los archivos adjuntos de la conversación actual
+   */
+  clearAttachedFiles() {
+    if (!this.currentConversationId) return false;
+
+    const conversation = this.conversations.get(this.currentConversationId);
+    if (!conversation) return false;
+
+    conversation.attachedFiles = [];
+    conversation.updatedAt = Date.now();
+    this.saveConversations();
+    return true;
+  }
+
+  /**
+   * Reemplazar archivos adjuntos de la conversación actual
+   */
+  setAttachedFiles(files) {
+    if (!this.currentConversationId) return false;
+
+    const conversation = this.conversations.get(this.currentConversationId);
+    if (!conversation) return false;
+
+    conversation.attachedFiles = Array.isArray(files) ? files : [];
+    conversation.updatedAt = Date.now();
+    this.saveConversations();
+    return true;
+  }
+
   // Métodos privados
 
   generateConversationId() {
@@ -698,6 +799,13 @@ class ConversationService {
         // Cargar conversaciones
         if (data.conversations) {
           this.conversations = new Map(data.conversations);
+          
+          // Asegurar compatibilidad hacia atrás: agregar attachedFiles si no existen
+          this.conversations.forEach((conversation) => {
+            if (!conversation.attachedFiles) {
+              conversation.attachedFiles = [];
+            }
+          });
         }
         
         // Cargar índice

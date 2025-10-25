@@ -11,7 +11,6 @@ import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
 import FileTypeDetectionPanel from './FileTypeDetectionPanel';
 import FileUploader from './FileUploader';
-import AttachedFilesDisplay from './AttachedFilesDisplay';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 
@@ -135,6 +134,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         timestamp: msg.timestamp,
         metadata: msg.metadata
       })));
+      // Cargar archivos adjuntos de la conversación actual
+      const attachedFiles = conversationService.getAttachedFiles();
+      setAttachedFiles(attachedFiles || []);
     } else {
       // Solo crear nueva conversación si realmente no hay ninguna
       const allConversations = conversationService.getAllConversations();
@@ -381,9 +383,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         finalMessage = `${userMessage}\n\n${fileContents}`;
       }
 
-      // Ocultar el área de subida antes de enviar
-      setShowFileUploader(false);
-
       // Enviar a la IA con callbacks
       await aiService.sendMessageWithCallbacks(finalMessage, callbacks);
 
@@ -417,10 +416,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Funciones para manejar archivos adjuntos
   const handleFilesAdded = (newFiles) => {
     setAttachedFiles(prev => [...prev, ...newFiles]);
+    // Guardar archivos adjuntos a la conversación actual
+    conversationService.addAttachedFiles(newFiles);
+    // Ocultar el diálogo de upload automáticamente después de añadir archivos
+    setShowFileUploader(false);
   };
 
   const handleFileRemoved = (fileId) => {
     setAttachedFiles(prev => prev.filter(file => file.id !== fileId));
+    // Remover archivo de la conversación actual
+    conversationService.removeAttachedFile(fileId);
   };
 
   const toggleFileUploader = () => {
@@ -429,6 +434,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
   const clearAttachedFiles = () => {
     setAttachedFiles([]);
+    // Limpiar archivos adjuntos de la conversación actual
+    conversationService.clearAttachedFiles();
     setShowFileUploader(false);
   };
 
@@ -485,6 +492,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setCurrentConversationId(newConversation.id);
     setConversationTitle(newConversation.title);
     setMessages([]);
+    setAttachedFiles([]);
     
     // Disparar evento para actualizar el historial
     window.dispatchEvent(new CustomEvent('conversation-updated'));
@@ -502,6 +510,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         timestamp: msg.timestamp,
         metadata: msg.metadata
       })));
+      // Cargar archivos adjuntos de la conversación
+      const attachedFiles = conversationService.getAttachedFilesForConversation(conversationId);
+      setAttachedFiles(attachedFiles || []);
     }
   };
 
@@ -948,12 +959,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             style={{ width: '100%' }}
           />
           
-          {/* Mostrar archivos adjuntos para mensajes del usuario */}
+          {/* Indicador simple si el mensaje tenía archivos adjuntos */}
           {isUser && message.attachedFiles && message.attachedFiles.length > 0 && (
-            <AttachedFilesDisplay 
-              attachedFiles={message.attachedFiles} 
-              compact={true}
-            />
+            <div style={{
+              marginTop: '0.5rem',
+              fontSize: '0.75rem',
+              color: themeColors.textSecondary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}>
+              <i className="pi pi-paperclip" />
+              <span>{message.attachedFiles.length} archivo{message.attachedFiles.length > 1 ? 's' : ''} adjunto{message.attachedFiles.length > 1 ? 's' : ''}</span>
+            </div>
           )}
         </div>
 
@@ -1886,6 +1904,48 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             flexDirection: 'column'
           }}
         >
+          {/* Mostrar archivos adjuntos al principio del chat */}
+          {attachedFiles.length > 0 && (
+            <div style={{
+              marginBottom: '1rem',
+              padding: '0.75rem',
+              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+              border: `1px solid ${themeColors.primaryColor}`,
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
+              <div style={{
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                color: themeColors.primaryColor,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <i className="pi pi-paperclip" />
+                <span>{attachedFiles.length} archivo{attachedFiles.length > 1 ? 's' : ''} adjunto{attachedFiles.length > 1 ? 's' : ''}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {attachedFiles.map((file) => (
+                  <div key={file.id} style={{
+                    fontSize: '0.8rem',
+                    color: themeColors.textSecondary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    paddingLeft: '1.5rem'
+                  }}>
+                    <i className="pi pi-file" style={{ fontSize: '0.7rem' }} />
+                    <span>{file.name}</span>
+                    <span style={{ fontSize: '0.75rem' }}>({file.sizeFormatted || 'OK'})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {messages.length === 0 ? (
             <div
               style={{
@@ -2080,49 +2140,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           </div>
         )}
 
-        {/* Área de archivos adjuntos */}
-        {showFileUploader && (
+        {showFileUploader ? (
           <div style={{ padding: '0 1rem 0.5rem 1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <span style={{ 
-                fontSize: '0.9rem', 
-                color: themeColors.textPrimary, 
-                fontWeight: '500' 
-              }}>
-                Archivos adjuntos
-              </span>
-              {attachedFiles.length > 0 && (
-                <button
-                  onClick={clearAttachedFiles}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: themeColors.textSecondary,
-                    cursor: 'pointer',
-                    padding: '0.25rem',
-                    borderRadius: '4px',
-                    fontSize: '0.8rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Limpiar archivos adjuntos"
-                >
-                  <i className="pi pi-times" />
-                  Limpiar
-                </button>
-              )}
-            </div>
             <FileUploader
               onFilesAdded={handleFilesAdded}
               onFileRemoved={handleFileRemoved}
               attachedFiles={attachedFiles}
               maxFiles={5}
               disabled={isLoading}
+              expandUpload={showFileUploader}
             />
           </div>
-        )}
+        ) : null}
 
         <div
           style={{
