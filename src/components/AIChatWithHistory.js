@@ -21,6 +21,28 @@ const AIChatWithHistory = () => {
     return () => window.removeEventListener('theme-changed', onThemeChanged);
   }, []);
 
+  // Inicializar currentConversationId al cargar
+  useEffect(() => {
+    const currentConversation = conversationService.getCurrentConversation();
+    if (currentConversation) {
+      setCurrentConversationId(currentConversation.id);
+    }
+  }, []);
+
+  // Escuchar actualizaciones de conversación para sincronizar la selección
+  useEffect(() => {
+    const handleConversationUpdate = () => {
+      // Obtener la conversación actual del servicio
+      const currentConversation = conversationService.getCurrentConversation();
+      if (currentConversation && currentConversation.id !== currentConversationId) {
+        setCurrentConversationId(currentConversation.id);
+      }
+    };
+
+    window.addEventListener('conversation-updated', handleConversationUpdate);
+    return () => window.removeEventListener('conversation-updated', handleConversationUpdate);
+  }, [currentConversationId]);
+
   // Obtener el tema actual
   const currentTheme = React.useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
