@@ -759,4 +759,33 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* === SCROLLBAR PARA CONVERSACIONES DEL CHAT DE IA === */
+/* Scrollbar personalizado usando colores del tema */
+.conversation-list::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.conversation-list::-webkit-scrollbar-track {
+  background: var(--ui-sidebar-bg, #1e1e1e);
+  border-radius: 3px;
+}
+
+.conversation-list::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-border, #3e3e42);
+  border-radius: 3px;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+}
+
+.conversation-list::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-sidebar-text, #cccccc);
+  opacity: 0.8;
+}
+
+/* Firefox scrollbar para conversaciones del chat de IA */
+.conversation-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e);
+}
 
