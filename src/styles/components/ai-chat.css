@@ -351,12 +351,13 @@
   border: 1px solid rgba(88, 166, 255, 0.2) !important;
   margin: 0.8rem 0 !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
-  background: rgba(0,0,0,0.35) !important;
+  background: rgba(0,0,0,0.4) !important;
   width: 100%;
   max-width: 100% !important;
   overflow: hidden !important;
   box-sizing: border-box;
-  display: block;
+  display: flex !important;
+  flex-direction: column !important;
   min-width: 0;
 }
 
@@ -374,6 +375,8 @@
   max-width: 100% !important;
   box-sizing: border-box;
   gap: 1rem;
+  margin: 0 !important;
+  padding: 0.7rem 1.2rem !important;
 }
 
 /* Language tag styling */
@@ -388,10 +391,11 @@
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: #58a6ff;
-  margin: 0;
+  margin: 0 !important;
+  flex-shrink: 0;
 }
 
-/* Pre and code blocks */
+/* Pre and code blocks - SIN BORDES */
 .ai-codeblock pre,
 .ai-code-pre {
   margin: 0 !important;
@@ -399,17 +403,19 @@
   overflow-y: auto !important;
   overflow-x: auto !important;
   padding: 1.2rem;
-  background: rgba(0,0,0,0.4) !important;
+  background: transparent !important;
+  border: none !important;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace !important;
   font-size: 0.85rem !important;
   line-height: 1.5 !important;
   color: #e6edf3;
   white-space: pre;
   word-wrap: normal;
-  border-radius: 0 0 7px 7px;
+  border-radius: 0;
   display: block;
   width: 100%;
   box-sizing: border-box;
+  flex: 1;
 }
 
 /* Scrollbar styling */
@@ -419,7 +425,7 @@
 }
 
 .ai-codeblock pre::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.2);
 }
 
 .ai-codeblock pre::-webkit-scrollbar-thumb {
@@ -445,6 +451,8 @@
   box-sizing: border-box;
   margin: 0 !important;
   padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Code spans */
@@ -466,11 +474,13 @@
   width: 100%;
   max-width: 100% !important;
   overflow-x: visible;
+  border: none !important;
 }
 
 .ai-codeblock pre.hljs {
-  background: rgba(0,0,0,0.4) !important;
-  border-radius: 0 0 7px 7px;
+  background: transparent !important;
+  border-radius: 0;
+  border: none !important;
   padding: 1.2rem;
   margin: 0;
   overflow-x: auto !important;
@@ -484,6 +494,7 @@
   display: block;
   flex-shrink: 0;
   min-width: 0;
+  flex: 1;
 }
 
 /* Syntax highlighting colors */
@@ -514,6 +525,7 @@
   backdrop-filter: blur(10px);
   opacity: 1;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ai-copy-btn:hover {
