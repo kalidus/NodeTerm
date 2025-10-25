@@ -672,11 +672,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       
       // Crear el nuevo pre con el código
       const newPre = document.createElement('pre');
-      newPre.className = `hljs language-${language}`;
+      newPre.className = `hljs language-${language} ai-code-pre`;
+      // Asegurar que el pre respeta el contenedor (estilos inline de respaldo)
+      newPre.style.width = '100%';
+      newPre.style.maxWidth = '100%';
+      newPre.style.boxSizing = 'border-box';
+      newPre.style.overflowX = 'auto';
+      newPre.style.overflowY = 'auto';
       
       const newCode = document.createElement('code');
       newCode.id = codeId;
       newCode.textContent = codeBlock.textContent;
+      // Estilos inline para el código
+      newCode.style.display = 'block';
+      newCode.style.width = '100%';
+      newCode.style.maxWidth = '100%';
+      newCode.style.boxSizing = 'border-box';
       
       newPre.appendChild(newCode);
       
