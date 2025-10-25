@@ -28,136 +28,127 @@
 }
 
 /* ============================================
-   H1 - SEPARADOR VISUAL FUERTE
+   TÍTULOS - MÁS VISTOSOS CON SEPARADORES
    ============================================ */
 
+/* H1 - SEPARADOR VISUAL FUERTE */
 .ai-md h1 {
   font-size: 1.3rem !important;
-  margin: 0.8rem 0 0.8rem 0 !important;
+  margin: 1.2rem 0 1rem 0 !important;
   font-weight: 700 !important;
   color: #58a6ff !important;
   text-align: center !important;
-  padding: 0.8rem 0 !important;
-  border-top: 2px solid #58a6ff !important;
-  border-bottom: 2px solid #58a6ff !important;
-  letter-spacing: 1px !important;
+  padding: 1rem 0 !important;
+  border-top: 3px solid #58a6ff !important;
+  border-bottom: 3px solid #58a6ff !important;
+  letter-spacing: 1.5px !important;
   text-transform: uppercase !important;
-  font-size: 1.1rem !important;
+  font-size: 1.2rem !important;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(88, 166, 255, 0.05) 100%) !important;
 }
 
-/* ============================================
-   H2 - CON ICONO VISIBLE Y BORDE AZUL
-   ============================================ */
-
+/* H2 - TÍTULOS VISTOSOS CON ICONOS Y SEPARADOR */
 .ai-md h2 {
-  font-size: 1.05rem !important;
-  margin: 1rem 0 0.5rem 0 !important;
+  font-size: 1.15rem !important;
+  margin: 1.5rem 0 0.6rem 0 !important;
   font-weight: 700 !important;
-  color: #fff !important;
-  border-left: 4px solid #58a6ff !important;
-  padding: 0.5rem 0 0.5rem 0.8rem !important;
-  background: rgba(88, 166, 255, 0.08) !important;
+  color: #58a6ff !important;
+  border-left: 5px solid #58a6ff !important;
+  padding: 0.7rem 0 0.7rem 1rem !important;
+  background: linear-gradient(90deg, rgba(88, 166, 255, 0.08) 0%, transparent 100%) !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.6rem !important;
+  gap: 0.8rem !important;
   position: relative !important;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.15) !important;
 }
 
+/* Iconos por defecto para H2 */
 .ai-md h2::before {
   content: "📌" !important;
-  font-size: 1rem !important;
+  font-size: 1.2rem !important;
   display: inline-block !important;
-  min-width: 1.2rem !important;
+  min-width: 1.3rem !important;
+  flex-shrink: 0 !important;
 }
 
-/* Iconos específicos por tipo de h2 */
-.ai-md h2:has(+ ul):contains("por qué")::before,
-.ai-md h2:contains("ventajas")::before {
-  content: "✨" !important;
+/* Iconos específicos - Primera H2 */
+.ai-md h2:first-of-type::before {
+  content: "📌" !important;
 }
 
-.ai-md h2:contains("características")::before {
+/* Segunda H2 */
+.ai-md h2:nth-of-type(2)::before {
   content: "⭐" !important;
 }
 
-.ai-md h2:contains("requisitos")::before {
-  content: "📋" !important;
-}
-
-.ai-md h2:contains("instalación")::before {
-  content: "🔧" !important;
-}
-
-.ai-md h2:contains("cómo")::before {
-  content: "❓" !important;
-}
-
-.ai-md h2:contains("ejemplo")::before {
-  content: "📝" !important;
-}
-
-.ai-md h2:contains("solución")::before {
-  content: "💡" !important;
-}
-
-.ai-md h2:contains("funcionali")::before {
+/* Tercera H2 */
+.ai-md h2:nth-of-type(3)::before {
   content: "⚙️" !important;
 }
 
-.ai-md h2:not(:first-child) {
-  border-top: 1px solid rgba(88, 166, 255, 0.2) !important;
-  margin-top: 1.2rem !important;
-  padding-top: 0.8rem !important;
+/* Cuarta H2 */
+.ai-md h2:nth-of-type(4)::before {
+  content: "💡" !important;
 }
 
-/* ============================================
-   H3 - SUBSECCIÓN CON ICONO
-   ============================================ */
+/* Quinta H2 */
+.ai-md h2:nth-of-type(5)::before {
+  content: "✨" !important;
+}
 
+/* Sexta H2 */
+.ai-md h2:nth-of-type(6)::before {
+  content: "📋" !important;
+}
+
+/* H3 - SUBSECCIONES CON ICONO */
 .ai-md h3 {
-  font-size: 0.98rem !important;
-  margin: 0.8rem 0 0.4rem 0 !important;
-  font-weight: 600 !important;
+  font-size: 1.02rem !important;
+  margin: 0.9rem 0 0.4rem 0 !important;
+  font-weight: 700 !important;
   color: #58a6ff !important;
-  border-left: 3px solid rgba(88, 166, 255, 0.6) !important;
-  padding-left: 0.6rem !important;
-  padding: 0.3rem 0 0.3rem 0.6rem !important;
+  border-left: 4px solid rgba(88, 166, 255, 0.7) !important;
+  padding: 0.4rem 0 0.4rem 0.9rem !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.4rem !important;
+  gap: 0.6rem !important;
+  background: rgba(88, 166, 255, 0.03) !important;
 }
 
 .ai-md h3::before {
-  content: "▶" !important;
-  font-size: 0.7rem !important;
+  content: "▸" !important;
+  font-size: 1rem !important;
   color: #58a6ff !important;
+  flex-shrink: 0 !important;
+  font-weight: bold !important;
 }
 
 /* ============================================
-   LISTAS - COMPACTAS CON ESTILO
+   LISTAS - LIMPIAS SIN RECUADRO
    ============================================ */
 
 .ai-md ul, .ai-md ol {
-  margin: 0.6rem 0 0.8rem 0 !important;
-  padding-left: 2rem !important;
-  background: rgba(88, 166, 255, 0.06) !important;
-  border-left: 3px solid #58a6ff !important;
-  padding: 0.6rem 0.8rem 0.6rem 1.8rem !important;
-  border-radius: 0 4px 4px 0 !important;
+  margin: 0.7rem 0 1rem 0 !important;
+  padding-left: 1.8rem !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
 }
 
 .ai-md li {
-  margin: 0.35rem 0 !important;
-  line-height: 1.5 !important;
+  margin: 0.4rem 0 !important;
+  line-height: 1.65 !important;
   color: inherit !important;
   padding: 0.2rem 0 !important;
-  font-size: 0.92rem !important;
-  border-bottom: 1px solid rgba(88, 166, 255, 0.05) !important;
-  padding-bottom: 0.3rem !important;
+  font-size: 0.95rem !important;
+  border: none !important;
+  padding-bottom: 0.2rem !important;
 }
 
 .ai-md li:last-child {
   border-bottom: none !important;
+  margin-bottom: 0 !important;
 }
 
 .ai-md ul li {
@@ -169,19 +160,24 @@
   content: "●" !important;
   color: #58a6ff !important;
   position: absolute !important;
-  left: -1.3rem !important;
-  top: 0.25rem !important;
+  left: -1.4rem !important;
+  top: 0.3rem !important;
   font-size: 0.8rem !important;
   font-weight: bold !important;
 }
 
+.ai-md ol li {
+  list-style-type: decimal !important;
+  margin-left: 0 !important;
+  font-size: 0.95rem !important;
+}
+
 /* Listas anidadas */
 .ai-md ul ul, .ai-md ol ol, .ai-md ul ol, .ai-md ol ul {
-  margin: 0.3rem 0 0.3rem 0 !important;
-  padding: 0.4rem 0.6rem 0.4rem 1.3rem !important;
-  background: rgba(88, 166, 255, 0.02) !important;
-  border-left: 2px solid rgba(88, 166, 255, 0.3) !important;
+  margin: 0.4rem 0 !important;
   padding-left: 1.3rem !important;
+  background: transparent !important;
+  border: none !important;
   margin-left: 0 !important;
 }
 
@@ -189,11 +185,11 @@
   content: "○" !important;
   color: rgba(88, 166, 255, 0.6) !important;
   font-size: 0.7rem !important;
-  left: -1rem !important;
+  left: -1.1rem !important;
 }
 
 /* ============================================
-   BLOCKQUOTES - ESTILO DESTACADO
+   BLOCKQUOTES - MEJORADOS
    ============================================ */
 
 .ai-md blockquote {
@@ -201,7 +197,7 @@
   padding: 0.8rem 1rem !important;
   margin: 0.8rem 0 !important;
   font-style: italic !important;
-  background: rgba(88, 166, 255, 0.1) !important;
+  background: rgba(88, 166, 255, 0.08) !important;
   border-radius: 0 4px 4px 0 !important;
   border: 1px solid rgba(88, 166, 255, 0.2) !important;
 }
