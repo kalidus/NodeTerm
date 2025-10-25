@@ -605,4 +605,158 @@
   margin-bottom: 0;
 }
 
+/* Estilos para FileUploader */
+.file-uploader-container {
+  transition: all 0.3s ease;
+}
+
+.file-uploader-drop-zone {
+  transition: all 0.2s ease;
+  border: 2px dashed;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.file-uploader-drop-zone:hover {
+  background: rgba(33, 150, 243, 0.1);
+  border-color: #2196f3;
+}
+
+.file-uploader-drop-zone.drag-over {
+  background: rgba(33, 150, 243, 0.15);
+  border-color: #2196f3;
+  transform: scale(1.02);
+}
+
+.file-uploader-processing {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.file-attachment-item {
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.file-attachment-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.file-attachment-icon {
+  font-size: 1.2rem;
+  margin-right: 0.75rem;
+}
+
+.file-attachment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-attachment-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.file-attachment-meta {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.file-attachment-remove {
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+  min-width: auto;
+  padding: 0.25rem;
+}
+
+.file-attachment-remove:hover {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+/* Animaciones para archivos adjuntos */
+.file-attachment-enter {
+  animation: slideInUp 0.3s ease-out;
+}
+
+.file-attachment-exit {
+  animation: slideOutDown 0.3s ease-in;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+/* Estilos para el botón de archivos adjuntos */
+.file-attach-button {
+  transition: all 0.2s ease;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+}
+
+.file-attach-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.file-attach-button:active {
+  transform: scale(0.95);
+}
+
+.file-attach-button.active {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.4);
+}
+
+.file-attach-button.inactive {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.file-attach-button.inactive:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 

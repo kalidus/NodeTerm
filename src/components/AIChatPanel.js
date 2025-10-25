@@ -10,7 +10,9 @@ import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
 import FileTypeDetectionPanel from './FileTypeDetectionPanel';
+import FileUploader from './FileUploader';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
+import fileAnalysisService from '../services/FileAnalysisService';
 
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
@@ -43,6 +45,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [fileTypeSuggestions, setFileTypeSuggestions] = useState([]);
   const [detectionConfidence, setDetectionConfidence] = useState(0);
   const [showDetailedFileTypes, setShowDetailedFileTypes] = useState(false);
+  
+  // Estados para archivos adjuntos
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [showFileUploader, setShowFileUploader] = useState(false);
 
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
@@ -362,8 +368,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         }
       };
 
+      // Preparar mensaje con archivos adjuntos si los hay
+      let finalMessage = userMessage;
+      if (attachedFiles.length > 0) {
+        const fileContents = attachedFiles.map(file => 
+          fileAnalysisService.prepareContentForAI(file)
+        ).join('\n\n');
+        finalMessage = `${userMessage}\n\n${fileContents}`;
+      }
+
       // Enviar a la IA con callbacks
-      await aiService.sendMessageWithCallbacks(userMessage, callbacks);
+      await aiService.sendMessageWithCallbacks(finalMessage, callbacks);
+
+      // Limpiar archivos adjuntos después de enviar
+      if (attachedFiles.length > 0) {
+        setAttachedFiles([]);
+        setShowFileUploader(false);
+      }
 
     } catch (error) {
       console.error('Error enviando mensaje:', error);
@@ -390,6 +411,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         setCurrentStatus(null);
       }, 2000);
     }
+  };
+
+  // Funciones para manejar archivos adjuntos
+  const handleFilesAdded = (newFiles) => {
+    setAttachedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleFileRemoved = (fileId) => {
+    setAttachedFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const toggleFileUploader = () => {
+    setShowFileUploader(prev => !prev);
+  };
+
+  const clearAttachedFiles = () => {
+    setAttachedFiles([]);
   };
 
   const handleStopGeneration = () => {
@@ -2021,6 +2059,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           </div>
         )}
 
+        {/* Área de archivos adjuntos */}
+        {showFileUploader && (
+          <div style={{ padding: '0 1rem 0.5rem 1rem' }}>
+            <FileUploader
+              onFilesAdded={handleFilesAdded}
+              onFileRemoved={handleFileRemoved}
+              attachedFiles={attachedFiles}
+              maxFiles={5}
+              disabled={isLoading}
+            />
+          </div>
+        )}
+
         <div
           style={{
             padding: '0.6rem 1rem',
@@ -2081,6 +2132,32 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
               }}
             />
+
+            {/* Botón para archivos adjuntos */}
+            <button
+              onClick={toggleFileUploader}
+              disabled={isLoading}
+              style={{
+                background: showFileUploader 
+                  ? `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`
+                  : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.6rem',
+                color: 'white',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '40px',
+                height: '40px',
+                opacity: isLoading ? 0.5 : 1
+              }}
+              title={showFileUploader ? 'Ocultar archivos adjuntos' : 'Adjuntar archivos'}
+            >
+              <i className={showFileUploader ? 'pi pi-times' : 'pi pi-paperclip'} />
+            </button>
 
             <button
               onClick={handleSendMessage}
