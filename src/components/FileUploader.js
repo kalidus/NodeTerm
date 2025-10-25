@@ -155,6 +155,9 @@ const FileUploader = ({
     if (fileType.includes('json')) return 'pi pi-code';
     if (fileType.includes('csv')) return 'pi pi-table';
     if (fileType.includes('doc')) return 'pi pi-file-word';
+    if (fileType.includes('xml')) return 'pi pi-code';
+    if (fileType.includes('rtf')) return 'pi pi-file';
+    if (fileType.includes('odt')) return 'pi pi-file';
     return 'pi pi-file';
   };
 
@@ -166,6 +169,9 @@ const FileUploader = ({
     if (fileType.includes('json')) return themeColors.warningColor;
     if (fileType.includes('csv')) return themeColors.successColor;
     if (fileType.includes('doc')) return themeColors.primaryColor;
+    if (fileType.includes('xml')) return themeColors.warningColor;
+    if (fileType.includes('rtf')) return themeColors.primaryColor;
+    if (fileType.includes('odt')) return themeColors.primaryColor;
     return themeColors.textSecondary;
   };
 
@@ -195,7 +201,7 @@ const FileUploader = ({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.txt,.doc,.docx,.csv,.json,.jpg,.jpeg,.png,.gif,.webp,.svg"
+          accept=".pdf,.txt,.doc,.docx,.csv,.json,.xml,.rtf,.odt,.jpg,.jpeg,.png,.gif,.webp,.svg"
           onChange={handleFileSelect}
           style={{ display: 'none' }}
           disabled={disabled}
@@ -219,7 +225,7 @@ const FileUploader = ({
               Arrastra archivos aquí o haz clic para seleccionar
             </p>
             <p style={{ margin: '0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
-              PDF, TXT, DOC, DOCX, CSV, JSON, imágenes (JPG, PNG, GIF, WebP, SVG)
+              PDF, TXT, DOC, DOCX, CSV, JSON, XML, RTF, ODT, imágenes (JPG, PNG, GIF, WebP, SVG)
             </p>
             <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem' }}>
               Máximo {maxFiles} archivos • {attachedFiles.length}/{maxFiles} utilizados
