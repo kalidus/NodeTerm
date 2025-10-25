@@ -110,30 +110,62 @@ class FileAnalysisService {
   }
 
   /**
-   * Procesar archivos PDF
+   * Procesar archivos PDF usando el proceso principal
    */
   async processPDFFile(file) {
     try {
-      // Para PDFs, necesitaremos una librería externa
-      // Por ahora, intentamos con una aproximación básica
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
       // Verificar si es un PDF válido
       if (uint8Array[0] === 0x25 && uint8Array[1] === 0x50 && uint8Array[2] === 0x44 && uint8Array[3] === 0x46) {
-        return {
-          text: '[PDF detectado - Se requiere procesamiento avanzado]',
-          isPDF: true,
-          size: file.size,
-          note: 'Para análisis completo de PDF, se recomienda usar un modelo con capacidades de visión'
-        };
+        
+        // Crear archivo temporal usando el proceso principal
+        const tempFilePath = await window.electron.pdfProcessor.createTempFile(file.name, arrayBuffer);
+        
+        try {
+          // Procesar PDF usando el proceso principal
+          const result = await window.electron.pdfProcessor.processPDF(tempFilePath);
+          
+          // Limpiar archivo temporal
+          await window.electron.pdfProcessor.cleanupTempFile(tempFilePath);
+          
+          if (result.success && result.text && result.text.length > 10) {
+            return {
+              text: result.text,
+              isPDF: true,
+              size: file.size,
+              pages: result.pages,
+              wordCount: result.wordCount,
+              characterCount: result.characterCount,
+              extracted: true,
+              note: result.note
+            };
+          } else {
+            return {
+              text: '[PDF detectado pero no se pudo extraer el contenido]',
+              isPDF: true,
+              size: file.size,
+              extracted: false,
+              error: result.error,
+              note: result.note || 'PDF detectado pero el contenido no se pudo extraer.'
+            };
+          }
+        } catch (processError) {
+          // Limpiar archivo temporal en caso de error
+          await window.electron.pdfProcessor.cleanupTempFile(tempFilePath);
+          throw processError;
+        }
       } else {
         throw new Error('Archivo PDF no válido');
       }
+      
     } catch (error) {
+      console.error('Error procesando PDF:', error);
       throw new Error(`Error procesando PDF: ${error.message}`);
     }
   }
+
 
   /**
    * Procesar archivos DOC (básico)
@@ -294,6 +326,19 @@ class FileAnalysisService {
         break;
         
       case 'pdf':
+        if (content.extracted && content.text) {
+          aiContent += `**Contenido del PDF:**\n`;
+          aiContent += `📊 ${content.pages} páginas | ${content.wordCount} palabras | ${content.characterCount} caracteres\n\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.text}\n\`\`\`\n`;
+        } else {
+          aiContent += `**PDF detectado:**\n`;
+          aiContent += `📄 ${content.note}\n`;
+          if (content.error) {
+            aiContent += `⚠️ Error: ${content.error}\n`;
+          }
+        }
+        break;
+        
       case 'doc':
       case 'docx':
         aiContent += `**Documento detectado:**\n`;

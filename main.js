@@ -7,6 +7,9 @@ const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrp
 // Importar servicios centralizados (fuera del try-catch para acceso global)
 const { WSL, PowerShell, Cygwin } = require('./src/main/services');
 
+// Importar procesador de PDFs
+const pdfProcessor = require('./src/services/PDFProcessor');
+
 try {
   // Importar configuraciones de terminal desde archivo externo
   ({ alternativePtyConfig } = require('./src/main/config/terminal-configs'));

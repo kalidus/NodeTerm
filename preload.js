@@ -23,6 +23,12 @@ contextBridge.exposeInMainWorld('electron', {
     getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
     quit: () => ipcRenderer.send('app-quit')
   },
+  pdfProcessor: {
+    processPDF: (filePath) => ipcRenderer.invoke('process-pdf', filePath),
+    processPDFBuffer: (base64Data) => ipcRenderer.invoke('process-pdf-buffer', base64Data),
+    createTempFile: (fileName, arrayBuffer) => ipcRenderer.invoke('create-temp-file', fileName, arrayBuffer),
+    cleanupTempFile: (filePath) => ipcRenderer.invoke('cleanup-temp-file', filePath)
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -48,6 +54,10 @@ contextBridge.exposeInMainWorld('electron', {
         /^guacamole:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
+        'process-pdf',
+        'process-pdf-buffer',
+        'create-temp-file',
+        'cleanup-temp-file',
         /^recording:.*$/
       ];
       if (validChannels.some(regex => {
