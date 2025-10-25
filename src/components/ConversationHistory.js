@@ -76,7 +76,7 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
   }, [loadConversations]);
 
   // Obtener conversaciones según la pestaña activa
-  const getCurrentConversations = () => {
+  const getCurrentConversations = useCallback(() => {
     switch (activeTab) {
       case 'recent':
         return groupedConversations.recent || [];
@@ -89,20 +89,22 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
       default:
         return conversations;
     }
-  };
+  }, [activeTab, groupedConversations, conversations, searchQuery]);
 
   // Filtrar conversaciones según búsqueda y estado de archivo
-  const filteredConversations = getCurrentConversations().filter(conv => {
-    const matchesSearch = !searchQuery || 
-      conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.messages.some(msg => 
-        msg.content.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    
-    const matchesArchive = showArchived ? !conv.isActive : conv.isActive;
-    
-    return matchesSearch && matchesArchive;
-  });
+  const filteredConversationsMemo = React.useMemo(() => {
+    return getCurrentConversations().filter(conv => {
+      const matchesSearch = !searchQuery || 
+        conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        conv.messages.some(msg => 
+          msg.content.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      
+      const matchesArchive = showArchived ? !conv.isActive : conv.isActive;
+      
+      return matchesSearch && matchesArchive;
+    });
+  }, [searchQuery, showArchived, groupedConversations, conversations, activeTab, getCurrentConversations]);
 
   const handleConversationClick = (conversationId) => {
     if (onConversationSelect) {
@@ -121,13 +123,53 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
     setShowDeleteConfirm(conversationId);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     if (showDeleteConfirm) {
+      // Obtener la conversación actual antes de eliminar
+      const conversationToDelete = conversations.find(c => c.id === showDeleteConfirm);
+      const currentIndex = filteredConversationsMemo.findIndex(c => c.id === showDeleteConfirm);
+      
+      // Encontrar la conversación anterior en la lista filtrada
+      let previousConversation = null;
+      if (currentIndex > 0) {
+        previousConversation = filteredConversationsMemo[currentIndex - 1];
+      } else if (currentIndex === 0 && filteredConversationsMemo.length > 1) {
+        // Si es la primera, tomar la siguiente
+        previousConversation = filteredConversationsMemo[1];
+      }
+      
+      // Eliminar la conversación del servicio
       conversationService.deleteConversation(showDeleteConfirm);
+      
+      // Recargar lista de conversaciones
       loadConversations();
+      
+      // Si hay conversación anterior, navegar a ella
+      if (previousConversation) {
+        // Pequeño delay para asegurar que la eliminación se ha completado
+        setTimeout(() => {
+          onConversationSelect(previousConversation.id);
+        }, 100);
+      } else {
+        // Si no hay conversación anterior, crear una nueva
+        setTimeout(() => {
+          onNewConversation();
+        }, 100);
+      }
+      
+      // Mostrar notificación de eliminación
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Conversación eliminada',
+          detail: `"${conversationToDelete?.title || 'Sin título'}" ha sido eliminada`,
+          life: 3000
+        });
+      }
+      
       setShowDeleteConfirm(null);
     }
-  };
+  }, [showDeleteConfirm, conversations, filteredConversationsMemo, loadConversations, onConversationSelect, onNewConversation]);
 
   const handleEditConversation = (conversation, event) => {
     event.stopPropagation();
@@ -588,7 +630,7 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
           <>
             {/* Lista de conversaciones */}
             <div className="conversation-list">
-              {filteredConversations.map((conversation) => (
+              {filteredConversationsMemo.map((conversation) => (
                 <div
                   key={conversation.id}
                   className={`conversation-item ${conversation.id === currentConversationId ? 'active' : ''}`}
@@ -669,7 +711,7 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
                 </div>
               ))}
 
-              {filteredConversations.length === 0 && (
+              {filteredConversationsMemo.length === 0 && (
                 <div style={{
                   textAlign: 'center',
                   color: themeColors.textSecondary,
