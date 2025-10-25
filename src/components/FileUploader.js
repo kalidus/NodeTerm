@@ -10,7 +10,8 @@ const FileUploader = ({
   onFileRemoved, 
   attachedFiles = [], 
   maxFiles = 5,
-  disabled = false 
+  disabled = false,
+  expandUpload = true
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -178,61 +179,63 @@ const FileUploader = ({
   return (
     <div style={{ width: '100%' }}>
       {/* Área de drop */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={openFileSelector}
-        style={{
-          border: `2px dashed ${isDragOver ? themeColors.primaryColor : themeColors.borderColor}`,
-          borderRadius: '8px',
-          padding: '1.5rem',
-          textAlign: 'center',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: isDragOver 
-            ? `${themeColors.primaryColor}10` 
-            : themeColors.cardBackground,
-          transition: 'all 0.2s ease',
-          opacity: disabled ? 0.5 : 1,
-          marginBottom: attachedFiles.length > 0 ? '1rem' : '0'
-        }}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.txt,.doc,.docx,.csv,.json,.xml,.rtf,.odt,.jpg,.jpeg,.png,.gif,.webp,.svg"
-          onChange={handleFileSelect}
-          style={{ display: 'none' }}
-          disabled={disabled}
-        />
+      {expandUpload && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={openFileSelector}
+          style={{
+            border: `2px dashed ${isDragOver ? themeColors.primaryColor : themeColors.borderColor}`,
+            borderRadius: '8px',
+            padding: '1.5rem',
+            textAlign: 'center',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            backgroundColor: isDragOver 
+              ? `${themeColors.primaryColor}10` 
+              : themeColors.cardBackground,
+            transition: 'all 0.2s ease',
+            opacity: disabled ? 0.5 : 1,
+            marginBottom: attachedFiles.length > 0 ? '1rem' : '0'
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.txt,.doc,.docx,.csv,.json,.xml,.rtf,.odt,.jpg,.jpeg,.png,.gif,.webp,.svg"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+            disabled={disabled}
+          />
 
-        {isProcessing ? (
-          <div>
-            <i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
-            <p style={{ margin: '0.5rem 0', color: themeColors.textPrimary }}>
-              Procesando {processingFile}...
-            </p>
-            <ProgressBar 
-              value={processingProgress} 
-              style={{ width: '100%', height: '0.5rem' }}
-            />
-          </div>
-        ) : (
-          <div>
-            <i className="pi pi-cloud-upload" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
-            <p style={{ margin: '0.5rem 0', color: themeColors.textPrimary, fontWeight: '500' }}>
-              Arrastra archivos aquí o haz clic para seleccionar
-            </p>
-            <p style={{ margin: '0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
-              PDF, TXT, DOC, DOCX, CSV, JSON, XML, RTF, ODT, imágenes (JPG, PNG, GIF, WebP, SVG)
-            </p>
-            <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem' }}>
-              Máximo {maxFiles} archivos • {attachedFiles.length}/{maxFiles} utilizados
-            </p>
-          </div>
-        )}
-      </div>
+          {isProcessing ? (
+            <div>
+              <i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+              <p style={{ margin: '0.5rem 0', color: themeColors.textPrimary }}>
+                Procesando {processingFile}...
+              </p>
+              <ProgressBar 
+                value={processingProgress} 
+                style={{ width: '100%', height: '0.5rem' }}
+              />
+            </div>
+          ) : (
+            <div>
+              <i className="pi pi-cloud-upload" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+              <p style={{ margin: '0.5rem 0', color: themeColors.textPrimary, fontWeight: '500' }}>
+                Arrastra archivos aquí o haz clic para seleccionar
+              </p>
+              <p style={{ margin: '0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
+                PDF, TXT, DOC, DOCX, CSV, JSON, XML, RTF, ODT, imágenes (JPG, PNG, GIF, WebP, SVG)
+              </p>
+              <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem' }}>
+                Máximo {maxFiles} archivos • {attachedFiles.length}/{maxFiles} utilizados
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Lista de archivos adjuntos */}
       {attachedFiles.length > 0 && (
