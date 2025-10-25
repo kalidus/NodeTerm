@@ -774,23 +774,57 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     
     let processed = content;
     
-    // Mejorar encabezados con emojis y formato
-    processed = processed.replace(/^#{1,6}\s*(.+)$/gm, (match, text) => {
-      const level = match.match(/^#+/)[0].length;
+    // Mejorar encabezados de nivel 1 con separadores y emojis
+    processed = processed.replace(/^#{1}\s*(.+)$/gm, (match, text) => {
+      const cleanText = text.trim();
+      // Separador superior para H1
+      return `---\n# ${cleanText}\n---`;
+    });
+    
+    // Mejorar encabezados de nivel 2 con numeración y iconos
+    let h2Counter = 0;
+    processed = processed.replace(/^#{2}\s*(.+)$/gm, (match, text) => {
+      h2Counter++;
       const cleanText = text.trim();
       
-      // Añadir emojis a encabezados comunes
-      if (cleanText.toLowerCase().includes('versión') || cleanText.toLowerCase().includes('version')) {
-        return match.replace(cleanText, `✨ ${cleanText}`);
-      }
-      if (cleanText.toLowerCase().includes('qué hace') || cleanText.toLowerCase().includes('what it does')) {
-        return match.replace(cleanText, `✅ ${cleanText}`);
-      }
-      if (cleanText.toLowerCase().includes('ejemplo') || cleanText.toLowerCase().includes('example')) {
-        return match.replace(cleanText, `📝 ${cleanText}`);
+      // Iconos según el contenido
+      let icon = '📌';
+      if (cleanText.toLowerCase().includes('características') || cleanText.toLowerCase().includes('features')) {
+        icon = '⭐';
+      } else if (cleanText.toLowerCase().includes('ventajas') || cleanText.toLowerCase().includes('benefits')) {
+        icon = '✨';
+      } else if (cleanText.toLowerCase().includes('requisitos') || cleanText.toLowerCase().includes('requirements')) {
+        icon = '📋';
+      } else if (cleanText.toLowerCase().includes('instalación') || cleanText.toLowerCase().includes('installation')) {
+        icon = '🔧';
+      } else if (cleanText.toLowerCase().includes('cómo') || cleanText.toLowerCase().includes('how')) {
+        icon = '❓';
+      } else if (cleanText.toLowerCase().includes('ejemplo') || cleanText.toLowerCase().includes('example')) {
+        icon = '📝';
+      } else if (cleanText.toLowerCase().includes('solución') || cleanText.toLowerCase().includes('solution')) {
+        icon = '💡';
+      } else if (cleanText.toLowerCase().includes('por qué') || cleanText.toLowerCase().includes('why')) {
+        icon = '🤔';
       }
       
-      return match;
+      return `## ${icon} ${h2Counter}. ${cleanText}`;
+    });
+    
+    // Mejorar encabezados de nivel 3 con iconos adicionales
+    processed = processed.replace(/^#{3}\s*(.+)$/gm, (match, text) => {
+      const cleanText = text.trim();
+      
+      // Iconos para subsecciones
+      let icon = '◆';
+      if (cleanText.toLowerCase().includes('ventaja') || cleanText.toLowerCase().includes('benefit')) {
+        icon = '✓';
+      } else if (cleanText.toLowerCase().includes('tipo') || cleanText.toLowerCase().includes('type')) {
+        icon = '▶';
+      } else if (cleanText.toLowerCase().includes('uso') || cleanText.toLowerCase().includes('usage')) {
+        icon = '▸';
+      }
+      
+      return `### ${icon} ${cleanText}`;
     });
     
     // Mejorar listas con mejor espaciado
@@ -1398,163 +1432,154 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
           /* Estilos ultra compactos y profesionales para el contenido markdown */
           .ai-md {
-            font-size: 0.9rem !important;
-            line-height: 1.35 !important;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
             max-width: 100% !important;
             word-wrap: break-word !important;
           }
 
           .ai-md p {
-            margin: 0 !important;
+            margin: 0 0 0.8rem 0 !important;
             padding: 0 !important;
-            line-height: 1.35 !important;
+            line-height: 1.7 !important;
             color: ${themeColors.textPrimary} !important;
             text-align: left !important;
           }
 
           /* Agregar espacio solo entre párrafos separados por saltos de línea */
           .ai-md p + p {
-            margin-top: 0.5rem !important;
+            margin-top: 0 !important;
           }
 
           .ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, .ai-md h5, .ai-md h6 {
-            margin: 0.5rem 0 0.3rem 0 !important;
-            line-height: 1.2 !important;
+            margin: 1rem 0 0.6rem 0 !important;
+            line-height: 1.3 !important;
             color: ${themeColors.textPrimary} !important;
             font-weight: 600 !important;
             text-align: left !important;
           }
 
-          .ai-md h1 { font-size: 1.2rem !important; }
-          .ai-md h2 { font-size: 1.1rem !important; }
-          .ai-md h3 { font-size: 1.05rem !important; }
-          .ai-md h4, .ai-md h5, .ai-md h6 { font-size: 1rem !important; }
+          .ai-md h1 { 
+            font-size: 1.3rem !important; 
+            margin-top: 0 !important;
+            margin-bottom: 1rem !important;
+            border-top: 1px solid rgba(255,255,255,0.15) !important;
+            border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+            padding: 0.6rem 0 !important;
+            text-align: center !important;
+          }
+          
+          .ai-md h2 { 
+            font-size: 1.15rem !important; 
+            margin-top: 1.2rem !important;
+            margin-bottom: 0.6rem !important;
+            border-left: 3px solid #58a6ff !important;
+            padding-left: 0.8rem !important;
+            background: rgba(88, 166, 255, 0.05) !important;
+            padding-right: 0.6rem !important;
+            padding-top: 0.4rem !important;
+            padding-bottom: 0.4rem !important;
+            border-radius: 0 4px 4px 0 !important;
+          }
+
+          .ai-md h2:not(:first-child) {
+            border-top: 1px solid rgba(255,255,255,0.08) !important;
+            padding-top: 0.8rem !important;
+            margin-top: 1.5rem !important;
+          }
+
+          .ai-md h3 { 
+            font-size: 1.05rem !important; 
+            margin-top: 0.8rem !important;
+            border-left: 2px solid rgba(255,255,255,0.2) !important;
+            padding-left: 0.6rem !important;
+          }
+          
+          .ai-md h4, .ai-md h5, .ai-md h6 { 
+            font-size: 1rem !important;
+            margin-top: 0.6rem !important;
+          }
 
           .ai-md ul, .ai-md ol {
-            margin: 0.3rem 0 !important;
-            padding-left: 1.2rem !important;
+            margin: 0.6rem 0 0.8rem 0 !important;
+            padding-left: 1.5rem !important;
+            background: rgba(255, 255, 255, 0.01) !important;
+            border-left: 2px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 0.5rem 0.8rem 0.5rem 1.5rem !important;
+            border-radius: 4px !important;
           }
 
           .ai-md li {
-            margin: 0 !important;
-            padding: 0.08rem 0 !important;
-            line-height: 1.35 !important;
+            margin: 0.25rem 0 !important;
+            padding: 0.1rem 0 !important;
+            line-height: 1.6 !important;
             color: ${themeColors.textPrimary} !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+            padding-bottom: 0.15rem !important;
+            font-size: 0.95rem !important;
+          }
+
+          .ai-md li:last-child {
+            border-bottom: none !important;
           }
 
           .ai-md li::marker {
-            color: ${themeColors.primaryColor} !important;
-            font-size: 0.85rem !important;
+            color: #58a6ff !important;
+            font-size: 0.9rem !important;
           }
 
           .ai-md blockquote {
-            margin: 0.4rem 0 !important;
-            padding: 0.4rem 0.8rem !important;
-            border-left: 2px solid ${themeColors.primaryColor} !important;
-            background: rgba(255,255,255,0.02) !important;
-            border-radius: 0 4px 4px 0 !important;
+            margin: 1rem 0 !important;
+            padding: 1rem 1.2rem !important;
+            border-left: 4px solid #58a6ff !important;
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.08) 0%, rgba(88, 166, 255, 0.03) 100%) !important;
+            border-radius: 0 8px 8px 0 !important;
             font-style: italic !important;
-            color: ${themeColors.textSecondary} !important;
-            font-size: 0.85rem !important;
+            color: rgba(255,255,255,0.85) !important;
+            font-size: 0.9rem !important;
+            border: 1px solid rgba(88, 166, 255, 0.2) !important;
+          }
+
+          .ai-md blockquote p {
+            margin: 0 !important;
+            color: rgba(255,255,255,0.85) !important;
           }
 
           .ai-md pre {
-            margin: 0.4rem 0 !important;
-            padding: 0.6rem !important;
-            background: rgba(0,0,0,0.15) !important;
-            border-radius: 4px !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            overflow-x: auto !important;
-            line-height: 1.3 !important;
+            margin: 0.8rem 0 !important;
+            padding: 0.8rem 1rem !important;
+            background: rgba(0,0,0,0.3) !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(255,255,255,0.15) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.4 !important;
           }
 
-          .ai-md code {
-            padding: 0.15rem 0.3rem !important;
-            font-size: 0.8em !important;
-            background: rgba(255,255,255,0.1) !important;
-            border-radius: 2px !important;
-            color: ${themeColors.textPrimary} !important;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
-          }
-
-          .ai-md pre code {
-            background: transparent !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            font-size: 0.8rem !important;
-            line-height: 1.3 !important;
+          .ai-md code:not(pre code) {
+            background: rgba(88, 166, 255, 0.1) !important;
+            border: 1px solid rgba(88, 166, 255, 0.2) !important;
+            padding: 0.15rem 0.35rem !important;
+            border-radius: 3px !important;
+            font-size: 0.85em !important;
+            color: #58a6ff !important;
+            font-weight: 500 !important;
           }
 
           .ai-md strong, .ai-md b {
-            color: ${themeColors.textPrimary} !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
+            color: rgba(255, 255, 255, 0.95) !important;
           }
 
           .ai-md em, .ai-md i {
-            color: ${themeColors.textSecondary} !important;
             font-style: italic !important;
+            color: rgba(255, 255, 255, 0.9) !important;
           }
 
-          .ai-md a {
-            color: ${themeColors.primaryColor} !important;
-            text-decoration: none !important;
-            border-bottom: 1px solid transparent !important;
-            transition: all 0.2s ease !important;
-          }
-
-          .ai-md a:hover {
-            border-bottom-color: ${themeColors.primaryColor} !important;
-            opacity: 0.8 !important;
-          }
-
-          .ai-md table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            margin: 0.4rem 0 !important;
-            background: rgba(255,255,255,0.02) !important;
-            border-radius: 4px !important;
-            overflow: hidden !important;
-            font-size: 0.8rem !important;
-          }
-
-          .ai-md th, .ai-md td {
-            padding: 0.3rem 0.5rem !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            text-align: left !important;
-          }
-
-          .ai-md th {
-            background: rgba(255,255,255,0.05) !important;
-            font-weight: 600 !important;
-            color: ${themeColors.textPrimary} !important;
-          }
-
-          .ai-md td {
-            color: ${themeColors.textSecondary} !important;
-          }
-
-          /* Espaciado mejorado entre diferentes tipos de elementos */
-          .ai-md p + ul, .ai-md p + ol {
-            margin-top: 0.3rem !important;
-          }
-
-          .ai-md ul + p, .ai-md ol + p {
-            margin-top: 0.4rem !important;
-          }
-
-          .ai-md h1 + p, .ai-md h2 + p, .ai-md h3 + p,
-          .ai-md h4 + p, .ai-md h5 + p, .ai-md h6 + p {
-            margin-top: 0.2rem !important;
-          }
-
-          .ai-md h1 + ul, .ai-md h2 + ul, .ai-md h3 + ul,
-          .ai-md h4 + ul, .ai-md h5 + ul, .ai-md h6 + ul {
-            margin-top: 0.3rem !important;
-          }
-
-          .ai-md ul + ul, .ai-md ol + ol,
-          .ai-md ul + ol, .ai-md ol + ul {
-            margin-top: 0.3rem !important;
+          .ai-md hr {
+            border: none !important;
+            height: 1px !important;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent) !important;
+            margin: 1rem 0 !important;
           }
         `}
       </style>
