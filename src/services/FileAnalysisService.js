@@ -20,8 +20,17 @@ class FileAnalysisService {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { type: 'docx', processor: 'processDocxFile' },
       'application/vnd.ms-word.document.macroEnabled.12': { type: 'docm', processor: 'processDocxFile' },
       
+      // PowerPoint
+      'application/vnd.ms-powerpoint': { type: 'ppt', processor: 'processPptFile' },
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': { type: 'pptx', processor: 'processPptxFile' },
+      
+      // Excel
+      'application/vnd.ms-excel': { type: 'xls', processor: 'processXlsFile' },
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { type: 'xlsx', processor: 'processXlsxFile' },
+      
       // Documentos OpenDocument
       'application/vnd.oasis.opendocument.text': { type: 'odt', processor: 'processOdtFile' },
+      'application/vnd.oasis.opendocument.spreadsheet': { type: 'ods', processor: 'processOdsFile' },
       
       // Rich Text Format
       'application/rtf': { type: 'rtf', processor: 'processRtfFile' },
@@ -31,10 +40,17 @@ class FileAnalysisService {
       'application/xml': { type: 'xml', processor: 'processXMLFile' },
       'text/xml': { type: 'xml', processor: 'processXMLFile' },
       
+      // HTML
+      'text/html': { type: 'html', processor: 'processHtmlFile' },
+      'application/xhtml+xml': { type: 'html', processor: 'processHtmlFile' },
+      
+      // Markdown
+      'text/markdown': { type: 'markdown', processor: 'processMarkdownFile' },
+      'text/x-markdown': { type: 'markdown', processor: 'processMarkdownFile' },
+      
       // Hojas de cálculo
       'text/csv': { type: 'csv', processor: 'processCSVFile' },
       'application/csv': { type: 'csv', processor: 'processCSVFile' },
-      'application/vnd.ms-excel': { type: 'xls', processor: 'processCSVFile' }, // Fallback a CSV para hojas
       
       // JSON
       'application/json': { type: 'json', processor: 'processJSONFile' },
@@ -55,9 +71,18 @@ class FileAnalysisService {
       'doc': 'application/msword',
       'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'docm': 'application/vnd.ms-word.document.macroEnabled.12',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'odt': 'application/vnd.oasis.opendocument.text',
+      'ods': 'application/vnd.oasis.opendocument.spreadsheet',
       'rtf': 'application/rtf',
       'xml': 'application/xml',
+      'html': 'text/html',
+      'htm': 'text/html',
+      'md': 'text/markdown',
+      'markdown': 'text/markdown',
       'csv': 'text/csv',
       'json': 'application/json',
       'jpg': 'image/jpeg',
@@ -254,13 +279,13 @@ class FileAnalysisService {
       
       // Verificar que es un ZIP válido (comienza con PK)
       if (uint8Array[0] !== 0x50 || uint8Array[1] !== 0x4B) {
-        return {
+      return {
           text: '[Archivo DOCX detectado pero no es un ZIP válido]',
-          isDocx: true,
-          size: file.size,
+        isDocx: true,
+        size: file.size,
           extracted: false,
           note: 'El archivo DOCX no tiene formato ZIP válido'
-        };
+      };
       }
 
       // Usar fallback para extraer contenido del ZIP
@@ -644,83 +669,83 @@ class FileAnalysisService {
         try {
           const xmlText = e.target.result;
           
-          // Parser XML del navegador
           const parser = new DOMParser();
           const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
           
-          // Verificar si hay errores de parsing
           const parseError = xmlDoc.getElementsByTagName('parsererror');
-          if (parseError.length > 0) {
-            // Si hay error, intentar extraer texto de todas formas
-            const text = xmlText
+          const isValid = parseError.length === 0;
+          
+          let cleanText = '';
+          let metadata = {
+            rootElement: '',
+            nodeCount: 0,
+            elements: [],
+            attributes: []
+          };
+          
+          if (isValid) {
+          const rootElement = xmlDoc.documentElement;
+            metadata.rootElement = rootElement.tagName;
+            metadata.nodeCount = this.countXMLNodes(rootElement);
+            
+            // Extraer contenido de atributos como texto legible
+            cleanText = this.extractXMLAttributesAsText(rootElement);
+            
+            if (cleanText.length < 50) {
+              // Si no hay contenido de atributos, intentar extraer texto
+              cleanText = xmlText
+                .replace(/<\?xml[^?]*\?>/g, '')
+                .replace(/<!--[\s\S]*?-->/g, '')
+                .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&quot;/g, '"')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&apos;/g, "'")
+                .replace(/&#(\d+);/g, (match, code) => String.fromCharCode(parseInt(code)))
+                .replace(/&#x([0-9a-f]+);/gi, (match, code) => String.fromCharCode(parseInt(code, 16)))
+                .replace(/\s+/g, ' ')
+                .trim();
+            }
+            
+            metadata.elements = this.extractXMLElementsAdvanced(rootElement);
+            metadata.attributes = this.extractXMLAttributesAdvanced(rootElement);
+          } else {
+            // Fallback: texto limpio si hay error de parsing
+            cleanText = xmlText
               .replace(/<\?xml[^?]*\?>/g, '')
               .replace(/<!--[\s\S]*?-->/g, '')
-              .replace(/<[^>]*>/g, ' ')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&apos;/g, "'")
               .replace(/\s+/g, ' ')
               .trim();
-            
-            if (text.length > 0) {
-              resolve({
-                text: text,
-                parsed: null,
-                isValid: false,
-                error: parseError[0].textContent,
-                note: 'XML con formato incompleto pero se extrajo contenido',
-                size: file.size,
-                nodeCount: (xmlText.match(/<[^/][^>]*>/g) || []).length,
-                characterCount: text.length
-              });
-            } else {
-              throw new Error('XML no válido: ' + parseError[0].textContent);
-            }
-            return;
           }
           
-          // Extraer información del XML
-          const rootElement = xmlDoc.documentElement;
-          
-          // Extraer todo el texto sin importar namespaces
-          const allText = this.extractAllTextFromXML(rootElement);
-          
-          // Extraer elementos (incluyendo con namespaces)
-          const elementInfo = this.extractXMLElementsAdvanced(rootElement);
-          const attributes = this.extractXMLAttributesAdvanced(rootElement);
+          // Garantizar que siempre hay contenido
+          if (cleanText.length < 20) {
+            cleanText = xmlText.substring(0, 500);
+          }
           
           resolve({
-            text: xmlText,
-            plainText: allText, // Texto extraído sin etiquetas
-            parsed: this.xmlToObject(rootElement),
-            isValid: true,
-            rootElement: rootElement.tagName,
-            elements: elementInfo,
-            attributes: attributes,
+            text: cleanText,
+            plainText: cleanText,
+            xmlContent: xmlText,
+            parsed: isValid ? this.xmlToObject(xmlDoc.documentElement) : null,
+            isValid: isValid,
+            ...metadata,
             size: file.size,
-            nodeCount: this.countXMLNodes(rootElement),
-            characterCount: allText.length
+            characterCount: cleanText.length,
+            note: isValid ? 'XML válido' : 'XML con errores de parsing'
           });
+          
         } catch (error) {
-          // Fallback: intentar extraer solo el texto del XML
-          try {
-            const xmlText = e.target.result;
-            const text = xmlText
-              .replace(/<\?xml[^?]*\?>/g, '')
-              .replace(/<!--[\s\S]*?-->/g, '')
-              .replace(/<[^>]*>/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-            
-            resolve({
-              text: xmlText,
-              plainText: text,
-              parsed: null,
-              isValid: false,
-              error: error.message,
-              note: 'XML parseado como texto plano',
-              characterCount: text.length
-            });
-          } catch (fallbackError) {
-            reject(new Error('Error leyendo archivo XML: ' + fallbackError.message));
-          }
+          console.error('Error procesando XML:', error);
+          reject(new Error('Error procesando XML: ' + error.message));
         }
       };
       reader.onerror = () => reject(new Error('Error leyendo archivo XML'));
@@ -887,13 +912,13 @@ class FileAnalysisService {
       
       // Verificar que es un ZIP válido (comienza con PK)
       if (uint8Array[0] !== 0x50 || uint8Array[1] !== 0x4B) {
-        return {
+      return {
           text: '[Archivo ODT detectado pero no es un ZIP válido]',
-          isOdt: true,
-          size: file.size,
+        isOdt: true,
+        size: file.size,
           extracted: false,
           note: 'El archivo ODT no tiene formato ZIP válido'
-        };
+      };
       }
 
       // Usar fallback para extraer contenido del ZIP
@@ -992,6 +1017,52 @@ class FileAnalysisService {
         note: 'Error: ' + error.message
       };
     }
+  }
+
+  /**
+   * Extraer atributos del XML como texto legible
+   */
+  extractXMLAttributesAsText(element, depth = 0, maxDepth = 20) {
+    if (depth > maxDepth) return '';
+    
+    let text = '';
+    const indent = '  '.repeat(depth);
+    
+    // Extraer información principal del elemento
+    const nodeName = element.getAttribute('Name') || element.tagName;
+    const nodeType = element.getAttribute('Type') || '';
+    const descr = element.getAttribute('Descr') || '';
+    
+    // Crear línea descriptiva
+    let line = `${indent}${element.tagName}`;
+    if (nodeName) line += `: ${nodeName}`;
+    if (nodeType) line += ` [${nodeType}]`;
+    text += line + '\n';
+    
+    // Extraer atributos importantes (máximo 15 para no saturar)
+    const importantAttrs = [
+      'Username', 'Hostname', 'Protocol', 'Port', 
+      'Domain', 'Panel', 'Descr', 'Id',
+      'RenderingEngine', 'Resolution', 'Colors',
+      'RedirectDiskDrives', 'UseCredSsp', 'ConnectToConsole'
+    ];
+    
+    let attrCount = 0;
+    for (const attr of importantAttrs) {
+      const value = element.getAttribute(attr);
+      if (value && value.trim() && attrCount < 10) {
+        text += `${indent}  • ${attr}: ${value}\n`;
+        attrCount++;
+      }
+    }
+    
+    // Procesar nodos hijos
+    for (let i = 0; i < element.children.length && depth < maxDepth; i++) {
+      const child = element.children[i];
+      text += this.extractXMLAttributesAsText(child, depth + 1, maxDepth);
+    }
+    
+    return text;
   }
 
   /**
@@ -1254,6 +1325,92 @@ class FileAnalysisService {
           }
         } else {
           aiContent += `**ODT detectado:**\n`;
+        aiContent += `📄 ${content.note}\n`;
+        if (content.error) {
+          aiContent += `⚠️ Error: ${content.error}\n`;
+          }
+        }
+        break;
+        
+      case 'ppt':
+        aiContent += `**PowerPoint (.ppt) detectado:**\n`;
+        aiContent += `📄 ${content.note}\n`;
+        if (content.error) {
+          aiContent += `⚠️ Error: ${content.error}\n`;
+        }
+        break;
+        
+      case 'pptx':
+        if (content.text && content.text.trim()) {
+          aiContent += `**Contenido de PowerPoint:**\n`;
+          aiContent += `📊 ${content.metadata?.slides || 1} slides | ${content.metadata?.characters || content.text.length} caracteres extraídos\n\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.text}\n\`\`\`\n`;
+        } else {
+          aiContent += `**PowerPoint (.pptx) detectado:**\n`;
+          aiContent += `📄 ${content.metadata?.note || 'Sin contenido extraíble'}\n`;
+          if (content.metadata?.error) {
+            aiContent += `⚠️ Error: ${content.metadata.error}\n`;
+          }
+        }
+        break;
+        
+      case 'xls':
+        aiContent += `**Excel (.xls) detectado:**\n`;
+        aiContent += `📄 ${content.note}\n`;
+        if (content.error) {
+          aiContent += `⚠️ Error: ${content.error}\n`;
+        }
+        break;
+        
+      case 'xlsx':
+        if (content.extractedText) {
+          aiContent += `**Contenido de Excel:**\n`;
+          aiContent += `📊 ${content.characters} caracteres extraídos\n\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.extractedText}\n\`\`\`\n`;
+        } else {
+          aiContent += `**Excel (.xlsx) detectado:**\n`;
+          aiContent += `📄 ${content.note}\n`;
+          if (content.error) {
+            aiContent += `⚠️ Error: ${content.error}\n`;
+          }
+        }
+        break;
+        
+      case 'ods':
+        if (content.extractedText) {
+          aiContent += `**Contenido de OpenDocument Spreadsheet:**\n`;
+          aiContent += `📊 ${content.characters} caracteres extraídos\n\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.extractedText}\n\`\`\`\n`;
+        } else {
+          aiContent += `**OpenDocument Spreadsheet (.ods) detectado:**\n`;
+          aiContent += `📄 ${content.note}\n`;
+          if (content.error) {
+            aiContent += `⚠️ Error: ${content.error}\n`;
+          }
+        }
+        break;
+        
+      case 'html':
+        if (content.extractedText) {
+          aiContent += `**Contenido HTML:**\n`;
+          aiContent += `📊 ${content.lines} líneas | ${content.words} palabras | ${content.characters} caracteres\n\n`;
+          aiContent += `**Texto extraído:**\n\`\`\`\n${content.extractedText}\n\`\`\`\n`;
+        } else {
+          aiContent += `**HTML detectado:**\n`;
+          aiContent += `📄 ${content.note}\n`;
+          if (content.error) {
+            aiContent += `⚠️ Error: ${content.error}\n`;
+          }
+        }
+        break;
+        
+      case 'markdown':
+        if (content.extractedText) {
+          aiContent += `**Contenido Markdown:**\n`;
+          aiContent += `📊 ${content.lines} líneas | ${content.words} palabras | ${content.characters} caracteres\n\n`;
+          aiContent += `**Contenido:**\n\`\`\`\n${content.extractedText}\n\`\`\`\n`;
+        } else {
+          aiContent += `**Markdown detectado:**\n`;
           aiContent += `📄 ${content.note}\n`;
           if (content.error) {
             aiContent += `⚠️ Error: ${content.error}\n`;
@@ -1266,6 +1423,442 @@ class FileAnalysisService {
     }
     
     return aiContent;
+  }
+
+  /**
+   * Procesar archivo PPT (PowerPoint antiguo)
+   */
+  async processPptFile(file) {
+    try {
+      // PPT es un formato binario complejo, por ahora solo información básica
+      return {
+        type: 'ppt',
+        text: `[Archivo PowerPoint (.ppt) detectado - ${file.name}]\n\nLos archivos PPT son formatos binarios complejos que requieren procesamiento especializado. Para análisis completo, se recomienda convertir a PPTX o exportar como texto.`,
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size,
+          note: 'Formato PPT requiere conversión para análisis completo'
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando PPT:', error);
+      return {
+        type: 'ppt',
+        text: `[Error procesando archivo PPT: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Procesar archivo PPTX (PowerPoint moderno)
+   */
+  async processPptxFile(file) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      console.log('PPTX: Iniciando procesamiento del archivo');
+      
+      // Buscar todos los slides disponibles
+      const slideFiles = this.findAllFilesInZip(uint8Array, 'ppt/slides/slide');
+      console.log('PPTX: Slides encontrados:', slideFiles.length);
+      
+      if (slideFiles.length === 0) {
+        // Intentar buscar en otra ubicación
+        const altSlideFiles = this.findAllFilesInZip(uint8Array, 'slides/slide');
+        console.log('PPTX: Slides alternativos encontrados:', altSlideFiles.length);
+        
+        if (altSlideFiles.length === 0) {
+          throw new Error('No se encontraron slides en el archivo PPTX');
+        }
+        
+        // Usar slides alternativos
+        slideFiles.push(...altSlideFiles);
+      }
+      
+      // Procesar todos los slides y extraer texto
+      let allText = '';
+      let slideCount = 0;
+      
+      for (let i = 0; i < Math.min(slideFiles.length, 10); i++) {
+        try {
+          console.log(`PPTX: Procesando slide ${i + 1}`);
+          const slideContent = this.extractFileFromZip(uint8Array, slideFiles[i]);
+          console.log(`PPTX: Slide ${i + 1} extraído, tamaño:`, slideContent.length);
+          
+          const slideText = this.extractTextFromPptxSlide(slideContent);
+          console.log(`PPTX: Slide ${i + 1} texto extraído:`, slideText.metadata?.extractedText?.length || 0, 'caracteres');
+          
+          if (slideText && slideText.metadata && slideText.metadata.extractedText && slideText.metadata.extractedText.trim()) {
+            allText += `\n--- Slide ${i + 1} ---\n${slideText.metadata.extractedText}\n`;
+            slideCount++;
+          }
+        } catch (slideError) {
+          console.warn(`Error procesando slide ${i + 1}:`, slideError);
+        }
+      }
+      
+      console.log('PPTX: Total slides procesados:', slideCount);
+      console.log('PPTX: Texto total extraído:', allText.length, 'caracteres');
+      
+      if (!allText.trim()) {
+        throw new Error('No se pudo extraer texto de ningún slide');
+      }
+      
+      return {
+        type: 'pptx',
+        text: allText.trim(),
+        metadata: {
+          extractedText: allText.trim(),
+          characters: allText.length,
+          slides: slideCount,
+          note: `Texto extraído de ${slideCount} slides de PowerPoint`
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando PPTX:', error);
+      return {
+        type: 'pptx',
+        text: `[Error procesando archivo PPTX: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Extraer texto de un slide de PPTX
+   */
+  extractTextFromPptxSlide(slideXml) {
+    try {
+      // slideXml ya es un string desde extractFileFromZip
+      const xmlText = slideXml;
+      console.log('PPTX Slide: XML length:', xmlText.length);
+      
+      let extractedText = '';
+      
+      // Método 1: Extraer texto de elementos a:t (texto en PowerPoint)
+      const aTextMatches = xmlText.match(/<a:t[^>]*>([^<]*)<\/a:t>/g);
+      console.log('PPTX Slide: a:t matches:', aTextMatches?.length || 0);
+      if (aTextMatches && aTextMatches.length > 0) {
+        extractedText = aTextMatches
+          .map(match => match.replace(/<a:t[^>]*>([^<]*)<\/a:t>/, '$1'))
+          .join(' ')
+          .trim();
+      }
+      
+      // Método 2: Si no hay a:t, buscar elementos t: (texto genérico)
+      if (!extractedText) {
+        const tMatches = xmlText.match(/<t[^>]*>([^<]*)<\/t>/g);
+        console.log('PPTX Slide: t matches:', tMatches?.length || 0);
+        if (tMatches && tMatches.length > 0) {
+          extractedText = tMatches
+            .map(match => match.replace(/<t[^>]*>([^<]*)<\/t>/, '$1'))
+            .join(' ')
+            .trim();
+        }
+      }
+      
+      // Método 3: Buscar elementos p: (párrafos)
+      if (!extractedText) {
+        const pMatches = xmlText.match(/<p[^>]*>([^<]*)<\/p>/g);
+        console.log('PPTX Slide: p matches:', pMatches?.length || 0);
+        if (pMatches && pMatches.length > 0) {
+          extractedText = pMatches
+            .map(match => match.replace(/<p[^>]*>([^<]*)<\/p>/, '$1'))
+            .join(' ')
+            .trim();
+        }
+      }
+      
+      // Método 4: Extraer texto de cualquier elemento que contenga texto
+      if (!extractedText) {
+        const allTextMatches = xmlText.match(/<[^>]*>([^<]+)<\/[^>]*>/g);
+        console.log('PPTX Slide: all text matches:', allTextMatches?.length || 0);
+        if (allTextMatches && allTextMatches.length > 0) {
+          extractedText = allTextMatches
+            .map(match => match.replace(/<[^>]*>([^<]+)<\/[^>]*>/, '$1'))
+            .filter(text => text.trim().length > 0)
+            .join(' ')
+            .trim();
+        }
+      }
+      
+      // Método 5: Fallback - extraer todo el texto entre tags
+      if (!extractedText) {
+        extractedText = xmlText
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+      
+      console.log('PPTX Slide: Texto extraído:', extractedText.length, 'caracteres');
+      
+      return {
+        type: 'pptx',
+        text: extractedText || '[Slide de PowerPoint sin texto extraíble]',
+        metadata: {
+          extractedText: extractedText,
+          characters: extractedText.length,
+          note: 'Texto extraído de slide de PowerPoint'
+        }
+      };
+    } catch (error) {
+      console.error('PPTX Slide: Error:', error);
+      return {
+        type: 'pptx',
+        text: `[Error extrayendo texto del slide: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Procesar archivo XLS (Excel antiguo)
+   */
+  async processXlsFile(file) {
+    try {
+      // XLS es un formato binario complejo, por ahora solo información básica
+      return {
+        type: 'xls',
+        text: `[Archivo Excel (.xls) detectado - ${file.name}]\n\nLos archivos XLS son formatos binarios complejos que requieren procesamiento especializado. Para análisis completo, se recomienda convertir a XLSX o exportar como CSV.`,
+        metadata: {
+          fileName: file.name,
+          fileSize: file.size,
+          note: 'Formato XLS requiere conversión para análisis completo'
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando XLS:', error);
+      return {
+        type: 'xls',
+        text: `[Error procesando archivo XLS: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Procesar archivo XLSX (Excel moderno)
+   */
+  async processXlsxFile(file) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Buscar y extraer sharedStrings.xml del ZIP
+      const sharedStringsXml = this.findFileInZip(uint8Array, 'xl/sharedStrings.xml');
+      if (!sharedStringsXml) {
+        throw new Error('No se encontró sharedStrings.xml en el archivo XLSX');
+      }
+      
+      // Extraer texto del XML
+      const extractedText = this.extractTextFromXlsxSharedStrings(sharedStringsXml);
+      
+      return {
+        type: 'xlsx',
+        text: extractedText || '[Hoja de cálculo sin texto extraíble]',
+        metadata: {
+          extractedText: extractedText,
+          characters: extractedText.length,
+          note: 'Texto extraído de hoja de cálculo Excel'
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando XLSX:', error);
+      return {
+        type: 'xlsx',
+        text: `[Error procesando archivo XLSX: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Extraer texto de sharedStrings.xml de XLSX
+   */
+  extractTextFromXlsxSharedStrings(sharedStringsXml) {
+    try {
+      // Convertir bytes a string
+      const xmlText = new TextDecoder('utf-8').decode(sharedStringsXml);
+      
+      // Extraer texto de elementos <t> (texto en Excel)
+      const textMatches = xmlText.match(/<t[^>]*>([^<]*)<\/t>/g);
+      let extractedText = '';
+      
+      if (textMatches) {
+        extractedText = textMatches
+          .map(match => match.replace(/<t[^>]*>([^<]*)<\/t>/, '$1'))
+          .join(' ')
+          .trim();
+      }
+      
+      return extractedText;
+    } catch (error) {
+      console.error('Error extrayendo texto de XLSX:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Procesar archivo ODS (OpenDocument Spreadsheet)
+   */
+  async processOdsFile(file) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Buscar y extraer content.xml del ZIP
+      const contentXml = this.findFileInZip(uint8Array, 'content.xml');
+      if (!contentXml) {
+        throw new Error('No se encontró content.xml en el archivo ODS');
+      }
+      
+      // Extraer texto del XML
+      const extractedText = this.extractTextFromOdsContent(contentXml);
+      
+      return {
+        type: 'ods',
+        text: extractedText || '[Hoja de cálculo sin texto extraíble]',
+        metadata: {
+          extractedText: extractedText,
+          characters: extractedText.length,
+          note: 'Texto extraído de hoja de cálculo OpenDocument'
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando ODS:', error);
+      return {
+        type: 'ods',
+        text: `[Error procesando archivo ODS: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Extraer texto de content.xml de ODS
+   */
+  extractTextFromOdsContent(contentXml) {
+    try {
+      // Convertir bytes a string
+      const xmlText = new TextDecoder('utf-8').decode(contentXml);
+      
+      // Extraer texto de elementos text:p y text:span
+      const textMatches = xmlText.match(/<text:p[^>]*>([^<]*)<\/text:p>|<text:span[^>]*>([^<]*)<\/text:span>/g);
+      let extractedText = '';
+      
+      if (textMatches) {
+        extractedText = textMatches
+          .map(match => {
+            const pMatch = match.match(/<text:p[^>]*>([^<]*)<\/text:p>/);
+            const spanMatch = match.match(/<text:span[^>]*>([^<]*)<\/text:span>/);
+            return pMatch ? pMatch[1] : (spanMatch ? spanMatch[1] : '');
+          })
+          .join(' ')
+          .trim();
+      }
+      
+      return extractedText;
+    } catch (error) {
+      console.error('Error extrayendo texto de ODS:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Procesar archivo HTML
+   */
+  async processHtmlFile(file) {
+    try {
+      const text = await file.text();
+      
+      // Extraer texto limpio del HTML
+      const cleanText = text
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      return {
+        type: 'html',
+        text: cleanText,
+        metadata: {
+          extractedText: cleanText,
+          lines: cleanText.split('\n').length,
+          words: cleanText.split(/\s+/).filter(word => word.length > 0).length,
+          characters: cleanText.length,
+          note: 'Texto extraído de página HTML'
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando HTML:', error);
+      return {
+        type: 'html',
+        text: `[Error procesando archivo HTML: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Procesar archivo Markdown
+   */
+  async processMarkdownFile(file) {
+    try {
+      const text = await file.text();
+      
+      return {
+        type: 'markdown',
+        text: text,
+        metadata: {
+          extractedText: text,
+          lines: text.split('\n').length,
+          words: text.split(/\s+/).filter(word => word.length > 0).length,
+          characters: text.length,
+          note: 'Contenido Markdown'
+        }
+      };
+    } catch (error) {
+      console.error('Error procesando Markdown:', error);
+      return {
+        type: 'markdown',
+        text: `[Error procesando archivo Markdown: ${error.message}]`,
+        metadata: { error: error.message }
+      };
+    }
+  }
+
+  /**
+   * Buscar todos los archivos en un ZIP que coincidan con un patrón
+   */
+  findAllFilesInZip(uint8Array, pattern) {
+    const patternBytes = new TextEncoder().encode(pattern);
+    const files = [];
+    
+    for (let i = 0; i < uint8Array.length - patternBytes.length; i++) {
+      let matches = true;
+      for (let j = 0; j < patternBytes.length; j++) {
+        if (uint8Array[i + j] !== patternBytes[j]) {
+          matches = false;
+          break;
+        }
+      }
+      
+      if (matches) {
+        // Encontramos el patrón, buscar el inicio del archivo
+        for (let k = i - 30; k >= Math.max(0, i - 100); k--) {
+          if (uint8Array[k] === 0x50 && uint8Array[k + 1] === 0x4B && 
+              uint8Array[k + 2] === 0x03 && uint8Array[k + 3] === 0x04) {
+            files.push(k);
+            break;
+          }
+        }
+      }
+    }
+    
+    return files;
   }
 
   /**
