@@ -10,6 +10,15 @@
   animation: bubble-appear 0.3s ease-out;
   line-height: 1.6;
   font-size: 0.95rem;
+  width: 100%;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* Prevenir que flex expand horizontalmente */
+  min-width: 0;
 }
 
 @keyframes bubble-appear {
@@ -48,6 +57,25 @@
   line-height: 1.7;
   font-size: 0.95rem;
   color: inherit;
+  width: 100%;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box;
+  /* Grid para prevenir expansión horizontal */
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+/* Asegurar que todos los elementos hijos respeten el ancho */
+.ai-md * {
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* EXCEPCIÓN: .ai-codeblock dentro de .ai-md maneja su propio overflow */
+.ai-md .ai-codeblock {
+  max-width: 100% !important;
 }
 
 /* Paragraphs with proper spacing */
@@ -183,11 +211,18 @@
 .ai-codeblock {
   position: relative;
   border-radius: 12px;
-  overflow: hidden;
   border: 1px solid rgba(255,255,255,0.2);
   margin: 1rem 0;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   background: rgba(0,0,0,0.4);
+  /* Contenimiento estricto */
+  width: 100%;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box;
+  display: block;
+  /* Prevenir expansión horizontal */
+  min-width: 0;
 }
 
 /* Indicador de scroll en la parte inferior */
@@ -218,13 +253,19 @@
   background: rgba(255,255,255,0.05);
   border-bottom: 1px solid rgba(255,255,255,0.1);
   font-size: 0.8rem;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 
 .ai-codeblock pre,
 .ai-code-pre {
   margin: 0;
   max-height: 600px;
-  overflow: auto !important;
+  /* SCROLL HORIZONTAL EN EL PRE */
+  overflow-y: auto !important;
+  overflow-x: auto !important;
   padding: 1rem 1.2rem;
   background: rgba(0,0,0,0.4);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
@@ -237,6 +278,10 @@
   /* Forzar scrollbar nativo */
   scrollbar-width: auto;
   scrollbar-color: #666 #333;
+  /* Permitir que se expanda internamente */
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Scroll simple y funcional */
@@ -258,16 +303,40 @@
   background: rgba(255,255,255,0.7);
 }
 
-/* Forzar scroll en todos los casos */
-.ai-codeblock pre {
-  overflow: auto !important;
-  max-height: 600px !important;
-  position: relative;
+/* Código dentro de pre */
+.ai-codeblock code,
+.ai-codeblock pre code {
+  display: block;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  overflow-x: visible;
+  overflow-y: visible;
+  white-space: pre;
+  word-break: normal;
+  word-wrap: normal;
+  box-sizing: border-box;
+  /* Evitar que inline styles rompan */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* CRÍTICO: Spans de highlight.js NO deben romper el layout */
+.ai-codeblock code span,
+.ai-codeblock pre code span {
+  display: inline !important;
+  white-space: pre !important;
+  word-wrap: normal !important;
+  word-break: normal !important;
+  /* Permitir que el contenido fluya naturalmente sin expandirse */
+  max-width: none !important;
 }
 
 /* Scroll de emergencia si no funciona el anterior */
 .ai-codeblock pre[style*="overflow"] {
   overflow: auto !important;
+  overflow-x: auto !important;
+  max-width: none !important;
 }
 
 /* ChatGPT-like Copy Button */
@@ -319,6 +388,10 @@
   color: #e6edf3;
   background: transparent !important;
   padding: 0;
+  display: block;
+  width: 100%;
+  max-width: 100% !important;
+  overflow-x: visible;
 }
 
 /* Override highlight.js styles for better integration */
@@ -327,10 +400,17 @@
   border-radius: 8px;
   padding: 0.9rem 1rem;
   margin: 0;
-  overflow-x: auto;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.9rem;
   line-height: 1.4;
+  width: 100%;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  display: block;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 /* Syntax highlighting colors */
@@ -343,6 +423,18 @@
 .ai-codeblock .hljs-number { color: #f97583; }
 .ai-codeblock .hljs-function { color: #79b8ff; }
 .ai-codeblock .hljs-title { color: #b392f0; }
+
+/* Asegurar que el código dentro de pre respeta el scroll */
+.ai-codeblock pre code,
+.ai-codeblock code {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto !important;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  box-sizing: border-box;
+}
 
 /* Streaming indicators - Enhanced */
 .ai-streaming-dots {
