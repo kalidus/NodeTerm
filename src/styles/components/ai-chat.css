@@ -49,27 +49,31 @@
 
 /* H2 - TÍTULOS VISTOSOS CON ICONOS Y SEPARADOR */
 .ai-md h2 {
-  font-size: 1.15rem !important;
-  margin: 1.5rem 0 0.6rem 0 !important;
-  font-weight: 700 !important;
+  font-size: 1.35rem !important;
+  margin: 1.8rem 0 1rem 0 !important;
+  font-weight: 800 !important;
   color: #58a6ff !important;
-  border-left: 5px solid #58a6ff !important;
-  padding: 0.7rem 0 0.7rem 1rem !important;
-  background: linear-gradient(90deg, rgba(88, 166, 255, 0.08) 0%, transparent 100%) !important;
+  border-left: 6px solid #58a6ff !important;
+  padding: 1rem 0 1rem 1.2rem !important;
+  background: linear-gradient(90deg, rgba(88, 166, 255, 0.12) 0%, transparent 100%) !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.8rem !important;
+  gap: 1rem !important;
   position: relative !important;
-  border-bottom: 1px solid rgba(88, 166, 255, 0.15) !important;
+  border-bottom: 3px solid #58a6ff !important;
+  letter-spacing: 0.3px !important;
+  min-height: 2rem !important;
+  line-height: 1.4 !important;
 }
 
 /* Iconos por defecto para H2 */
 .ai-md h2::before {
   content: "📌" !important;
-  font-size: 1.2rem !important;
+  font-size: 1.5rem !important;
   display: inline-block !important;
-  min-width: 1.3rem !important;
+  min-width: 1.5rem !important;
   flex-shrink: 0 !important;
+  filter: drop-shadow(0 0 4px rgba(88, 166, 255, 0.3)) !important;
 }
 
 /* Iconos específicos - Primera H2 */
@@ -104,24 +108,27 @@
 
 /* H3 - SUBSECCIONES CON ICONO */
 .ai-md h3 {
-  font-size: 1.02rem !important;
-  margin: 0.9rem 0 0.4rem 0 !important;
+  font-size: 1.15rem !important;
+  margin: 1.2rem 0 0.6rem 0 !important;
   font-weight: 700 !important;
   color: #58a6ff !important;
-  border-left: 4px solid rgba(88, 166, 255, 0.7) !important;
-  padding: 0.4rem 0 0.4rem 0.9rem !important;
+  border-left: 5px solid rgba(88, 166, 255, 0.8) !important;
+  padding: 0.6rem 0 0.6rem 1rem !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.6rem !important;
-  background: rgba(88, 166, 255, 0.03) !important;
+  gap: 0.7rem !important;
+  background: rgba(88, 166, 255, 0.06) !important;
+  border-bottom: 2px solid rgba(88, 166, 255, 0.5) !important;
+  letter-spacing: 0.2px !important;
 }
 
 .ai-md h3::before {
   content: "▸" !important;
-  font-size: 1rem !important;
+  font-size: 1.2rem !important;
   color: #58a6ff !important;
   flex-shrink: 0 !important;
   font-weight: bold !important;
+  filter: drop-shadow(0 0 2px rgba(88, 166, 255, 0.2)) !important;
 }
 
 /* ============================================
@@ -162,7 +169,7 @@
   position: absolute !important;
   left: -1.4rem !important;
   top: 0.3rem !important;
-  font-size: 0.8rem !important;
+  font-size: 0.4rem !important;
   font-weight: bold !important;
 }
 
@@ -184,7 +191,7 @@
 .ai-md ul ul li::before {
   content: "○" !important;
   color: rgba(88, 166, 255, 0.6) !important;
-  font-size: 0.7rem !important;
+  font-size: 0.35rem !important;
   left: -1.1rem !important;
 }
 

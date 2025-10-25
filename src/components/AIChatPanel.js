@@ -1470,29 +1470,80 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
           
           .ai-md h2 { 
-            font-size: 1.15rem !important; 
-            margin-top: 1.2rem !important;
-            margin-bottom: 0.6rem !important;
-            border-left: 3px solid #58a6ff !important;
-            padding-left: 0.8rem !important;
-            background: rgba(88, 166, 255, 0.05) !important;
-            padding-right: 0.6rem !important;
-            padding-top: 0.4rem !important;
-            padding-bottom: 0.4rem !important;
-            border-radius: 0 4px 4px 0 !important;
+            font-size: 1.35rem !important; 
+            margin-top: 1.8rem !important;
+            margin-bottom: 1rem !important;
+            border-left: 6px solid #58a6ff !important;
+            border-bottom: 3px solid #58a6ff !important;
+            padding: 1rem 0 1rem 1.2rem !important;
+            background: linear-gradient(90deg, rgba(88, 166, 255, 0.12) 0%, transparent 100%) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.3px !important;
+            min-height: 2rem !important;
+            line-height: 1.4 !important;
+            position: relative !important;
           }
 
           .ai-md h2:not(:first-child) {
-            border-top: 1px solid rgba(255,255,255,0.08) !important;
-            padding-top: 0.8rem !important;
-            margin-top: 1.5rem !important;
+            border-top: none !important;
+            padding-top: 1rem !important;
+            margin-top: 1.8rem !important;
+          }
+
+          .ai-md h2::before {
+            content: "📌" !important;
+            font-size: 1.5rem !important;
+            display: inline-block !important;
+            min-width: 1.5rem !important;
+            flex-shrink: 0 !important;
+            filter: drop-shadow(0 0 4px rgba(88, 166, 255, 0.3)) !important;
+          }
+
+          .ai-md h2:nth-of-type(2)::before {
+            content: "⭐" !important;
+          }
+
+          .ai-md h2:nth-of-type(3)::before {
+            content: "⚙️" !important;
+          }
+
+          .ai-md h2:nth-of-type(4)::before {
+            content: "💡" !important;
+          }
+
+          .ai-md h2:nth-of-type(5)::before {
+            content: "✨" !important;
+          }
+
+          .ai-md h2:nth-of-type(6)::before {
+            content: "📋" !important;
           }
 
           .ai-md h3 { 
-            font-size: 1.05rem !important; 
-            margin-top: 0.8rem !important;
-            border-left: 2px solid rgba(255,255,255,0.2) !important;
-            padding-left: 0.6rem !important;
+            font-size: 1.15rem !important; 
+            margin-top: 1.2rem !important;
+            margin-bottom: 0.6rem !important;
+            border-left: 5px solid rgba(88, 166, 255, 0.8) !important;
+            border-bottom: 2px solid rgba(88, 166, 255, 0.5) !important;
+            padding: 0.6rem 0 0.6rem 1rem !important;
+            background: rgba(88, 166, 255, 0.06) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.7rem !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.2px !important;
+          }
+
+          .ai-md h3::before {
+            content: "▸" !important;
+            font-size: 1.2rem !important;
+            color: #58a6ff !important;
+            flex-shrink: 0 !important;
+            font-weight: bold !important;
+            filter: drop-shadow(0 0 2px rgba(88, 166, 255, 0.2)) !important;
           }
           
           .ai-md h4, .ai-md h5, .ai-md h6 { 
@@ -1503,24 +1554,42 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           .ai-md ul, .ai-md ol {
             margin: 0.6rem 0 0.8rem 0 !important;
             padding-left: 1.5rem !important;
-            background: rgba(255, 255, 255, 0.01) !important;
-            border-left: 2px solid rgba(255, 255, 255, 0.1) !important;
-            padding: 0.5rem 0.8rem 0.5rem 1.5rem !important;
-            border-radius: 4px !important;
+            background: transparent !important;
+            border: none !important;
           }
 
           .ai-md li {
             margin: 0.25rem 0 !important;
-            padding: 0.1rem 0 !important;
+            padding: 0 !important;
             line-height: 1.6 !important;
             color: ${themeColors.textPrimary} !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
-            padding-bottom: 0.15rem !important;
+            border: none !important;
             font-size: 0.95rem !important;
           }
 
           .ai-md li:last-child {
             border-bottom: none !important;
+          }
+
+          .ai-md ul li {
+            list-style-type: none !important;
+            position: relative !important;
+          }
+
+          .ai-md ul li::before {
+            content: "●" !important;
+            color: #58a6ff !important;
+            position: absolute !important;
+            left: -1.4rem !important;
+            top: 0.3rem !important;
+            font-size: 0.4rem !important;
+            font-weight: bold !important;
+          }
+
+          .ai-md ol li {
+            list-style-type: decimal !important;
+            margin-left: 0 !important;
+            font-size: 0.95rem !important;
           }
 
           .ai-md li::marker {
