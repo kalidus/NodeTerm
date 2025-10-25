@@ -1,309 +1,437 @@
-/* Estilos compactos y profesionales para el chat de IA */
+/* ============================================
+   ESTILOS RADICALES - MARKDOWN DE IA
+   Diseño COMPACTO y PROFESIONAL
+   ============================================ */
 
-/* AI Chat Bubble Styles - ChatGPT-like formatting */
-.ai-bubble {
-  padding: 1.5rem;
-  border-radius: 16px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: pre-wrap;
-  animation: bubble-appear 0.3s ease-out;
-  line-height: 1.6;
-  font-size: 0.95rem;
-  width: 100%;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  overflow-x: hidden !important;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  /* Prevenir que flex expand horizontalmente */
-  min-width: 0;
-}
-
-@keyframes bubble-appear {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.ai-bubble.user {
-  border-radius: 18px;
-  margin-left: auto;
-}
-
-.ai-bubble.assistant {
-  border-radius: 18px;
-  margin-right: auto;
-}
-
-.ai-bubble.system {
-  border-radius: 10px;
-}
-
-/* Ensure full width for assistant messages */
-.ai-bubble.assistant {
-  width: 100%;
-  max-width: 100%;
-}
-
-/* ChatGPT-like Markdown Styling */
 .ai-md {
-  line-height: 1.7;
-  font-size: 0.95rem;
+  line-height: 1.5;
+  font-size: 0.92rem;
   color: inherit;
   width: 100%;
   max-width: 100% !important;
   overflow: hidden !important;
-  overflow-x: hidden !important;
   box-sizing: border-box;
-  /* Grid para prevenir expansión horizontal */
   display: grid;
   grid-template-columns: 1fr;
 }
 
-/* Asegurar que todos los elementos hijos respeten el ancho */
-.ai-md * {
-  max-width: 100% !important;
-  box-sizing: border-box;
+/* ============================================
+   PÁRRAFOS - COMPACTOS
+   ============================================ */
+
+.ai-md p {
+  margin: 0.4rem 0 0.6rem 0 !important;
+  line-height: 1.6 !important;
+  color: inherit !important;
+  padding: 0 !important;
+  font-size: 0.92rem !important;
 }
 
-/* EXCEPCIÓN: .ai-codeblock dentro de .ai-md maneja su propio overflow */
-.ai-md .ai-codeblock {
-  max-width: 100% !important;
+/* ============================================
+   H1 - SEPARADOR VISUAL FUERTE
+   ============================================ */
+
+.ai-md h1 {
+  font-size: 1.3rem !important;
+  margin: 0.8rem 0 0.8rem 0 !important;
+  font-weight: 700 !important;
+  color: #58a6ff !important;
+  text-align: center !important;
+  padding: 0.8rem 0 !important;
+  border-top: 2px solid #58a6ff !important;
+  border-bottom: 2px solid #58a6ff !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  font-size: 1.1rem !important;
 }
 
-/* Paragraphs with proper spacing */
-.ai-md p { 
-  margin: 0 0 1rem 0; 
-  line-height: 1.7;
+/* ============================================
+   H2 - CON ICONO VISIBLE Y BORDE AZUL
+   ============================================ */
+
+.ai-md h2 {
+  font-size: 1.05rem !important;
+  margin: 1rem 0 0.5rem 0 !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  border-left: 4px solid #58a6ff !important;
+  padding: 0.5rem 0 0.5rem 0.8rem !important;
+  background: rgba(88, 166, 255, 0.08) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  position: relative !important;
 }
 
-/* Headers with ChatGPT-like styling */
-.ai-md h1, .ai-md h2, .ai-md h3, .ai-md h4, .ai-md h5, .ai-md h6 {
-  margin: 1.5rem 0 0.8rem 0;
-  font-weight: 700;
-  line-height: 1.3;
-  color: inherit;
+.ai-md h2::before {
+  content: "📌" !important;
+  font-size: 1rem !important;
+  display: inline-block !important;
+  min-width: 1.2rem !important;
 }
 
-.ai-md h1 { 
-  font-size: 1.5rem; 
-  margin-top: 0;
-  border-bottom: 2px solid rgba(255,255,255,0.1);
-  padding-bottom: 0.5rem;
+/* Iconos específicos por tipo de h2 */
+.ai-md h2:has(+ ul):contains("por qué")::before,
+.ai-md h2:contains("ventajas")::before {
+  content: "✨" !important;
 }
 
-.ai-md h2 { 
-  font-size: 1.3rem; 
-  margin-top: 1.8rem;
+.ai-md h2:contains("características")::before {
+  content: "⭐" !important;
 }
 
-.ai-md h3 { 
-  font-size: 1.15rem; 
-  margin-top: 1.5rem;
+.ai-md h2:contains("requisitos")::before {
+  content: "📋" !important;
 }
 
-.ai-md h4 { 
-  font-size: 1.05rem; 
-  margin-top: 1.2rem;
+.ai-md h2:contains("instalación")::before {
+  content: "🔧" !important;
 }
 
-/* Lists with better spacing */
-.ai-md ul, .ai-md ol { 
-  margin: 0.8rem 0 1rem 0;
-  padding-left: 1.5rem;
+.ai-md h2:contains("cómo")::before {
+  content: "❓" !important;
 }
 
-.ai-md li { 
-  margin: 0.4rem 0;
-  line-height: 1.6;
+.ai-md h2:contains("ejemplo")::before {
+  content: "📝" !important;
+}
+
+.ai-md h2:contains("solución")::before {
+  content: "💡" !important;
+}
+
+.ai-md h2:contains("funcionali")::before {
+  content: "⚙️" !important;
+}
+
+.ai-md h2:not(:first-child) {
+  border-top: 1px solid rgba(88, 166, 255, 0.2) !important;
+  margin-top: 1.2rem !important;
+  padding-top: 0.8rem !important;
+}
+
+/* ============================================
+   H3 - SUBSECCIÓN CON ICONO
+   ============================================ */
+
+.ai-md h3 {
+  font-size: 0.98rem !important;
+  margin: 0.8rem 0 0.4rem 0 !important;
+  font-weight: 600 !important;
+  color: #58a6ff !important;
+  border-left: 3px solid rgba(88, 166, 255, 0.6) !important;
+  padding-left: 0.6rem !important;
+  padding: 0.3rem 0 0.3rem 0.6rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+.ai-md h3::before {
+  content: "▶" !important;
+  font-size: 0.7rem !important;
+  color: #58a6ff !important;
+}
+
+/* ============================================
+   LISTAS - COMPACTAS CON ESTILO
+   ============================================ */
+
+.ai-md ul, .ai-md ol {
+  margin: 0.6rem 0 0.8rem 0 !important;
+  padding-left: 2rem !important;
+  background: rgba(88, 166, 255, 0.06) !important;
+  border-left: 3px solid #58a6ff !important;
+  padding: 0.6rem 0.8rem 0.6rem 1.8rem !important;
+  border-radius: 0 4px 4px 0 !important;
+}
+
+.ai-md li {
+  margin: 0.35rem 0 !important;
+  line-height: 1.5 !important;
+  color: inherit !important;
+  padding: 0.2rem 0 !important;
+  font-size: 0.92rem !important;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.05) !important;
+  padding-bottom: 0.3rem !important;
+}
+
+.ai-md li:last-child {
+  border-bottom: none !important;
 }
 
 .ai-md ul li {
-  list-style-type: disc;
+  list-style-type: none !important;
+  position: relative !important;
 }
 
-.ai-md ol li {
-  list-style-type: decimal;
+.ai-md ul li::before {
+  content: "●" !important;
+  color: #58a6ff !important;
+  position: absolute !important;
+  left: -1.3rem !important;
+  top: 0.25rem !important;
+  font-size: 0.8rem !important;
+  font-weight: bold !important;
 }
 
-/* Nested lists */
+/* Listas anidadas */
 .ai-md ul ul, .ai-md ol ol, .ai-md ul ol, .ai-md ol ul {
-  margin: 0.3rem 0;
+  margin: 0.3rem 0 0.3rem 0 !important;
+  padding: 0.4rem 0.6rem 0.4rem 1.3rem !important;
+  background: rgba(88, 166, 255, 0.02) !important;
+  border-left: 2px solid rgba(88, 166, 255, 0.3) !important;
+  padding-left: 1.3rem !important;
+  margin-left: 0 !important;
 }
 
-/* Blockquotes with ChatGPT styling */
-.ai-md blockquote { 
-  border-left: 4px solid rgba(255,255,255,0.4);
-  padding: 1rem 1.5rem;
-  margin: 1.2rem 0;
-  font-style: italic;
-  background: rgba(255,255,255,0.05);
-  border-radius: 0 8px 8px 0;
-  border: 1px solid rgba(255,255,255,0.1);
+.ai-md ul ul li::before {
+  content: "○" !important;
+  color: rgba(88, 166, 255, 0.6) !important;
+  font-size: 0.7rem !important;
+  left: -1rem !important;
+}
+
+/* ============================================
+   BLOCKQUOTES - ESTILO DESTACADO
+   ============================================ */
+
+.ai-md blockquote {
+  border-left: 4px solid #58a6ff !important;
+  padding: 0.8rem 1rem !important;
+  margin: 0.8rem 0 !important;
+  font-style: italic !important;
+  background: rgba(88, 166, 255, 0.1) !important;
+  border-radius: 0 4px 4px 0 !important;
+  border: 1px solid rgba(88, 166, 255, 0.2) !important;
 }
 
 .ai-md blockquote p {
-  margin: 0;
+  margin: 0 !important;
+  line-height: 1.6 !important;
+  color: rgba(255,255,255,0.9) !important;
 }
 
-/* Horizontal rules */
-.ai-md hr { 
-  border: none; 
-  height: 2px; 
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-  margin: 2rem 0; 
-}
-/* ChatGPT-like Tables */
-.ai-table-wrapper { 
-  overflow-x: auto; 
-  margin: 1.2rem 0;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* ============================================
+   SEPARADORES HORIZONTALES
+   ============================================ */
+
+.ai-md hr {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, #58a6ff, transparent) !important;
+  margin: 1rem 0 !important;
+  opacity: 0.5 !important;
 }
 
-.ai-md table { 
-  border-collapse: collapse; 
-  width: 100%; 
-  font-size: 0.9rem; 
-  margin: 0;
-  background: rgba(255,255,255,0.02);
+/* ============================================
+   CÓDIGO
+   ============================================ */
+
+.ai-md code:not(pre code) {
+  background: rgba(88, 166, 255, 0.12) !important;
+  border: 1px solid rgba(88, 166, 255, 0.25) !important;
+  padding: 0.15rem 0.4rem !important;
+  border-radius: 3px !important;
+  font-size: 0.88em !important;
+  color: #58a6ff !important;
+  font-weight: 500 !important;
+  font-family: 'Consolas', 'Monaco', monospace !important;
 }
 
-.ai-md th, .ai-md td { 
-  border: 1px solid rgba(255,255,255,0.1); 
-  padding: 0.8rem 1rem; 
-  text-align: left;
-  line-height: 1.5;
+.ai-md pre {
+  margin: 0.8rem 0 !important;
+  padding: 0.8rem !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(88, 166, 255, 0.15) !important;
+  border-radius: 6px !important;
+  font-size: 0.85rem !important;
+  line-height: 1.4 !important;
+  overflow-x: auto !important;
 }
 
-.ai-md th { 
-  background: rgba(255,255,255,0.08);
-  font-weight: 600;
-  color: inherit;
+/* ============================================
+   FORMATO DE TEXTO
+   ============================================ */
+
+.ai-md strong, .ai-md b {
+  font-weight: 700 !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.ai-md em, .ai-md i {
+  font-style: italic !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.ai-md mark {
+  background: rgba(255, 255, 0, 0.2) !important;
+  padding: 0.1rem 0.3rem !important;
+  border-radius: 3px !important;
+}
+
+/* ============================================
+   ENLACES
+   ============================================ */
+
+.ai-md a {
+  color: #58a6ff !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  border-bottom: 1px solid transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.ai-md a:hover {
+  border-bottom-color: #58a6ff !important;
+}
+
+/* ============================================
+   TABLAS - COMPACTAS
+   ============================================ */
+
+.ai-md table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  font-size: 0.88rem !important;
+  margin: 0.8rem 0 !important;
+  border: 1px solid rgba(88, 166, 255, 0.15) !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+}
+
+.ai-md th, .ai-md td {
+  border: 1px solid rgba(88, 166, 255, 0.1) !important;
+  padding: 0.6rem 0.8rem !important;
+  text-align: left !important;
+  line-height: 1.4 !important;
+}
+
+.ai-md th {
+  background: rgba(88, 166, 255, 0.1) !important;
+  font-weight: 700 !important;
+  color: #58a6ff !important;
 }
 
 .ai-md tr:nth-child(even) {
-  background: rgba(255,255,255,0.02);
+  background: rgba(88, 166, 255, 0.03) !important;
 }
 
-/* ChatGPT-like Inline Code */
-.ai-inline-code {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.9em;
-  font-weight: 500;
-  color: #e6edf3;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+/* ============================================
+   ESPACIADO GLOBAL
+   ============================================ */
+
+.ai-md > *:first-child {
+  margin-top: 0 !important;
 }
+
+.ai-md > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.ai-md h1 + p,
+.ai-md h2 + p,
+.ai-md h3 + p {
+  margin-top: 0.3rem !important;
+}
+
+.ai-md p + ul,
+.ai-md p + ol {
+  margin-top: 0.4rem !important;
+}
+
+/* ============================================
+   BLOQUES DE CÓDIGO - ESTILOS COMPACTOS
+   ============================================ */
 
 /* ChatGPT-like Code Blocks */
 .ai-codeblock {
   position: relative;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.2);
-  margin: 1rem 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  background: rgba(0,0,0,0.4);
-  /* Contenimiento estricto */
+  border-radius: 8px;
+  border: 1px solid rgba(88, 166, 255, 0.2) !important;
+  margin: 0.8rem 0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  background: rgba(0,0,0,0.35) !important;
   width: 100%;
   max-width: 100% !important;
   overflow: hidden !important;
   box-sizing: border-box;
   display: block;
-  /* Prevenir expansión horizontal */
   min-width: 0;
 }
 
-/* Indicador de scroll en la parte inferior */
-.ai-codeblock::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.8));
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.ai-codeblock:hover::after {
-  opacity: 1;
-}
-
-/* Header del bloque de código */
+/* Code header - INTEGRADO */
 .ai-code-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
-  background: rgba(255,255,255,0.05);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 0.7rem 1.2rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.15) 0%, rgba(88, 166, 255, 0.08) 100%);
+  border-bottom: 1px solid rgba(88, 166, 255, 0.2);
   font-size: 0.8rem;
   flex-shrink: 0;
   width: 100%;
   max-width: 100% !important;
   box-sizing: border-box;
+  gap: 1rem;
 }
 
+/* Language tag styling */
+.ai-code-lang {
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 1;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  background: rgba(88, 166, 255, 0.15);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #58a6ff;
+  margin: 0;
+}
+
+/* Pre and code blocks */
 .ai-codeblock pre,
 .ai-code-pre {
-  margin: 0;
-  max-height: 600px;
-  /* SCROLL HORIZONTAL EN EL PRE */
+  margin: 0 !important;
+  max-height: 400px;
   overflow-y: auto !important;
   overflow-x: auto !important;
-  padding: 1rem 1.2rem;
-  background: rgba(0,0,0,0.4);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  padding: 1.2rem;
+  background: rgba(0,0,0,0.4) !important;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace !important;
+  font-size: 0.85rem !important;
+  line-height: 1.5 !important;
   color: #e6edf3;
   white-space: pre;
   word-wrap: normal;
-  border-radius: 0 0 8px 8px;
-  /* Forzar scrollbar nativo */
-  scrollbar-width: auto;
-  scrollbar-color: #666 #333;
-  /* Permitir que se expanda internamente */
+  border-radius: 0 0 7px 7px;
   display: block;
   width: 100%;
   box-sizing: border-box;
 }
 
-/* Scroll simple y funcional */
+/* Scrollbar styling */
 .ai-codeblock pre::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 .ai-codeblock pre::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.4);
 }
 
 .ai-codeblock pre::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.5);
+  background: rgba(88, 166, 255, 0.4);
   border-radius: 4px;
 }
 
 .ai-codeblock pre::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.7);
+  background: rgba(88, 166, 255, 0.6);
 }
 
-/* Código dentro de pre */
+/* Code inside pre */
 .ai-codeblock code,
 .ai-codeblock pre code {
   display: block;
@@ -311,79 +439,25 @@
   min-width: 0;
   max-width: none;
   overflow-x: visible;
-  overflow-y: visible;
   white-space: pre;
   word-break: normal;
   word-wrap: normal;
   box-sizing: border-box;
-  /* Evitar que inline styles rompan */
   margin: 0 !important;
   padding: 0 !important;
 }
 
-/* CRÍTICO: Spans de highlight.js NO deben romper el layout */
+/* Code spans */
 .ai-codeblock code span,
 .ai-codeblock pre code span {
   display: inline !important;
   white-space: pre !important;
   word-wrap: normal !important;
   word-break: normal !important;
-  /* Permitir que el contenido fluya naturalmente sin expandirse */
   max-width: none !important;
 }
 
-/* Scroll de emergencia si no funciona el anterior */
-.ai-codeblock pre[style*="overflow"] {
-  overflow: auto !important;
-  overflow-x: auto !important;
-  max-width: none !important;
-}
-
-/* ChatGPT-like Copy Button */
-.ai-copy-btn {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: #fff;
-  border-radius: 6px;
-  padding: 0.3rem 0.6rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
-  opacity: 0.8;
-}
-
-.ai-copy-btn:hover {
-  background: rgba(255,255,255,0.2);
-  border-color: rgba(255,255,255,0.3);
-  opacity: 1;
-  transform: translateY(-1px);
-}
-
-.ai-copy-btn i {
-  font-size: 0.7rem;
-}
-
-/* Language indicator */
-.ai-code-lang {
-  font-size: 0.75rem;
-  font-weight: 600;
-  opacity: 0.9;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(10px);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: rgba(255,255,255,0.8);
-}
-
-/* Highlight.js base tune (dark overlay friendly) */
+/* Highlight.js integration */
 .ai-codeblock .hljs {
   color: #e6edf3;
   background: transparent !important;
@@ -394,17 +468,16 @@
   overflow-x: visible;
 }
 
-/* Override highlight.js styles for better integration */
 .ai-codeblock pre.hljs {
-  background: rgba(0,0,0,0.35) !important;
-  border-radius: 8px;
-  padding: 0.9rem 1rem;
+  background: rgba(0,0,0,0.4) !important;
+  border-radius: 0 0 7px 7px;
+  padding: 1.2rem;
   margin: 0;
   overflow-x: auto !important;
   overflow-y: auto !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-size: 0.85rem;
+  line-height: 1.5;
   width: 100%;
   max-width: 100% !important;
   box-sizing: border-box;
@@ -424,460 +497,33 @@
 .ai-codeblock .hljs-function { color: #79b8ff; }
 .ai-codeblock .hljs-title { color: #b392f0; }
 
-/* Asegurar que el código dentro de pre respeta el scroll */
-.ai-codeblock pre code,
-.ai-codeblock code {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto !important;
-  white-space: pre;
-  word-wrap: normal;
-  word-break: normal;
-  box-sizing: border-box;
-}
-
-/* Streaming indicators - Enhanced */
-.ai-streaming-dots {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  height: 24px;
-}
-
-.ai-streaming-dots span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: streaming-pulse 1.4s ease-in-out infinite both;
-}
-
-.ai-streaming-dots span:nth-child(1) { animation-delay: -0.32s; }
-.ai-streaming-dots span:nth-child(2) { animation-delay: -0.16s; }
-.ai-streaming-dots span:nth-child(3) { animation-delay: 0s; }
-
-@keyframes streaming-pulse {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Streaming bubble styles */
-.ai-bubble.streaming {
-  border-left: 3px solid rgba(255,255,255,0.3);
-  animation: streaming-glow 2s ease-in-out infinite;
-}
-
-@keyframes streaming-glow {
-  0%, 100% {
-    border-left-color: rgba(255,255,255,0.3);
-  }
-  50% {
-    border-left-color: rgba(255,255,255,0.6);
-  }
-}
-
-/* Enhanced status indicator styles */
-.ai-status-indicator {
-  animation: status-fade 0.5s ease-in-out;
-}
-
-@keyframes status-fade {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* File download widget */
-.ai-file-download-widget {
-  background: linear-gradient(135deg, rgba(100, 200, 100, 0.1) 0%, rgba(100, 200, 100, 0.05) 100%);
-  border: 1px solid rgba(100, 200, 100, 0.3);
-  border-radius: 12px;
-  padding: 1rem;
-  margin-top: 1rem;
-  animation: file-slide-in 0.4s ease-out;
-}
-
-@keyframes file-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.ai-file-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.8rem;
-  background: rgba(100, 200, 100, 0.08);
-  border: 1px solid rgba(100, 200, 100, 0.2);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ai-file-item:hover {
-  background: rgba(100, 200, 100, 0.15);
-  border-color: rgba(100, 200, 100, 0.4);
-  transform: translateX(4px);
-}
-
-/* Status messages styling */
-.ai-status-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 0.2rem;
-}
-
-.ai-status-description {
-  font-size: 0.75rem;
-  opacity: 0.8;
-}
-
-/* === CHATGPT-LIKE ENHANCEMENTS === */
-
-/* Mejoras adicionales para formato ChatGPT */
-.ai-md strong, .ai-md b {
-  font-weight: 700;
-  color: inherit;
-}
-
-.ai-md em, .ai-md i {
-  font-style: italic;
-  opacity: 0.9;
-}
-
-/* Mejorar enlaces */
-.ai-md a {
+/* ChatGPT-like Copy Button - INTEGRADO */
+.ai-copy-btn {
+  background: rgba(88, 166, 255, 0.15);
+  border: 1px solid rgba(88, 166, 255, 0.25);
   color: #58a6ff;
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.ai-md a:hover {
-  border-bottom-color: #58a6ff;
-  opacity: 0.8;
-}
-
-/* Estilos para texto resaltado */
-.ai-md mark {
-  background: rgba(255, 255, 0, 0.2);
-  padding: 0.1rem 0.2rem;
-  border-radius: 3px;
-}
-
-/* Mejorar espaciado entre secciones */
-.ai-md > *:first-child {
-  margin-top: 0;
-}
-
-.ai-md > *:last-child {
-  margin-bottom: 0;
-}
-
-/* Estilos para elementos de lista con mejor presentación */
-.ai-md li::marker {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-/* Mejorar presentación de listas anidadas */
-.ai-md ul ul, .ai-md ol ol, .ai-md ul ol, .ai-md ol ul {
-  margin-top: 0.2rem;
-  margin-bottom: 0.2rem;
-}
-
-/* Estilos para elementos de lista con viñetas personalizadas */
-.ai-md ul li {
-  position: relative;
-  padding-left: 0.5rem;
-}
-
-.ai-md ul li::before {
-  content: "•";
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: bold;
-  position: absolute;
-  left: -1rem;
-}
-
-/* Estilos para listas numeradas */
-.ai-md ol li {
-  position: relative;
-  padding-left: 0.5rem;
-}
-
-/* Mejorar presentación de tablas */
-.ai-md table {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.ai-md table thead {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.ai-md table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* Animaciones suaves para elementos interactivos */
-.ai-md a, .ai-copy-btn, .ai-file-item {
-  transition: all 0.2s ease;
-}
-
-/* Mejorar presentación de código inline en contexto */
-.ai-md p code, .ai-md li code, .ai-md td code {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 0.15rem 0.4rem;
   border-radius: 4px;
-  font-size: 0.85em;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
-}
-
-/* Estilos para elementos de código en contexto de texto */
-.ai-md code:not(pre code) {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.85em;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
-}
-
-/* Mejorar presentación de bloques de código en contexto */
-.ai-md pre {
-  margin: 1rem 0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* Estilos para elementos de lista con mejor jerarquía visual */
-.ai-md ul li, .ai-md ol li {
-  line-height: 1.6;
-  margin: 0.3rem 0;
-}
-
-/* Mejorar presentación de elementos de lista con contenido complejo */
-.ai-md li p {
-  margin: 0.2rem 0;
-}
-
-.ai-md li ul, .ai-md li ol {
-  margin: 0.3rem 0;
-}
-
-/* Estilos para elementos de lista con mejor espaciado */
-.ai-md ul, .ai-md ol {
-  margin: 0.8rem 0 1rem 0;
-}
-
-/* Mejorar presentación de elementos de lista con contenido mixto */
-.ai-md li > *:first-child {
-  margin-top: 0;
-}
-
-.ai-md li > *:last-child {
-  margin-bottom: 0;
-}
-
-/* Estilos para FileUploader */
-.file-uploader-container {
-  transition: all 0.3s ease;
-}
-
-.file-uploader-drop-zone {
-  transition: all 0.2s ease;
-  border: 2px dashed;
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
+  padding: 0.4rem 0.7rem;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.file-uploader-drop-zone:hover {
-  background: rgba(33, 150, 243, 0.1);
-  border-color: #2196f3;
-}
-
-.file-uploader-drop-zone.drag-over {
-  background: rgba(33, 150, 243, 0.15);
-  border-color: #2196f3;
-  transform: scale(1.02);
-}
-
-.file-uploader-processing {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.file-attachment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   transition: all 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  opacity: 1;
+  white-space: nowrap;
 }
 
-.file-attachment-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+.ai-copy-btn:hover {
+  background: rgba(88, 166, 255, 0.25);
+  border-color: rgba(88, 166, 255, 0.4);
+  opacity: 1;
   transform: translateY(-1px);
 }
 
-.file-attachment-icon {
-  font-size: 1.2rem;
-  margin-right: 0.75rem;
-}
-
-.file-attachment-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-attachment-name {
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.file-attachment-meta {
-  font-size: 0.8rem;
-  opacity: 0.7;
-  margin: 0;
-}
-
-.file-attachment-remove {
-  color: rgba(255, 255, 255, 0.6);
-  transition: all 0.2s ease;
-  min-width: auto;
-  padding: 0.25rem;
-}
-
-.file-attachment-remove:hover {
-  color: #f44336;
-  background: rgba(244, 67, 54, 0.1);
-}
-
-/* Animaciones para archivos adjuntos */
-.file-attachment-enter {
-  animation: slideInUp 0.3s ease-out;
-}
-
-.file-attachment-exit {
-  animation: slideOutDown 0.3s ease-in;
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideOutDown {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-}
-
-/* Estilos para el botón de archivos adjuntos */
-.file-attach-button {
-  transition: all 0.2s ease;
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 40px;
-}
-
-.file-attach-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
-}
-
-.file-attach-button:active {
-  transform: scale(0.95);
-}
-
-.file-attach-button.active {
-  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.4);
-}
-
-.file-attach-button.inactive {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.file-attach-button.inactive:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* === SCROLLBAR PARA CONVERSACIONES DEL CHAT DE IA === */
-/* Scrollbar personalizado usando colores del tema */
-.conversation-list::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.conversation-list::-webkit-scrollbar-track {
-  background: var(--ui-sidebar-bg, #1e1e1e);
-  border-radius: 3px;
-}
-
-.conversation-list::-webkit-scrollbar-thumb {
-  background: var(--ui-sidebar-border, #3e3e42);
-  border-radius: 3px;
-  opacity: 0.6;
-  transition: all 0.2s ease;
-}
-
-.conversation-list::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-sidebar-text, #cccccc);
-  opacity: 0.8;
-}
-
-/* Firefox scrollbar para conversaciones del chat de IA */
-.conversation-list {
-  scrollbar-width: thin;
-  scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e);
+.ai-copy-btn i {
+  font-size: 0.75rem;
 }
 
