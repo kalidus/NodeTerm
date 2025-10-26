@@ -1869,13 +1869,10 @@ const Sidebar = React.memo(({
             zIndex: 1000
           }}>
             <Button
-              icon="pi pi-bars"
+              icon="pi pi-cog"
               className="p-button-rounded p-button-text sidebar-action-button"
-              onClick={(e) => {
-                console.log('Click en botón del menú detectado');
-                handleAppMenuClick(e);
-              }}
-              tooltip="Menú de la aplicación"
+              onClick={() => setShowSettingsDialog(true)}
+              tooltip="Configuración"
               tooltipOptions={{ position: 'right' }}
               style={{ 
                 margin: 0, 
@@ -1893,10 +1890,13 @@ const Sidebar = React.memo(({
               }} 
             />
             <Button
-              icon="pi pi-cog"
+              icon="pi pi-bars"
               className="p-button-rounded p-button-text sidebar-action-button"
-              onClick={() => setShowSettingsDialog(true)}
-              tooltip="Configuración"
+              onClick={(e) => {
+                console.log('Click en botón del menú detectado');
+                handleAppMenuClick(e);
+              }}
+              tooltip="Menú de la aplicación"
               tooltipOptions={{ position: 'right' }}
               style={{ 
                 margin: 0, 
