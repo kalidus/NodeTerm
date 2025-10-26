@@ -10,7 +10,6 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [themeVersion, setThemeVersion] = useState(0);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [editingConversation, setEditingConversation] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   
@@ -120,56 +119,54 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
 
   const handleDeleteConversation = (conversationId, event) => {
     event.stopPropagation();
-    setShowDeleteConfirm(conversationId);
+    // Eliminar directamente sin confirmación
+    deleteConversationDirectly(conversationId);
   };
 
-  const confirmDelete = useCallback(() => {
-    if (showDeleteConfirm) {
-      // Obtener la conversación actual antes de eliminar
-      const conversationToDelete = conversations.find(c => c.id === showDeleteConfirm);
-      const currentIndex = filteredConversationsMemo.findIndex(c => c.id === showDeleteConfirm);
-      
-      // Encontrar la conversación anterior en la lista filtrada
-      let previousConversation = null;
-      if (currentIndex > 0) {
-        previousConversation = filteredConversationsMemo[currentIndex - 1];
-      } else if (currentIndex === 0 && filteredConversationsMemo.length > 1) {
-        // Si es la primera, tomar la siguiente
-        previousConversation = filteredConversationsMemo[1];
-      }
-      
-      // Eliminar la conversación del servicio
-      conversationService.deleteConversation(showDeleteConfirm);
-      
-      // Recargar lista de conversaciones
-      loadConversations();
-      
-      // Si hay conversación anterior, navegar a ella
-      if (previousConversation) {
-        // Pequeño delay para asegurar que la eliminación se ha completado
-        setTimeout(() => {
-          onConversationSelect(previousConversation.id);
-        }, 100);
-      } else {
-        // Si no hay conversación anterior, crear una nueva
-        setTimeout(() => {
-          onNewConversation();
-        }, 100);
-      }
-      
-      // Mostrar notificación de eliminación
-      if (window.toast?.current?.show) {
-        window.toast.current.show({
-          severity: 'success',
-          summary: 'Conversación eliminada',
-          detail: `"${conversationToDelete?.title || 'Sin título'}" ha sido eliminada`,
-          life: 3000
-        });
-      }
-      
-      setShowDeleteConfirm(null);
+  const deleteConversationDirectly = useCallback((conversationId) => {
+    // Obtener la conversación actual antes de eliminar
+    const conversationToDelete = conversations.find(c => c.id === conversationId);
+    const currentIndex = filteredConversationsMemo.findIndex(c => c.id === conversationId);
+    
+    // Encontrar la conversación anterior en la lista filtrada
+    let previousConversation = null;
+    if (currentIndex > 0) {
+      previousConversation = filteredConversationsMemo[currentIndex - 1];
+    } else if (currentIndex === 0 && filteredConversationsMemo.length > 1) {
+      // Si es la primera, tomar la siguiente
+      previousConversation = filteredConversationsMemo[1];
     }
-  }, [showDeleteConfirm, conversations, filteredConversationsMemo, loadConversations, onConversationSelect, onNewConversation]);
+    
+    // Eliminar la conversación del servicio
+    conversationService.deleteConversation(conversationId);
+    
+    // Recargar lista de conversaciones
+    loadConversations();
+    
+    // Si hay conversación anterior, navegar a ella
+    if (previousConversation) {
+      // Pequeño delay para asegurar que la eliminación se ha completado
+      setTimeout(() => {
+        onConversationSelect(previousConversation.id);
+      }, 100);
+    } else {
+      // Si no hay conversación anterior, crear una nueva
+      setTimeout(() => {
+        onNewConversation();
+      }, 100);
+    }
+    
+    // Mostrar notificación de eliminación
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'success',
+        summary: 'Conversación eliminada',
+        detail: `"${conversationToDelete?.title || 'Sin título'}" ha sido eliminada`,
+        life: 3000
+      });
+    }
+  }, [conversations, filteredConversationsMemo, loadConversations, onConversationSelect, onNewConversation]);
+
 
   const handleEditConversation = (conversation, event) => {
     event.stopPropagation();
@@ -488,69 +485,6 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             text-align: center;
           }
 
-          .delete-confirm {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-          }
-
-          .delete-confirm-content {
-            background: ${themeColors.cardBackground};
-            padding: 1.5rem;
-            border-radius: 8px;
-            border: 1px solid ${themeColors.borderColor};
-            max-width: 400px;
-            width: 90%;
-          }
-
-          .delete-confirm-title {
-            color: ${themeColors.textPrimary};
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-          }
-
-          .delete-confirm-message {
-            color: ${themeColors.textSecondary};
-            margin-bottom: 1rem;
-            line-height: 1.4;
-          }
-
-          .delete-confirm-actions {
-            display: flex;
-            gap: 0.5rem;
-            justify-content: flex-end;
-          }
-
-          .delete-confirm-btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
-          }
-
-          .delete-confirm-btn.cancel {
-            background: rgba(255,255,255,0.1);
-            color: ${themeColors.textPrimary};
-            border: 1px solid ${themeColors.borderColor};
-          }
-
-          .delete-confirm-btn.delete {
-            background: #f44336;
-            color: white;
-          }
-
-          .delete-confirm-btn:hover {
-            opacity: 0.8;
-          }
         `}
       </style>
 
@@ -742,31 +676,6 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
         )}
       </div>
 
-      {/* Modal de confirmación de eliminación */}
-      {showDeleteConfirm && (
-        <div className="delete-confirm">
-          <div className="delete-confirm-content">
-            <div className="delete-confirm-title">Eliminar conversación</div>
-            <div className="delete-confirm-message">
-              ¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer.
-            </div>
-            <div className="delete-confirm-actions">
-              <button
-                className="delete-confirm-btn cancel"
-                onClick={() => setShowDeleteConfirm(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="delete-confirm-btn delete"
-                onClick={confirmDelete}
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };
