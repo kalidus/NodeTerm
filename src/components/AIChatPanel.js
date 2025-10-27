@@ -1167,8 +1167,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Buscar el bloque de código que corresponde a este archivo
           let foundBlock = null;
           
-          // Primero intentar encontrar por nombre descriptivo
-          if (fileName.includes('_')) {
+          // Estrategia 1: Buscar por índice en el nombre del archivo (script_1.js, script_2.py, etc.)
+          const indexMatch = fileName.match(/script_(\d+)\./);
+          if (indexMatch) {
+            const blockIndex = parseInt(indexMatch[1]) - 1;
+            if (blockIndex >= 0 && blockIndex < codeBlocks.length) {
+              const match = codeBlocks[blockIndex].match(/```(\w+)?\n([\s\S]*?)```/);
+              if (match) {
+                foundBlock = match[2].trim();
+              }
+            }
+          }
+          
+          // Estrategia 2: Si no se encontró por índice, buscar por nombre descriptivo
+          if (!foundBlock && fileName.includes('_')) {
             const nameParts = fileName.split('_');
             const baseName = nameParts[0];
             const expectedExtension = fileName.split('.').pop();
@@ -1192,18 +1204,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             }
           }
           
-          // Si no se encontró por nombre descriptivo, usar el índice tradicional
-          if (!foundBlock) {
-            const blockIndex = parseInt(fileName.match(/script_(\d+)\./)?.[1]) - 1;
-            if (blockIndex >= 0 && codeBlocks[blockIndex]) {
-              const match = codeBlocks[blockIndex].match(/```(\w+)?\n([\s\S]*?)```/);
-              if (match) {
-                foundBlock = match[2].trim();
-              }
-            }
-          }
-          
-          // Si aún no se encontró, buscar por extensión
+          // Estrategia 3: Si aún no se encontró, buscar por extensión y usar el primer bloque disponible
           if (!foundBlock) {
             for (let i = 0; i < codeBlocks.length; i++) {
               const match = codeBlocks[i].match(/```(\w+)?\n([\s\S]*?)```/);
@@ -1215,6 +1216,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   break;
                 }
               }
+            }
+          }
+          
+          // Estrategia 4: Si aún no se encontró, usar el primer bloque de código disponible
+          if (!foundBlock && codeBlocks.length > 0) {
+            const match = codeBlocks[0].match(/```(\w+)?\n([\s\S]*?)```/);
+            if (match) {
+              foundBlock = match[2].trim();
             }
           }
           
