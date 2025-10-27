@@ -505,11 +505,8 @@ class AIService {
    * Obtener configuración de rendimiento para un modelo
    */
   getModelPerformanceConfig(modelId, modelType) {
-    // Si hay configuración manual, usarla
-    if (this.performanceConfig) {
-      return this.performanceConfig;
-    }
-
+    console.log(`🔧 [AIService] getModelPerformanceConfig - Modelo: ${modelId}, Tipo: ${modelType}`);
+    
     // Configuraciones específicas por modelo cloud
     const cloudModelConfigs = {
       // OpenAI Models
@@ -611,9 +608,16 @@ class AIService {
       }
     };
 
-    // Si es un modelo cloud, usar configuración específica
+    // Si es un modelo cloud, usar configuración específica (prioridad máxima)
     if (modelType === 'remote' && cloudModelConfigs[modelId]) {
+      console.log(`🔧 [AIService] Usando configuración específica para ${modelId}:`, cloudModelConfigs[modelId]);
       return cloudModelConfigs[modelId];
+    }
+
+    // Si hay configuración manual, usarla (pero solo para modelos locales)
+    if (this.performanceConfig) {
+      console.log(`🔧 [AIService] Usando configuración manual:`, this.performanceConfig);
+      return this.performanceConfig;
     }
 
     // Si no, usar configuración automática basada en performance
@@ -624,9 +628,13 @@ class AIService {
       model = this.models[modelType].find(m => m.id === modelId);
     }
     
-    if (!model) return this.getDefaultPerformanceConfig();
+    if (!model) {
+      console.log(`🔧 [AIService] Modelo no encontrado, usando configuración por defecto`);
+      return this.getDefaultPerformanceConfig();
+    }
 
     const performanceLevel = model.performance || 'medium';
+    console.log(`🔧 [AIService] Usando configuración por performance (${performanceLevel}) para ${modelId}`);
     
     const configs = {
       low: {
@@ -652,7 +660,9 @@ class AIService {
       }
     };
 
-    return configs[performanceLevel] || configs.medium;
+    const finalConfig = configs[performanceLevel] || configs.medium;
+    console.log(`🔧 [AIService] Configuración final para ${modelId}:`, finalConfig);
+    return finalConfig;
   }
 
   /**
