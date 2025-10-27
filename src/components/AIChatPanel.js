@@ -1337,11 +1337,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             }
           }
 
-          .ai-input:focus {
-            outline: none;
-            border-color: ${themeColors.primaryColor} !important;
-            box-shadow: 0 0 0 2px ${themeColors.primaryColor}33 !important;
-          }
 
           .ai-scrollbar::-webkit-scrollbar {
             width: 8px;
@@ -1359,6 +1354,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
           .ai-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(255,255,255,0.3);
+          }
+
+          /* Estilos específicos para el input del chat de IA con color del tema */
+          #ai-chat-input:focus {
+            border: 1px solid ${themeColors.primaryColor} !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px ${themeColors.primaryColor}33 !important;
+          }
+
+          #ai-chat-input:focus-visible {
+            border: 1px solid ${themeColors.primaryColor} !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px ${themeColors.primaryColor}33 !important;
+          }
+
+          /* Sobrescribir cualquier estilo global que pueda interferir */
+          #ai-chat-input {
+            border: 1px solid rgba(255,255,255,0.15) !important;
+            outline: none !important;
+            box-shadow: none !important;
           }
 
           .ai-model-dropdown .p-dropdown {
@@ -1654,6 +1669,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       </style>
 
       <div
+        className="ai-chat-panel"
         style={{
           height: '100%',
           display: 'flex',
@@ -2264,11 +2280,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               placeholder="Escribe tu mensaje..."
               disabled={isLoading || !currentModel}
               className="ai-input"
+              id="ai-chat-input"
               style={{
                 flex: 1,
                 padding: '0.6rem',
                 background: 'rgba(255,255,255,0.05)',
-                border: `1px solid ${themeColors.borderColor}`,
+                border: `1px solid rgba(255,255,255,0.15)`,
                 borderRadius: '8px',
                 color: themeColors.textPrimary,
                 fontSize: '0.9rem',
