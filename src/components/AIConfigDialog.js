@@ -27,11 +27,11 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [remoteOllamaUrl, setRemoteOllamaUrl] = useState('');
   const [testingConnection, setTestingConnection] = useState(false);
   const [performanceConfig, setPerformanceConfig] = useState({
-    maxTokens: 1500,
+    maxTokens: 7000,
     temperature: 0.7,
     maxHistory: 8,
     useStreaming: true,
-    contextLimit: 4000
+    contextLimit: 8000
   });
   const [useManualConfig, setUseManualConfig] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
@@ -1026,23 +1026,69 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
         </div>
 
+        {/* Presets rápidos por modelo */}
+        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Button
+            label="⚡ Preset 8B (7K tokens)"
+            icon="pi pi-lightning"
+            onClick={() => setPerformanceConfig({
+              maxTokens: 7000,
+              temperature: 0.7,
+              maxHistory: 8,
+              useStreaming: true,
+              contextLimit: 8000
+            })}
+            severity="info"
+            outlined
+            size="small"
+          />
+          <Button
+            label="🚀 Preset 70B (12K tokens)"
+            icon="pi pi-rocket"
+            onClick={() => setPerformanceConfig({
+              maxTokens: 12000,
+              temperature: 0.7,
+              maxHistory: 10,
+              useStreaming: true,
+              contextLimit: 32000
+            })}
+            severity="success"
+            outlined
+            size="small"
+          />
+          <Button
+            label="💨 Rápido (4K tokens)"
+            icon="pi pi-bolt"
+            onClick={() => setPerformanceConfig({
+              maxTokens: 4000,
+              temperature: 0.7,
+              maxHistory: 5,
+              useStreaming: true,
+              contextLimit: 4000
+            })}
+            severity="warning"
+            outlined
+            size="small"
+          />
+        </div>
+
         {useManualConfig && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Max Tokens */}
             <div>
               <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
-                Máximo de tokens (100-4000)
+                Máximo de tokens (500-12000) para respuestas más profundas
               </label>
               <InputText
                 type="number"
                 value={performanceConfig.maxTokens}
-                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, maxTokens: parseInt(e.target.value) || 1500 }))}
-                min="100"
-                max="4000"
+                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, maxTokens: parseInt(e.target.value) || 7000 }))}
+                min="500"
+                max="12000"
                 style={{ width: '100%' }}
               />
               <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
-                Número máximo de tokens en la respuesta (menos = más rápido)
+                Recomendado: 4000+ para resúmenes, 7000+ para análisis profundo, 10000+ para 70B
               </small>
             </div>
 
@@ -1086,18 +1132,18 @@ const AIConfigDialog = ({ visible, onHide }) => {
             {/* Context Limit */}
             <div>
               <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
-                Límite de contexto (1000-16000)
+                Límite de contexto (2000-32000) - window de memoria del modelo
               </label>
               <InputText
                 type="number"
                 value={performanceConfig.contextLimit}
-                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, contextLimit: parseInt(e.target.value) || 4000 }))}
-                min="1000"
-                max="16000"
+                onChange={(e) => setPerformanceConfig(prev => ({ ...prev, contextLimit: parseInt(e.target.value) || 8000 }))}
+                min="2000"
+                max="32000"
                 style={{ width: '100%' }}
               />
               <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
-                Límite total de caracteres en el contexto (menos = más rápido)
+                Recomendado: 8000 para 8B, 16000-32000 para 70B. Más contexto = mejor comprensión de documentos largos
               </small>
             </div>
 
@@ -1148,17 +1194,20 @@ const AIConfigDialog = ({ visible, onHide }) => {
           marginTop: '1rem'
         }}>
           <h4 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
-            Consejos de rendimiento
+            💡 Configuración Recomendada por Modelo
           </h4>
           <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>
             <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Para modelos pesados (Llama 3.1, GPT-4):</strong> Reduce maxTokens (1000-1500) y maxHistory (5-8)
+              <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
             </p>
             <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Para modelos ligeros (Llama 3.2, Phi-3):</strong> Puedes usar valores más altos
+              <strong>Llama 3.1 (8B):</strong> maxTokens: 6000-7000 | contextLimit: 8000 | maxHistory: 8 ⭐ ACTUAL
+            </p>
+            <p style={{ margin: '0 0 0.5rem 0' }}>
+              <strong>Llama 3.1 (70B):</strong> maxTokens: 10000-12000 | contextLimit: 16000-32000 | maxHistory: 10
             </p>
             <p style={{ margin: '0' }}>
-              <strong>Streaming:</strong> Siempre activado para modelos locales mejora la experiencia
+              <strong>Streaming:</strong> Siempre activado para mejor UX en modelos locales
             </p>
           </div>
         </div>
