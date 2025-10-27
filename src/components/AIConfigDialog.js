@@ -1057,6 +1057,20 @@ const AIConfigDialog = ({ visible, onHide }) => {
             size="small"
           />
           <Button
+            label="🔥 Máximo (64K contexto)"
+            icon="pi pi-fire"
+            onClick={() => setPerformanceConfig({
+              maxTokens: 15000,
+              temperature: 0.7,
+              maxHistory: 12,
+              useStreaming: true,
+              contextLimit: 64000
+            })}
+            severity="danger"
+            outlined
+            size="small"
+          />
+          <Button
             label="💨 Rápido (4K tokens)"
             icon="pi pi-bolt"
             onClick={() => setPerformanceConfig({
@@ -1132,19 +1146,66 @@ const AIConfigDialog = ({ visible, onHide }) => {
             {/* Context Limit */}
             <div>
               <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
-                Límite de contexto (2000-32000) - window de memoria del modelo
+                Límite de contexto (2000-128000) - window de memoria del modelo
               </label>
               <InputText
                 type="number"
                 value={performanceConfig.contextLimit}
                 onChange={(e) => setPerformanceConfig(prev => ({ ...prev, contextLimit: parseInt(e.target.value) || 8000 }))}
                 min="2000"
-                max="32000"
+                max="128000"
                 style={{ width: '100%' }}
               />
               <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
                 Recomendado: 8000 para 8B, 16000-32000 para 70B. Más contexto = mejor comprensión de documentos largos
               </small>
+              
+              {/* Requisitos de RAM+GPU dinámicos */}
+              {(() => {
+                const context = performanceConfig.contextLimit || 8000;
+                const is70B = currentModel?.includes('70b') || currentModel?.includes('70B');
+                
+                // Estimaciones de memoria (aproximadas)
+                let baseRAM = is70B ? 32 : 8; // GB base del modelo
+                let baseGPU = is70B ? 16 : 4; // GB base del modelo
+                
+                // Memoria adicional por contexto (aproximada)
+                const contextRAM = Math.ceil(context / 1000) * (is70B ? 0.8 : 0.2); // GB por 1K tokens
+                const contextGPU = Math.ceil(context / 1000) * (is70B ? 0.6 : 0.15); // GB por 1K tokens
+                
+                const totalRAM = Math.ceil(baseRAM + contextRAM);
+                const totalGPU = Math.ceil(baseGPU + contextGPU);
+                
+                const ramColor = totalRAM > 64 ? '#F44336' : totalRAM > 32 ? '#FF9800' : '#4CAF50';
+                const gpuColor = totalGPU > 24 ? '#F44336' : totalGPU > 16 ? '#FF9800' : '#4CAF50';
+                
+                return (
+                  <div style={{ 
+                    marginTop: '0.5rem', 
+                    padding: '0.5rem', 
+                    background: 'rgba(255,255,255,0.05)', 
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
+                      <strong>Requisitos estimados para {context.toLocaleString()} tokens:</strong>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem' }}>
+                      <span style={{ color: ramColor }}>
+                        💾 RAM: ~{totalRAM}GB {totalRAM > 64 ? '(⚠️ Insuficiente)' : totalRAM > 32 ? '(⚠️ Límite)' : '(✅ OK)'}
+                      </span>
+                      <span style={{ color: gpuColor }}>
+                        🎮 GPU: ~{totalGPU}GB {totalGPU > 24 ? '(⚠️ Insuficiente)' : totalGPU > 16 ? '(⚠️ Límite)' : '(✅ OK)'}
+                      </span>
+                    </div>
+                    {totalRAM > 64 && (
+                      <div style={{ fontSize: '0.65rem', color: '#F44336', marginTop: '0.25rem' }}>
+                        ⚠️ Tu sistema (64GB RAM + 24GB GPU) no puede manejar este contexto
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Use Streaming */}
@@ -1201,10 +1262,32 @@ const AIConfigDialog = ({ visible, onHide }) => {
               <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
             </p>
             <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Llama 3.1 (8B):</strong> maxTokens: 6000-7000 | contextLimit: 8000 | maxHistory: 8 ⭐ ACTUAL
+              <strong>Llama 3.1 (8B):</strong> maxTokens: 6000-7000 | contextLimit: 8000-16000 | maxHistory: 8 ⭐ ACTUAL
             </p>
             <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Llama 3.1 (70B):</strong> maxTokens: 10000-12000 | contextLimit: 16000-32000 | maxHistory: 10
+              <strong>Llama 3.1 (70B):</strong> maxTokens: 10000-12000 | contextLimit: 16000-64000 | maxHistory: 10
+            </p>
+            
+            <div style={{ margin: '1rem 0', padding: '0.75rem', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '8px', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+              <h4 style={{ color: '#2196F3', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>🌐 Modelos Cloud - Límites Automáticos</h4>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>GPT-4:</strong> 4K tokens | 128K contexto
+              </p>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>Claude 3:</strong> 4K tokens | 200K contexto
+              </p>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>Gemini 2.5 Flash:</strong> 4K tokens | 1M contexto
+              </p>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>Gemini 2.5 Pro:</strong> 4K tokens | 2M contexto
+              </p>
+              <p style={{ margin: '0', fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                Los límites se ajustan automáticamente según el modelo seleccionado
+              </p>
+            </div>
+            <p style={{ margin: '0 0 0.5rem 0' }}>
+              <strong>🔥 Máximo (70B):</strong> maxTokens: 15000 | contextLimit: 64000-128000 | maxHistory: 12 (Requiere 64GB+ RAM)
             </p>
             <p style={{ margin: '0' }}>
               <strong>Streaming:</strong> Siempre activado para mejor UX en modelos locales

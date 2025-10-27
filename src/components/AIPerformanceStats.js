@@ -7,9 +7,12 @@ const AIPerformanceStats = ({
   currentModel = null,
   modelType = 'local',
   maxTokens = 7000,
+  contextLimit = 16000,
   inputValue = '',
   messageCount = 0,
-  isLoading = false
+  isLoading = false,
+  lastResponseTokens = 0,
+  attachedFiles = []
 }) => {
   const currentTheme = React.useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
@@ -28,12 +31,37 @@ const AIPerformanceStats = ({
     };
   }, [currentTheme]);
 
-  // Calcular estadísticas de tokens
+  // Calcular estadísticas de tokens reales
   const historyTokens = React.useMemo(() => {
-    return Math.ceil(messageCount * 150); // Estimación: ~150 tokens por mensaje en historial
-  }, [messageCount]);
+    // Usar tokens reales de la última respuesta si están disponibles
+    if (lastResponseTokens > 0) {
+      return lastResponseTokens + TokenCounter.countTokens(inputValue);
+    }
+    // Fallback: estimación básica
+    return Math.ceil(messageCount * 200) + Math.ceil(messageCount * 0.5 * 500);
+  }, [messageCount, lastResponseTokens, inputValue]);
+
+  // Calcular contexto usado (historial + archivos adjuntos)
+  const contextUsed = React.useMemo(() => {
+    let totalContext = historyTokens;
+    
+    // Agregar tokens de archivos adjuntos
+    if (attachedFiles && attachedFiles.length > 0) {
+      attachedFiles.forEach(file => {
+        // Estimación de tokens en archivos (PDFs, textos, etc.)
+        if (file.size) {
+          // Estimación: ~1 token cada 4 caracteres
+          const estimatedTokens = Math.ceil(file.size / 4);
+          totalContext += estimatedTokens;
+        }
+      });
+    }
+    
+    return totalContext;
+  }, [historyTokens, attachedFiles]);
 
   const stats = TokenCounter.getTokenStats(inputValue, maxTokens, historyTokens);
+  const contextStats = TokenCounter.getTokenStats('', contextLimit, contextUsed);
 
   const getIndicatorColor = () => {
     if (stats.percentUsed > 90) return themeColors.dangerColor;
@@ -45,38 +73,53 @@ const AIPerformanceStats = ({
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '1rem',
       padding: '0.75rem 0',
       fontSize: '0.85rem',
       color: themeColors.textSecondary,
       borderTop: `1px solid ${themeColors.borderColor}`,
       marginTop: '0.5rem',
-      flexWrap: 'wrap'
+      flexWrap: 'nowrap',
+      overflowX: 'auto'
     }}>
-      {/* Modelo actual */}
-      {currentModel && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <i className="pi pi-database" style={{ fontSize: '0.8rem' }} />
-          <span>{currentModel.split(':')[0].slice(0, 15)}</span>
-        </div>
-      )}
+      {/* Lado izquierdo: Modelo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 'fit-content' }}>
+        {currentModel && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.4rem',
+            minWidth: 'fit-content',
+            whiteSpace: 'nowrap'
+          }}>
+            <i className="pi pi-database" style={{ fontSize: '0.8rem', color: themeColors.textSecondary }} />
+            <span>{currentModel.split(':')[0].slice(0, 15)}</span>
+          </div>
+        )}
 
-      {/* Indicador de tokens */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <i className="pi pi-bolt" style={{ fontSize: '0.8rem', color: getIndicatorColor() }} />
-        <span style={{ color: getIndicatorColor() }}>
-          {stats.availableTokens} / {stats.maxTokens}
-        </span>
+        {/* Grupo Tokens: Icono + Texto + Barra + Porcentaje */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.4rem',
+          minWidth: 'fit-content',
+          whiteSpace: 'nowrap'
+        }}>
+          <i className="pi pi-bolt" style={{ fontSize: '0.8rem', color: getIndicatorColor() }} />
+          <span style={{ color: getIndicatorColor() }}>
+            {stats.availableTokens} / {stats.maxTokens}
+          </span>
+        </div>
       </div>
 
-      {/* Barra de progreso */}
+      {/* Barra de progreso - Tokens (OCUPA TODO EL ESPACIO) */}
       <div style={{
         flex: 1,
-        minWidth: '100px',
         height: '4px',
         background: 'rgba(255,255,255,0.1)',
         borderRadius: '2px',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        margin: '0 1rem',
+        position: 'relative'
       }}>
         <div style={{
           height: '100%',
@@ -86,14 +129,74 @@ const AIPerformanceStats = ({
         }} />
       </div>
 
-      {/* Porcentaje */}
-      <span style={{ color: getIndicatorColor(), fontWeight: '500' }}>
+      {/* Porcentaje - Tokens */}
+      <span style={{ 
+        color: getIndicatorColor(), 
+        fontWeight: '500',
+        minWidth: 'fit-content',
+        whiteSpace: 'nowrap'
+      }}>
         {stats.percentUsed}%
+      </span>
+
+      {/* Lado derecho: Contexto */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '0.4rem',
+        minWidth: 'fit-content',
+        whiteSpace: 'nowrap',
+        marginLeft: '1rem'
+      }}>
+        <i className="pi pi-file" style={{ 
+          fontSize: '0.8rem', 
+          color: '#2196F3' // Azul fijo para contexto
+        }} />
+        <span style={{ 
+          color: '#2196F3' // Azul fijo para contexto
+        }}>
+          {contextStats.availableTokens} / {contextStats.maxTokens}
+        </span>
+      </div>
+
+      {/* Barra de progreso - Contexto (OCUPA TODO EL ESPACIO) */}
+      <div style={{
+        flex: 1,
+        height: '4px',
+        background: 'rgba(255,255,255,0.1)',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        margin: '0 1rem',
+        position: 'relative'
+      }}>
+        <div style={{
+          height: '100%',
+          width: `${contextStats.percentUsed}%`,
+          background: '#2196F3', // Azul fijo para contexto
+          transition: 'width 0.2s ease'
+        }} />
+      </div>
+
+      {/* Porcentaje - Contexto */}
+      <span style={{ 
+        color: '#2196F3', // Azul fijo para contexto
+        fontWeight: '500',
+        minWidth: 'fit-content',
+        whiteSpace: 'nowrap'
+      }}>
+        {contextStats.percentUsed}%
       </span>
 
       {/* Estado de carga */}
       {isLoading && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: 'auto' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.4rem', 
+          marginLeft: 'auto',
+          minWidth: 'fit-content',
+          whiteSpace: 'nowrap'
+        }}>
           <i className="pi pi-spin pi-spinner" style={{
             fontSize: '0.8rem',
             animation: 'spin 1s linear infinite'

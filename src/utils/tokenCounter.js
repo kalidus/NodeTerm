@@ -1,6 +1,6 @@
 /**
- * Utilidad para contar tokens aproximadamente
- * Usa una estimación simple: ~1 token cada 4-5 caracteres
+ * Utilidad para contar tokens con mayor precisión
+ * Optimizado para texto en español e inglés
  */
 
 class TokenCounter {
@@ -11,26 +11,32 @@ class TokenCounter {
    */
   static countTokens(text) {
     if (!text) return 0;
-    // Promedio: 1 token ≈ 4 caracteres (puede variar entre 3-5)
-    return Math.ceil(text.length / 4);
+    
+    const isSpanish = this.isSpanishText(text);
+    const ratio = isSpanish ? 3.5 : 4;
+    return Math.ceil(text.length / ratio);
   }
 
   /**
-   * Estimar tokens en caracteres
+   * Estimar tokens en caracteres (asume español por defecto)
    * @param {number} characters - Número de caracteres
+   * @param {boolean} isSpanish - Si es texto en español
    * @returns {number} Aproximación de tokens
    */
-  static estimateTokensFromChars(characters) {
-    return Math.ceil(characters / 4);
+  static estimateTokensFromChars(characters, isSpanish = true) {
+    const ratio = isSpanish ? 3.5 : 4;
+    return Math.ceil(characters / ratio);
   }
 
   /**
    * Estimar caracteres necesarios para N tokens
    * @param {number} tokens - Número de tokens
+   * @param {boolean} isSpanish - Si es texto en español
    * @returns {number} Aproximación de caracteres
    */
-  static estimateCharsFromTokens(tokens) {
-    return Math.ceil(tokens * 4);
+  static estimateCharsFromTokens(tokens, isSpanish = true) {
+    const ratio = isSpanish ? 3.5 : 4;
+    return Math.ceil(tokens * ratio);
   }
 
   /**
@@ -65,6 +71,22 @@ class TokenCounter {
   static formatTokens(tokens) {
     if (tokens < 1000) return `${tokens} tokens`;
     return `${(tokens / 1000).toFixed(1)}K tokens`;
+  }
+
+  /**
+   * Detectar si un texto es principalmente en español
+   * @param {string} text - Texto a analizar
+   * @returns {boolean} True si es español
+   */
+  static isSpanishText(text) {
+    if (!text) return true; // Por defecto asumimos español
+    
+    const hasAccents = /[áéíóúñüÁÉÍÓÚÑÜ]/.test(text);
+    const hasSpecialChars = /[¿¡]/.test(text);
+    const spanishWords = text.match(/\b(el|la|de|que|y|a|en|un|es|se|no|te|lo|le|da|su|por|son|con|para|al|del|los|las|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/gi) || [];
+    const englishWords = text.match(/\b(the|and|or|but|in|on|at|to|for|of|with|by|from|up|about|into|through|during|before|after|above|below|between|among|under|over|around|near|far|here|there|where|when|why|how|what|who|which|that|this|these|those|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|may|might|must|can|shall)\b/gi) || [];
+    
+    return hasAccents || hasSpecialChars || spanishWords.length > englishWords.length;
   }
 
   /**

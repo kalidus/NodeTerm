@@ -508,7 +508,113 @@ class AIService {
       return this.performanceConfig;
     }
 
-    // Si no, usar configuración automática
+    // Configuraciones específicas por modelo cloud
+    const cloudModelConfigs = {
+      // OpenAI Models
+      'gpt-4': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 128000 // 128K contexto
+      },
+      'gpt-4-turbo': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 128000 // 128K contexto
+      },
+      'gpt-3.5-turbo': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 16000 // 16K contexto
+      },
+      'gpt-3.5-turbo-16k': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 16000 // 16K contexto
+      },
+      
+      // Anthropic Models
+      'claude-3-opus': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 200000 // 200K contexto
+      },
+      'claude-3-sonnet': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 200000 // 200K contexto
+      },
+      'claude-3-haiku': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 200000 // 200K contexto
+      },
+      'claude-2': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 100000 // 100K contexto
+      },
+      
+      // Google Models
+      'gemini-2.5-flash': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 1000000 // 1M contexto (Flash tiene contexto muy alto)
+      },
+      'gemini-2.5-pro': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 2000000 // 2M contexto (Pro tiene el contexto más alto)
+      },
+      'gemini-2.0-flash-exp': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 1000000 // 1M contexto (experimental)
+      },
+      // Modelos legacy (por compatibilidad)
+      'gemini-pro': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 32000 // 32K contexto
+      },
+      'gemini-pro-vision': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 32000 // 32K contexto
+      }
+    };
+
+    // Si es un modelo cloud, usar configuración específica
+    if (modelType === 'remote' && cloudModelConfigs[modelId]) {
+      return cloudModelConfigs[modelId];
+    }
+
+    // Si no, usar configuración automática basada en performance
     let model;
     if (modelType === 'local') {
       model = this.getAllLocalModels().find(m => m.id === modelId);
