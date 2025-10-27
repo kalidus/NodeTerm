@@ -137,7 +137,7 @@
 
 .ai-md ul, .ai-md ol {
   margin: 0.7rem 0 1rem 0 !important;
-  padding-left: 1.8rem !important;
+  padding-left: 2.2rem !important;
   background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
@@ -177,12 +177,14 @@
   list-style-type: decimal !important;
   margin-left: 0 !important;
   font-size: 0.95rem !important;
+  padding-left: 0.3rem !important;
+  position: relative !important;
 }
 
 /* Listas anidadas */
 .ai-md ul ul, .ai-md ol ol, .ai-md ul ol, .ai-md ol ul {
   margin: 0.4rem 0 !important;
-  padding-left: 1.3rem !important;
+  padding-left: 1.8rem !important;
   background: transparent !important;
   border: none !important;
   margin-left: 0 !important;
