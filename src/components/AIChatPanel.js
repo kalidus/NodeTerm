@@ -1568,7 +1568,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
           .ai-md ul, .ai-md ol {
             margin: 0.6rem 0 0.8rem 0 !important;
-            padding-left: 1.5rem !important;
+            padding-left: 2.2rem !important;
             background: transparent !important;
             border: none !important;
           }
@@ -1605,6 +1605,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             list-style-type: decimal !important;
             margin-left: 0 !important;
             font-size: 0.95rem !important;
+            padding-left: 0.3rem !important;
+            position: relative !important;
           }
 
           .ai-md li::marker {
