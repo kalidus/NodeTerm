@@ -11,6 +11,7 @@ import { uiThemes } from '../themes/ui-themes';
 import AIConfigDialog from './AIConfigDialog';
 import FileTypeDetectionPanel from './FileTypeDetectionPanel';
 import FileUploader from './FileUploader';
+import AIPerformanceStats from './AIPerformanceStats';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 
@@ -28,6 +29,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [themeVersion, setThemeVersion] = useState(0);
   const [functionalModels, setFunctionalModels] = useState([]);
+  const [lastResponseTokens, setLastResponseTokens] = useState(0);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
@@ -332,6 +334,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             files: files.length > 0 ? files : undefined
           });
           
+          // Calcular tokens reales de la respuesta
+          const responseTokens = Math.ceil(data.response.length / 4);
+          
           // Actualizar mensaje final con archivos asociados
           setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId ? {
@@ -343,11 +348,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 latency: data.latency,
                 model: data.model,
                 provider: data.provider,
-                tokens: Math.ceil(data.response.length / 4),
+                tokens: responseTokens,
                 files: files.length > 0 ? files : undefined
               }
             } : msg
           ));
+          
+          // Actualizar tokens de la última respuesta para el contador visual
+          setLastResponseTokens(responseTokens);
           
           setCurrentStatus({
             status: 'complete',
@@ -2273,6 +2281,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             borderTop: `1px solid ${themeColors.borderColor}`
           }}
         >
+          {/* Indicadores de rendimiento */}
+          <AIPerformanceStats
+            currentModel={currentModel}
+            modelType={modelType}
+            maxTokens={(() => {
+              const config = aiService.getModelPerformanceConfig(currentModel, modelType);
+              console.log(`🔧 [AIChatPanel] Modelo: ${currentModel}, Tipo: ${modelType}, Config:`, config);
+              return config?.maxTokens || 7000;
+            })()}
+            contextLimit={(() => {
+              const config = aiService.getModelPerformanceConfig(currentModel, modelType);
+              return config?.contextLimit || 16000;
+            })()}
+            inputValue={inputValue}
+            messageCount={messages.length}
+            isLoading={isLoading}
+            lastResponseTokens={lastResponseTokens}
+            attachedFiles={attachedFiles}
+          />
+          
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
             <textarea
               ref={inputRef}
