@@ -219,6 +219,11 @@ class MarkdownFormatter {
       return `${indent}${number} ${text.trim()}`;
     });
     
+    // Corregir listas numeradas sin espacio después del punto
+    content = content.replace(/^(\s*)(\d+\.)([^\s])/gm, (match, indent, number, text) => {
+      return `${indent}${number} ${text}`;
+    });
+    
     return content;
   }
 
