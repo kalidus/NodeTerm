@@ -23,18 +23,8 @@ class ConversationService {
    * Crear nueva conversación
    */
   createConversation(title = null, modelId = null, modelType = null) {
-    // Verificar si ya hay una conversación actual vacía (sin mensajes)
-    const currentConversation = this.getCurrentConversation();
-    if (currentConversation && currentConversation.messages.length === 0) {
-      // Reutilizar la conversación vacía existente
-      if (title) {
-        currentConversation.title = title;
-        currentConversation.updatedAt = Date.now();
-        this.saveConversations();
-      }
-      return currentConversation;
-    }
-
+    // SIEMPRE crear una nueva conversación para evitar contaminación
+    // No reutilizar conversaciones existentes, aunque estén vacías
     const conversationId = this.generateConversationId();
     const now = Date.now();
     

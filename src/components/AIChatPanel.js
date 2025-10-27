@@ -492,15 +492,33 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   const handleNewConversation = () => {
+    // Reset completo del estado antes de crear nueva conversación
+    setMessages([]);
+    setAttachedFiles([]);
+    setInputValue('');
+    setIsLoading(false);
+    setLastResponseTokens(0);
+    
+    // Crear nueva conversación completamente limpia
     const newConversation = conversationService.createConversation(
       null, 
       currentModel, 
       modelType
     );
+    
+    // Actualizar estado con la nueva conversación
     setCurrentConversationId(newConversation.id);
     setConversationTitle(newConversation.title);
+    
+    // Asegurar que los mensajes estén vacíos (doble verificación)
     setMessages([]);
-    setAttachedFiles([]);
+    
+    console.log('Nueva conversación creada:', {
+      id: newConversation.id,
+      title: newConversation.title,
+      messagesCount: newConversation.messages.length,
+      attachedFilesCount: newConversation.attachedFiles.length
+    });
     
     // Disparar evento para actualizar el historial
     window.dispatchEvent(new CustomEvent('conversation-updated'));
