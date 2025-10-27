@@ -191,6 +191,7 @@ setInterval(() => {
 async function initializeGuacamoleServices() {
   // Evitar inicialización múltiple
   if (guacamoleInitializing || guacamoleInitialized) {
+    console.log('✅ Servicios Guacamole ya inicializados o en proceso, omitiendo...');
     return;
   }
   
@@ -351,8 +352,13 @@ function createWindow() {
       if (pref) {
         guacdService.setPreferredMethod(pref);
       }
-      await guacdService.initialize();
-      console.log('✅ Guacd precalentado y listo');
+      // Solo precalentar si no está ya inicializando o inicializado
+      if (!guacamoleInitializing && !guacamoleInitialized) {
+        await guacdService.initialize();
+        console.log('✅ Guacd precalentado y listo');
+      } else {
+        console.log('✅ Guacd ya está inicializado o en proceso');
+      }
     } catch (error) {
       console.warn('⚠️ Error en precalentamiento de guacd:', error.message);
     }

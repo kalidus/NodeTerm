@@ -446,9 +446,38 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 				{/* Docker/Guacd */}
 				{(() => {
 					const gColor = guacdState.isRunning ? '#22c55e' : '#ef4444';
-					const gLabel = guacdState.isRunning ? 'docker activo' : 'Docker detenido';
-					const gStatus = guacdState.isRunning ? 'Sesión activa' : 'Inactivo';
-					const gSubStatus = guacdState.isRunning ? `${guacdState.host}:${guacdState.port}` : 'Preferido: Docker/WSL';
+					
+					// Determinar el método y etiqueta correctos
+					let gLabel, gStatus, gSubStatus;
+					if (guacdState.isRunning) {
+						const method = guacdState.method || 'unknown';
+						switch (method.toLowerCase()) {
+							case 'docker':
+								gLabel = 'docker activo';
+								gStatus = 'Sesión activa';
+								break;
+							case 'wsl':
+								gLabel = 'wsl activo';
+								gStatus = 'Sesión activa';
+								break;
+							case 'native':
+								gLabel = 'nativo activo';
+								gStatus = 'Sesión activa';
+								break;
+							case 'mock':
+								gLabel = 'modo simulación';
+								gStatus = 'Simulando';
+								break;
+							default:
+								gLabel = 'guacd activo';
+								gStatus = 'Sesión activa';
+						}
+						gSubStatus = `${guacdState.host}:${guacdState.port}`;
+					} else {
+						gLabel = 'Guacd detenido';
+						gStatus = 'Inactivo';
+						gSubStatus = 'Preferido: Docker/WSL';
+					}
 					
 					return (
 						<div style={{

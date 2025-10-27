@@ -445,6 +445,12 @@ class GuacdService {
    */
   async initialize() {
     try {
+      // Evitar inicialización múltiple
+      if (this.isRunning) {
+        console.log('✅ GuacdService ya está corriendo, omitiendo inicialización...');
+        return true;
+      }
+
       // Primero verificar si guacd ya está corriendo
       const portAvailable = await this.isPortAvailable(this.port);
       if (!portAvailable) {
@@ -526,6 +532,9 @@ class GuacdService {
       // Limpiar estado
       this.isRunning = false;
       this.detectedMethod = null;
+      
+      // Pequeña pausa para asegurar que el puerto se libere
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Reinicializar con la nueva preferencia
       return await this.initialize();
