@@ -1258,17 +1258,29 @@ const AIConfigDialog = ({ visible, onHide }) => {
             💡 Configuración Recomendada por Modelo
           </h4>
           <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>
-            <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
-            </p>
-            <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Llama 3.1 (8B):</strong> maxTokens: 6000-7000 | contextLimit: 8000-16000 | maxHistory: 8 ⭐ ACTUAL
-            </p>
-            <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>Llama 3.1 (70B):</strong> maxTokens: 10000-12000 | contextLimit: 16000-64000 | maxHistory: 10
-            </p>
             
-            <div style={{ margin: '1rem 0', padding: '0.75rem', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '8px', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
+            {/* Modelos Locales */}
+            <div style={{ margin: '0 0 1rem 0', padding: '0.75rem', background: 'rgba(255, 193, 7, 0.1)', borderRadius: '8px', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+              <h4 style={{ color: '#FFC107', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>🏠 Modelos Locales (Ollama)</h4>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
+              </p>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000-7000 | contextLimit: 8000-16000 | maxHistory: 8 ⭐ ACTUAL
+              </p>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>Llama 3.1 (70B):</strong> maxTokens: 10000-12000 | contextLimit: 16000-64000 | maxHistory: 10
+              </p>
+              <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
+                <strong>🔥 Máximo (70B):</strong> maxTokens: 15000 | contextLimit: 64000-128000 | maxHistory: 12 (Requiere 64GB+ RAM)
+              </p>
+              <p style={{ margin: '0', fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                <strong>Streaming:</strong> Siempre activado para mejor UX en modelos locales
+              </p>
+            </div>
+
+            {/* Modelos Remotos */}
+            <div style={{ margin: '0', padding: '0.75rem', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '8px', border: '1px solid rgba(33, 150, 243, 0.3)' }}>
               <h4 style={{ color: '#2196F3', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>🌐 Modelos Cloud - Límites Automáticos</h4>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
                 <strong>GPT-4:</strong> 4K tokens | 128K contexto
@@ -1286,12 +1298,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 Los límites se ajustan automáticamente según el modelo seleccionado
               </p>
             </div>
-            <p style={{ margin: '0 0 0.5rem 0' }}>
-              <strong>🔥 Máximo (70B):</strong> maxTokens: 15000 | contextLimit: 64000-128000 | maxHistory: 12 (Requiere 64GB+ RAM)
-            </p>
-            <p style={{ margin: '0' }}>
-              <strong>Streaming:</strong> Siempre activado para mejor UX en modelos locales
-            </p>
           </div>
         </div>
       </div>
