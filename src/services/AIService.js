@@ -880,10 +880,13 @@ class AIService {
       this.conversationHistory = this.conversationHistory.slice(-finalOptions.maxHistory);
     }
 
+    // Mejorar el mensaje si es para scripts de Python
+    const enhancedMessage = this.enhanceMessageForPythonScripts(message);
+    
     // Agregar mensaje al historial
     this.conversationHistory.push({
       role: 'user',
-      content: message,
+      content: enhancedMessage,
       timestamp: Date.now()
     });
 
@@ -942,8 +945,11 @@ class AIService {
       limitedMessages = conversationMessages.slice(-finalOptions.maxHistory);
     }
 
+    // Mejorar el mensaje si es para scripts de Python
+    const enhancedMessage = this.enhanceMessageForPythonScripts(message);
+    
     // Agregar mensaje del usuario a la conversación
-    conversationService.addMessage('user', message, {
+    conversationService.addMessage('user', enhancedMessage, {
       timestamp: Date.now()
     });
 
@@ -1844,6 +1850,56 @@ class AIService {
   }
 
   /**
+   * Mejorar el mensaje del usuario para scripts de Python
+   */
+  enhanceMessageForPythonScripts(message) {
+    // Si el mensaje contiene solicitudes de scripts Python, agregar instrucciones de formato
+    if (message.toLowerCase().includes('script') && 
+        (message.toLowerCase().includes('python') || message.toLowerCase().includes('py'))) {
+      
+      const enhancedMessage = `${message}
+
+IMPORTANTE: Para cada script de Python que generes, asegúrate de:
+1. Envolver cada script completo en bloques de código con \`\`\`python al inicio y \`\`\` al final
+2. Cada script debe ser independiente y ejecutable
+3. Incluir comentarios descriptivos en español
+4. Usar nombres de variables y funciones descriptivos
+5. Cada script debe tener al menos 3-5 líneas de código funcional
+
+Ejemplo de formato correcto:
+\`\`\`python
+# Script 1: Calculadora básica
+def calcular(a, b, operacion):
+    if operacion == '+':
+        return a + b
+    elif operacion == '-':
+        return a - b
+    # ... más código
+
+if __name__ == "__main__":
+    resultado = calcular(5, 3, '+')
+    print(f"El resultado es: {resultado}")
+\`\`\`
+
+\`\`\`python
+# Script 2: Generador de números aleatorios
+import random
+
+def generar_numero(min_val, max_val):
+    return random.randint(min_val, max_val)
+
+if __name__ == "__main__":
+    numero = generar_numero(1, 100)
+    print(f"Número aleatorio: {numero}")
+\`\`\``;
+      
+      return enhancedMessage;
+    }
+    
+    return message;
+  }
+
+  /**
    * Detectar archivos mencionados en la respuesta
    */
   detectFilesInResponse(content, userMessage = '') {
@@ -1853,16 +1909,34 @@ class AIService {
     const seenFiles = new Set();
     
     // PRIORIDAD 1: Detectar bloques de código (lo más confiable)
-    const codeBlocks = content.match(/```(\w+)?\n([\s\S]*?)```/g);
+    // Hacer la detección más flexible para diferentes formatos
+    const codeBlocks = content.match(/```(\w+)?\s*\n([\s\S]*?)```/g) || 
+                      content.match(/```(\w+)?\s*([\s\S]*?)```/g) ||
+                      content.match(/```\s*\n([\s\S]*?)```/g);
+    
     if (codeBlocks && codeBlocks.length > 0) {
       // Si hay UN SOLO bloque de código, crear archivo si es significativo
       if (codeBlocks.length === 1) {
-        const match = codeBlocks[0].match(/```(\w+)?\n([\s\S]*?)```/);
+        const match = codeBlocks[0].match(/```(\w+)?\s*\n([\s\S]*?)```/) ||
+                      codeBlocks[0].match(/```(\w+)?\s*([\s\S]*?)```/) ||
+                      codeBlocks[0].match(/```\s*\n([\s\S]*?)```/);
         if (match) {
           const language = match[1] || 'txt';
-          const code = match[2].trim();
+          const code = match[2] ? match[2].trim() : match[1] ? match[1].trim() : '';
           
-          if (this.isSignificantCode(code, language)) {
+          // Si es Python y tiene contenido mínimo, incluirlo SIEMPRE
+          if (language === 'python' && code.length > 15) {
+            const extension = this.getLanguageExtension(language);
+            const descriptiveName = this.generateDescriptiveFileName(code, language, 0, userMessage);
+            const fileName = descriptiveName || `script.${extension}`;
+            
+            if (!seenFiles.has(fileName)) {
+              files.push(fileName);
+              seenFiles.add(fileName);
+            }
+          }
+          // Para otros lenguajes, usar lógica normal pero más permisiva
+          else if (language !== 'txt' && code.length > 20) {
             const extension = this.getLanguageExtension(language);
             const descriptiveName = this.generateDescriptiveFileName(code, language, 0, userMessage);
             const fileName = descriptiveName || `script.${extension}`;
@@ -1873,48 +1947,65 @@ class AIService {
             }
           }
         }
-        // Si hay UN bloque y generamos archivo, RETORNAR AQUÍ
-        if (files.length > 0) {
-          return files;
-        }
+        // Si hay UN bloque y generamos archivo, continuar para detectar más archivos
       } else {
-        // Múltiples bloques: ser EXTREMADAMENTE selectivo - SOLO el más significativo
-        let bestBlock = null;
-        let bestScore = 0;
-        
+        // Múltiples bloques: procesar TODOS los bloques de código
         codeBlocks.forEach((block, index) => {
-          const match = block.match(/```(\w+)?\n([\s\S]*?)```/);
+          const match = block.match(/```(\w+)?\s*\n([\s\S]*?)```/) ||
+                       block.match(/```(\w+)?\s*([\s\S]*?)```/) ||
+                       block.match(/```\s*\n([\s\S]*?)```/);
           if (match) {
             const language = match[1] || 'txt';
-            const code = match[2].trim();
+            const code = match[2] ? match[2].trim() : match[1] ? match[1].trim() : '';
             
-            if (this.isSignificantCode(code, language)) {
-              const score = this.calculateCodeSignificance(code, language);
-              if (score > bestScore) {
-                bestScore = score;
-                bestBlock = { code, language, index };
+            // Si es Python y tiene contenido mínimo, incluirlo SIEMPRE
+            if (language === 'python' && code.length > 15) {
+              const extension = this.getLanguageExtension(language);
+              const descriptiveName = this.generateDescriptiveFileName(code, language, index, userMessage);
+              const fileName = descriptiveName || `script_${index + 1}.${extension}`;
+              
+              if (!seenFiles.has(fileName)) {
+                files.push(fileName);
+                seenFiles.add(fileName);
+              }
+            }
+            // Para otros lenguajes, usar lógica normal pero más permisiva
+            else if (language !== 'txt' && code.length > 20) {
+              const extension = this.getLanguageExtension(language);
+              const descriptiveName = this.generateDescriptiveFileName(code, language, index, userMessage);
+              const fileName = descriptiveName || `script_${index + 1}.${extension}`;
+              
+              if (!seenFiles.has(fileName)) {
+                files.push(fileName);
+                seenFiles.add(fileName);
               }
             }
           }
         });
         
-        // Solo crear archivo para el bloque MEJOR clasificado
-        if (bestBlock && bestScore > 5) { // Umbral mínimo de significancia
-          const extension = this.getLanguageExtension(bestBlock.language);
-          const descriptiveName = this.generateDescriptiveFileName(bestBlock.code, bestBlock.language, bestBlock.index, userMessage);
-          const fileName = descriptiveName || `script.${extension}`;
-          
-          if (!seenFiles.has(fileName)) {
-            files.push(fileName);
-            seenFiles.add(fileName);
+        // Continuar para detectar más archivos en lugar de retornar aquí
+      }
+    }
+    
+    // PRIORIDAD 1.5: Detectar código Python suelto (sin bloques de código formales)
+    if (files.length === 0 || files.length < 3) { // Solo si no hemos detectado suficientes archivos
+      const pythonCodePatterns = [
+        // Patrones para detectar código Python suelto
+        /def\s+\w+\([^)]*\):\s*\n[\s\S]*?(?=\n\s*(?:def|class|if|#|$))/g,
+        /import\s+\w+[\s\S]*?(?=\n\s*(?:def|class|import|#|$))/g,
+        /print\([^)]*\)[\s\S]*?(?=\n\s*(?:def|class|import|#|$))/g
+      ];
+      
+      pythonCodePatterns.forEach((pattern, index) => {
+        let match;
+        while ((match = pattern.exec(content)) !== null) {
+          const code = match[0].trim();
+          if (code.length > 20 && !seenFiles.has(`python_code_${index + 1}.py`)) {
+            files.push(`python_code_${index + 1}.py`);
+            seenFiles.add(`python_code_${index + 1}.py`);
           }
         }
-        
-        // Si hay múltiples bloques y generamos archivo, RETORNAR AQUÍ
-        if (files.length > 0) {
-          return files;
-        }
-      }
+      });
     }
     
     // PRIORIDAD 2: Solo detectar archivos EXPLÍCITAMENTE mencionados (muy restrictivo)
@@ -1947,19 +2038,52 @@ class AIService {
    * Verificar si el código es significativo y merece ser un archivo
    */
   isSignificantCode(code, language) {
-    // Criterios más estrictos para evitar archivos innecesarios
-    const minLength = 50; // Reducir de 100 a 50 caracteres
+    // Criterios más flexibles para detectar scripts completos
+    const minLength = 20; // Muy bajo para scripts pequeños pero completos
+    const lines = code.split('\n');
+    const lineCount = lines.length;
+    
+    // Para Python, ser más inclusivo con scripts de prueba
+    if (language === 'python') {
+      const hasPythonStructure = (
+        code.includes('def ') || 
+        code.includes('class ') || 
+        code.includes('import ') ||
+        code.includes('if __name__') ||
+        code.includes('main()') ||
+        code.includes('assert ') ||
+        code.includes('print(') ||
+        code.includes('for ') ||
+        code.includes('if ') ||
+        code.includes('while ') ||
+        code.includes('try:') ||
+        code.includes('except:') ||
+        code.includes('input(') ||
+        code.includes('return ')
+      );
+      
+      // Un script Python es significativo si:
+      // 1. Tiene estructura Python Y (es suficientemente largo O tiene múltiples líneas)
+      // 2. O es un script completo con main() o if __name__
+      const isCompleteScript = code.includes('if __name__') || code.includes('main()');
+      const hasGoodLength = code.length > minLength;
+      const hasMultipleLines = lineCount > 2;
+      
+      return hasPythonStructure && (isCompleteScript || (hasGoodLength && hasMultipleLines));
+    }
+    
+    // Para otros lenguajes, mantener criterios más estrictos
     const hasStructure = (
-            code.includes('import ') || 
-            code.includes('def ') || 
-            code.includes('class ') || 
-            code.includes('function ') || 
-            code.includes('const ') || 
-            code.includes('let ') || 
-            code.includes('var ') ||
-            code.includes('public class') ||
-            code.includes('#include') ||
-            code.includes('package ') ||
+      code.includes('import ') || 
+      code.includes('def ') || 
+      code.includes('class ') || 
+      code.includes('function ') || 
+      code.includes('const ') || 
+      code.includes('let ') || 
+      code.includes('var ') ||
+      code.includes('public class') ||
+      code.includes('#include') ||
+      code.includes('package ') ||
       code.includes('export ') ||
       code.includes('module.exports') ||
       code.includes('require(') ||
@@ -1968,7 +2092,7 @@ class AIService {
     );
     
     const hasContent = code.length > minLength;
-    const hasMultipleLines = code.split('\n').length > 3;
+    const hasMultipleLines = lineCount > 3;
     
     return hasStructure && hasContent && hasMultipleLines;
   }
@@ -1979,12 +2103,16 @@ class AIService {
   calculateCodeSignificance(code, language) {
     let score = 0;
     
-    // Puntuación por longitud (más código = más significativo)
+    // Puntuación base por longitud (más código = más significativo)
     score += Math.min(code.length / 100, 10);
     
-    // Puntuación por estructura
+    // Puntuación por estructura - más específica para Python
     const structureKeywords = {
-      'python': ['def ', 'class ', 'import ', 'if __name__', 'main()'],
+      'python': [
+        'def ', 'class ', 'import ', 'if __name__', 'main()',
+        'assert ', 'print(', 'for ', 'if ', 'while ', 'try:', 'except:',
+        'return ', 'yield ', 'lambda ', 'with ', 'as '
+      ],
       'javascript': ['function', 'const ', 'class ', 'export ', 'import '],
       'java': ['public class', 'public static void main', 'import '],
       'cpp': ['int main', 'class ', '#include']
@@ -1997,9 +2125,42 @@ class AIService {
       }
     });
     
+    // Puntuación especial para scripts Python completos
+    if (language === 'python') {
+      // Script completo con main
+      if (code.includes('if __name__') && code.includes('main()')) {
+        score += 10; // Puntuación alta para scripts completos
+      }
+      
+      // Script con funciones definidas
+      if (code.includes('def ')) {
+        score += 5;
+      }
+      
+      // Script con pruebas (assert)
+      if (code.includes('assert ')) {
+        score += 3;
+      }
+      
+      // Script con bucles o condicionales
+      if (code.includes('for ') || code.includes('while ') || code.includes('if ')) {
+        score += 2;
+      }
+      
+      // Script con manejo de errores
+      if (code.includes('try:') || code.includes('except:')) {
+        score += 2;
+      }
+      
+      // Script con input del usuario
+      if (code.includes('input(')) {
+        score += 2;
+      }
+    }
+    
     // Puntuación por funcionalidad específica
     const functionalityKeywords = {
-      'python': ['random', 'randint', 'suma', 'resta', 'multiplicacion', 'division', 'celsius', 'fahrenheit'],
+      'python': ['random', 'randint', 'suma', 'resta', 'multiplicacion', 'division', 'celsius', 'fahrenheit', 'prueba', 'test'],
       'javascript': ['express', 'react', 'vue', 'angular', 'api', 'server'],
       'java': ['@SpringBootApplication', '@RestController', '@Service', '@Entity'],
       'cpp': ['iostream', 'vector', 'string', 'algorithm']
@@ -2421,6 +2582,15 @@ class AIService {
     // Buscar palabras clave que indiquen el propósito específico
     const purposeKeywords = {
       'python': {
+        'prueba_for': ['for ', 'frutas', 'bucle', 'iteracion', 'lista', 'append'],
+        'prueba_if': ['if ', 'condicional', 'assert', 'verificar', 'validar'],
+        'prueba_while': ['while ', 'bucle', 'iteracion', 'condicion'],
+        'prueba_funciones': ['def ', 'funcion', 'parametros', 'return'],
+        'prueba_clases': ['class ', 'objeto', 'metodo', 'constructor'],
+        'prueba_manejo_errores': ['try:', 'except:', 'error', 'excepcion'],
+        'analizador_csv': ['csv', 'analizar', 'archivo', 'columnas', 'filas', 'frecuencia'],
+        'lista_tareas': ['tareas', 'agregar', 'mostrar', 'pendientes', 'opcion', 'menu'],
+        'calculadora_interactiva': ['calcular', 'operacion', 'ingrese', 'numeros', 'resultado'],
         'calculadora_basica': ['suma', 'resta', 'multiplicacion', 'division', 'calculadora', 'operaciones'],
         'sumador_numeros': ['sumar', 'suma', 'numeros', 'cantidad', 'ingrese'],
         'promedio_numeros': ['promedio', 'calcular_promedio', 'numeros', 'promediar'],
@@ -2461,7 +2631,13 @@ class AIService {
     // Si no encuentra propósito específico, buscar patrones generales
     const generalPatterns = {
       'python': {
+        'script_prueba': ['assert ', 'print(', 'prueba', 'test'],
         'script_basico': ['def ', 'if __name__', 'main()'],
+        'script_bucle': ['for ', 'while ', 'bucle'],
+        'script_condicional': ['if ', 'elif ', 'else:', 'condicional'],
+        'script_interactivo': ['input(', 'while True', 'opcion', 'menu'],
+        'script_tareas': ['tareas', 'agregar', 'mostrar', 'pendientes'],
+        'script_calculadora': ['calcular', 'operacion', 'numeros', 'resultado'],
         'calculadora': ['suma', 'resta', 'multiplicacion', 'division'],
         'sumador': ['sumar', 'suma', 'numeros'],
         'conversor': ['convertir', 'celsius', 'fahrenheit', 'grados']
