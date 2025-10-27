@@ -3,6 +3,8 @@
  * Soporta modelos remotos (GPT, Claude, etc.) y locales (Llama, Qwen, DeepSeek)
  */
 
+import { conversationService } from './ConversationService';
+
 class AIService {
   constructor() {
     this.currentModel = null;
@@ -915,15 +917,23 @@ class AIService {
       ...options
     };
 
-    // Limitar historial si es necesario
-    if (this.conversationHistory.length > finalOptions.maxHistory) {
-      this.conversationHistory = this.conversationHistory.slice(-finalOptions.maxHistory);
+    // Obtener historial de la conversación actual desde ConversationService
+    const currentConversation = conversationService.getCurrentConversation();
+    if (!currentConversation) {
+      throw new Error('No hay conversación activa');
     }
 
-    // Agregar mensaje al historial
-    this.conversationHistory.push({
-      role: 'user',
-      content: message,
+    // Obtener mensajes de la conversación actual
+    const conversationMessages = currentConversation.messages || [];
+    
+    // Limitar historial si es necesario
+    let limitedMessages = conversationMessages;
+    if (conversationMessages.length > finalOptions.maxHistory) {
+      limitedMessages = conversationMessages.slice(-finalOptions.maxHistory);
+    }
+
+    // Agregar mensaje del usuario a la conversación
+    conversationService.addMessage('user', message, {
       timestamp: Date.now()
     });
 
@@ -942,9 +952,9 @@ class AIService {
       }
 
       if (this.modelType === 'remote') {
-        response = await this.sendToRemoteModelWithCallbacks(message, callbacks, finalOptions);
+        response = await this.sendToRemoteModelWithCallbacks(message, limitedMessages, callbacks, finalOptions);
       } else {
-        response = await this.sendToLocalModelWithCallbacks(message, callbacks, finalOptions);
+        response = await this.sendToLocalModelWithCallbacks(message, limitedMessages, callbacks, finalOptions);
       }
 
       const endTime = Date.now();
@@ -960,16 +970,12 @@ class AIService {
         });
       }
 
-      // Agregar respuesta al historial
-      this.conversationHistory.push({
-        role: 'assistant',
-        content: response,
-        timestamp: Date.now(),
-        metadata: {
-          latency,
-          model: this.currentModel,
-          modelType: this.modelType
-        }
+      // Agregar respuesta a la conversación actual
+      conversationService.addMessage('assistant', response, {
+        latency,
+        model: this.currentModel,
+        modelType: this.modelType,
+        tokens: finalOptions.maxTokens
       });
 
       return response;
@@ -1210,7 +1216,7 @@ class AIService {
   /**
    * Enviar mensaje a modelo remoto con callbacks
    */
-  async sendToRemoteModelWithCallbacks(message, callbacks = {}, options = {}) {
+  async sendToRemoteModelWithCallbacks(message, conversationMessages, callbacks = {}, options = {}) {
     const model = this.models.remote.find(m => m.id === this.currentModel);
     if (!model) {
       throw new Error('Modelo remoto no encontrado');
@@ -1245,7 +1251,7 @@ class AIService {
         
         requestBody = {
           model: model.id,
-          messages: this.conversationHistory.map(msg => ({
+          messages: conversationMessages.map(msg => ({
             role: msg.role,
             content: msg.content
           })),
@@ -1262,7 +1268,7 @@ class AIService {
         
         requestBody = {
           model: model.id,
-          messages: this.conversationHistory.map(msg => ({
+          messages: conversationMessages.map(msg => ({
             role: msg.role,
             content: msg.content
           })),
@@ -1275,7 +1281,7 @@ class AIService {
         
         endpointWithKey = `${model.endpoint}?key=${apiKey}`;
         
-        const contents = this.conversationHistory.map(msg => ({
+        const contents = conversationMessages.map(msg => ({
           role: msg.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: msg.content }]
         }));
@@ -1379,7 +1385,7 @@ class AIService {
   /**
    * Enviar mensaje a modelo local con callbacks
    */
-  async sendToLocalModelWithCallbacks(message, callbacks = {}, options = {}) {
+  async sendToLocalModelWithCallbacks(message, conversationMessages, callbacks = {}, options = {}) {
     const model = this.getAllLocalModels().find(m => m.id === this.currentModel);
     if (!model) {
       throw new Error('Modelo local no encontrado');
@@ -1390,7 +1396,7 @@ class AIService {
     }
 
     try {
-      const messages = this.conversationHistory.map(msg => ({
+      const messages = conversationMessages.map(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
         content: msg.content
       }));
