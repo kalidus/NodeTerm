@@ -522,21 +522,21 @@ class AIService {
     
     const configs = {
       low: {
-        maxTokens: 1000,
+        maxTokens: 4000,
         temperature: 0.7,
         maxHistory: 5,
         useStreaming: false,
         contextLimit: 2000
       },
       medium: {
-        maxTokens: 1500,
+        maxTokens: 7000,
         temperature: 0.7,
         maxHistory: 8,
         useStreaming: true,
         contextLimit: 4000
       },
       high: {
-        maxTokens: 2000,
+        maxTokens: 12000,
         temperature: 0.7,
         maxHistory: 10,
         useStreaming: true,
@@ -552,7 +552,7 @@ class AIService {
    */
   getDefaultPerformanceConfig() {
     return {
-      maxTokens: 1500,
+      maxTokens: 7000,
       temperature: 0.7,
       maxHistory: 8,
       useStreaming: true,
@@ -1336,7 +1336,11 @@ class AIService {
         stream: false,
         options: {
           temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 1500
+          num_predict: options.maxTokens || 4000,
+          num_ctx: options.contextLimit || 8000,
+          top_k: 40,
+          top_p: 0.9,
+          repeat_penalty: 1.1
         }
       })
     });
@@ -1522,7 +1526,11 @@ class AIService {
         stream: false,
         options: {
           temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 1500
+          num_predict: options.maxTokens || 4000,
+          num_ctx: options.contextLimit || 8000,
+          top_k: 40,
+          top_p: 0.9,
+          repeat_penalty: 1.1
         }
       })
     });
