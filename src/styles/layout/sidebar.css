@@ -896,33 +896,20 @@
   -ms-overflow-style: none !important;
 }
 
-/* Estilos glassy para botones del header superior */
+/* Estilos limpios para botones del header superior - solo iconos */
 .sidebar-action-button.glass-button {
-  background: linear-gradient(135deg, 
-    rgba(255,255,255,0.25) 0%, 
-    rgba(255,255,255,0.15) 50%, 
-    rgba(255,255,255,0.08) 100%) !important;
-  backdrop-filter: blur(20px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
-  border: 1px solid rgba(255,255,255,0.3) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3), 
-              0 4px 16px rgba(0,0,0,0.2),
-              inset 0 1px 0 rgba(255,255,255,0.4) !important;
-  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-  overflow: hidden !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: opacity 0.2s ease !important;
 }
 
 .sidebar-action-button.glass-button:hover {
-  transform: translateY(-1px) !important;
-  background: linear-gradient(135deg, 
-    rgba(255,255,255,0.35) 0%, 
-    rgba(255,255,255,0.25) 50%, 
-    rgba(255,255,255,0.15) 100%) !important;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 
-              0 6px 20px rgba(0,0,0,0.3),
-              inset 0 1px 0 rgba(255,255,255,0.5) !important;
-  border-color: rgba(255,255,255,0.4) !important;
+  opacity: 0.7 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /* Estilo especial para botón key (amarillo) */
@@ -931,11 +918,6 @@
 }
 
 .sidebar-action-button.glass-button.key-button:hover {
-  background: linear-gradient(135deg, 
-    rgba(255,193,7,0.2) 0%, 
-    rgba(255,193,7,0.15) 50%, 
-    rgba(255,193,7,0.1) 100%) !important;
-  box-shadow: 0 12px 40px rgba(255,193,7,0.3), 
-              0 6px 20px rgba(0,0,0,0.3),
-              inset 0 1px 0 rgba(255,255,255,0.5) !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
