@@ -1603,7 +1603,7 @@ const Sidebar = React.memo(({
             
             {/* Botón de conexiones */}
             <Button 
-              icon="pi pi-desktop" 
+              icon="pi pi-sitemap" 
               className="p-button-rounded p-button-text sidebar-action-button" 
               onClick={() => {
                 setViewMode('connections');
@@ -1623,7 +1623,8 @@ const Sidebar = React.memo(({
                 alignItems: 'center',
                 justifyContent: 'center',
                 visibility: 'visible !important',
-                opacity: '1 !important'
+                opacity: '1 !important',
+                color: '#2196f3'
               }} 
             />
             
