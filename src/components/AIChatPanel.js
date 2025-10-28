@@ -2133,12 +2133,51 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                     color: themeColors.textSecondary,
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                     gap: '0.5rem',
-                    paddingLeft: '1.5rem'
+                    paddingLeft: '1.5rem',
+                    paddingRight: '0.5rem'
                   }}>
-                    <i className="pi pi-file" style={{ fontSize: '0.7rem' }} />
-                    <span>{file.name}</span>
-                    <span style={{ fontSize: '0.75rem' }}>({file.sizeFormatted || 'OK'})</span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      flex: 1
+                    }}>
+                      <i className="pi pi-file" style={{ fontSize: '0.7rem' }} />
+                      <span>{file.name}</span>
+                      <span style={{ fontSize: '0.75rem' }}>({file.sizeFormatted || 'OK'})</span>
+                    </div>
+                    <button
+                      onClick={() => handleFileRemoved(file.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        borderRadius: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: themeColors.textSecondary,
+                        fontSize: '0.8rem',
+                        transition: 'all 0.2s ease',
+                        opacity: 0.7
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.opacity = '1';
+                        e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+                        e.target.style.color = '#f44336';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.opacity = '0.7';
+                        e.target.style.backgroundColor = 'transparent';
+                        e.target.style.color = themeColors.textSecondary;
+                      }}
+                      title="Eliminar archivo adjunto"
+                    >
+                      <i className="pi pi-times" style={{ fontSize: '0.7rem' }} />
+                    </button>
                   </div>
                 ))}
               </div>
