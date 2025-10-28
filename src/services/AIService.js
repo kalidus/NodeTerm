@@ -645,18 +645,18 @@ class AIService {
         contextLimit: 2000
       },
       medium: {
-        maxTokens: 7000,
+        maxTokens: 6000,  // Reducido de 7000 para mejor coherencia con modelos cloud
         temperature: 0.7,
         maxHistory: 8,
         useStreaming: true,
-        contextLimit: 4000
+        contextLimit: 8000  // Aumentado de 4000 para mejor contexto
       },
       high: {
-        maxTokens: 12000,
+        maxTokens: 8000,  // Reducido de 12000 para mantener consistencia
         temperature: 0.7,
         maxHistory: 10,
         useStreaming: true,
-        contextLimit: 8000
+        contextLimit: 16000  // Aumentado de 8000 para aprovechar mejor los modelos grandes
       }
     };
 
@@ -1900,7 +1900,8 @@ if __name__ == "__main__":
   }
 
   /**
-   * Detectar archivos mencionados en la respuesta
+   * Detectar archivos mencionados en la respuesta - VERSIÓN SIMPLIFICADA
+   * Solo extrae bloques de código de la respuesta actual
    */
   detectFilesInResponse(content, userMessage = '') {
     if (!content) return [];
@@ -1908,130 +1909,221 @@ if __name__ == "__main__":
     const files = [];
     const seenFiles = new Set();
     
-    // PRIORIDAD 1: Detectar bloques de código (lo más confiable)
-    // Hacer la detección más flexible para diferentes formatos
-    const codeBlocks = content.match(/```(\w+)?\s*\n([\s\S]*?)```/g) || 
-                      content.match(/```(\w+)?\s*([\s\S]*?)```/g) ||
-                      content.match(/```\s*\n([\s\S]*?)```/g);
+    // PASO 1: Extraer SOLO bloques de código formales: ```lenguaje\ncode```
+    const codeBlockRegex = /```(\w+)?\s*\n([\s\S]*?)```/g;
+    let match;
+    let blockIndex = 0;
     
-    if (codeBlocks && codeBlocks.length > 0) {
-      // Si hay UN SOLO bloque de código, crear archivo si es significativo
-      if (codeBlocks.length === 1) {
-        const match = codeBlocks[0].match(/```(\w+)?\s*\n([\s\S]*?)```/) ||
-                      codeBlocks[0].match(/```(\w+)?\s*([\s\S]*?)```/) ||
-                      codeBlocks[0].match(/```\s*\n([\s\S]*?)```/);
-        if (match) {
-          const language = match[1] || 'txt';
-          const code = match[2] ? match[2].trim() : match[1] ? match[1].trim() : '';
-          
-          // Si es Python y tiene contenido mínimo, incluirlo SIEMPRE
-          if (language === 'python' && code.length > 15) {
-            const extension = this.getLanguageExtension(language);
-            const descriptiveName = this.generateDescriptiveFileName(code, language, 0, userMessage);
-            const fileName = descriptiveName || `script.${extension}`;
-            
-            if (!seenFiles.has(fileName)) {
-              files.push(fileName);
-              seenFiles.add(fileName);
-            }
-          }
-          // Para otros lenguajes, usar lógica normal pero más permisiva
-          else if (language !== 'txt' && code.length > 20) {
-            const extension = this.getLanguageExtension(language);
-            const descriptiveName = this.generateDescriptiveFileName(code, language, 0, userMessage);
-            const fileName = descriptiveName || `script.${extension}`;
-            
-            if (!seenFiles.has(fileName)) {
-              files.push(fileName);
-              seenFiles.add(fileName);
-            }
-          }
-        }
-        // Si hay UN bloque y generamos archivo, continuar para detectar más archivos
-      } else {
-        // Múltiples bloques: procesar TODOS los bloques de código
-        codeBlocks.forEach((block, index) => {
-          const match = block.match(/```(\w+)?\s*\n([\s\S]*?)```/) ||
-                       block.match(/```(\w+)?\s*([\s\S]*?)```/) ||
-                       block.match(/```\s*\n([\s\S]*?)```/);
-          if (match) {
-            const language = match[1] || 'txt';
-            const code = match[2] ? match[2].trim() : match[1] ? match[1].trim() : '';
-            
-            // Si es Python y tiene contenido mínimo, incluirlo SIEMPRE
-            if (language === 'python' && code.length > 15) {
-              const extension = this.getLanguageExtension(language);
-              const descriptiveName = this.generateDescriptiveFileName(code, language, index, userMessage);
-              const fileName = descriptiveName || `script_${index + 1}.${extension}`;
-              
-              if (!seenFiles.has(fileName)) {
-                files.push(fileName);
-                seenFiles.add(fileName);
-              }
-            }
-            // Para otros lenguajes, usar lógica normal pero más permisiva
-            else if (language !== 'txt' && code.length > 20) {
-              const extension = this.getLanguageExtension(language);
-              const descriptiveName = this.generateDescriptiveFileName(code, language, index, userMessage);
-              const fileName = descriptiveName || `script_${index + 1}.${extension}`;
-              
-              if (!seenFiles.has(fileName)) {
-                files.push(fileName);
-                seenFiles.add(fileName);
-              }
-            }
-          }
-        });
-        
-        // Continuar para detectar más archivos en lugar de retornar aquí
-      }
-    }
-    
-    // PRIORIDAD 1.5: Detectar código Python suelto (sin bloques de código formales)
-    if (files.length === 0 || files.length < 3) { // Solo si no hemos detectado suficientes archivos
-      const pythonCodePatterns = [
-        // Patrones para detectar código Python suelto
-        /def\s+\w+\([^)]*\):\s*\n[\s\S]*?(?=\n\s*(?:def|class|if|#|$))/g,
-        /import\s+\w+[\s\S]*?(?=\n\s*(?:def|class|import|#|$))/g,
-        /print\([^)]*\)[\s\S]*?(?=\n\s*(?:def|class|import|#|$))/g
-      ];
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      blockIndex++;
+      const language = (match[1] || 'txt').trim().toLowerCase();
+      const code = match[2].trim();
       
-      pythonCodePatterns.forEach((pattern, index) => {
-        let match;
-        while ((match = pattern.exec(content)) !== null) {
-          const code = match[0].trim();
-          if (code.length > 20 && !seenFiles.has(`python_code_${index + 1}.py`)) {
-            files.push(`python_code_${index + 1}.py`);
-            seenFiles.add(`python_code_${index + 1}.py`);
-          }
-        }
-      });
-    }
-    
-    // PRIORIDAD 2: Solo detectar archivos EXPLÍCITAMENTE mencionados (muy restrictivo)
-    // Solo si NO hay bloques de código significativos
-    const patterns = [
-      // Rutas explícitas: /ruta/a/archivo.ext o C:\ruta\archivo.ext (requieren separador)
-      /(?:^|\s)((?:[a-zA-Z]:)?(?:\/|\\)[^\s<>"{}|\\^`\[\]]+\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md))\b/gmi,
-      // Rutas en formato de código: src/lib/dist/etc (requieren prefijo específico)
-      /(?:src|lib|dist|build|out|output|downloads|files)\/[^\s<>"{}|\\^`\[\]]+\.(?:py|js|ts|jsx|tsx|json|html|css|sql|java|cpp|go|rb|php|sh|bash|yaml|yml|xml|txt|csv|md)/gmi
-    ];
-    
-    for (const pattern of patterns) {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        const filePath = match[1] || match[0].trim();
-        // Validar que parezca una ruta real (no solo una palabra con punto)
-        if (filePath && (filePath.includes('/') || filePath.includes('\\') || filePath.startsWith('C:'))) {
-          if (!seenFiles.has(filePath)) {
-            files.push(filePath);
-            seenFiles.add(filePath);
-          }
-        }
+      // Solo aceptar bloques con contenido real (más de 20 caracteres)
+      if (code.length < 20) continue;
+      
+      // Solo aceptar lenguajes de programación válidos
+      const validLanguages = {
+        'python': 'py',
+        'javascript': 'js',
+        'typescript': 'ts',
+        'html': 'html',
+        'css': 'css',
+        'jsx': 'jsx',
+        'tsx': 'tsx',
+        'json': 'json',
+        'xml': 'xml',
+        'bash': 'sh',
+        'shell': 'sh',
+        'sh': 'sh',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c',
+        'go': 'go',
+        'rust': 'rs',
+        'php': 'php',
+        'ruby': 'rb',
+        'sql': 'sql'
+      };
+      
+      if (!(language in validLanguages)) continue;
+      
+      // PASO 2: Generar nombre descriptivo basado en el contenido
+      let fileName = this.generateSimpleFileName(code, language, blockIndex, userMessage);
+      
+      // Si generateSimpleFileName retorna null, IGNORAR este bloque (ej: comandos bash simples)
+      if (fileName === null) continue;
+      
+      // Evitar duplicados
+      if (!seenFiles.has(fileName)) {
+        files.push(fileName);
+        seenFiles.add(fileName);
       }
     }
     
     return files;
+  }
+
+  /**
+   * Generar nombre simple de archivo basado en el contenido
+   * Detecta si es una edición o un archivo nuevo
+   */
+  generateSimpleFileName(code, language, blockIndex, userMessage) {
+    const extensions = {
+      'python': 'py',
+      'javascript': 'js',
+      'typescript': 'ts',
+      'html': 'html',
+      'css': 'css',
+      'jsx': 'jsx',
+      'tsx': 'tsx',
+      'json': 'json',
+      'xml': 'xml',
+      'bash': 'sh',
+      'shell': 'sh',
+      'sh': 'sh',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c': 'c',
+      'go': 'go',
+      'rust': 'rs',
+      'php': 'php',
+      'ruby': 'rb',
+      'sql': 'sql'
+    };
+    
+    const ext = extensions[language] || language;
+    
+    // FILTRO ESPECIAL: Para bash/sh, diferenciar entre comandos simples y scripts
+    if (language === 'bash' || language === 'shell' || language === 'sh') {
+      // Si es un comando simple (una línea o pocas líneas de comandos), IGNORAR
+      const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+      
+      // Verificar si es un script real (tiene estructura de script)
+      const isRealScript = code.includes('#!/') || // Shebang
+                          code.includes('function ') || // Definición de función
+                          code.includes('for ') || // Loops
+                          code.includes('while ') ||
+                          code.includes('if ') || // Condicionales
+                          code.includes('case ') ||
+                          lines.length > 3; // Más de 3 líneas de verdadero código
+      
+      // Si es solo comandos simples (una o dos líneas), NO generar archivo
+      if (!isRealScript && lines.length <= 2) {
+        return null; // Retornar null para ignorar este bloque
+      }
+    }
+    
+    // DETECTAR EDICIONES: Si es código incompleto o fragmento, probablemente es edición
+    const isEditionIndicators = [
+      'document.getElementById', // Edición de HTML existente
+      'addEventListener', // Edición de script existente
+      'querySelector', // Edición de HTML/CSS
+      'fetch(', // Edición de API
+      'const', // Edición de función existente
+      'function ', // Nueva función en archivo existente
+      'export ', // Edición de módulo
+      'import ', // Edición de imports
+    ];
+    
+    const hasEditionIndicators = isEditionIndicators.some(indicator => code.includes(indicator));
+    
+    // Si tiene indicadores de edición Y no es un archivo completo, es una edición
+    const isCompleteFile = code.includes('<!DOCTYPE') || 
+                          code.includes('if __name__') ||
+                          code.includes('function main') ||
+                          code.includes('package main');
+    
+    const isEdition = hasEditionIndicators && !isCompleteFile;
+    
+    // 1. Si el usuario pidió explícitamente algo, usar ese nombre
+    if (userMessage) {
+      const userLower = userMessage.toLowerCase();
+      
+      // Palabras clave que indican edición
+      const editKeywords = ['añade', 'agrega', 'add', 'edit', 'modifica', 'update', 'edita', 'improve', 'mejorar', 'incluye', 'include'];
+      const isEditRequest = editKeywords.some(kw => userLower.includes(kw));
+      
+      // Si es solicitud de edición y el código parece una edición, retornar archivo conocido
+      if (isEditRequest && isEdition) {
+        // Detectar qué archivo es probablemente una edición
+        if (language === 'html' && code.includes('<')) return 'index.html';
+        if (language === 'javascript' && code.includes('document.')) return 'index.js';
+        if (language === 'javascript' && code.includes('app.on')) return 'main.js';
+        if (language === 'css') return 'styles.css';
+        if (language === 'json' && code.includes('"')) return 'package.json';
+      }
+      
+      // Electron
+      if (userLower.includes('electron') && language === 'javascript') {
+        if (code.includes('BrowserWindow') || code.includes('app.on')) return 'main.js';
+        if (code.includes('<html') || code.includes('<!DOCTYPE')) return 'index.html';
+      }
+      
+      // React
+      if ((userLower.includes('react') || userLower.includes('componente')) && language === 'jsx') {
+        return `Component.${ext}`;
+      }
+      
+      // Package.json
+      if (userLower.includes('package.json') && language === 'json') {
+        return 'package.json';
+      }
+    }
+    
+    // 2. Detectar archivos especiales por contenido
+    if (language === 'html' && code.includes('<!DOCTYPE')) {
+      return 'index.html';
+    }
+    if (language === 'json' && code.includes('"name"') && code.includes('"version"')) {
+      return 'package.json';
+    }
+    if (language === 'javascript' && code.includes('module.exports')) {
+      return 'index.js';
+    }
+    if (language === 'css' && code.split('\n').length > 2) {
+      return 'styles.css';
+    }
+    
+    // 3. Si parece una edición pero no sabemos cuál archivo, usar nombre genérico
+    if (isEdition) {
+      const typeNames = {
+        'python': 'script',
+        'javascript': 'index',
+        'typescript': 'index',
+        'html': 'index',
+        'css': 'styles',
+        'json': 'config',
+        'java': 'App',
+        'cpp': 'main',
+        'sql': 'query',
+        'bash': 'script',
+        'shell': 'script',
+        'sh': 'script'
+      };
+      
+      const baseName = typeNames[language] || 'file';
+      return `${baseName}.${ext}`; // Sin números para ediciones
+    }
+    
+    // 4. Nombre genérico basado en tipo para archivos nuevos
+    const typeNames = {
+      'python': 'script',
+      'javascript': 'script',
+      'typescript': 'script',
+      'html': 'page',
+      'css': 'styles',
+      'json': 'config',
+      'java': 'App',
+      'cpp': 'main',
+      'sql': 'query',
+      'bash': 'script',
+      'shell': 'script',
+      'sh': 'script'
+    };
+    
+    const baseName = typeNames[language] || 'file';
+    return `${baseName}_${blockIndex}.${ext}`;
   }
 
   /**
@@ -2657,6 +2749,120 @@ if __name__ == "__main__":
     }
     
     return null;
+  }
+
+  /**
+   * Verificar si el código es relevante al contexto de la solicitud del usuario
+   */
+  isRelevantToContext(code, userContext, language) {
+    if (!userContext || userContext.trim() === '') return true; // Si no hay contexto, aceptar
+    
+    const codeLower = code.toLowerCase();
+    const userContextLower = userContext.toLowerCase();
+    
+    console.log('🔍 Validando relevancia:', {
+      userContext: userContext.substring(0, 50),
+      language,
+      codePreview: code.substring(0, 50)
+    });
+    
+    // Validar por tipo de solicitud específica CON MAYOR PRECISIÓN
+    if (userContextLower.includes('electron')) {
+      const isRelevant = codeLower.includes('electron') || 
+                         codeLower.includes('app.on') || 
+                         codeLower.includes('browserwindow') ||
+                         codeLower.includes('createwindow') ||
+                         codeLower.includes('const { app, browserwindow }') ||
+                         codeLower.includes('loadurl') ||
+                         codeLower.includes('index.html') ||
+                         codeLower.includes('<!doctype html>') ||
+                         codeLower.includes('<html') ||
+                         codeLower.includes('mi aplicación') ||
+                         codeLower.includes('aplicación electrónica');
+      
+      console.log('🔍 Electron validation:', isRelevant, {
+        hasElectron: codeLower.includes('electron'),
+        hasAppOn: codeLower.includes('app.on'),
+        hasBrowserWindow: codeLower.includes('browserwindow'),
+        hasLoadURL: codeLower.includes('loadurl'),
+        hasIndexHTML: codeLower.includes('index.html'),
+        hasHTML: codeLower.includes('<!doctype html>') || codeLower.includes('<html')
+      });
+      
+      return isRelevant;
+    }
+    
+    if (userContextLower.includes('react')) {
+      const isRelevant = codeLower.includes('react') || 
+                         codeLower.includes('import react') ||
+                         codeLower.includes('from "react"');
+      
+      console.log('🔍 React validation:', isRelevant);
+      return isRelevant;
+    }
+    
+    if (userContextLower.includes('vue')) {
+      const isRelevant = codeLower.includes('vue') || 
+                         codeLower.includes('import') && codeLower.includes('vue');
+      
+      console.log('🔍 Vue validation:', isRelevant);
+      return isRelevant;
+    }
+    
+    if (userContextLower.includes('python') || userContextLower.includes('pandas')) {
+      const isRelevant = codeLower.includes('import') || 
+                         codeLower.includes('def ') || 
+                         codeLower.includes('pandas');
+      
+      console.log('🔍 Python validation:', isRelevant);
+      return isRelevant;
+    }
+    
+    if (userContextLower.includes('web scraper') || userContextLower.includes('scraper')) {
+      const isRelevant = codeLower.includes('scraper') || 
+                         codeLower.includes('requests') ||
+                         codeLower.includes('beautifulsoup') ||
+                         codeLower.includes('fetch(');
+      
+      console.log('🔍 Web scraper validation:', isRelevant);
+      return isRelevant;
+    }
+    
+    if (userContextLower.includes('data analysis') || userContextLower.includes('analisis de datos')) {
+      const isRelevant = codeLower.includes('pandas') || 
+                         codeLower.includes('numpy') ||
+                         codeLower.includes('dataframe') ||
+                         codeLower.includes('csv');
+      
+      console.log('🔍 Data analysis validation:', isRelevant);
+      return isRelevant;
+    }
+    
+    // Detectar archivos JavaScript/HTML genéricos si el contexto es de desarrollo
+    if (userContextLower.includes('proyecto') || userContextLower.includes('aplicación') || 
+        userContextLower.includes('app') || userContextLower.includes('desarrollo')) {
+      
+      const isRelevant = (language === 'javascript' && (
+        codeLower.includes('function') || 
+        codeLower.includes('const ') || 
+        codeLower.includes('let ') ||
+        codeLower.includes('var ') ||
+        codeLower.includes('import ') ||
+        codeLower.includes('export ')
+      )) || (language === 'html' && (
+        codeLower.includes('<!doctype') ||
+        codeLower.includes('<html') ||
+        codeLower.includes('<head') ||
+        codeLower.includes('<body')
+      ));
+      
+      console.log('🔍 Generic project validation:', isRelevant, { language, hasJS: language === 'javascript', hasHTML: language === 'html' });
+      return isRelevant;
+    }
+    
+    // Si no hay contexto específico conocido, RECHAZAR por defecto (más restrictivo)
+    console.log('⚠️ Contexto no reconocido, rechazando archivo');
+    return false;
   }
 
   /**
