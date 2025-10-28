@@ -1114,7 +1114,8 @@ class AIService {
           const response = await fetch(requestUrl, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: options.signal
       });
 
       if (!response.ok) {
@@ -1358,7 +1359,8 @@ class AIService {
           const response = await fetch(requestUrl, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify(requestBody),
+            signal: options.signal
           });
 
           if (!response.ok) {
@@ -1486,7 +1488,8 @@ class AIService {
           top_p: 0.9,
           repeat_penalty: 1.1
         }
-      })
+      }),
+      signal: options.signal
     });
 
     if (!response.ok) {
@@ -1523,7 +1526,8 @@ class AIService {
           temperature: options.temperature || 0.7,
           num_predict: options.maxTokens || 1500
         }
-      })
+      }),
+      signal: options.signal
     });
 
     if (!response.ok) {
@@ -1582,7 +1586,8 @@ class AIService {
           temperature: options.temperature || 0.7,
           num_predict: options.maxTokens || 1500
         }
-      })
+      }),
+      signal: options.signal
     });
 
     if (!response.ok) {
@@ -1676,7 +1681,8 @@ class AIService {
           top_p: 0.9,
           repeat_penalty: 1.1
         }
-      })
+      }),
+      signal: options.signal
     });
 
     if (!response.ok) {

@@ -399,10 +399,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         finalMessage = `${userMessage}\n\n${fileContents}`;
       }
 
-      // Enviar a la IA con callbacks
-      await aiService.sendMessageWithCallbacks(finalMessage, callbacks);
+      // Enviar a la IA con callbacks y signal para cancelación
+      await aiService.sendMessageWithCallbacks(finalMessage, callbacks, {
+        signal: controller.signal
+      });
 
     } catch (error) {
+      // Si es error de cancelación, no mostrar como error
+      if (error.name === 'AbortError') {
+        console.log('💡 Generación cancelada por el usuario');
+        setCurrentStatus({
+          status: 'cancelled',
+          message: 'Generación cancelada'
+        });
+        return; // No mostrar mensaje de error para cancelaciones
+      }
+      
       console.error('Error enviando mensaje:', error);
       
       setCurrentStatus({
