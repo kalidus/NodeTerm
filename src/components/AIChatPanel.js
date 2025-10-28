@@ -2303,15 +2303,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           <AIPerformanceStats
             currentModel={currentModel}
             modelType={modelType}
-            maxTokens={(() => {
+            maxTokens={React.useMemo(() => {
+              if (!currentModel) return 7000;
               const config = aiService.getModelPerformanceConfig(currentModel, modelType);
-              console.log(`🔧 [AIChatPanel] Modelo: ${currentModel}, Tipo: ${modelType}, Config:`, config);
               return config?.maxTokens || 7000;
-            })()}
-            contextLimit={(() => {
+            }, [currentModel, modelType])}
+            contextLimit={React.useMemo(() => {
+              if (!currentModel) return 16000;
               const config = aiService.getModelPerformanceConfig(currentModel, modelType);
               return config?.contextLimit || 16000;
-            })()}
+            }, [currentModel, modelType])}
             inputValue={inputValue}
             messageCount={messages.length}
             isLoading={isLoading}
