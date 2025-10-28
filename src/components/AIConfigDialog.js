@@ -27,7 +27,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [remoteOllamaUrl, setRemoteOllamaUrl] = useState('');
   const [testingConnection, setTestingConnection] = useState(false);
   const [performanceConfig, setPerformanceConfig] = useState({
-    maxTokens: 7000,
+    maxTokens: 6000,  // Ajustado para mejor coherencia con modelos cloud
     temperature: 0.7,
     maxHistory: 8,
     useStreaming: true,
@@ -1029,10 +1029,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
         {/* Presets rápidos por modelo */}
         <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <Button
-            label="⚡ Preset 8B (7K tokens)"
+            label="⚡ Preset 8B (6K tokens)"
             icon="pi pi-lightning"
             onClick={() => setPerformanceConfig({
-              maxTokens: 7000,
+              maxTokens: 6000,
               temperature: 0.7,
               maxHistory: 8,
               useStreaming: true,
@@ -1043,28 +1043,28 @@ const AIConfigDialog = ({ visible, onHide }) => {
             size="small"
           />
           <Button
-            label="🚀 Preset 70B (12K tokens)"
+            label="🚀 Preset 70B (8K tokens)"
             icon="pi pi-rocket"
             onClick={() => setPerformanceConfig({
-              maxTokens: 12000,
+              maxTokens: 8000,
               temperature: 0.7,
               maxHistory: 10,
               useStreaming: true,
-              contextLimit: 32000
+              contextLimit: 16000
             })}
             severity="success"
             outlined
             size="small"
           />
           <Button
-            label="🔥 Máximo (64K contexto)"
+            label="🔥 Máximo (16K contexto)"
             icon="pi pi-fire"
             onClick={() => setPerformanceConfig({
-              maxTokens: 15000,
+              maxTokens: 8000,
               temperature: 0.7,
               maxHistory: 12,
               useStreaming: true,
-              contextLimit: 64000
+              contextLimit: 32000
             })}
             severity="danger"
             outlined
@@ -1102,7 +1102,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 style={{ width: '100%' }}
               />
               <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>
-                Recomendado: 4000+ para resúmenes, 7000+ para análisis profundo, 10000+ para 70B
+                Recomendado: 4000 para cloud/8B, 6000-8000 para análisis profundo, 8000+ para 70B
               </small>
             </div>
 
@@ -1266,13 +1266,13 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000-7000 | contextLimit: 8000-16000 | maxHistory: 8 ⭐ ACTUAL
+                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000 | contextLimit: 8000-16000 | maxHistory: 8 ⭐ ACTUAL
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.1 (70B):</strong> maxTokens: 10000-12000 | contextLimit: 16000-64000 | maxHistory: 10
+                <strong>Llama 3.1 (70B):</strong> maxTokens: 8000 | contextLimit: 16000-32000 | maxHistory: 10
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>🔥 Máximo (70B):</strong> maxTokens: 15000 | contextLimit: 64000-128000 | maxHistory: 12 (Requiere 64GB+ RAM)
+                <strong>🔥 Máximo (70B):</strong> maxTokens: 8000 | contextLimit: 32000-64000 | maxHistory: 12 (Requiere 64GB+ RAM)
               </p>
               <p style={{ margin: '0', fontSize: '0.75rem', color: themeColors.textSecondary }}>
                 <strong>Streaming:</strong> Siempre activado para mejor UX en modelos locales
