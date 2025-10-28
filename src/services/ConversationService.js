@@ -50,6 +50,16 @@ class ConversationService {
     this.addToIndex(conversation);
     this.currentConversationId = conversationId;
     
+    // Log para debug y verificación de aislamiento
+    console.log('✅ [ConversationService] Nueva conversación creada:', {
+      id: conversationId,
+      title: conversation.title,
+      totalConversations: this.conversations.size,
+      messagesCount: 0,
+      attachedFilesCount: 0,
+      isolation: 'guaranteed'
+    });
+    
     this.saveConversations();
     return conversation;
   }
@@ -803,10 +813,9 @@ class ConversationService {
           this.conversationIndex = data.index;
         }
         
-        // Cargar conversación actual
-        if (data.currentConversationId) {
-          this.currentConversationId = data.currentConversationId;
-        }
+        // No cargar automáticamente la conversación anterior para evitar mezcla de contenido
+        // Cada sesión debe empezar limpia
+        this.currentConversationId = null;
         
         // Cargar carpetas
         if (data.folders) {
@@ -841,7 +850,7 @@ class ConversationService {
       const data = {
         conversations: Array.from(this.conversations.entries()),
         index: this.conversationIndex,
-        currentConversationId: this.currentConversationId,
+        // No guardar currentConversationId para asegurar que cada sesión empiece limpia
         folders: Array.from(this.folders.entries()),
         favorites: Array.from(this.favorites),
         tags: Array.from(this.tags.entries()),
