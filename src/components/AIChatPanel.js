@@ -29,7 +29,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [themeVersion, setThemeVersion] = useState(0);
   const [functionalModels, setFunctionalModels] = useState([]);
-  const [lastResponseTokens, setLastResponseTokens] = useState(0);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
@@ -345,8 +344,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             } : msg
           ));
           
-          // Actualizar tokens de la última respuesta para el contador visual
-          setLastResponseTokens(responseTokens);
+          // Tokens calculados internamente por el sistema de ventana deslizante
           
           // 🪟 NOTIFICACIÓN SUTIL de optimización de contexto (como ChatGPT)
           if (aiService.lastContextOptimization && 
@@ -507,7 +505,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAttachedFiles([]);
     setInputValue('');
     setIsLoading(false);
-    setLastResponseTokens(0);
     
     // Crear nueva conversación completamente limpia
     const newConversation = conversationService.createConversation(
@@ -2367,11 +2364,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           <AIPerformanceStats
             currentModel={currentModel}
             modelType={modelType}
-            maxTokens={React.useMemo(() => {
-              if (!currentModel) return 7000;
-              const config = aiService.getModelPerformanceConfig(currentModel, modelType);
-              return config?.maxTokens || 7000;
-            }, [currentModel, modelType])}
             contextLimit={React.useMemo(() => {
               if (!currentModel) return 16000;
               const config = aiService.getModelPerformanceConfig(currentModel, modelType);
@@ -2380,7 +2372,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             inputValue={inputValue}
             messageCount={messages.length}
             isLoading={isLoading}
-            lastResponseTokens={lastResponseTokens}
             attachedFiles={attachedFiles}
           />
           
