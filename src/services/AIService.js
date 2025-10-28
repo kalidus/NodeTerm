@@ -4,6 +4,7 @@
  */
 
 import { conversationService } from './ConversationService';
+import debugLogger from '../utils/debugLogger';
 
 class AIService {
   constructor() {
@@ -505,7 +506,7 @@ class AIService {
    * Obtener configuración de rendimiento para un modelo
    */
   getModelPerformanceConfig(modelId, modelType) {
-    console.log(`🔧 [AIService] getModelPerformanceConfig - Modelo: ${modelId}, Tipo: ${modelType}`);
+    debugLogger.debug('AIService', `getModelPerformanceConfig - Modelo: ${modelId}, Tipo: ${modelType}`);
     
     // Configuraciones específicas por modelo cloud
     const cloudModelConfigs = {
@@ -610,13 +611,13 @@ class AIService {
 
     // Si es un modelo cloud, usar configuración específica (prioridad máxima)
     if (modelType === 'remote' && cloudModelConfigs[modelId]) {
-      console.log(`🔧 [AIService] Usando configuración específica para ${modelId}:`, cloudModelConfigs[modelId]);
+      debugLogger.trace('AIService', `Usando configuración específica para ${modelId}:`, cloudModelConfigs[modelId]);
       return cloudModelConfigs[modelId];
     }
 
     // Si hay configuración manual, usarla (pero solo para modelos locales)
     if (this.performanceConfig) {
-      console.log(`🔧 [AIService] Usando configuración manual:`, this.performanceConfig);
+      debugLogger.trace('AIService', `Usando configuración manual:`, this.performanceConfig);
       return this.performanceConfig;
     }
 
@@ -629,12 +630,12 @@ class AIService {
     }
     
     if (!model) {
-      console.log(`🔧 [AIService] Modelo no encontrado, usando configuración por defecto`);
+      debugLogger.warn('AIService', `Modelo no encontrado, usando configuración por defecto`);
       return this.getDefaultPerformanceConfig();
     }
 
     const performanceLevel = model.performance || 'medium';
-    console.log(`🔧 [AIService] Usando configuración por performance (${performanceLevel}) para ${modelId}`);
+    debugLogger.debug('AIService', `Usando configuración por performance (${performanceLevel}) para ${modelId}`);
     
     const configs = {
       low: {
@@ -661,7 +662,7 @@ class AIService {
     };
 
     const finalConfig = configs[performanceLevel] || configs.medium;
-    console.log(`🔧 [AIService] Configuración final para ${modelId}:`, finalConfig);
+    debugLogger.trace('AIService', `Configuración final para ${modelId}:`, finalConfig);
     return finalConfig;
   }
 
@@ -699,6 +700,24 @@ class AIService {
   clearPerformanceConfig() {
     this.performanceConfig = null;
     this.saveConfig();
+  }
+
+  /**
+   * Activar/desactivar logging de debug detallado para AIService
+   */
+  setDebugLogging(enabled) {
+    if (enabled) {
+      debugLogger.enableModule('AIService');
+    } else {
+      debugLogger.disableModule('AIService');
+    }
+  }
+
+  /**
+   * Obtener estado del debug logging
+   */
+  isDebugLoggingEnabled() {
+    return debugLogger.isModuleEnabled('AIService');
   }
 
   /**
