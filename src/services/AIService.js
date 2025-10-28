@@ -1928,6 +1928,7 @@ if __name__ == "__main__":
       blockIndex++;
       const language = (match[1] || 'txt').trim().toLowerCase();
       const code = match[2].trim();
+      const blockStartPosition = match.index;
       
       // Solo aceptar bloques con contenido real (más de 20 caracteres)
       if (code.length < 20) continue;
@@ -1958,17 +1959,34 @@ if __name__ == "__main__":
       
       if (!(language in validLanguages)) continue;
       
-      // PASO 2: Generar nombre descriptivo basado en el contenido
-      let fileName = this.generateSimpleFileName(code, language, blockIndex, userMessage);
+      // PASO 2: PRIMERO buscar título markdown antes del bloque de código
+      const titleFromMarkdown = this.extractTitleFromMarkdown(content, blockStartPosition);
+      let fileName;
       
-      // Si generateSimpleFileName retorna null, IGNORAR este bloque (ej: comandos bash simples)
+      if (titleFromMarkdown) {
+        const extension = this.getLanguageExtension(language);
+        fileName = `${titleFromMarkdown}.${extension}`;
+      } else {
+        // Si no hay título markdown, usar la lógica original
+        fileName = this.generateDescriptiveFileName(code, language, blockIndex, userMessage);
+      }
+      
+      // Si generateDescriptiveFileName retorna null, IGNORAR este bloque (ej: comandos bash simples)
       if (fileName === null) continue;
       
-      // Evitar duplicados
-      if (!seenFiles.has(fileName)) {
-        files.push(fileName);
-        seenFiles.add(fileName);
+      // Evitar duplicados - si el nombre ya existe, agregar sufijo único
+      let uniqueFileName = fileName;
+      let counter = 1;
+      while (seenFiles.has(uniqueFileName)) {
+        const fileParts = fileName.split('.');
+        const name = fileParts.slice(0, -1).join('.');
+        const extension = fileParts[fileParts.length - 1];
+        uniqueFileName = `${name}_${counter}.${extension}`;
+        counter++;
       }
+      
+      files.push(uniqueFileName);
+      seenFiles.add(uniqueFileName);
     }
     
     return files;
@@ -2343,6 +2361,26 @@ if __name__ == "__main__":
   generateDescriptiveFileName(code, language, index, userMessage = '') {
     const extension = this.getLanguageExtension(language);
     
+    // FILTRO ESPECIAL: Para bash/sh, diferenciar entre comandos simples y scripts
+    if (language === 'bash' || language === 'shell' || language === 'sh') {
+      // Si es un comando simple (una línea o pocas líneas de comandos), IGNORAR
+      const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+      
+      // Verificar si es un script real (tiene estructura de script)
+      const isRealScript = code.includes('#!/') || // Shebang
+                          code.includes('function ') || // Definición de función
+                          code.includes('for ') || // Loops
+                          code.includes('while ') ||
+                          code.includes('if ') || // Condicionales
+                          code.includes('case ') ||
+                          lines.length > 3; // Más de 3 líneas de verdadero código
+      
+      // Si es solo comandos simples (una o dos líneas), NO generar archivo
+      if (!isRealScript && lines.length <= 2) {
+        return null; // Retornar null para ignorar este bloque
+      }
+    }
+    
     // 1. PRIMERO: Intentar generar nombre basado en la solicitud del usuario
     const nameFromUserRequest = this.extractNameFromUserRequest(userMessage, language);
     if (nameFromUserRequest) {
@@ -2576,8 +2614,13 @@ if __name__ == "__main__":
     
     // Lista de nombres de funciones genéricas que no deben usarse
     const genericFunctionNames = [
-      'suma', 'resta', 'multiplicacion', 'division', 'main', 'test', 'example',
-      'demo', 'sample', 'temp', 'tmp', 'func', 'function', 'method'
+      'main', 'test', 'example', 'demo', 'sample', 'temp', 'tmp', 'func', 'function', 'method'
+    ];
+    
+    // Lista de nombres de funciones específicas que SÍ deben usarse
+    const specificFunctionNames = [
+      'fahrenheit_a_celsius', 'celsius_a_fahrenheit', 'conversor_temperatura',
+      'calcular_promedio', 'verificar_par_impar', 'generar_contrasena'
     ];
     
     for (const pattern of patterns) {
@@ -2585,14 +2628,87 @@ if __name__ == "__main__":
       if (match) {
         const functionName = match[1];
         if (functionName && 
-            !genericFunctionNames.includes(functionName.toLowerCase()) &&
-            functionName.length > 3) {
+            (specificFunctionNames.includes(functionName.toLowerCase()) ||
+             (!genericFunctionNames.includes(functionName.toLowerCase()) && functionName.length > 3))) {
           return functionName.toLowerCase();
         }
       }
     }
     
     return null;
+  }
+
+  /**
+   * Extraer título de markdown que aparece antes del bloque de código
+   */
+  extractTitleFromMarkdown(content, blockStartPosition) {
+    // Obtener el texto antes del bloque de código
+    const textBeforeBlock = content.substring(0, blockStartPosition);
+    
+    // Buscar títulos markdown hacia atrás desde la posición del bloque
+    const lines = textBeforeBlock.split('\n').reverse();
+    
+    for (let i = 0; i < Math.min(lines.length, 10); i++) { // Buscar hasta 10 líneas atrás
+      const line = lines[i].trim();
+      
+      // Patrones de títulos markdown - CORREGIDOS según los logs reales
+      const titlePatterns = [
+        // **Script 1: Conversor de temperatura** (formato real de tus logs)
+        /^\*\*Script\s*\d*:\s*(.+?)\*\*$/i,
+        // **Ejemplo 1: Calculadora**
+        /^\*\*Ejemplo\s*\d*:\s*(.+?)\*\*$/i,
+        // ## Script 1: Par o Impar
+        /^#+\s*Script\s*\d*:\s*(.+)$/i,
+        // ## Ejemplo 1: Calculadora  
+        /^#+\s*Ejemplo\s*\d*:\s*(.+)$/i,
+        // ## 1. Conversor de temperatura
+        /^#+\s*\d+\.\s*(.+)$/i,
+        // ## Conversor de temperatura
+        /^#+\s*([A-Z][^#\n]{3,100})$/i,
+        // Script 1: Par o Impar (sin formato)
+        /^Script\s*\d*:\s*(.+)$/i,
+        // Ejemplo: Calculadora (sin formato) 
+        /^Ejemplo\s*\d*:\s*(.+)$/i,
+        // Casos específicos 
+        /^(Juego\s+de\s+Adivina\s+el\s+Número)$/i,
+        /^(Generador\s+de\s+números?\s+aleatorios?)$/i,
+        /^(Conversor\s+de\s+temperatura)$/i,
+        // Cualquier título descriptivo con palabras clave
+        /^(.*(?:juego|generador|calculadora|conversor|sistema|programa).*[a-zA-Z\s]{5,60})$/i,
+        // Título que empiece con mayúscula y tenga al menos 3 palabras
+        /^([A-Z][a-z]+\s+[a-z]+\s+[A-Z][a-z]+.*?)$/i,
+        // Título simple con palabras descriptivas
+        /^([A-Z][a-zA-Z\s]{8,60})$/i
+      ];
+      
+      for (const pattern of titlePatterns) {
+        const match = line.match(pattern);
+        if (match && match[1]) {
+          const titleText = match[1].trim();
+          return this.sanitizeFileName(titleText);
+        }
+      }
+      
+      // Si encontramos una línea que no está vacía y no es un título, dejar de buscar
+      if (line.length > 0 && !line.match(/^```/) && !line.match(/^\s*$/)) {
+        break;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Convertir texto a nombre de archivo válido
+   */
+  sanitizeFileName(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s\-]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_') // Espacios a guiones bajos
+      .replace(/_+/g, '_') // Múltiples guiones bajos a uno solo
+      .replace(/^_|_$/g, '') // Remover guiones bajos al inicio y final
+      .substring(0, 50); // Limitar longitud
   }
 
   /**
@@ -2685,6 +2801,7 @@ if __name__ == "__main__":
     const purposeKeywords = {
       'python': {
         'prueba_for': ['for ', 'frutas', 'bucle', 'iteracion', 'lista', 'append'],
+        'verificador_par_impar': ['% 2', 'par', 'impar', 'numero % 2', 'es par', 'es impar'],
         'prueba_if': ['if ', 'condicional', 'assert', 'verificar', 'validar'],
         'prueba_while': ['while ', 'bucle', 'iteracion', 'condicion'],
         'prueba_funciones': ['def ', 'funcion', 'parametros', 'return'],
@@ -2719,13 +2836,23 @@ if __name__ == "__main__":
     
     const keywords = purposeKeywords[language] || purposeKeywords['python'];
     
-    // Buscar el propósito más específico primero
-    for (const [purpose, words] of Object.entries(keywords)) {
-      const hasKeywords = words.some(word => 
+    // Buscar el propósito más específico primero - ordenar por especificidad
+    const sortedPurposes = Object.entries(keywords).sort((a, b) => {
+      // Contar cuántas palabras clave coinciden para cada propósito
+      const aMatches = a[1].filter(word => code.toLowerCase().includes(word.toLowerCase())).length;
+      const bMatches = b[1].filter(word => code.toLowerCase().includes(word.toLowerCase())).length;
+      return bMatches - aMatches; // Más coincidencias primero
+    });
+    
+    for (const [purpose, words] of sortedPurposes) {
+      const matchingWords = words.filter(word => 
         code.toLowerCase().includes(word.toLowerCase())
       );
       
-      if (hasKeywords) {
+      // Solo considerar si tiene al menos 2 coincidencias O es muy específico
+      if (matchingWords.length >= 2 || 
+          (matchingWords.length >= 1 && ['celsius', 'fahrenheit', 'temperatura', 'pandas', 'numpy', 'beautifulsoup'].some(specific => 
+            matchingWords.some(match => match.includes(specific))))) {
         return purpose;
       }
     }
