@@ -1902,6 +1902,15 @@ if __name__ == "__main__":
   /**
    * Detectar archivos mencionados en la respuesta - VERSIÓN SIMPLIFICADA
    * Solo extrae bloques de código de la respuesta actual
+   * 
+   * 🔒 AUDITORÍA DE SEGURIDAD:
+   * - SOLO procesa 'content' (respuesta actual de la IA)
+   * - NUNCA incluye historial de conversaciones anteriores
+   * - NUNCA busca en contenido del usuario
+   * - 'userMessage' solo se usa para detectar INTENCIÓN (edición vs archivo nuevo)
+   * - Flujo: AIChatPanel.js línea 326 → data.response (respuesta actual)
+   * - data.response viene de sendMessageWithCallbacks (línea 981-986)
+   * - sendMessageWithCallbacks retorna SOLO respuesta nueva, NO historial
    */
   detectFilesInResponse(content, userMessage = '') {
     if (!content) return [];
@@ -1910,6 +1919,7 @@ if __name__ == "__main__":
     const seenFiles = new Set();
     
     // PASO 1: Extraer SOLO bloques de código formales: ```lenguaje\ncode```
+    // Regex crítica: esto es lo ÚNICO que se procesa
     const codeBlockRegex = /```(\w+)?\s*\n([\s\S]*?)```/g;
     let match;
     let blockIndex = 0;
