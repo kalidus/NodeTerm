@@ -236,6 +236,34 @@ class AIService {
             bestFor: 'Desarrolladores internacionales, programación multilingüe y análisis de código'
           },
           { 
+            id: 'qwen3:8b', 
+            name: 'Qwen 3 (8B)', 
+            size: '5.0GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo Qwen3 de 8B con contexto extendido hasta 128K tokens. Optimizado para GPU y conversaciones largas.',
+            useCases: ['Análisis de documentos largos', 'Conversaciones extensas', 'Programación compleja', 'Análisis profundo', 'Contextos largos'],
+            strengths: ['Contexto ultra-largo (128K)', 'Optimización GPU', 'Multilingüe avanzado', 'Razonamiento profundo'],
+            bestFor: 'Análisis de documentos extensos, conversaciones largas y tareas que requieren contexto amplio'
+          },
+          { 
+            id: 'qwen3:30b', 
+            name: 'Qwen 3 (30B-A3B)', 
+            size: '18.6GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente + GPU potente',
+            description: 'Modelo Qwen3 de 30B con arquitectura MoE (solo 3B activos). Contexto de 128K tokens para máximo rendimiento.',
+            useCases: ['Análisis masivos', 'Investigación compleja', 'Documentos muy largos', 'Razonamiento avanzado', 'Tareas complejas'],
+            strengths: ['Contexto ultra-largo (128K)', 'Arquitectura MoE eficiente', 'Rendimiento superior', 'GPU optimizado'],
+            bestFor: 'Usuarios con hardware potente que necesitan máximo rendimiento y contextos extremadamente largos'
+          },
+          { 
             id: 'gemma2', 
             name: 'Gemma 2 (9B)', 
             size: '5.4GB', 
@@ -632,6 +660,38 @@ class AIService {
     if (!model) {
       debugLogger.warn('AIService', `Modelo no encontrado, usando configuración por defecto`);
       return this.getDefaultPerformanceConfig();
+    }
+
+    // Configuraciones específicas para modelos Qwen3 con contextos largos
+    const qwen3Configs = {
+      'qwen3:8b': {
+        maxTokens: 15000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de Qwen3
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'qwen3:30b': {
+        maxTokens: 20000,
+        temperature: 0.7,
+        maxHistory: 25,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de Qwen3
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      }
+    };
+
+    // Si es un modelo Qwen3, usar configuración específica
+    if (qwen3Configs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para Qwen3 ${modelId}:`, qwen3Configs[modelId]);
+      return qwen3Configs[modelId];
     }
 
     const performanceLevel = model.performance || 'medium';
