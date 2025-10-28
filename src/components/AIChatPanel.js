@@ -348,6 +348,25 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Actualizar tokens de la última respuesta para el contador visual
           setLastResponseTokens(responseTokens);
           
+          // 🪟 NOTIFICACIÓN SUTIL de optimización de contexto (como ChatGPT)
+          if (aiService.lastContextOptimization && 
+              aiService.lastContextOptimization.messagesArchived > 5 && // Solo si se archivaron muchos mensajes
+              Date.now() - aiService.lastContextOptimization.timestamp < 5000) { // Y fue reciente
+            
+            const optimization = aiService.lastContextOptimization;
+            setMessages(prev => [...prev, {
+              id: Date.now() + 1,
+              role: 'system',
+              content: `💭 *Usando conversación reciente para mantener el contexto* • ${optimization.messagesArchived} mensajes anteriores archivados`,
+              timestamp: Date.now() + 1,
+              contextOptimization: true,
+              subtle: true
+            }]);
+            
+            // Limpiar la notificación para no mostrarla múltiples veces
+            aiService.lastContextOptimization = null;
+          }
+          
           setCurrentStatus({
             status: 'complete',
             message: `Completado en ${data.latency}ms`,
@@ -983,18 +1002,29 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       >
         {/* Burbuja de mensaje con contenido */}
         <div
-          className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''}`}
+          className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''} ${message.subtle ? 'subtle' : ''}`}
           style={{
             width: isUser ? 'auto' : '100%',
-            background: isSystem
+            background: message.subtle 
+              ? 'rgba(255, 255, 255, 0.02)' // Muy sutil para notificaciones de contexto
+              : isSystem
               ? 'rgba(255, 107, 53, 0.1)'
               : isUser
               ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
               : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
-            color: themeColors.textPrimary,
-            border: `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
-            borderRadius: '8px',
-            padding: '0.6rem 0.8rem'
+            color: message.subtle 
+              ? 'rgba(255, 255, 255, 0.6)' // Texto más tenue para notificaciones sutiles
+              : themeColors.textPrimary,
+            border: message.subtle 
+              ? '1px solid rgba(255, 255, 255, 0.05)' // Borde muy sutil
+              : `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
+            borderRadius: message.subtle ? '6px' : '8px',
+            padding: message.subtle 
+              ? '0.3rem 0.5rem' // Padding más pequeño para notificaciones sutiles
+              : '0.6rem 0.8rem',
+            fontSize: message.subtle ? '0.8rem' : undefined, // Texto más pequeño
+            fontStyle: message.subtle ? 'italic' : undefined, // Cursiva para dar sensación de meta-información
+            opacity: message.subtle ? '0.8' : '1' // Ligeramente transparente
           }}
         >
           <div 
@@ -1026,8 +1056,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           )}
         </div>
 
-        {/* Timestamp y métricas solo después de completar */}
-        {!isStreaming && hasContent && (
+        {/* Timestamp y métricas solo después de completar (no para mensajes sutiles) */}
+        {!isStreaming && hasContent && !message.subtle && (
           <div
             style={{
               fontSize: '0.65rem',

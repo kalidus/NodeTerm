@@ -958,11 +958,8 @@ class AIService {
     // Obtener mensajes de la conversación actual
     const conversationMessages = currentConversation.messages || [];
     
-    // Limitar historial si es necesario
-    let limitedMessages = conversationMessages;
-    if (conversationMessages.length > finalOptions.maxHistory) {
-      limitedMessages = conversationMessages.slice(-finalOptions.maxHistory);
-    }
+    // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
+    let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
 
     // Mejorar el mensaje si es para scripts de Python
     const enhancedMessage = this.enhanceMessageForPythonScripts(message);
@@ -1866,6 +1863,94 @@ class AIService {
     } catch (error) {
       console.error('Error guardando historial:', error);
     }
+  }
+
+  /**
+   * 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS
+   * Sistema como ChatGPT/Claude - trunca automáticamente sin bloquear al usuario
+   * @param {Array} messages - Todos los mensajes de la conversación
+   * @param {Object} options - Configuraciones de modelo (contextLimit, etc.)
+   * @returns {Array} Mensajes limitados por tokens
+   */
+  smartTokenBasedHistoryLimit(messages, options) {
+    if (!messages || messages.length === 0) return [];
+
+    const contextLimit = options.contextLimit || 16000; // Límite en tokens
+    const reserveTokensForResponse = 2000; // Reservar espacio para la respuesta
+    const targetLimit = contextLimit - reserveTokensForResponse;
+
+    // Calcular tokens por mensaje usando función simple
+    const messagesWithTokens = messages.map(msg => {
+      const content = msg.content || '';
+      // Detección simple de idioma español para cálculo preciso
+      const hasSpanish = /[áéíóúñüÁÉÍÓÚÑÜ¿¡]/.test(content);
+      const ratio = hasSpanish ? 3.5 : 4; // tokens por caracter
+      const tokens = Math.ceil(content.length / ratio);
+      
+      return {
+        ...msg,
+        estimatedTokens: tokens
+      };
+    });
+
+    // Calcular tokens totales
+    let totalTokens = messagesWithTokens.reduce((sum, msg) => sum + msg.estimatedTokens, 0);
+
+    // Si estamos dentro del límite, devolver todos los mensajes
+    if (totalTokens <= targetLimit) {
+      return messages;
+    }
+
+    // 🔪 TRUNCAMIENTO INTELIGENTE (como los grandes modelos)
+    console.log(`🪟 [AIService] Ventana deslizante activada: ${totalTokens} > ${targetLimit} tokens`);
+
+    // Estrategia: mantener los mensajes más recientes hasta alcanzar el límite
+    let truncatedMessages = [];
+    let runningTotal = 0;
+    let truncatedCount = 0;
+
+    // Empezar desde el final (mensajes más recientes)
+    for (let i = messagesWithTokens.length - 1; i >= 0; i--) {
+      const msg = messagesWithTokens[i];
+      
+      // Si agregar este mensaje nos pasaría del límite
+      if (runningTotal + msg.estimatedTokens > targetLimit) {
+        truncatedCount = i + 1; // Contar mensajes eliminados
+        break;
+      }
+      
+      runningTotal += msg.estimatedTokens;
+      truncatedMessages.unshift(msg); // Agregar al principio
+    }
+
+    // Intentar preservar coherencia de pares (user-assistant)
+    if (truncatedMessages.length > 0) {
+      const firstMsg = truncatedMessages[0];
+      
+      // Si el primer mensaje es de assistant, intentar incluir el user anterior
+      if (firstMsg.role === 'assistant' && truncatedCount > 0) {
+        const previousMsg = messagesWithTokens[truncatedCount - 1];
+        if (previousMsg.role === 'user' && 
+            runningTotal + previousMsg.estimatedTokens <= targetLimit * 1.05) { // 5% de tolerancia
+          truncatedMessages.unshift(previousMsg);
+          truncatedCount--;
+        }
+      }
+    }
+
+    // Registro para transparencia (como ChatGPT - opcional y sutil)
+    if (truncatedCount > 0) {
+      console.log(`📄 [AIService] Contexto optimizado: ${truncatedCount} mensajes antiguos archivados para mantener fluidez (${totalTokens - runningTotal} tokens liberados)`);
+      
+      // Notificación sutil opcional (muy discreta, como los grandes modelos)
+      this.lastContextOptimization = {
+        messagesArchived: truncatedCount,
+        tokensFreed: totalTokens - runningTotal,
+        timestamp: Date.now()
+      };
+    }
+
+    return truncatedMessages;
   }
 
   /**
