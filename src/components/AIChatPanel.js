@@ -124,34 +124,25 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const functional = aiService.getFunctionalModels();
     setFunctionalModels(functional);
     
-    // Cargar conversación actual o crear nueva
-    const currentConversation = conversationService.getCurrentConversation();
-    if (currentConversation) {
-      setCurrentConversationId(currentConversation.id);
-      setConversationTitle(currentConversation.title);
-      setMessages(currentConversation.messages.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        metadata: msg.metadata
-      })));
-      // Cargar archivos adjuntos de la conversación actual
-      const attachedFiles = conversationService.getAttachedFiles();
-      setAttachedFiles(attachedFiles || []);
-    } else {
-      // Solo crear nueva conversación si realmente no hay ninguna
-      const allConversations = conversationService.getAllConversations();
-      if (allConversations.length === 0) {
-        const newConversation = conversationService.createConversation(
-          null, 
-          aiService.currentModel, 
-          aiService.modelType
-        );
-        setCurrentConversationId(newConversation.id);
-        setConversationTitle(newConversation.title);
-      }
-    }
+    // SIEMPRE empezar con una nueva conversación limpia
+    // No cargar conversación anterior automáticamente para evitar mezcla de contenido
+    const newConversation = conversationService.createConversation(
+      null, 
+      aiService.currentModel, 
+      aiService.modelType
+    );
+    setCurrentConversationId(newConversation.id);
+    setConversationTitle(newConversation.title);
+    
+    // Asegurar que empezamos con estado limpio
+    setMessages([]);
+    setAttachedFiles([]);
+    
+    console.log('🔄 [AIChatPanel] Nueva conversación iniciada:', {
+      id: newConversation.id,
+      title: newConversation.title,
+      cleanStart: true
+    });
   }, []);
 
   // Escuchar eventos del historial de conversaciones
