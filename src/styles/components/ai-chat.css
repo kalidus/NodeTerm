@@ -13,6 +13,9 @@
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 1fr;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
 }
 
 /* ============================================
@@ -33,47 +36,75 @@
 
 /* H1 - SEPARADOR VISUAL FUERTE */
 .ai-md h1 {
-  font-size: 1.3rem !important;
-  margin: 1.2rem 0 1rem 0 !important;
-  font-weight: 700 !important;
+  font-size: 1.05rem !important;
+  margin: 0.8rem 0 0.6rem 0 !important;
+  font-weight: 800 !important;
   color: #58a6ff !important;
   text-align: center !important;
-  padding: 1rem 0 !important;
+  padding: 0.6rem 1rem !important;
   border-top: 3px solid #58a6ff !important;
   border-bottom: 3px solid #58a6ff !important;
-  letter-spacing: 1.5px !important;
+  letter-spacing: 1.2px !important;
   text-transform: uppercase !important;
-  font-size: 1.2rem !important;
-  background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(88, 166, 255, 0.05) 100%) !important;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.15) 0%, rgba(88, 166, 255, 0.08) 100%) !important;
+  box-shadow: 0 2px 6px rgba(88, 166, 255, 0.12) !important;
+  border-radius: 3px !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
 }
 
 /* H2 - TÍTULOS VISTOSOS CON ICONOS Y SEPARADOR */
 .ai-md h2 {
-  font-size: 1.35rem !important;
-  margin: 1.8rem 0 1rem 0 !important;
-  font-weight: 800 !important;
+  font-size: 0.95rem !important;
+  margin: 0.7rem 0 0.4rem 0 !important;
+  font-weight: 700 !important;
   color: #58a6ff !important;
-  border-left: 6px solid #58a6ff !important;
-  padding: 1rem 0 1rem 1.2rem !important;
-  background: linear-gradient(90deg, rgba(88, 166, 255, 0.12) 0%, transparent 100%) !important;
+  border-left: 4px solid #58a6ff !important;
+  border-bottom: 2px dashed rgba(88, 166, 255, 0.3) !important;
+  padding: 0.5rem 0 0.5rem 0.8rem !important;
+  background: linear-gradient(90deg, rgba(88, 166, 255, 0.1) 0%, transparent 100%) !important;
   display: flex !important;
   align-items: center !important;
-  gap: 1rem !important;
+  gap: 0.5rem !important;
   position: relative !important;
-  border-bottom: 3px solid #58a6ff !important;
-  letter-spacing: 0.3px !important;
-  min-height: 2rem !important;
-  line-height: 1.4 !important;
+  letter-spacing: 0.2px !important;
+  min-height: 1.5rem !important;
+  line-height: 1.2 !important;
+  box-shadow: 0 1px 3px rgba(88, 166, 255, 0.06) !important;
+  border-radius: 2px !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
 }
 
-/* Iconos por defecto para H2 */
+/* Emojis para H2 - COMPACTO */
 .ai-md h2::before {
   content: "📌" !important;
-  font-size: 1.5rem !important;
-  display: inline-block !important;
-  min-width: 1.5rem !important;
+  font-size: 1.1rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 1.3rem !important;
+  min-height: 1.3rem !important;
   flex-shrink: 0 !important;
-  filter: drop-shadow(0 0 4px rgba(88, 166, 255, 0.3)) !important;
+  filter: drop-shadow(0 1px 3px rgba(88, 166, 255, 0.25)) !important;
+  animation: titleEmojiBounce 0.5s ease-out !important;
+}
+
+/* Animación para emojis de títulos */
+@keyframes titleEmojiBounce {
+  0% {
+    transform: scale(0.8) translateY(-2px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Iconos específicos - Primera H2 */
@@ -88,47 +119,66 @@
 
 /* Tercera H2 */
 .ai-md h2:nth-of-type(3)::before {
-  content: "⚙️" !important;
+  content: "✨" !important;
 }
 
 /* Cuarta H2 */
 .ai-md h2:nth-of-type(4)::before {
-  content: "💡" !important;
+  content: "🎯" !important;
 }
 
 /* Quinta H2 */
 .ai-md h2:nth-of-type(5)::before {
-  content: "✨" !important;
+  content: "📊" !important;
 }
 
 /* Sexta H2 */
 .ai-md h2:nth-of-type(6)::before {
-  content: "📋" !important;
+  content: "🚀" !important;
 }
 
-/* H3 - SUBSECCIONES CON ICONO */
+/* H3 - SUBSECCIONES CON ICONO MEJORADO */
 .ai-md h3 {
-  font-size: 1.15rem !important;
-  margin: 1.2rem 0 0.6rem 0 !important;
-  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  margin: 0.5rem 0 0.3rem 0 !important;
+  font-weight: 600 !important;
   color: #58a6ff !important;
-  border-left: 5px solid rgba(88, 166, 255, 0.8) !important;
-  padding: 0.6rem 0 0.6rem 1rem !important;
+  border-left: 3px solid rgba(88, 166, 255, 0.7) !important;
+  padding: 0.3rem 0 0.3rem 0.6rem !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.7rem !important;
-  background: rgba(88, 166, 255, 0.06) !important;
-  border-bottom: 2px solid rgba(88, 166, 255, 0.5) !important;
-  letter-spacing: 0.2px !important;
+  gap: 0.4rem !important;
+  background: rgba(88, 166, 255, 0.04) !important;
+  border-bottom: 1px solid rgba(88, 166, 255, 0.2) !important;
+  letter-spacing: 0px !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
 }
 
 .ai-md h3::before {
   content: "▸" !important;
-  font-size: 1.2rem !important;
+  font-size: 0.9rem !important;
   color: #58a6ff !important;
   flex-shrink: 0 !important;
   font-weight: bold !important;
-  filter: drop-shadow(0 0 2px rgba(88, 166, 255, 0.2)) !important;
+  filter: drop-shadow(0 0 1px rgba(88, 166, 255, 0.15)) !important;
+}
+
+/* H4, H5, H6 - Mejora general */
+.ai-md h4,
+.ai-md h5,
+.ai-md h6 {
+  color: #58a6ff !important;
+  margin-top: 0.4rem !important;
+  margin-bottom: 0.3rem !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
 }
 
 /* ============================================
