@@ -6,6 +6,8 @@
 import { conversationService } from './ConversationService';
 import debugLogger from '../utils/debugLogger';
 
+import fileAnalysisService from './FileAnalysisService';
+
 class AIService {
   constructor() {
     this.currentModel = null;
@@ -1029,6 +1031,29 @@ class AIService {
       timestamp: Date.now()
     });
 
+    // Recalcular historial limitado para incluir el último mensaje
+    const updatedConv = conversationService.getCurrentConversation();
+    limitedMessages = this.smartTokenBasedHistoryLimit(updatedConv.messages || [], finalOptions);
+
+    // Construir contexto efímero de archivos adjuntos (RAG ligero)
+    const attachedFiles = conversationService.getAttachedFiles();
+    const ephemeralContext = fileAnalysisService.buildEphemeralContext(attachedFiles, enhancedMessage, {
+      maxChars: Math.min(3000, (finalOptions.contextLimit || 8000) / 2)
+    });
+
+    // Mensajes a enviar al proveedor (no se guardan como historial visible)
+    const providerMessages = [...limitedMessages];
+    if (ephemeralContext && ephemeralContext.length > 0) {
+      providerMessages.push({ role: 'system', content: ephemeralContext });
+    }
+    // Asegurar que el último input del usuario esté presente explícitamente
+    providerMessages.push({ role: 'user', content: enhancedMessage });
+
+    // Metadatos para la UI: indicar si se usó contexto efímero y qué archivos
+    const ephemeralFilesUsed = (ephemeralContext && ephemeralContext.length > 0)
+      ? (attachedFiles || []).map(f => f.name)
+      : [];
+
     const startTime = Date.now();
     
     try {
@@ -1039,14 +1064,16 @@ class AIService {
         callbacks.onStart({
           model: this.currentModel,
           modelType: this.modelType,
-          message: message
+          message: message,
+          ephemeralContextUsed: ephemeralContext && ephemeralContext.length > 0,
+          ephemeralFilesUsed
         });
       }
 
       if (this.modelType === 'remote') {
-        response = await this.sendToRemoteModelWithCallbacks(message, limitedMessages, callbacks, finalOptions);
+        response = await this.sendToRemoteModelWithCallbacks(message, providerMessages, callbacks, finalOptions);
       } else {
-        response = await this.sendToLocalModelWithCallbacks(message, limitedMessages, callbacks, finalOptions);
+        response = await this.sendToLocalModelWithCallbacks(message, providerMessages, callbacks, finalOptions);
       }
 
       const endTime = Date.now();
@@ -1058,7 +1085,9 @@ class AIService {
           response,
           latency,
           model: this.currentModel,
-          modelType: this.modelType
+          modelType: this.modelType,
+          ephemeralContextUsed: ephemeralContext && ephemeralContext.length > 0,
+          ephemeralFilesUsed
         });
       }
 
@@ -1081,7 +1110,9 @@ class AIService {
           error,
           latency,
           model: this.currentModel,
-          modelType: this.modelType
+          modelType: this.modelType,
+          ephemeralContextUsed: ephemeralContext && ephemeralContext.length > 0,
+          ephemeralFilesUsed
         });
       }
       
@@ -1491,7 +1522,7 @@ class AIService {
 
     try {
       const messages = conversationMessages.map(msg => ({
-        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        role: msg.role === 'assistant' ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
         content: msg.content
       }));
 
