@@ -20,6 +20,93 @@ class ConversationService {
   }
 
   /**
+   * Sanitiza el contenido de un mensaje de usuario eliminando el bloque
+   * legado de adjuntos que comienza con "📎 **Archivo adjunto:" si existe.
+   * Devuelve el contenido limpio. Si el resultado queda vacío, coloca un
+   * marcador breve para mantener el contexto histórico.
+   */
+  sanitizeUserMessageContent(content) {
+    if (!content || typeof content !== 'string') return content;
+
+    // Localizar el inicio del bloque de adjuntos generado por prepareContentForAI
+    let idx = content.indexOf('\n\n📎 **Archivo adjunto:');
+    if (idx === -1) idx = content.indexOf('📎 **Archivo adjunto:');
+
+    if (idx === -1) return content; // Nada que limpiar
+
+    const cleaned = content.slice(0, idx).trimEnd();
+    return cleaned && cleaned.length > 0 ? cleaned : '[Solicitud con archivos adjuntos]';
+  }
+
+  /**
+   * Elimina duplicados consecutivos con el mismo rol y el mismo contenido
+   * (tras normalizar espacios). Mantiene el primer mensaje.
+   */
+  deduplicateConsecutiveMessages(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) return messages || [];
+    const normalize = (s) => (s || '').replace(/\s+/g, ' ').trim();
+    const result = [];
+    for (let i = 0; i < messages.length; i++) {
+      const current = messages[i];
+      const last = result[result.length - 1];
+      if (
+        last &&
+        last.role === current.role &&
+        normalize(last.content) === normalize(current.content)
+      ) {
+        // Duplicado consecutivo: omitir
+        continue;
+      }
+      result.push(current);
+    }
+    return result;
+  }
+
+  /**
+   * Aplica saneado a todas las conversaciones cargadas desde almacenamiento:
+   * - Limpia el bloque de adjuntos en mensajes de rol 'user'.
+   * - Deduplica mensajes consecutivos iguales.
+   * Devuelve true si hubo cambios.
+   */
+  sanitizeLoadedConversations() {
+    let changed = false;
+    this.conversations.forEach((conversation) => {
+      if (!conversation || !Array.isArray(conversation.messages)) return;
+
+      let messagesChanged = false;
+
+      // Limpiar bloques legacy en mensajes de usuario
+      const sanitizedMessages = conversation.messages.map((msg) => {
+        if (msg && msg.role === 'user' && typeof msg.content === 'string') {
+          const newContent = this.sanitizeUserMessageContent(msg.content);
+          if (newContent !== msg.content) {
+            messagesChanged = true;
+            return { ...msg, content: newContent };
+          }
+        }
+        return msg;
+      });
+
+      // Deduplicar consecutivos
+      const deduped = this.deduplicateConsecutiveMessages(sanitizedMessages);
+      if (deduped.length !== conversation.messages.length || messagesChanged) {
+        conversation.messages = deduped;
+        conversation.updatedAt = Date.now();
+        conversation.metadata = conversation.metadata || {};
+        conversation.metadata.messageCount = conversation.messages.length;
+        changed = true;
+      }
+
+      // Asegurar estructura mínima
+      if (!conversation.attachedFiles) {
+        conversation.attachedFiles = [];
+      }
+    });
+
+    return changed;
+  }
+
+  /**
    * Crear nueva conversación
    */
   createConversation(title = null, modelId = null, modelType = null) {
@@ -806,6 +893,18 @@ class ConversationService {
               conversation.attachedFiles = [];
             }
           });
+
+          // Saneado de datos legacy (bloques de adjuntos + duplicados)
+          const changed = this.sanitizeLoadedConversations();
+          if (changed) {
+            // Guardar backup antes de sobrescribir
+            try {
+              const backup = { timestamp: Date.now(), data: data };
+              localStorage.setItem('ai-conversations-data-backup', JSON.stringify(backup));
+            } catch (e) {
+              console.warn('No se pudo crear backup de conversaciones:', e);
+            }
+          }
         }
         
         // Cargar índice
@@ -834,6 +933,9 @@ class ConversationService {
         
         // Limpiar duplicados después de cargar
         this.cleanupDuplicateConversations();
+
+        // Persistir si se aplicaron cambios de saneado
+        this.saveConversations();
       }
     } catch (error) {
       console.error('Error cargando conversaciones:', error);

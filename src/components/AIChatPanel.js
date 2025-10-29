@@ -370,6 +370,21 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             message: `Completado en ${data.latency}ms`,
             latency: data.latency
           });
+
+          // Aviso sutil de uso de contexto efímero con archivos
+          if (data.ephemeralContextUsed && Array.isArray(data.ephemeralFilesUsed) && data.ephemeralFilesUsed.length > 0) {
+            const shown = data.ephemeralFilesUsed.slice(0, 3);
+            const extra = data.ephemeralFilesUsed.length - shown.length;
+            const note = `💭 *Usé tus archivos* • ${shown.join(', ')}${extra > 0 ? ` y ${extra} más` : ''}`;
+            setMessages(prev => [...prev, {
+              id: Date.now() + 2,
+              role: 'system',
+              content: note,
+              timestamp: Date.now() + 2,
+              contextOptimization: true,
+              subtle: true
+            }]);
+          }
         },
         onError: (errorData) => {
           setCurrentStatus({
@@ -390,17 +405,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         }
       };
 
-      // Preparar mensaje con archivos adjuntos si los hay
-      let finalMessage = userMessage;
-      if (attachedFiles.length > 0) {
-        const fileContents = attachedFiles.map(file => 
-          fileAnalysisService.prepareContentForAI(file)
-        ).join('\n\n');
-        finalMessage = `${userMessage}\n\n${fileContents}`;
-      }
-
-      // Enviar a la IA con callbacks y signal para cancelación
-      await aiService.sendMessageWithCallbacks(finalMessage, callbacks, {
+      // Enviar solo el prompt del usuario; el contexto de archivos se inyecta
+      // de forma efímera en el servicio de IA (RAG ligero)
+      await aiService.sendMessageWithCallbacks(userMessage, callbacks, {
         signal: controller.signal
       });
 

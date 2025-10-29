@@ -97,6 +97,158 @@ class FileAnalysisService {
   }
 
   /**
+   * Genera un resumen corto y estable del archivo para orientar al modelo
+   * sin exponer contenido completo.
+   */
+  generateFileSummary(fileData) {
+    try {
+      if (!fileData) return '';
+      const { name, type, sizeFormatted, category, content } = fileData;
+      const parts = [];
+      parts.push(`Archivo: ${name}`);
+      parts.push(`Tipo: ${type}`);
+      parts.push(`Tamaño: ${sizeFormatted}`);
+      parts.push(`Categoría: ${category}`);
+
+      // Añadir detalles breves según la categoría
+      if (category === 'pdf' && content?.pages) {
+        parts.push(`Páginas: ${content.pages}`);
+        if (content?.wordCount) parts.push(`Palabras: ${content.wordCount}`);
+      } else if (category === 'csv' && content?.rows != null && content?.columns != null) {
+        parts.push(`Filas: ${content.rows}, Columnas: ${content.columns}`);
+      } else if (category === 'json' && Array.isArray(content?.keys)) {
+        parts.push(`Claves: ${content.keys.slice(0, 8).join(', ')}${content.keys.length > 8 ? '…' : ''}`);
+      } else if (category === 'docx' && (content?.words || content?.lines)) {
+        if (content?.words) parts.push(`Palabras: ${content.words}`);
+        if (content?.lines) parts.push(`Líneas: ${content.lines}`);
+      } else if (category === 'text' && (content?.lines || content?.characters)) {
+        parts.push(`Líneas: ${content.lines}, Caracteres: ${content.characters}`);
+      } else if (category === 'xml' && content?.rootElement) {
+        parts.push(`Raíz: ${content.rootElement}`);
+      }
+
+      return `Resumen de archivo — ${parts.join(' • ')}`;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
+   * Extrae texto bruto del contenido procesado según la categoría.
+   */
+  extractPlainText(content, category) {
+    if (!content) return '';
+    switch (category) {
+      case 'text':
+        return content.text || '';
+      case 'pdf':
+        return content.text || '';
+      case 'docx':
+        return content.text || '';
+      case 'csv':
+        // Preferir vista previa textual
+        if (content.preview) return content.preview;
+        return '';
+      case 'json':
+        return content.text || (typeof content === 'string' ? content : JSON.stringify(content).slice(0, 4000));
+      case 'xml':
+        return content.plainText || content.text || '';
+      case 'rtf':
+        return content.text || '';
+      case 'odt':
+        return content.text || '';
+      case 'html':
+        return content.plainText || content.text || '';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Construye un contexto efímero (RAG ligero) para inyectar al prompt:
+   * incluye un resumen breve por archivo y los fragmentos más relevantes
+   * respecto a la consulta del usuario, limitado en tamaño.
+   */
+  buildEphemeralContext(attachedFiles = [], userQuery = '', options = {}) {
+    try {
+      if (!Array.isArray(attachedFiles) || attachedFiles.length === 0) return '';
+      const maxChars = options.maxChars || 2000;
+      const maxPerFile = Math.max(300, Math.floor(maxChars / attachedFiles.length));
+      const stopWords = new Set(['el','la','los','las','de','del','y','o','u','que','en','a','un','una','para','con','por','es','son','al','se','lo','su','sus','como','si','no','más','menos','the','of','and','to','in','for','on','is','are']);
+      const qTokens = (userQuery || '').toLowerCase().split(/[^a-záéíóúñ0-9]+/i).filter(t => t && !stopWords.has(t));
+
+      const pickTopSegments = (text, perFileLimit) => {
+        if (!text) return [];
+        const chunks = [];
+        // Segmentar por párrafos o ventanas deslizantes ~350-500 chars
+        const paras = text.split(/\n\n+/);
+        for (const p of paras) {
+          const trimmed = p.trim();
+          if (!trimmed) continue;
+          // Ventanas internas si es muy largo
+          if (trimmed.length > 600) {
+            for (let i = 0; i < trimmed.length; i += 450) {
+              chunks.push(trimmed.slice(i, i + 500));
+            }
+          } else {
+            chunks.push(trimmed);
+          }
+          if (chunks.length > 60) break; // límite de seguridad
+        }
+
+        const score = (seg) => {
+          const tokens = seg.toLowerCase().split(/[^a-záéíóúñ0-9]+/i);
+          let hits = 0;
+          for (const t of qTokens) {
+            if (!t) continue;
+            if (tokens.includes(t)) hits += 1;
+          }
+          // Bonus por longitud moderada
+          const len = Math.min(seg.length, 500) / 500;
+          return hits + 0.2 * len;
+        };
+
+        const ranked = chunks
+          .map(seg => ({ seg, s: score(seg) }))
+          .sort((a, b) => b.s - a.s);
+
+        const out = [];
+        let used = 0;
+        for (const { seg } of ranked) {
+          if (used + seg.length > perFileLimit) break;
+          out.push(seg);
+          used += seg.length + 1;
+          if (out.length >= 5) break;
+        }
+        return out;
+      };
+
+      const blocks = [];
+      let totalChars = 0;
+      for (const f of attachedFiles) {
+        const summary = this.generateFileSummary(f);
+        const plain = this.extractPlainText(f.content, f.category);
+        const segs = pickTopSegments(plain, maxPerFile);
+
+        let block = `Archivo: ${f.name}\n${summary}`;
+        if (segs.length > 0) {
+          block += `\nFragmentos relevantes:\n\n\`\`\`\n${segs.join('\n---\n')}\n\`\`\``;
+        }
+
+        if (totalChars + block.length > maxChars) break;
+        blocks.push(block);
+        totalChars += block.length;
+      }
+
+      if (blocks.length === 0) return '';
+      const header = 'Contexto de archivos adjuntos (usar solo como referencia; no repetir textualmente si no es necesario):';
+      return `${header}\n\n${blocks.join('\n\n')}`;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
    * Obtener MIME type desde la extensión del archivo
    */
   getMimeTypeFromExtension(fileName) {
