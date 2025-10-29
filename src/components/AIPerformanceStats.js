@@ -50,6 +50,14 @@ const AIPerformanceStats = ({
   }, [messageCount, attachedFiles]);
 
   const contextPercent = Math.min(100, Math.round((contextUsed / contextLimit) * 100));
+  
+  // Color del contador según el uso
+  const getContextColor = (percent) => {
+    if (percent < 50) return themeColors.successColor;
+    if (percent < 75) return themeColors.warningColor;
+    if (percent < 90) return '#FF9800'; // Naranja
+    return themeColors.dangerColor;
+  };
 
   return (
     <div style={{
@@ -96,15 +104,39 @@ const AIPerformanceStats = ({
           </div>
         )}
         
-        {/* Contexto siempre visible si hay actividad */}
-        {(messageCount > 0 || (attachedFiles && attachedFiles.length > 0)) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <i className="pi pi-clock" style={{ fontSize: '0.7rem', opacity: 0.6 }} />
-            <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>
-              {contextPercent}% ctx
-            </span>
-          </div>
-        )}
+        {/* Contexto siempre visible */}
+        <div 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.3rem',
+            cursor: 'help',
+            position: 'relative',
+            padding: '0.2rem 0.4rem',
+            borderRadius: '0.3rem',
+            backgroundColor: contextPercent > 75 ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+            border: `1px solid ${getContextColor(contextPercent)}20`,
+            transition: 'all 0.2s ease'
+          }}
+          title={`Contexto usado: ${contextUsed.toLocaleString()} / ${contextLimit.toLocaleString()} tokens (${contextPercent}%)`}
+        >
+          <i 
+            className="pi pi-clock" 
+            style={{ 
+              fontSize: '0.7rem', 
+              color: getContextColor(contextPercent),
+              opacity: 0.8 
+            }} 
+          />
+          <span style={{ 
+            color: getContextColor(contextPercent),
+            fontSize: '0.75rem',
+            fontWeight: contextPercent > 75 ? '600' : '400',
+            opacity: 0.9
+          }}>
+            {contextPercent}% ctx
+          </span>
+        </div>
 
         {/* Estado de carga */}
         {isLoading && (
