@@ -40,6 +40,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
     'llama3': true,
     'llama2': false
   });
+  const [currentModelConfig, setCurrentModelConfig] = useState(null);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -72,6 +73,14 @@ const AIConfigDialog = ({ visible, onHide }) => {
       loadConfig();
     }
   }, [visible]);
+
+  // Efecto para actualizar configuración del modelo seleccionado
+  useEffect(() => {
+    if (currentModel && modelType) {
+      const config = aiService.getModelPerformanceConfig(currentModel, modelType);
+      setCurrentModelConfig(config);
+    }
+  }, [currentModel, modelType]);
 
   const loadConfig = async () => {
     const models = aiService.getAvailableModels();
@@ -516,6 +525,37 @@ const AIConfigDialog = ({ visible, onHide }) => {
                         👤 {model.bestFor}
                       </p>
                     )}
+                    
+                    {/* Especificaciones técnicas */}
+                    {(model.context || model.parameters || model.ramRequired || model.quantization) && (
+                      <div style={{ 
+                        margin: '0.75rem 0 0 0', 
+                        padding: '0.75rem', 
+                        background: 'rgba(76, 175, 80, 0.08)', 
+                        borderRadius: '8px',
+                        border: `1px solid rgba(76, 175, 80, 0.3)`,
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '0.5rem'
+                      }}>
+                        <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                          <strong style={{ color: themeColors.textPrimary }}>📊 Contexto:</strong><br />
+                          {model.context || 'N/A'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                          <strong style={{ color: themeColors.textPrimary }}>⚙️ Parámetros:</strong><br />
+                          {model.parameters || 'N/A'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                          <strong style={{ color: themeColors.textPrimary }}>💾 RAM:</strong><br />
+                          {model.ramRequired || 'N/A'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                          <strong style={{ color: themeColors.textPrimary }}>🎯 Cuantización:</strong><br />
+                          {model.quantization || 'N/A'}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     {model.downloaded ? (
@@ -797,6 +837,37 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
                       👤 {model.bestFor}
                     </p>
+                  )}
+                  
+                  {/* Especificaciones técnicas */}
+                  {(model.context || model.parameters || model.ramRequired || model.quantization) && (
+                    <div style={{ 
+                      margin: '0.75rem 0 0 0', 
+                      padding: '0.75rem', 
+                      background: 'rgba(33, 150, 243, 0.08)', 
+                      borderRadius: '8px',
+                      border: `1px solid ${themeColors.primaryColor}30`,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '0.5rem'
+                    }}>
+                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                        <strong style={{ color: themeColors.textPrimary }}>📊 Contexto:</strong><br />
+                        {model.context || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                        <strong style={{ color: themeColors.textPrimary }}>⚙️ Parámetros:</strong><br />
+                        {model.parameters || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                        <strong style={{ color: themeColors.textPrimary }}>💾 RAM:</strong><br />
+                        {model.ramRequired || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                        <strong style={{ color: themeColors.textPrimary }}>🎯 Cuantización:</strong><br />
+                        {model.quantization || 'N/A'}
+                      </div>
+                    </div>
                   )}
                 </div>
                 
@@ -1566,6 +1637,72 @@ const AIConfigDialog = ({ visible, onHide }) => {
       style={{ width: '85vw', minWidth: '900px', maxWidth: '1200px' }}
       modal
     >
+      {/* Tarjeta de Modelo Actual Seleccionado */}
+      {currentModel && currentModelConfig && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(76, 175, 80, 0.1) 100%)',
+          border: `2px solid ${themeColors.primaryColor}`,
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr',
+          gap: '1rem',
+          alignItems: 'center'
+        }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '12px',
+            background: themeColors.primaryColor + '20',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <i className="pi pi-check-circle" style={{ fontSize: '2.5rem', color: themeColors.primaryColor }} />
+          </div>
+          <div>
+            <h3 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0' }}>
+              ✓ Modelo Seleccionado Actualmente
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
+                  <strong>📊 Contexto Disponible:</strong>
+                </div>
+                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
+                  {currentModelConfig.contextLimit?.toLocaleString ? currentModelConfig.contextLimit.toLocaleString() : currentModelConfig.contextLimit} tokens
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
+                  <strong>📤 Máx. Output:</strong>
+                </div>
+                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
+                  {currentModelConfig.maxTokens?.toLocaleString ? currentModelConfig.maxTokens.toLocaleString() : currentModelConfig.maxTokens} tokens
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
+                  <strong>🔄 Historial:</strong>
+                </div>
+                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
+                  {currentModelConfig.maxHistory} mensajes
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
+                  <strong>🌊 Streaming:</strong>
+                </div>
+                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
+                  {currentModelConfig.useStreaming ? '✓ Activo' : '✗ Inactivo'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
         <TabPanel header="☁️ Modelos Remotos">
           {renderRemoteModels()}

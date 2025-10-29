@@ -26,7 +26,11 @@ class AIService {
           description: 'El modelo más avanzado de OpenAI. Excelente para tareas complejas, programación, análisis y razonamiento profundo.',
           useCases: ['Programación avanzada', 'Análisis de datos', 'Investigación', 'Escritura técnica', 'Resolución de problemas complejos'],
           strengths: ['Razonamiento superior', 'Código de alta calidad', 'Análisis detallado', 'Creatividad avanzada'],
-          bestFor: 'Desarrolladores, investigadores, analistas y usuarios que necesitan la máxima calidad'
+          bestFor: 'Desarrolladores, investigadores, analistas y usuarios que necesitan la máxima calidad',
+          context: '128K tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '220B',
+          quantization: 'Full Precision'
         },
         { 
           id: 'gpt-3.5-turbo', 
@@ -37,7 +41,11 @@ class AIService {
           description: 'Modelo rápido y eficiente de OpenAI. Ideal para uso general, programación básica y conversaciones.',
           useCases: ['Programación básica', 'Asistencia general', 'Escritura', 'Traducción', 'Resumen de textos'],
           strengths: ['Velocidad alta', 'Costo eficiente', 'Buena calidad general', 'Respuestas rápidas'],
-          bestFor: 'Uso diario, programación básica, estudiantes y usuarios que buscan velocidad'
+          bestFor: 'Uso diario, programación básica, estudiantes y usuarios que buscan velocidad',
+          context: '16K tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '175B',
+          quantization: 'Full Precision'
         },
         { 
           id: 'claude-3-opus', 
@@ -48,7 +56,11 @@ class AIService {
           description: 'El modelo más potente de Anthropic. Destaca en análisis, escritura creativa y comprensión de contexto.',
           useCases: ['Análisis profundo', 'Escritura creativa', 'Investigación académica', 'Edición de textos', 'Análisis de documentos'],
           strengths: ['Comprensión superior', 'Escritura excelente', 'Análisis detallado', 'Creatividad'],
-          bestFor: 'Escritores, investigadores, analistas y usuarios que necesitan análisis profundo'
+          bestFor: 'Escritores, investigadores, analistas y usuarios que necesitan análisis profundo',
+          context: '200K tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '200B',
+          quantization: 'Full Precision'
         },
         { 
           id: 'claude-3-sonnet', 
@@ -59,7 +71,11 @@ class AIService {
           description: 'Modelo equilibrado de Anthropic. Buen balance entre velocidad y calidad para uso general.',
           useCases: ['Programación', 'Asistencia general', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
           strengths: ['Balance velocidad/calidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
-          bestFor: 'Desarrolladores, profesionales y usuarios que buscan un buen balance'
+          bestFor: 'Desarrolladores, profesionales y usuarios que buscan un buen balance',
+          context: '200K tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '100B',
+          quantization: 'Full Precision'
         },
         { 
           id: 'gemini-2.5-flash', 
@@ -70,7 +86,11 @@ class AIService {
           description: 'El modelo más reciente y rápido de Google. Excelente para tareas generales y programación con velocidad superior.',
           useCases: ['Programación rápida', 'Análisis de datos', 'Investigación', 'Escritura técnica', 'Resolución de problemas'],
           strengths: ['Velocidad excepcional', 'Código de calidad', 'Análisis rápido', 'Multimodal'],
-          bestFor: 'Desarrolladores que necesitan velocidad, analistas y usuarios que buscan respuestas rápidas'
+          bestFor: 'Desarrolladores que necesitan velocidad, analistas y usuarios que buscan respuestas rápidas',
+          context: '1M tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '~100B',
+          quantization: 'Full Precision'
         },
         { 
           id: 'gemini-2.5-pro', 
@@ -81,7 +101,11 @@ class AIService {
           description: 'El modelo más potente de Google. Máxima calidad para tareas complejas y análisis profundos.',
           useCases: ['Programación avanzada', 'Análisis complejo', 'Investigación profunda', 'Escritura técnica', 'Resolución de problemas difíciles'],
           strengths: ['Máxima calidad', 'Razonamiento superior', 'Análisis profundo', 'Código avanzado'],
-          bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan la máxima calidad'
+          bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan la máxima calidad',
+          context: '2M tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '~200B',
+          quantization: 'Full Precision'
         },
         { 
           id: 'gemini-2.0-flash-exp', 
@@ -92,7 +116,11 @@ class AIService {
           description: 'Modelo experimental de Google con capacidades avanzadas. Ideal para probar nuevas funcionalidades.',
           useCases: ['Experimentación', 'Funcionalidades nuevas', 'Análisis innovador', 'Programación experimental'],
           strengths: ['Funcionalidades nuevas', 'Capacidades experimentales', 'Innovación', 'Tecnología de vanguardia'],
-          bestFor: 'Usuarios avanzados, investigadores y desarrolladores que quieren probar lo último'
+          bestFor: 'Usuarios avanzados, investigadores y desarrolladores que quieren probar lo último',
+          context: '1M tokens',
+          ramRequired: 'N/A (Cloud)',
+          parameters: '~100B',
+          quantization: 'Full Precision'
         },
       ],
       local: {
@@ -109,7 +137,11 @@ class AIService {
             description: 'Modelo predeterminado de Llama 3.2 optimizado para texto. Versión recomendada para la mayoría de usuarios.',
             useCases: ['Programación general', 'Asistencia técnica', 'Procesamiento de texto', 'Uso general'],
             strengths: ['Versión recomendada', 'Optimizado para texto', 'Excelente balance', 'Versatilidad'],
-            bestFor: 'Usuarios que quieren la versión más reciente optimizada para texto'
+            bestFor: 'Usuarios que quieren la versión más reciente optimizada para texto',
+            context: '8K tokens',
+            ramRequired: '6-8GB',
+            parameters: '3B',
+            quantization: 'Q4, Q5, Q8'
           },
           { 
             id: 'llama3.2:1b', 
@@ -123,21 +155,29 @@ class AIService {
             description: 'Modelo más ligero de Llama 3.2 optimizado para dispositivos con recursos limitados. Ideal para uso básico.',
             useCases: ['Procesamiento básico', 'Dispositivos móviles', 'Uso ligero', 'Tareas simples'],
             strengths: ['Muy ligero', 'Rápido', 'Eficiente', 'Ideal para móviles'],
-            bestFor: 'Usuarios con dispositivos limitados o que necesitan máxima velocidad'
+            bestFor: 'Usuarios con dispositivos limitados o que necesitan máxima velocidad',
+            context: '4K tokens',
+            ramRequired: '2-4GB',
+            parameters: '1B',
+            quantization: 'Q4'
           },
           { 
-            id: 'llama3.1:latest', 
-            name: 'Llama 3.1 (Latest - 8B)', 
+            id: 'llama3.1:8b', 
+            name: 'Llama 3.1 (8B)', 
             size: '4.7GB', 
             downloaded: false, 
             performance: 'high',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Modelo predeterminado de Llama 3.1 con excelente rendimiento. Versión recomendada para la mayoría de usuarios.',
-            useCases: ['Programación avanzada', 'Análisis de código', 'Escritura técnica', 'Resolución de problemas complejos', 'Uso general'],
-            strengths: ['Versión recomendada', 'Excelente programación', 'Razonamiento sólido', 'Código de calidad'],
-            bestFor: 'Usuarios que quieren lo mejor de Llama 3.1 sin configurar versiones específicas'
+            description: 'Versión moderna de Llama 3.1 con contexto extendido hasta 128K tokens. Excelente para análisis de documentos largos y conversaciones extensas.',
+            useCases: ['Análisis de documentos largos', 'Conversaciones extensas', 'Programación compleja', 'Investigación', 'Análisis de código masivo'],
+            strengths: ['Contexto ultra-largo (128K nativo)', 'Optimizado para instrucciones', 'Excelente para documentos', 'Análisis profundo'],
+            bestFor: 'Análisis de documentos extensos, conversaciones largas y tareas que requieren contexto amplio',
+            context: '128K tokens',
+            ramRequired: '8-10GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5, Q8'
           },
           { 
             id: 'llama3.1:70b', 
@@ -147,11 +187,15 @@ class AIService {
             performance: 'high',
             platform: 'ollama',
             platformName: 'Ollama',
-            platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Modelo más potente de Llama 3.1. Excelente para programación avanzada y análisis complejos con máxima calidad.',
-            useCases: ['Programación avanzada', 'Análisis de código complejo', 'Investigación', 'Razonamiento profundo', 'Tareas de alta complejidad'],
-            strengths: ['Excelente programación', 'Razonamiento superior', 'Código de máxima calidad', 'Análisis profundo', 'Máxima potencia'],
-            bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan máxima calidad en programación'
+            platformDescription: 'Requiere Ollama instalado localmente + GPU potente',
+            description: 'Modelo más potente de Llama 3.1 con contexto extendido a 128K tokens. Excelente para programación avanzada, análisis complejos y documentos largos con máxima calidad.',
+            useCases: ['Programación avanzada', 'Análisis de código complejo', 'Investigación', 'Razonamiento profundo', 'Análisis masivo de documentos', 'Documentos muy largos'],
+            strengths: ['Contexto ultra-largo (128K)', 'Excelente programación', 'Razonamiento superior', 'Código de máxima calidad', 'Análisis profundo'],
+            bestFor: 'Desarrolladores senior, investigadores y usuarios con hardware potente que necesitan máxima calidad y contextos largos',
+            context: '128K tokens',
+            ramRequired: '45-70GB',
+            parameters: '70B',
+            quantization: 'Q2, Q3, Q4'
           },
           { 
             id: 'llama3', 
@@ -165,7 +209,11 @@ class AIService {
             description: 'Modelo estable y confiable de Meta. Buen balance entre rendimiento y recursos para uso general.',
             useCases: ['Programación general', 'Asistencia técnica', 'Análisis de datos', 'Escritura', 'Resolución de problemas'],
             strengths: ['Estabilidad', 'Buena programación', 'Análisis sólido', 'Respuestas coherentes'],
-            bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad'
+            bestFor: 'Uso general, programación básica-intermedia y usuarios que buscan estabilidad',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5, Q8'
           },
           { 
             id: 'llama3:70b', 
@@ -179,7 +227,11 @@ class AIService {
             description: 'Modelo más potente de Llama 3. Excelente para programación avanzada y análisis complejos con máxima calidad.',
             useCases: ['Programación avanzada', 'Análisis de código complejo', 'Investigación', 'Razonamiento profundo', 'Tareas de alta complejidad'],
             strengths: ['Excelente programación', 'Razonamiento superior', 'Código de máxima calidad', 'Análisis profundo', 'Máxima potencia'],
-            bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan máxima calidad en programación'
+            bestFor: 'Desarrolladores senior, investigadores y usuarios que necesitan máxima calidad en programación',
+            context: '8K tokens',
+            ramRequired: '40-64GB',
+            parameters: '70B',
+            quantization: 'Q2, Q3, Q4, Q5'
           },
           { 
             id: 'llama2', 
@@ -193,7 +245,11 @@ class AIService {
             description: 'Modelo clásico de Meta. Versión anterior estable y confiable para uso general.',
             useCases: ['Programación básica', 'Asistencia general', 'Análisis de texto', 'Resolución de problemas'],
             strengths: ['Estabilidad', 'Buena comprensión', 'Respuestas coherentes', 'Amplio conocimiento'],
-            bestFor: 'Uso general, programación básica y usuarios que buscan estabilidad'
+            bestFor: 'Uso general, programación básica y usuarios que buscan estabilidad',
+            context: '4K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5, Q8'
           },
           { 
             id: 'deepseek-r1:8b', 
@@ -207,7 +263,11 @@ class AIService {
             description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
             useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
             strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
-            bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo'
+            bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo',
+            context: '8K tokens',
+            ramRequired: '10-12GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'mistral', 
@@ -221,7 +281,11 @@ class AIService {
             description: 'Modelo europeo eficiente. Excelente para programación y tareas técnicas con buen rendimiento.',
             useCases: ['Programación', 'Análisis técnico', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
             strengths: ['Eficiencia', 'Buena programación', 'Análisis técnico', 'Respuestas precisas'],
-            bestFor: 'Desarrolladores, técnicos y usuarios que buscan eficiencia en programación'
+            bestFor: 'Desarrolladores, técnicos y usuarios que buscan eficiencia en programación',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'qwen2.5', 
@@ -235,7 +299,11 @@ class AIService {
             description: 'Modelo chino con capacidades multilingües. Excelente para programación y análisis en múltiples idiomas.',
             useCases: ['Programación multilingüe', 'Análisis de código', 'Traducción técnica', 'Asistencia general'],
             strengths: ['Multilingüe', 'Buena programación', 'Análisis de código', 'Flexibilidad'],
-            bestFor: 'Desarrolladores internacionales, programación multilingüe y análisis de código'
+            bestFor: 'Desarrolladores internacionales, programación multilingüe y análisis de código',
+            context: '128K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'qwen3:8b', 
@@ -249,7 +317,11 @@ class AIService {
             description: 'Modelo Qwen3 de 8B con contexto extendido hasta 128K tokens. Optimizado para GPU y conversaciones largas.',
             useCases: ['Análisis de documentos largos', 'Conversaciones extensas', 'Programación compleja', 'Análisis profundo', 'Contextos largos'],
             strengths: ['Contexto ultra-largo (128K)', 'Optimización GPU', 'Multilingüe avanzado', 'Razonamiento profundo'],
-            bestFor: 'Análisis de documentos extensos, conversaciones largas y tareas que requieren contexto amplio'
+            bestFor: 'Análisis de documentos extensos, conversaciones largas y tareas que requieren contexto amplio',
+            context: '128K tokens',
+            ramRequired: '10-12GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'qwen3:30b', 
@@ -263,7 +335,11 @@ class AIService {
             description: 'Modelo Qwen3 de 30B con arquitectura MoE (solo 3B activos). Contexto de 128K tokens para máximo rendimiento.',
             useCases: ['Análisis masivos', 'Investigación compleja', 'Documentos muy largos', 'Razonamiento avanzado', 'Tareas complejas'],
             strengths: ['Contexto ultra-largo (128K)', 'Arquitectura MoE eficiente', 'Rendimiento superior', 'GPU optimizado'],
-            bestFor: 'Usuarios con hardware potente que necesitan máximo rendimiento y contextos extremadamente largos'
+            bestFor: 'Usuarios con hardware potente que necesitan máximo rendimiento y contextos extremadamente largos',
+            context: '128K tokens',
+            ramRequired: '20-32GB',
+            parameters: '30B (3B activos)',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'gemma2', 
@@ -277,7 +353,11 @@ class AIService {
             description: 'Modelo de Google optimizado para eficiencia. Excelente para programación y análisis con recursos moderados.',
             useCases: ['Programación eficiente', 'Análisis de datos', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
             strengths: ['Eficiencia', 'Buena programación', 'Análisis sólido', 'Optimización'],
-            bestFor: 'Desarrolladores que buscan eficiencia, análisis de datos y programación optimizada'
+            bestFor: 'Desarrolladores que buscan eficiencia, análisis de datos y programación optimizada',
+            context: '8K tokens',
+            ramRequired: '10-12GB',
+            parameters: '9B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'phi3', 
@@ -291,7 +371,11 @@ class AIService {
             description: 'Modelo compacto de Microsoft. Ideal para dispositivos con recursos limitados y tareas básicas.',
             useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Tareas simples', 'Prototipado'],
             strengths: ['Muy compacto', 'Velocidad alta', 'Bajo consumo', 'Fácil instalación'],
-            bestFor: 'Dispositivos con recursos limitados, desarrollo móvil y tareas básicas rápidas'
+            bestFor: 'Dispositivos con recursos limitados, desarrollo móvil y tareas básicas rápidas',
+            context: '4K tokens',
+            ramRequired: '4-6GB',
+            parameters: '3.8B',
+            quantization: 'Q4'
           },
           { 
             id: 'codellama', 
@@ -305,7 +389,11 @@ class AIService {
             description: 'Modelo de programación de Meta basado en Llama. Excelente para generación y comprensión de código.',
             useCases: ['Programación en múltiples lenguajes', 'Generación de código', 'Explicación de código', 'Refactoring', 'Debugging'],
             strengths: ['Multilenguaje', 'Comprensión de código', 'Generación eficiente', 'Soporte para múltiples paradigmas'],
-            bestFor: 'Desarrolladores que trabajan con múltiples lenguajes de programación'
+            bestFor: 'Desarrolladores que trabajan con múltiples lenguajes de programación',
+            context: '16K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'wizardcoder', 
@@ -319,7 +407,11 @@ class AIService {
             description: 'Modelo especializado en programación con capacidades avanzadas de generación de código.',
             useCases: ['Generación de código', 'Programación asistida', 'Resolución de problemas', 'Optimización de código'],
             strengths: ['Generación de código limpio', 'Comprensión de requerimientos', 'Optimización', 'Buena documentación'],
-            bestFor: 'Desarrolladores que buscan asistencia inteligente en programación'
+            bestFor: 'Desarrolladores que buscan asistencia inteligente en programación',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'starcoder', 
@@ -333,8 +425,156 @@ class AIService {
             description: 'Modelo de código de BigCode entrenado en repositorios públicos. Excelente para programación.',
             useCases: ['Programación en múltiples lenguajes', 'Generación de código', 'Completado de código', 'Refactoring'],
             strengths: ['Gran conocimiento de código', 'Soporte multilenguaje', 'Comprensión de patrones', 'Generación eficiente'],
-            bestFor: 'Desarrolladores que necesitan un modelo con amplio conocimiento de código'
-          }
+            bestFor: 'Desarrolladores que necesitan un modelo con amplio conocimiento de código',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'llama3:8b-instruct', 
+            name: 'Llama 3 (8B Instruct)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión Instruct optimizada de Llama 3 (8B). Versión chat/instrucciones de alta calidad.',
+            useCases: ['Seguimiento de instrucciones', 'Asistencia general', 'Programación', 'Análisis', 'Escritura'],
+            strengths: ['Optimizado para instrucciones', 'Excelente comprensión', 'Respuestas coherentes', 'Chat natural'],
+            bestFor: 'Usuarios que necesitan seguimiento preciso de instrucciones y conversaciones naturales',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'mistral-instruct', 
+            name: 'Mistral Instruct (7B)', 
+            size: '4.1GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión Instruct de Mistral. Modelo europeo eficiente optimizado para seguimiento de instrucciones.',
+            useCases: ['Seguimiento de instrucciones', 'Programación', 'Análisis técnico', 'Respuestas precisas'],
+            strengths: ['Eficiencia superior', 'Instrucciones precisas', 'Respuestas relevantes', 'Bajo consumo'],
+            bestFor: 'Desarrolladores que buscan eficiencia y precisión en seguimiento de instrucciones',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'neural-chat', 
+            name: 'Neural Chat (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo especializado en conversaciones naturales y chat. Entrenado con RLHF para diálogos fluidos.',
+            useCases: ['Chat natural', 'Conversaciones', 'Asistencia general', 'Diálogos prolongados', 'Entretenimiento'],
+            strengths: ['Conversaciones naturales', 'Diálogos fluidos', 'Comprensión contextual', 'Respuestas personalizadas'],
+            bestFor: 'Usuarios que buscan conversaciones naturales y asistencia conversacional',
+            context: '4K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'vicuna', 
+            name: 'Vicuña (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo de conversación basado en LLaMA, fine-tuned con instrucciones de alta calidad de usuarios.',
+            useCases: ['Chat general', 'Asistencia', 'Brainstorming', 'Escritura', 'Respuestas creativas'],
+            strengths: ['Chat natural', 'Versatilidad', 'Respuestas creativas', 'Buena comprensión'],
+            bestFor: 'Usuarios que buscan un asistente de conversación versátil y accesible',
+            context: '2K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'orca-mini', 
+            name: 'Orca Mini (3B)', 
+            size: '1.9GB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión mini ultra-compacta de Orca. Ideal para dispositivos con recursos limitados.',
+            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Prototipado', 'Testing'],
+            strengths: ['Muy ligero', 'Rápido', 'Bajo consumo', 'Fácil instalación'],
+            bestFor: 'Dispositivos con recursos muy limitados y tareas de respuesta rápida',
+            context: '2K tokens',
+            ramRequired: '3-4GB',
+            parameters: '3B',
+            quantization: 'Q4'
+          },
+          { 
+            id: 'orca2', 
+            name: 'Orca 2 (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Orca 2 con mejoras en razonamiento y seguimiento de instrucciones. Versión mejorada de Orca.',
+            useCases: ['Razonamiento', 'Instrucciones complejas', 'Análisis', 'Programación', 'Resolución de problemas'],
+            strengths: ['Razonamiento mejorado', 'Instrucciones precisas', 'Análisis profundo', 'Versatilidad'],
+            bestFor: 'Usuarios que buscan mejor razonamiento y comprensión de instrucciones complejas',
+            context: '4K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'neural-chat-instruct', 
+            name: 'Neural Chat Instruct (8B)', 
+            size: '4.2GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Intel Neural Chat Instruct - Modelo optimizado para instrucciones. Excelente balance velocidad/calidad.',
+            useCases: ['Seguimiento de instrucciones', 'Conversaciones', 'Programación', 'Asistencia general', 'Escritura técnica'],
+            strengths: ['Instrucciones precisas', 'Chat natural', 'Optimizado por Intel', 'Balance velocidad/calidad'],
+            bestFor: 'Usuarios que buscan seguimiento preciso de instrucciones con buena velocidad',
+            context: '4K tokens',
+            ramRequired: '10-12GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'dolphin-mixtral', 
+            name: 'Dolphin Mixtral (8x7B)', 
+            size: '26GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente + GPU potente',
+            description: 'Dolphin fine-tuned sobre Mixtral MoE. Excelente razonamiento con arquitectura eficiente.',
+            useCases: ['Razonamiento avanzado', 'Programación compleja', 'Análisis profundo', 'Instrucciones precisas'],
+            strengths: ['Razonamiento superior', 'MoE eficiente', 'Análisis profundo', 'Instrucciones precisas'],
+            bestFor: 'Usuarios con GPU que necesitan razonamiento avanzado y eficiencia',
+            context: '32K tokens',
+            ramRequired: '30-40GB',
+            parameters: '8x7B (MoE)',
+            quantization: 'Q4, Q5'
+          },
         ],
         independent: [
           { 
@@ -349,7 +589,11 @@ class AIService {
             description: 'Modelo especializado en programación y generación de código. Optimizado para tareas de desarrollo.',
             useCases: ['Generación de código', 'Refactoring', 'Debugging', 'Documentación técnica', 'Análisis de código'],
             strengths: ['Excelente en programación', 'Generación de código de calidad', 'Comprensión de sintaxis', 'Refactoring inteligente'],
-            bestFor: 'Desarrolladores, programadores y equipos de desarrollo que necesitan asistencia en código'
+            bestFor: 'Desarrolladores, programadores y equipos de desarrollo que necesitan asistencia en código',
+            context: '4K tokens',
+            ramRequired: '8-10GB',
+            parameters: '6.7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'magicoder:7b', 
@@ -363,7 +607,11 @@ class AIService {
             description: 'Modelo de programación con capacidades mágicas para generación de código y resolución de problemas.',
             useCases: ['Generación de código', 'Resolución de bugs', 'Optimización', 'Documentación automática'],
             strengths: ['Generación creativa', 'Resolución de problemas', 'Optimización inteligente', 'Código bien documentado'],
-            bestFor: 'Desarrolladores que buscan soluciones creativas y optimizadas'
+            bestFor: 'Desarrolladores que buscan soluciones creativas y optimizadas',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'phind-codellama:7b', 
@@ -377,7 +625,11 @@ class AIService {
             description: 'Versión optimizada de CodeLlama por Phind. Mejorado para búsqueda y generación de código.',
             useCases: ['Búsqueda de código', 'Generación eficiente', 'Análisis de código', 'Documentación'],
             strengths: ['Búsqueda inteligente', 'Generación rápida', 'Análisis profundo', 'Documentación clara'],
-            bestFor: 'Desarrolladores que necesitan búsqueda y análisis eficiente de código'
+            bestFor: 'Desarrolladores que necesitan búsqueda y análisis eficiente de código',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'octocoder:7b', 
@@ -391,7 +643,11 @@ class AIService {
             description: 'Modelo especializado en desarrollo web y aplicaciones. Optimizado para tecnologías modernas.',
             useCases: ['Desarrollo web', 'Aplicaciones modernas', 'Frontend/Backend', 'APIs', 'Frameworks populares'],
             strengths: ['Conocimiento web', 'Frameworks modernos', 'APIs y servicios', 'Desarrollo full-stack'],
-            bestFor: 'Desarrolladores web y de aplicaciones modernas'
+            bestFor: 'Desarrolladores web y de aplicaciones modernas',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'sqlcoder:7b', 
@@ -405,7 +661,11 @@ class AIService {
             description: 'Modelo especializado en SQL y bases de datos. Excelente para consultas y optimización de bases de datos.',
             useCases: ['Consultas SQL', 'Optimización de bases de datos', 'Análisis de datos', 'Diseño de esquemas', 'Migración de datos'],
             strengths: ['SQL avanzado', 'Optimización de consultas', 'Análisis de rendimiento', 'Diseño de bases de datos'],
-            bestFor: 'Desarrolladores de bases de datos, analistas de datos y administradores de sistemas'
+            bestFor: 'Desarrolladores de bases de datos, analistas de datos y administradores de sistemas',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'python-coder:7b', 
@@ -419,7 +679,11 @@ class AIService {
             description: 'Modelo especializado en Python. Optimizado para desarrollo, análisis de datos y machine learning.',
             useCases: ['Desarrollo Python', 'Data Science', 'Machine Learning', 'Automatización', 'Scripting'],
             strengths: ['Python puro', 'Librerías populares', 'Data Science', 'ML/AI', 'Automatización'],
-            bestFor: 'Desarrolladores Python, científicos de datos y profesionales de ML/AI'
+            bestFor: 'Desarrolladores Python, científicos de datos y profesionales de ML/AI',
+            context: '8K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
           }
         ]
       }
@@ -3267,10 +3531,10 @@ if __name__ == "__main__":
       'crystal': 'cr',
       'zig': 'zig',
       'v': 'v',
-      'julia': 'jl',
-      'powershell': 'ps1',
-      'batch': 'bat',
-      'cmd': 'cmd',
+      'sql': 'sql',
+      'matlab': 'm',
+      'octave': 'm',
+      'fortran': 'f90',
       'assembly': 'asm',
       'vhdl': 'vhdl',
       'verilog': 'v',
