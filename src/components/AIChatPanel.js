@@ -502,50 +502,75 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   const handleClearChat = () => {
+    // Si la conversación actual está vacía, no hacer nada para evitar duplicados
+    const currentConv = conversationService.getCurrentConversation();
+    const serviceHasMessages = !!(currentConv && Array.isArray(currentConv.messages) && currentConv.messages.length > 0);
+    const serviceHasFiles = !!(currentConv && Array.isArray(currentConv.attachedFiles) && currentConv.attachedFiles.length > 0);
+    const uiHasMessages = messages.length > 0;
+    const inputHasText = !!inputValue.trim();
+
+    if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
+      console.log('🛑 [AIChatPanel] Limpiar chat ignorado: la conversación está vacía');
+      return;
+    }
+
     setMessages([]);
     aiService.clearHistory();
-    
-    // Crear nueva conversación
+
+    // Crear nueva conversación para preservar la anterior con contenido
     const newConversation = conversationService.createConversation(
-      null, 
-      currentModel, 
+      null,
+      currentModel,
       modelType
     );
     setCurrentConversationId(newConversation.id);
     setConversationTitle(newConversation.title);
-    
+
     // Disparar evento para actualizar el historial
     window.dispatchEvent(new CustomEvent('conversation-updated'));
   };
 
   const handleNewConversation = () => {
+    // Si la conversación actual está vacía (sin mensajes, sin adjuntos y sin texto),
+    // no crear otra conversación nueva para evitar duplicados en el historial.
+    const currentConv = conversationService.getCurrentConversation();
+    const serviceHasMessages = !!(currentConv && Array.isArray(currentConv.messages) && currentConv.messages.length > 0);
+    const serviceHasFiles = !!(currentConv && Array.isArray(currentConv.attachedFiles) && currentConv.attachedFiles.length > 0);
+    const uiHasMessages = messages.length > 0;
+    const inputHasText = !!inputValue.trim();
+
+    if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
+      console.log('🛑 [AIChatPanel] Nueva conversación ignorada: la actual está vacía');
+      return;
+    }
+
     // Reset completo del estado antes de crear nueva conversación
     setMessages([]);
     setAttachedFiles([]);
     setInputValue('');
     setIsLoading(false);
-    
+
     // Crear nueva conversación completamente limpia
     const newConversation = conversationService.createConversation(
-      null, 
-      currentModel, 
+      null,
+      currentModel,
       modelType
     );
-    
+
     // Actualizar estado con la nueva conversación
     setCurrentConversationId(newConversation.id);
     setConversationTitle(newConversation.title);
-    
+
     // Asegurar que los mensajes estén vacíos (doble verificación)
     setMessages([]);
-    
+
     console.log('Nueva conversación creada:', {
       id: newConversation.id,
       title: newConversation.title,
       messagesCount: newConversation.messages.length,
       attachedFilesCount: newConversation.attachedFiles.length
     });
-    
+
     // Disparar evento para actualizar el historial
     window.dispatchEvent(new CustomEvent('conversation-updated'));
   };

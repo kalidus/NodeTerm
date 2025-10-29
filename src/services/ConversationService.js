@@ -17,6 +17,9 @@ class ConversationService {
     this.tags = new Map(); // Etiquetas por conversación
     
     this.loadConversations();
+
+    // Anti-rebote para creación de conversaciones
+    this._lastCreationTimestamp = 0;
   }
 
   /**
@@ -110,10 +113,59 @@ class ConversationService {
    * Crear nueva conversación
    */
   createConversation(title = null, modelId = null, modelType = null) {
-    // SIEMPRE crear una nueva conversación para evitar contaminación
-    // No reutilizar conversaciones existentes, aunque estén vacías
-    const conversationId = this.generateConversationId();
     const now = Date.now();
+    const current = this.getCurrentConversation();
+
+    // Protección anti-dobles clics / eventos duplicados muy seguidos
+    if (now - this._lastCreationTimestamp < 250) {
+      if (current) {
+        return current;
+      }
+    }
+
+    const isEmpty = (conv) => !conv || (
+      Array.isArray(conv.messages) && conv.messages.length === 0 &&
+      Array.isArray(conv.attachedFiles) && conv.attachedFiles.length === 0
+    );
+
+    // Si la conversación actual existe y está vacía, reutilizarla
+    if (current && isEmpty(current)) {
+      current.updatedAt = now;
+      current.lastMessageAt = now;
+      if (title && title.trim()) current.title = title.trim();
+      if (modelId) current.modelId = modelId;
+      if (modelType) current.modelType = modelType;
+      current.isActive = true;
+      this._lastCreationTimestamp = now;
+      this.saveConversations();
+      return current;
+    }
+
+    // Buscar si ya existe una conversación vacía reciente (últimos 5 minutos) con el mismo título
+    const defaultTitle = title || this.generateDefaultTitle();
+    const recentEmptyConversation = Array.from(this.conversations.values())
+      .find(conv => 
+        isEmpty(conv) && 
+        conv.title === defaultTitle &&
+        (now - conv.createdAt) < 5 * 60 * 1000 // 5 minutos
+      );
+
+    if (recentEmptyConversation) {
+      // Reutilizar la conversación vacía existente
+      recentEmptyConversation.updatedAt = now;
+      recentEmptyConversation.lastMessageAt = now;
+      recentEmptyConversation.isActive = true;
+      if (modelId) recentEmptyConversation.modelId = modelId;
+      if (modelType) recentEmptyConversation.modelType = modelType;
+      this.currentConversationId = recentEmptyConversation.id;
+      this._lastCreationTimestamp = now;
+      this.saveConversations();
+      return recentEmptyConversation;
+    }
+
+    // Crear una nueva conversación en caso contrario
+    const conversationId = this.generateConversationId();
+    
     
     const conversation = {
       id: conversationId,
@@ -147,6 +199,7 @@ class ConversationService {
       isolation: 'guaranteed'
     });
     
+    this._lastCreationTimestamp = now;
     this.saveConversations();
     return conversation;
   }
@@ -787,8 +840,7 @@ class ConversationService {
   }
 
   generateDefaultTitle() {
-    const now = new Date();
-    return `Nueva conversación - ${now.toLocaleDateString('es-ES')} ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+    return `Nueva conversación`;
   }
 
   /**
