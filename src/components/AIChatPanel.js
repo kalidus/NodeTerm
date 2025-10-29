@@ -796,40 +796,93 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     
     try {
       // Pre-procesar el contenido para mejorar el formato
-      let processedContent = preprocessMarkdown(content);
+      let processedContent = content;
       
-      // Configurar marked con opciones mejoradas
+      // Paso 1: Reparar títulos sin espacio después de #
+      processedContent = processedContent.replace(/^(#{1,6})([^\s#])/gm, (match, hashes, char) => {
+        return `${hashes} ${char}`;
+      });
+      
+      // Paso 2: Convertir líneas en MAYÚSCULAS que parecen títulos
+      processedContent = processedContent.replace(/^([A-Z][A-Z\s\d:]{4,})$/gm, (match, text) => {
+        const cleanText = text.trim();
+        if (cleanText.startsWith('#') || cleanText.length < 4) return match;
+        
+        if (cleanText.match(/^(EJEMPLO|SLIDE|DIAPOSITIVA|PASO|USO|CARACTERÍSTICAS|FEATURES|VENTAJAS|BENEFITS|REQUISITOS|REQUIREMENTS|INSTALACIÓN|INSTALLATION|CÓMO|HOW|SOLUCIÓN|SOLUTION|POR QUÉ|WHY|RESUMEN|SUMMARY)/i)) {
+          return `## ${cleanText}`;
+        }
+        return match;
+      });
+      
+      // Configurar marked
       marked.setOptions({
-        highlight: function(code, lang) {
-          if (lang && hljs.getLanguage(lang)) {
-            try {
-              return hljs.highlight(code, { language: lang }).value;
-            } catch (err) {
-              console.error('Error highlighting code:', err);
-            }
-          }
-          try {
-            return hljs.highlightAuto(code).value;
-          } catch (err) {
-            console.error('Error auto-highlighting code:', err);
-            return code;
-          }
-        },
         breaks: true,
         gfm: true,
         pedantic: false,
         sanitize: false,
         smartLists: true,
-        smartypants: true
+        smartypants: true,
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            try {
+              return hljs.highlight(code, { language: lang }).value;
+            } catch (err) {
+              return code;
+            }
+          }
+          try {
+            return hljs.highlightAuto(code).value;
+          } catch (err) {
+            return code;
+          }
+        }
       });
       
-      // Procesar el markdown
-      const html = marked(processedContent);
+      // Procesar markdown CON marked
+      let html = marked(processedContent);
       
-      // Procesar bloques de código después del renderizado
+      // Paso 3: Agregar emojis a los H2 después del renderizado
+      html = html.replace(/<h2>([^<]+)<\/h2>/g, (match, text) => {
+        const cleanText = text.trim();
+        
+        // Si ya tiene emoji, no agregar
+        const firstChar = cleanText.charCodeAt(0);
+        if (firstChar > 127) {
+          return match;
+        }
+        
+        let icon = '📌';
+        if (cleanText.toLowerCase().includes('ejemplo')) {
+          icon = '✅';
+        } else if (cleanText.toLowerCase().includes('características') || cleanText.toLowerCase().includes('features')) {
+          icon = '⭐';
+        } else if (cleanText.toLowerCase().includes('ventajas') || cleanText.toLowerCase().includes('benefits')) {
+          icon = '✨';
+        } else if (cleanText.toLowerCase().includes('requisitos') || cleanText.toLowerCase().includes('requirements')) {
+          icon = '📋';
+        } else if (cleanText.toLowerCase().includes('instalación') || cleanText.toLowerCase().includes('installation')) {
+          icon = '🔧';
+        } else if (cleanText.toLowerCase().includes('cómo') || cleanText.toLowerCase().includes('how')) {
+          icon = '❓';
+        } else if (cleanText.toLowerCase().includes('uso')) {
+          icon = '💡';
+        } else if (cleanText.toLowerCase().includes('solución') || cleanText.toLowerCase().includes('solution')) {
+          icon = '🎯';
+        } else if (cleanText.toLowerCase().includes('por qué') || cleanText.toLowerCase().includes('why')) {
+          icon = '🤔';
+        } else if (cleanText.toLowerCase().includes('nota') || cleanText.toLowerCase().includes('importante')) {
+          icon = '⚠️';
+        } else if (cleanText.toLowerCase().includes('resultado') || cleanText.toLowerCase().includes('resultado')) {
+          icon = '📊';
+        }
+        
+        return `<h2>${icon} ${cleanText}</h2>`;
+      });
+      
+      // Procesar bloques de código
       const processedHtml = processCodeBlocksAfterRender(html);
       
-      // Sanitizar el HTML para seguridad
+      // Sanitizar
       const cleanHtml = DOMPurify.sanitize(processedHtml, {
         ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div', 'button', 'i'],
         ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id', 'onclick', 'data-language', 'data-code-id', 'data-code'],
@@ -840,8 +893,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       
       return cleanHtml;
     } catch (error) {
-      console.error('Error rendering markdown:', error);
-      return content;
+      console.error('❌ Error rendering markdown:', error);
+      // Escapar el contenido si hay error
+      const div = document.createElement('div');
+      div.textContent = content;
+      return div.innerHTML;
     }
   };
 
@@ -851,74 +907,41 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     
     let processed = content;
     
-    // Mejorar encabezados de nivel 1 con separadores y emojis
+    // ========================================
+    // PASO 1: DETECTAR Y CORREGIR TÍTULOS MALFORMADOS
+    // ========================================
+    
+    // Detectar títulos que NO tienen el símbolo # pero deberían
+    // Patrón: Líneas en mayúsculas que parecen títulos
+    processed = processed.replace(/^([A-Z][A-Z\s\d:]{5,}?)$/gm, (match, text) => {
+      const cleanText = text.trim();
+      
+      // NO convertir si ya empieza con # o contiene ciertos patrones
+      if (cleanText.startsWith('#') || cleanText.length < 5) {
+        return match;
+      }
+      
+      // Detectar si parece un título de ejemplo o sección
+      if (cleanText.match(/^(EJEMPLO|EJEMPLO|SLIDE|DIAPOSITIVA|PASO|SECCI[ÓO]N|CAP[ÍI]TULO|USO|CARACTERÍSTICAS|FEATURES|VENTAJAS|BENEFITS|REQUISITOS|REQUIREMENTS|INSTALACIÓN|INSTALLATION|CÓMO|HOW|SOLUCIÓN|SOLUTION|POR QUÉ|WHY)/i)) {
+        return `## ${cleanText}`;
+      }
+      
+      return match;
+    });
+    
+    // PASO 2: Reparar encabezados que TIENEN # pero sin espacio
+    // Patrón: #TITULO → # TITULO
+    processed = processed.replace(/^(#{1,6})([^\s#])/gm, (match, hashes, char) => {
+      return `${hashes} ${char}`;
+    });
+    
+    // PASO 3: Mejorar encabezados de nivel 1 con separadores
     processed = processed.replace(/^#{1}\s*(.+)$/gm, (match, text) => {
       const cleanText = text.trim();
-      // Separador superior para H1
       return `---\n# ${cleanText}\n---`;
     });
     
-    // Mejorar encabezados de nivel 2 con numeración y iconos
-    let h2Counter = 0;
-    processed = processed.replace(/^#{2}\s*(.+)$/gm, (match, text) => {
-      h2Counter++;
-      const cleanText = text.trim();
-      
-      // Iconos según el contenido
-      let icon = '📌';
-      if (cleanText.toLowerCase().includes('características') || cleanText.toLowerCase().includes('features')) {
-        icon = '⭐';
-      } else if (cleanText.toLowerCase().includes('ventajas') || cleanText.toLowerCase().includes('benefits')) {
-        icon = '✨';
-      } else if (cleanText.toLowerCase().includes('requisitos') || cleanText.toLowerCase().includes('requirements')) {
-        icon = '📋';
-      } else if (cleanText.toLowerCase().includes('instalación') || cleanText.toLowerCase().includes('installation')) {
-        icon = '🔧';
-      } else if (cleanText.toLowerCase().includes('cómo') || cleanText.toLowerCase().includes('how')) {
-        icon = '❓';
-      } else if (cleanText.toLowerCase().includes('ejemplo') || cleanText.toLowerCase().includes('example')) {
-        icon = '📝';
-      } else if (cleanText.toLowerCase().includes('solución') || cleanText.toLowerCase().includes('solution')) {
-        icon = '💡';
-      } else if (cleanText.toLowerCase().includes('por qué') || cleanText.toLowerCase().includes('why')) {
-        icon = '🤔';
-      }
-      
-      return `## ${icon} ${h2Counter}. ${cleanText}`;
-    });
-    
-    // Mejorar encabezados de nivel 3 con iconos adicionales
-    processed = processed.replace(/^#{3}\s*(.+)$/gm, (match, text) => {
-      const cleanText = text.trim();
-      
-      // Iconos para subsecciones
-      let icon = '◆';
-      if (cleanText.toLowerCase().includes('ventaja') || cleanText.toLowerCase().includes('benefit')) {
-        icon = '✓';
-      } else if (cleanText.toLowerCase().includes('tipo') || cleanText.toLowerCase().includes('type')) {
-        icon = '▶';
-      } else if (cleanText.toLowerCase().includes('uso') || cleanText.toLowerCase().includes('usage')) {
-        icon = '▸';
-      }
-      
-      return `### ${icon} ${cleanText}`;
-    });
-    
-    // Mejorar listas con mejor espaciado
-    processed = processed.replace(/^(\s*)([-*+])\s+(.+)$/gm, (match, indent, marker, text) => {
-      return `${indent}${marker} ${text.trim()}`;
-    });
-    
-    // Mejorar listas numeradas
-    processed = processed.replace(/^(\s*)(\d+\.)\s+(.+)$/gm, (match, indent, number, text) => {
-      return `${indent}${number} ${text.trim()}`;
-    });
-    
-    // Mejorar bloques de código
-    processed = processed.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-      const language = lang || 'text';
-      return `\`\`\`${language}\n${code.trim()}\n\`\`\``;
-    });
+    // NO agregar emojis aquí - se agregan en renderMarkdown() después del renderizado HTML
     
     return processed;
   };
