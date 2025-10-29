@@ -102,12 +102,22 @@ const AIConfigDialog = ({ visible, onHide }) => {
     // Cargar URL de Ollama remoto
     setRemoteOllamaUrl(aiService.remoteOllamaUrl || '');
 
-    // Cargar configuración de rendimiento
-    const perfConfig = aiService.getPerformanceConfig();
-    if (perfConfig) {
-      setPerformanceConfig(perfConfig);
+    // Cargar configuración de rendimiento (usar 128K Ultra por defecto)
+    let perfConfig = aiService.getPerformanceConfig();
+    if (!perfConfig) {
+      // Si no hay configuración guardada, usar el preset 128K Ultra como defecto
+      perfConfig = {
+        maxTokens: 8000,
+        temperature: 0.7,
+        maxHistory: 16,
+        useStreaming: true,
+        contextLimit: 128000
+      };
+      setUseManualConfig(true);
+    } else {
       setUseManualConfig(true);
     }
+    setPerformanceConfig(perfConfig);
 
     // Detectar modelos de Ollama automáticamente
     await handleDetectModels();
@@ -1098,63 +1108,119 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </div>
 
         {/* Presets rápidos por modelo */}
-        <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <Button
-            label="⚡ Preset 8B (6K tokens)"
-            icon="pi pi-lightning"
-            onClick={() => setPerformanceConfig({
-              maxTokens: 6000,
-              temperature: 0.7,
-              maxHistory: 8,
-              useStreaming: true,
-              contextLimit: 8000
-            })}
-            severity="info"
-            outlined
-            size="small"
-          />
-          <Button
-            label="🚀 Preset 70B (8K tokens)"
-            icon="pi pi-rocket"
-            onClick={() => setPerformanceConfig({
-              maxTokens: 8000,
-              temperature: 0.7,
-              maxHistory: 10,
-              useStreaming: true,
-              contextLimit: 16000
-            })}
-            severity="success"
-            outlined
-            size="small"
-          />
-          <Button
-            label="🔥 Máximo (16K contexto)"
-            icon="pi pi-fire"
-            onClick={() => setPerformanceConfig({
-              maxTokens: 8000,
-              temperature: 0.7,
-              maxHistory: 12,
-              useStreaming: true,
-              contextLimit: 32000
-            })}
-            severity="danger"
-            outlined
-            size="small"
-          />
-          <Button
-            label="💨 Rápido (4K tokens)"
-            icon="pi pi-bolt"
-            onClick={() => setPerformanceConfig({
-              maxTokens: 4000,
-              temperature: 0.7,
-              maxHistory: 5,
-              useStreaming: true,
-              contextLimit: 4000
-            })}
-            severity="warning"
-            outlined
-            size="small"
-          />
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ 
+            color: themeColors.textPrimary, 
+            marginBottom: '1rem',
+            fontSize: '1.1rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <i className="pi pi-lightning-bolt" style={{ color: themeColors.primaryColor }} />
+            Presets de Configuración Rápida
+          </h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <Button
+              label="⚡ Estándar (8K)"
+              icon="pi pi-lightning"
+              onClick={() => setPerformanceConfig({
+                maxTokens: 6000,
+                temperature: 0.7,
+                maxHistory: 8,
+                useStreaming: true,
+                contextLimit: 8000
+              })}
+              severity="info"
+              outlined
+              size="small"
+              style={{ 
+                padding: '0.75rem 1rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                borderRadius: '8px'
+              }}
+            />
+            <Button
+              label="📚 Análisis Avanzado (32K)"
+              icon="pi pi-book"
+              onClick={() => setPerformanceConfig({
+                maxTokens: 8000,
+                temperature: 0.7,
+                maxHistory: 10,
+                useStreaming: true,
+                contextLimit: 32000
+              })}
+              severity="success"
+              outlined
+              size="small"
+              style={{ 
+                padding: '0.75rem 1rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                borderRadius: '8px'
+              }}
+            />
+            <Button
+              label="🚀 128K Ultra (Defecto)"
+              icon="pi pi-fire"
+              onClick={() => setPerformanceConfig({
+                maxTokens: 8000,
+                temperature: 0.7,
+                maxHistory: 16,
+                useStreaming: true,
+                contextLimit: 128000
+              })}
+              severity="danger"
+              size="small"
+              style={{ 
+                padding: '0.75rem 1rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                borderRadius: '8px',
+                background: '#E53935',
+                border: 'none',
+                color: 'white'
+              }}
+            />
+            <Button
+              label="💨 Rápido (4K)"
+              icon="pi pi-bolt"
+              onClick={() => setPerformanceConfig({
+                maxTokens: 4000,
+                temperature: 0.7,
+                maxHistory: 5,
+                useStreaming: true,
+                contextLimit: 4000
+              })}
+              severity="warning"
+              outlined
+              size="small"
+              style={{ 
+                padding: '0.75rem 1rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                borderRadius: '8px'
+              }}
+            />
+          </div>
+
+          <div style={{
+            background: 'rgba(229, 57, 53, 0.1)',
+            border: '1px solid rgba(229, 57, 53, 0.3)',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'flex-start'
+          }}>
+            <i className="pi pi-info-circle" style={{ color: '#E53935', marginTop: '0.1rem' }} />
+            <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
+              <strong>128K Ultra es el preset recomendado</strong> para Llama 3.1 con máxima profundidad de análisis y contexto. Ideal para documentos largos y análisis complejos.
+            </div>
+          </div>
         </div>
 
         {useManualConfig && (
@@ -1337,10 +1403,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000 | contextLimit: 8000-16000 | maxHistory: 8 ⭐ ACTUAL
+                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000 | contextLimit: 128000 | maxHistory: 8 ⭐ ACTUAL
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.1 (70B):</strong> maxTokens: 8000 | contextLimit: 16000-32000 | maxHistory: 10
+                <strong>Llama 3.1 (70B):</strong> maxTokens: 8000 | contextLimit: 128000 | maxHistory: 10
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
                 <strong>🔥 Máximo (70B):</strong> maxTokens: 8000 | contextLimit: 32000-64000 | maxHistory: 12 (Requiere 64GB+ RAM)
@@ -1722,4 +1788,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
 };
 
 export default AIConfigDialog;
+
+
+
+
 
