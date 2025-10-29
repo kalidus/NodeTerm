@@ -954,10 +954,62 @@ class AIService {
       }
     };
 
+    // Configuraciones específicas para Llama 3.1 con contexto extendido
+    const llama31Configs = {
+      'llama3.1:8b': {
+        maxTokens: 8000,
+        temperature: 0.7,
+        maxHistory: 16,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de Llama 3.1 8B
+        num_ctx: 128000        // Para Ollama
+      },
+      'llama3.1:70b': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de Llama 3.1 70B
+        num_ctx: 128000        // Para Ollama
+      }
+    };
+
+    // Configuraciones específicas para Llama 3 (versión anterior)
+    const llama3Configs = {
+      'llama3': {
+        maxTokens: 6000,
+        temperature: 0.7,
+        maxHistory: 12,
+        useStreaming: true,
+        contextLimit: 8000,    // 8K contexto nativo de Llama 3 8B
+        num_ctx: 8000          // Para Ollama
+      },
+      'llama3:70b': {
+        maxTokens: 10000,
+        temperature: 0.7,
+        maxHistory: 16,
+        useStreaming: true,
+        contextLimit: 8000,    // 8K contexto nativo de Llama 3 70B
+        num_ctx: 8000          // Para Ollama
+      }
+    };
+
     // Si es un modelo Qwen3, usar configuración específica
     if (qwen3Configs[modelId]) {
       debugLogger.trace('AIService', `Usando configuración específica para Qwen3 ${modelId}:`, qwen3Configs[modelId]);
       return qwen3Configs[modelId];
+    }
+
+    // Si es un modelo Llama 3.1, usar configuración específica
+    if (llama31Configs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para Llama 3.1 ${modelId}:`, llama31Configs[modelId]);
+      return llama31Configs[modelId];
+    }
+
+    // Si es un modelo Llama 3, usar configuración específica
+    if (llama3Configs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para Llama 3 ${modelId}:`, llama3Configs[modelId]);
+      return llama3Configs[modelId];
     }
 
     const performanceLevel = model.performance || 'medium';
