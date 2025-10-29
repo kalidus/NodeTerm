@@ -1301,20 +1301,45 @@ const AIConfigDialog = ({ visible, onHide }) => {
               {(() => {
                 const context = performanceConfig.contextLimit || 8000;
                 const is70B = currentModel?.includes('70b') || currentModel?.includes('70B');
+                const is8B = currentModel?.includes('8b') || currentModel?.includes('8B') || currentModel?.includes('3b') || currentModel?.includes('3B');
                 
-                // Estimaciones de memoria (aproximadas)
-                let baseRAM = is70B ? 32 : 8; // GB base del modelo
-                let baseGPU = is70B ? 16 : 4; // GB base del modelo
+                // Estimaciones de memoria REALES según modelos:
+                // Llama 3.1 8B con 128K: 8GB RAM (incluye contexto)
+                // Llama 3.1 70B con 128K: ~40GB RAM (incluye contexto)
+                // La mayoría del espacio es el peso del modelo, no el contexto adicional
                 
-                // Memoria adicional por contexto (aproximada)
-                const contextRAM = Math.ceil(context / 1000) * (is70B ? 0.8 : 0.2); // GB por 1K tokens
-                const contextGPU = Math.ceil(context / 1000) * (is70B ? 0.6 : 0.15); // GB por 1K tokens
+                let baseRAM, baseGPU;
                 
-                const totalRAM = Math.ceil(baseRAM + contextRAM);
-                const totalGPU = Math.ceil(baseGPU + contextGPU);
+                if (is70B) {
+                  // Para 70B, necesita más espacio
+                  baseRAM = 40;  // Incluye contexto hasta 128K
+                  baseGPU = 24;  // GPU VRAM needed
+                } else if (is8B) {
+                  // Para 8B (3B, 7B, 8B), incluye 128K de contexto
+                  baseRAM = 8;   // Realista para Llama 3.1 8B con 128K
+                  baseGPU = 4;   // GPU VRAM needed
+                } else {
+                  // Para otros modelos, usar aproximación general
+                  baseRAM = 6;
+                  baseGPU = 3;
+                }
                 
-                const ramColor = totalRAM > 64 ? '#F44336' : totalRAM > 32 ? '#FF9800' : '#4CAF50';
-                const gpuColor = totalGPU > 24 ? '#F44336' : totalGPU > 16 ? '#FF9800' : '#4CAF50';
+                // El contexto MÁS ALLÁ de 128K agregaría algo mínimo
+                // pero en la práctica Llama 3.1 maneja bien hasta 128K en 8GB
+                let additionalRAM = 0;
+                let additionalGPU = 0;
+                
+                // Si el contexto está por debajo de 8K, podemos reducir RAM (4-6GB)
+                if (context <= 8000 && is8B) {
+                  baseRAM = Math.max(4, baseRAM - 2);
+                  baseGPU = Math.max(2, baseGPU - 1);
+                }
+                
+                const totalRAM = baseRAM + additionalRAM;
+                const totalGPU = baseGPU + additionalGPU;
+                
+                const ramColor = totalRAM > 48 ? '#F44336' : totalRAM > 24 ? '#FF9800' : '#4CAF50';
+                const gpuColor = totalGPU > 16 ? '#F44336' : totalGPU > 8 ? '#FF9800' : '#4CAF50';
                 
                 return (
                   <div style={{ 
@@ -1329,15 +1354,15 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.7rem' }}>
                       <span style={{ color: ramColor }}>
-                        💾 RAM: ~{totalRAM}GB {totalRAM > 64 ? '(⚠️ Insuficiente)' : totalRAM > 32 ? '(⚠️ Límite)' : '(✅ OK)'}
+                        💾 RAM: ~{totalRAM}GB {totalRAM > 48 ? '(⚠️ Muy alto)' : totalRAM > 24 ? '(⚠️ Alto)' : '(✅ OK)'}
                       </span>
                       <span style={{ color: gpuColor }}>
-                        🎮 GPU: ~{totalGPU}GB {totalGPU > 24 ? '(⚠️ Insuficiente)' : totalGPU > 16 ? '(⚠️ Límite)' : '(✅ OK)'}
+                        🎮 GPU: ~{totalGPU}GB {totalGPU > 16 ? '(⚠️ Muy alto)' : totalGPU > 8 ? '(⚠️ Alto)' : '(✅ OK)'}
                       </span>
                     </div>
-                    {totalRAM > 64 && (
+                    {totalRAM > 48 && (
                       <div style={{ fontSize: '0.65rem', color: '#F44336', marginTop: '0.25rem' }}>
-                        ⚠️ Tu sistema (64GB RAM + 24GB GPU) no puede manejar este contexto
+                        ⚠️ Requisitos por encima de lo recomendado para hardware estándar
                       </div>
                     )}
                   </div>
