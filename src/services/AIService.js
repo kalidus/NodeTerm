@@ -1025,15 +1025,6 @@ class AIService {
 
     // Mejorar el mensaje si es para scripts de Python
     const enhancedMessage = this.enhanceMessageForPythonScripts(message);
-    
-    // Agregar mensaje del usuario a la conversación
-    conversationService.addMessage('user', enhancedMessage, {
-      timestamp: Date.now()
-    });
-
-    // Recalcular historial limitado para incluir el último mensaje
-    const updatedConv = conversationService.getCurrentConversation();
-    limitedMessages = this.smartTokenBasedHistoryLimit(updatedConv.messages || [], finalOptions);
 
     // Construir contexto efímero de archivos adjuntos (RAG ligero)
     const attachedFiles = conversationService.getAttachedFiles();
@@ -1090,14 +1081,6 @@ class AIService {
           ephemeralFilesUsed
         });
       }
-
-      // Agregar respuesta a la conversación actual
-      conversationService.addMessage('assistant', response, {
-        latency,
-        model: this.currentModel,
-        modelType: this.modelType,
-        tokens: finalOptions.maxTokens
-      });
 
       return response;
     } catch (error) {
