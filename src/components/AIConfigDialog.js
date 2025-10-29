@@ -1078,7 +1078,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
           border: '1px solid rgba(33, 150, 243, 0.3)',
           borderRadius: '8px',
           padding: '0.75rem',
-          marginBottom: '1rem',
           display: 'flex',
           gap: '0.5rem',
           alignItems: 'flex-start'
@@ -1208,15 +1207,15 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
 
           <div style={{
-            background: 'rgba(229, 57, 53, 0.1)',
-            border: '1px solid rgba(229, 57, 53, 0.3)',
+            background: 'rgba(33, 150, 243, 0.1)',
+            border: '1px solid rgba(33, 150, 243, 0.3)',
             borderRadius: '8px',
             padding: '0.75rem',
             display: 'flex',
             gap: '0.5rem',
             alignItems: 'flex-start'
           }}>
-            <i className="pi pi-info-circle" style={{ color: '#E53935', marginTop: '0.1rem' }} />
+            <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.1rem' }} />
             <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary }}>
               <strong>128K Ultra es el preset recomendado</strong> para Llama 3.1 con máxima profundidad de análisis y contexto. Ideal para documentos largos y análisis complejos.
             </div>
@@ -1361,8 +1360,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
                       </span>
                     </div>
                     {totalRAM > 48 && (
-                      <div style={{ fontSize: '0.65rem', color: '#F44336', marginTop: '0.25rem' }}>
-                        ⚠️ Requisitos por encima de lo recomendado para hardware estándar
+                      <div style={{ fontSize: '0.65rem', color: '#2196F3', marginTop: '0.25rem' }}>
+                        ℹ️ Requisitos por encima de lo recomendado para hardware estándar
                       </div>
                     )}
                   </div>
@@ -1425,19 +1424,19 @@ const AIConfigDialog = ({ visible, onHide }) => {
             <div style={{ margin: '0 0 1rem 0', padding: '0.75rem', background: 'rgba(255, 193, 7, 0.1)', borderRadius: '8px', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
               <h4 style={{ color: '#FFC107', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>🏠 Modelos Locales (Ollama)</h4>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.2 (1B/3B):</strong> maxTokens: 3000-4000 | contextLimit: 2000-4000 | maxHistory: 5
+                <strong>Llama 3.2 (1B):</strong> maxTokens: 2000-3000 | contextLimit: 4000 | maxHistory: 4 | RAM: 2GB
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000 | contextLimit: 128000 | maxHistory: 8 ⭐ ACTUAL
+                <strong>Llama 3.2 (3B):</strong> maxTokens: 3000-4000 | contextLimit: 8000 | maxHistory: 5 | RAM: 4GB
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>Llama 3.1 (70B):</strong> maxTokens: 8000 | contextLimit: 128000 | maxHistory: 10
+                <strong>Llama 3.1 (8B):</strong> maxTokens: 6000 | contextLimit: 128000 | maxHistory: 8 | RAM: 8GB ⭐ RECOMENDADO
               </p>
               <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem' }}>
-                <strong>🔥 Máximo (70B):</strong> maxTokens: 8000 | contextLimit: 32000-64000 | maxHistory: 12 (Requiere 64GB+ RAM)
+                <strong>Llama 3.1 (70B):</strong> maxTokens: 8000 | contextLimit: 128000 | maxHistory: 10 | RAM: 40GB
               </p>
               <p style={{ margin: '0', fontSize: '0.75rem', color: themeColors.textSecondary }}>
-                <strong>Streaming:</strong> Siempre activado para mejor UX en modelos locales
+                <strong>💡 Nota:</strong> El contexto de 128K ya está incluido en los requisitos de RAM. Streaming siempre activado para modelos locales.
               </p>
             </div>
 
