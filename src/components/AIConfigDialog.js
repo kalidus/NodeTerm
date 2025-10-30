@@ -709,8 +709,48 @@ const AIConfigDialog = ({ visible, onHide }) => {
   };
 
   const renderRemoteModels = () => {
+    // Agrupar modelos por proveedor
+    const remoteProviders = [
+      {
+        id: 'openai',
+        name: 'OpenAI',
+        icon: 'pi pi-briefcase',
+        color: '#00A67E',
+        logo: '🤖',
+        description: 'GPT-4, GPT-3.5 Turbo y más',
+        apiKeyPlaceholder: 'sk-...',
+        models: remoteModels.filter(m => m.provider === 'openai'),
+        configured: !!apiKeys.openai
+      },
+      {
+        id: 'anthropic',
+        name: 'Anthropic',
+        icon: 'pi pi-star',
+        color: '#E06F6F',
+        logo: '🧠',
+        description: 'Claude 3 Opus, Sonnet, Haiku',
+        apiKeyPlaceholder: 'sk-ant-...',
+        models: remoteModels.filter(m => m.provider === 'anthropic'),
+        configured: !!apiKeys.anthropic
+      },
+      {
+        id: 'google',
+        name: 'Google',
+        icon: 'pi pi-palette',
+        color: '#4285F4',
+        logo: '✨',
+        description: 'Gemini 2.5, Gemini 2.0 Flash',
+        apiKeyPlaceholder: 'AIza...',
+        models: remoteModels.filter(m => m.provider === 'google'),
+        configured: !!apiKeys.google
+      }
+    ];
+
+    // Filtrar solo proveedores con modelos
+    const activeProviders = remoteProviders.filter(p => p.models.length > 0);
+
     return (
-      <div style={{ padding: '1.5rem' }}>
+      <div style={{ padding: '1.5rem', height: '100%', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{
             background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
@@ -734,15 +774,21 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
         </div>
 
-        {/* API Keys */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h4 style={{ color: themeColors.textPrimary, marginBottom: '0.5rem' }}>
-            API Keys
+        {/* API Keys - Sección de configuración */}
+        <div style={{
+          background: 'rgba(33, 150, 243, 0.1)',
+          border: '1px solid rgba(33, 150, 243, 0.3)',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          <h4 style={{ color: themeColors.textPrimary, margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '600' }}>
+            🔑 Configuración de API Keys
           </h4>
           
           {/* OpenAI */}
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
               OpenAI API Key
             </label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -772,8 +818,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
 
           {/* Anthropic */}
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
               Anthropic API Key
             </label>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -803,9 +849,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
 
           {/* Google */}
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
-              Google API Key (Gemini 2.5)
+          <div>
+            <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
+              Google API Key (Gemini)
             </label>
             <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
               Incluye: Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.0 Flash
@@ -837,126 +883,241 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
         </div>
 
-        {/* Lista de modelos remotos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {remoteModels.map(model => (
+        {/* Grid de Proveedores Remotos - Cards modernas */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {activeProviders.map(provider => (
             <div
-              key={model.id}
-              style={{
-                background: currentModel === model.id && modelType === 'remote'
-                  ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
-                  : themeColors.cardBackground,
-                border: `1px solid ${currentModel === model.id && modelType === 'remote' ? themeColors.primaryColor : themeColors.borderColor}`,
-                borderRadius: '12px',
-                padding: '1.25rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
+              key={provider.id}
+              onClick={() => {
+                setSelectedCategory(provider.id);
+                setCategoryDialogVisible(true);
               }}
-              onClick={() => handleSelectModel(model.id, 'remote')}
+              style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: `2px solid ${provider.color}30`,
+                borderRadius: '16px',
+                padding: '1.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = provider.color;
+                e.currentTarget.style.boxShadow = `0 12px 32px ${provider.color}30, inset 0 1px 0 rgba(255,255,255,0.05)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = `${provider.color}30`;
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
+              }}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
-                      {model.name}
-                    </h4>
-                    <span style={{
-                      background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-                      color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
-                      padding: '0.1rem 0.5rem',
-                      borderRadius: '12px',
-                      fontSize: '0.7rem',
-                      fontWeight: '500',
-                      border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
-                    }}>
-                      {model.performance === 'high' ? '⚡ Alto' : model.performance === 'medium' ? '⚖️ Medio' : '🐌 Bajo'}
-                    </span>
+              {/* Decoración de fondo */}
+              <div style={{
+                position: 'absolute',
+                top: '-20px',
+                right: '-20px',
+                width: '100px',
+                height: '100px',
+                borderRadius: '50%',
+                background: `${provider.color}10`,
+                filter: 'blur(30px)',
+                pointerEvents: 'none'
+              }} />
+              
+              {/* Contenido */}
+              <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* Header con logo e indicador */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{
+                    fontSize: '2rem',
+                    lineHeight: 1,
+                    width: '50px',
+                    height: '50px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    background: `${provider.color}20`,
+                    border: `1px solid ${provider.color}40`,
+                    boxShadow: `0 2px 8px ${provider.color}20`
+                  }}>
+                    {provider.logo}
                   </div>
                   
-                  <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
-                    Provider: {model.provider}
-                  </p>
-                  
-                  {model.description && (
-                    <p style={{ margin: '0.5rem 0', color: themeColors.textSecondary, fontSize: '0.9rem', lineHeight: '1.4' }}>
-                      {model.description}
-                    </p>
-                  )}
-                  
-                  {model.useCases && model.useCases.length > 0 && (
-                    <div style={{ margin: '0.5rem 0' }}>
-                      <p style={{ margin: '0 0 0.25rem 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontWeight: '600' }}>
-                        💼 Casos de uso:
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                        {model.useCases.slice(0, 3).map((useCase, index) => (
-                          <span key={index} style={{
-                            background: themeColors.primaryColor + '20',
-                            color: themeColors.primaryColor,
-                            padding: '0.1rem 0.4rem',
-                            borderRadius: '8px',
-                            fontSize: '0.7rem',
-                            border: `1px solid ${themeColors.primaryColor}40`
-                          }}>
-                            {useCase}
-                          </span>
-                        ))}
-                        {model.useCases.length > 3 && (
-                          <span style={{
-                            color: themeColors.textSecondary,
-                            fontSize: '0.7rem'
-                          }}>
-                            +{model.useCases.length - 3} más
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {model.bestFor && (
-                    <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.8rem', fontStyle: 'italic' }}>
-                      👤 {model.bestFor}
-                    </p>
-                  )}
-                  
-                  {/* Especificaciones técnicas */}
-                  {(model.context || model.parameters || model.ramRequired || model.quantization) && (
-                    <div style={{ 
-                      margin: '0.75rem 0 0 0', 
-                      padding: '0.75rem', 
-                      background: 'rgba(33, 150, 243, 0.08)', 
-                      borderRadius: '8px',
-                      border: `1px solid ${themeColors.primaryColor}30`,
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '0.5rem'
+                  {/* Indicador de configuración */}
+                  {provider.configured ? (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(76, 175, 80, 0.15)',
+                      color: '#4CAF50',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      border: '1px solid rgba(76, 175, 80, 0.3)',
+                      whiteSpace: 'nowrap'
                     }}>
-                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
-                        <strong style={{ color: themeColors.textPrimary }}>📊 Contexto:</strong><br />
-                        {model.context || 'N/A'}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
-                        <strong style={{ color: themeColors.textPrimary }}>⚙️ Parámetros:</strong><br />
-                        {model.parameters || 'N/A'}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
-                        <strong style={{ color: themeColors.textPrimary }}>💾 RAM:</strong><br />
-                        {model.ramRequired || 'N/A'}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>
-                        <strong style={{ color: themeColors.textPrimary }}>🎯 Cuantización:</strong><br />
-                        {model.quantization || 'N/A'}
-                      </div>
+                      <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                      Configurado
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(255, 193, 7, 0.15)',
+                      color: '#FFC107',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      border: '1px solid rgba(255, 193, 7, 0.3)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <i className="pi pi-exclamation-circle" style={{ fontSize: '0.6rem' }} />
+                      No configurado
                     </div>
                   )}
                 </div>
-                
-                {currentModel === model.id && modelType === 'remote' && (
-                  <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem', marginLeft: '1rem' }} />
-                )}
+
+                {/* Nombre y descripción */}
+                <h3 style={{
+                  color: themeColors.textPrimary,
+                  margin: '0 0 0.4rem 0',
+                  fontSize: '1.15rem',
+                  fontWeight: '700',
+                  letterSpacing: '0.3px'
+                }}>
+                  {provider.name}
+                </h3>
+
+                <p style={{
+                  color: themeColors.textSecondary,
+                  margin: '0 0 1rem 0',
+                  fontSize: '0.85rem',
+                  lineHeight: '1.4',
+                  flex: 1
+                }}>
+                  {provider.description}
+                </p>
+
+                {/* Estadísticas */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.75rem',
+                  marginBottom: '1rem',
+                  paddingBottom: '1rem',
+                  borderBottom: `1px solid ${provider.color}20`
+                }}>
+                  <div>
+                    <div style={{
+                      fontSize: '0.7rem',
+                      color: themeColors.textSecondary,
+                      marginBottom: '0.3rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      fontWeight: '600'
+                    }}>
+                      Modelos
+                    </div>
+                    <div style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: provider.color
+                    }}>
+                      {provider.models.length}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{
+                      fontSize: '0.7rem',
+                      color: themeColors.textSecondary,
+                      marginBottom: '0.3rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      fontWeight: '600'
+                    }}>
+                      Estado
+                    </div>
+                    <div style={{
+                      fontSize: '0.8rem',
+                      fontWeight: '600',
+                      color: provider.configured ? '#4CAF50' : '#FFC107'
+                    }}>
+                      {provider.configured ? 'Activo' : 'Espera API'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón de acción */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: provider.color,
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  marginTop: 'auto',
+                  padding: '0.75rem',
+                  background: `${provider.color}15`,
+                  borderRadius: '10px',
+                  border: `1px solid ${provider.color}30`,
+                  transition: 'all 0.2s ease',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>Ver {provider.models.length} modelo{provider.models.length !== 1 ? 's' : ''}</span>
+                  <i className="pi pi-arrow-right" style={{ fontSize: '0.75rem' }} />
+                </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {activeProviders.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem',
+            color: themeColors.textSecondary
+          }}>
+            <i className="pi pi-inbox" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }} />
+            <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No hay modelos remotos disponibles</p>
+            <p style={{ fontSize: '0.9rem' }}>Configura una API Key para acceder a los modelos</p>
+          </div>
+        )}
+
+        {/* Información adicional */}
+        <div style={{
+          background: 'rgba(33, 150, 243, 0.1)',
+          border: '1px solid rgba(33, 150, 243, 0.3)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          display: 'flex',
+          gap: '0.75rem',
+          alignItems: 'flex-start'
+        }}>
+          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.2rem', fontSize: '1.1rem', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
+            <strong style={{ color: themeColors.textPrimary }}>💡 Información:</strong>
+            Obtén tus API Keys en los respectivos sitios web de los proveedores. 
+            Una vez configurados, podrás acceder a todos los modelos disponibles de cada proveedor.
+          </div>
         </div>
       </div>
     );
