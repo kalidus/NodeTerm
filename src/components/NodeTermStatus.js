@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getVersionInfo } from '../version-info';
 import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
+import { aiService } from '../services/AIService';
 
 const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnectionsCount = 0, themeColors = {} }) => {
 	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
+	const [ollamaState, setOllamaState] = useState({ isRunning: false, url: 'http://localhost:11434', isRemote: false });
 	const syncManagerRef = useRef(null);
 	const secureStorageRef = useRef(null);
 
@@ -56,7 +58,39 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 		};
 		fetchGuacd();
 		intervalId = setInterval(fetchGuacd, 5000);
-		return () => { if (intervalId) clearInterval(intervalId); };
+
+		// Estado Ollama
+		const fetchOllama = async () => {
+			try {
+				const ollamaUrl = aiService.getOllamaUrl();
+				const isRemote = !!aiService.remoteOllamaUrl;
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 3000);
+				
+				const response = await fetch(`${ollamaUrl}/api/tags`, { 
+					method: 'GET',
+					signal: controller.signal
+				});
+				clearTimeout(timeoutId);
+				
+				if (response.ok) {
+					setOllamaState({ isRunning: true, url: ollamaUrl, isRemote });
+				} else {
+					setOllamaState({ isRunning: false, url: ollamaUrl, isRemote });
+				}
+			} catch (error) {
+				const ollamaUrl = aiService.getOllamaUrl();
+				const isRemote = !!aiService.remoteOllamaUrl;
+				setOllamaState({ isRunning: false, url: ollamaUrl, isRemote });
+			}
+		};
+		fetchOllama();
+		const ollamaIntervalId = setInterval(fetchOllama, 5000);
+
+		return () => { 
+			if (intervalId) clearInterval(intervalId);
+			if (ollamaIntervalId) clearInterval(ollamaIntervalId);
+		};
 	}, []);
 
 	const getRelativeTime = (date) => {
@@ -119,7 +153,7 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 			</div>
 			<div style={{ flex: 1 }}>
 				<div style={{ 
-					color: 'var(--text-color)', 
+					color: themeColors.textPrimary || 'var(--text-color)', 
 					fontWeight: '700', 
 					fontSize: compact ? '0.6rem' : '0.7rem',
 					lineHeight: '1.2'
@@ -127,7 +161,7 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 					{value}
 				</div>
 				<div style={{ 
-					color: 'var(--text-color-secondary)', 
+					color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 					fontSize: compact ? '0.45rem' : '0.5rem',
 					lineHeight: '1.2'
 				}}>
@@ -406,8 +440,8 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 									gap: '0.5rem',
 									marginBottom: '0.2rem'
 								}}>
-									<span style={{ 
-										color: 'var(--text-color)', 
+								<span style={{ 
+									color: themeColors.textPrimary || 'var(--text-color)', 
 										fontWeight: '600', 
 										fontSize: '0.7rem' 
 									}}>
@@ -422,7 +456,7 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 									}} />
 								</div>
 								<div style={{ 
-									color: 'var(--text-color-secondary)', 
+									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 									fontSize: '0.55rem',
 									lineHeight: '1.3'
 								}}>
@@ -523,8 +557,8 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 									gap: '0.5rem',
 									marginBottom: '0.2rem'
 								}}>
-									<span style={{ 
-										color: 'var(--text-color)', 
+								<span style={{ 
+									color: themeColors.textPrimary || 'var(--text-color)', 
 										fontWeight: '600', 
 										fontSize: '0.7rem' 
 									}}>
@@ -539,7 +573,7 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 									}} />
 								</div>
 								<div style={{ 
-									color: 'var(--text-color-secondary)', 
+									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 									fontSize: '0.55rem',
 									lineHeight: '1.3'
 								}}>
@@ -610,8 +644,8 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 									gap: '0.5rem',
 									marginBottom: '0.2rem'
 								}}>
-									<span style={{ 
-										color: 'var(--text-color)', 
+								<span style={{ 
+									color: themeColors.textPrimary || 'var(--text-color)', 
 										fontWeight: '600', 
 										fontSize: '0.7rem' 
 									}}>
@@ -626,11 +660,99 @@ const NodeTermStatus = ({ sshConnectionsCount = 0, foldersCount = 0, rdpConnecti
 									}} />
 								</div>
 								<div style={{ 
-									color: 'var(--text-color-secondary)', 
+									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
 									fontSize: '0.55rem',
 									lineHeight: '1.3'
 								}}>
 									{vStatus}
+								</div>
+							</div>
+						</div>
+					);
+				})()}
+
+				{/* Ollama */}
+				{(() => {
+					const isRunning = ollamaState.isRunning;
+					const isRemote = ollamaState.isRemote;
+					const oColor = isRunning ? '#22c55e' : '#ef4444';
+					const oLabel = isRunning ? (isRemote ? 'Ollama remoto' : 'Ollama activo') : 'Ollama detenido';
+					const oStatus = isRunning ? 'Servicio activo' : 'Servicio inactivo';
+					const oSubStatus = isRunning ? ollamaState.url : (isRemote ? 'Servidor remoto no disponible' : 'Local no disponible');
+					
+					return (
+						<div style={{
+							display: 'flex',
+							alignItems: 'center',
+							gap: '0.75rem',
+							padding: '0.75rem',
+							borderRadius: '10px',
+							background: 'rgba(255,255,255,0.02)',
+							border: `1px solid ${oColor}30`,
+							position: 'relative',
+							overflow: 'hidden'
+						}}>
+							{/* Indicador de estado */}
+							<div style={{
+								position: 'absolute',
+								top: 0,
+								left: 0,
+								width: '3px',
+								height: '100%',
+								background: oColor,
+								borderRadius: '0 2px 2px 0'
+							}} />
+							
+							<div style={{
+								width: '28px',
+								height: '28px',
+								borderRadius: '8px',
+								background: `${oColor}20`,
+								border: `1px solid ${oColor}40`,
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								boxShadow: `0 2px 4px ${oColor}20`
+							}}>
+								<i className={isRemote ? "pi pi-cloud" : "pi pi-server"} style={{ color: oColor, fontSize: '0.8rem' }} />
+							</div>
+							
+							<div style={{ flex: 1 }}>
+								<div style={{ 
+									display: 'flex', 
+									alignItems: 'center', 
+									gap: '0.5rem',
+									marginBottom: '0.2rem'
+								}}>
+								<span style={{ 
+									color: themeColors.textPrimary || 'var(--text-color)', 
+										fontWeight: '600', 
+										fontSize: '0.7rem' 
+									}}>
+										{oLabel}
+									</span>
+									<div style={{
+										width: '6px',
+										height: '6px',
+										borderRadius: '50%',
+										background: oColor,
+										boxShadow: `0 0 4px ${oColor}60`
+									}} />
+								</div>
+								<div style={{ 
+									color: themeColors.textSecondary || 'var(--text-color-secondary)', 
+									fontSize: '0.55rem',
+									lineHeight: '1.3'
+								}}>
+									{oStatus}
+								</div>
+								<div style={{ 
+									color: oColor, 
+									fontSize: '0.5rem', 
+									marginTop: '0.2rem',
+									fontWeight: '500'
+								}}>
+									{oSubStatus}
 								</div>
 							</div>
 						</div>
