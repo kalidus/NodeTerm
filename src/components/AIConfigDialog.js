@@ -1669,39 +1669,48 @@ const AIConfigDialog = ({ visible, onHide }) => {
       }
     };
 
-    const provider = providersMap[selectedCategory];
-    if (!provider) return null;
-
-    // Filtrar modelos por proveedor
+    let provider = providersMap[selectedCategory];
     let filteredModels = [];
-    
-    if (['openai', 'anthropic', 'google'].includes(selectedCategory)) {
-      // Modelos remotos
-      const providerName = selectedCategory === 'openai' ? 'openai' : 
-                          selectedCategory === 'anthropic' ? 'anthropic' : 'google';
-      filteredModels = remoteModels.filter(m => m.provider === providerName);
-    } else if (selectedCategory === 'ollama') {
-      // Todos los modelos de Ollama
-      filteredModels = localModels.filter(m => m.platform === 'ollama');
-    } else if (selectedCategory === 'gpt-oss') {
-      // Modelos GPT-OSS
-      filteredModels = localModels.filter(m => m.id.includes('gpt-oss'));
-    } else if (selectedCategory === 'gemma') {
-      // Modelos Gemma
-      filteredModels = localModels.filter(m => m.id.includes('gemma'));
-    } else if (selectedCategory === 'orca') {
-      // Modelos Orca
-      filteredModels = localModels.filter(m => m.id.includes('orca'));
-    } else if (selectedCategory === 'neural-chat') {
-      // Modelos Neural Chat
-      filteredModels = localModels.filter(m => m.id.includes('neural-chat'));
-    } else if (selectedCategory === 'otros') {
-      // Otros modelos
-      filteredModels = localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat') && !m.id.includes('gpt-oss') && !m.id.includes('gemma'));
+
+    if (provider) {
+      // Filtrado por proveedor (comportamiento existente)
+      if (['openai', 'anthropic', 'google'].includes(selectedCategory)) {
+        const providerName = selectedCategory === 'openai' ? 'openai' :
+                            selectedCategory === 'anthropic' ? 'anthropic' : 'google';
+        filteredModels = remoteModels.filter(m => m.provider === providerName);
+      } else if (selectedCategory === 'ollama') {
+        filteredModels = localModels.filter(m => m.platform === 'ollama');
+      } else if (selectedCategory === 'gpt-oss') {
+        filteredModels = localModels.filter(m => m.id.includes('gpt-oss'));
+      } else if (selectedCategory === 'gemma') {
+        filteredModels = localModels.filter(m => m.id.includes('gemma'));
+      } else if (selectedCategory === 'orca') {
+        filteredModels = localModels.filter(m => m.id.includes('orca'));
+      } else if (selectedCategory === 'neural-chat') {
+        filteredModels = localModels.filter(m => m.id.includes('neural-chat'));
+      } else if (selectedCategory === 'otros') {
+        filteredModels = localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat') && !m.id.includes('gpt-oss') && !m.id.includes('gemma'));
+      } else {
+        const keyword = selectedCategory;
+        filteredModels = localModels.filter(m => m.id.includes(keyword));
+      }
     } else {
-      // Modelos por palabra clave (qwen, deepseek, mistral, etc.)
-      const keyword = selectedCategory;
-      filteredModels = localModels.filter(m => m.id.includes(keyword));
+      // Si no coincide con proveedor, interpretarlo como CATEGORÍA de uso
+      const category = USE_CASE_CATEGORIES.find(c => c.id === selectedCategory);
+      if (!category) return null;
+
+      // Crear un proveedor "sintético" para reutilizar estilos del header
+      provider = {
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        logo: <i className={category.icon} style={{ color: category.color }} />,
+        description: category.description,
+        recommendation: 'Modelos recomendados para esta categoría de uso'
+      };
+
+      const byCategory = getModelsByCategory(category.id);
+      filteredModels = [...byCategory.local, ...byCategory.remote];
     }
 
     return (
