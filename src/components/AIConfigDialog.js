@@ -886,9 +886,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         {/* Grid de Proveedores Remotos - Cards modernas */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '1.5rem',
-          marginBottom: '2rem'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+          gap: '1.25rem',
+          marginBottom: '1.5rem'
         }}>
           {activeProviders.map(provider => (
             <div
@@ -904,13 +904,13 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 backdropFilter: 'blur(8px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(8px) saturate(140%)',
                 border: `2px solid ${provider.color}30`,
-                borderRadius: '16px',
-                padding: '1.5rem',
+                borderRadius: '12px',
+                padding: '1rem',
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
                 overflow: 'hidden',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                boxShadow: '0 3px 12px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
                 display: 'flex',
                 flexDirection: 'column'
               }}
@@ -1305,9 +1305,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         {/* Grid de Familias de Modelos - Cards profesionales */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '1.5rem',
-          marginBottom: '2rem'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+          gap: '1.25rem',
+          marginBottom: '1.5rem'
         }}>
           {activeProviders.map(provider => (
             <div
@@ -1323,13 +1323,13 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 backdropFilter: 'blur(8px) saturate(140%)',
                 WebkitBackdropFilter: 'blur(8px) saturate(140%)',
                 border: `2px solid ${provider.color}30`,
-                borderRadius: '16px',
-                padding: '1.5rem',
+                borderRadius: '12px',
+                padding: '1rem',
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
                 overflow: 'hidden',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                boxShadow: '0 3px 12px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
                 display: 'flex',
                 flexDirection: 'column'
               }}
@@ -1824,8 +1824,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     backdropFilter: 'blur(8px) saturate(140%)',
                     WebkitBackdropFilter: 'blur(8px) saturate(140%)',
                     border: `1px solid ${currentModel === model.id && ((modelType === 'remote' && ['openai', 'anthropic', 'google'].includes(selectedCategory)) || (modelType === 'local' && !['openai', 'anthropic', 'google'].includes(selectedCategory))) ? provider.color : provider.color + '30'}`,
-                    borderRadius: '12px',
-                    padding: '1.5rem',
+                    borderRadius: '10px',
+                    padding: '1rem',
                     transition: 'all 0.2s ease',
                     opacity: (modelType === 'local' && model.platform === 'ollama') || (modelType === 'remote') ? 1 : (!['openai', 'anthropic', 'google'].includes(selectedCategory) && !model.downloaded ? 0.6 : 1),
                     cursor: 'pointer'
@@ -2125,24 +2125,24 @@ const AIConfigDialog = ({ visible, onHide }) => {
             </div>
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem' }}>
           <div style={{
             background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
-            borderRadius: '12px',
-            padding: '1rem',
+            borderRadius: '10px',
+            padding: '0.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: '80px',
-            height: '80px'
+            minWidth: '48px',
+            height: '48px'
           }}>
-            <i className="pi pi-home" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+            <i className="pi pi-home" style={{ fontSize: '1.2rem', color: themeColors.primaryColor }} />
           </div>
           <div>
-            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.15rem 0', fontSize: '0.95rem' }}>
               Selecciona por Funcionalidad
             </h2>
-            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '0.8rem' }}>
               Elige el tipo de tarea que quieres realizar y encuentra el mejor modelo
             </p>
           </div>
@@ -2151,9 +2151,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         {/* Grid de Categorías - Cards modernas */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '1.5rem',
-          marginBottom: '2rem'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+          gap: '1.25rem',
+          marginBottom: '1.5rem'
         }}>
           {USE_CASE_CATEGORIES.map(category => {
             const { remote, local } = getModelsByCategory(category.id);
@@ -2173,13 +2173,13 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   backdropFilter: 'blur(8px) saturate(140%)',
                   WebkitBackdropFilter: 'blur(8px) saturate(140%)',
                   border: `2px solid ${category.color}30`,
-                  borderRadius: '16px',
-                  padding: '1.5rem',
+                  borderRadius: '12px',
+                  padding: '1rem',
                   cursor: 'pointer',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   position: 'relative',
                   overflow: 'hidden',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  boxShadow: '0 3px 12px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
                   display: 'flex',
                   flexDirection: 'column'
                 }}
@@ -2213,8 +2213,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   <div style={{
                     fontSize: '2.5rem',
                     lineHeight: 1,
-                    width: '50px',
-                    height: '50px',
+                  width: '40px',
+                  height: '40px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -2222,16 +2222,16 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     background: `${category.color}20`,
                     border: `1px solid ${category.color}40`,
                     boxShadow: `0 2px 8px ${category.color}20`,
-                    marginBottom: '1rem'
+                  marginBottom: '0.75rem'
                   }}>
-                    <i className={category.icon} style={{ color: category.color, fontSize: '1.3rem' }} />
+                    <i className={category.icon} style={{ color: category.color, fontSize: '1.1rem' }} />
                   </div>
 
                   {/* Nombre y descripción */}
                   <h3 style={{
                     color: themeColors.textPrimary,
                     margin: '0 0 0.4rem 0',
-                    fontSize: '1.15rem',
+                    fontSize: '1rem',
                     fontWeight: '700',
                     letterSpacing: '0.3px'
                   }}>
@@ -2241,7 +2241,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   <p style={{
                     color: themeColors.textSecondary,
                     margin: '0 0 1rem 0',
-                    fontSize: '0.85rem',
+                    fontSize: '0.8rem',
                     lineHeight: '1.4',
                     flex: 1
                   }}>
@@ -2273,7 +2273,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                         fontWeight: '700',
                         color: category.color
                       }}>
-                        {totalModels}
+                        <span style={{ fontSize: '1.2rem' }}>{totalModels}</span>
                       </div>
                     </div>
                     <div>
@@ -2292,7 +2292,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                         fontWeight: '700',
                         color: category.color
                       }}>
-                        {local.length + remote.length > 0 ? '✓' : '-'}
+                        <span style={{ fontSize: '1.2rem' }}>{local.length + remote.length > 0 ? '✓' : '-'}</span>
                       </div>
                     </div>
                   </div>
@@ -2303,10 +2303,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     alignItems: 'center',
                     gap: '0.5rem',
                     color: category.color,
-                    fontSize: '0.85rem',
+                    fontSize: '0.8rem',
                     fontWeight: '600',
                     marginTop: 'auto',
-                    padding: '0.75rem',
+                    padding: '0.6rem',
                     background: `${category.color}15`,
                     borderRadius: '10px',
                     border: `1px solid ${category.color}30`,
