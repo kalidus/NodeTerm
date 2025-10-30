@@ -8,6 +8,74 @@ import { aiService } from '../services/AIService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 
+// Definición de categorías de uso
+const USE_CASE_CATEGORIES = [
+  {
+    id: 'general',
+    name: 'Uso General / Asistente',
+    icon: 'pi pi-comments',
+    color: '#00BCD4',
+    description: 'Conversación, asistencia diaria, respuestas rápidas y tareas variadas',
+    keywords: ['Uso general', 'Asistencia general', 'Procesamiento de texto', 'Escritura', 'Respuestas rápidas', 'Asistencia básica', 'Tareas simples']
+  },
+  {
+    id: 'programming-basic',
+    name: 'Programación Básica',
+    icon: 'pi pi-code',
+    color: '#4CAF50',
+    description: 'Código simple, scripting, aprendizaje y tareas rutinarias',
+    keywords: ['Programación general', 'Programación básica', 'Asistencia técnica', 'Procesamiento básico', 'Uso general', 'Asistencia general']
+  },
+  {
+    id: 'programming-advanced',
+    name: 'Programación Avanzada',
+    icon: 'pi pi-desktop',
+    color: '#2196F3',
+    description: 'Arquitecturas complejas, debugging avanzado, refactoring y código de producción',
+    keywords: ['Programación avanzada', 'Programación compleja', 'Análisis de código complejo', 'Razonamiento profundo', 'Generación de código', 'Debugging avanzado', 'Refactoring']
+  },
+  {
+    id: 'reasoning',
+    name: 'Razonamiento y Lógica',
+    icon: 'pi pi-bolt',
+    color: '#FF9800',
+    description: 'Matemáticas, algoritmos, resolución de problemas complejos y pensamiento profundo',
+    keywords: ['Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Razonamiento profundo', 'Resolución de problemas complejos', 'Resolución de problemas difíciles']
+  },
+  {
+    id: 'document-analysis',
+    name: 'Análisis de Documentos Largos',
+    icon: 'pi pi-file',
+    color: '#9C27B0',
+    description: 'Documentos extensos, análisis masivo de texto, investigación y contextos largos',
+    keywords: ['Análisis de documentos largos', 'Conversaciones extensas', 'Análisis masivo', 'Documentos muy largos', 'Contextos largos', 'Investigación profunda']
+  },
+  {
+    id: 'sysadmin',
+    name: 'SysAdmin / DevOps',
+    icon: 'pi pi-server',
+    color: '#795548',
+    description: 'Scripts de administración, automatización, configuración de sistemas',
+    keywords: ['Automatización', 'Scripts', 'Configuración', 'Administración de sistemas', 'DevOps', 'Infraestructura']
+  },
+  {
+    id: 'security',
+    name: 'Seguridad y Auditoría',
+    icon: 'pi pi-shield',
+    color: '#F44336',
+    description: 'Análisis de vulnerabilidades, auditoría de código y mejores prácticas de seguridad',
+    keywords: ['Seguridad', 'Auditoría', 'Vulnerabilidades', 'Análisis de seguridad', 'Mejores prácticas']
+  },
+  {
+    id: 'lightweight',
+    name: 'Dispositivos Limitados',
+    icon: 'pi pi-mobile',
+    color: '#607D8B',
+    description: 'Hardware con poca RAM, dispositivos móviles y máxima velocidad',
+    keywords: ['Dispositivos móviles', 'Uso ligero', 'Tareas simples', 'Dispositivos limitados', 'Bajo consumo']
+  }
+];
+
 const AIConfigDialog = ({ visible, onHide }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [remoteModels, setRemoteModels] = useState([]);
@@ -41,6 +109,8 @@ const AIConfigDialog = ({ visible, onHide }) => {
     'llama2': false
   });
   const [currentModelConfig, setCurrentModelConfig] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryDialogVisible, setCategoryDialogVisible] = useState(false);
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -1047,6 +1117,381 @@ const AIConfigDialog = ({ visible, onHide }) => {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
+  // Función para filtrar modelos por categoría
+  const getModelsByCategory = (categoryId) => {
+    const category = USE_CASE_CATEGORIES.find(c => c.id === categoryId);
+    if (!category) return { remote: [], local: [] };
+
+    const filteredRemote = remoteModels.filter(model => 
+      model.useCases?.some(useCase => 
+        category.keywords.some(keyword => 
+          useCase.toLowerCase().includes(keyword.toLowerCase())
+        )
+      )
+    );
+
+    const filteredLocal = localModels.filter(model => 
+      model.useCases?.some(useCase => 
+        category.keywords.some(keyword => 
+          useCase.toLowerCase().includes(keyword.toLowerCase())
+        )
+      )
+    );
+
+    return { remote: filteredRemote, local: filteredLocal };
+  };
+
+  // Renderizar modal de categoría con sus modelos
+  const renderCategoryDialog = () => {
+    if (!selectedCategory) return null;
+
+    const category = USE_CASE_CATEGORIES.find(c => c.id === selectedCategory);
+    const { remote, local } = getModelsByCategory(selectedCategory);
+    const totalModels = remote.length + local.length;
+
+    return (
+      <Dialog
+        header={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <i className={category.icon} style={{ fontSize: '1.5rem', color: category.color }} />
+            <div>
+              <div style={{ fontSize: '1.2rem', fontWeight: '600' }}>{category.name}</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.8, marginTop: '0.25rem' }}>
+                {category.description}
+              </div>
+            </div>
+          </div>
+        }
+        visible={categoryDialogVisible}
+        onHide={() => setCategoryDialogVisible(false)}
+        style={{ width: '80vw', maxWidth: '1000px' }}
+        modal
+      >
+        <div style={{ padding: '1rem 0' }}>
+          {totalModels === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem',
+              color: themeColors.textSecondary
+            }}>
+              <i className="pi pi-info-circle" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }} />
+              <p>No hay modelos disponibles para esta categoría</p>
+            </div>
+          ) : (
+            <>
+              {/* Modelos Remotos */}
+              {remote.length > 0 && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{ 
+                    color: themeColors.textPrimary, 
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <i className="pi pi-cloud" style={{ color: themeColors.primaryColor }} />
+                    Modelos Remotos ({remote.length})
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {remote.map(model => (
+                      <div
+                        key={model.id}
+                        style={{
+                          background: currentModel === model.id && modelType === 'remote'
+                            ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
+                            : themeColors.cardBackground,
+                          border: `1px solid ${currentModel === model.id && modelType === 'remote' ? themeColors.primaryColor : themeColors.borderColor}`,
+                          borderRadius: '12px',
+                          padding: '1.25rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onClick={() => {
+                          handleSelectModel(model.id, 'remote');
+                          setCategoryDialogVisible(false);
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ margin: '0 0 0.5rem 0', color: themeColors.textPrimary }}>
+                              {model.name}
+                            </h4>
+                            <p style={{ margin: '0.25rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                              Provider: {model.provider} | Contexto: {model.context}
+                            </p>
+                            {model.description && (
+                              <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
+                                {model.description}
+                              </p>
+                            )}
+                          </div>
+                          {currentModel === model.id && modelType === 'remote' && (
+                            <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem', marginLeft: '1rem' }} />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Modelos Locales */}
+              {local.length > 0 && (
+                <div>
+                  <h3 style={{ 
+                    color: themeColors.textPrimary, 
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <i className="pi pi-desktop" style={{ color: themeColors.primaryColor }} />
+                    Modelos Locales ({local.length})
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {local.map(model => (
+                      <div
+                        key={model.id}
+                        style={{
+                          background: currentModel === model.id && modelType === 'local'
+                            ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
+                            : themeColors.cardBackground,
+                          border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
+                          borderRadius: '12px',
+                          padding: '1.25rem',
+                          opacity: model.downloaded ? 1 : 0.6,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                              <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
+                                {model.name}
+                              </h4>
+                              {model.downloaded && (
+                                <span style={{
+                                  background: 'rgba(76, 175, 80, 0.2)',
+                                  color: '#4CAF50',
+                                  padding: '0.1rem 0.5rem',
+                                  borderRadius: '12px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '500',
+                                  border: '1px solid rgba(76, 175, 80, 0.4)'
+                                }}>
+                                  ✓ Instalado
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ margin: '0.25rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                              💾 {model.size} | 🧠 {model.context} | 💾 RAM: {model.ramRequired}
+                            </p>
+                            {model.description && (
+                              <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
+                                {model.description}
+                              </p>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {model.downloaded ? (
+                              <>
+                                {currentModel === model.id && modelType === 'local' && (
+                                  <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
+                                )}
+                                <Button
+                                  label="Usar"
+                                  icon="pi pi-play"
+                                  size="small"
+                                  onClick={() => {
+                                    handleSelectModel(model.id, 'local');
+                                    setCategoryDialogVisible(false);
+                                  }}
+                                  style={{ minWidth: '80px' }}
+                                />
+                              </>
+                            ) : (
+                              <Button
+                                label="Descargar"
+                                icon="pi pi-download"
+                                size="small"
+                                onClick={() => handleDownloadModel(model.id)}
+                                loading={downloading[model.id]}
+                                style={{ minWidth: '120px' }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Dialog>
+    );
+  };
+
+  // Renderizar pestaña de Inicio
+  const renderHomeTab = () => {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
+            borderRadius: '12px',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '80px',
+            height: '80px'
+          }}>
+            <i className="pi pi-home" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+          </div>
+          <div>
+            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+              Selecciona por Funcionalidad
+            </h2>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+              Elige el tipo de tarea que quieres realizar y encuentra el mejor modelo
+            </p>
+          </div>
+        </div>
+
+        {/* Tarjetas de categorías */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', 
+          gap: '1rem' 
+        }}>
+          {USE_CASE_CATEGORIES.map(category => {
+            const { remote, local } = getModelsByCategory(category.id);
+            const totalModels = remote.length + local.length;
+
+            return (
+              <div
+                key={category.id}
+                onClick={() => {
+                  setSelectedCategory(category.id);
+                  setCategoryDialogVisible(true);
+                }}
+                style={{
+                  background: themeColors.cardBackground,
+                  border: `2px solid ${themeColors.borderColor}`,
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.borderColor = category.color;
+                  e.currentTarget.style.boxShadow = `0 8px 24px ${category.color}30`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = themeColors.borderColor;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                {/* Icono de fondo decorativo */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-15px',
+                  right: '-15px',
+                  fontSize: '4.5rem',
+                  opacity: 0.05,
+                  color: category.color
+                }}>
+                  <i className={category.icon} />
+                </div>
+
+                {/* Contenido */}
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    width: '45px',
+                    height: '45px',
+                    borderRadius: '10px',
+                    background: `${category.color}20`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '0.75rem'
+                  }}>
+                    <i className={category.icon} style={{ fontSize: '1.3rem', color: category.color }} />
+                  </div>
+
+                  <h3 style={{ 
+                    color: themeColors.textPrimary, 
+                    margin: '0 0 0.4rem 0',
+                    fontSize: '0.95rem',
+                    fontWeight: '600'
+                  }}>
+                    {category.name}
+                  </h3>
+
+                  <p style={{ 
+                    color: themeColors.textSecondary, 
+                    margin: '0 0 0.75rem 0',
+                    fontSize: '0.75rem',
+                    lineHeight: '1.4',
+                    minHeight: '2rem'
+                  }}>
+                    {category.description}
+                  </p>
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '0.75rem',
+                    paddingTop: '0.75rem',
+                    borderTop: `1px solid ${themeColors.borderColor}`
+                  }}>
+                    <span style={{
+                      background: `${category.color}20`,
+                      color: category.color,
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '10px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      border: `1px solid ${category.color}40`
+                    }}>
+                      {totalModels} modelo{totalModels !== 1 ? 's' : ''}
+                    </span>
+                    <i className="pi pi-arrow-right" style={{ color: category.color, fontSize: '0.9rem' }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Información adicional */}
+        <div style={{
+          marginTop: '2rem',
+          background: 'rgba(33, 150, 243, 0.1)',
+          border: '1px solid rgba(33, 150, 243, 0.3)',
+          borderRadius: '12px',
+          padding: '1.25rem',
+          display: 'flex',
+          gap: '0.75rem',
+          alignItems: 'flex-start'
+        }}>
+          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.2rem', fontSize: '1.1rem' }} />
+          <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
+            <strong style={{ color: themeColors.textPrimary }}>💡 Consejo:</strong> Cada categoría agrupa modelos optimizados para tareas específicas. 
+            Los modelos remotos requieren API keys, mientras que los locales necesitan Ollama instalado.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPerformanceConfig = () => {
     return (
       <div style={{ padding: '1.5rem' }}>
@@ -1923,6 +2368,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
       )}
 
       <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
+        <TabPanel header="🏠 Inicio">
+          {renderHomeTab()}
+        </TabPanel>
         <TabPanel header="☁️ Modelos Remotos">
           {renderRemoteModels()}
         </TabPanel>
@@ -1936,6 +2384,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
           {renderPerformanceConfig()}
         </TabPanel>
       </TabView>
+
+      {/* Diálogo de categoría */}
+      {renderCategoryDialog()}
     </Dialog>
   );
 };
