@@ -2371,11 +2371,11 @@ const AIConfigDialog = ({ visible, onHide }) => {
         <TabPanel header="🏠 Inicio">
           {renderHomeTab()}
         </TabPanel>
-        <TabPanel header="☁️ Modelos Remotos">
-          {renderRemoteModels()}
-        </TabPanel>
         <TabPanel header="💻 Modelos Locales">
           {renderLocalModels()}
+        </TabPanel>
+        <TabPanel header="☁️ Modelos Remotos">
+          {renderRemoteModels()}
         </TabPanel>
         <TabPanel header="🌐 Ollama Remoto">
           {renderRemoteOllamaConfig()}
