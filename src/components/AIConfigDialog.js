@@ -1187,14 +1187,34 @@ const AIConfigDialog = ({ visible, onHide }) => {
         installed: localModels.filter(m => m.id.includes('neural-chat')).some(m => m.downloaded)
       },
       {
+        id: 'gpt-oss',
+        name: 'GPT-OSS',
+        icon: 'pi pi-brain',
+        color: '#00D9FF',
+        logo: '🧠',
+        description: 'OpenAI\'s open-weight models designed for powerful reasoning, agentic tasks, and versatile developer use cases.',
+        models: localModels.filter(m => m.id.includes('gpt-oss')),
+        installed: localModels.filter(m => m.id.includes('gpt-oss')).some(m => m.downloaded)
+      },
+      {
+        id: 'gemma',
+        name: 'Gemma',
+        icon: 'pi pi-star',
+        color: '#FF9800',
+        logo: '✨',
+        description: 'The current, most capable model that runs on a single GPU.',
+        models: localModels.filter(m => m.id.includes('gemma')),
+        installed: localModels.filter(m => m.id.includes('gemma')).some(m => m.downloaded)
+      },
+      {
         id: 'otros',
         name: 'Otros Modelos',
         icon: 'pi pi-cog',
         color: '#9C27B0',
         logo: '⚙️',
         description: 'Otros modelos disponibles en Ollama',
-        models: localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat')),
-        installed: localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat')).some(m => m.downloaded)
+        models: localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat') && !m.id.includes('gpt-oss') && !m.id.includes('gemma')),
+        installed: localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat') && !m.id.includes('gpt-oss') && !m.id.includes('gemma')).some(m => m.downloaded)
       }
     ];
 
@@ -1606,6 +1626,46 @@ const AIConfigDialog = ({ visible, onHide }) => {
         logo: '🦙',
         description: 'Familia completa de modelos Llama de Meta',
         recommendation: 'Disponible vía Ollama local'
+      },
+      'orca': {
+        name: 'Orca',
+        icon: 'pi pi-asterisk',
+        color: '#00BCD4',
+        logo: '🐋',
+        description: 'Modelos Orca compactos y eficientes',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'neural-chat': {
+        name: 'Neural Chat',
+        icon: 'pi pi-comments',
+        color: '#4CAF50',
+        logo: '💬',
+        description: 'Modelos optimizados para conversación',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'gpt-oss': {
+        name: 'GPT-OSS',
+        icon: 'pi pi-brain',
+        color: '#00D9FF',
+        logo: '🧠',
+        description: 'OpenAI\'s open-weight models designed for powerful reasoning, agentic tasks, and versatile developer use cases.',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'gemma': {
+        name: 'Gemma',
+        icon: 'pi pi-star',
+        color: '#FF9800',
+        logo: '✨',
+        description: 'The current, most capable model that runs on a single GPU.',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'otros': {
+        name: 'Otros Modelos',
+        icon: 'pi pi-cog',
+        color: '#9C27B0',
+        logo: '⚙️',
+        description: 'Otros modelos disponibles en Ollama',
+        recommendation: 'Disponible vía Ollama local'
       }
     };
 
@@ -1623,8 +1683,23 @@ const AIConfigDialog = ({ visible, onHide }) => {
     } else if (selectedCategory === 'ollama') {
       // Todos los modelos de Ollama
       filteredModels = localModels.filter(m => m.platform === 'ollama');
+    } else if (selectedCategory === 'gpt-oss') {
+      // Modelos GPT-OSS
+      filteredModels = localModels.filter(m => m.id.includes('gpt-oss'));
+    } else if (selectedCategory === 'gemma') {
+      // Modelos Gemma
+      filteredModels = localModels.filter(m => m.id.includes('gemma'));
+    } else if (selectedCategory === 'orca') {
+      // Modelos Orca
+      filteredModels = localModels.filter(m => m.id.includes('orca'));
+    } else if (selectedCategory === 'neural-chat') {
+      // Modelos Neural Chat
+      filteredModels = localModels.filter(m => m.id.includes('neural-chat'));
+    } else if (selectedCategory === 'otros') {
+      // Otros modelos
+      filteredModels = localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat') && !m.id.includes('gpt-oss') && !m.id.includes('gemma'));
     } else {
-      // Modelos por palabra clave (qwen, deepseek, mistral, llama)
+      // Modelos por palabra clave (qwen, deepseek, mistral, etc.)
       const keyword = selectedCategory;
       filteredModels = localModels.filter(m => m.id.includes(keyword));
     }
