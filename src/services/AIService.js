@@ -432,24 +432,6 @@ class AIService {
             quantization: 'Q4, Q5'
           },
           { 
-            id: 'llama3:8b-instruct', 
-            name: 'Llama 3 (8B Instruct)', 
-            size: '4.7GB', 
-            downloaded: false, 
-            performance: 'high',
-            platform: 'ollama',
-            platformName: 'Ollama',
-            platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Versión Instruct optimizada de Llama 3 (8B). Versión chat/instrucciones de alta calidad.',
-            useCases: ['Seguimiento de instrucciones', 'Asistencia general', 'Programación', 'Análisis', 'Escritura'],
-            strengths: ['Optimizado para instrucciones', 'Excelente comprensión', 'Respuestas coherentes', 'Chat natural'],
-            bestFor: 'Usuarios que necesitan seguimiento preciso de instrucciones y conversaciones naturales',
-            context: '8K tokens',
-            ramRequired: '8-10GB',
-            parameters: '8B',
-            quantization: 'Q4, Q5'
-          },
-          { 
             id: 'mistral-instruct', 
             name: 'Mistral Instruct (7B)', 
             size: '4.1GB', 
