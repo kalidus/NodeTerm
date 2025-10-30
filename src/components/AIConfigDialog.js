@@ -87,6 +87,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
     anthropic: '',
     google: ''
   });
+  // Refs para enfocar rápidamente los campos de API Key al pulsar "Configurar" en cada card
+  const openaiInputRef = React.useRef(null);
+  const anthropicInputRef = React.useRef(null);
+  const googleInputRef = React.useRef(null);
   const [downloading, setDownloading] = useState({});
   const [downloadProgress, setDownloadProgress] = useState({});
   const [themeVersion, setThemeVersion] = useState(0);
@@ -111,6 +115,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [currentModelConfig, setCurrentModelConfig] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryDialogVisible, setCategoryDialogVisible] = useState(false);
+  const [configuringProvider, setConfiguringProvider] = useState(null);
+  const [configInputValue, setConfigInputValue] = useState('');
+  const [configDialogVisible, setConfigDialogVisible] = useState(false);
+  // Estado interno del diálogo de configuración
 
   // Escuchar cambios en el tema
   useEffect(() => {
@@ -341,6 +349,26 @@ const AIConfigDialog = ({ visible, onHide }) => {
         summary: 'API Key borrada',
         detail: `API Key de ${provider} ha sido borrada`,
         life: 3000
+      });
+    }
+  };
+
+  // Lleva al usuario a la sección del input correspondiente y hace foco
+  const handleConfigureProvider = (providerId) => {
+    setConfiguringProvider(providerId);
+    setConfigInputValue(apiKeys[providerId] || '');
+    setConfigDialogVisible(true);
+  };
+
+  const handleSaveApiKeyValue = (providerId, value) => {
+    setApiKeys(prev => ({ ...prev, [providerId]: value }));
+    aiService.setApiKey(providerId, value);
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'success',
+        summary: 'API Key guardada',
+        detail: `API Key de ${providerId} guardada correctamente`,
+        life: 2000
       });
     }
   };
@@ -749,6 +777,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
     // Filtrar solo proveedores con modelos
     const activeProviders = remoteProviders.filter(p => p.models.length > 0);
 
+    const showGlobalApiSection = false;
     return (
       <div style={{ padding: '1.5rem', height: '100%', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
@@ -774,7 +803,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
         </div>
 
-        {/* API Keys - Sección de configuración */}
+        {showGlobalApiSection && (
         <div style={{
           background: 'rgba(33, 150, 243, 0.1)',
           border: '1px solid rgba(33, 150, 243, 0.3)',
@@ -798,6 +827,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 placeholder="sk-..."
                 type="password"
                 style={{ flex: 1 }}
+                ref={openaiInputRef}
               />
               <Button
                 label="Guardar"
@@ -829,6 +859,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 placeholder="sk-ant-..."
                 type="password"
                 style={{ flex: 1 }}
+                ref={anthropicInputRef}
               />
               <Button
                 label="Guardar"
@@ -863,6 +894,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                 placeholder="AIza..."
                 type="password"
                 style={{ flex: 1 }}
+                ref={googleInputRef}
               />
               <Button
                 label="Guardar"
@@ -882,6 +914,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Grid de Proveedores Remotos - Cards modernas */}
         <div style={{ 
@@ -894,6 +927,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             <div
               key={provider.id}
               onClick={() => {
+                if (configDialogVisible) return; // Evita abrir modelos si el diálogo de API está abierto o acaba de cerrarse
                 setSelectedCategory(provider.id);
                 setCategoryDialogVisible(true);
               }}
@@ -958,42 +992,53 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     {provider.logo}
                   </div>
                   
-                  {/* Indicador de configuración */}
-                  {provider.configured ? (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(76, 175, 80, 0.15)',
-                      color: '#4CAF50',
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '20px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      border: '1px solid rgba(76, 175, 80, 0.3)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
-                      Configurado
-                    </div>
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(255, 193, 7, 0.15)',
-                      color: '#FFC107',
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '20px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      border: '1px solid rgba(255, 193, 7, 0.3)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <i className="pi pi-exclamation-circle" style={{ fontSize: '0.6rem' }} />
-                      No configurado
-                    </div>
-                  )}
+                  {/* Indicador + botón configuración */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {provider.configured ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(76, 175, 80, 0.15)',
+                        color: '#4CAF50',
+                        padding: '0.3rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        border: '1px solid rgba(76, 175, 80, 0.3)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                        Configurado
+                      </div>
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(255, 193, 7, 0.15)',
+                        color: '#FFC107',
+                        padding: '0.3rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        border: '1px solid rgba(255, 193, 7, 0.3)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <i className="pi pi-exclamation-circle" style={{ fontSize: '0.6rem' }} />
+                        No configurado
+                      </div>
+                    )}
+                    <Button
+                      icon="pi pi-cog"
+                      rounded
+                      text
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); handleConfigureProvider(provider.id); }}
+                      aria-label="Configurar proveedor"
+                      style={{ padding: '0.25rem', width: '28px', height: '28px', fontSize: '0.85rem' }}
+                    />
+                  </div>
                 </div>
 
                 {/* Nombre y descripción */}
@@ -1085,6 +1130,58 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   <span>Ver {provider.models.length} modelo{provider.models.length !== 1 ? 's' : ''}</span>
                   <i className="pi pi-arrow-right" style={{ fontSize: '0.75rem' }} />
                 </div>
+
+        {/* Diálogo de configuración de API Key */}
+        {configDialogVisible && (
+          <Dialog
+            visible={configDialogVisible}
+            onHide={() => {
+              setConfigDialogVisible(false);
+            }}
+            header={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="pi pi-cog" />
+                <span>Configurar API Key</span>
+              </div>
+            }
+            style={{ width: '32rem' }}
+            modal
+          >
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div style={{ color: themeColors.textSecondary }}>
+                Proveedor: <strong style={{ color: themeColors.textPrimary }}>{(configuringProvider || '').toUpperCase()}</strong>
+              </div>
+              <InputText
+                value={configInputValue}
+                onChange={(e) => setConfigInputValue(e.target.value)}
+                placeholder={configuringProvider === 'openai' ? 'sk-...' : configuringProvider === 'anthropic' ? 'sk-ant-...' : 'AIza...'}
+                type="password"
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                {apiKeys[configuringProvider] && (
+                  <Button
+                    label="Borrar"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    onClick={() => { handleClearApiKey(configuringProvider); setConfigInputValue(''); setConfigDialogVisible(false); }}
+                  />
+                )}
+                <Button
+                  label="Cancelar"
+                  icon="pi pi-times"
+                  severity="secondary"
+                  onClick={() => setConfigDialogVisible(false)}
+                />
+                <Button
+                  label="Guardar"
+                  icon="pi pi-check"
+                  onClick={() => { handleSaveApiKeyValue(configuringProvider, configInputValue); setConfigDialogVisible(false); }}
+                />
+              </div>
+            </div>
+          </Dialog>
+        )}
+
               </div>
             </div>
           ))}
@@ -1222,25 +1319,25 @@ const AIConfigDialog = ({ visible, onHide }) => {
     const activeProviders = localProviders.filter(p => p.models.length > 0);
 
     return (
-      <div style={{ padding: '1.5rem', height: '100%', overflow: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ padding: '1rem', height: '100%', overflow: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <div style={{
             background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
-            borderRadius: '12px',
-            padding: '1rem',
+            borderRadius: '10px',
+            padding: '0.4rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: '80px',
-            height: '80px'
+            minWidth: '36px',
+            height: '36px'
           }}>
-            <i className="pi pi-desktop" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
+            <i className="pi pi-desktop" style={{ fontSize: '1rem', color: themeColors.primaryColor }} />
           </div>
           <div style={{ flex: 1 }}>
-            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+            <h2 style={{ color: themeColors.textPrimary, margin: 0, fontSize: '1rem', fontWeight: 700 }}>
               Modelos Locales
             </h2>
-            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
+            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '0.8rem' }}>
               Modelos de IA ejecutados localmente en tu dispositivo para máxima privacidad
             </p>
           </div>
@@ -1253,29 +1350,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
           />
         </div>
 
-        {/* Información importante */}
-        <div style={{
-          background: 'rgba(255, 193, 7, 0.1)',
-          border: '1px solid rgba(255, 193, 7, 0.3)',
-          borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '2rem',
-          display: 'flex',
-          gap: '0.75rem',
-          alignItems: 'flex-start'
-        }}>
-          <i className="pi pi-lightbulb" style={{ color: '#FFC107', marginTop: '0.2rem', fontSize: '1.1rem', flexShrink: 0 }} />
-          <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
-            <strong>💡 Información importante:</strong><br />
-            • <strong>Modelos Ollama:</strong> Requieren Ollama instalado y ejecutándose localmente<br />
-            • Puedes agregar modelos personalizados si están instalados en Ollama<br />
-            • Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
-          </div>
-        </div>
-
         {/* Agregar modelo personalizado */}
-        <div style={{ marginBottom: '2rem' }}>
-          <label style={{ color: themeColors.textPrimary, fontSize: '0.95rem', marginBottom: '0.75rem', display: 'block', fontWeight: '600' }}>
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label style={{ color: themeColors.textPrimary, fontSize: '0.8rem', marginBottom: '0.4rem', display: 'block', fontWeight: '600' }}>
             ➕ Agregar modelo personalizado
           </label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1283,7 +1360,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
               value={customModelId}
               onChange={(e) => setCustomModelId(e.target.value)}
               placeholder="Ej: llama3.2, mistral, qwen2.5"
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '0.4rem 0.6rem', fontSize: '0.9rem' }}
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   handleAddCustomModel();
@@ -1293,11 +1370,12 @@ const AIConfigDialog = ({ visible, onHide }) => {
             <Button
               label="Agregar"
               icon="pi pi-plus"
+              size="small"
               onClick={handleAddCustomModel}
               disabled={!customModelId.trim()}
             />
           </div>
-          <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', marginTop: '0.5rem', display: 'block' }}>
+          <small style={{ color: themeColors.textSecondary, fontSize: '0.7rem', marginTop: '0.35rem', display: 'block' }}>
             Escribe el nombre exacto del modelo instalado en Ollama
           </small>
         </div>
@@ -1507,6 +1585,26 @@ const AIConfigDialog = ({ visible, onHide }) => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Información importante al final */}
+        <div style={{
+          background: 'rgba(255, 193, 7, 0.08)',
+          border: '1px solid rgba(255, 193, 7, 0.25)',
+          borderRadius: '6px',
+          padding: '0.6rem',
+          marginTop: '0.75rem',
+          display: 'flex',
+          gap: '0.5rem',
+          alignItems: 'flex-start'
+        }}>
+          <i className="pi pi-lightbulb" style={{ color: '#FFC107', marginTop: '0.1rem', fontSize: '0.9rem', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, lineHeight: '1.35' }}>
+            <strong>💡 Información importante:</strong><br />
+            • <strong>Modelos Ollama:</strong> Requieren Ollama instalado y ejecutándose localmente<br />
+            • Puedes agregar modelos personalizados si están instalados en Ollama<br />
+            • Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
+          </div>
         </div>
 
         {activeProviders.length === 0 && (
