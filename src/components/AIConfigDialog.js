@@ -2088,6 +2088,43 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const renderHomeTab = () => {
     return (
       <div style={{ padding: '1.5rem', height: '100%', overflow: 'auto' }}>
+        {/* Banner compacto con estado del modelo actual */}
+        {currentModel && currentModelConfig && (
+          <div style={{
+            background: themeColors.primaryColor + '10',
+            border: `1px solid ${themeColors.primaryColor}40`,
+            borderRadius: '8px',
+            padding: '0.4rem 0.6rem',
+            marginBottom: '0.9rem',
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr auto auto',
+            gap: '0.6rem',
+            alignItems: 'center',
+            minHeight: '44px'
+          }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              background: themeColors.primaryColor + '20',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <i className="pi pi-check-circle" style={{ fontSize: '0.95rem', color: themeColors.primaryColor }} />
+            </div>
+            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ color: themeColors.textPrimary, fontSize: '0.85rem', fontWeight: 600 }}>✓ Modelo:</span>
+              <span style={{ color: themeColors.textPrimary, fontSize: '0.85rem', marginLeft: '0.35rem' }}>{currentModel}</span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <span style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>📊 {currentModelConfig.contextLimit?.toLocaleString ? currentModelConfig.contextLimit.toLocaleString() : currentModelConfig.contextLimit} tokens</span>
+              <span style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>📤 {currentModelConfig.maxTokens?.toLocaleString ? currentModelConfig.maxTokens.toLocaleString() : currentModelConfig.maxTokens} tokens</span>
+              <span style={{ color: themeColors.textSecondary, fontSize: '0.75rem' }}>🔄 {currentModelConfig.maxHistory} msgs</span>
+              <span style={{ color: currentModelConfig.useStreaming ? themeColors.primaryColor : themeColors.textSecondary, fontSize: '0.75rem' }}>{currentModelConfig.useStreaming ? '🌊 Streaming activo' : 'Streaming inactivo'}</span>
+            </div>
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{
             background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
@@ -3115,72 +3152,16 @@ const AIConfigDialog = ({ visible, onHide }) => {
       style={{ width: '85vw', minWidth: '900px', maxWidth: '1200px' }}
       modal
     >
-      {/* Tarjeta de Modelo Actual Seleccionado */}
-      {currentModel && currentModelConfig && (
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(76, 175, 80, 0.1) 100%)',
-          border: `2px solid ${themeColors.primaryColor}`,
-          borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '1.5rem',
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
-          gap: '1rem',
-          alignItems: 'center'
-        }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            borderRadius: '12px',
-            background: themeColors.primaryColor + '20',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <i className="pi pi-check-circle" style={{ fontSize: '2.5rem', color: themeColors.primaryColor }} />
-          </div>
-          <div>
-            <h3 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0' }}>
-              ✓ Modelo Seleccionado Actualmente
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
-              <div>
-                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
-                  <strong>📊 Contexto Disponible:</strong>
-                </div>
-                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
-                  {currentModelConfig.contextLimit?.toLocaleString ? currentModelConfig.contextLimit.toLocaleString() : currentModelConfig.contextLimit} tokens
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
-                  <strong>📤 Máx. Output:</strong>
-                </div>
-                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
-                  {currentModelConfig.maxTokens?.toLocaleString ? currentModelConfig.maxTokens.toLocaleString() : currentModelConfig.maxTokens} tokens
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
-                  <strong>🔄 Historial:</strong>
-                </div>
-                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
-                  {currentModelConfig.maxHistory} mensajes
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginBottom: '0.25rem' }}>
-                  <strong>🌊 Streaming:</strong>
-                </div>
-                <div style={{ fontSize: '1rem', color: themeColors.primaryColor, fontWeight: 'bold' }}>
-                  {currentModelConfig.useStreaming ? '✓ Activo' : '✗ Inactivo'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Estilos compactos para tabs solo dentro de este diálogo */}
+      <style>{`
+        .ai-config-tabs .p-tabview-nav li .p-tabview-nav-link {
+          font-size: 0.85rem;
+          padding: 0.35rem 0.6rem;
+        }
+      `}</style>
+      {/* Banner superior eliminado; será mostrado dentro de la pestaña Inicio en versión compacta */}
 
+      <div className="ai-config-tabs">
       <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
         <TabPanel header="🏠 Inicio">
           {renderHomeTab()}
@@ -3198,6 +3179,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
           {renderPerformanceConfig()}
         </TabPanel>
       </TabView>
+      </div>
 
       {/* Diálogo de categoría */}
       {renderCategoryDialog()}
