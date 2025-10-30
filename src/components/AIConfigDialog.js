@@ -963,8 +963,85 @@ const AIConfigDialog = ({ visible, onHide }) => {
   };
 
   const renderLocalModels = () => {
+    // Agrupar modelos por familia/proveedor
+    const localProviders = [
+      {
+        id: 'llama',
+        name: 'Llama',
+        icon: 'pi pi-bolt',
+        color: '#AC63F7',
+        logo: '🦙',
+        description: 'Familia completa de modelos Llama de Meta',
+        models: localModels.filter(m => m.id.includes('llama')),
+        installed: localModels.filter(m => m.id.includes('llama')).some(m => m.downloaded)
+      },
+      {
+        id: 'mistral',
+        name: 'Mistral',
+        icon: 'pi pi-wind',
+        color: '#F7931E',
+        logo: '💨',
+        description: 'Mistral 7B, Mixtral y otros modelos rápidos y eficientes',
+        models: localModels.filter(m => m.id.includes('mistral') || m.id.includes('mixtral')),
+        installed: localModels.filter(m => m.id.includes('mistral') || m.id.includes('mixtral')).some(m => m.downloaded)
+      },
+      {
+        id: 'qwen',
+        name: 'Qwen',
+        icon: 'pi pi-rocket',
+        color: '#FF6B35',
+        logo: '🚀',
+        description: 'Modelos Qwen de Alibaba optimizados para múltiples idiomas',
+        models: localModels.filter(m => m.id.includes('qwen')),
+        installed: localModels.filter(m => m.id.includes('qwen')).some(m => m.downloaded)
+      },
+      {
+        id: 'deepseek',
+        name: 'DeepSeek',
+        icon: 'pi pi-search',
+        color: '#7C3AED',
+        logo: '🔍',
+        description: 'Modelos DeepSeek con excelente análisis y razonamiento',
+        models: localModels.filter(m => m.id.includes('deepseek')),
+        installed: localModels.filter(m => m.id.includes('deepseek')).some(m => m.downloaded)
+      },
+      {
+        id: 'orca',
+        name: 'Orca',
+        icon: 'pi pi-asterisk',
+        color: '#00BCD4',
+        logo: '🐋',
+        description: 'Modelos Orca compactos y eficientes',
+        models: localModels.filter(m => m.id.includes('orca')),
+        installed: localModels.filter(m => m.id.includes('orca')).some(m => m.downloaded)
+      },
+      {
+        id: 'neural-chat',
+        name: 'Neural Chat',
+        icon: 'pi pi-comments',
+        color: '#4CAF50',
+        logo: '💬',
+        description: 'Modelos optimizados para conversación',
+        models: localModels.filter(m => m.id.includes('neural-chat')),
+        installed: localModels.filter(m => m.id.includes('neural-chat')).some(m => m.downloaded)
+      },
+      {
+        id: 'otros',
+        name: 'Otros Modelos',
+        icon: 'pi pi-cog',
+        color: '#9C27B0',
+        logo: '⚙️',
+        description: 'Otros modelos disponibles en Ollama',
+        models: localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat')),
+        installed: localModels.filter(m => m.platform === 'ollama' && !m.id.includes('llama') && !m.id.includes('mistral') && !m.id.includes('qwen') && !m.id.includes('deepseek') && !m.id.includes('orca') && !m.id.includes('neural-chat')).some(m => m.downloaded)
+      }
+    ];
+
+    // Filtrar solo proveedores con modelos
+    const activeProviders = localProviders.filter(p => p.models.length > 0);
+
     return (
-      <div style={{ padding: '1.5rem' }}>
+      <div style={{ padding: '1.5rem', height: '100%', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{
             background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
@@ -995,31 +1072,30 @@ const AIConfigDialog = ({ visible, onHide }) => {
           />
         </div>
 
-
+        {/* Información importante */}
         <div style={{
           background: 'rgba(255, 193, 7, 0.1)',
           border: '1px solid rgba(255, 193, 7, 0.3)',
           borderRadius: '12px',
           padding: '1rem',
-          marginBottom: '1.5rem',
+          marginBottom: '2rem',
           display: 'flex',
           gap: '0.75rem',
           alignItems: 'flex-start'
         }}>
-          <i className="pi pi-lightbulb" style={{ color: '#FFC107', marginTop: '0.2rem', fontSize: '1.1rem' }} />
+          <i className="pi pi-lightbulb" style={{ color: '#FFC107', marginTop: '0.2rem', fontSize: '1.1rem', flexShrink: 0 }} />
           <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
             <strong>💡 Información importante:</strong><br />
             • <strong>Modelos Ollama:</strong> Requieren Ollama instalado y ejecutándose localmente<br />
-            • <strong>Modelos Independientes:</strong> No requieren Ollama, funcionan directamente<br />
-            • Puedes usar Ollama local o remoto para los modelos Ollama<br />
+            • Puedes agregar modelos personalizados si están instalados en Ollama<br />
             • Descarga Ollama desde: <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer" style={{ color: themeColors.primaryColor }}>https://ollama.ai</a>
           </div>
         </div>
 
         {/* Agregar modelo personalizado */}
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.5rem', display: 'block' }}>
-            Agregar modelo personalizado
+        <div style={{ marginBottom: '2rem' }}>
+          <label style={{ color: themeColors.textPrimary, fontSize: '0.95rem', marginBottom: '0.75rem', display: 'block', fontWeight: '600' }}>
+            ➕ Agregar modelo personalizado
           </label>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <InputText
@@ -1040,69 +1116,228 @@ const AIConfigDialog = ({ visible, onHide }) => {
               disabled={!customModelId.trim()}
             />
           </div>
-          <small style={{ color: themeColors.textSecondary, fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+          <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', marginTop: '0.5rem', display: 'block' }}>
             Escribe el nombre exacto del modelo instalado en Ollama
           </small>
         </div>
 
-        {/* Modelos Ollama */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h4 style={{ color: themeColors.textPrimary, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <i className="pi pi-server" style={{ color: themeColors.primaryColor }} />
-            Modelos Ollama
-            <span style={{ 
-              background: 'rgba(33, 150, 243, 0.1)', 
-              color: themeColors.primaryColor, 
-              padding: '0.1rem 0.5rem', 
-              borderRadius: '12px', 
-              fontSize: '0.7rem',
-              border: `1px solid ${themeColors.primaryColor}30`
-            }}>
-              Requiere Ollama
-            </span>
-          </h4>
-          
-          {renderCollapsibleSection(
-            'llama3.2',
-            'Llama 3.2 (Multimodal - Más Reciente)',
-            'pi pi-star',
-            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama3.2'))
-          )}
-          
-          {renderCollapsibleSection(
-            'llama3.1',
-            'Llama 3.1 (Avanzado)',
-            'pi pi-bolt',
-            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama3.1'))
-          )}
-          
-          {renderCollapsibleSection(
-            'llama3',
-            'Llama 3 (Estable)',
-            'pi pi-shield',
-            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama3') && !model.id.includes('llama3.1') && !model.id.includes('llama3.2'))
-          )}
-          
-          {renderCollapsibleSection(
-            'llama2',
-            'Llama 2 (Clásico)',
-            'pi pi-book',
-            localModels.filter(model => model.platform === 'ollama' && model.id.includes('llama2'))
-          )}
-          
-          {renderCollapsibleSection(
-            'otros-ollama',
-            'Otros Modelos Ollama',
-            'pi pi-cog',
-            localModels.filter(model => model.platform === 'ollama' && !model.id.includes('llama'))
-                    )}
+        {/* Grid de Familias de Modelos - Cards profesionales */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          {activeProviders.map(provider => (
+            <div
+              key={provider.id}
+              onClick={() => {
+                setSelectedCategory(provider.id);
+                setCategoryDialogVisible(true);
+              }}
+              style={{
+                background: `linear-gradient(135deg,
+                  rgba(16, 20, 28, 0.6) 0%,
+                  rgba(16, 20, 28, 0.4) 100%)`,
+                backdropFilter: 'blur(8px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                border: `2px solid ${provider.color}30`,
+                borderRadius: '16px',
+                padding: '1.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.borderColor = provider.color;
+                e.currentTarget.style.boxShadow = `0 12px 32px ${provider.color}30, inset 0 1px 0 rgba(255,255,255,0.05)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = `${provider.color}30`;
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
+              }}
+            >
+              {/* Decoración de fondo */}
+              <div style={{
+                position: 'absolute',
+                top: '-20px',
+                right: '-20px',
+                width: '100px',
+                height: '100px',
+                borderRadius: '50%',
+                background: `${provider.color}10`,
+                filter: 'blur(30px)',
+                pointerEvents: 'none'
+              }} />
+              
+              {/* Contenido */}
+              <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* Header con logo e indicador */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{
+                    fontSize: '2rem',
+                    lineHeight: 1,
+                    width: '50px',
+                    height: '50px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '12px',
+                    background: `${provider.color}20`,
+                    border: `1px solid ${provider.color}40`,
+                    boxShadow: `0 2px 8px ${provider.color}20`
+                  }}>
+                    {provider.logo}
                   </div>
                   
-        {renderCollapsibleSection(
-          'independent',
-          'Modelos Independientes',
-          'pi pi-desktop',
-          localModels.filter(model => model.platform === 'independent')
+                  {/* Indicador de estado */}
+                  {provider.installed ? (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(76, 175, 80, 0.15)',
+                      color: '#4CAF50',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      border: '1px solid rgba(76, 175, 80, 0.3)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                      Instalado
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(255, 193, 7, 0.15)',
+                      color: '#FFC107',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      border: '1px solid rgba(255, 193, 7, 0.3)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <i className="pi pi-exclamation-circle" style={{ fontSize: '0.6rem' }} />
+                      No instalado
+                    </div>
+                  )}
+                </div>
+
+                {/* Nombre y descripción */}
+                <h3 style={{
+                  color: themeColors.textPrimary,
+                  margin: '0 0 0.4rem 0',
+                  fontSize: '1.15rem',
+                  fontWeight: '700',
+                  letterSpacing: '0.3px'
+                }}>
+                  {provider.name}
+                </h3>
+
+                <p style={{
+                  color: themeColors.textSecondary,
+                  margin: '0 0 1rem 0',
+                  fontSize: '0.85rem',
+                  lineHeight: '1.4',
+                  flex: 1
+                }}>
+                  {provider.description}
+                </p>
+
+                {/* Estadísticas */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.75rem',
+                  marginBottom: '1rem',
+                  paddingBottom: '1rem',
+                  borderBottom: `1px solid ${provider.color}20`
+                }}>
+                  <div>
+                    <div style={{
+                      fontSize: '0.7rem',
+                      color: themeColors.textSecondary,
+                      marginBottom: '0.3rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      fontWeight: '600'
+                    }}>
+                      Modelos
+                    </div>
+                    <div style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: provider.color
+                    }}>
+                      {provider.models.length}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{
+                      fontSize: '0.7rem',
+                      color: themeColors.textSecondary,
+                      marginBottom: '0.3rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      fontWeight: '600'
+                    }}>
+                      Descargados
+                    </div>
+                    <div style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: provider.installed ? '#4CAF50' : '#FFC107'
+                    }}>
+                      {provider.models.filter(m => m.downloaded).length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón de acción */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: provider.color,
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  marginTop: 'auto',
+                  padding: '0.75rem',
+                  background: `${provider.color}15`,
+                  borderRadius: '10px',
+                  border: `1px solid ${provider.color}30`,
+                  transition: 'all 0.2s ease',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>Ver {provider.models.length} modelo{provider.models.length !== 1 ? 's' : ''}</span>
+                  <i className="pi pi-arrow-right" style={{ fontSize: '0.75rem' }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {activeProviders.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '3rem',
+            color: themeColors.textSecondary
+          }}>
+            <i className="pi pi-inbox" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }} />
+            <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No hay modelos locales disponibles</p>
+            <p style={{ fontSize: '0.9rem' }}>Instala Ollama y descarga modelos para comenzar</p>
+          </div>
         )}
       </div>
     );
@@ -1145,188 +1380,459 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const renderCategoryDialog = () => {
     if (!selectedCategory) return null;
 
-    const category = USE_CASE_CATEGORIES.find(c => c.id === selectedCategory);
-    const { remote, local } = getModelsByCategory(selectedCategory);
-    const totalModels = remote.length + local.length;
+    // Definición de proveedores para obtener información
+    const providersMap = {
+      'ollama': {
+        name: 'Ollama',
+        icon: 'pi pi-server',
+        color: '#4CAF50',
+        logo: '🦙',
+        description: 'Modelos de IA locales ejecutados en tu dispositivo sin conexión a internet',
+        recommendation: 'Requiere Ollama instalado y ejecutándose localmente'
+      },
+      'openai': {
+        name: 'OpenAI',
+        icon: 'pi pi-briefcase',
+        color: '#00A67E',
+        logo: '🤖',
+        description: 'Acceso a GPT-4, GPT-3.5 Turbo y otros modelos avanzados',
+        recommendation: 'Requiere una API Key válida de OpenAI'
+      },
+      'anthropic': {
+        name: 'Anthropic',
+        icon: 'pi pi-star',
+        color: '#E06F6F',
+        logo: '🧠',
+        description: 'Modelos Claude con excelente comprensión y razonamiento',
+        recommendation: 'Requiere una API Key válida de Anthropic'
+      },
+      'google': {
+        name: 'Google',
+        icon: 'pi pi-palette',
+        color: '#4285F4',
+        logo: '✨',
+        description: 'Gemini 2.5, Gemini 2.0 Flash y otras innovaciones de Google',
+        recommendation: 'Requiere una API Key válida de Google Gemini'
+      },
+      'qwen': {
+        name: 'Qwen',
+        icon: 'pi pi-rocket',
+        color: '#FF6B35',
+        logo: '🚀',
+        description: 'Modelos Qwen de Alibaba optimizados para múltiples idiomas',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'deepseek': {
+        name: 'DeepSeek',
+        icon: 'pi pi-search',
+        color: '#7C3AED',
+        logo: '🔍',
+        description: 'Modelos DeepSeek con excelente análisis y razonamiento',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'mistral': {
+        name: 'Mistral',
+        icon: 'pi pi-wind',
+        color: '#F7931E',
+        logo: '💨',
+        description: 'Mistral 7B, Mixtral y otros modelos rápidos y eficientes',
+        recommendation: 'Disponible vía Ollama local'
+      },
+      'llama': {
+        name: 'Llama',
+        icon: 'pi pi-bolt',
+        color: '#AC63F7',
+        logo: '🦙',
+        description: 'Familia completa de modelos Llama de Meta',
+        recommendation: 'Disponible vía Ollama local'
+      }
+    };
+
+    const provider = providersMap[selectedCategory];
+    if (!provider) return null;
+
+    // Filtrar modelos por proveedor
+    let filteredModels = [];
+    
+    if (['openai', 'anthropic', 'google'].includes(selectedCategory)) {
+      // Modelos remotos
+      const providerName = selectedCategory === 'openai' ? 'openai' : 
+                          selectedCategory === 'anthropic' ? 'anthropic' : 'google';
+      filteredModels = remoteModels.filter(m => m.provider === providerName);
+    } else if (selectedCategory === 'ollama') {
+      // Todos los modelos de Ollama
+      filteredModels = localModels.filter(m => m.platform === 'ollama');
+    } else {
+      // Modelos por palabra clave (qwen, deepseek, mistral, llama)
+      const keyword = selectedCategory;
+      filteredModels = localModels.filter(m => m.id.includes(keyword));
+    }
 
     return (
       <Dialog
         header={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <i className={category.icon} style={{ fontSize: '1.5rem', color: category.color }} />
-            <div>
-              <div style={{ fontSize: '1.2rem', fontWeight: '600' }}>{category.name}</div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.8, marginTop: '0.25rem' }}>
-                {category.description}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            width: '100%'
+          }}>
+            <button
+              onClick={() => setCategoryDialogVisible(false)}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '8px',
+                color: themeColors.textPrimary,
+                padding: '0.5rem 0.75rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.2s ease',
+                fontWeight: '600'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+              }}
+            >
+              <i className="pi pi-arrow-left" style={{ fontSize: '0.8rem' }} />
+              Atrás
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+              <div style={{
+                fontSize: '1.8rem',
+                lineHeight: 1,
+                width: '45px',
+                height: '45px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '12px',
+                background: `${provider.color}20`,
+                border: `1px solid ${provider.color}40`
+              }}>
+                {provider.logo}
+              </div>
+              <div>
+                <div style={{ fontSize: '1.3rem', fontWeight: '700', color: themeColors.textPrimary }}>
+                  {provider.name}
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.8, marginTop: '0.25rem', color: themeColors.textSecondary }}>
+                  {provider.description}
+                </div>
               </div>
             </div>
           </div>
         }
         visible={categoryDialogVisible}
         onHide={() => setCategoryDialogVisible(false)}
-        style={{ width: '80vw', maxWidth: '1000px' }}
+        style={{ width: '85vw', maxWidth: '1200px' }}
         modal
       >
-        <div style={{ padding: '1rem 0' }}>
-          {totalModels === 0 ? (
+        <div style={{ padding: '1.5rem 0' }}>
+          {/* Recomendación */}
+          <div style={{
+            background: `${provider.color}15`,
+            border: `1px solid ${provider.color}30`,
+            borderRadius: '10px',
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            gap: '0.75rem',
+            alignItems: 'flex-start'
+          }}>
+            <i className="pi pi-info-circle" style={{ color: provider.color, marginTop: '0.2rem', fontSize: '1rem', flexShrink: 0 }} />
+            <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
+              <strong style={{ color: provider.color }}>ℹ️ Información:</strong> {provider.recommendation}
+            </div>
+          </div>
+
+          {filteredModels.length === 0 ? (
             <div style={{
               textAlign: 'center',
               padding: '3rem',
               color: themeColors.textSecondary
             }}>
               <i className="pi pi-info-circle" style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }} />
-              <p>No hay modelos disponibles para esta categoría</p>
+              <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No hay modelos disponibles para {provider.name}</p>
+              <p style={{ fontSize: '0.9rem' }}>Intenta instalar Ollama o configurar las API Keys necesarias</p>
             </div>
           ) : (
-            <>
-              {/* Modelos Remotos */}
-              {remote.length > 0 && (
-                <div style={{ marginBottom: '2rem' }}>
-                  <h3 style={{ 
-                    color: themeColors.textPrimary, 
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <i className="pi pi-cloud" style={{ color: themeColors.primaryColor }} />
-                    Modelos Remotos ({remote.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {remote.map(model => (
-                      <div
-                        key={model.id}
-                        style={{
-                          background: currentModel === model.id && modelType === 'remote'
-                            ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
-                            : themeColors.cardBackground,
-                          border: `1px solid ${currentModel === model.id && modelType === 'remote' ? themeColors.primaryColor : themeColors.borderColor}`,
-                          borderRadius: '12px',
-                          padding: '1.25rem',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onClick={() => {
-                          handleSelectModel(model.id, 'remote');
-                          setCategoryDialogVisible(false);
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: '0 0 0.5rem 0', color: themeColors.textPrimary }}>
-                              {model.name}
-                            </h4>
-                            <p style={{ margin: '0.25rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
-                              Provider: {model.provider} | Contexto: {model.context}
-                            </p>
-                            {model.description && (
-                              <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
-                                {model.description}
-                              </p>
-                            )}
-                          </div>
-                          {currentModel === model.id && modelType === 'remote' && (
-                            <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem', marginLeft: '1rem' }} />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {filteredModels.map(model => (
+                <div
+                  key={model.id}
+                  style={{
+                    background: currentModel === model.id && ((modelType === 'remote' && ['openai', 'anthropic', 'google'].includes(selectedCategory)) || (modelType === 'local' && !['openai', 'anthropic', 'google'].includes(selectedCategory)))
+                      ? `linear-gradient(135deg, ${provider.color}25 0%, ${provider.color}15 100%)`
+                      : `linear-gradient(135deg,
+                        rgba(16, 20, 28, 0.6) 0%,
+                        rgba(16, 20, 28, 0.4) 100%)`,
+                    backdropFilter: 'blur(8px) saturate(140%)',
+                    WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                    border: `1px solid ${currentModel === model.id && ((modelType === 'remote' && ['openai', 'anthropic', 'google'].includes(selectedCategory)) || (modelType === 'local' && !['openai', 'anthropic', 'google'].includes(selectedCategory))) ? provider.color : provider.color + '30'}`,
+                    borderRadius: '12px',
+                    padding: '1.5rem',
+                    transition: 'all 0.2s ease',
+                    opacity: (modelType === 'local' && model.platform === 'ollama') || (modelType === 'remote') ? 1 : (!['openai', 'anthropic', 'google'].includes(selectedCategory) && !model.downloaded ? 0.6 : 1),
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentModel !== model.id) {
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                      e.currentTarget.style.borderColor = provider.color;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    if (currentModel !== model.id) {
+                      e.currentTarget.style.borderColor = provider.color + '30';
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                      {/* Nombre y badges */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                        <h4 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1.1rem', fontWeight: '700' }}>
+                          {model.name}
+                        </h4>
+                        
+                        {/* Badge de rendimiento */}
+                        {model.performance && (
+                          <span style={{
+                            background: model.performance === 'high' ? 'rgba(76, 175, 80, 0.2)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                            color: model.performance === 'high' ? '#4CAF50' : model.performance === 'medium' ? '#FFC107' : '#F44336',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: `1px solid ${model.performance === 'high' ? 'rgba(76, 175, 80, 0.4)' : model.performance === 'medium' ? 'rgba(255, 193, 7, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                          }}>
+                            {model.performance === 'high' ? '⚡ Alto Rendimiento' : model.performance === 'medium' ? '⚖️ Rendimiento Medio' : '🐌 Rendimiento Bajo'}
+                          </span>
+                        )}
 
-              {/* Modelos Locales */}
-              {local.length > 0 && (
-                <div>
-                  <h3 style={{ 
-                    color: themeColors.textPrimary, 
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <i className="pi pi-desktop" style={{ color: themeColors.primaryColor }} />
-                    Modelos Locales ({local.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {local.map(model => (
-                      <div
-                        key={model.id}
-                        style={{
-                          background: currentModel === model.id && modelType === 'local'
-                            ? `linear-gradient(135deg, ${themeColors.primaryColor}30 0%, ${themeColors.primaryColor}20 100%)`
-                            : themeColors.cardBackground,
-                          border: `1px solid ${currentModel === model.id && modelType === 'local' ? themeColors.primaryColor : themeColors.borderColor}`,
-                          borderRadius: '12px',
-                          padding: '1.25rem',
-                          opacity: model.downloaded ? 1 : 0.6,
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                              <h4 style={{ margin: 0, color: themeColors.textPrimary }}>
-                                {model.name}
-                              </h4>
-                              {model.downloaded && (
-                                <span style={{
-                                  background: 'rgba(76, 175, 80, 0.2)',
-                                  color: '#4CAF50',
-                                  padding: '0.1rem 0.5rem',
-                                  borderRadius: '12px',
-                                  fontSize: '0.7rem',
-                                  fontWeight: '500',
-                                  border: '1px solid rgba(76, 175, 80, 0.4)'
-                                }}>
-                                  ✓ Instalado
-                                </span>
-                              )}
-                            </div>
-                            <p style={{ margin: '0.25rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
-                              💾 {model.size} | 🧠 {model.context} | 💾 RAM: {model.ramRequired}
-                            </p>
-                            {model.description && (
-                              <p style={{ margin: '0.5rem 0 0 0', color: themeColors.textSecondary, fontSize: '0.9rem' }}>
-                                {model.description}
-                              </p>
-                            )}
+                        {/* Badge de instalación */}
+                        {model.downloaded && (
+                          <span style={{
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            color: '#4CAF50',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: '1px solid rgba(76, 175, 80, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                            Instalado
+                          </span>
+                        )}
+
+                        {/* Badge de selección actual */}
+                        {currentModel === model.id && ((modelType === 'remote' && ['openai', 'anthropic', 'google'].includes(selectedCategory)) || (modelType === 'local' && !['openai', 'anthropic', 'google'].includes(selectedCategory))) && (
+                          <span style={{
+                            background: `${provider.color}30`,
+                            color: provider.color,
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: `1px solid ${provider.color}50`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <i className="pi pi-check-circle" style={{ fontSize: '0.6rem' }} />
+                            Seleccionado
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Información técnica */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '0.75rem',
+                        marginBottom: '1rem'
+                      }}>
+                        {model.size && (
+                          <div style={{ fontSize: '0.85rem' }}>
+                            <span style={{ color: themeColors.textSecondary }}>💾 Tamaño:</span>
+                            <span style={{ color: themeColors.textPrimary, fontWeight: '600', marginLeft: '0.5rem' }}>
+                              {model.size}
+                            </span>
                           </div>
-                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {model.downloaded ? (
-                              <>
-                                {currentModel === model.id && modelType === 'local' && (
-                                  <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, fontSize: '1.5rem' }} />
-                                )}
-                                <Button
-                                  label="Usar"
-                                  icon="pi pi-play"
-                                  size="small"
-                                  onClick={() => {
-                                    handleSelectModel(model.id, 'local');
-                                    setCategoryDialogVisible(false);
-                                  }}
-                                  style={{ minWidth: '80px' }}
-                                />
-                              </>
-                            ) : (
-                              <Button
-                                label="Descargar"
-                                icon="pi pi-download"
-                                size="small"
-                                onClick={() => handleDownloadModel(model.id)}
-                                loading={downloading[model.id]}
-                                style={{ minWidth: '120px' }}
-                              />
-                            )}
+                        )}
+                        {model.context && (
+                          <div style={{ fontSize: '0.85rem' }}>
+                            <span style={{ color: themeColors.textSecondary }}>🧠 Contexto:</span>
+                            <span style={{ color: themeColors.textPrimary, fontWeight: '600', marginLeft: '0.5rem' }}>
+                              {model.context}
+                            </span>
+                          </div>
+                        )}
+                        {model.parameters && (
+                          <div style={{ fontSize: '0.85rem' }}>
+                            <span style={{ color: themeColors.textSecondary }}>⚙️ Parámetros:</span>
+                            <span style={{ color: themeColors.textPrimary, fontWeight: '600', marginLeft: '0.5rem' }}>
+                              {model.parameters}
+                            </span>
+                          </div>
+                        )}
+                        {model.ramRequired && (
+                          <div style={{ fontSize: '0.85rem' }}>
+                            <span style={{ color: themeColors.textSecondary }}>💼 RAM:</span>
+                            <span style={{ color: themeColors.textPrimary, fontWeight: '600', marginLeft: '0.5rem' }}>
+                              {model.ramRequired}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Descripción */}
+                      {model.description && (
+                        <p style={{
+                          margin: '0 0 1rem 0',
+                          color: themeColors.textSecondary,
+                          fontSize: '0.95rem',
+                          lineHeight: '1.5'
+                        }}>
+                          {model.description}
+                        </p>
+                      )}
+
+                      {/* Casos de uso */}
+                      {model.useCases && model.useCases.length > 0 && (
+                        <div style={{ marginBottom: '1rem' }}>
+                          <p style={{ margin: '0 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem', fontWeight: '600' }}>
+                            📌 Casos de uso:
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {model.useCases.map((useCase, index) => (
+                              <span key={index} style={{
+                                background: `${provider.color}20`,
+                                color: provider.color,
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '8px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                border: `1px solid ${provider.color}40`
+                              }}>
+                                {useCase}
+                              </span>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )}
+
+                      {/* Mejor para */}
+                      {model.bestFor && (
+                        <p style={{
+                          margin: '0',
+                          color: themeColors.textSecondary,
+                          fontSize: '0.85rem',
+                          fontStyle: 'italic',
+                          paddingTop: '0.5rem',
+                          borderTop: `1px solid ${provider.color}20`
+                        }}>
+                          👤 <strong>Mejor para:</strong> {model.bestFor}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column', alignItems: 'flex-end', minWidth: '120px' }}>
+                      {model.downloaded ? (
+                        <>
+                          <Button
+                            label="Usar"
+                            icon="pi pi-play"
+                            onClick={() => {
+                              handleSelectModel(model.id, 'local');
+                              setCategoryDialogVisible(false);
+                            }}
+                            style={{ width: '100%' }}
+                            severity="success"
+                          />
+                          <Button
+                            icon="pi pi-trash"
+                            onClick={() => handleDeleteModel(model.id)}
+                            severity="danger"
+                            style={{ width: '100%' }}
+                          />
+                        </>
+                      ) : (
+                        <Button
+                          label="Descargar"
+                          icon={downloading[model.id] ? 'pi pi-spin pi-spinner' : 'pi pi-download'}
+                          onClick={() => handleDownloadModel(model.id)}
+                          loading={downloading[model.id]}
+                          style={{ width: '100%' }}
+                        />
+                      )}
+                      {['openai', 'anthropic', 'google'].includes(selectedCategory) && (
+                        <Button
+                          label="Usar"
+                          icon="pi pi-play"
+                          onClick={() => {
+                            handleSelectModel(model.id, 'remote');
+                            setCategoryDialogVisible(false);
+                          }}
+                          style={{ width: '100%' }}
+                          severity="success"
+                        />
+                      )}
+                    </div>
                   </div>
+
+                  {/* Barra de progreso de descarga */}
+                  {downloading[model.id] && downloadProgress[model.id] && (
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${provider.color}20` }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.8rem'
+                      }}>
+                        <span style={{ color: themeColors.textSecondary }}>
+                          {downloadProgress[model.id].status}
+                        </span>
+                        <span style={{ color: provider.color, fontWeight: '600' }}>
+                          {downloadProgress[model.id].percent}%
+                        </span>
+                      </div>
+                      <ProgressBar
+                        value={downloadProgress[model.id].percent}
+                        style={{ height: '6px' }}
+                        showValue={false}
+                      />
+                      {downloadProgress[model.id].total && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: themeColors.textSecondary,
+                          marginTop: '0.5rem',
+                          textAlign: 'right'
+                        }}>
+                          {formatBytes(downloadProgress[model.id].completed)} / {formatBytes(downloadProgress[model.id].total)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </div>
       </Dialog>
@@ -1336,7 +1842,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
   // Renderizar pestaña de Inicio
   const renderHomeTab = () => {
     return (
-      <div style={{ padding: '1.5rem' }}>
+      <div style={{ padding: '1.5rem', height: '100%', overflow: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{
             background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
@@ -1360,11 +1866,12 @@ const AIConfigDialog = ({ visible, onHide }) => {
           </div>
         </div>
 
-        {/* Tarjetas de categorías */}
+        {/* Grid de Categorías - Cards modernas */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', 
-          gap: '1rem' 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '1.5rem',
+          marginBottom: '2rem'
         }}>
           {USE_CASE_CATEGORIES.map(category => {
             const { remote, local } = getModelsByCategory(category.id);
@@ -1378,92 +1885,154 @@ const AIConfigDialog = ({ visible, onHide }) => {
                   setCategoryDialogVisible(true);
                 }}
                 style={{
-                  background: themeColors.cardBackground,
-                  border: `2px solid ${themeColors.borderColor}`,
-                  borderRadius: '12px',
-                  padding: '1rem',
+                  background: `linear-gradient(135deg,
+                    rgba(16, 20, 28, 0.6) 0%,
+                    rgba(16, 20, 28, 0.4) 100%)`,
+                  backdropFilter: 'blur(8px) saturate(140%)',
+                  WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+                  border: `2px solid ${category.color}30`,
+                  borderRadius: '16px',
+                  padding: '1.5rem',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.transform = 'translateY(-8px)';
                   e.currentTarget.style.borderColor = category.color;
-                  e.currentTarget.style.boxShadow = `0 8px 24px ${category.color}30`;
+                  e.currentTarget.style.boxShadow = `0 12px 32px ${category.color}30, inset 0 1px 0 rgba(255,255,255,0.05)`;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = themeColors.borderColor;
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = `${category.color}30`;
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
                 }}
               >
-                {/* Icono de fondo decorativo */}
+                {/* Decoración de fondo */}
                 <div style={{
                   position: 'absolute',
-                  top: '-15px',
-                  right: '-15px',
-                  fontSize: '4.5rem',
-                  opacity: 0.05,
-                  color: category.color
-                }}>
-                  <i className={category.icon} />
-                </div>
-
+                  top: '-20px',
+                  right: '-20px',
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
+                  background: `${category.color}10`,
+                  filter: 'blur(30px)',
+                  pointerEvents: 'none'
+                }} />
+                
                 {/* Contenido */}
-                <div style={{ position: 'relative', zIndex: 1 }}>
+                <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {/* Header con icono */}
                   <div style={{
-                    width: '45px',
-                    height: '45px',
-                    borderRadius: '10px',
-                    background: `${category.color}20`,
+                    fontSize: '2.5rem',
+                    lineHeight: 1,
+                    width: '50px',
+                    height: '50px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: '0.75rem'
+                    borderRadius: '12px',
+                    background: `${category.color}20`,
+                    border: `1px solid ${category.color}40`,
+                    boxShadow: `0 2px 8px ${category.color}20`,
+                    marginBottom: '1rem'
                   }}>
-                    <i className={category.icon} style={{ fontSize: '1.3rem', color: category.color }} />
+                    <i className={category.icon} style={{ color: category.color, fontSize: '1.3rem' }} />
                   </div>
 
-                  <h3 style={{ 
-                    color: themeColors.textPrimary, 
+                  {/* Nombre y descripción */}
+                  <h3 style={{
+                    color: themeColors.textPrimary,
                     margin: '0 0 0.4rem 0',
-                    fontSize: '0.95rem',
-                    fontWeight: '600'
+                    fontSize: '1.15rem',
+                    fontWeight: '700',
+                    letterSpacing: '0.3px'
                   }}>
                     {category.name}
                   </h3>
 
-                  <p style={{ 
-                    color: themeColors.textSecondary, 
-                    margin: '0 0 0.75rem 0',
-                    fontSize: '0.75rem',
+                  <p style={{
+                    color: themeColors.textSecondary,
+                    margin: '0 0 1rem 0',
+                    fontSize: '0.85rem',
                     lineHeight: '1.4',
-                    minHeight: '2rem'
+                    flex: 1
                   }}>
                     {category.description}
                   </p>
 
+                  {/* Estadísticas */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '0.75rem',
+                    marginBottom: '1rem',
+                    paddingBottom: '1rem',
+                    borderBottom: `1px solid ${category.color}20`
+                  }}>
+                    <div>
+                      <div style={{
+                        fontSize: '0.7rem',
+                        color: themeColors.textSecondary,
+                        marginBottom: '0.3rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        fontWeight: '600'
+                      }}>
+                        Modelos
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: category.color
+                      }}>
+                        {totalModels}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{
+                        fontSize: '0.7rem',
+                        color: themeColors.textSecondary,
+                        marginBottom: '0.3rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        fontWeight: '600'
+                      }}>
+                        Disponibles
+                      </div>
+                      <div style={{
+                        fontSize: '1.5rem',
+                        fontWeight: '700',
+                        color: category.color
+                      }}>
+                        {local.length + remote.length > 0 ? '✓' : '-'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botón de acción */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: '0.75rem',
-                    paddingTop: '0.75rem',
-                    borderTop: `1px solid ${themeColors.borderColor}`
+                    gap: '0.5rem',
+                    color: category.color,
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    marginTop: 'auto',
+                    padding: '0.75rem',
+                    background: `${category.color}15`,
+                    borderRadius: '10px',
+                    border: `1px solid ${category.color}30`,
+                    transition: 'all 0.2s ease',
+                    justifyContent: 'space-between'
                   }}>
-                    <span style={{
-                      background: `${category.color}20`,
-                      color: category.color,
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '10px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      border: `1px solid ${category.color}40`
-                    }}>
-                      {totalModels} modelo{totalModels !== 1 ? 's' : ''}
-                    </span>
-                    <i className="pi pi-arrow-right" style={{ color: category.color, fontSize: '0.9rem' }} />
+                    <span>Ver detalles</span>
+                    <i className="pi pi-arrow-right" style={{ fontSize: '0.75rem' }} />
                   </div>
                 </div>
               </div>
@@ -1473,7 +2042,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
         {/* Información adicional */}
         <div style={{
-          marginTop: '2rem',
           background: 'rgba(33, 150, 243, 0.1)',
           border: '1px solid rgba(33, 150, 243, 0.3)',
           borderRadius: '12px',
@@ -1482,9 +2050,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
           gap: '0.75rem',
           alignItems: 'flex-start'
         }}>
-          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.2rem', fontSize: '1.1rem' }} />
+          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.2rem', fontSize: '1.1rem', flexShrink: 0 }} />
           <div style={{ fontSize: '0.9rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
-            <strong style={{ color: themeColors.textPrimary }}>💡 Consejo:</strong> Cada categoría agrupa modelos optimizados para tareas específicas. 
+            <strong style={{ color: themeColors.textPrimary }}>💡 Consejo:</strong> 
+            Cada categoría agrupa modelos optimizados para tareas específicas. 
             Los modelos remotos requieren API keys, mientras que los locales necesitan Ollama instalado.
           </div>
         </div>
