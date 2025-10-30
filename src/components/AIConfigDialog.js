@@ -794,7 +794,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             <i className="pi pi-cloud" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
           </div>
           <div>
-            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+            <h2 style={{ color: themeColors.textPrimary, margin: 0, fontSize: '1rem', fontWeight: 700 }}>
               Modelos Remotos
             </h2>
             <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
@@ -2458,7 +2458,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             <i className="pi pi-cog" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
           </div>
           <div>
-            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+            <h2 style={{ color: themeColors.textPrimary, margin: 0, fontSize: '1rem', fontWeight: 700 }}>
               Configuración de Rendimiento
             </h2>
             <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
@@ -3005,7 +3005,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
             <i className="pi pi-server" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
           </div>
           <div>
-            <h2 style={{ color: themeColors.textPrimary, margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>
+            <h2 style={{ color: themeColors.textPrimary, margin: 0, fontSize: '1rem', fontWeight: 700 }}>
               Ollama Remoto
             </h2>
             <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
