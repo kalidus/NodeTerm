@@ -1896,7 +1896,8 @@ class AIService {
         stream: true,
         options: {
           temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 1500
+          num_predict: options.maxTokens || 1500,
+          num_ctx: options.contextLimit || 8000
         }
       }),
       signal: options.signal
@@ -1956,7 +1957,8 @@ class AIService {
         stream: true,
         options: {
           temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 1500
+          num_predict: options.maxTokens || 1500,
+          num_ctx: options.contextLimit || 8000
         }
       }),
       signal: options.signal

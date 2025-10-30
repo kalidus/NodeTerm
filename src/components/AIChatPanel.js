@@ -2476,7 +2476,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               return config?.contextLimit || 16000;
             }, [currentModel, modelType])}
             inputValue={inputValue}
-            messageCount={messages.length}
+            messages={messages}
             isLoading={isLoading}
             attachedFiles={attachedFiles}
           />
