@@ -8,7 +8,7 @@ const AIPerformanceStats = ({
   modelType = 'local',
   contextLimit = 16000,
   inputValue = '',
-  messageCount = 0,
+  messages = [],
   isLoading = false,
   attachedFiles = []
 }) => {
@@ -29,10 +29,18 @@ const AIPerformanceStats = ({
     };
   }, [currentTheme]);
 
-  // Calcular contexto usado (historial + archivos adjuntos) de forma simple
+  // Calcular contexto usado (tokens reales del historial + adjuntos)
   const contextUsed = React.useMemo(() => {
-    let totalContext = messageCount * 150; // Estimación simple para historial
-    
+    let totalContext = 0;
+
+    // Sumar tokens del historial real
+    if (Array.isArray(messages) && messages.length > 0) {
+      for (const msg of messages) {
+        const text = (msg && typeof msg.content === 'string') ? msg.content : '';
+        if (text) totalContext += TokenCounter.countTokens(text);
+      }
+    }
+
     // Agregar contexto de archivos adjuntos
     if (attachedFiles && attachedFiles.length > 0) {
       attachedFiles.forEach(file => {
@@ -45,9 +53,9 @@ const AIPerformanceStats = ({
         }
       });
     }
-    
+
     return totalContext;
-  }, [messageCount, attachedFiles]);
+  }, [messages, attachedFiles]);
 
   const contextPercent = Math.min(100, Math.round((contextUsed / contextLimit) * 100));
   
@@ -85,11 +93,11 @@ const AIPerformanceStats = ({
       {/* Información contextual (sutil) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         {/* Mostrar mensajes en la conversación */}
-        {messageCount > 0 && (
+        {Array.isArray(messages) && messages.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <i className="pi pi-comments" style={{ fontSize: '0.7rem', opacity: 0.6 }} />
             <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>
-              {messageCount} mensaje{messageCount !== 1 ? 's' : ''}
+              {messages.length} mensaje{messages.length !== 1 ? 's' : ''}
             </span>
           </div>
         )}
@@ -136,6 +144,7 @@ const AIPerformanceStats = ({
           }}>
             {contextPercent}% ctx
           </span>
+
         </div>
 
         {/* Estado de carga */}
