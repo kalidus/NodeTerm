@@ -188,17 +188,6 @@ class ConversationService {
     this.conversations.set(conversationId, conversation);
     this.addToIndex(conversation);
     this.currentConversationId = conversationId;
-    
-    // Log para debug y verificación de aislamiento
-    console.log('✅ [ConversationService] Nueva conversación creada:', {
-      id: conversationId,
-      title: conversation.title,
-      totalConversations: this.conversations.size,
-      messagesCount: 0,
-      attachedFilesCount: 0,
-      isolation: 'guaranteed'
-    });
-    
     this._lastCreationTimestamp = now;
     this.saveConversations();
     return conversation;

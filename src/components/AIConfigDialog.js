@@ -168,7 +168,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
       const config = aiService.getModelPerformanceConfig(currentModel, modelType);
       setCurrentModelConfig(config);
     }
-  }, [currentModel, modelType]);
+  }, [currentModel, modelType, localModelPerformanceDialogVisible]);
 
   // Cargar configuración guardada cuando se abre el diálogo de configuración de un modelo local
   useEffect(() => {
@@ -245,16 +245,34 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const handleDetectModels = async () => {
     setDetectingModels(true);
     try {
+      const previousModel = aiService.currentModel;
       await aiService.detectOllamaModels();
       const models = aiService.getAvailableModels();
       setLocalModels(models.local);
-      if (window.toast?.current?.show) {
-        window.toast.current.show({
-          severity: 'success',
-          summary: 'Modelos detectados',
-          detail: 'Se detectaron los modelos instalados en Ollama',
-          life: 2000
-        });
+      
+      // Actualizar modelo actual si cambió después de la detección
+      setCurrentModel(aiService.currentModel);
+      setModelType(aiService.modelType);
+      
+      // Notificar si el modelo anterior ya no está disponible
+      if (previousModel && previousModel !== aiService.currentModel) {
+        if (window.toast?.current?.show) {
+          window.toast.current.show({
+            severity: 'warn',
+            summary: 'Modelo no disponible',
+            detail: `El modelo ${previousModel} ya no está instalado. Selecciona otro modelo.`,
+            life: 4000
+          });
+        }
+      } else {
+        if (window.toast?.current?.show) {
+          window.toast.current.show({
+            severity: 'success',
+            summary: 'Modelos detectados',
+            detail: 'Se detectaron los modelos instalados en Ollama',
+            life: 2000
+          });
+        }
       }
     } catch (error) {
       console.error('Error detectando modelos:', error);
@@ -364,9 +382,75 @@ const AIConfigDialog = ({ visible, onHide }) => {
   };
 
   const handleSelectModel = (modelId, type) => {
-    aiService.setCurrentModel(modelId, type);
-    setCurrentModel(modelId);
-    setModelType(type);
+    try {
+      // Validar antes de seleccionar
+      if (type === 'local') {
+        const model = localModels.find(m => m.id === modelId);
+        if (!model || !model.downloaded) {
+          if (window.toast?.current?.show) {
+            window.toast.current.show({
+              severity: 'warn',
+              summary: 'Modelo no disponible',
+              detail: `El modelo ${modelId} no está instalado. Instálalo primero en Ollama.`,
+              life: 4000
+            });
+          }
+          return;
+        }
+      } else if (type === 'remote') {
+        const model = remoteModels.find(m => m.id === modelId);
+        if (!model) {
+          if (window.toast?.current?.show) {
+            window.toast.current.show({
+              severity: 'warn',
+              summary: 'Modelo no encontrado',
+              detail: `El modelo ${modelId} no existe.`,
+              life: 3000
+            });
+          }
+          return;
+        }
+        const apiKey = aiService.getApiKey(model.provider);
+        if (!apiKey) {
+          if (window.toast?.current?.show) {
+            window.toast.current.show({
+              severity: 'warn',
+              summary: 'API Key requerida',
+              detail: `Configura primero la API Key de ${model.provider} para usar este modelo.`,
+              life: 4000
+            });
+          }
+          return;
+        }
+      }
+      
+      // Si todo está bien, seleccionar el modelo
+      aiService.setCurrentModel(modelId, type);
+      setCurrentModel(modelId);
+      setModelType(type);
+      
+      if (window.toast?.current?.show) {
+        const modelName = type === 'local' 
+          ? localModels.find(m => m.id === modelId)?.name || modelId
+          : remoteModels.find(m => m.id === modelId)?.name || modelId;
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Modelo seleccionado',
+          detail: `${modelName} configurado correctamente`,
+          life: 2000
+        });
+      }
+    } catch (error) {
+      console.error('Error seleccionando modelo:', error);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.message || 'No se pudo seleccionar el modelo',
+          life: 4000
+        });
+      }
+    }
   };
 
   const handleSaveApiKey = (provider) => {
@@ -2510,553 +2594,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
     );
   };
 
-  const renderPerformanceConfig = () => {
-    return (
-      <div style={{ padding: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '3rem' }}>
-          <div style={{
-            background: `linear-gradient(135deg, ${themeColors.primaryColor}20, ${themeColors.primaryColor}10)`,
-            borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '80px',
-            height: '80px'
-          }}>
-            <i className="pi pi-cog" style={{ fontSize: '2rem', color: themeColors.primaryColor }} />
-          </div>
-          <div>
-            <h2 style={{ color: themeColors.textPrimary, margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-              Configuración de Rendimiento
-            </h2>
-            <p style={{ color: themeColors.textSecondary, margin: 0, fontSize: '1rem' }}>
-              Ajusta parámetros de rendimiento para optimizar la experiencia de uso
-            </p>
-          </div>
-        </div>
-
-        {/* Info sobre configuración automática vs manual - MÁS DESTACADA */}
-        <div style={{
-          background: 'rgba(33, 150, 243, 0.1)',
-          border: `2px solid ${themeColors.primaryColor}30`,
-          borderRadius: '12px',
-          padding: '1.25rem',
-          display: 'flex',
-          gap: '0.75rem',
-          alignItems: 'flex-start',
-          marginBottom: '2.5rem'
-        }}>
-          <i className="pi pi-info-circle" style={{ color: '#2196F3', marginTop: '0.3rem', fontSize: '1.3rem' }} />
-          <div style={{ fontSize: '0.95rem', color: themeColors.textSecondary, lineHeight: '1.6' }}>
-            <div style={{ fontWeight: 'bold', color: themeColors.textPrimary, marginBottom: '0.5rem' }}>
-              💡 Dos formas de configurar:
-            </div>
-            <div style={{ marginBottom: '0.5rem' }}>
-              <strong>Automática:</strong> Se ajusta según el modelo. Recomendado para la mayoría.
-            </div>
-            <div>
-              <strong>Manual:</strong> Ajusta manualmente cada parámetro si conoces tus recursos.
-            </div>
-          </div>
-        </div>
-
-        {/* Presets rápidos - EN 1 FILA, MÁS GRANDES Y VISIBLES */}
-        <div style={{ marginBottom: '3rem' }}>
-          <h3 style={{ 
-            color: themeColors.textPrimary, 
-            marginBottom: '1.5rem',
-            fontSize: '1.2rem',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
-            <i className="pi pi-lightning-bolt" style={{ color: themeColors.primaryColor, fontSize: '1.3rem' }} />
-            Presets de Configuración Rápida
-          </h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <Button
-              label="⚡ Estándar (8K)"
-              onClick={() => {
-                const newConfig = {
-                  maxTokens: 6000,
-                  temperature: 0.7,
-                  maxHistory: 8,
-                  useStreaming: true,
-                  contextLimit: 8000
-                };
-                setPerformanceConfig(newConfig);
-                aiService.setPerformanceConfig(newConfig);
-                if (window.toast?.current?.show) {
-                  window.toast.current.show({
-                    severity: 'success',
-                    summary: 'Configuración guardada',
-                    detail: 'Preset Estándar (8K) aplicado',
-                    life: 2000
-                  });
-                }
-              }}
-              severity="info"
-              outlined
-              style={{ 
-                padding: '1.25rem 1rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '10px',
-                height: '100%',
-                whiteSpace: 'normal',
-                lineHeight: '1.4'
-              }}
-            />
-            <Button
-              label="📚 Análisis Avanzado (32K)"
-              onClick={() => {
-                const newConfig = {
-                  maxTokens: 8000,
-                  temperature: 0.7,
-                  maxHistory: 10,
-                  useStreaming: true,
-                  contextLimit: 32000
-                };
-                setPerformanceConfig(newConfig);
-                aiService.setPerformanceConfig(newConfig);
-                if (window.toast?.current?.show) {
-                  window.toast.current.show({
-                    severity: 'success',
-                    summary: 'Configuración guardada',
-                    detail: 'Preset Análisis Avanzado (32K) aplicado',
-                    life: 2000
-                  });
-                }
-              }}
-              severity="success"
-              outlined
-              style={{ 
-                padding: '1.25rem 1rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '10px',
-                height: '100%',
-                whiteSpace: 'normal',
-                lineHeight: '1.4'
-              }}
-            />
-            <Button
-              label="🚀 128K Ultra (Defecto)"
-              onClick={() => {
-                const newConfig = {
-                  maxTokens: 8000,
-                  temperature: 0.7,
-                  maxHistory: 16,
-                  useStreaming: true,
-                  contextLimit: 128000
-                };
-                setPerformanceConfig(newConfig);
-                aiService.setPerformanceConfig(newConfig);
-                if (window.toast?.current?.show) {
-                  window.toast.current.show({
-                    severity: 'success',
-                    summary: 'Configuración guardada',
-                    detail: 'Preset 128K Ultra (Defecto) aplicado',
-                    life: 2000
-                  });
-                }
-              }}
-              severity="danger"
-              style={{ 
-                padding: '1.25rem 1rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '10px',
-                background: '#E53935',
-                border: 'none',
-                color: 'white',
-                height: '100%',
-                whiteSpace: 'normal',
-                lineHeight: '1.4'
-              }}
-            />
-            <Button
-              label="💨 Rápido (4K)"
-              onClick={() => {
-                const newConfig = {
-                  maxTokens: 4000,
-                  temperature: 0.7,
-                  maxHistory: 5,
-                  useStreaming: true,
-                  contextLimit: 4000
-                };
-                setPerformanceConfig(newConfig);
-                aiService.setPerformanceConfig(newConfig);
-                if (window.toast?.current?.show) {
-                  window.toast.current.show({
-                    severity: 'success',
-                    summary: 'Configuración guardada',
-                    detail: 'Preset Rápido (4K) aplicado',
-                    life: 2000
-                  });
-                }
-              }}
-              severity="warning"
-              outlined
-              style={{ 
-                padding: '1.25rem 1rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '10px',
-                height: '100%',
-                whiteSpace: 'normal',
-                lineHeight: '1.4'
-              }}
-            />
-          </div>
-
-          <div style={{
-            background: 'rgba(33, 150, 243, 0.08)',
-            border: `1px solid ${themeColors.primaryColor}30`,
-            borderRadius: '10px',
-            padding: '1.25rem',
-            display: 'flex',
-            gap: '0.75rem',
-            alignItems: 'flex-start'
-          }}>
-            <i className="pi pi-check-circle" style={{ color: themeColors.primaryColor, marginTop: '0.2rem', fontSize: '1.1rem' }} />
-            <div style={{ fontSize: '0.95rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
-              <strong style={{ color: themeColors.textPrimary }}>128K Ultra es la opción recomendada</strong> para máxima profundidad de análisis, ideal para documentos largos y análisis complejos.
-            </div>
-          </div>
-        </div>
-
-        {/* Toggle para configuración manual - JUSTO ANTES DE GUARDAR */}
-        <div style={{ 
-          marginBottom: '2.5rem',
-          background: themeColors.cardBackground,
-          border: `1px solid ${themeColors.borderColor}`,
-          borderRadius: '12px',
-          padding: '1.5rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <input
-              type="checkbox"
-              id="useManualConfig"
-              checked={useManualConfig}
-              onChange={(e) => setUseManualConfig(e.target.checked)}
-              style={{ transform: 'scale(1.4)', cursor: 'pointer' }}
-            />
-            <label htmlFor="useManualConfig" style={{ 
-              color: themeColors.textPrimary, 
-              cursor: 'pointer',
-              fontSize: '1.05rem',
-              fontWeight: '500'
-            }}>
-              Usar configuración manual de rendimiento
-            </label>
-          </div>
-        </div>
-
-        {/* Configuración manual - MÁS ESPACIADA */}
-        {useManualConfig && (
-          <div style={{ marginBottom: '3rem' }}>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '2rem',
-              background: themeColors.cardBackground,
-              border: `1px solid ${themeColors.borderColor}`,
-              borderRadius: '12px',
-              padding: '2rem'
-            }}>
-              {/* Max Tokens */}
-              <div>
-                <label style={{ color: themeColors.textPrimary, fontSize: '1rem', marginBottom: '0.75rem', display: 'block', fontWeight: '600' }}>
-                  📤 Máximo de Tokens (500-12000)
-                </label>
-                <p style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.75rem', lineHeight: '1.4' }}>
-                  Controla la longitud máxima de las respuestas. Mayor valor = respuestas más largas y detalladas.
-                </p>
-                <InputText
-                  type="number"
-                  value={performanceConfig.maxTokens}
-                  onChange={(e) => setPerformanceConfig(prev => ({ ...prev, maxTokens: parseInt(e.target.value) || 7000 }))}
-                  min="500"
-                  max="12000"
-                  style={{ width: '100%', padding: '0.75rem' }}
-                />
-                <small style={{ color: themeColors.textSecondary, fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
-                  💡 Recomendado: 4000 (cloud/8B), 6000-8000 (análisis profundo), 8000+ (70B)
-                </small>
-              </div>
-
-              {/* Temperature */}
-              <div>
-                <label style={{ color: themeColors.textPrimary, fontSize: '1rem', marginBottom: '0.75rem', display: 'block', fontWeight: '600' }}>
-                  🎲 Temperatura (0.1-2.0)
-                </label>
-                <p style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.75rem', lineHeight: '1.4' }}>
-                  Controla la creatividad. Valores bajos = respuestas precisas y consistentes. Valores altos = más variadas y creativas.
-                </p>
-                <InputText
-                  type="number"
-                  step="0.1"
-                  value={performanceConfig.temperature}
-                  onChange={(e) => setPerformanceConfig(prev => ({ ...prev, temperature: parseFloat(e.target.value) || 0.7 }))}
-                  min="0.1"
-                  max="2.0"
-                  style={{ width: '100%', padding: '0.75rem' }}
-                />
-                <small style={{ color: themeColors.textSecondary, fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
-                  💡 0.1 = conservador, 0.7 = equilibrado, 2.0 = muy creativo
-                </small>
-              </div>
-
-              {/* Max History */}
-              <div>
-                <label style={{ color: themeColors.textPrimary, fontSize: '1rem', marginBottom: '0.75rem', display: 'block', fontWeight: '600' }}>
-                  🔄 Máximo de Mensajes en Historial (3-20)
-                </label>
-                <p style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.75rem', lineHeight: '1.4' }}>
-                  Número de mensajes anteriores que el modelo recuerda. Más mensajes = mejor contexto pero más memoria usada.
-                </p>
-                <InputText
-                  type="number"
-                  value={performanceConfig.maxHistory}
-                  onChange={(e) => setPerformanceConfig(prev => ({ ...prev, maxHistory: parseInt(e.target.value) || 8 }))}
-                  min="3"
-                  max="20"
-                  style={{ width: '100%', padding: '0.75rem' }}
-                />
-                <small style={{ color: themeColors.textSecondary, fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
-                  💡 Recomendado: 8-10 para buen balance entre contexto y rendimiento
-                </small>
-              </div>
-
-              {/* Context Limit */}
-              <div>
-                <label style={{ color: themeColors.textPrimary, fontSize: '1rem', marginBottom: '0.75rem', display: 'block', fontWeight: '600' }}>
-                  🧠 Límite de Contexto (2000-128000 tokens)
-                </label>
-                <p style={{ color: themeColors.textSecondary, fontSize: '0.9rem', marginBottom: '0.75rem', lineHeight: '1.4' }}>
-                  Tamaño máximo de la "ventana de memoria" del modelo. Mayor contexto = mejor comprensión de documentos largos.
-                </p>
-                <InputText
-                  type="number"
-                  value={performanceConfig.contextLimit}
-                  onChange={(e) => setPerformanceConfig(prev => ({ ...prev, contextLimit: parseInt(e.target.value) || 8000 }))}
-                  min="2000"
-                  max="128000"
-                  style={{ width: '100%', padding: '0.75rem' }}
-                />
-                <small style={{ color: themeColors.textSecondary, fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>
-                  💡 Recomendado: 8000 (8B), 32000 (70B), 128000 (máximo análisis)
-                </small>
-                
-                {/* Requisitos de RAM+GPU dinámicos */}
-                {(() => {
-                  const context = performanceConfig.contextLimit || 8000;
-                  const is70B = currentModel?.includes('70b') || currentModel?.includes('70B');
-                  const is8B = currentModel?.includes('8b') || currentModel?.includes('8B') || currentModel?.includes('3b') || currentModel?.includes('3B');
-                  
-                  let baseRAM, baseGPU;
-                  
-                  if (is70B) {
-                    baseRAM = 40;
-                    baseGPU = 24;
-                  } else if (is8B) {
-                    baseRAM = 8;
-                    baseGPU = 4;
-                  } else {
-                    baseRAM = 6;
-                    baseGPU = 3;
-                  }
-                  
-                  let additionalRAM = 0;
-                  let additionalGPU = 0;
-                  
-                  if (context <= 8000 && is8B) {
-                    baseRAM = Math.max(4, baseRAM - 2);
-                    baseGPU = Math.max(2, baseGPU - 1);
-                  }
-                  
-                  const totalRAM = baseRAM + additionalRAM;
-                  const totalGPU = baseGPU + additionalGPU;
-                  
-                  const ramColor = totalRAM > 48 ? '#F44336' : totalRAM > 24 ? '#FF9800' : '#4CAF50';
-                  const gpuColor = totalGPU > 16 ? '#F44336' : totalGPU > 8 ? '#FF9800' : '#4CAF50';
-                  
-                  return (
-                    <div style={{ 
-                      marginTop: '1rem', 
-                      padding: '1.25rem', 
-                      background: 'rgba(255,255,255,0.05)', 
-                      borderRadius: '10px',
-                      border: `1px solid ${themeColors.borderColor}`
-                    }}>
-                      <div style={{ fontSize: '0.9rem', color: themeColors.textPrimary, marginBottom: '0.75rem', fontWeight: '600' }}>
-                        📊 Requisitos estimados:
-                      </div>
-                      <div style={{ display: 'flex', gap: '2rem', fontSize: '0.95rem' }}>
-                        <div>
-                          <span style={{ color: ramColor, fontWeight: '600' }}>
-                            💾 RAM: ~{totalRAM}GB
-                          </span>
-                          <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginTop: '0.25rem' }}>
-                            {totalRAM > 48 ? '⚠️ Muy alto' : totalRAM > 24 ? '⚠️ Alto' : '✅ OK'}
-                          </div>
-                        </div>
-                        <div>
-                          <span style={{ color: gpuColor, fontWeight: '600' }}>
-                            🎮 GPU: ~{totalGPU}GB
-                          </span>
-                          <div style={{ fontSize: '0.8rem', color: themeColors.textSecondary, marginTop: '0.25rem' }}>
-                            {totalGPU > 16 ? '⚠️ Muy alto' : totalGPU > 8 ? '⚠️ Alto' : '✅ OK'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Use Streaming */}
-              <div style={{ 
-                background: 'rgba(76, 175, 80, 0.1)',
-                border: `1px solid rgba(76, 175, 80, 0.3)`,
-                borderRadius: '10px',
-                padding: '1.25rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <input
-                    type="checkbox"
-                    id="useStreaming"
-                    checked={performanceConfig.useStreaming}
-                    onChange={(e) => setPerformanceConfig(prev => ({ ...prev, useStreaming: e.target.checked }))}
-                    style={{ transform: 'scale(1.3)', cursor: 'pointer' }}
-                  />
-                  <label htmlFor="useStreaming" style={{ 
-                    color: themeColors.textPrimary, 
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: '600'
-                  }}>
-                    🌊 Usar Streaming (recomendado)
-                  </label>
-                </div>
-                <p style={{ color: themeColors.textSecondary, fontSize: '0.9rem', margin: 0, lineHeight: '1.4' }}>
-                  Muestra las respuestas en tiempo real. Reduce memoria y mejora la experiencia.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Botones de acción - BIEN SEPARADOS */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem' }}>
-          <Button
-            label="Guardar Configuración"
-            icon="pi pi-check"
-            onClick={handleSavePerformanceConfig}
-            style={{ flex: 1, padding: '0.75rem', fontSize: '1rem' }}
-          />
-          <Button
-            label="Restablecer"
-            icon="pi pi-refresh"
-            onClick={handleResetPerformanceConfig}
-            severity="secondary"
-            outlined
-            style={{ minWidth: '150px', padding: '0.75rem', fontSize: '1rem' }}
-          />
-        </div>
-
-        {/* Información adicional EXPANDIDA y CLARA */}
-        <div style={{
-          background: 'rgba(76, 175, 80, 0.1)',
-          border: `2px solid rgba(76, 175, 80, 0.3)`,
-          borderRadius: '12px',
-          padding: '1.75rem'
-        }}>
-          <h3 style={{ color: themeColors.textPrimary, margin: '0 0 1.5rem 0', fontSize: '1.15rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            💡 Configuraciones Recomendadas por Modelo
-          </h3>
-          
-          {/* Modelos Locales */}
-          <div style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'rgba(255, 193, 7, 0.15)', borderRadius: '10px', border: `1px solid rgba(255, 193, 7, 0.4)` }}>
-            <h4 style={{ color: '#FFC107', margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              🏠 Modelos Locales (Ollama)
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '8px' }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: themeColors.textPrimary, fontWeight: '600' }}>
-                  Llama 3.2 (1B)
-                </p>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  📤 Tokens: 2-3K | 🧠 Contexto: 4K | 🔄 Historial: 4 | 💾 RAM: 2GB
-                </p>
-              </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '8px' }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: themeColors.textPrimary, fontWeight: '600' }}>
-                  Llama 3.2 (3B)
-                </p>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  📤 Tokens: 3-4K | 🧠 Contexto: 8K | 🔄 Historial: 5 | 💾 RAM: 4GB
-                </p>
-              </div>
-              <div style={{ background: 'rgba(76, 175, 80, 0.15)', padding: '1rem', borderRadius: '8px', border: '2px solid #4CAF50' }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: '#4CAF50', fontWeight: '700' }}>
-                  ⭐ Llama 3.1 (8B) - RECOMENDADO
-                </p>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  📤 Tokens: 6K | 🧠 Contexto: 128K | 🔄 Historial: 8 | 💾 RAM: 8GB
-                </p>
-              </div>
-              <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '1rem', borderRadius: '8px' }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem', color: themeColors.textPrimary, fontWeight: '600' }}>
-                  Llama 3.1 (70B)
-                </p>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  📤 Tokens: 8K | 🧠 Contexto: 128K | 🔄 Historial: 10 | 💾 RAM: 40GB
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Modelos Remotos */}
-          <div style={{ padding: '1.5rem', background: 'rgba(33, 150, 243, 0.15)', borderRadius: '10px', border: `1px solid rgba(33, 150, 243, 0.4)` }}>
-            <h4 style={{ color: '#2196F3', margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              🌐 Modelos Cloud - Límites Automáticos
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  <strong style={{ color: themeColors.textPrimary }}>GPT-4:</strong> 4K tokens | 128K contexto
-                </p>
-              </div>
-              <div>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  <strong style={{ color: themeColors.textPrimary }}>Claude 3:</strong> 4K tokens | 200K contexto
-                </p>
-              </div>
-              <div>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  <strong style={{ color: themeColors.textPrimary }}>Gemini Flash:</strong> 4K tokens | 1M contexto
-                </p>
-              </div>
-              <div>
-                <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-                  <strong style={{ color: themeColors.textPrimary }}>Gemini Pro:</strong> 4K tokens | 2M contexto
-                </p>
-              </div>
-            </div>
-            <p style={{ margin: '1rem 0 0 0', fontSize: '0.85rem', color: themeColors.textSecondary, fontStyle: 'italic' }}>
-              ℹ️ Los límites se ajustan automáticamente según el modelo seleccionado
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderRemoteOllamaConfig = () => {
     return (
       <div style={{ padding: '1.5rem' }}>
@@ -3385,20 +2922,38 @@ const AIConfigDialog = ({ visible, onHide }) => {
     };
 
     const handleSaveLocalModelConfig = () => {
-      // Guardar por ID de modelo específico
+      // Guardar por ID de modelo específico (usar el ID exacto del modelo)
       const configs = JSON.parse(localStorage.getItem('local-model-performance-configs') || '{}');
-      configs[model.id] = localModelPerformanceConfig;
+      const modelIdToSave = model.id; // Usar el ID exacto del modelo
+      
+      // Guardar configuración con el ID exacto
+      configs[modelIdToSave] = localModelPerformanceConfig;
+      
+      // También guardar con el nombre base (sin tags) para compatibilidad
+      const baseModelId = modelIdToSave.split(':')[0];
+      if (baseModelId !== modelIdToSave) {
+        // Solo guardar también con base si es diferente (tiene tags)
+        // Esto permite que modelos con diferentes tags compartan configuración si el usuario lo desea
+        // Pero priorizamos la configuración exacta
+        if (!configs[baseModelId]) {
+          configs[baseModelId] = localModelPerformanceConfig;
+        }
+      }
+      
       localStorage.setItem('local-model-performance-configs', JSON.stringify(configs));
       
       // También aplicar globalmente al aiService
       aiService.setPerformanceConfig(localModelPerformanceConfig);
       
+      console.log(`✅ Configuración guardada para modelo "${modelIdToSave}":`, localModelPerformanceConfig);
+      console.log(`✅ También disponible para base "${baseModelId}":`, baseModelId !== modelIdToSave);
+      
       if (window.toast?.current?.show) {
         window.toast.current.show({
           severity: 'success',
           summary: 'Configuración guardada',
-          detail: `Rendimiento configurado para ${sizeInfo.displayName}`,
-          life: 2000
+          detail: `Rendimiento configurado para ${sizeInfo.displayName} (${modelIdToSave})`,
+          life: 3000
         });
       }
       
@@ -3630,11 +3185,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="🌐 Ollama Remoto">
           {renderRemoteOllamaConfig()}
-        </TabPanel>
-        <TabPanel header="⚙️ Rendimiento">
-          {renderPerformanceConfig()}
-        </TabPanel>
-      </TabView>
+        </TabPanel></TabView>
       </div>
 
       {/* Diálogo de categoría */}

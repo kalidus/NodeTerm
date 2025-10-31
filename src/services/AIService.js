@@ -252,6 +252,60 @@ class AIService {
             quantization: 'Q4, Q5, Q8'
           },
           { 
+            id: 'deepseek-r1:latest', 
+            name: 'DeepSeek R1 (Latest)', 
+            size: '5.2GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'DeepSeek-R1 es una familia de modelos de razonamiento abierto con rendimiento que se acerca a modelos líderes como O3 y Gemini 2.5 Pro. Versión latest optimizada.',
+            useCases: ['Razonamiento profundo', 'Programación compleja', 'Análisis matemático', 'Resolución de problemas complejos', 'Pensamiento crítico'],
+            strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo', 'Contexto extenso'],
+            bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo y contexto extenso',
+            context: '128K tokens',
+            ramRequired: '10-12GB',
+            parameters: '8B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'deepseek-r1:1.5b', 
+            name: 'DeepSeek R1 (1.5B)', 
+            size: '1.1GB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión compacta de DeepSeek-R1. Ideal para dispositivos con recursos limitados pero que requieren razonamiento avanzado.',
+            useCases: ['Razonamiento básico', 'Programación ligera', 'Análisis rápido', 'Dispositivos con recursos limitados'],
+            strengths: ['Muy compacto', 'Razonamiento eficiente', 'Bajo consumo', 'Contexto extenso'],
+            bestFor: 'Usuarios con recursos limitados que buscan razonamiento avanzado en un paquete compacto',
+            context: '128K tokens',
+            ramRequired: '4-6GB',
+            parameters: '1.5B',
+            quantization: 'Q4'
+          },
+          { 
+            id: 'deepseek-r1:7b', 
+            name: 'DeepSeek R1 (7B)', 
+            size: '4.7GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 7B de DeepSeek-R1. Excelente balance entre rendimiento y eficiencia para razonamiento profundo.',
+            useCases: ['Razonamiento profundo', 'Programación compleja', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
+            strengths: ['Razonamiento superior', 'Balance rendimiento/eficiencia', 'Lógica matemática', 'Análisis profundo', 'Contexto extenso'],
+            bestFor: 'Desarrolladores que buscan excelente razonamiento con eficiencia de recursos',
+            context: '128K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
             id: 'deepseek-r1:8b', 
             name: 'DeepSeek R1 (8B)', 
             size: '5.2GB', 
@@ -260,13 +314,67 @@ class AIService {
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda.',
+            description: 'DeepSeek-R1 8B. Modelo especializado en razonamiento y programación. Ideal para tareas que requieren lógica profunda con contexto extenso.',
             useCases: ['Programación compleja', 'Razonamiento lógico', 'Análisis matemático', 'Resolución de algoritmos', 'Debugging avanzado'],
-            strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo'],
+            strengths: ['Razonamiento superior', 'Programación avanzada', 'Lógica matemática', 'Análisis profundo', 'Contexto extenso'],
             bestFor: 'Desarrolladores senior, matemáticos, investigadores y usuarios que necesitan razonamiento profundo',
-            context: '8K tokens',
+            context: '128K tokens',
             ramRequired: '10-12GB',
             parameters: '8B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'deepseek-r1:14b', 
+            name: 'DeepSeek R1 (14B)', 
+            size: '9.0GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 14B de DeepSeek-R1. Mayor capacidad de razonamiento y análisis para tareas complejas que requieren comprensión profunda.',
+            useCases: ['Razonamiento avanzado', 'Programación de nivel experto', 'Análisis matemático complejo', 'Investigación', 'Resolución de problemas complejos'],
+            strengths: ['Razonamiento excepcional', 'Comprensión profunda', 'Análisis complejo', 'Contexto extenso', 'Precisión superior'],
+            bestFor: 'Investigadores, desarrolladores expertos y profesionales que requieren máximo razonamiento',
+            context: '128K tokens',
+            ramRequired: '16-20GB',
+            parameters: '14B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'deepseek-r1:32b', 
+            name: 'DeepSeek R1 (32B)', 
+            size: '20GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 32B de DeepSeek-R1. Modelo de alto rendimiento para razonamiento extremadamente complejo y análisis de nivel experto.',
+            useCases: ['Razonamiento de nivel experto', 'Programación avanzada', 'Análisis matemático complejo', 'Investigación avanzada', 'Resolución de problemas extremadamente complejos'],
+            strengths: ['Razonamiento excepcional', 'Comprensión profunda', 'Análisis complejo', 'Contexto extenso', 'Precisión máxima'],
+            bestFor: 'Investigadores avanzados, desarrolladores expertos y profesionales que requieren máximo razonamiento y capacidad de análisis',
+            context: '128K tokens',
+            ramRequired: '40-48GB',
+            parameters: '32B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'deepseek-r1:70b', 
+            name: 'DeepSeek R1 (70B)', 
+            size: '40GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 70B de DeepSeek-R1. Modelo de máximo rendimiento para razonamiento de nivel experto, comparable con modelos líderes como O3 y Gemini 2.5 Pro.',
+            useCases: ['Razonamiento de nivel experto', 'Programación avanzada', 'Análisis matemático complejo', 'Investigación avanzada', 'Resolución de problemas extremadamente complejos'],
+            strengths: ['Razonamiento excepcional', 'Comprensión profunda', 'Análisis complejo', 'Contexto extenso', 'Precisión máxima', 'Rendimiento de nivel líder'],
+            bestFor: 'Investigadores avanzados, desarrolladores expertos y profesionales que requieren máximo razonamiento y capacidad de análisis',
+            context: '128K tokens',
+            ramRequired: '80-96GB',
+            parameters: '70B',
             quantization: 'Q4, Q5'
           },
           { 
@@ -711,6 +819,28 @@ class AIService {
   }
 
   /**
+   * Validar si un modelo está disponible para uso
+   */
+  validateModelAvailability(modelId, type) {
+    if (!modelId) return false;
+    
+    if (type === 'local') {
+      const model = this.getAllLocalModels().find(m => m.id === modelId);
+      if (!model) return false;
+      // Solo permitir modelos que estén marcados como descargados
+      return model.downloaded === true;
+    } else if (type === 'remote') {
+      const model = this.models.remote.find(m => m.id === modelId);
+      if (!model) return false;
+      // Solo permitir modelos remotos con API key configurada
+      const apiKey = this.getApiKey(model.provider);
+      return !!apiKey;
+    }
+    
+    return false;
+  }
+
+  /**
    * Cargar configuración desde localStorage
    */
   loadConfig() {
@@ -718,8 +848,8 @@ class AIService {
       const config = localStorage.getItem('ai-service-config');
       if (config) {
         const parsed = JSON.parse(config);
-        this.currentModel = parsed.currentModel || null;
-        this.modelType = parsed.modelType || 'remote';
+        
+        // Restaurar API keys primero (necesario para validación de modelos remotos)
         this.apiKey = parsed.apiKey || null;
         this.remoteOllamaUrl = parsed.remoteOllamaUrl || null;
         this.performanceConfig = parsed.performanceConfig || null;
@@ -733,6 +863,25 @@ class AIService {
               model.downloaded = saved.downloaded;
             }
           });
+        }
+        
+        // Validar que el modelo guardado esté disponible antes de usarlo
+        const savedModel = parsed.currentModel;
+        const savedType = parsed.modelType || 'remote';
+        
+        if (savedModel && this.validateModelAvailability(savedModel, savedType)) {
+          // Modelo válido, usar configuración guardada
+          this.currentModel = savedModel;
+          this.modelType = savedType;
+        } else {
+          // Modelo no válido o no disponible, limpiar selección
+          // El usuario deberá seleccionar un modelo válido manualmente
+          this.currentModel = null;
+          this.modelType = 'remote';
+          
+          if (savedModel) {
+            debugLogger.warn('AIService', `Modelo guardado ${savedModel} (${savedType}) no está disponible. Limpiando selección.`);
+          }
         }
       }
     } catch (error) {
@@ -927,10 +1076,37 @@ class AIService {
       return cloudModelConfigs[modelId];
     }
 
-    // Si hay configuración manual, usarla (pero solo para modelos locales)
-    if (this.performanceConfig) {
-      debugLogger.trace('AIService', `Usando configuración manual:`, this.performanceConfig);
-      return this.performanceConfig;
+    // Para modelos locales, verificar configuración guardada manualmente (prioridad alta)
+    if (modelType === 'local') {
+      try {
+        const localConfigs = JSON.parse(localStorage.getItem('local-model-performance-configs') || '{}');
+        
+        // Buscar configuración exacta primero
+        if (localConfigs[modelId]) {
+          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada para ${modelId}:`, localConfigs[modelId]);
+          return localConfigs[modelId];
+        }
+        
+        // Si no se encuentra, intentar con el nombre base (sin tags como :latest, :8b, etc.)
+        // Esto permite que modelos como "llama3.2:latest" usen la configuración de "llama3.2"
+        const baseModelId = modelId.split(':')[0];
+        if (baseModelId !== modelId && localConfigs[baseModelId]) {
+          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada para ${baseModelId} (base de ${modelId}):`, localConfigs[baseModelId]);
+          return localConfigs[baseModelId];
+        }
+        
+        // Buscar también por coincidencias parciales (para modelos personalizados)
+        // Por ejemplo, si tenemos "mistral:7b" instalado y configuramos "mistral"
+        const matchingKey = Object.keys(localConfigs).find(key => {
+          return modelId.includes(key) || key.includes(baseModelId);
+        });
+        if (matchingKey) {
+          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada (coincidencia parcial) ${matchingKey} para ${modelId}:`, localConfigs[matchingKey]);
+          return localConfigs[matchingKey];
+        }
+      } catch (e) {
+        debugLogger.warn('AIService', `Error al cargar configuración individual de ${modelId}:`, e.message);
+      }
     }
 
     // Si no, usar configuración automática basada en performance
@@ -946,8 +1122,19 @@ class AIService {
       return this.getDefaultPerformanceConfig();
     }
 
-    // Configuraciones específicas para modelos Qwen3 con contextos largos
+    // Configuraciones específicas para modelos Qwen con contextos largos
     const qwen3Configs = {
+      'qwen2.5': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 16,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de Qwen 2.5
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
       'qwen3:8b': {
         maxTokens: 15000,
         temperature: 0.7,
@@ -972,6 +1159,52 @@ class AIService {
       }
     };
 
+    // Configuraciones específicas para modelos GPT-OSS con contextos largos
+    const gptOssConfigs = {
+      'gpt-oss:20b': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de GPT-OSS 20B
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'gpt-oss:120b': {
+        maxTokens: 16000,
+        temperature: 0.7,
+        maxHistory: 24,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de GPT-OSS 120B
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      }
+    };
+
+    // Configuraciones específicas para Llama 3.2
+    const llama32Configs = {
+      'llama3.2:latest': {
+        maxTokens: 6000,
+        temperature: 0.7,
+        maxHistory: 12,
+        useStreaming: true,
+        contextLimit: 8000,    // 8K contexto nativo de Llama 3.2 3B
+        num_ctx: 8000          // Para Ollama
+      },
+      'llama3.2:1b': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 8,
+        useStreaming: true,
+        contextLimit: 4000,    // 4K contexto nativo de Llama 3.2 1B
+        num_ctx: 4000          // Para Ollama
+      }
+    };
+
     // Configuraciones específicas para Llama 3.1 con contexto extendido
     const llama31Configs = {
       'llama3.1:8b': {
@@ -980,6 +1213,14 @@ class AIService {
         maxHistory: 16,
         useStreaming: true,
         contextLimit: 128000,  // 128K contexto nativo de Llama 3.1 8B
+        num_ctx: 128000        // Para Ollama
+      },
+      'llama3.1:latest': {
+        maxTokens: 8000,
+        temperature: 0.7,
+        maxHistory: 16,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de Llama 3.1
         num_ctx: 128000        // Para Ollama
       },
       'llama3.1:70b': {
@@ -1012,10 +1253,109 @@ class AIService {
       }
     };
 
-    // Si es un modelo Qwen3, usar configuración específica
+    // Configuraciones específicas para DeepSeek R1 (todos tienen 128K contexto)
+    const deepseekR1Configs = {
+      'deepseek-r1:latest': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo de DeepSeek R1
+        num_ctx: 128000,      // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:1.5b': {
+        maxTokens: 6000,
+        temperature: 0.7,
+        maxHistory: 16,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:7b': {
+        maxTokens: 10000,
+        temperature: 0.7,
+        maxHistory: 18,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:8b': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:14b': {
+        maxTokens: 14000,
+        temperature: 0.7,
+        maxHistory: 24,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:32b': {
+        maxTokens: 16000,
+        temperature: 0.7,
+        maxHistory: 28,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:70b': {
+        maxTokens: 20000,
+        temperature: 0.7,
+        maxHistory: 32,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      }
+    };
+
+    // Si es un modelo DeepSeek R1, usar configuración específica
+    if (deepseekR1Configs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para DeepSeek R1 ${modelId}:`, deepseekR1Configs[modelId]);
+      return deepseekR1Configs[modelId];
+    }
+
+    // Si es un modelo Qwen, usar configuración específica
     if (qwen3Configs[modelId]) {
-      debugLogger.trace('AIService', `Usando configuración específica para Qwen3 ${modelId}:`, qwen3Configs[modelId]);
+      debugLogger.trace('AIService', `Usando configuración específica para Qwen ${modelId}:`, qwen3Configs[modelId]);
       return qwen3Configs[modelId];
+    }
+
+    // Si es un modelo GPT-OSS, usar configuración específica
+    if (gptOssConfigs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para GPT-OSS ${modelId}:`, gptOssConfigs[modelId]);
+      return gptOssConfigs[modelId];
+    }
+
+    // Si es un modelo Llama 3.2, usar configuración específica
+    if (llama32Configs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para Llama 3.2 ${modelId}:`, llama32Configs[modelId]);
+      return llama32Configs[modelId];
     }
 
     // Si es un modelo Llama 3.1, usar configuración específica
@@ -1180,6 +1520,15 @@ class AIService {
         // Limpiar duplicados - remover modelos predefinidos que ya están instalados con tags
         this.cleanDuplicateModels();
         
+        // Validar que el modelo actual siga siendo válido después de la detección
+        if (this.currentModel && this.modelType === 'local') {
+          if (!this.validateModelAvailability(this.currentModel, this.modelType)) {
+            debugLogger.warn('AIService', `El modelo actual ${this.currentModel} ya no está instalado. Limpiando selección.`);
+            this.currentModel = null;
+            this.modelType = 'remote';
+          }
+        }
+        
         this.saveConfig();
         
         return installedModelNames;
@@ -1235,9 +1584,20 @@ class AIService {
    * Seleccionar modelo actual
    */
   setCurrentModel(modelId, type) {
+    // Validar que el modelo esté disponible antes de seleccionarlo
+    if (!this.validateModelAvailability(modelId, type)) {
+      const modelName = modelId || 'desconocido';
+      const errorMsg = type === 'local' 
+        ? `El modelo ${modelName} no está instalado. Instálalo primero en Ollama.`
+        : `El modelo ${modelName} no está disponible. Configura la API Key correspondiente.`;
+      throw new Error(errorMsg);
+    }
+    
     this.currentModel = modelId;
     this.modelType = type;
     this.saveConfig();
+    
+    debugLogger.info('AIService', `Modelo seleccionado: ${modelId} (${type})`);
   }
 
   /**
@@ -1353,6 +1713,36 @@ class AIService {
 
     // Obtener mensajes de la conversación actual
     const conversationMessages = currentConversation.messages || [];
+    // Considerar "primera conversación" cuando solo hay 1 mensaje (el del usuario que acabamos de agregar)
+    const isFirstMessage = conversationMessages.length === 1;
+    
+    // Log de parámetros solo en el primer mensaje
+    if (isFirstMessage) {
+      const providerLogName = this.modelType === 'local' ? 'OLLAMA' : 
+                               this.modelType === 'remote' ? 'REMOTE' : 'IA';
+      
+      // Para modelos locales, mostrar también cómo se transforman los parámetros para Ollama
+      if (this.modelType === 'local') {
+        const ollamaParams = {
+          temperature: finalOptions.temperature ?? 0.7,
+          num_predict: finalOptions.maxTokens ?? 4000,
+          num_ctx: finalOptions.contextLimit ?? 8000,
+          top_k: finalOptions.top_k ?? 40,
+          top_p: finalOptions.top_p ?? 0.9,
+          repeat_penalty: finalOptions.repeat_penalty ?? 1.1
+        };
+        debugLogger.info('AIService', `📊 PARÁMETROS INTERNOS (antes de transformar):`, JSON.stringify(finalOptions, null, 2));
+        debugLogger.info('AIService', `📊 PARÁMETROS OLLAMA (transformados para envío):`, JSON.stringify(ollamaParams, null, 2));
+        console.log(`📊 PARÁMETROS OLLAMA (enviados al servidor):`, JSON.stringify(ollamaParams, null, 2));
+      } else {
+        debugLogger.info('AIService', `📊 PARÁMETROS ${providerLogName} (Primera conversación):`, JSON.stringify(finalOptions, null, 2));
+        console.log(`📊 PARÁMETROS ${providerLogName} (Primera conversación):`, JSON.stringify(finalOptions, null, 2));
+      }
+      
+      debugLogger.debug('AIService', `Configuración cargada desde getModelPerformanceConfig:`, JSON.stringify(perfConfig, null, 2));
+      debugLogger.debug('AIService', `Opciones adicionales pasadas:`, JSON.stringify(options, null, 2));
+      console.log(`DEBUG: modelType=${this.modelType}, currentModel=${this.currentModel}, messagesCount=${conversationMessages.length}`);
+    }
     
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
     let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
@@ -1879,6 +2269,20 @@ class AIService {
    */
   async sendToLocalModelNonStreaming(modelId, messages, options) {
     const ollamaUrl = this.getOllamaUrl();
+    
+    // Preparar opciones con configuración (usar valores de options directamente, sin defaults hardcodeados)
+    const ollamaOptions = {
+      temperature: options.temperature ?? 0.7,
+      num_predict: options.maxTokens ?? 4000,
+      num_ctx: options.contextLimit ?? 8000,
+      top_k: options.top_k ?? 40,
+      top_p: options.top_p ?? 0.9,
+      repeat_penalty: options.repeat_penalty ?? 1.1
+    };
+    
+    // Log para debug (mostrar parámetros que realmente se envían)
+    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (NonStreaming) para ${modelId}:`, JSON.stringify(ollamaOptions, null, 2));
+    
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
@@ -1888,14 +2292,7 @@ class AIService {
         model: modelId,
         messages: messages,
         stream: false,
-        options: {
-          temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 4000,
-          num_ctx: options.contextLimit || 8000,
-          top_k: 40,
-          top_p: 0.9,
-          repeat_penalty: 1.1
-        }
+        options: ollamaOptions
       }),
       signal: options.signal
     });
@@ -1921,6 +2318,20 @@ class AIService {
    */
   async sendToLocalModelStreaming(modelId, messages, options) {
     const ollamaUrl = this.getOllamaUrl();
+    
+    // Preparar opciones con configuración (usar valores de options directamente, sin defaults hardcodeados)
+    const ollamaOptions = {
+      temperature: options.temperature ?? 0.7,
+      num_predict: options.maxTokens ?? 4000,
+      num_ctx: options.contextLimit ?? 8000,
+      top_k: options.top_k ?? 40,
+      top_p: options.top_p ?? 0.9,
+      repeat_penalty: options.repeat_penalty ?? 1.1
+    };
+    
+    // Log para debug (mostrar parámetros que realmente se envían)
+    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (Streaming) para ${modelId}:`, JSON.stringify(ollamaOptions, null, 2));
+    
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
@@ -1930,11 +2341,7 @@ class AIService {
         model: modelId,
         messages: messages,
         stream: true,
-        options: {
-          temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 1500,
-          num_ctx: options.contextLimit || 8000
-        }
+        options: ollamaOptions
       }),
       signal: options.signal
     });
@@ -1982,6 +2389,20 @@ class AIService {
    */
   async sendToLocalModelStreamingWithCallbacks(modelId, messages, callbacks = {}, options = {}) {
     const ollamaUrl = this.getOllamaUrl();
+    
+    // Preparar opciones que se enviarán a Ollama (usar valores de options directamente)
+    const ollamaOptions = {
+      temperature: options.temperature ?? 0.7,
+      num_predict: options.maxTokens ?? 4000,
+      num_ctx: options.contextLimit ?? 8000,
+      top_k: options.top_k ?? 40,
+      top_p: options.top_p ?? 0.9,
+      repeat_penalty: options.repeat_penalty ?? 1.1
+    };
+    
+    // Log para debug (mostrar parámetros que realmente se envían)
+    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (StreamingWithCallbacks) para ${modelId}:`, JSON.stringify({ ...ollamaOptions, signal: options.signal ? 'AbortSignal' : undefined }, null, 2));
+    
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
@@ -1991,11 +2412,7 @@ class AIService {
         model: modelId,
         messages: messages,
         stream: true,
-        options: {
-          temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 1500,
-          num_ctx: options.contextLimit || 8000
-        }
+        options: ollamaOptions
       }),
       signal: options.signal
     });
@@ -2064,6 +2481,19 @@ class AIService {
   async sendToLocalModelNonStreamingWithCallbacks(modelId, messages, callbacks = {}, options = {}) {
     const ollamaUrl = this.getOllamaUrl();
     
+    // Preparar opciones que se enviarán a Ollama (usar valores de options directamente)
+    const ollamaOptions = {
+      temperature: options.temperature ?? 0.7,
+      num_predict: options.maxTokens ?? 4000,
+      num_ctx: options.contextLimit ?? 8000,
+      top_k: options.top_k ?? 40,
+      top_p: options.top_p ?? 0.9,
+      repeat_penalty: options.repeat_penalty ?? 1.1
+    };
+    
+    // Log para debug (mostrar parámetros que realmente se envían)
+    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (NonStreamingWithCallbacks) para ${modelId}:`, JSON.stringify(ollamaOptions, null, 2));
+    
     // Callback de estado: generando
     if (callbacks.onStatus) {
       callbacks.onStatus({
@@ -2083,14 +2513,7 @@ class AIService {
         model: modelId,
         messages: messages,
         stream: false,
-        options: {
-          temperature: options.temperature || 0.7,
-          num_predict: options.maxTokens || 4000,
-          num_ctx: options.contextLimit || 8000,
-          top_k: 40,
-          top_p: 0.9,
-          repeat_penalty: 1.1
-        }
+        options: ollamaOptions
       }),
       signal: options.signal
     });
