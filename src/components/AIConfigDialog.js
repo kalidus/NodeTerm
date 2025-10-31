@@ -120,6 +120,16 @@ const AIConfigDialog = ({ visible, onHide }) => {
   const [configDialogVisible, setConfigDialogVisible] = useState(false);
   // Estado interno del diálogo de configuración
 
+  const [configuringLocalModel, setConfiguringLocalModel] = useState(null);
+  const [localModelPerformanceConfig, setLocalModelPerformanceConfig] = useState({
+    maxTokens: 6000,
+    temperature: 0.7,
+    maxHistory: 8,
+    useStreaming: true,
+    contextLimit: 8000
+  });
+  const [localModelPerformanceDialogVisible, setLocalModelPerformanceDialogVisible] = useState(false);
+
   // Escuchar cambios en el tema
   useEffect(() => {
     const onThemeChanged = () => {
@@ -159,6 +169,37 @@ const AIConfigDialog = ({ visible, onHide }) => {
       setCurrentModelConfig(config);
     }
   }, [currentModel, modelType]);
+
+  // Cargar configuración guardada cuando se abre el diálogo de configuración de un modelo local
+  useEffect(() => {
+    if (localModelPerformanceDialogVisible && configuringLocalModel && typeof configuringLocalModel === 'object') {
+      const model = configuringLocalModel;
+      const configs = JSON.parse(localStorage.getItem('local-model-performance-configs') || '{}');
+      
+      if (configs[model.id]) {
+        // Ya hay configuración guardada
+        setLocalModelPerformanceConfig(configs[model.id]);
+      } else {
+        // Primera vez - auto-aplicar preset según tamaño
+        const modelId = model.id?.toLowerCase() || '';
+        let category = 'medium';
+        
+        if (modelId.includes('70b')) category = 'large';
+        else if (modelId.includes('13b') || modelId.includes('8b')) category = 'medium';
+        else if (modelId.includes('7b') || modelId.includes('3b')) category = 'small';
+        else if (modelId.includes('1b')) category = 'tiny';
+        
+        const presets = {
+          tiny: { maxTokens: 2000, temperature: 0.7, maxHistory: 4, contextLimit: 4000, useStreaming: true },
+          small: { maxTokens: 3000, temperature: 0.7, maxHistory: 5, contextLimit: 8000, useStreaming: true },
+          medium: { maxTokens: 6000, temperature: 0.7, maxHistory: 8, contextLimit: 32000, useStreaming: true },
+          large: { maxTokens: 8000, temperature: 0.7, maxHistory: 12, contextLimit: 128000, useStreaming: true }
+        };
+        const defaultConfig = presets[category] || presets.medium;
+        setLocalModelPerformanceConfig(defaultConfig);
+      }
+    }
+  }, [localModelPerformanceDialogVisible, configuringLocalModel]);
 
   const loadConfig = async () => {
     const models = aiService.getAvailableModels();
@@ -1455,42 +1496,44 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     {provider.logo}
                   </div>
                   
-                  {/* Indicador de estado */}
-                  {provider.installed ? (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(76, 175, 80, 0.15)',
-                      color: '#4CAF50',
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '20px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      border: '1px solid rgba(76, 175, 80, 0.3)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
-                      Instalado
-                    </div>
-                  ) : (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(255, 193, 7, 0.15)',
-                      color: '#FFC107',
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '20px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      border: '1px solid rgba(255, 193, 7, 0.3)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      <i className="pi pi-exclamation-circle" style={{ fontSize: '0.6rem' }} />
-                      No instalado
-                    </div>
-                  )}
+                  {/* Indicador de estado + botón configurar */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {provider.installed ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(76, 175, 80, 0.15)',
+                        color: '#4CAF50',
+                        padding: '0.3rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        border: '1px solid rgba(76, 175, 80, 0.3)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                        Instalado
+                      </div>
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(255, 193, 7, 0.15)',
+                        color: '#FFC107',
+                        padding: '0.3rem 0.8rem',
+                        borderRadius: '20px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        border: '1px solid rgba(255, 193, 7, 0.3)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <i className="pi pi-exclamation-circle" style={{ fontSize: '0.6rem' }} />
+                        No instalado
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Nombre y descripción */}
@@ -2110,6 +2153,18 @@ const AIConfigDialog = ({ visible, onHide }) => {
                             severity="success"
                           />
                           <Button
+                            icon="pi pi-cog"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfiguringLocalModel(model);
+                              setLocalModelPerformanceDialogVisible(true);
+                            }}
+                            severity="secondary"
+                            style={{ width: '100%' }}
+                            tooltip="Configurar rendimiento"
+                            tooltipPosition="top"
+                          />
+                          <Button
                             icon="pi pi-trash"
                             onClick={() => handleDeleteModel(model.id)}
                             severity="danger"
@@ -2117,13 +2172,27 @@ const AIConfigDialog = ({ visible, onHide }) => {
                           />
                         </>
                       ) : (
-                        <Button
-                          label="Descargar"
-                          icon={downloading[model.id] ? 'pi pi-spin pi-spinner' : 'pi pi-download'}
-                          onClick={() => handleDownloadModel(model.id)}
-                          loading={downloading[model.id]}
-                          style={{ width: '100%' }}
-                        />
+                        <>
+                          <Button
+                            label="Descargar"
+                            icon={downloading[model.id] ? 'pi pi-spin pi-spinner' : 'pi pi-download'}
+                            onClick={() => handleDownloadModel(model.id)}
+                            loading={downloading[model.id]}
+                            style={{ width: '100%' }}
+                          />
+                          <Button
+                            icon="pi pi-cog"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfiguringLocalModel(model);
+                              setLocalModelPerformanceDialogVisible(true);
+                            }}
+                            severity="secondary"
+                            style={{ width: '100%' }}
+                            tooltip="Configurar rendimiento"
+                            tooltipPosition="top"
+                          />
+                        </>
                       )}
                       {['openai', 'anthropic', 'google'].includes(selectedCategory) && (
                         <Button
@@ -3242,6 +3311,295 @@ const AIConfigDialog = ({ visible, onHide }) => {
     );
   };
 
+  // Renderizar diálogo de configuración de rendimiento para modelos locales
+  const renderLocalModelPerformanceDialog = () => {
+    if (!configuringLocalModel || typeof configuringLocalModel === 'string') return null;
+
+    const model = configuringLocalModel;
+    
+    // Auto-detectar tamaño del modelo basado en el nombre y specs
+    const getModelSizeInfo = (modelObj) => {
+      const modelId = modelObj.id?.toLowerCase() || '';
+      const modelName = modelObj.name?.toLowerCase() || '';
+      
+      // Detectar por tamaño explícito en el nombre
+      if (modelId.includes('70b') || modelName.includes('70b')) {
+        return { name: `Grande (70B) - ${modelObj.name}`, category: 'large', displayName: modelObj.name };
+      }
+      if (modelId.includes('13b') || modelName.includes('13b')) {
+        return { name: `Mediano (13B) - ${modelObj.name}`, category: 'medium', displayName: modelObj.name };
+      }
+      if (modelId.includes('8b') || modelName.includes('8b')) {
+        return { name: `Mediano (8B) - ${modelObj.name}`, category: 'medium', displayName: modelObj.name };
+      }
+      if (modelId.includes('7b') || modelName.includes('7b')) {
+        return { name: `Pequeño (7B) - ${modelObj.name}`, category: 'small', displayName: modelObj.name };
+      }
+      if (modelId.includes('3b') || modelName.includes('3b')) {
+        return { name: `Pequeño (3B) - ${modelObj.name}`, category: 'small', displayName: modelObj.name };
+      }
+      if (modelId.includes('1b') || modelName.includes('1b')) {
+        return { name: `Muy Pequeño (1B) - ${modelObj.name}`, category: 'tiny', displayName: modelObj.name };
+      }
+      
+      // Detectar por familia de modelos
+      const smallModels = ['mistral', 'neural-chat', 'orca', 'gemma'];
+      const mediumModels = ['llama', 'qwen', 'gpt-oss'];
+      const largeModels = ['deepseek'];
+      
+      if (smallModels.some(m => modelId.includes(m))) {
+        return { name: `Pequeño - ${modelObj.name}`, category: 'small', displayName: modelObj.name };
+      }
+      if (mediumModels.some(m => modelId.includes(m))) {
+        return { name: `Mediano - ${modelObj.name}`, category: 'medium', displayName: modelObj.name };
+      }
+      if (largeModels.some(m => modelId.includes(m))) {
+        return { name: `Grande - ${modelObj.name}`, category: 'large', displayName: modelObj.name };
+      }
+      
+      return { name: `Personalizado - ${modelObj.name}`, category: 'custom', displayName: modelObj.name };
+    };
+
+    const sizeInfo = getModelSizeInfo(model);
+
+    // Función para aplicar presets
+    const applyPreset = (presetType) => {
+      const presets = {
+        fast: { maxTokens: sizeInfo.category === 'tiny' ? 2000 : sizeInfo.category === 'small' ? 3000 : sizeInfo.category === 'medium' ? 4000 : 6000, temperature: 0.7, maxHistory: 4, contextLimit: 4000, useStreaming: true },
+        balanced: { maxTokens: sizeInfo.category === 'tiny' ? 2000 : sizeInfo.category === 'small' ? 3000 : sizeInfo.category === 'medium' ? 6000 : 8000, temperature: 0.7, maxHistory: 8, contextLimit: sizeInfo.category === 'small' ? 8000 : sizeInfo.category === 'medium' ? 32000 : 128000, useStreaming: true },
+        deep: { maxTokens: sizeInfo.category === 'tiny' ? 2000 : sizeInfo.category === 'small' ? 3000 : sizeInfo.category === 'medium' ? 8000 : 12000, temperature: 0.7, maxHistory: 12, contextLimit: 128000, useStreaming: true }
+      };
+      
+      const newConfig = presets[presetType];
+      setLocalModelPerformanceConfig(newConfig);
+      
+      if (window.toast?.current?.show) {
+        const presetNames = { fast: '⚡ Rápido', balanced: '⚖️ Equilibrado', deep: '🚀 Máximo' };
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Preset aplicado',
+          detail: `${presetNames[presetType]} para ${sizeInfo.displayName}`,
+          life: 2000
+        });
+      }
+    };
+
+    const handleSaveLocalModelConfig = () => {
+      // Guardar por ID de modelo específico
+      const configs = JSON.parse(localStorage.getItem('local-model-performance-configs') || '{}');
+      configs[model.id] = localModelPerformanceConfig;
+      localStorage.setItem('local-model-performance-configs', JSON.stringify(configs));
+      
+      // También aplicar globalmente al aiService
+      aiService.setPerformanceConfig(localModelPerformanceConfig);
+      
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Configuración guardada',
+          detail: `Rendimiento configurado para ${sizeInfo.displayName}`,
+          life: 2000
+        });
+      }
+      
+      setLocalModelPerformanceDialogVisible(false);
+    };
+
+    return (
+      <Dialog
+        visible={localModelPerformanceDialogVisible}
+        onHide={() => setLocalModelPerformanceDialogVisible(false)}
+        header={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <i className="pi pi-sliders-h" style={{ fontSize: '1.2rem' }} />
+            <span>Configurar Rendimiento - {sizeInfo.displayName}</span>
+          </div>
+        }
+        style={{ width: '90vw', maxWidth: '600px' }}
+        modal
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+          
+          {/* Presets rápidos */}
+          <div>
+            <h3 style={{ color: themeColors.textPrimary, margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <i className="pi pi-lightning-bolt" style={{ color: themeColors.primaryColor }} />
+              Presets Rápidos
+            </h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+              <Button
+                label="⚡ Rápido"
+                onClick={() => applyPreset('fast')}
+                severity="warning"
+                outlined
+                style={{ padding: '0.75rem' }}
+              />
+              <Button
+                label="⚖️ Equilibrado"
+                onClick={() => applyPreset('balanced')}
+                severity="info"
+                outlined
+                style={{ padding: '0.75rem' }}
+              />
+              <Button
+                label="🚀 Máximo"
+                onClick={() => applyPreset('deep')}
+                severity="success"
+                outlined
+                style={{ padding: '0.75rem' }}
+              />
+            </div>
+          </div>
+
+          {/* Información de requisitos */}
+          <div style={{
+            background: `rgba(33, 150, 243, 0.1)`,
+            border: `1px solid rgba(33, 150, 243, 0.3)`,
+            borderRadius: '8px',
+            padding: '1rem'
+          }}>
+            <div style={{ fontSize: '0.9rem', color: themeColors.textPrimary, fontWeight: '600', marginBottom: '0.5rem' }}>
+              📊 Requisitos estimados:
+            </div>
+            <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary, lineHeight: '1.5' }}>
+              {sizeInfo.category === 'tiny' && '💾 RAM: 1-2GB | 🎮 GPU: 1GB'}
+              {sizeInfo.category === 'small' && '💾 RAM: 3-4GB | 🎮 GPU: 2-3GB'}
+              {sizeInfo.category === 'medium' && '💾 RAM: 6-8GB | 🎮 GPU: 4-6GB'}
+              {sizeInfo.category === 'large' && '💾 RAM: 40GB+ | 🎮 GPU: 24GB+'}
+              {sizeInfo.category === 'custom' && '💾 RAM: Variable | 🎮 GPU: Variable'}
+            </div>
+          </div>
+
+          {/* Configuración manual */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            
+            {/* Max Tokens */}
+            <div>
+              <label style={{ color: themeColors.textPrimary, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
+                📤 Máximo de Tokens
+              </label>
+              <InputText
+                type="number"
+                value={localModelPerformanceConfig.maxTokens}
+                onChange={(e) => setLocalModelPerformanceConfig(prev => ({ ...prev, maxTokens: parseInt(e.target.value) || 6000 }))}
+                min="1000"
+                max="12000"
+                style={{ width: '100%', padding: '0.6rem' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', marginTop: '0.3rem', display: 'block' }}>
+                Longitud máxima de respuestas. Mayor = respuestas más detalladas.
+              </small>
+            </div>
+
+            {/* Temperature */}
+            <div>
+              <label style={{ color: themeColors.textPrimary, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
+                🎲 Temperatura (0.1-2.0)
+              </label>
+              <InputText
+                type="number"
+                step="0.1"
+                value={localModelPerformanceConfig.temperature}
+                onChange={(e) => setLocalModelPerformanceConfig(prev => ({ ...prev, temperature: parseFloat(e.target.value) || 0.7 }))}
+                min="0.1"
+                max="2.0"
+                style={{ width: '100%', padding: '0.6rem' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', marginTop: '0.3rem', display: 'block' }}>
+                0.1=conservador, 0.7=equilibrado, 2.0=muy creativo
+              </small>
+            </div>
+
+            {/* Max History */}
+            <div>
+              <label style={{ color: themeColors.textPrimary, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
+                🔄 Máximo de Mensajes en Historial (3-20)
+              </label>
+              <InputText
+                type="number"
+                value={localModelPerformanceConfig.maxHistory}
+                onChange={(e) => setLocalModelPerformanceConfig(prev => ({ ...prev, maxHistory: parseInt(e.target.value) || 8 }))}
+                min="3"
+                max="20"
+                style={{ width: '100%', padding: '0.6rem' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', marginTop: '0.3rem', display: 'block' }}>
+                Mensajes anteriores que recuerda el modelo. Más = mejor contexto.
+              </small>
+            </div>
+
+            {/* Context Limit */}
+            <div>
+              <label style={{ color: themeColors.textPrimary, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'block', fontWeight: '600' }}>
+                🧠 Límite de Contexto (2K-128K tokens)
+              </label>
+              <InputText
+                type="number"
+                value={localModelPerformanceConfig.contextLimit}
+                onChange={(e) => setLocalModelPerformanceConfig(prev => ({ ...prev, contextLimit: parseInt(e.target.value) || 8000 }))}
+                min="2000"
+                max="128000"
+                style={{ width: '100%', padding: '0.6rem' }}
+              />
+              <small style={{ color: themeColors.textSecondary, fontSize: '0.8rem', marginTop: '0.3rem', display: 'block' }}>
+                {sizeInfo.category === 'tiny' && 'Recomendado: 4K'}
+                {sizeInfo.category === 'small' && 'Recomendado: 4K-8K'}
+                {sizeInfo.category === 'medium' && 'Recomendado: 8K-32K'}
+                {sizeInfo.category === 'large' && 'Recomendado: 32K-128K'}
+                {sizeInfo.category === 'custom' && 'Según disponibilidad de recursos'}
+              </small>
+            </div>
+
+            {/* Streaming */}
+            <div style={{
+              background: 'rgba(76, 175, 80, 0.1)',
+              border: `1px solid rgba(76, 175, 80, 0.3)`,
+              borderRadius: '8px',
+              padding: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <input
+                  type="checkbox"
+                  id="useStreamingLocal"
+                  checked={localModelPerformanceConfig.useStreaming}
+                  onChange={(e) => setLocalModelPerformanceConfig(prev => ({ ...prev, useStreaming: e.target.checked }))}
+                  style={{ transform: 'scale(1.2)', cursor: 'pointer' }}
+                />
+                <label htmlFor="useStreamingLocal" style={{
+                  color: themeColors.textPrimary,
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}>
+                  🌊 Usar Streaming (recomendado)
+                </label>
+              </div>
+              <p style={{ color: themeColors.textSecondary, fontSize: '0.85rem', margin: '0.5rem 0 0 0', lineHeight: '1.4' }}>
+                Muestra respuestas en tiempo real. Reduce memoria y mejora UX.
+              </p>
+            </div>
+          </div>
+
+          {/* Botones de acción */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+            <Button
+              label="Guardar Configuración"
+              icon="pi pi-check"
+              onClick={handleSaveLocalModelConfig}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Cancelar"
+              icon="pi pi-times"
+              severity="secondary"
+              onClick={() => setLocalModelPerformanceDialogVisible(false)}
+            />
+          </div>
+        </div>
+      </Dialog>
+    );
+  };
+
   return (
     <Dialog
       header="Configuración de IA"
@@ -3281,6 +3639,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
 
       {/* Diálogo de categoría */}
       {renderCategoryDialog()}
+      {renderLocalModelPerformanceDialog()}
     </Dialog>
   );
 };
