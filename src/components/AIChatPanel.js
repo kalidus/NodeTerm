@@ -136,12 +136,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Asegurar que empezamos con estado limpio
     setMessages([]);
     setAttachedFiles([]);
-    
-    console.log('🔄 [AIChatPanel] Nueva conversación iniciada:', {
-      id: newConversation.id,
-      title: newConversation.title,
-      cleanStart: true
-    });
   }, []);
 
   // Escuchar eventos del historial de conversaciones
@@ -563,13 +557,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Asegurar que los mensajes estén vacíos (doble verificación)
     setMessages([]);
-
-    console.log('Nueva conversación creada:', {
-      id: newConversation.id,
-      title: newConversation.title,
-      messagesCount: newConversation.messages.length,
-      attachedFilesCount: newConversation.attachedFiles.length
-    });
 
     // Disparar evento para actualizar el historial
     window.dispatchEvent(new CustomEvent('conversation-updated'));
