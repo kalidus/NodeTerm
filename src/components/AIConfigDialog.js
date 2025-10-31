@@ -2246,7 +2246,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                             severity="secondary"
                             style={{ width: '100%' }}
                             tooltip="Configurar rendimiento"
-                            tooltipPosition="top"
+                            tooltipOptions={{ position: 'top' }}
                           />
                           <Button
                             icon="pi pi-trash"
@@ -2274,7 +2274,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
                             severity="secondary"
                             style={{ width: '100%' }}
                             tooltip="Configurar rendimiento"
-                            tooltipPosition="top"
+                            tooltipOptions={{ position: 'top' }}
                           />
                         </>
                       )}

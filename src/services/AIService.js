@@ -1716,33 +1716,7 @@ class AIService {
     // Considerar "primera conversación" cuando solo hay 1 mensaje (el del usuario que acabamos de agregar)
     const isFirstMessage = conversationMessages.length === 1;
     
-    // Log de parámetros solo en el primer mensaje
-    if (isFirstMessage) {
-      const providerLogName = this.modelType === 'local' ? 'OLLAMA' : 
-                               this.modelType === 'remote' ? 'REMOTE' : 'IA';
-      
-      // Para modelos locales, mostrar también cómo se transforman los parámetros para Ollama
-      if (this.modelType === 'local') {
-        const ollamaParams = {
-          temperature: finalOptions.temperature ?? 0.7,
-          num_predict: finalOptions.maxTokens ?? 4000,
-          num_ctx: finalOptions.contextLimit ?? 8000,
-          top_k: finalOptions.top_k ?? 40,
-          top_p: finalOptions.top_p ?? 0.9,
-          repeat_penalty: finalOptions.repeat_penalty ?? 1.1
-        };
-        debugLogger.info('AIService', `📊 PARÁMETROS INTERNOS (antes de transformar):`, JSON.stringify(finalOptions, null, 2));
-        debugLogger.info('AIService', `📊 PARÁMETROS OLLAMA (transformados para envío):`, JSON.stringify(ollamaParams, null, 2));
-        console.log(`📊 PARÁMETROS OLLAMA (enviados al servidor):`, JSON.stringify(ollamaParams, null, 2));
-      } else {
-        debugLogger.info('AIService', `📊 PARÁMETROS ${providerLogName} (Primera conversación):`, JSON.stringify(finalOptions, null, 2));
-        console.log(`📊 PARÁMETROS ${providerLogName} (Primera conversación):`, JSON.stringify(finalOptions, null, 2));
-      }
-      
-      debugLogger.debug('AIService', `Configuración cargada desde getModelPerformanceConfig:`, JSON.stringify(perfConfig, null, 2));
-      debugLogger.debug('AIService', `Opciones adicionales pasadas:`, JSON.stringify(options, null, 2));
-      console.log(`DEBUG: modelType=${this.modelType}, currentModel=${this.currentModel}, messagesCount=${conversationMessages.length}`);
-    }
+    // No loguear aquí - los logs están en los métodos de envío específicos
     
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
     let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
@@ -2280,20 +2254,27 @@ class AIService {
       repeat_penalty: options.repeat_penalty ?? 1.1
     };
     
-    // Log para debug (mostrar parámetros que realmente se envían)
-    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (NonStreaming) para ${modelId}:`, JSON.stringify(ollamaOptions, null, 2));
+    // Preparar el body completo que se enviará a Ollama
+    const requestBody = {
+      model: modelId,
+      messages: messages,
+      stream: false,
+      options: ollamaOptions
+    };
+    
+    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
+    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
+      url: `${ollamaUrl}/api/chat`,
+      method: 'POST',
+      body: requestBody
+    }, null, 2));
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages,
-        stream: false,
-        options: ollamaOptions
-      }),
+      body: JSON.stringify(requestBody),
       signal: options.signal
     });
 
@@ -2329,20 +2310,27 @@ class AIService {
       repeat_penalty: options.repeat_penalty ?? 1.1
     };
     
-    // Log para debug (mostrar parámetros que realmente se envían)
-    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (Streaming) para ${modelId}:`, JSON.stringify(ollamaOptions, null, 2));
+    // Preparar el body completo que se enviará a Ollama
+    const requestBody = {
+      model: modelId,
+      messages: messages,
+      stream: true,
+      options: ollamaOptions
+    };
+    
+    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
+    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
+      url: `${ollamaUrl}/api/chat`,
+      method: 'POST',
+      body: requestBody
+    }, null, 2));
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages,
-        stream: true,
-        options: ollamaOptions
-      }),
+      body: JSON.stringify(requestBody),
       signal: options.signal
     });
 
@@ -2400,20 +2388,27 @@ class AIService {
       repeat_penalty: options.repeat_penalty ?? 1.1
     };
     
-    // Log para debug (mostrar parámetros que realmente se envían)
-    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (StreamingWithCallbacks) para ${modelId}:`, JSON.stringify({ ...ollamaOptions, signal: options.signal ? 'AbortSignal' : undefined }, null, 2));
+    // Preparar el body completo que se enviará a Ollama
+    const requestBody = {
+      model: modelId,
+      messages: messages,
+      stream: true,
+      options: ollamaOptions
+    };
+    
+    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
+    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
+      url: `${ollamaUrl}/api/chat`,
+      method: 'POST',
+      body: requestBody
+    }, null, 2));
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages,
-        stream: true,
-        options: ollamaOptions
-      }),
+      body: JSON.stringify(requestBody),
       signal: options.signal
     });
 
@@ -2491,8 +2486,20 @@ class AIService {
       repeat_penalty: options.repeat_penalty ?? 1.1
     };
     
-    // Log para debug (mostrar parámetros que realmente se envían)
-    debugLogger.debug('AIService', `PARÁMETROS OLLAMA (NonStreamingWithCallbacks) para ${modelId}:`, JSON.stringify(ollamaOptions, null, 2));
+    // Preparar el body completo que se enviará a Ollama
+    const requestBody = {
+      model: modelId,
+      messages: messages,
+      stream: false,
+      options: ollamaOptions
+    };
+    
+    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
+    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
+      url: `${ollamaUrl}/api/chat`,
+      method: 'POST',
+      body: requestBody
+    }, null, 2));
     
     // Callback de estado: generando
     if (callbacks.onStatus) {
@@ -2509,12 +2516,7 @@ class AIService {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: modelId,
-        messages: messages,
-        stream: false,
-        options: ollamaOptions
-      }),
+      body: JSON.stringify(requestBody),
       signal: options.signal
     });
 
