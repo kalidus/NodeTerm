@@ -241,8 +241,8 @@ class FileAnalysisService {
       }
 
       if (blocks.length === 0) return '';
-      const header = 'Contexto de archivos adjuntos (usar solo como referencia; no repetir textualmente si no es necesario):';
-      return `${header}\n\n${blocks.join('\n\n')}`;
+      // Sin header innecesario - los modelos ya saben usar contexto
+      return blocks.join('\n\n');
     } catch (e) {
       return '';
     }

@@ -1821,13 +1821,10 @@ class AIService {
       this.conversationHistory = this.conversationHistory.slice(-finalOptions.maxHistory);
     }
 
-    // Mejorar el mensaje si es para scripts de Python
-    const enhancedMessage = this.enhanceMessageForPythonScripts(message);
-    
     // Agregar mensaje al historial
     this.conversationHistory.push({
       role: 'user',
-      content: enhancedMessage,
+      content: message,
       timestamp: Date.now()
     });
 
@@ -1887,22 +1884,45 @@ class AIService {
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
     let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
 
-    // Mejorar el mensaje si es para scripts de Python
-    const enhancedMessage = this.enhanceMessageForPythonScripts(message);
-
     // Construir contexto efímero de archivos adjuntos (RAG ligero)
     const attachedFiles = conversationService.getAttachedFiles();
-    const ephemeralContext = fileAnalysisService.buildEphemeralContext(attachedFiles, enhancedMessage, {
+    const ephemeralContext = fileAnalysisService.buildEphemeralContext(attachedFiles, message, {
       maxChars: Math.min(3000, (finalOptions.contextLimit || 8000) / 2)
     });
 
     // Mensajes a enviar al proveedor (no se guardan como historial visible)
     const providerMessages = [...limitedMessages];
-    if (ephemeralContext && ephemeralContext.length > 0) {
-      providerMessages.push({ role: 'system', content: ephemeralContext });
+    
+    // Si el último mensaje es del usuario, reemplazarlo para evitar duplicados
+    if (providerMessages.length > 0 && providerMessages[providerMessages.length - 1].role === 'user') {
+      providerMessages[providerMessages.length - 1] = { role: 'user', content: message };
+    } else {
+      // Si no hay mensaje del usuario al final, agregarlo
+      providerMessages.push({ role: 'user', content: message });
     }
-    // Asegurar que el último input del usuario esté presente explícitamente
-    providerMessages.push({ role: 'user', content: enhancedMessage });
+    
+    // Contexto efímero de archivos adjuntos (debe ir antes del mensaje del usuario)
+    // Insertar antes del último mensaje (que es el del usuario)
+    if (ephemeralContext && ephemeralContext.length > 0) {
+      providerMessages.splice(providerMessages.length - 1, 0, { role: 'system', content: ephemeralContext });
+    }
+
+    // 🔍 LOG DETALLADO: Mostrar cada prompt que se enviará
+    console.log('📤 PROMPTS QUE SE ENVIARÁN AL MODELO:');
+    console.log('═══════════════════════════════════════════════════════════');
+    providerMessages.forEach((msg, index) => {
+      const roleEmoji = msg.role === 'user' ? '👤' : msg.role === 'assistant' ? '🤖' : '⚙️';
+      const contentPreview = msg.content.length > 200 
+        ? msg.content.substring(0, 200) + '...' 
+        : msg.content;
+      console.log(`${index + 1}. ${roleEmoji} [${msg.role.toUpperCase()}]`);
+      console.log(`   ${contentPreview.replace(/\n/g, ' ')}`);
+      if (msg.content.length > 200) {
+        console.log(`   ... (${msg.content.length} caracteres en total)`);
+      }
+      console.log('');
+    });
+    console.log('═══════════════════════════════════════════════════════════');
 
     // Metadatos para la UI: indicar si se usó contexto efímero y qué archivos
     const ephemeralFilesUsed = (ephemeralContext && ephemeralContext.length > 0)
@@ -2960,55 +2980,6 @@ class AIService {
     return truncatedMessages;
   }
 
-  /**
-   * Mejorar el mensaje del usuario para scripts de Python
-   */
-  enhanceMessageForPythonScripts(message) {
-    // Si el mensaje contiene solicitudes de scripts Python, agregar instrucciones de formato
-    if (message.toLowerCase().includes('script') && 
-        (message.toLowerCase().includes('python') || message.toLowerCase().includes('py'))) {
-      
-      const enhancedMessage = `${message}
-
-IMPORTANTE: Para cada script de Python que generes, asegúrate de:
-1. Envolver cada script completo en bloques de código con \`\`\`python al inicio y \`\`\` al final
-2. Cada script debe ser independiente y ejecutable
-3. Incluir comentarios descriptivos en español
-4. Usar nombres de variables y funciones descriptivos
-5. Cada script debe tener al menos 3-5 líneas de código funcional
-
-Ejemplo de formato correcto:
-\`\`\`python
-# Script 1: Calculadora básica
-def calcular(a, b, operacion):
-    if operacion == '+':
-        return a + b
-    elif operacion == '-':
-        return a - b
-    # ... más código
-
-if __name__ == "__main__":
-    resultado = calcular(5, 3, '+')
-    print(f"El resultado es: {resultado}")
-\`\`\`
-
-\`\`\`python
-# Script 2: Generador de números aleatorios
-import random
-
-def generar_numero(min_val, max_val):
-    return random.randint(min_val, max_val)
-
-if __name__ == "__main__":
-    numero = generar_numero(1, 100)
-    print(f"Número aleatorio: {numero}")
-\`\`\``;
-      
-      return enhancedMessage;
-    }
-    
-    return message;
-  }
 
   /**
    * Detectar archivos mencionados en la respuesta - VERSIÓN SIMPLIFICADA
