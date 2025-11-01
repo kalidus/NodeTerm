@@ -362,7 +362,7 @@ class AIService {
           { 
             id: 'deepseek-r1:70b', 
             name: 'DeepSeek R1 (70B)', 
-            size: '40GB', 
+            size: '43GB', 
             downloaded: false, 
             performance: 'high',
             platform: 'ollama',
@@ -376,6 +376,24 @@ class AIService {
             ramRequired: '80-96GB',
             parameters: '70B',
             quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'deepseek-r1:671b', 
+            name: 'DeepSeek R1 (671B)', 
+            size: '404GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente + GPU muy potente',
+            description: 'Versión completa 671B de DeepSeek-R1. El modelo más grande de la familia, con rendimiento que se acerca a modelos líderes como O3 y Gemini 2.5 Pro. Requiere hardware de nivel enterprise.',
+            useCases: ['Razonamiento de nivel experto', 'Programación avanzada', 'Análisis matemático complejo', 'Investigación avanzada', 'Resolución de problemas extremadamente complejos', 'Benchmarks de investigación'],
+            strengths: ['Razonamiento excepcional', 'Comprensión profunda', 'Análisis complejo', 'Contexto extenso (160K)', 'Precisión máxima', 'Rendimiento de nivel líder', 'Máxima capacidad'],
+            bestFor: 'Investigadores avanzados, instituciones de investigación y usuarios con hardware enterprise que requieren máxima capacidad de razonamiento',
+            context: '160K tokens',
+            ramRequired: '450-500GB',
+            parameters: '671B',
+            quantization: 'MXFP4'
           },
           { 
             id: 'mistral', 
@@ -738,9 +756,9 @@ class AIService {
             quantization: 'Q4, Q5'
           },
           { 
-            id: 'orca-mini', 
+            id: 'orca-mini:3b', 
             name: 'Orca Mini (3B)', 
-            size: '1.9GB', 
+            size: '2.0GB', 
             downloaded: false, 
             performance: 'low',
             platform: 'ollama',
@@ -750,10 +768,64 @@ class AIService {
             useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Prototipado', 'Testing'],
             strengths: ['Muy ligero', 'Rápido', 'Bajo consumo', 'Fácil instalación'],
             bestFor: 'Dispositivos con recursos muy limitados y tareas de respuesta rápida',
-            context: '2K tokens',
+            context: '32K tokens',
             ramRequired: '3-4GB',
             parameters: '3B',
             quantization: 'Q4'
+          },
+          { 
+            id: 'orca-mini:7b', 
+            name: 'Orca Mini (7B)', 
+            size: '3.8GB', 
+            downloaded: false, 
+            performance: 'medium',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 7B de Orca Mini. Modelo de propósito general adecuado para hardware de nivel de entrada.',
+            useCases: ['Asistencia general', 'Programación básica', 'Análisis de texto', 'Resolución de problemas', 'Uso general'],
+            strengths: ['Balance rendimiento/recursos', 'Buena comprensión', 'Respuestas coherentes', 'Amplio conocimiento'],
+            bestFor: 'Usuarios con hardware básico que buscan buen rendimiento general',
+            context: '32K tokens',
+            ramRequired: '8-10GB',
+            parameters: '7B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'orca-mini:13b', 
+            name: 'Orca Mini (13B)', 
+            size: '7.4GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 13B de Orca Mini. Mayor capacidad para tareas más complejas manteniendo eficiencia.',
+            useCases: ['Programación avanzada', 'Análisis profundo', 'Razonamiento', 'Escritura técnica', 'Asistencia avanzada'],
+            strengths: ['Mayor capacidad', 'Mejor razonamiento', 'Análisis profundo', 'Versatilidad'],
+            bestFor: 'Usuarios que buscan mayor capacidad sin requerir hardware extremo',
+            context: '32K tokens',
+            ramRequired: '16-20GB',
+            parameters: '13B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'orca-mini:70b', 
+            name: 'Orca Mini (70B)', 
+            size: '39GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 70B de Orca Mini. Máxima capacidad de la serie Orca Mini para tareas complejas.',
+            useCases: ['Programación avanzada', 'Análisis profundo', 'Razonamiento complejo', 'Investigación', 'Tareas complejas'],
+            strengths: ['Máxima capacidad', 'Razonamiento superior', 'Análisis profundo', 'Precisión superior'],
+            bestFor: 'Investigadores y desarrolladores expertos que requieren máxima capacidad',
+            context: '32K tokens',
+            ramRequired: '80-96GB',
+            parameters: '70B',
+            quantization: 'Q4, Q5'
           },
           { 
             id: 'orca2', 
@@ -764,11 +836,11 @@ class AIService {
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'Orca 2 con mejoras en razonamiento y seguimiento de instrucciones. Versión mejorada de Orca.',
+            description: 'Orca 2 con mejoras en razonamiento y seguimiento de instrucciones. Versión mejorada de Orca basada en Llama 2.',
             useCases: ['Razonamiento', 'Instrucciones complejas', 'Análisis', 'Programación', 'Resolución de problemas'],
             strengths: ['Razonamiento mejorado', 'Instrucciones precisas', 'Análisis profundo', 'Versatilidad'],
             bestFor: 'Usuarios que buscan mejor razonamiento y comprensión de instrucciones complejas',
-            context: '4K tokens',
+            context: '32K tokens',
             ramRequired: '8-10GB',
             parameters: '7B',
             quantization: 'Q4, Q5'
@@ -1418,6 +1490,17 @@ class AIService {
         useStreaming: true,
         contextLimit: 128000,  // 128K contexto nativo
         num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'deepseek-r1:671b': {
+        maxTokens: 24000,
+        temperature: 0.7,
+        maxHistory: 36,
+        useStreaming: true,
+        contextLimit: 160000,  // 160K contexto nativo
+        num_ctx: 160000,       // Para Ollama
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
