@@ -504,21 +504,111 @@ class AIService {
             quantization: 'MXFP4'
           },
           { 
-            id: 'gemma2', 
-            name: 'Gemma 2 (9B)', 
-            size: '5.4GB', 
+            id: 'gemma3:latest', 
+            name: 'Gemma 3 (Latest)', 
+            size: '3.3GB', 
             downloaded: false, 
             performance: 'high',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
-            description: 'The current, most capable model that runs on a single GPU. Modelo de Google optimizado para eficiencia.',
-            useCases: ['Programación eficiente', 'Análisis de datos', 'Escritura técnica', 'Resolución de problemas', 'Asistencia general'],
-            strengths: ['Eficiencia', 'Buena programación', 'Análisis sólido', 'Optimización'],
-            bestFor: 'Desarrolladores que buscan eficiencia, análisis de datos y programación optimizada',
-            context: '8K tokens',
+            description: 'The current, most capable model that runs on a single GPU. Modelo de Google con soporte para texto e imágenes.',
+            useCases: ['Análisis de imágenes', 'Programación con contexto visual', 'Análisis de datos', 'Escritura técnica', 'Tareas multimodales'],
+            strengths: ['Multimodal (texto e imagen)', 'Eficiencia', 'Contexto extenso', 'Versatilidad'],
+            bestFor: 'Desarrolladores que necesitan análisis multimodal y contexto extenso',
+            context: '128K tokens',
             ramRequired: '6-8GB',
-            parameters: '9B',
+            parameters: '4B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'gemma3:270m', 
+            name: 'Gemma 3 (270M)', 
+            size: '292MB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Modelo ultra-compacto de Gemma 3. Ideal para dispositivos con recursos muy limitados.',
+            useCases: ['Tareas básicas', 'Respuestas rápidas', 'Dispositivos móviles', 'Prototipado ligero'],
+            strengths: ['Muy compacto', 'Velocidad alta', 'Bajo consumo', 'Fácil instalación'],
+            bestFor: 'Dispositivos con recursos muy limitados y tareas básicas rápidas',
+            context: '32K tokens',
+            ramRequired: '1-2GB',
+            parameters: '270M',
+            quantization: 'Q4'
+          },
+          { 
+            id: 'gemma3:1b', 
+            name: 'Gemma 3 (1B)', 
+            size: '815MB', 
+            downloaded: false, 
+            performance: 'low',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión compacta de Gemma 3. Ideal para dispositivos con recursos limitados.',
+            useCases: ['Asistencia básica', 'Respuestas rápidas', 'Dispositivos móviles', 'Tareas simples', 'Prototipado'],
+            strengths: ['Compacto', 'Velocidad alta', 'Bajo consumo', 'Fácil instalación'],
+            bestFor: 'Dispositivos con recursos limitados y tareas básicas rápidas',
+            context: '32K tokens',
+            ramRequired: '2-4GB',
+            parameters: '1B',
+            quantization: 'Q4'
+          },
+          { 
+            id: 'gemma3:4b', 
+            name: 'Gemma 3 (4B)', 
+            size: '3.3GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'The current, most capable model that runs on a single GPU. Versión 4B con soporte para texto e imágenes.',
+            useCases: ['Análisis de imágenes', 'Programación con contexto visual', 'Análisis de datos', 'Escritura técnica', 'Tareas multimodales'],
+            strengths: ['Multimodal (texto e imagen)', 'Eficiencia', 'Contexto extenso', 'Balance rendimiento/recursos'],
+            bestFor: 'Desarrolladores que necesitan análisis multimodal con eficiencia de recursos',
+            context: '128K tokens',
+            ramRequired: '6-8GB',
+            parameters: '4B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'gemma3:12b', 
+            name: 'Gemma 3 (12B)', 
+            size: '8.1GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 12B de Gemma 3. Mayor capacidad para análisis multimodal y tareas complejas.',
+            useCases: ['Análisis avanzado de imágenes', 'Programación compleja con contexto visual', 'Análisis profundo', 'Investigación multimodal', 'Tareas agentic'],
+            strengths: ['Multimodal avanzado', 'Mayor capacidad', 'Contexto extenso', 'Análisis profundo'],
+            bestFor: 'Desarrolladores y investigadores que necesitan análisis multimodal avanzado',
+            context: '128K tokens',
+            ramRequired: '16-20GB',
+            parameters: '12B',
+            quantization: 'Q4, Q5'
+          },
+          { 
+            id: 'gemma3:27b', 
+            name: 'Gemma 3 (27B)', 
+            size: '17GB', 
+            downloaded: false, 
+            performance: 'high',
+            platform: 'ollama',
+            platformName: 'Ollama',
+            platformDescription: 'Requiere Ollama instalado localmente',
+            description: 'Versión 27B de Gemma 3. Máxima capacidad para análisis multimodal y tareas complejas de nivel experto.',
+            useCases: ['Análisis experto de imágenes', 'Programación avanzada con contexto visual', 'Investigación multimodal', 'Análisis profundo', 'Tareas agentic complejas'],
+            strengths: ['Multimodal de nivel experto', 'Máxima capacidad', 'Contexto extenso', 'Análisis profundo', 'Precisión superior'],
+            bestFor: 'Investigadores avanzados y desarrolladores expertos que requieren máxima capacidad multimodal',
+            context: '128K tokens',
+            ramRequired: '32-40GB',
+            parameters: '27B',
             quantization: 'Q4, Q5'
           },
           { 
@@ -1333,6 +1423,82 @@ class AIService {
         repeat_penalty: 1.1
       }
     };
+
+    // Configuraciones específicas para Gemma 3 (multimodal)
+    const gemma3Configs = {
+      'gemma3:latest': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'gemma3:270m': {
+        maxTokens: 4000,
+        temperature: 0.7,
+        maxHistory: 12,
+        useStreaming: true,
+        contextLimit: 32000,   // 32K contexto nativo
+        num_ctx: 32000,        // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'gemma3:1b': {
+        maxTokens: 6000,
+        temperature: 0.7,
+        maxHistory: 14,
+        useStreaming: true,
+        contextLimit: 32000,   // 32K contexto nativo
+        num_ctx: 32000,        // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'gemma3:4b': {
+        maxTokens: 12000,
+        temperature: 0.7,
+        maxHistory: 20,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo (multimodal)
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'gemma3:12b': {
+        maxTokens: 16000,
+        temperature: 0.7,
+        maxHistory: 24,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo (multimodal)
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      },
+      'gemma3:27b': {
+        maxTokens: 20000,
+        temperature: 0.7,
+        maxHistory: 28,
+        useStreaming: true,
+        contextLimit: 128000,  // 128K contexto nativo (multimodal)
+        num_ctx: 128000,       // Para Ollama
+        top_k: 40,
+        top_p: 0.9,
+        repeat_penalty: 1.1
+      }
+    };
+
+    // Si es un modelo Gemma 3, usar configuración específica
+    if (gemma3Configs[modelId]) {
+      debugLogger.trace('AIService', `Usando configuración específica para Gemma 3 ${modelId}:`, gemma3Configs[modelId]);
+      return gemma3Configs[modelId];
+    }
 
     // Si es un modelo DeepSeek R1, usar configuración específica
     if (deepseekR1Configs[modelId]) {
