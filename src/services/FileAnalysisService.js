@@ -105,29 +105,28 @@ class FileAnalysisService {
       if (!fileData) return '';
       const { name, type, sizeFormatted, category, content } = fileData;
       const parts = [];
-      parts.push(`Archivo: ${name}`);
-      parts.push(`Tipo: ${type}`);
-      parts.push(`Tamaño: ${sizeFormatted}`);
-      parts.push(`Categoría: ${category}`);
+      parts.push(name);
+      parts.push(type);
+      parts.push(sizeFormatted);
 
       // Añadir detalles breves según la categoría
       if (category === 'pdf' && content?.pages) {
-        parts.push(`Páginas: ${content.pages}`);
-        if (content?.wordCount) parts.push(`Palabras: ${content.wordCount}`);
+        parts.push(`${content.pages} páginas`);
+        if (content?.wordCount) parts.push(`${content.wordCount} palabras`);
       } else if (category === 'csv' && content?.rows != null && content?.columns != null) {
-        parts.push(`Filas: ${content.rows}, Columnas: ${content.columns}`);
+        parts.push(`${content.rows} filas, ${content.columns} columnas`);
       } else if (category === 'json' && Array.isArray(content?.keys)) {
-        parts.push(`Claves: ${content.keys.slice(0, 8).join(', ')}${content.keys.length > 8 ? '…' : ''}`);
+        parts.push(`claves: ${content.keys.slice(0, 8).join(', ')}${content.keys.length > 8 ? '…' : ''}`);
       } else if (category === 'docx' && (content?.words || content?.lines)) {
-        if (content?.words) parts.push(`Palabras: ${content.words}`);
-        if (content?.lines) parts.push(`Líneas: ${content.lines}`);
+        if (content?.words) parts.push(`${content.words} palabras`);
+        if (content?.lines) parts.push(`${content.lines} líneas`);
       } else if (category === 'text' && (content?.lines || content?.characters)) {
-        parts.push(`Líneas: ${content.lines}, Caracteres: ${content.characters}`);
+        parts.push(`${content.lines} líneas, ${content.characters} caracteres`);
       } else if (category === 'xml' && content?.rootElement) {
-        parts.push(`Raíz: ${content.rootElement}`);
+        parts.push(`raíz: ${content.rootElement}`);
       }
 
-      return `Resumen de archivo — ${parts.join(' • ')}`;
+      return parts.join(' • ');
     } catch (e) {
       return '';
     }
@@ -230,9 +229,9 @@ class FileAnalysisService {
         const plain = this.extractPlainText(f.content, f.category);
         const segs = pickTopSegments(plain, maxPerFile);
 
-        let block = `Archivo: ${f.name}\n${summary}`;
+        let block = `${f.name}\n${summary}`;
         if (segs.length > 0) {
-          block += `\nFragmentos relevantes:\n\n\`\`\`\n${segs.join('\n---\n')}\n\`\`\``;
+          block += `\n\n\`\`\`\n${segs.join('\n---\n')}\n\`\`\``;
         }
 
         if (totalChars + block.length > maxChars) break;
