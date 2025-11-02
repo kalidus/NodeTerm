@@ -89,7 +89,8 @@ const SettingsDialog = ({
   exportTreeToJson,
   importTreeFromJson,
   sessionManager,
-  onMasterPasswordConfigured
+  onMasterPasswordConfigured,
+  onMasterPasswordChanged
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   
@@ -466,6 +467,12 @@ const SettingsDialog = ({
     setIsLoading(true);
     try {
       await secureStorage.changeMasterKey(currentPassword, newPassword);
+      
+      // Actualizar el estado en App.js con la nueva clave
+      if (onMasterPasswordChanged) {
+        onMasterPasswordChanged(newPassword);
+      }
+      
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');

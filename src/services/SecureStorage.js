@@ -248,17 +248,123 @@ class SecureStorage {
    * Cambia la clave maestra
    */
   async changeMasterKey(oldKey, newKey, sessionPassword = null) {
-    // Verificar clave antigua
-    try {
-      await this.loadSecureSessions(oldKey);
-    } catch (error) {
-      throw new Error('La clave maestra actual es incorrecta');
+    // Verificar clave antigua - intentar descifrar cualquier dato existente
+    let validKey = false;
+    let validationSuccess = [];
+    
+    // Intentar verificar con conexiones (más común)
+    const connectionsData = localStorage.getItem('connections_encrypted');
+    if (connectionsData) {
+      try {
+        await this.decryptData(JSON.parse(connectionsData), oldKey);
+        validKey = true;
+        validationSuccess.push('connections');
+      } catch (error) {
+        console.log('No se pudo validar con conexiones:', error.name);
+      }
     }
 
-    // Cargar sesiones con clave antigua y reencriptar con nueva
-    const sessions = await this.loadSecureSessions(oldKey);
-    await this.saveSecureSessions(sessions, newKey);
+    // Si conexiones no funcionaron, intentar con passwords
+    if (!validKey) {
+      const passwordsData = localStorage.getItem('passwords_encrypted');
+      if (passwordsData) {
+        try {
+          await this.decryptData(JSON.parse(passwordsData), oldKey);
+          validKey = true;
+          validationSuccess.push('passwords');
+        } catch (error) {
+          console.log('No se pudo validar con passwords:', error.name);
+        }
+      }
+    }
+
+    // Si aún no funciona, intentar con sesiones
+    if (!validKey) {
+      try {
+        await this.loadSecureSessions(oldKey);
+        validKey = true;
+        validationSuccess.push('sessions');
+      } catch (error) {
+        console.log('No se pudo validar con sesiones:', error.name);
+      }
+    }
+
+    // Si no hay datos encriptados pero hay master key guardada, asumir que es válida
+    if (!validKey && this.hasSavedMasterKey() && 
+        !connectionsData && 
+        !localStorage.getItem('passwords_encrypted') && 
+        !localStorage.getItem('nodeterm_secure_sessions')) {
+      console.log('No hay datos encriptados, pero hay master key guardada');
+      validKey = true;
+    }
+
+    if (!validKey) {
+      throw new Error('La clave maestra actual es incorrecta. No se pudo validar con ningún dato existente.');
+    }
+
+    console.log('Validación exitosa con:', validationSuccess.join(', '));
+
+    // Re-encriptar conexiones con clave nueva (si existen y se pudieron validar)
+    let reencryptedConnections = false;
+    if (connectionsData) {
+      try {
+        const decrypted = await this.decryptData(JSON.parse(connectionsData), oldKey);
+        const encrypted = await this.encryptData(decrypted, newKey);
+        localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
+        reencryptedConnections = true;
+        console.log('✅ Conexiones re-encriptadas correctamente');
+      } catch (error) {
+        console.error('❌ Error re-encriptando conexiones:', error);
+        // No fallar si las conexiones no se pueden re-encriptar, pero avisar
+        if (validationSuccess.includes('connections')) {
+          throw new Error(`Error al re-encriptar las conexiones: ${error.message}`);
+        }
+      }
+    }
+
+    // Re-encriptar passwords con clave nueva (si existen y se pudieron validar)
+    let reencryptedPasswords = false;
+    const passwordsData = localStorage.getItem('passwords_encrypted');
+    if (passwordsData) {
+      try {
+        const decrypted = await this.decryptData(JSON.parse(passwordsData), oldKey);
+        const encrypted = await this.encryptData(decrypted, newKey);
+        localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+        reencryptedPasswords = true;
+        console.log('✅ Passwords re-encriptados correctamente');
+      } catch (error) {
+        console.error('❌ Error re-encriptando passwords:', error);
+        // No fallar si los passwords no se pueden re-encriptar, pero avisar
+        if (validationSuccess.includes('passwords')) {
+          throw new Error(`Error al re-encriptar los passwords: ${error.message}`);
+        }
+      }
+    }
+
+    // Re-encriptar sesiones con clave nueva (si existen)
+    let reencryptedSessions = false;
+    try {
+      const sessions = await this.loadSecureSessions(oldKey);
+      await this.saveSecureSessions(sessions, newKey);
+      reencryptedSessions = true;
+      console.log('✅ Sesiones re-encriptadas correctamente');
+    } catch (error) {
+      // Si no hay sesiones o falla, no es un error crítico
+      if (error.message.includes('No hay clave maestra disponible')) {
+        console.log('ℹ️ No hay sesiones seguras para re-encriptar');
+      } else {
+        console.log('ℹ️ No se pudieron re-encriptar sesiones:', error.name);
+      }
+    }
+
+    // Verificar que al menos algo se re-encriptó o no había nada que re-encriptar
+    if (!reencryptedConnections && !reencryptedPasswords && !reencryptedSessions) {
+      console.log('ℹ️ No había datos para re-encriptar');
+    }
+
+    // Guardar la nueva clave maestra
     await this.saveMasterKey(newKey, sessionPassword);
+    console.log('✅ Clave maestra actualizada correctamente');
   }
 }
 

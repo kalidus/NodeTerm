@@ -209,6 +209,12 @@ const App = () => {
     setMasterKey(key);
     // Ahora los datos se empezarán a guardar encriptados
   }, []);
+
+  // Handler cuando se cambia master password desde Settings
+  const handleMasterPasswordChanged = useCallback((key) => {
+    setMasterKey(key);
+    // Actualizar el estado con la nueva clave después del cambio
+  }, []);
   
   // Lógica unificada de importación con deduplicación/merge y actualización de fuentes vinculadas
   const unifiedHandleImportComplete = async (importResult) => {
@@ -2116,6 +2122,7 @@ const App = () => {
         
         // Encriptación
         onMasterPasswordConfigured={handleMasterPasswordConfigured}
+        onMasterPasswordChanged={handleMasterPasswordChanged}
       />
 
       {/* Menú contextual del árbol de la sidebar */}
