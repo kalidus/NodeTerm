@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import TokenCounter from '../utils/tokenCounter';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -12,11 +12,11 @@ const AIPerformanceStats = ({
   isLoading = false,
   attachedFiles = []
 }) => {
-  const currentTheme = React.useMemo(() => {
+  const currentTheme = useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
   }, []);
 
-  const themeColors = React.useMemo(() => {
+  const themeColors = useMemo(() => {
     return {
       background: currentTheme.colors?.contentBackground || '#fafafa',
       textPrimary: currentTheme.colors?.sidebarText || '#ffffff',
@@ -30,7 +30,7 @@ const AIPerformanceStats = ({
   }, [currentTheme]);
 
   // Calcular contexto usado (tokens reales del historial + adjuntos)
-  const contextUsed = React.useMemo(() => {
+  const contextUsed = useMemo(() => {
     let totalContext = 0;
 
     // Sumar tokens del historial real
@@ -57,7 +57,9 @@ const AIPerformanceStats = ({
     return totalContext;
   }, [messages, attachedFiles]);
 
-  const contextPercent = Math.min(100, Math.round((contextUsed / contextLimit) * 100));
+  const contextPercent = useMemo(() => {
+    return Math.min(100, Math.round((contextUsed / contextLimit) * 100));
+  }, [contextUsed, contextLimit]);
   
   // Color del contador según el uso
   const getContextColor = (percent) => {
