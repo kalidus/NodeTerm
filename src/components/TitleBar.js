@@ -54,7 +54,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           }
         }
       } catch (error) {
-        console.error('Error loading passwords for search:', error);
+        // Si es OperationError, probablemente la clave maestra cambió o los datos están corruptos
+        if (error.name === 'OperationError') {
+          console.warn('No se pudieron cargar passwords encriptados. Puede ser que la clave maestra haya cambiado o los datos estén corruptos.');
+        } else {
+          console.error('Error loading passwords for search:', error);
+        }
         setPasswordNodes([]);
       }
     };
