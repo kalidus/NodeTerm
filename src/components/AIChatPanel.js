@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import DOMPurify from 'dompurify';
@@ -97,11 +97,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   }, []);
 
   // Obtener el tema actual
-  const currentTheme = React.useMemo(() => {
+  const currentTheme = useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
   }, [themeVersion]);
 
-  const themeColors = React.useMemo(() => {
+  const themeColors = useMemo(() => {
     return {
       background: currentTheme.colors?.contentBackground || '#fafafa',
       cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
@@ -223,6 +223,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       setDetectionConfidence(0);
     }
   }, [inputValue, analyzeFileTypes]);
+
+  // Calcular contextLimit basado en el modelo actual
+  const contextLimit = useMemo(() => {
+    if (!currentModel) return 16000;
+    const config = aiService.getModelPerformanceConfig(currentModel, modelType);
+    return config?.contextLimit || 16000;
+  }, [currentModel, modelType]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -2457,11 +2464,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           <AIPerformanceStats
             currentModel={currentModel}
             modelType={modelType}
-            contextLimit={React.useMemo(() => {
-              if (!currentModel) return 16000;
-              const config = aiService.getModelPerformanceConfig(currentModel, modelType);
-              return config?.contextLimit || 16000;
-            }, [currentModel, modelType])}
+            contextLimit={contextLimit}
             inputValue={inputValue}
             messages={messages}
             isLoading={isLoading}
