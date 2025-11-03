@@ -141,26 +141,36 @@ class ConversationService {
       return current;
     }
 
-    // Buscar si ya existe una conversación vacía reciente (últimos 5 minutos) con el mismo título
+    // Buscar si ya existe una conversación vacía con el mismo título
     const defaultTitle = title || this.generateDefaultTitle();
-    const recentEmptyConversation = Array.from(this.conversations.values())
-      .find(conv => 
-        isEmpty(conv) && 
-        conv.title === defaultTitle &&
-        (now - conv.createdAt) < 5 * 60 * 1000 // 5 minutos
-      );
+    
+    // Para el título por defecto "Nueva conversación", buscar TODAS las conversaciones vacías
+    // sin restricción de tiempo para evitar duplicados
+    // Para otros títulos, solo buscar las recientes (últimos 5 minutos)
+    const isDefaultTitle = defaultTitle === this.generateDefaultTitle();
+    const timeLimit = isDefaultTitle ? null : 5 * 60 * 1000; // 5 minutos solo para títulos personalizados
+    
+    const emptyConversations = Array.from(this.conversations.values())
+      .filter(conv => {
+        if (!isEmpty(conv) || conv.title !== defaultTitle) return false;
+        if (timeLimit === null) return true; // Sin límite para título por defecto
+        return (now - conv.createdAt) < timeLimit; // Límite de tiempo para otros títulos
+      })
+      .sort((a, b) => b.lastMessageAt - a.lastMessageAt); // Ordenar por más reciente
 
-    if (recentEmptyConversation) {
+    const emptyConversation = emptyConversations[0]; // Tomar la más reciente
+
+    if (emptyConversation) {
       // Reutilizar la conversación vacía existente
-      recentEmptyConversation.updatedAt = now;
-      recentEmptyConversation.lastMessageAt = now;
-      recentEmptyConversation.isActive = true;
-      if (modelId) recentEmptyConversation.modelId = modelId;
-      if (modelType) recentEmptyConversation.modelType = modelType;
-      this.currentConversationId = recentEmptyConversation.id;
+      emptyConversation.updatedAt = now;
+      emptyConversation.lastMessageAt = now;
+      emptyConversation.isActive = true;
+      if (modelId) emptyConversation.modelId = modelId;
+      if (modelType) emptyConversation.modelType = modelType;
+      this.currentConversationId = emptyConversation.id;
       this._lastCreationTimestamp = now;
       this.saveConversations();
-      return recentEmptyConversation;
+      return emptyConversation;
     }
 
     // Crear una nueva conversación en caso contrario
@@ -431,20 +441,34 @@ class ConversationService {
    */
   cleanupDuplicateConversations() {
     const conversations = Array.from(this.conversations.values());
-    const emptyConversations = conversations.filter(conv => conv.messages.length === 0);
+    const defaultTitle = this.generateDefaultTitle();
     
-    // Si hay más de una conversación vacía, eliminar las duplicadas
-    if (emptyConversations.length > 1) {
-      // Mantener solo la más reciente
-      const sortedEmpty = emptyConversations.sort((a, b) => b.createdAt - a.createdAt);
-      const toDelete = sortedEmpty.slice(1); // Eliminar todas excepto la primera
+    const isEmpty = (conv) => !conv || (
+      Array.isArray(conv.messages) && conv.messages.length === 0 &&
+      Array.isArray(conv.attachedFiles) && conv.attachedFiles.length === 0
+    );
+    
+    // Buscar todas las conversaciones vacías con el título por defecto "Nueva conversación"
+    const emptyDefaultConversations = conversations.filter(conv => 
+      isEmpty(conv) && conv.title === defaultTitle
+    );
+    
+    // Si hay más de una conversación vacía con el título por defecto, eliminar las duplicadas
+    if (emptyDefaultConversations.length > 1) {
+      // Mantener solo la más reciente (ordenar por lastMessageAt o createdAt)
+      const sortedEmpty = emptyDefaultConversations.sort((a, b) => 
+        (b.lastMessageAt || b.createdAt) - (a.lastMessageAt || a.createdAt)
+      );
+      const toDelete = sortedEmpty.slice(1); // Eliminar todas excepto la más reciente
       
       toDelete.forEach(conv => {
         this.conversations.delete(conv.id);
         this.removeFromIndex(conv.id);
+        // Limpiar también de favoritos si está ahí
+        this.favorites.delete(conv.id);
       });
       
-      this.saveConversations();
+      console.log(`🧹 [ConversationService] Eliminadas ${toDelete.length} conversaciones vacías duplicadas con título "${defaultTitle}"`);
     }
   }
 
