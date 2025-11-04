@@ -67,6 +67,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return false;
   }, []);
 
+  const looksLikeJsonStart = useCallback((text) => {
+    if (!text || typeof text !== 'string') return false;
+    const t = text.trimStart();
+    return t.startsWith('{') || t.startsWith('[') || t.startsWith('```');
+  }, []);
+
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
     marked.setOptions({
@@ -332,7 +338,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         },
         onStream: (streamData) => {
           // Si el contenido del stream parece un tool-call JSON, NO mostrarlo
-          if (looksLikeToolJson(streamData.fullResponse)) {
+          if (looksLikeToolJson(streamData.fullResponse) || looksLikeJsonStart(streamData.fullResponse)) {
             setMessages(prev => prev.map(msg => 
               msg.id === assistantMessageId ? { ...msg, content: '', streaming: true } : msg
             ));
