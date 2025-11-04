@@ -12,8 +12,10 @@ import AIConfigDialog from './AIConfigDialog';
 import FileTypeDetectionPanel from './FileTypeDetectionPanel';
 import FileUploader from './FileUploader';
 import AIPerformanceStats from './AIPerformanceStats';
+import MCPActiveTools from './MCPActiveTools';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
+import mcpClient from '../services/MCPClientService';
 
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
@@ -136,6 +138,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Asegurar que empezamos con estado limpio
     setMessages([]);
     setAttachedFiles([]);
+    
+    // Inicializar MCP client
+    mcpClient.initialize().catch(error => {
+      console.error('Error inicializando MCP client:', error);
+    });
   }, []);
 
   // Escuchar eventos del historial de conversaciones
@@ -2460,6 +2467,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             borderTop: `1px solid ${themeColors.borderColor}`
           }}
         >
+          {/* Herramientas MCP activas */}
+          <MCPActiveTools themeColors={themeColors} />
+          
           {/* Indicadores de rendimiento */}
           <AIPerformanceStats
             currentModel={currentModel}

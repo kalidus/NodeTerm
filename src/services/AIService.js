@@ -7,6 +7,7 @@ import { conversationService } from './ConversationService';
 import debugLogger from '../utils/debugLogger';
 
 import fileAnalysisService from './FileAnalysisService';
+import mcpClient from './MCPClientService';
 
 class AIService {
   constructor() {
@@ -1932,6 +1933,125 @@ class AIService {
       console.error('Error enviando mensaje a IA:', error);
       throw error;
     }
+  }
+
+  /**
+   * Inyectar contexto MCP (tools, resources, prompts) en los mensajes
+   */
+  async injectMCPContext() {
+    try {
+      // Verificar si hay MCPs activos
+      if (!mcpClient.hasActiveServers()) {
+        return { tools: [], resources: [], prompts: [], hasTools: false };
+      }
+
+      // Obtener tools disponibles
+      const tools = mcpClient.getAvailableTools();
+      const resources = mcpClient.getAvailableResources();
+      const prompts = mcpClient.getAvailablePrompts();
+
+      console.log(`🔌 [MCP] ${tools.length} tools, ${resources.length} resources, ${prompts.length} prompts disponibles`);
+
+      return {
+        tools,
+        resources,
+        prompts,
+        hasTools: tools.length > 0
+      };
+    } catch (error) {
+      console.error('[MCP] Error obteniendo contexto MCP:', error);
+      return { tools: [], resources: [], prompts: [], hasTools: false };
+    }
+  }
+
+  /**
+   * Convertir tools MCP a formato function calling del proveedor
+   */
+  convertMCPToolsToProviderFormat(tools, provider) {
+    if (!tools || tools.length === 0) return [];
+
+    return tools.map(tool => {
+      // Formato común para function calling
+      const toolDef = {
+        name: tool.name,
+        description: tool.description || `Herramienta ${tool.name} del servidor ${tool.serverId}`,
+        parameters: tool.inputSchema || { type: 'object', properties: {} }
+      };
+
+      // Adaptar según el proveedor
+      if (provider === 'openai') {
+        return {
+          type: 'function',
+          function: toolDef
+        };
+      } else if (provider === 'anthropic') {
+        return {
+          name: toolDef.name,
+          description: toolDef.description,
+          input_schema: toolDef.parameters
+        };
+      } else if (provider === 'google') {
+        return {
+          name: toolDef.name,
+          description: toolDef.description,
+          parameters: toolDef.parameters
+        };
+      }
+
+      return toolDef;
+    });
+  }
+
+  /**
+   * Generar system prompt con tools MCP (para modelos sin function calling nativo)
+   */
+  generateMCPSystemPrompt(tools) {
+    if (!tools || tools.length === 0) return '';
+
+    const toolsList = tools.map(t => 
+      `- ${t.name}: ${t.description || 'Sin descripción'}`
+    ).join('\n');
+
+    return `\n\nTienes acceso a las siguientes herramientas MCP:
+${toolsList}
+
+Para usar una herramienta, responde en el siguiente formato JSON:
+\`\`\`json
+{
+  "use_tool": "nombre_herramienta",
+  "arguments": { /* argumentos según el esquema */ }
+}
+\`\`\`
+
+Después de usar una herramienta, espera el resultado antes de continuar.`;
+  }
+
+  /**
+   * Detectar si la respuesta del modelo solicita usar una tool
+   */
+  detectToolCallInResponse(response) {
+    try {
+      // Buscar bloques JSON en la respuesta
+      const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
+      const match = jsonBlockRegex.exec(response);
+      
+      if (match) {
+        const jsonContent = match[1].trim();
+        const data = JSON.parse(jsonContent);
+        
+        if (data.use_tool && typeof data.use_tool === 'string') {
+          return {
+            toolName: data.use_tool,
+            arguments: data.arguments || {},
+            serverId: data.serverId || null
+          };
+        }
+      }
+    } catch (error) {
+      // No es un tool call válido
+    }
+    
+    return null;
   }
 
   /**

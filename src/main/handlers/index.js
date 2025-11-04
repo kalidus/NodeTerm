@@ -9,6 +9,7 @@ const { registerAppHandlers } = require('./app-handlers');
 const { registerSystemHandlers } = require('./system-handlers');
 const { registerGuacamoleHandlers } = require('./guacamole-handlers');
 const registerSSHHandlers = require('./ssh-handlers');
+const { registerMCPHandlers } = require('./mcp-handlers');
 
 /**
  * Registra todos los handlers del sistema
@@ -42,6 +43,9 @@ function registerAllHandlers(dependencies) {
   // Registrar handlers SSH
   registerSSHHandlers(dependencies);
   
+  // Registrar handlers MCP
+  registerMCPHandlers();
+  
   console.log('✅ Sistema: Handlers registrados');
 }
 
@@ -50,5 +54,6 @@ module.exports = {
   registerAppHandlers,
   registerSystemHandlers,
   registerGuacamoleHandlers,
-  registerSSHHandlers
+  registerSSHHandlers,
+  registerMCPHandlers
 };

@@ -7,6 +7,8 @@ import { ProgressBar } from 'primereact/progressbar';
 import { aiService } from '../services/AIService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import MCPManagerTab from './MCPManagerTab';
+import mcpClient from '../services/MCPClientService';
 
 // Definición de categorías de uso
 const USE_CASE_CATEGORIES = [
@@ -159,6 +161,10 @@ const AIConfigDialog = ({ visible, onHide }) => {
   useEffect(() => {
     if (visible) {
       loadConfig();
+      // Inicializar MCP client
+      mcpClient.initialize().catch(error => {
+        console.error('Error inicializando MCP client:', error);
+      });
     }
   }, [visible]);
 
@@ -3185,7 +3191,11 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="🌐 Ollama Remoto">
           {renderRemoteOllamaConfig()}
-        </TabPanel></TabView>
+        </TabPanel>
+        <TabPanel header="🔌 MCP Tools">
+          <MCPManagerTab themeColors={themeColors} />
+        </TabPanel>
+      </TabView>
       </div>
 
       {/* Diálogo de categoría */}
