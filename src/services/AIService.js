@@ -16,6 +16,8 @@ class AIService {
     this.apiKey = null;
     this.remoteOllamaUrl = null;
     this.performanceConfig = null; // Configuración manual de rendimiento
+    // Caché simple para los directorios permitidos de MCP (evita pedirlos repetidamente)
+    this.allowedDirectoriesCache = { value: null, fetchedAt: 0 };
     this.models = {
       remote: [
         { 
@@ -1965,6 +1967,44 @@ class AIService {
   }
 
   /**
+   * Obtener lista de directorios permitidos (con caché de 5 minutos)
+   */
+  async getAllowedDirectoriesCached() {
+    try {
+      const now = Date.now();
+      const TTL_MS = 5 * 60 * 1000; // 5 minutos
+      if (this.allowedDirectoriesCache.value && (now - this.allowedDirectoriesCache.fetchedAt) < TTL_MS) {
+        return this.allowedDirectoriesCache.value;
+      }
+
+      // Llamar a la tool solo si existe en el servidor filesystem
+      const tools = mcpClient.getAvailableTools() || [];
+      const hasFilesystem = tools.some(t => t.name === 'list_allowed_directories');
+      if (!hasFilesystem) return null;
+
+      const result = await mcpClient.callTool('list_allowed_directories', {});
+      let dirsText = null;
+      if (result && result.content && Array.isArray(result.content) && result.content.length > 0) {
+        const text = result.content[0].text || '';
+        // Formato esperado: "Allowed directories:\nC:\\path1"
+        const match = text.match(/Allowed directories:\s*([\s\S]+)/i);
+        if (match) {
+          dirsText = match[1].trim();
+        }
+      }
+
+      this.allowedDirectoriesCache = {
+        value: dirsText,
+        fetchedAt: now
+      };
+      return dirsText;
+    } catch (err) {
+      console.warn('⚠️ [MCP] No se pudieron cachear los directorios permitidos:', err.message);
+      return null;
+    }
+  }
+
+  /**
    * Convertir tools MCP a formato function calling del proveedor
    */
   convertMCPToolsToProviderFormat(tools, provider) {
@@ -2005,7 +2045,7 @@ class AIService {
   /**
    * Generar system prompt con tools MCP (para modelos sin function calling nativo)
    */
-  generateMCPSystemPrompt(tools) {
+  generateMCPSystemPrompt(tools, allowedDirsText = null) {
     if (!tools || tools.length === 0) return '';
 
     const toolsList = tools.map(t => {
@@ -2018,6 +2058,24 @@ class AIService {
   Parámetros: ${params}`;
     }).join('\n\n');
 
+    // Bloque explicativo de directorios permitidos, si está disponible
+    const allowedDirsInfo = allowedDirsText ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📂 DIRECTORIOS PERMITIDOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ IMPORTANTE: Solo puedes acceder a archivos dentro de estos directorios:
+
+${allowedDirsText}
+
+REGLAS CRÍTICAS:
+1. Usa SIEMPRE rutas completas dentro de los directorios anteriores
+2. No uses rutas relativas como "test.txt" o "./test.txt"
+3. Ejemplo correcto: { "path": "${allowedDirsText.split('\n')[0]}\\test.txt" }
+4. No llames a list_allowed_directories; ya tienes esta información
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : '';
+
     return `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔧 HERRAMIENTAS MCP DISPONIBLES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2025,7 +2083,7 @@ class AIService {
 Tienes acceso a las siguientes herramientas MCP que puedes usar para realizar acciones:
 
 ${toolsList}
-
+${allowedDirsInfo}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📝 CÓMO USAR HERRAMIENTAS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2172,6 +2230,18 @@ IMPORTANTE:
         const result = await mcpClient.callTool(currentToolCall.toolName, currentToolCall.arguments);
         
         console.log(`✅ [MCP] Resultado de ${currentToolCall.toolName}:`, result);
+        // Notificar a la UI inmediatamente con el resultado de la tool
+        if (callbacks && typeof callbacks.onToolResult === 'function') {
+          try {
+            callbacks.onToolResult({
+              toolName: currentToolCall.toolName,
+              args: currentToolCall.arguments,
+              result
+            });
+          } catch (cbErr) {
+            console.warn('⚠️ [MCP] onToolResult callback lanzó un error:', cbErr.message);
+          }
+        }
         
         // Formatear el resultado para el modelo
         const resultMessage = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2202,11 +2272,33 @@ Usa este resultado para responder al usuario. Si necesitas usar otra herramienta
         
         // Continuar la conversación con el resultado
         console.log(`🤖 [MCP] Enviando resultado al modelo para continuar...`);
+
+        // Recortar contexto para modelos locales: solo último user + resultado + regla breve
+        const resultUserMessage = conversationMessages[conversationMessages.length - 1]; // el que acabamos de añadir
+        let previousUserMessage = null;
+        for (let i = conversationMessages.length - 2; i >= 0; i--) {
+          if (conversationMessages[i].role === 'user') {
+            previousUserMessage = conversationMessages[i];
+            break;
+          }
+        }
+
+        const minimalSystem = {
+          role: 'system',
+          content: 'Responde en español, máximo dos frases. No uses JSON ni herramientas a menos que el usuario lo pida explícitamente.'
+        };
+
+        const trimmedMessages = [
+          minimalSystem,
+          ...(previousUserMessage ? [previousUserMessage] : []),
+          resultUserMessage
+        ];
+
         const response = await this.sendToLocalModelStreamingWithCallbacks(
-          modelId, 
-          conversationMessages, 
-          callbacks, 
-          options
+          modelId,
+          trimmedMessages,
+          callbacks,
+          { ...options, maxTokens: 200, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
         );
         
         // Añadir respuesta del modelo al historial
@@ -2254,11 +2346,20 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
         
         // Dar una última oportunidad al modelo de responder con el error
         try {
+          // Recortar también en caso de error
+          const errorUserMessage = conversationMessages[conversationMessages.length - 1];
+          let prevUserMsg = null;
+          for (let i = conversationMessages.length - 2; i >= 0; i--) {
+            if (conversationMessages[i].role === 'user') { prevUserMsg = conversationMessages[i]; break; }
+          }
+          const minimalSystem = { role: 'system', content: 'Explica brevemente el error en español. No uses JSON.' };
+          const trimmedOnError = [ minimalSystem, ...(prevUserMsg ? [prevUserMsg] : []), errorUserMessage ];
+
           const errorResponse = await this.sendToLocalModelStreamingWithCallbacks(
             modelId, 
-            conversationMessages, 
+            trimmedOnError, 
             callbacks, 
-            options
+            { ...options, maxTokens: 200, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
           );
           return errorResponse;
         } catch (recoveryError) {
@@ -2839,8 +2940,9 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
         
         if (mcpContext.hasTools) {
           console.log(`🔌 [MCP] Inyectando ${mcpContext.tools.length} herramientas en system prompt`);
-          
-          const toolsPrompt = this.generateMCPSystemPrompt(mcpContext.tools);
+          // Obtener directorios permitidos (cacheados) para instruir al modelo
+          const allowedDirs = await this.getAllowedDirectoriesCached();
+          const toolsPrompt = this.generateMCPSystemPrompt(mcpContext.tools, allowedDirs || null);
           
           // Buscar si ya hay un system message
           const systemIndex = messages.findIndex(m => m.role === 'system');

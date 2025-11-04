@@ -37,6 +37,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Estados avanzados para Fase 2
   const [currentStatus, setCurrentStatus] = useState(null);
   const [abortController, setAbortController] = useState(null);
+  const lastToolResultRef = useRef(null);
   
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -335,6 +336,39 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             provider: streamData.provider
           });
         },
+        onToolResult: (toolData) => {
+          // Extraer texto legible del resultado (evitar mostrar JSON crudo)
+          let resultText = '';
+          const res = toolData.result;
+          if (res && typeof res === 'object' && Array.isArray(res.content)) {
+            const textItems = res.content
+              .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
+              .map(it => it.text.trim());
+            resultText = textItems.join('\n');
+          } else if (typeof res === 'string') {
+            resultText = res;
+          } else {
+            try { resultText = JSON.stringify(res, null, 2); } catch { resultText = String(res ?? ''); }
+          }
+
+          // Guardar último resultado para posibles fallbacks del mensaje final
+          lastToolResultRef.current = { toolName: toolData.toolName, text: resultText };
+
+          const content = `🔧 ${toolData.toolName}: ${resultText}`;
+          const toolMsgId = Date.now();
+          setMessages(prev => {
+            const idx = prev.findIndex(m => m.id === assistantMessageId);
+            const arr = [...prev];
+            arr.splice(idx >= 0 ? idx : arr.length, 0, {
+              id: toolMsgId,
+              role: 'system',
+              content,
+              timestamp: toolMsgId,
+              metadata: { toolName: toolData.toolName, toolArgs: toolData.args, isToolResult: true }
+            });
+            return arr;
+          });
+        },
         onComplete: (data) => {
           const files = aiService.detectFilesInResponse(data.response, userMessage);
           
@@ -350,12 +384,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Calcular tokens reales de la respuesta
           const responseTokens = Math.ceil(data.response.length / 4);
           
+          // Si la respuesta está vacía, usar un fallback basado en el último resultado de tool
+          const safeResponse = (data.response && data.response.trim().length > 0)
+            ? data.response
+            : (() => {
+                const last = lastToolResultRef.current;
+                if (last && typeof last.text === 'string' && last.text.length > 0) {
+                  // Intentar sintetizar una frase breve
+                  const pathMatch = last.text.match(/wrote to\s+(.+)$/i);
+                  const path = pathMatch ? pathMatch[1] : '';
+                  return path ? `Hecho. Archivo creado en ${path}.` : `Hecho. ${last.text}`;
+                }
+                return 'Hecho.';
+              })();
+
           // Actualizar mensaje final con archivos asociados
           setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId ? {
               ...msg,
               id: assistantMessageObj.id,
-              content: data.response,
+              content: safeResponse,
               streaming: false,
               metadata: {
                 latency: data.latency,
@@ -1064,11 +1112,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const isStreaming = message.streaming;
     const hasContent = message.content && message.content.trim().length > 0;
 
-    // No renderizar mensajes vacíos en streaming (el indicador está arriba)
-    if (isStreaming && !hasContent) {
-      return null;
-    }
-
     return (
       <div
         key={message.id || `msg-${index}-${message.timestamp}`}
@@ -1111,7 +1154,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           <div 
             className="ai-md" 
             dangerouslySetInnerHTML={{ 
-              __html: isUser || isSystem ? message.content : renderMarkdown(message.content)
+              __html: (hasContent
+                ? (isUser || isSystem ? message.content : renderMarkdown(message.content))
+                : (isUser || isSystem ? '…' : renderMarkdown('…')))
             }}
             ref={(el) => {
               if (el && !isUser && !isSystem) {
