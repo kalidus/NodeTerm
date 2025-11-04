@@ -1,0 +1,354 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-11-04",
+  "categories": [
+    {
+      "id": "system",
+      "name": "Sistema",
+      "icon": "pi-desktop",
+      "description": "Herramientas para interactuar con el sistema de archivos y comandos"
+    },
+    {
+      "id": "development",
+      "name": "Desarrollo",
+      "icon": "pi-code",
+      "description": "Herramientas para desarrollo de software y control de versiones"
+    },
+    {
+      "id": "data",
+      "name": "Datos",
+      "icon": "pi-database",
+      "description": "Acceso y manipulación de bases de datos y estructuras de datos"
+    },
+    {
+      "id": "web",
+      "name": "Web",
+      "icon": "pi-globe",
+      "description": "Herramientas para interactuar con la web y APIs"
+    },
+    {
+      "id": "productivity",
+      "name": "Productividad",
+      "icon": "pi-calendar",
+      "description": "Herramientas para mejorar la productividad"
+    }
+  ],
+  "mcps": [
+    {
+      "id": "filesystem",
+      "name": "Filesystem",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "category": "system",
+      "icon": "pi-folder",
+      "description": "Acceso seguro al sistema de archivos. Permite leer, escribir y manipular archivos dentro de directorios específicos.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": true,
+      "configSchema": {
+        "allowedPaths": {
+          "type": "array",
+          "required": true,
+          "description": "Rutas permitidas para acceso",
+          "example": ["C:/Users/Documents", "/home/user/projects"]
+        }
+      },
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "create_directory",
+        "move_file",
+        "search_files"
+      ],
+      "useCases": [
+        "Leer y escribir archivos de código",
+        "Navegación del sistema de archivos",
+        "Búsqueda de archivos por patrón",
+        "Gestión de directorios de proyecto"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "package": "@modelcontextprotocol/server-github",
+      "category": "development",
+      "icon": "pi-github",
+      "description": "Interactuar con repositorios de GitHub: crear issues, pull requests, buscar código y gestionar repositorios.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "token": {
+          "type": "string",
+          "required": true,
+          "description": "Token de acceso personal de GitHub",
+          "secret": true
+        },
+        "owner": {
+          "type": "string",
+          "required": false,
+          "description": "Usuario u organización por defecto"
+        },
+        "repo": {
+          "type": "string",
+          "required": false,
+          "description": "Repositorio por defecto"
+        }
+      },
+      "tools": [
+        "create_issue",
+        "create_pull_request",
+        "search_repositories",
+        "search_code",
+        "get_file_contents",
+        "push_files"
+      ],
+      "useCases": [
+        "Crear issues desde conversaciones",
+        "Buscar código en repositorios",
+        "Gestionar pull requests",
+        "Automatizar workflows de Git"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite",
+      "package": "@modelcontextprotocol/server-sqlite",
+      "category": "data",
+      "icon": "pi-database",
+      "description": "Ejecutar consultas SQL sobre bases de datos SQLite. Acceso seguro con consultas read-only por defecto.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "databasePath": {
+          "type": "string",
+          "required": true,
+          "description": "Ruta a la base de datos SQLite",
+          "example": "C:/data/mydb.sqlite"
+        },
+        "readOnly": {
+          "type": "boolean",
+          "required": false,
+          "description": "Modo solo lectura (recomendado)",
+          "default": true
+        }
+      },
+      "tools": [
+        "execute_query",
+        "list_tables",
+        "describe_table",
+        "get_schema"
+      ],
+      "useCases": [
+        "Análisis de datos",
+        "Consultas SQL interactivas",
+        "Exploración de esquemas de BD",
+        "Generación de reports"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "package": "@modelcontextprotocol/server-postgres",
+      "category": "data",
+      "icon": "pi-database",
+      "description": "Conectar y consultar bases de datos PostgreSQL. Soporta queries complejas y análisis de datos.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": true,
+      "configSchema": {
+        "connectionString": {
+          "type": "string",
+          "required": true,
+          "description": "Connection string de PostgreSQL",
+          "secret": true,
+          "example": "postgresql://user:password@localhost:5432/dbname"
+        }
+      },
+      "tools": [
+        "execute_query",
+        "list_tables",
+        "describe_table",
+        "get_schema",
+        "explain_query"
+      ],
+      "useCases": [
+        "Análisis de datos empresariales",
+        "Consultas SQL avanzadas",
+        "Optimización de queries",
+        "Migración de datos"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "puppeteer",
+      "name": "Puppeteer",
+      "package": "@modelcontextprotocol/server-puppeteer",
+      "category": "web",
+      "icon": "pi-globe",
+      "description": "Automatizar navegación web con Puppeteer. Capturar screenshots, extraer datos y automatizar interacciones.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "navigate",
+        "screenshot",
+        "click",
+        "fill",
+        "extract_text",
+        "evaluate_js"
+      ],
+      "useCases": [
+        "Web scraping",
+        "Testing automatizado",
+        "Captura de screenshots",
+        "Automatización de tareas web"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch",
+      "package": "@modelcontextprotocol/server-fetch",
+      "category": "web",
+      "icon": "pi-download",
+      "description": "Realizar peticiones HTTP a APIs y sitios web. Soporta GET, POST y otros métodos HTTP.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "fetch_url",
+        "post_data",
+        "download_file"
+      ],
+      "useCases": [
+        "Consumir APIs REST",
+        "Descargar contenido web",
+        "Integración con servicios externos",
+        "Testing de endpoints"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "google-drive",
+      "name": "Google Drive",
+      "package": "@modelcontextprotocol/server-gdrive",
+      "category": "productivity",
+      "icon": "pi-google",
+      "description": "Acceder y gestionar archivos en Google Drive. Leer, escribir y buscar documentos.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": true,
+      "configSchema": {
+        "credentials": {
+          "type": "object",
+          "required": true,
+          "description": "Credenciales de Google Cloud OAuth",
+          "secret": true
+        }
+      },
+      "tools": [
+        "list_files",
+        "read_file",
+        "create_file",
+        "search_files",
+        "share_file"
+      ],
+      "useCases": [
+        "Sincronización de documentos",
+        "Gestión de archivos en la nube",
+        "Colaboración en documentos",
+        "Backup automático"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "package": "@modelcontextprotocol/server-slack",
+      "category": "productivity",
+      "icon": "pi-comments",
+      "description": "Enviar mensajes y gestionar canales de Slack. Automatizar notificaciones y comunicación.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "token": {
+          "type": "string",
+          "required": true,
+          "description": "Token de bot de Slack",
+          "secret": true
+        }
+      },
+      "tools": [
+        "send_message",
+        "list_channels",
+        "create_channel",
+        "upload_file",
+        "set_status"
+      ],
+      "useCases": [
+        "Notificaciones automáticas",
+        "Gestión de equipos",
+        "Compartir información",
+        "Bots de productividad"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "memory",
+      "name": "Memory",
+      "package": "@modelcontextprotocol/server-memory",
+      "category": "productivity",
+      "icon": "pi-bookmark",
+      "description": "Sistema de memoria persistente para el modelo. Guardar y recuperar información entre sesiones.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": false,
+      "tools": [
+        "store_memory",
+        "recall_memory",
+        "list_memories",
+        "delete_memory",
+        "search_memories"
+      ],
+      "useCases": [
+        "Recordar preferencias del usuario",
+        "Mantener contexto entre sesiones",
+        "Base de conocimiento personal",
+        "Aprendizaje acumulativo"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "package": "@modelcontextprotocol/server-git",
+      "category": "development",
+      "icon": "pi-sitemap",
+      "description": "Ejecutar comandos Git: commit, push, pull, branch y más. Control de versiones integrado.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "repositoryPath": {
+          "type": "string",
+          "required": true,
+          "description": "Ruta al repositorio Git",
+          "example": "C:/projects/myrepo"
+        }
+      },
+      "tools": [
+        "git_status",
+        "git_commit",
+        "git_push",
+        "git_pull",
+        "git_branch",
+        "git_log",
+        "git_diff"
+      ],
+      "useCases": [
+        "Automatizar commits",
+        "Gestión de ramas",
+        "Revisión de cambios",
+        "Workflows de desarrollo"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    }
+  ]
+}
+
