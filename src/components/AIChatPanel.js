@@ -57,6 +57,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Estado para MCP tools
   const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
 
+  // Detectar si un texto parece un tool-call JSON para NO mostrarlo en streaming
+  const looksLikeToolJson = useCallback((text) => {
+    if (!text || typeof text !== 'string') return false;
+    const head = text.slice(0, 1200);
+    if (/```\s*(json|tool|tool_call)/i.test(head)) return true;
+    if (/\"use_tool\"\s*:\s*\"/i.test(head)) return true;
+    if (/\"tool\"\s*:\s*\"/i.test(head)) return true;
+    return false;
+  }, []);
+
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
     marked.setOptions({
@@ -321,14 +331,21 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           setCurrentStatus(statusData);
         },
         onStream: (streamData) => {
-          // Actualizar mensaje con contenido streaming
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId ? {
-              ...msg,
-              content: streamData.fullResponse,
-              streaming: true
-            } : msg
-          ));
+          // Si el contenido del stream parece un tool-call JSON, NO mostrarlo
+          if (looksLikeToolJson(streamData.fullResponse)) {
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId ? { ...msg, content: '', streaming: true } : msg
+            ));
+          } else {
+            // Actualizar mensaje con contenido streaming normal
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId ? {
+                ...msg,
+                content: streamData.fullResponse,
+                streaming: true
+              } : msg
+            ));
+          }
           setCurrentStatus({
             status: 'streaming',
             message: 'Recibiendo respuesta...',
@@ -354,7 +371,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Guardar último resultado para posibles fallbacks del mensaje final
           lastToolResultRef.current = { toolName: toolData.toolName, text: resultText };
 
-          const content = `🔧 ${toolData.toolName}: ${resultText}`;
+          // Mensaje minimalista y bonito (sin rutas)
+          const lower = resultText.toLowerCase();
+          let pretty = 'Acción completada';
+          if (toolData.toolName === 'write_file') {
+            pretty = lower.includes('successfully') || lower.includes('wrote') ? 'Archivo creado' : 'Escritura completada';
+          } else if (toolData.toolName === 'edit_file') {
+            pretty = 'Archivo editado';
+          } else if (toolData.toolName === 'create_directory') {
+            pretty = 'Directorio creado';
+          } else if (toolData.toolName === 'move_file') {
+            pretty = 'Archivo movido';
+          } else if (toolData.toolName === 'list_directory' || toolData.toolName === 'list_directory_with_sizes') {
+            pretty = 'Directorio listado';
+          } else if (toolData.toolName === 'directory_tree') {
+            pretty = 'Árbol generado';
+          }
+          const content = `🔧 ${toolData.toolName} · ${pretty}`;
           const toolMsgId = Date.now();
           setMessages(prev => {
             const idx = prev.findIndex(m => m.id === assistantMessageId);
@@ -364,7 +397,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               role: 'system',
               content,
               timestamp: toolMsgId,
-              metadata: { toolName: toolData.toolName, toolArgs: toolData.args, isToolResult: true }
+              metadata: { toolName: toolData.toolName, toolArgs: toolData.args, isToolResult: true },
+              subtle: true
             });
             return arr;
           });
@@ -1111,6 +1145,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const isSystem = message.role === 'system';
     const isStreaming = message.streaming;
     const hasContent = message.content && message.content.trim().length > 0;
+    const isToolResult = !!(message.metadata && message.metadata.isToolResult);
+
+    // No renderizar el placeholder si está en streaming y aún no hay contenido
+    if (isStreaming && !hasContent) {
+      return null;
+    }
 
     return (
       <div
@@ -1129,34 +1169,34 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''} ${message.subtle ? 'subtle' : ''}`}
           style={{
             width: isUser ? 'auto' : '100%',
-            background: message.subtle 
-              ? 'rgba(255, 255, 255, 0.02)' // Muy sutil para notificaciones de contexto
-              : isSystem
-              ? 'rgba(255, 107, 53, 0.1)'
-              : isUser
-              ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
-              : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
+            background: isToolResult
+              ? 'transparent'
+              : message.subtle 
+                ? 'rgba(255, 255, 255, 0.02)'
+                : isSystem
+                  ? 'rgba(255, 107, 53, 0.1)'
+                  : isUser
+                    ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
+                    : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             color: message.subtle 
-              ? 'rgba(255, 255, 255, 0.6)' // Texto más tenue para notificaciones sutiles
+              ? 'rgba(255, 255, 255, 0.6)'
               : themeColors.textPrimary,
-            border: message.subtle 
-              ? '1px solid rgba(255, 255, 255, 0.05)' // Borde muy sutil
-              : `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
+            border: isToolResult
+              ? 'none'
+              : message.subtle 
+                ? '1px solid rgba(255, 255, 255, 0.05)'
+                : `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
             borderRadius: message.subtle ? '6px' : '8px',
-            padding: message.subtle 
-              ? '0.3rem 0.5rem' // Padding más pequeño para notificaciones sutiles
-              : '0.6rem 0.8rem',
-            fontSize: message.subtle ? '0.8rem' : undefined, // Texto más pequeño
-            fontStyle: message.subtle ? 'italic' : undefined, // Cursiva para dar sensación de meta-información
-            opacity: message.subtle ? '0.8' : '1' // Ligeramente transparente
+            padding: isToolResult ? '0 0 0.2rem 0' : (message.subtle ? '0.3rem 0.5rem' : '0.6rem 0.8rem'),
+            fontSize: message.subtle ? '0.8rem' : undefined,
+            fontStyle: isToolResult ? 'normal' : (message.subtle ? 'italic' : undefined),
+            opacity: message.subtle ? '0.8' : '1'
           }}
         >
           <div 
             className="ai-md" 
             dangerouslySetInnerHTML={{ 
-              __html: (hasContent
-                ? (isUser || isSystem ? message.content : renderMarkdown(message.content))
-                : (isUser || isSystem ? '…' : renderMarkdown('…')))
+              __html: isUser || isSystem ? message.content : renderMarkdown(message.content)
             }}
             ref={(el) => {
               if (el && !isUser && !isSystem) {
