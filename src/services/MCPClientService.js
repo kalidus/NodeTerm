@@ -392,6 +392,50 @@ class MCPClientService {
   }
 
   /**
+   * Llamar a una tool MCP
+   */
+  async callTool(toolName, args = {}) {
+    try {
+      console.log(`🔧 [MCP Client] Llamando a tool: ${toolName}`);
+      console.log(`   Argumentos:`, args);
+      
+      // Buscar la tool en el cache para obtener el serverId
+      const tool = this.toolsCache.find(t => t.name === toolName);
+      
+      if (!tool) {
+        console.error(`❌ [MCP Client] Tool no encontrado: ${toolName}`);
+        throw new Error(`Tool no encontrado: ${toolName}`);
+      }
+      
+      const serverId = tool.serverId;
+      console.log(`   Servidor: ${serverId}`);
+      
+      // Verificar que el servidor esté activo
+      const server = this.servers.find(s => s.id === serverId);
+      if (!server || !server.running) {
+        console.error(`❌ [MCP Client] Servidor no está activo: ${serverId}`);
+        throw new Error(`El servidor MCP ${serverId} no está activo`);
+      }
+      
+      // Llamar a la tool via IPC
+      const result = await window.electron.mcp.callTool(serverId, toolName, args);
+      
+      if (result.success) {
+        console.log(`✅ [MCP Client] Tool ${toolName} ejecutado correctamente`);
+        console.log(`   Resultado:`, result.result);
+        this.notifyListeners('tool-called', { serverId, toolName, args, result: result.result });
+        return result.result;
+      } else {
+        console.error(`❌ [MCP Client] Error ejecutando tool ${toolName}:`, result.error);
+        throw new Error(result.error || `Error ejecutando tool ${toolName}`);
+      }
+    } catch (error) {
+      console.error(`[MCP Client] Error en callTool:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Obtener un resource específico
    */
   async getResource(serverId, resourceUri) {

@@ -52,22 +52,37 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Estados para archivos adjuntos
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showFileUploader, setShowFileUploader] = useState(false);
+  
+  // Estado para MCP tools
+  const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
 
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
     marked.setOptions({
       highlight: function(code, lang) {
+        // Ignorar lenguajes especiales de MCP (tool, tool_call) para evitar warnings
+        const mcpLangs = ['tool', 'tool_call', 'mcp'];
+        if (lang && mcpLangs.includes(lang.toLowerCase())) {
+          // Tratarlos como JSON
+          try {
+            return hljs.highlight(code, { language: 'json' }).value;
+          } catch (err) {
+            return code;
+          }
+        }
+        
         if (lang && hljs.getLanguage(lang)) {
           try {
             return hljs.highlight(code, { language: lang }).value;
           } catch (err) {
-            console.error('Error highlighting code:', err);
+            // Suprimir error en consola para lenguajes desconocidos
+            return code;
           }
         }
         try {
           return hljs.highlightAuto(code).value;
         } catch (err) {
-          console.error('Error auto-highlighting code:', err);
+          // Suprimir error en consola
           return code;
         }
       },
@@ -416,7 +431,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // Enviar solo el prompt del usuario; el contexto de archivos se inyecta
       // de forma efímera en el servicio de IA (RAG ligero)
       await aiService.sendMessageWithCallbacks(userMessage, callbacks, {
-        signal: controller.signal
+        signal: controller.signal,
+        mcpEnabled: mcpToolsEnabled // Pasar estado de MCP
       });
 
     } catch (error) {
@@ -1936,6 +1952,35 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               <i className="pi pi-plus" style={{ fontSize: '0.8rem' }} />
             </button>
 
+            {/* Botón toggle MCP Tools */}
+            <button
+              onClick={() => setMcpToolsEnabled(!mcpToolsEnabled)}
+              style={{
+                background: mcpToolsEnabled ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)',
+                border: `1px solid ${mcpToolsEnabled ? 'rgba(255, 152, 0, 0.4)' : themeColors.borderColor}`,
+                borderRadius: '6px',
+                padding: '0.4rem 0.6rem',
+                color: mcpToolsEnabled ? '#ff9800' : themeColors.textSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                width: '32px',
+                height: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = mcpToolsEnabled ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255,255,255,0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = mcpToolsEnabled ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)';
+              }}
+              title={mcpToolsEnabled ? 'MCP Tools Activado' : 'MCP Tools Desactivado'}
+            >
+              <i className="pi pi-wrench" style={{ fontSize: '0.8rem' }} />
+            </button>
+
             {/* Botón para abrir en pestaña nueva */}
             <button
               onClick={handleOpenInTab}
@@ -2063,16 +2108,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}cc 100%)`,
+                  background: currentStatus?.status === 'tool-execution' 
+                    ? `linear-gradient(135deg, #ff9800 0%, #ff9800cc 100%)`
+                    : currentStatus?.status === 'tool-error'
+                    ? `linear-gradient(135deg, #f44336 0%, #f44336cc 100%)`
+                    : `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}cc 100%)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: `0 2px 8px ${themeColors.primaryColor}40`
+                  boxShadow: currentStatus?.status === 'tool-execution'
+                    ? `0 2px 8px rgba(255, 152, 0, 0.4)`
+                    : currentStatus?.status === 'tool-error'
+                    ? `0 2px 8px rgba(244, 67, 54, 0.4)`
+                    : `0 2px 8px ${themeColors.primaryColor}40`
                 }}>
                   {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {currentStatus?.status === 'tool-execution' && <i className="pi pi-wrench pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {currentStatus?.status === 'tool-error' && <i className="pi pi-exclamation-triangle" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                 </div>
               </div>
@@ -2092,36 +2147,64 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                    currentStatus?.status === 'generating' ? 'Generando respuesta...' :
                    currentStatus?.status === 'streaming' ? 'Recibiendo respuesta...' :
                    currentStatus?.status === 'retrying' ? 'Reintentando...' :
+                   currentStatus?.status === 'tool-execution' ? (
+                     <span>
+                       🔧 Ejecutando: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
+                       {currentStatus?.iteration && ` (${currentStatus.iteration}/${currentStatus.maxIterations})`}
+                     </span>
+                   ) :
+                   currentStatus?.status === 'tool-error' ? (
+                     <span style={{ color: '#f44336' }}>
+                       ❌ Error en: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
+                     </span>
+                   ) :
                    'Procesando...'}
                   
-                  {/* Puntos animados más pequeños */}
-                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                    <span style={{ 
-                      width: '3px', 
-                      height: '3px', 
-                      borderRadius: '50%', 
-                      background: themeColors.primaryColor,
-                      animation: 'dot-pulse 1.4s ease-in-out infinite',
-                      animationDelay: '0s'
-                    }}></span>
-                    <span style={{ 
-                      width: '3px', 
-                      height: '3px', 
-                      borderRadius: '50%', 
-                      background: themeColors.primaryColor,
-                      animation: 'dot-pulse 1.4s ease-in-out infinite',
-                      animationDelay: '0.2s'
-                    }}></span>
-                    <span style={{ 
-                      width: '3px', 
-                      height: '3px', 
-                      borderRadius: '50%', 
-                      background: themeColors.primaryColor,
-                      animation: 'dot-pulse 1.4s ease-in-out infinite',
-                      animationDelay: '0.4s'
-                    }}></span>
-                  </div>
+                  {/* Puntos animados más pequeños - no mostrar durante tool execution */}
+                  {currentStatus?.status !== 'tool-execution' && currentStatus?.status !== 'tool-error' && (
+                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                      <span style={{ 
+                        width: '3px', 
+                        height: '3px', 
+                        borderRadius: '50%', 
+                        background: themeColors.primaryColor,
+                        animation: 'dot-pulse 1.4s ease-in-out infinite',
+                        animationDelay: '0s'
+                      }}></span>
+                      <span style={{ 
+                        width: '3px', 
+                        height: '3px', 
+                        borderRadius: '50%', 
+                        background: themeColors.primaryColor,
+                        animation: 'dot-pulse 1.4s ease-in-out infinite',
+                        animationDelay: '0.2s'
+                      }}></span>
+                      <span style={{ 
+                        width: '3px', 
+                        height: '3px', 
+                        borderRadius: '50%', 
+                        background: themeColors.primaryColor,
+                        animation: 'dot-pulse 1.4s ease-in-out infinite',
+                        animationDelay: '0.4s'
+                      }}></span>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Información adicional de tool */}
+                {currentStatus?.status === 'tool-execution' && currentStatus?.toolArgs && (
+                  <div style={{
+                    fontSize: '0.7rem',
+                    color: themeColors.textSecondary,
+                    marginTop: '0.2rem',
+                    opacity: 0.8
+                  }}>
+                    {Object.keys(currentStatus.toolArgs).length > 0 
+                      ? `Con ${Object.keys(currentStatus.toolArgs).length} parámetro(s)`
+                      : 'Sin parámetros'
+                    }
+                  </div>
+                )}
               </div>
             </div>
 
