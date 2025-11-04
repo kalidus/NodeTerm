@@ -2008,50 +2008,284 @@ class AIService {
   generateMCPSystemPrompt(tools) {
     if (!tools || tools.length === 0) return '';
 
-    const toolsList = tools.map(t => 
-      `- ${t.name}: ${t.description || 'Sin descripción'}`
-    ).join('\n');
+    const toolsList = tools.map(t => {
+      const params = t.inputSchema?.properties 
+        ? Object.keys(t.inputSchema.properties).join(', ')
+        : 'ninguno';
+      
+      return `- **${t.name}** (${t.serverId || 'MCP'})
+  Descripción: ${t.description || 'Sin descripción'}
+  Parámetros: ${params}`;
+    }).join('\n\n');
 
-    return `\n\nTienes acceso a las siguientes herramientas MCP:
+    return `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 HERRAMIENTAS MCP DISPONIBLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tienes acceso a las siguientes herramientas MCP que puedes usar para realizar acciones:
+
 ${toolsList}
 
-Para usar una herramienta, responde en el siguiente formato JSON:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 CÓMO USAR HERRAMIENTAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Para usar una herramienta, responde con un bloque de código JSON. Puedes usar cualquiera de estos formatos:
+
+FORMATO 1 (RECOMENDADO):
 \`\`\`json
 {
-  "use_tool": "nombre_herramienta",
-  "arguments": { /* argumentos según el esquema */ }
+  "tool": "nombre_herramienta",
+  "arguments": {
+    "parametro1": "valor1",
+    "parametro2": "valor2"
+  }
 }
 \`\`\`
 
-Después de usar una herramienta, espera el resultado antes de continuar.`;
+FORMATO 2 (ALTERNATIVO):
+\`\`\`json
+{
+  "use_tool": "nombre_herramienta",
+  "arguments": {
+    "parametro1": "valor1"
+  }
+}
+\`\`\`
+
+IMPORTANTE:
+- Usa herramientas cuando el usuario solicite acciones específicas
+- Después de solicitar una herramienta, recibirás el resultado automáticamente
+- Puedes usar múltiples herramientas en secuencia si es necesario
+- Si no necesitas una herramienta, responde normalmente sin JSON
+- SOLO responde con JSON cuando quieras usar una herramienta
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
   }
 
   /**
    * Detectar si la respuesta del modelo solicita usar una tool
    */
   detectToolCallInResponse(response) {
+    if (!response || typeof response !== 'string') return null;
+    
     try {
-      // Buscar bloques JSON en la respuesta
-      const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
-      const match = jsonBlockRegex.exec(response);
+      // Estrategia 1: Buscar bloques JSON con ```json, ```tool, ```tool_call
+      const jsonBlockRegex = /```(?:json|tool|tool_call)?\s*([\s\S]*?)```/gi;
+      let match = jsonBlockRegex.exec(response);
       
       if (match) {
         const jsonContent = match[1].trim();
         const data = JSON.parse(jsonContent);
         
+        // Soportar múltiples formatos de tool call
+        // Formato 1: { "use_tool": "name", "arguments": {...} }
         if (data.use_tool && typeof data.use_tool === 'string') {
+          console.log('🔍 [MCP] Tool call detectado en bloque JSON (formato use_tool)');
           return {
             toolName: data.use_tool,
             arguments: data.arguments || {},
-            serverId: data.serverId || null
+            serverId: data.serverId || data.server || null
+          };
+        }
+        
+        // Formato 2: { "tool": "name", "arguments": {...} }
+        if (data.tool && typeof data.tool === 'string') {
+          console.log('🔍 [MCP] Tool call detectado en bloque JSON (formato tool)');
+          return {
+            toolName: data.tool,
+            arguments: data.arguments || {},
+            serverId: data.serverId || data.server || null
+          };
+        }
+      }
+      
+      // Estrategia 2: Buscar JSON sin bloques de código (para modelos que no usan backticks)
+      // Buscar tanto "use_tool" como "tool"
+      const jsonRegex = /\{[\s\S]*(?:"use_tool"|"tool")[\s\S]*\}/gi;
+      match = jsonRegex.exec(response);
+      
+      if (match) {
+        const data = JSON.parse(match[0]);
+        
+        // Formato 1: use_tool
+        if (data.use_tool && typeof data.use_tool === 'string') {
+          console.log('🔍 [MCP] Tool call detectado en JSON directo (formato use_tool)');
+          return {
+            toolName: data.use_tool,
+            arguments: data.arguments || {},
+            serverId: data.serverId || data.server || null
+          };
+        }
+        
+        // Formato 2: tool
+        if (data.tool && typeof data.tool === 'string') {
+          console.log('🔍 [MCP] Tool call detectado en JSON directo (formato tool)');
+          return {
+            toolName: data.tool,
+            arguments: data.arguments || {},
+            serverId: data.serverId || data.server || null
           };
         }
       }
     } catch (error) {
       // No es un tool call válido
+      console.log('⚠️ [MCP] Error parseando posible tool call:', error.message);
     }
     
     return null;
+  }
+
+  /**
+   * Manejar loop de tool calls para modelos locales (system prompt)
+   */
+  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations = 5) {
+    let iteration = 0;
+    let currentToolCall = toolCall;
+    let conversationMessages = [...messages];
+    
+    console.log(`🔄 [MCP] Iniciando loop de tool calls (máx ${maxIterations} iteraciones)`);
+    
+    while (currentToolCall && iteration < maxIterations) {
+      iteration++;
+      
+      console.log(`🔧 [MCP] Iteración ${iteration}/${maxIterations} - Ejecutando: ${currentToolCall.toolName}`);
+      console.log(`   Argumentos:`, currentToolCall.arguments);
+      
+      // Callback de estado: ejecutando herramienta
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'tool-execution',
+          message: `🔧 Ejecutando herramienta: ${currentToolCall.toolName}...`,
+          model: modelId,
+          provider: 'local',
+          toolName: currentToolCall.toolName,
+          toolArgs: currentToolCall.arguments,
+          iteration,
+          maxIterations
+        });
+      }
+      
+      try {
+        // Ejecutar la tool via MCP
+        console.log(`📡 [MCP] Llamando a mcpClient.callTool("${currentToolCall.toolName}", ...)...`);
+        const result = await mcpClient.callTool(currentToolCall.toolName, currentToolCall.arguments);
+        
+        console.log(`✅ [MCP] Resultado de ${currentToolCall.toolName}:`, result);
+        
+        // Formatear el resultado para el modelo
+        const resultMessage = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 RESULTADO DE HERRAMIENTA: ${currentToolCall.toolName}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${typeof result === 'object' ? JSON.stringify(result, null, 2) : result}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Usa este resultado para responder al usuario. Si necesitas usar otra herramienta, puedes hacerlo.`;
+        
+        // Añadir resultado como user message
+        conversationMessages.push({
+          role: 'user',
+          content: resultMessage
+        });
+        
+        // Callback de estado: procesando resultado
+        if (callbacks.onStatus) {
+          callbacks.onStatus({
+            status: 'generating',
+            message: `Procesando resultado de ${currentToolCall.toolName}...`,
+            model: modelId,
+            provider: 'local'
+          });
+        }
+        
+        // Continuar la conversación con el resultado
+        console.log(`🤖 [MCP] Enviando resultado al modelo para continuar...`);
+        const response = await this.sendToLocalModelStreamingWithCallbacks(
+          modelId, 
+          conversationMessages, 
+          callbacks, 
+          options
+        );
+        
+        // Añadir respuesta del modelo al historial
+        conversationMessages.push({
+          role: 'assistant',
+          content: response
+        });
+        
+        // Verificar si hay otro tool call en la nueva respuesta
+        currentToolCall = this.detectToolCallInResponse(response);
+        if (!currentToolCall) {
+          console.log(`✅ [MCP] Loop finalizado - respuesta final del modelo`);
+          return response; // Respuesta final sin más tool calls
+        }
+        
+        console.log(`🔄 [MCP] Nuevo tool call detectado, continuando loop...`);
+      } catch (error) {
+        console.error(`❌ [MCP] Error ejecutando tool ${currentToolCall.toolName}:`, error);
+        
+        // Callback de error en tool
+        if (callbacks.onStatus) {
+          callbacks.onStatus({
+            status: 'tool-error',
+            message: `Error en herramienta ${currentToolCall.toolName}: ${error.message}`,
+            model: modelId,
+            provider: 'local',
+            toolName: currentToolCall.toolName,
+            error: error.message
+          });
+        }
+        
+        // Informar al modelo del error
+        conversationMessages.push({
+          role: 'user',
+          content: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ERROR EN HERRAMIENTA: ${currentToolCall.toolName}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${error.message}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
+        });
+        
+        // Dar una última oportunidad al modelo de responder con el error
+        try {
+          const errorResponse = await this.sendToLocalModelStreamingWithCallbacks(
+            modelId, 
+            conversationMessages, 
+            callbacks, 
+            options
+          );
+          return errorResponse;
+        } catch (recoveryError) {
+          // Si falla la recuperación, devolver mensaje de error
+          throw new Error(`Error ejecutando herramienta ${currentToolCall.toolName}: ${error.message}`);
+        }
+      }
+    }
+    
+    // Si llegamos aquí, excedimos las iteraciones máximas
+    console.warn(`⚠️ [MCP] Límite de iteraciones alcanzado (${maxIterations})`);
+    
+    if (callbacks.onStatus) {
+      callbacks.onStatus({
+        status: 'warning',
+        message: `Límite de herramientas alcanzado (${maxIterations} iteraciones)`,
+        model: modelId,
+        provider: 'local'
+      });
+    }
+    
+    // Retornar la última respuesta del modelo
+    const lastAssistantMessage = conversationMessages
+      .reverse()
+      .find(m => m.role === 'assistant');
+    
+    return lastAssistantMessage?.content || 'Lo siento, alcancé el límite de uso de herramientas.';
   }
 
   /**
@@ -2591,10 +2825,37 @@ Después de usar una herramienta, espera el resultado antes de continuar.`;
     }
 
     try {
-      const messages = conversationMessages.map(msg => ({
+      let messages = conversationMessages.map(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
         content: msg.content
       }));
+
+      // 🔌 INYECTAR TOOLS MCP EN SYSTEM PROMPT (si no está desactivado)
+      const mcpEnabled = options.mcpEnabled !== false; // Por defecto true
+      let mcpContext = { tools: [], resources: [], prompts: [], hasTools: false };
+      
+      if (mcpEnabled) {
+        mcpContext = await this.injectMCPContext();
+        
+        if (mcpContext.hasTools) {
+          console.log(`🔌 [MCP] Inyectando ${mcpContext.tools.length} herramientas en system prompt`);
+          
+          const toolsPrompt = this.generateMCPSystemPrompt(mcpContext.tools);
+          
+          // Buscar si ya hay un system message
+          const systemIndex = messages.findIndex(m => m.role === 'system');
+          if (systemIndex >= 0) {
+            // Añadir tools al system message existente
+            messages[systemIndex].content += toolsPrompt;
+          } else {
+            // Crear nuevo system message al inicio
+            messages.unshift({
+              role: 'system',
+              content: toolsPrompt
+            });
+          }
+        }
+      }
 
       const ollamaUrl = this.getOllamaUrl();
       
@@ -2604,16 +2865,29 @@ Después de usar una herramienta, espera el resultado antes de continuar.`;
           status: 'connecting',
           message: `Conectando con ${model.name} local...`,
           model: model.name,
-          provider: 'local'
+          provider: 'local',
+          mcpEnabled: mcpContext.hasTools
         });
       }
       
       // Usar streaming si está habilitado
+      let response;
       if (options.useStreaming) {
-        return await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, options);
+        response = await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, options);
       } else {
-        return await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, options);
+        response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, options);
       }
+      
+      // 🔧 DETECTAR SI LA RESPUESTA ES UN TOOL CALL
+      if (mcpContext.hasTools) {
+        const toolCall = this.detectToolCallInResponse(response);
+        if (toolCall) {
+          console.log('🔧 [MCP] Tool call detectado:', toolCall);
+          return await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
+        }
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error llamando a modelo local:', error);
       
