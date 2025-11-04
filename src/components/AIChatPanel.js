@@ -683,6 +683,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const handleLoadConversation = (conversationId) => {
     const conversation = conversationService.loadConversation(conversationId);
     if (conversation) {
+      console.log(`📂 Cargando conversación: "${conversation.title}" con ${conversation.messages?.length || 0} mensajes`);
+      if (conversation.messages && conversation.messages.length > 0) {
+        const roleCount = {};
+        conversation.messages.forEach((msg, idx) => {
+          roleCount[msg.role] = (roleCount[msg.role] || 0) + 1;
+          // ⚠️ LOG CRÍTICO - Mostrar contenido de cada mensaje
+          const contentPreview = msg.content ? `"${msg.content.substring(0, 50)}..."` : 'NULL/UNDEFINED';
+          const hasContent = !!(msg.content && msg.content.trim().length > 0);
+          console.log(`   Msg ${idx}: role="${msg.role}", content=${contentPreview}, hasContent=${hasContent}`);
+        });
+        console.log(`   Desglose:`, roleCount);
+      }
+      
       setCurrentConversationId(conversation.id);
       setConversationTitle(conversation.title);
       setMessages(conversation.messages.map(msg => ({
@@ -695,6 +708,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // Cargar archivos adjuntos de la conversación
       const attachedFiles = conversationService.getAttachedFilesForConversation(conversationId);
       setAttachedFiles(attachedFiles || []);
+    } else {
+      console.error(`❌ No se encontró la conversación con ID: ${conversationId}`);
     }
   };
 

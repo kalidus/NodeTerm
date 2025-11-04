@@ -58,6 +58,7 @@ class ConversationService {
         normalize(last.content) === normalize(current.content)
       ) {
         // Duplicado consecutivo: omitir
+        console.warn(`⚠️ Deduplicando mensaje duplicado: role=${current.role}, content length=${current.content?.length || 0}`);
         continue;
       }
       result.push(current);
@@ -77,6 +78,7 @@ class ConversationService {
       if (!conversation || !Array.isArray(conversation.messages)) return;
 
       let messagesChanged = false;
+      const initialCount = conversation.messages.length;
 
       // Limpiar bloques legacy en mensajes de usuario
       const sanitizedMessages = conversation.messages.map((msg) => {
@@ -93,6 +95,7 @@ class ConversationService {
       // Deduplicar consecutivos
       const deduped = this.deduplicateConsecutiveMessages(sanitizedMessages);
       if (deduped.length !== conversation.messages.length || messagesChanged) {
+        console.log(`📊 Conversación "${conversation.title}": ${initialCount} mensajes → ${deduped.length} después de deduplicación`);
         conversation.messages = deduped;
         conversation.updatedAt = Date.now();
         conversation.metadata = conversation.metadata || {};
@@ -925,21 +928,66 @@ class ConversationService {
   }
 
   conversationToText(conversation) {
-    let text = `${conversation.title}\n`;
-    text += `Creada: ${new Date(conversation.createdAt).toLocaleString('es-ES')}\n`;
-    text += `Modelo: ${conversation.modelId || 'N/A'}\n`;
-    text += `Mensajes: ${conversation.messages.length}\n\n`;
-    text += `${'='.repeat(50)}\n\n`;
+    if (!conversation || !Array.isArray(conversation.messages)) {
+      return '';
+    }
 
+    let text = '';
     conversation.messages.forEach((message, index) => {
-      const timestamp = new Date(message.timestamp).toLocaleTimeString('es-ES');
-      const role = message.role === 'user' ? 'USUARIO' : 'ASISTENTE';
-      
-      text += `[${timestamp}] ${role}:\n`;
+      const role = message.role || 'unknown';
+      const timestamp = message.timestamp ? new Date(message.timestamp).toLocaleString() : '';
+      text += `[${role.toUpperCase()}] ${timestamp}\n`;
+
       text += `${message.content}\n\n`;
     });
 
     return text;
+  }
+
+  /**
+   * Intenta recuperar mensajes con contenido vacío desde el backup anterior
+   * Esto ayuda a recuperar contenido perdido durante la deduplicación
+   */
+  recoverMissingContentFromBackup() {
+    try {
+      const backupData = localStorage.getItem('ai-conversations-data-backup');
+      if (!backupData) return;
+
+      const backup = JSON.parse(backupData);
+      if (!backup.data || !backup.data.conversations) return;
+
+      const backupConversations = new Map(backup.data.conversations);
+      let recovered = 0;
+
+      // Para cada conversación actual
+      this.conversations.forEach((currentConv, convId) => {
+        const backupConv = backupConversations.get(convId);
+        if (!backupConv || !Array.isArray(backupConv.messages)) return;
+
+        // Buscar mensajes vacíos
+        if (Array.isArray(currentConv.messages)) {
+          currentConv.messages.forEach((currentMsg, idx) => {
+            // Si el mensaje actual está vacío
+            if (!currentMsg.content || currentMsg.content.trim().length === 0) {
+              // Intentar encontrar en backup
+              const backupMsg = backupConv.messages[idx];
+              if (backupMsg && backupMsg.content && backupMsg.content.trim().length > 0) {
+                console.log(`🔧 Recuperando contenido vacío para mensaje ${idx} en "${currentConv.title}"`);
+                currentMsg.content = backupMsg.content;
+                recovered++;
+              }
+            }
+          });
+        }
+      });
+
+      if (recovered > 0) {
+        console.log(`✅ Recuperados ${recovered} mensajes con contenido del backup`);
+        this.saveConversations();
+      }
+    } catch (error) {
+      console.warn('⚠️ Error intentando recuperar contenido del backup:', error.message);
+    }
   }
 
   loadConversations() {
@@ -951,6 +999,26 @@ class ConversationService {
         // Cargar conversaciones
         if (data.conversations) {
           this.conversations = new Map(data.conversations);
+          
+          console.log(`📥 Conversaciones cargadas del localStorage: ${this.conversations.size} conversaciones`);
+          let totalMessages = 0;
+          this.conversations.forEach((conv, id) => {
+            const msgCount = conv.messages?.length || 0;
+            totalMessages += msgCount;
+            console.log(`   - "${conv.title}": ${msgCount} mensajes`);
+            
+            // LOG CRÍTICO: Mostrar contenido de cada mensaje
+            if (conv.messages && conv.messages.length > 0) {
+              conv.messages.forEach((msg, idx) => {
+                const contentPreview = msg.content ? `"${msg.content.substring(0, 40)}..."` : 'NULL/UNDEFINED';
+                console.log(`      Msg ${idx}: role="${msg.role}", content=${contentPreview}`);
+              });
+            }
+          });
+          console.log(`   Total de mensajes: ${totalMessages}`);
+          
+          // Intentar recuperar mensajes vacíos del backup
+          this.recoverMissingContentFromBackup();
           
           // Asegurar compatibilidad hacia atrás: agregar attachedFiles si no existen
           this.conversations.forEach((conversation) => {

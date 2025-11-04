@@ -2301,17 +2301,22 @@ Usa este resultado para responder al usuario. Si necesitas usar otra herramienta
           { ...options, maxTokens: 200, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
         );
         
+        // Asegurar que la respuesta no esté vacía - si está vacía, usar un fallback
+        const finalResponse = (response && response.trim().length > 0) 
+          ? response
+          : `✅ Operación completada. Resultado: ${result.content?.[0]?.text || 'Éxito'}`;
+        
         // Añadir respuesta del modelo al historial
         conversationMessages.push({
           role: 'assistant',
-          content: response
+          content: finalResponse
         });
         
         // Verificar si hay otro tool call en la nueva respuesta
         currentToolCall = this.detectToolCallInResponse(response);
         if (!currentToolCall) {
           console.log(`✅ [MCP] Loop finalizado - respuesta final del modelo`);
-          return response; // Respuesta final sin más tool calls
+          return finalResponse; // Respuesta final con fallback si fue necesario
         }
         
         console.log(`🔄 [MCP] Nuevo tool call detectado, continuando loop...`);
