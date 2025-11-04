@@ -18,6 +18,8 @@ class AIService {
     this.performanceConfig = null; // Configuración manual de rendimiento
     // Caché simple para los directorios permitidos de MCP (evita pedirlos repetidamente)
     this.allowedDirectoriesCache = { value: null, fetchedAt: 0 };
+    // Flag para invalidar información del filesystem cuando se modifica
+    this._filesystemModified = false;
     this.models = {
       remote: [
         { 
@@ -1421,45 +1423,45 @@ class AIService {
     // Configuraciones específicas para DeepSeek R1 (todos tienen 128K contexto)
     const deepseekR1Configs = {
       'deepseek-r1:latest': {
-        maxTokens: 12000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 20,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo de DeepSeek R1
-        num_ctx: 128000,      // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,      // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
       },
       'deepseek-r1:1.5b': {
-        maxTokens: 6000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 16,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo
-        num_ctx: 128000,       // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,       // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
       },
       'deepseek-r1:7b': {
-        maxTokens: 10000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 18,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo
-        num_ctx: 128000,       // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,       // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
       },
       'deepseek-r1:8b': {
-        maxTokens: 12000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 20,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo
-        num_ctx: 128000,       // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,       // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
@@ -1947,12 +1949,13 @@ class AIService {
         return { tools: [], resources: [], prompts: [], hasTools: false };
       }
 
-      // Obtener tools disponibles
-      const tools = mcpClient.getAvailableTools();
+      // Obtener tools disponibles y FILTRAR las internas
+      const allTools = mcpClient.getAvailableTools();
+      const tools = allTools.filter(t => t.name !== 'list_allowed_directories');
       const resources = mcpClient.getAvailableResources();
       const prompts = mcpClient.getAvailablePrompts();
 
-      console.log(`🔌 [MCP] ${tools.length} tools, ${resources.length} resources, ${prompts.length} prompts disponibles`);
+      console.log(`🔌 [MCP] ${tools.length} tools expuestas, ${resources.length} resources, ${prompts.length} prompts disponibles`);
 
       return {
         tools,
@@ -2048,77 +2051,27 @@ class AIService {
   generateMCPSystemPrompt(tools, allowedDirsText = null) {
     if (!tools || tools.length === 0) return '';
 
-    const toolsList = tools.map(t => {
-      const params = t.inputSchema?.properties 
-        ? Object.keys(t.inputSchema.properties).join(', ')
-        : 'ninguno';
-      
-      return `- **${t.name}** (${t.serverId || 'MCP'})
-  Descripción: ${t.description || 'Sin descripción'}
-  Parámetros: ${params}`;
-    }).join('\n\n');
+    const dir = allowedDirsText ? allowedDirsText.split('\n')[0].replace('Allowed directories:', '').trim() : '';
 
-    // Bloque explicativo de directorios permitidos, si está disponible
-    const allowedDirsInfo = allowedDirsText ? `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📂 DIRECTORIOS PERMITIDOS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const dirEscaped = dir.replace(/\\/g, '/');
+    return `
+Tienes acceso a herramientas MCP para gestionar archivos en: ${dirEscaped}
 
-⚠️ IMPORTANTE: Solo puedes acceder a archivos dentro de estos directorios:
+Herramientas disponibles:
+- write_file: Crear/sobrescribir archivo
+- read_text_file: Leer contenido de archivo
+- edit_file: Editar archivo existente
+- list_directory: Listar contenido de directorio
 
-${allowedDirsText}
+Formato de uso:
+{"tool":"nombre_herramienta","arguments":{"parametros":"valores"}}
 
-REGLAS CRÍTICAS:
-1. Usa SIEMPRE rutas completas dentro de los directorios anteriores
-2. No uses rutas relativas como "test.txt" o "./test.txt"
-3. Ejemplo correcto: { "path": "${allowedDirsText.split('\n')[0]}\\test.txt" }
-4. No llames a list_allowed_directories; ya tienes esta información
+Ejemplos:
+• Crear: {"tool":"write_file","arguments":{"path":"${dirEscaped}/test.txt","content":"contenido"}}
+• Listar: {"tool":"list_directory","arguments":{"path":"${dirEscaped}"}}
+• Leer: {"tool":"read_text_file","arguments":{"path":"${dirEscaped}/test.txt"}}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-` : '';
-
-    return `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔧 HERRAMIENTAS MCP DISPONIBLES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Tienes acceso a las siguientes herramientas MCP que puedes usar para realizar acciones:
-
-${toolsList}
-${allowedDirsInfo}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 CÓMO USAR HERRAMIENTAS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Para usar una herramienta, responde con un bloque de código JSON. Puedes usar cualquiera de estos formatos:
-
-FORMATO 1 (RECOMENDADO):
-\`\`\`json
-{
-  "tool": "nombre_herramienta",
-  "arguments": {
-    "parametro1": "valor1",
-    "parametro2": "valor2"
-  }
-}
-\`\`\`
-
-FORMATO 2 (ALTERNATIVO):
-\`\`\`json
-{
-  "use_tool": "nombre_herramienta",
-  "arguments": {
-    "parametro1": "valor1"
-  }
-}
-\`\`\`
-
-IMPORTANTE:
-- Usa herramientas cuando el usuario solicite acciones específicas
-- Después de solicitar una herramienta, recibirás el resultado automáticamente
-- Puedes usar múltiples herramientas en secuencia si es necesario
-- Si no necesitas una herramienta, responde normalmente sin JSON
-- SOLO responde con JSON cuando quieras usar una herramienta
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
+IMPORTANTE: Usa rutas COMPLETAS. El parámetro es "path", no "directory" ni "filename".`;
   }
 
   /**
@@ -2139,7 +2092,6 @@ IMPORTANTE:
         // Soportar múltiples formatos de tool call
         // Formato 1: { "use_tool": "name", "arguments": {...} }
         if (data.use_tool && typeof data.use_tool === 'string') {
-          console.log('🔍 [MCP] Tool call detectado en bloque JSON (formato use_tool)');
           return {
             toolName: data.use_tool,
             arguments: data.arguments || {},
@@ -2149,7 +2101,6 @@ IMPORTANTE:
         
         // Formato 2: { "tool": "name", "arguments": {...} }
         if (data.tool && typeof data.tool === 'string') {
-          console.log('🔍 [MCP] Tool call detectado en bloque JSON (formato tool)');
           return {
             toolName: data.tool,
             arguments: data.arguments || {},
@@ -2159,16 +2110,15 @@ IMPORTANTE:
       }
       
       // Estrategia 2: Buscar JSON sin bloques de código (para modelos que no usan backticks)
-      // Buscar tanto "use_tool" como "tool"
-      const jsonRegex = /\{[\s\S]*(?:"use_tool"|"tool")[\s\S]*\}/gi;
-      match = jsonRegex.exec(response);
+      // Regex más estricta: debe empezar con { y terminar con } sin otros caracteres después
+      const jsonRegex = /^\s*(\{[\s\S]*?\})\s*$/m;
+      match = jsonRegex.exec(response.trim());
       
       if (match) {
-        const data = JSON.parse(match[0]);
+        const data = JSON.parse(match[1]);
         
         // Formato 1: use_tool
         if (data.use_tool && typeof data.use_tool === 'string') {
-          console.log('🔍 [MCP] Tool call detectado en JSON directo (formato use_tool)');
           return {
             toolName: data.use_tool,
             arguments: data.arguments || {},
@@ -2178,7 +2128,6 @@ IMPORTANTE:
         
         // Formato 2: tool
         if (data.tool && typeof data.tool === 'string') {
-          console.log('🔍 [MCP] Tool call detectado en JSON directo (formato tool)');
           return {
             toolName: data.tool,
             arguments: data.arguments || {},
@@ -2187,8 +2136,11 @@ IMPORTANTE:
         }
       }
     } catch (error) {
-      // No es un tool call válido
-      console.log('⚠️ [MCP] Error parseando posible tool call:', error.message);
+      // No es un tool call válido - esto es normal, no logueamos
+      // Solo loguear si parece que intentaba ser JSON
+      if (response.trim().startsWith('{') && response.trim().endsWith('}')) {
+        console.log('⚠️ [MCP] JSON inválido detectado:', error.message.substring(0, 100));
+      }
     }
     
     return null;
@@ -2207,8 +2159,7 @@ IMPORTANTE:
     while (currentToolCall && iteration < maxIterations) {
       iteration++;
       
-      console.log(`🔧 [MCP] Iteración ${iteration}/${maxIterations} - Ejecutando: ${currentToolCall.toolName}`);
-      console.log(`   Argumentos:`, currentToolCall.arguments);
+        console.log(`🔧 [MCP] ${currentToolCall.toolName}`);
       
       // Callback de estado: ejecutando herramienta
       if (callbacks.onStatus) {
@@ -2226,10 +2177,9 @@ IMPORTANTE:
       
       try {
         // Ejecutar la tool via MCP
-        console.log(`📡 [MCP] Llamando a mcpClient.callTool("${currentToolCall.toolName}", ...)...`);
         const result = await mcpClient.callTool(currentToolCall.toolName, currentToolCall.arguments);
         
-        console.log(`✅ [MCP] Resultado de ${currentToolCall.toolName}:`, result);
+        console.log(`✅ [MCP] ${currentToolCall.toolName} completado`);
         // Notificar a la UI inmediatamente con el resultado de la tool
         if (callbacks && typeof callbacks.onToolResult === 'function') {
           try {
@@ -2243,21 +2193,45 @@ IMPORTANTE:
           }
         }
         
-        // Formatear el resultado para el modelo
-        const resultMessage = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔧 RESULTADO DE HERRAMIENTA: ${currentToolCall.toolName}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${typeof result === 'object' ? JSON.stringify(result, null, 2) : result}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Usa este resultado para responder al usuario. Si necesitas usar otra herramienta, puedes hacerlo.`;
+        // Formatear resultado SIN TRUNCAR
+        const cleanResult = (() => {
+          const text = result.content?.[0]?.text || 'OK';
+          
+          // Operaciones de escritura/modificación
+          if (text.includes('Successfully wrote') || text.includes('Successfully created')) {
+            return '✅ Archivo creado correctamente';
+          }
+          if (text.includes('Successfully moved')) {
+            return '✅ Archivo movido correctamente';
+          }
+          if (text.includes('DIFF INDEX') || text.includes('---') || text.includes('```diff')) {
+            return '✅ Archivo editado correctamente';
+          }
+          
+          // Listados de directorios - formatear bonito SIN TRUNCAR
+          if (text.includes('[FILE]') || text.includes('[DIR]')) {
+            const lines = text.split('\n').filter(l => l.trim());
+            const dirs = lines.filter(l => l.includes('[DIR]')).map(l => '📁 ' + l.replace('[DIR]', '').trim());
+            const files = lines.filter(l => l.includes('[FILE]')).map(l => '📄 ' + l.replace('[FILE]', '').trim());
+            
+            let output = [];
+            if (dirs.length > 0) {
+              output.push('**Directorios:**\n' + dirs.join('\n'));
+            }
+            if (files.length > 0) {
+              output.push('**Archivos:**\n' + files.join('\n'));
+            }
+            return output.join('\n\n');
+          }
+          
+          // Contenido de archivos o texto general - devolver COMPLETO
+          return text;
+        })();
         
-        // Añadir resultado como user message
+        // Mensaje minimalista
         conversationMessages.push({
           role: 'user',
-          content: resultMessage
+          content: `${currentToolCall.toolName}: ${cleanResult}`
         });
         
         // Callback de estado: procesando resultado
@@ -2270,56 +2244,17 @@ Usa este resultado para responder al usuario. Si necesitas usar otra herramienta
           });
         }
         
-        // Continuar la conversación con el resultado
-        console.log(`🤖 [MCP] Enviando resultado al modelo para continuar...`);
-
-        // Recortar contexto para modelos locales: solo último user + resultado + regla breve
-        const resultUserMessage = conversationMessages[conversationMessages.length - 1]; // el que acabamos de añadir
-        let previousUserMessage = null;
-        for (let i = conversationMessages.length - 2; i >= 0; i--) {
-          if (conversationMessages[i].role === 'user') {
-            previousUserMessage = conversationMessages[i];
-            break;
-          }
-        }
-
-        const minimalSystem = {
-          role: 'system',
-          content: 'Responde en español, máximo dos frases. No uses JSON ni herramientas a menos que el usuario lo pida explícitamente.'
-        };
-
-        const trimmedMessages = [
-          minimalSystem,
-          ...(previousUserMessage ? [previousUserMessage] : []),
-          resultUserMessage
-        ];
-
-        const response = await this.sendToLocalModelStreamingWithCallbacks(
-          modelId,
-          trimmedMessages,
-          callbacks,
-          { ...options, maxTokens: 200, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
-        );
+        // Usar DIRECTAMENTE el resultado de la tool (sin procesar por el modelo)
+        const finalResponse = cleanResult;
         
-        // Asegurar que la respuesta no esté vacía - si está vacía, usar un fallback
-        const finalResponse = (response && response.trim().length > 0) 
-          ? response
-          : `✅ Operación completada. Resultado: ${result.content?.[0]?.text || 'Éxito'}`;
-        
-        // Añadir respuesta del modelo al historial
-        conversationMessages.push({
-          role: 'assistant',
-          content: finalResponse
-        });
-        
-        // Verificar si hay otro tool call en la nueva respuesta
-        currentToolCall = this.detectToolCallInResponse(response);
-        if (!currentToolCall) {
-          console.log(`✅ [MCP] Loop finalizado - respuesta final del modelo`);
-          return finalResponse; // Respuesta final con fallback si fue necesario
+        // Marcar si el filesystem fue modificado
+        const finalOperations = ['write_file', 'edit_file', 'create_directory', 'move_file'];
+        if (finalOperations.includes(currentToolCall.toolName)) {
+          this._filesystemModified = true;
         }
         
-        console.log(`🔄 [MCP] Nuevo tool call detectado, continuando loop...`);
+        // Devolver resultado inmediatamente (no continuar loop)
+        return finalResponse;
       } catch (error) {
         console.error(`❌ [MCP] Error ejecutando tool ${currentToolCall.toolName}:`, error);
         
@@ -2335,18 +2270,10 @@ Usa este resultado para responder al usuario. Si necesitas usar otra herramienta
           });
         }
         
-        // Informar al modelo del error
+        // Informar error brevemente
         conversationMessages.push({
           role: 'user',
-          content: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-❌ ERROR EN HERRAMIENTA: ${currentToolCall.toolName}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${error.message}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
+          content: `ERR: ${error.message.substring(0, 50)}`
         });
         
         // Dar una última oportunidad al modelo de responder con el error
@@ -2357,14 +2284,14 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
           for (let i = conversationMessages.length - 2; i >= 0; i--) {
             if (conversationMessages[i].role === 'user') { prevUserMsg = conversationMessages[i]; break; }
           }
-          const minimalSystem = { role: 'system', content: 'Explica brevemente el error en español. No uses JSON.' };
+          const minimalSystem = { role: 'system', content: 'ES. Error breve.' };
           const trimmedOnError = [ minimalSystem, ...(prevUserMsg ? [prevUserMsg] : []), errorUserMessage ];
 
           const errorResponse = await this.sendToLocalModelStreamingWithCallbacks(
             modelId, 
             trimmedOnError, 
             callbacks, 
-            { ...options, maxTokens: 200, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
+            { ...options, maxTokens: 1500, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
           );
           return errorResponse;
         } catch (recoveryError) {
@@ -2450,22 +2377,17 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
       providerMessages.splice(providerMessages.length - 1, 0, { role: 'system', content: ephemeralContext });
     }
 
-    // 🔍 LOG DETALLADO: Mostrar cada prompt que se enviará
-    console.log('📤 PROMPTS QUE SE ENVIARÁN AL MODELO:');
-    console.log('═══════════════════════════════════════════════════════════');
-    providerMessages.forEach((msg, index) => {
-      const roleEmoji = msg.role === 'user' ? '👤' : msg.role === 'assistant' ? '🤖' : '⚙️';
-      const contentPreview = msg.content.length > 200 
-        ? msg.content.substring(0, 200) + '...' 
-        : msg.content;
-      console.log(`${index + 1}. ${roleEmoji} [${msg.role.toUpperCase()}]`);
-      console.log(`   ${contentPreview.replace(/\n/g, ' ')}`);
-      if (msg.content.length > 200) {
-        console.log(`   ... (${msg.content.length} caracteres en total)`);
-      }
-      console.log('');
-    });
-    console.log('═══════════════════════════════════════════════════════════');
+    // Si el filesystem fue modificado, agregar nota para invalidar información anterior
+    if (this._filesystemModified) {
+      providerMessages.splice(providerMessages.length - 1, 0, {
+        role: 'system',
+        content: '⚠️ FILESYSTEM MODIFICADO. Archivos/directorios anteriores ya NO son válidos. DEBES ejecutar tools de nuevo para obtener información actualizada.'
+      });
+      this._filesystemModified = false; // Reset flag
+    }
+
+    // Log compacto
+    console.log(`📤 Enviando ${providerMessages.length} mensaje(s) al modelo`);
 
     // Metadatos para la UI: indicar si se usó contexto efímero y qué archivos
     const ephemeralFilesUsed = (ephemeralContext && ephemeralContext.length > 0)
@@ -2977,19 +2899,24 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
         });
       }
       
+      // Ajustar maxTokens dinámicamente: si hay herramientas, el modelo solo necesita generar JSON
+      const adjustedOptions = { ...options };
+      if (mcpContext.hasTools) {
+        adjustedOptions.maxTokens = Math.min(options.maxTokens || 2000, 800); // Reducir para tool calls
+      }
+      
       // Usar streaming si está habilitado
       let response;
-      if (options.useStreaming) {
-        response = await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, options);
+      if (adjustedOptions.useStreaming) {
+        response = await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
       } else {
-        response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, options);
+        response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
       }
       
       // 🔧 DETECTAR SI LA RESPUESTA ES UN TOOL CALL
       if (mcpContext.hasTools) {
         const toolCall = this.detectToolCallInResponse(response);
         if (toolCall) {
-          console.log('🔧 [MCP] Tool call detectado:', toolCall);
           return await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
         }
       }
@@ -3032,12 +2959,8 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
+    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -3088,12 +3011,8 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
+    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -3166,12 +3085,8 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
+    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -3264,12 +3179,8 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
+    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     // Callback de estado: generando
     if (callbacks.onStatus) {
@@ -3442,6 +3353,7 @@ Por favor, informa al usuario sobre este error o intenta con otra herramienta.`
    */
   clearHistory() {
     this.conversationHistory = [];
+    this._filesystemModified = false; // Reset flag al limpiar historial
   }
 
   /**
