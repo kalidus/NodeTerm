@@ -2055,23 +2055,29 @@ class AIService {
 
     const dirEscaped = dir.replace(/\\/g, '/');
     return `
-Tienes acceso a herramientas MCP para gestionar archivos en: ${dirEscaped}
-
 Herramientas disponibles:
-- write_file: Crear/sobrescribir archivo
-- read_text_file: Leer contenido de archivo
-- edit_file: Editar archivo existente
-- list_directory: Listar contenido de directorio
+• write_file - Crear archivo NUEVO o SOBRESCRIBIR completamente uno existente
+• edit_file - MODIFICAR parte de un archivo existente (reemplazar texto específico)
+• read_text_file - Leer contenido
+• list_directory - Listar archivos/carpetas
 
-Formato de uso:
-{"tool":"nombre_herramienta","arguments":{"parametros":"valores"}}
+DIR: ${dirEscaped}
 
-Ejemplos:
-• Crear: {"tool":"write_file","arguments":{"path":"${dirEscaped}/test.txt","content":"contenido"}}
+FORMATO: {"tool":"nombre","arguments":{...}}
+
+CUÁNDO USAR CADA UNA:
+1. Usuario dice "crea/crear archivo" → write_file
+2. Usuario dice "edita/modificar/cambiar/añadir/agregar a archivo" → edit_file
+3. Usuario dice "lee/muestra contenido" → read_text_file
+4. Usuario dice "lista/muestra archivos" → list_directory
+
+EJEMPLOS:
+• Crear: {"tool":"write_file","arguments":{"path":"${dirEscaped}/nuevo.txt","content":"texto completo"}}
+• Editar: {"tool":"edit_file","arguments":{"path":"${dirEscaped}/existente.txt","edits":[{"oldText":"antes","newText":"después"}]}}
+• Leer: {"tool":"read_text_file","arguments":{"path":"${dirEscaped}/archivo.txt"}}
 • Listar: {"tool":"list_directory","arguments":{"path":"${dirEscaped}"}}
-• Leer: {"tool":"read_text_file","arguments":{"path":"${dirEscaped}/test.txt"}}
 
-IMPORTANTE: Usa rutas COMPLETAS. El parámetro es "path", no "directory" ni "filename".`;
+CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
   }
 
   /**
@@ -2179,7 +2185,15 @@ IMPORTANTE: Usa rutas COMPLETAS. El parámetro es "path", no "directory" ni "fil
         // Ejecutar la tool via MCP
         const result = await mcpClient.callTool(currentToolCall.toolName, currentToolCall.arguments);
         
+        // Verificar si hubo error en la tool
+        if (result.isError) {
+          const errorText = result.content?.[0]?.text || 'Error desconocido';
+          console.error(`❌ [MCP] ${currentToolCall.toolName} falló:`, errorText);
+          return `❌ Error: ${errorText}`;
+        }
+        
         console.log(`✅ [MCP] ${currentToolCall.toolName} completado`);
+        
         // Notificar a la UI inmediatamente con el resultado de la tool
         if (callbacks && typeof callbacks.onToolResult === 'function') {
           try {
@@ -2228,33 +2242,14 @@ IMPORTANTE: Usa rutas COMPLETAS. El parámetro es "path", no "directory" ni "fil
           return text;
         })();
         
-        // Mensaje minimalista
-        conversationMessages.push({
-          role: 'user',
-          content: `${currentToolCall.toolName}: ${cleanResult}`
-        });
-        
-        // Callback de estado: procesando resultado
-        if (callbacks.onStatus) {
-          callbacks.onStatus({
-            status: 'generating',
-            message: `Procesando resultado de ${currentToolCall.toolName}...`,
-            model: modelId,
-            provider: 'local'
-          });
-        }
-        
-        // Usar DIRECTAMENTE el resultado de la tool (sin procesar por el modelo)
-        const finalResponse = cleanResult;
-        
         // Marcar si el filesystem fue modificado
         const finalOperations = ['write_file', 'edit_file', 'create_directory', 'move_file'];
         if (finalOperations.includes(currentToolCall.toolName)) {
           this._filesystemModified = true;
         }
         
-        // Devolver resultado inmediatamente (no continuar loop)
-        return finalResponse;
+        // Devolver resultado INMEDIATAMENTE (no continuar loop, no enviar al modelo)
+        return cleanResult;
       } catch (error) {
         console.error(`❌ [MCP] Error ejecutando tool ${currentToolCall.toolName}:`, error);
         
