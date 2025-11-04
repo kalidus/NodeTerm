@@ -70,7 +70,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const looksLikeJsonStart = useCallback((text) => {
     if (!text || typeof text !== 'string') return false;
     const t = text.trimStart();
-    return t.startsWith('{') || t.startsWith('[') || t.startsWith('```');
+    // Solo considerar JSON si empieza con { y contiene "tool" o "use_tool" en los primeros 100 chars
+    if (t.startsWith('{')) {
+      const head = t.substring(0, 100);
+      return head.includes('"tool"') || head.includes('"use_tool"');
+    }
+    // Bloques de código explícitos
+    if (t.startsWith('```json') || t.startsWith('```tool')) return true;
+    return false;
   }, []);
 
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
@@ -284,6 +291,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAbortController(controller);
 
     try {
+      // CRÍTICO: Limpiar historial de AIService para evitar contaminación
+      aiService.clearHistory();
+      
+      // Asegurar que el servicio esté sincronizado con la conversación actual
+      if (currentConversationId && conversationService.currentConversationId !== currentConversationId) {
+        console.log(`🔄 [AIChatPanel] Sincronizando conversación: ${currentConversationId}`);
+        conversationService.loadConversation(currentConversationId);
+      }
+      
       // Agregar mensaje del usuario a la conversación con archivos adjuntos
       const userMessageObj = conversationService.addMessage('user', userMessage, {
         attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
@@ -337,10 +353,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           setCurrentStatus(statusData);
         },
         onStream: (streamData) => {
-          // Si el contenido del stream parece un tool-call JSON, NO mostrarlo
+          // Si el contenido del stream parece un tool-call JSON, NO mostrarlo PERO mantener placeholder
           if (looksLikeToolJson(streamData.fullResponse) || looksLikeJsonStart(streamData.fullResponse)) {
             setMessages(prev => prev.map(msg => 
-              msg.id === assistantMessageId ? { ...msg, content: '', streaming: true } : msg
+              msg.id === assistantMessageId ? { ...msg, content: '⚙️ Ejecutando herramienta...', streaming: true } : msg
             ));
           } else {
             // Actualizar mensaje con contenido streaming normal
@@ -651,6 +667,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const uiHasMessages = messages.length > 0;
     const inputHasText = !!inputValue.trim();
 
+    // Si hay desincronización (UI tiene mensajes pero servicio no), limpiar UI
+    if (uiHasMessages && !serviceHasMessages) {
+      console.log('🔧 [AIChatPanel] Limpiando UI desincronizada');
+      setMessages([]);
+      setAttachedFiles([]);
+    }
+
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
       console.log('🛑 [AIChatPanel] Nueva conversación ignorada: la actual está vacía');
       return;
@@ -681,21 +704,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   const handleLoadConversation = (conversationId) => {
+    // Limpiar UI primero para evitar mezclas
+    setMessages([]);
+    setAttachedFiles([]);
+    setIsLoading(false);
+    
     const conversation = conversationService.loadConversation(conversationId);
     if (conversation) {
-      console.log(`📂 Cargando conversación: "${conversation.title}" con ${conversation.messages?.length || 0} mensajes`);
-      if (conversation.messages && conversation.messages.length > 0) {
-        const roleCount = {};
-        conversation.messages.forEach((msg, idx) => {
-          roleCount[msg.role] = (roleCount[msg.role] || 0) + 1;
-          // ⚠️ LOG CRÍTICO - Mostrar contenido de cada mensaje
-          const contentPreview = msg.content ? `"${msg.content.substring(0, 50)}..."` : 'NULL/UNDEFINED';
-          const hasContent = !!(msg.content && msg.content.trim().length > 0);
-          console.log(`   Msg ${idx}: role="${msg.role}", content=${contentPreview}, hasContent=${hasContent}`);
-        });
-        console.log(`   Desglose:`, roleCount);
-      }
-      
       setCurrentConversationId(conversation.id);
       setConversationTitle(conversation.title);
       setMessages(conversation.messages.map(msg => ({
@@ -708,8 +723,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // Cargar archivos adjuntos de la conversación
       const attachedFiles = conversationService.getAttachedFilesForConversation(conversationId);
       setAttachedFiles(attachedFiles || []);
-    } else {
-      console.error(`❌ No se encontró la conversación con ID: ${conversationId}`);
     }
   };
 
@@ -917,6 +930,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     try {
       // Pre-procesar el contenido para mejorar el formato
       let processedContent = content;
+      
+      // Agregar iconos visuales a [FILE] y [DIR]
+      processedContent = processedContent.replace(/\[FILE\]\s+([^\n]+)/g, (match, filename) => {
+        return `📄 **${filename}**`;
+      });
+      processedContent = processedContent.replace(/\[DIR\]\s+([^\n]+)/g, (match, dirname) => {
+        return `📁 **${dirname}**`;
+      });
       
       // Paso 1: Reparar títulos sin espacio después de #
       processedContent = processedContent.replace(/^(#{1,6})([^\s#])/gm, (match, hashes, char) => {

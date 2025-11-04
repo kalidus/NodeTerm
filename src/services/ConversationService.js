@@ -58,7 +58,6 @@ class ConversationService {
         normalize(last.content) === normalize(current.content)
       ) {
         // Duplicado consecutivo: omitir
-        console.warn(`⚠️ Deduplicando mensaje duplicado: role=${current.role}, content length=${current.content?.length || 0}`);
         continue;
       }
       result.push(current);
@@ -95,7 +94,6 @@ class ConversationService {
       // Deduplicar consecutivos
       const deduped = this.deduplicateConsecutiveMessages(sanitizedMessages);
       if (deduped.length !== conversation.messages.length || messagesChanged) {
-        console.log(`📊 Conversación "${conversation.title}": ${initialCount} mensajes → ${deduped.length} después de deduplicación`);
         conversation.messages = deduped;
         conversation.updatedAt = Date.now();
         conversation.metadata = conversation.metadata || {};
@@ -999,23 +997,6 @@ class ConversationService {
         // Cargar conversaciones
         if (data.conversations) {
           this.conversations = new Map(data.conversations);
-          
-          console.log(`📥 Conversaciones cargadas del localStorage: ${this.conversations.size} conversaciones`);
-          let totalMessages = 0;
-          this.conversations.forEach((conv, id) => {
-            const msgCount = conv.messages?.length || 0;
-            totalMessages += msgCount;
-            console.log(`   - "${conv.title}": ${msgCount} mensajes`);
-            
-            // LOG CRÍTICO: Mostrar contenido de cada mensaje
-            if (conv.messages && conv.messages.length > 0) {
-              conv.messages.forEach((msg, idx) => {
-                const contentPreview = msg.content ? `"${msg.content.substring(0, 40)}..."` : 'NULL/UNDEFINED';
-                console.log(`      Msg ${idx}: role="${msg.role}", content=${contentPreview}`);
-              });
-            }
-          });
-          console.log(`   Total de mensajes: ${totalMessages}`);
           
           // Intentar recuperar mensajes vacíos del backup
           this.recoverMissingContentFromBackup();
