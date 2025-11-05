@@ -240,10 +240,22 @@ class ConversationService {
     const conversation = this.conversations.get(this.currentConversationId);
     if (!conversation) return false;
 
+    // 🔧 Validar que el contenido no sea null/undefined
+    const safeContent = content ?? '';
+    
+    // 🔧 Log para debugging
+    if (!safeContent || safeContent.trim().length === 0) {
+      console.warn(`⚠️ [ConversationService.addMessage] Mensaje VACÍO detectado:`, {
+        role,
+        contentLength: content ? content.length : 0,
+        metadata
+      });
+    }
+
     const message = {
       id: this.generateMessageId(),
       role: role,
-      content: content,
+      content: safeContent,
       timestamp: Date.now(),
       metadata: metadata
     };
