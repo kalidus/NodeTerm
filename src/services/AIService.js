@@ -2052,32 +2052,105 @@ class AIService {
     if (!tools || tools.length === 0) return '';
 
     const dir = allowedDirsText ? allowedDirsText.split('\n')[0].replace('Allowed directories:', '').trim() : '';
-
     const dirEscaped = dir.replace(/\\/g, '/');
-    return `
-Herramientas disponibles:
-• write_file - Crear archivo NUEVO o SOBRESCRIBIR completamente uno existente
-• edit_file - MODIFICAR parte de un archivo existente (reemplazar texto específico)
-• read_text_file - Leer contenido
-• list_directory - Listar archivos/carpetas
 
-DIR: ${dirEscaped}
+    // NUEVO: Construir dinámicamente desde tools reales
+    let toolsSection = `HERRAMIENTAS DISPONIBLES (MCP Filesystem)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-FORMATO: {"tool":"nombre","arguments":{...}}
+Directorios permitidos: ${dirEscaped || 'N/A'}
 
-CUÁNDO USAR CADA UNA:
-1. Usuario dice "crea/crear archivo" → write_file
-2. Usuario dice "edita/modificar/cambiar/añadir/agregar a archivo" → edit_file
-3. Usuario dice "lee/muestra contenido" → read_text_file
-4. Usuario dice "lista/muestra archivos" → list_directory
+FORMATO GENERAL: {"tool":"nombre_herramienta","arguments":{...}}
 
-EJEMPLOS:
-• Crear: {"tool":"write_file","arguments":{"path":"${dirEscaped}/nuevo.txt","content":"texto completo"}}
-• Editar: {"tool":"edit_file","arguments":{"path":"${dirEscaped}/existente.txt","edits":[{"oldText":"antes","newText":"después"}]}}
-• Leer: {"tool":"read_text_file","arguments":{"path":"${dirEscaped}/archivo.txt"}}
-• Listar: {"tool":"list_directory","arguments":{"path":"${dirEscaped}"}}
+`;
 
-CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
+    // Iterar sobre cada tool y generar documentación dinámica
+    for (let i = 0; i < tools.length; i++) {
+      const tool = tools[i];
+      const schema = tool.inputSchema || {};
+      const properties = schema.properties || {};
+      const required = schema.required || [];
+
+      toolsSection += `\n📌 ${tool.name.toUpperCase()}\n`;
+      toolsSection += `${'-'.repeat(tool.name.length + 3)}\n`;
+      
+      // Descripción
+      if (tool.description) {
+        toolsSection += `Descripción: ${tool.description}\n`;
+      }
+
+      // Parámetros
+      const paramKeys = Object.keys(properties);
+      if (paramKeys.length > 0) {
+        toolsSection += '\nParámetros:\n';
+        
+        paramKeys.forEach(paramName => {
+          const param = properties[paramName];
+          const isRequired = required.includes(paramName) ? 'REQUERIDO' : 'opcional';
+          const paramType = param.type || 'any';
+          const paramDesc = param.description || 'Sin descripción';
+          
+          toolsSection += `  • ${paramName} [${paramType}] (${isRequired}): ${paramDesc}\n`;
+        });
+      }
+
+      // Ejemplo JSON realista basado en schema
+      toolsSection += '\nEjemplo de uso:\n';
+      const exampleArgs = {};
+      paramKeys.forEach(paramName => {
+        const param = properties[paramName];
+        
+        // Generar valor de ejemplo según tipo
+        if (param.type === 'string') {
+          if (paramName.includes('path') || paramName.includes('file')) {
+            exampleArgs[paramName] = `${dirEscaped}/ejemplo.txt`;
+          } else if (paramName.includes('content') || paramName.includes('text')) {
+            exampleArgs[paramName] = 'contenido de ejemplo';
+          } else {
+            exampleArgs[paramName] = 'valor';
+          }
+        } else if (param.type === 'array') {
+          exampleArgs[paramName] = param.items?.type === 'object' 
+            ? [{ key: 'value' }] 
+            : ['item1', 'item2'];
+        } else if (param.type === 'object') {
+          exampleArgs[paramName] = { key: 'value' };
+        } else if (param.type === 'number') {
+          exampleArgs[paramName] = 0;
+        } else if (param.type === 'boolean') {
+          exampleArgs[paramName] = true;
+        } else {
+          exampleArgs[paramName] = 'valor';
+        }
+      });
+
+      toolsSection += `{
+  "tool": "${tool.name}",
+  "arguments": ${JSON.stringify(exampleArgs, null, 4).split('\n').join('\n    ')}
+}\n`;
+
+      // Separador entre herramientas
+      if (i < tools.length - 1) {
+        toolsSection += `\n${'━'.repeat(70)}\n`;
+      }
+    }
+
+    // Instrucciones finales
+    toolsSection += `
+
+${'━'.repeat(70)}
+
+INSTRUCCIONES IMPORTANTES:
+1. Para CREAR o SOBRESCRIBIR archivo → usa "write_file"
+2. Para MODIFICAR parte de un archivo existente → usa "edit_file"
+3. Para LEER contenido → usa "read_text_file"
+4. Para LISTAR archivos/carpetas → usa "list_directory"
+
+SIEMPRE responde en formato JSON válido.
+Las rutas DEBEN estar dentro del directorio permitido.
+`;
+
+    return toolsSection;
   }
 
   /**
@@ -2086,86 +2159,170 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
   detectToolCallInResponse(response) {
     if (!response || typeof response !== 'string') return null;
     
+    // NUEVO: Log agresivo para ver la respuesta COMPLETA
+    console.log(`🔎 [MCP] detectToolCallInResponse ENTRADA:`);
+    console.log(`   Tipo: ${typeof response}`);
+    console.log(`   Largo: ${response?.length} chars`);
+    console.log(`   Contenido: ${response?.substring(0, 200)}`);
+    console.log(`   ¿Incluye "tool"? ${response?.includes('"tool"')}`);
+    console.log(`   ¿Incluye "{"? ${response?.includes('{')}`);
+    
     try {
-      // Estrategia 1: Buscar bloques JSON con ```json, ```tool, ```tool_call
-      const jsonBlockRegex = /```(?:json|tool|tool_call)?\s*([\s\S]*?)```/gi;
-      let match = jsonBlockRegex.exec(response);
+      // Estrategia 1: Bloques explícitos con backticks (```json...```)
+      const toolCall = this._extractToolCallFromCodeBlock(response);
+      if (toolCall) return toolCall;
       
-      if (match) {
-        const jsonContent = match[1].trim();
-        const data = JSON.parse(jsonContent);
-        
-        // Soportar múltiples formatos de tool call
-        // Formato 1: { "use_tool": "name", "arguments": {...} }
-        if (data.use_tool && typeof data.use_tool === 'string') {
-          return {
-            toolName: data.use_tool,
-            arguments: data.arguments || {},
-            serverId: data.serverId || data.server || null
-          };
-        }
-        
-        // Formato 2: { "tool": "name", "arguments": {...} }
-        if (data.tool && typeof data.tool === 'string') {
-          return {
-            toolName: data.tool,
-            arguments: data.arguments || {},
-            serverId: data.serverId || data.server || null
-          };
-        }
-      }
+      // Estrategia 2: JSON flexible en cualquier posición (con preámbulo/epilogo)
+      return this._extractToolCallFromJSON(response);
       
-      // Estrategia 2: Buscar JSON sin bloques de código (para modelos que no usan backticks)
-      // Regex más estricta: debe empezar con { y terminar con } sin otros caracteres después
-      const jsonRegex = /^\s*(\{[\s\S]*?\})\s*$/m;
-      match = jsonRegex.exec(response.trim());
-      
-      if (match) {
-        const data = JSON.parse(match[1]);
-        
-        // Formato 1: use_tool
-        if (data.use_tool && typeof data.use_tool === 'string') {
-          return {
-            toolName: data.use_tool,
-            arguments: data.arguments || {},
-            serverId: data.serverId || data.server || null
-          };
-        }
-        
-        // Formato 2: tool
-        if (data.tool && typeof data.tool === 'string') {
-          return {
-            toolName: data.tool,
-            arguments: data.arguments || {},
-            serverId: data.serverId || data.server || null
-          };
-        }
-      }
     } catch (error) {
-      // No es un tool call válido - esto es normal, no logueamos
-      // Solo loguear si parece que intentaba ser JSON
+      // Error inesperado en detección
       if (response.trim().startsWith('{') && response.trim().endsWith('}')) {
         console.log('⚠️ [MCP] JSON inválido detectado:', error.message.substring(0, 100));
       }
+      return null;
+    }
+  }
+
+  /**
+   * Extraer tool call de bloques de código (```json...```)
+   */
+  _extractToolCallFromCodeBlock(response) {
+    const jsonBlockRegex = /```(?:json|tool|tool_call)?\s*([\s\S]*?)```/gi;
+    let match = jsonBlockRegex.exec(response);
+    
+    while (match) {
+      try {
+        const jsonContent = match[1].trim();
+        const data = JSON.parse(jsonContent);
+        const toolCall = this._normalizeToolCall(data);
+        if (toolCall) return toolCall;
+      } catch (e) {
+        // Este bloque no es válido, intentar siguiente
+      }
+      match = jsonBlockRegex.exec(response);
     }
     
     return null;
   }
 
   /**
-   * Manejar loop de tool calls para modelos locales (system prompt)
+   * Extraer tool call de JSON flexible (en cualquier posición con preámbulo/epilogo)
    */
-  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations = 5) {
+  _extractToolCallFromJSON(response) {
+    // NUEVO: Log para debugging
+    console.log(`🔍 [MCP] Buscando JSON en respuesta (${response.length} chars)...`);
+    
+    // Buscar JSON que contenga "tool" o "use_tool"
+    // Permite preámbulo y epilogo alrededor del JSON
+    // FIX: Usar [\s\S]* GREEDY (sin ?) para capturar hasta el ÚLTIMO } del objeto
+    const jsonPattern = /\{[\s\S]*?"(?:tool|use_tool)"[\s\S]*\}/g;
+    const matches = response.match(jsonPattern);
+    
+    console.log(`   Encontrados ${matches?.length || 0} candidatos JSON`);
+    
+    if (!matches) {
+      console.log(`⚠️ [MCP] No se encontró JSON con 'tool' o 'use_tool'`);
+      return null;
+    }
+    
+    // Intentar cada JSON encontrado (puede haber múltiples)
+    for (let i = 0; i < matches.length; i++) {
+      const jsonStr = matches[i];
+      console.log(`   Intentando candidato ${i + 1}: ${jsonStr.substring(0, 50).replace(/\n/g, '\\n')}...`);
+      
+      try {
+        const data = JSON.parse(jsonStr);
+        const toolCall = this._normalizeToolCall(data);
+        if (toolCall) {
+          console.log(`✅ [MCP] Tool call detectado: ${toolCall.toolName}`);
+          return toolCall;
+        }
+      } catch (e) {
+        console.log(`      ❌ JSON inválido: ${e.message}`);
+        continue;
+      }
+    }
+    
+    console.log(`❌ [MCP] Ninguno de los candidatos fue un tool call válido`);
+    return null;
+  }
+
+  /**
+   * Validar si data es un tool call válido
+   */
+  _isValidToolCall(data) {
+    if (!data || typeof data !== 'object') return false;
+    
+    const hasToolField = (data.tool && typeof data.tool === 'string') ||
+                         (data.use_tool && typeof data.use_tool === 'string');
+    
+    return hasToolField;
+  }
+
+  /**
+   * Normalizar tool call a formato estándar
+   */
+  _normalizeToolCall(data) {
+    if (!this._isValidToolCall(data)) return null;
+    
+    return {
+      toolName: data.tool || data.use_tool,
+      arguments: data.arguments || {},
+      serverId: data.serverId || data.server || null
+    };
+  }
+
+  /**
+   * Manejar loop de tool calls para modelos locales (system prompt)
+   * Soporta múltiples iteraciones, re-inyección de resultados, y detección de loops
+   */
+  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations = 10) {
     let iteration = 0;
     let currentToolCall = toolCall;
     let conversationMessages = [...messages];
+    let lastToolName = null;
+    let consecutiveRepeats = 0;
     
     console.log(`🔄 [MCP] Iniciando loop de tool calls (máx ${maxIterations} iteraciones)`);
     
     while (currentToolCall && iteration < maxIterations) {
       iteration++;
       
-        console.log(`🔧 [MCP] ${currentToolCall.toolName}`);
+      console.log(`🔧 [MCP] Iteración ${iteration}/${maxIterations}: ${currentToolCall.toolName}`);
+      
+      // NEW: Detect infinite loops (same tool repeated)
+      if (lastToolName === currentToolCall.toolName) {
+        consecutiveRepeats++;
+        console.warn(`⚠️ [MCP] Mismo tool repetido ${consecutiveRepeats}x: ${currentToolCall.toolName}`);
+        
+        // Si el mismo tool se pide 2 veces seguidas (es decir, 3 veces en total), probablemente es un loop
+        if (consecutiveRepeats >= 2) {
+          console.warn(`⚠️ [MCP] Loop infinito detectado, deteniendo y retornando respuesta`);
+          if (callbacks.onStatus) {
+            callbacks.onStatus({
+              status: 'warning',
+              message: `⚠️ Loop infinito detectado (${currentToolCall.toolName} repetido 3 veces)`,
+              model: modelId,
+              provider: 'local'
+            });
+          }
+          
+          // FIX: Return the last meaningful response instead of just breaking
+          const lastMessage = conversationMessages[conversationMessages.length - 1];
+          const lastContent = lastMessage?.content || '';
+          
+          return `⚠️ Se detectó un loop infinito con la herramienta "${currentToolCall.toolName}". El modelo solicitó esta herramienta repetidamente sin progresar.
+
+Última respuesta del modelo:
+${lastContent}
+
+Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
+        }
+      } else {
+        consecutiveRepeats = 0;
+        lastToolName = currentToolCall.toolName;
+      }
       
       // Callback de estado: ejecutando herramienta
       if (callbacks.onStatus) {
@@ -2189,12 +2346,44 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
         if (result.isError) {
           const errorText = result.content?.[0]?.text || 'Error desconocido';
           console.error(`❌ [MCP] ${currentToolCall.toolName} falló:`, errorText);
-          return `❌ Error: ${errorText}`;
+          
+          // Callback de error
+          if (callbacks.onStatus) {
+            callbacks.onStatus({
+              status: 'tool-error',
+              message: `Error en herramienta ${currentToolCall.toolName}: ${errorText}`,
+              model: modelId,
+              provider: 'local',
+              toolName: currentToolCall.toolName,
+              error: errorText
+            });
+          }
+          
+          // No devolver inmediatamente, informar al modelo
+          conversationMessages.push({
+            role: 'user',
+            content: `❌ Error ejecutando ${currentToolCall.toolName}: ${errorText}`
+          });
+          
+          // Pedir al modelo que intente de otra forma
+          const errorFollowUp = await this.sendToLocalModelStreamingWithCallbacks(
+            modelId,
+            conversationMessages,
+            callbacks,
+            { ...options, maxTokens: 500, temperature: 0.3 }
+          );
+          
+          // Detectar si hay otra tool call después del error
+          currentToolCall = this.detectToolCallInResponse(errorFollowUp);
+          if (!currentToolCall) {
+            return errorFollowUp;
+          }
+          continue;
         }
         
         console.log(`✅ [MCP] ${currentToolCall.toolName} completado`);
         
-        // Notificar a la UI inmediatamente con el resultado de la tool
+        // Notificar a la UI con el resultado de la tool
         if (callbacks && typeof callbacks.onToolResult === 'function') {
           try {
             callbacks.onToolResult({
@@ -2207,7 +2396,7 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
           }
         }
         
-        // Formatear resultado SIN TRUNCAR
+        // Formatear resultado
         const cleanResult = (() => {
           const text = result.content?.[0]?.text || 'OK';
           
@@ -2222,7 +2411,7 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
             return '✅ Archivo editado correctamente';
           }
           
-          // Listados de directorios - formatear bonito SIN TRUNCAR
+          // Listados de directorios - formatear bonito
           if (text.includes('[FILE]') || text.includes('[DIR]')) {
             const lines = text.split('\n').filter(l => l.trim());
             const dirs = lines.filter(l => l.includes('[DIR]')).map(l => '📁 ' + l.replace('[DIR]', '').trim());
@@ -2238,7 +2427,7 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
             return output.join('\n\n');
           }
           
-          // Contenido de archivos o texto general - devolver COMPLETO
+          // Contenido de archivos o texto general
           return text;
         })();
         
@@ -2248,12 +2437,44 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
           this._filesystemModified = true;
         }
         
-        // Devolver resultado INMEDIATAMENTE (no continuar loop, no enviar al modelo)
-        return cleanResult;
+        // NUEVO: Re-inyectar resultado en conversación para que el modelo lo vea
+        console.log(`📝 [MCP] Re-inyectando resultado en conversación`);
+        conversationMessages.push({
+          role: 'user',
+          content: `✅ Herramienta COMPLETADA: ${currentToolCall.toolName}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Resultado:
+${cleanResult}
+
+⚠️ IMPORTANTE: Esta herramienta YA FUE EJECUTADA. 
+No vuelvas a pedir la misma herramienta.
+Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin herramientas.`
+        });
+        
+        // NUEVO: Preguntar al modelo si necesita más herramientas
+        const followUp = await this.sendToLocalModelStreamingWithCallbacks(
+          modelId,
+          conversationMessages,
+          callbacks,
+          { ...options, maxTokens: 500, temperature: 0.3, contextLimit: Math.min(4096, options.contextLimit || 8000) }
+        );
+        
+        // NUEVO: Detectar si hay otro tool call
+        currentToolCall = this.detectToolCallInResponse(followUp);
+        
+        if (!currentToolCall) {
+          // No hay más tools, el modelo respondió normalmente
+          console.log(`✅ [MCP] Loop completado, modelo respondió sin pedir tools`);
+          return followUp;
+        }
+        
+        // Hay otro tool call, continuar loop
+        console.log(`🔄 [MCP] Modelo solicita otra herramienta, continuando loop`);
+        
       } catch (error) {
         console.error(`❌ [MCP] Error ejecutando tool ${currentToolCall.toolName}:`, error);
         
-        // Callback de error en tool
+        // Callback de error
         if (callbacks.onStatus) {
           callbacks.onStatus({
             status: 'tool-error',
@@ -2265,32 +2486,22 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
           });
         }
         
-        // Informar error brevemente
+        // Informar error al modelo
         conversationMessages.push({
           role: 'user',
-          content: `ERR: ${error.message.substring(0, 50)}`
+          content: `❌ Error técnico ejecutando ${currentToolCall.toolName}: ${error.message}`
         });
         
-        // Dar una última oportunidad al modelo de responder con el error
+        // Dar oportunidad al modelo de responder
         try {
-          // Recortar también en caso de error
-          const errorUserMessage = conversationMessages[conversationMessages.length - 1];
-          let prevUserMsg = null;
-          for (let i = conversationMessages.length - 2; i >= 0; i--) {
-            if (conversationMessages[i].role === 'user') { prevUserMsg = conversationMessages[i]; break; }
-          }
-          const minimalSystem = { role: 'system', content: 'ES. Error breve.' };
-          const trimmedOnError = [ minimalSystem, ...(prevUserMsg ? [prevUserMsg] : []), errorUserMessage ];
-
           const errorResponse = await this.sendToLocalModelStreamingWithCallbacks(
-            modelId, 
-            trimmedOnError, 
-            callbacks, 
-            { ...options, maxTokens: 1500, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
+            modelId,
+            conversationMessages,
+            callbacks,
+            { ...options, maxTokens: 500, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
           );
           return errorResponse;
         } catch (recoveryError) {
-          // Si falla la recuperación, devolver mensaje de error
           throw new Error(`Error ejecutando herramienta ${currentToolCall.toolName}: ${error.message}`);
         }
       }
@@ -2308,12 +2519,15 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
       });
     }
     
-    // Retornar la última respuesta del modelo
-    const lastAssistantMessage = conversationMessages
-      .reverse()
-      .find(m => m.role === 'assistant');
+    // Retornar la última respuesta del modelo o mensaje por defecto
+    if (conversationMessages.length > 0) {
+      const lastMessage = conversationMessages[conversationMessages.length - 1];
+      if (lastMessage.content) {
+        return lastMessage.content;
+      }
+    }
     
-    return lastAssistantMessage?.content || 'Lo siento, alcancé el límite de uso de herramientas.';
+    return 'Lo siento, alcancé el límite de uso de herramientas. Intenté ejecutar hasta ' + maxIterations + ' herramientas.';
   }
 
   /**
@@ -2908,6 +3122,8 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
         response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
       }
       
+      console.log(`📥 [AIService] Respuesta recibida (${response?.length || 0} chars), hasTools=${mcpContext.hasTools}`);
+      
       // 🔧 DETECTAR SI LA RESPUESTA ES UN TOOL CALL
       if (mcpContext.hasTools) {
         const toolCall = this.detectToolCallInResponse(response);
@@ -2974,10 +3190,17 @@ CRÍTICO: "edita/modifica" SIEMPRE usa edit_file, NO write_file.`;
 
     const data = await response.json();
     
+    // NUEVO: Log detallado de respuesta
+    console.log(`📨 [Ollama Raw Response]:`, JSON.stringify(data).substring(0, 200));
+    console.log(`   message:`, data.message);
+    console.log(`   message.content:`, data.message?.content);
+    console.log(`   content length:`, data.message?.content?.length || 0);
+    
     // La respuesta de Ollama viene en data.message.content
     if (data.message && data.message.content) {
       return data.message.content;
     } else {
+      console.error(`❌ [Ollama] Respuesta vacía o inválida`, { message: data.message, content: data.message?.content });
       throw new Error('Respuesta inválida del modelo local');
     }
   }
