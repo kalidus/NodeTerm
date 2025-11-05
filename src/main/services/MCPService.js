@@ -25,6 +25,12 @@ class MCPService {
     this.messageIdCounter = 0;
     this.pendingRequests = new Map(); // Map<messageId, {resolve, reject, timeout}>
     this.initialized = false;
+    // Keepalive y logging
+    this.keepaliveIntervalMs = 30000;
+    this.keepaliveTimeoutMs = 5000;
+    this.keepaliveMaxFailures = 2;
+    this.keepaliveTimers = new Map();
+    this.verboseLogs = false;
   }
 
   /**
@@ -67,11 +73,13 @@ class MCPService {
         const data = await fs.readFile(this.configPath, 'utf8');
         this.mcpConfig = JSON.parse(data);
         console.log(`📄 [MCP] Configuración cargada: ${Object.keys(this.mcpConfig.mcpServers || {}).length} servidores`);
+        this.verboseLogs = !!this.mcpConfig.verbose || !!process.env.MCP_VERBOSE;
       } else {
         // Crear configuración por defecto
         this.mcpConfig = {
           mcpServers: {},
-          version: '1.0.0'
+          version: '1.0.0',
+          verbose: false
         };
         await this.saveConfig();
         console.log('📄 [MCP] Configuración por defecto creada');
@@ -149,7 +157,12 @@ class MCPService {
         capabilities: null,
         tools: [],
         resources: [],
-        prompts: []
+        prompts: [],
+        keepaliveTimer: null,
+        keepaliveFailures: 0,
+        lastHeartbeatAt: 0,
+        lastCapabilitiesRefreshAt: 0,
+        keepaliveInFlight: false
       };
 
       this.mcpProcesses.set(serverId, mcpProcess);
@@ -162,6 +175,9 @@ class MCPService {
 
       // Obtener capabilities
       await this.refreshServerCapabilities(serverId);
+
+      // Iniciar keepalive
+      this.startKeepalive(serverId);
 
       console.log(`✅ [MCP] ${serverId} iniciado correctamente`);
       
@@ -218,7 +234,9 @@ class MCPService {
     if (!mcpProcess) return;
 
     const dataStr = data.toString();
-    console.log(`📥 [MCP ${serverId}] Datos en stdout:`, dataStr);
+    if (this.verboseLogs) {
+      console.log(`📥 [MCP ${serverId}] Datos en stdout:`, dataStr);
+    }
 
     mcpProcess.buffer += dataStr;
 
@@ -231,15 +249,21 @@ class MCPService {
     for (const line of lines) {
       if (!line.trim()) continue;
 
-      console.log(`   Procesando línea: ${line.substring(0, 100)}...`);
+      if (this.verboseLogs) {
+        console.log(`   Procesando línea: ${line.substring(0, 120)}...`);
+      }
 
       try {
         const message = JSON.parse(line);
-        console.log(`   ✅ JSON parseado correctamente, tipo:`, message.method || 'response');
+        if (this.verboseLogs) {
+          console.log(`   ✅ JSON parseado correctamente, tipo:`, message.method || 'response');
+        }
         this.handleJSONRPCMessage(serverId, message);
       } catch (error) {
         console.error(`❌ [MCP ${serverId}] Error parseando JSON:`, error.message);
-        console.error(`   Línea completa: ${line}`);
+        if (this.verboseLogs) {
+          console.error(`   Línea completa: ${line}`);
+        }
       }
     }
   }
@@ -248,7 +272,25 @@ class MCPService {
    * Manejar mensaje JSON-RPC recibido
    */
   handleJSONRPCMessage(serverId, message) {
-    console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido:`, JSON.stringify(message, null, 2));
+    if (this.verboseLogs) {
+      console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido:`, JSON.stringify(message, null, 2));
+    } else {
+      const id = message.id;
+      const method = message.method || 'response';
+      let summary = method;
+      if (!message.method && message.result) {
+        if (Array.isArray(message.result?.content)) {
+          const first = message.result.content[0];
+          const sample = typeof first?.text === 'string' ? first.text.substring(0, 80) : '';
+          summary = `response(content[0]: "${sample}"${first?.text && first.text.length > 80 ? '…' : ''})`;
+        } else if (message.result?.tools) {
+          summary = `response(tools: ${message.result.tools.length})`;
+        } else {
+          summary = 'response(result)';
+        }
+      }
+      console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido (#${id}): ${summary}`);
+    }
     
     // Respuesta a una petición nuestra
     if (message.id !== undefined) {
@@ -294,7 +336,12 @@ class MCPService {
     };
 
     console.log(`📤 [MCP ${serverId}] Enviando request #${id}: ${method}`);
-    console.log(`   Params:`, JSON.stringify(params, null, 2));
+    if (this.verboseLogs) {
+      console.log(`   Params:`, JSON.stringify(params, null, 2));
+    } else {
+      const keys = Object.keys(params || {});
+      console.log(`   Params keys: ${keys.join(', ') || '(sin params)'}`);
+    }
 
     return new Promise((resolve, reject) => {
       const timeoutHandle = setTimeout(() => {
@@ -308,7 +355,11 @@ class MCPService {
 
       try {
         const message = JSON.stringify(request) + '\n';
-        console.log(`📝 [MCP ${serverId}] Escribiendo en stdin:`, message.trim());
+        if (this.verboseLogs) {
+          console.log(`📝 [MCP ${serverId}] Escribiendo en stdin:`, message.trim());
+        } else {
+          console.log(`📝 [MCP ${serverId}] Escribiendo en stdin: { id: ${id}, method: ${method} }`);
+        }
         mcpProcess.process.stdin.write(message);
       } catch (error) {
         clearTimeout(timeoutHandle);
@@ -455,6 +506,9 @@ class MCPService {
 
     const config = mcpProcess.config;
 
+    // Detener keepalive en cualquier caso
+    this.stopKeepalive(serverId);
+
     // Si tiene restart automático habilitado y no fue detenido manualmente
     if (config.autoRestart && mcpProcess.state === 'ready') {
       console.log(`🔄 [MCP ${serverId}] Reiniciando automáticamente...`);
@@ -468,6 +522,59 @@ class MCPService {
       }, 2000);
     } else {
       this.mcpProcesses.delete(serverId);
+    }
+  }
+
+  // ===== Keepalive =====
+  startKeepalive(serverId) {
+    const proc = this.mcpProcesses.get(serverId);
+    if (!proc) return;
+    if (proc.keepaliveTimer || this.keepaliveTimers.has(serverId)) return;
+
+    const tick = async () => {
+      const m = this.mcpProcesses.get(serverId);
+      if (!m || m.state !== 'ready') return;
+      if (m.keepaliveInFlight) return;
+      m.keepaliveInFlight = true;
+      try {
+        await this.sendRequest(serverId, 'tools/list', {}, this.keepaliveTimeoutMs);
+        m.keepaliveFailures = 0;
+        m.lastHeartbeatAt = Date.now();
+        const now = Date.now();
+        if (!m.lastCapabilitiesRefreshAt || now - m.lastCapabilitiesRefreshAt > 20000) {
+          m.lastCapabilitiesRefreshAt = now;
+          this.refreshServerCapabilities(serverId).catch(() => {});
+        }
+      } catch (e) {
+        m.keepaliveFailures = (m.keepaliveFailures || 0) + 1;
+        console.warn(`⚠️ [MCP ${serverId}] Keepalive fallo #${m.keepaliveFailures}: ${e.message}`);
+        if (m.keepaliveFailures >= this.keepaliveMaxFailures) {
+          console.warn(`🔁 [MCP ${serverId}] Reinicio por keepalive fallido`);
+          this.stopKeepalive(serverId);
+          this.mcpProcesses.delete(serverId);
+          this.startMCPServer(serverId).catch(err => console.error(`❌ [MCP ${serverId}] Error reiniciando:`, err.message));
+          m.keepaliveInFlight = false;
+          return;
+        }
+      }
+      m.keepaliveInFlight = false;
+    };
+
+    const t = setInterval(tick, this.keepaliveIntervalMs);
+    proc.keepaliveTimer = t;
+    this.keepaliveTimers.set(serverId, t);
+  }
+
+  stopKeepalive(serverId) {
+    const proc = this.mcpProcesses.get(serverId);
+    if (!proc) return;
+    if (proc.keepaliveTimer) {
+      clearInterval(proc.keepaliveTimer);
+      proc.keepaliveTimer = null;
+    }
+    if (this.keepaliveTimers.has(serverId)) {
+      clearInterval(this.keepaliveTimers.get(serverId));
+      this.keepaliveTimers.delete(serverId);
     }
   }
 

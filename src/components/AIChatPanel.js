@@ -68,6 +68,31 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return false;
   }, []);
 
+  // Escuchar actualizaciones de la conversación para sincronizar mensajes en vivo
+  useEffect(() => {
+    const handleConversationUpdate = () => {
+      const conv = conversationService.getCurrentConversation();
+      if (!conv) return;
+      setMessages(prev => {
+        const persisted = (conv.messages || []).map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          metadata: msg.metadata,
+          subtle: msg.subtle,
+          contextOptimization: msg.contextOptimization,
+          attachedFiles: msg.attachedFiles
+        }));
+        const streaming = prev.filter(m => m.streaming);
+        return streaming.length > 0 ? [...persisted, ...streaming] : persisted;
+      });
+    };
+
+    window.addEventListener('conversation-updated', handleConversationUpdate);
+    return () => window.removeEventListener('conversation-updated', handleConversationUpdate);
+  }, []);
+
   const looksLikeJsonStart = useCallback((text) => {
     if (!text || typeof text !== 'string') return false;
     const t = text.trimStart();
@@ -353,7 +378,41 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           });
         },
         onStatus: (statusData) => {
-          setCurrentStatus(statusData);
+          // Mantener visible el estado de herramienta unos ms para UX
+          try {
+            const s = statusData?.status;
+            if (!window.__toolStatusRefs) {
+              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 2000 };
+            }
+            const refs = window.__toolStatusRefs;
+            const MIN_MS = refs.minMs || 2000;
+            if (s === 'tool-execution') {
+              if (refs.timer) { clearTimeout(refs.timer); refs.timer = null; }
+              refs.lastAt = Date.now();
+              setCurrentStatus(statusData);
+              return;
+            }
+            if (s === 'tool-error') {
+              if (refs.timer) { clearTimeout(refs.timer); refs.timer = null; }
+              refs.lastAt = 0;
+              setCurrentStatus(statusData);
+              return;
+            }
+            const elapsed = Date.now() - (refs.lastAt || 0);
+            if (refs.lastAt && elapsed < MIN_MS) {
+              const delay = MIN_MS - elapsed;
+              if (refs.timer) clearTimeout(refs.timer);
+              refs.timer = setTimeout(() => {
+                setCurrentStatus(statusData);
+                refs.timer = null;
+                refs.lastAt = 0;
+              }, delay);
+              return;
+            }
+            setCurrentStatus(statusData);
+          } catch {
+            setCurrentStatus(statusData);
+          }
         },
         onStream: (streamData) => {
           // Si el contenido del stream parece un tool-call JSON, NO mostrarlo PERO mantener placeholder
@@ -371,12 +430,27 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               } : msg
             ));
           }
-          setCurrentStatus({
-            status: 'streaming',
-            message: 'Recibiendo respuesta...',
-            model: streamData.model,
-            provider: streamData.provider
-          });
+          // Respetar ventana mínima del estado de herramienta
+          try {
+            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 2000 };
+            const MIN_MS = refs.minMs || 2000;
+            const elapsed = Date.now() - (refs.lastAt || 0);
+            const next = { status: 'streaming', message: 'Recibiendo respuesta...', model: streamData.model, provider: streamData.provider };
+            if (refs.lastAt && elapsed < MIN_MS) {
+              const delay = MIN_MS - elapsed;
+              if (refs.timer) clearTimeout(refs.timer);
+              refs.timer = setTimeout(() => {
+                setCurrentStatus(next);
+                refs.timer = null;
+                refs.lastAt = 0;
+              }, delay);
+            } else {
+              setCurrentStatus(next);
+              refs.lastAt = 0;
+            }
+          } catch {
+            setCurrentStatus({ status: 'streaming', message: 'Recibiendo respuesta...', model: streamData.model, provider: streamData.provider });
+          }
         },
         onToolResult: (toolData) => {
           console.log('🔧 [AIChatPanel.onToolResult] Ejecutado:', {
@@ -384,6 +458,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             hasArgs: !!toolData.args,
             hasResult: !!toolData.result
           });
+          // Mostrar estado "resultado recibido" con icono de herramienta
+          try {
+            if (!window.__toolStatusRefs) {
+              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 2000 };
+            }
+            const refs = window.__toolStatusRefs;
+            refs.lastAt = Date.now();
+            setCurrentStatus({ status: 'tool-executed', message: 'Resultado recibido', toolName: toolData.toolName, toolArgs: toolData.args });
+          } catch {}
           
           // Extraer texto legible del resultado (evitar mostrar JSON crudo)
           let resultText = '';
@@ -422,8 +505,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
           const content = `🔧 ${toolData.toolName} · ${pretty}`;
           
-          // ============= GUARDAR RESULTADO DE HERRAMIENTA EN CONVERSATIONSERVICE =============
-          // 🔧 Agregar el resultado de la herramienta a localStorage para persistencia
+          // Si usamos mensajes estructurados, el orquestador ya persistirá y emitirá 'conversation-updated'
+          if (aiService.featureFlags?.structuredToolMessages) {
+            return;
+          }
+          // Flujo legacy: persistir un mensaje de sistema minimalista y reflejar en UI
           console.log(`   Guardando en conversationService: "${content}"`);
           const toolMessageObj = conversationService.addMessage('system', content, {
             toolName: toolData.toolName,
@@ -459,9 +545,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // ============= CALCULAR SAFE RESPONSE PRIMERO (antes de guardar) =============
           // Si la respuesta está vacía, usar un fallback basado en el último resultado de tool
-          const safeResponse = (data.response && data.response.trim().length > 0)
+          const looksLikeDirListing = (txt) => {
+            if (!txt || typeof txt !== 'string') return false;
+            const matches = (txt.match(/\[(FILE|DIR)\]/g) || []).length;
+            const lines = txt.split(/\r?\n/).length;
+            return matches >= 2 && lines >= 3;
+          };
+
+          let safeResponse = (data.response && data.response.trim().length > 0)
             ? data.response
             : (() => {
+                // En modo estructurado, evitar duplicar el resultado de tool
+                if (aiService.featureFlags?.structuredToolMessages) {
+                  return 'Hecho.';
+                }
                 const last = lastToolResultRef.current;
                 if (last && typeof last.text === 'string' && last.text.length > 0) {
                   // Intentar sintetizar una frase breve
@@ -471,6 +568,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 }
                 return 'Hecho.';
               })();
+
+          if (aiService.featureFlags?.structuredToolMessages && looksLikeDirListing(data.response)) {
+            safeResponse = 'Hecho.';
+          }
+          const norm = (s) => (s || '').trim();
+          if (aiService.featureFlags?.structuredToolMessages && lastToolResultRef.current?.text) {
+            const toolText = norm(lastToolResultRef.current.text);
+            const respText = norm(data.response);
+            if (toolText && respText && (toolText === respText || toolText.includes(respText) || respText.includes(toolText))) {
+              safeResponse = 'Hecho.';
+            }
+          }
           
           console.log(`   Safe response: "${safeResponse.substring(0, 80)}"`);
           
@@ -527,11 +636,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             aiService.lastContextOptimization = null;
           }
           
-          setCurrentStatus({
-            status: 'complete',
-            message: `Completado en ${data.latency}ms`,
-            latency: data.latency
-          });
+          try {
+            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 2000 };
+            const MIN_MS = refs.minMs || 2000;
+            const elapsed = Date.now() - (refs.lastAt || 0);
+            const applyComplete = () => setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
+            if (refs.lastAt && elapsed < MIN_MS) {
+              const delay = MIN_MS - elapsed;
+              if (refs.timer) clearTimeout(refs.timer);
+              refs.timer = setTimeout(() => {
+                applyComplete();
+                refs.timer = null;
+                refs.lastAt = 0;
+              }, delay);
+            } else {
+              applyComplete();
+              refs.lastAt = 0;
+            }
+          } catch {
+            setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
+          }
 
           // Aviso sutil de uso de contexto efímero con archivos
           if (data.ephemeralContextUsed && Array.isArray(data.ephemeralFilesUsed) && data.ephemeralFilesUsed.length > 0) {
@@ -2333,7 +2457,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
-                  {currentStatus?.status === 'tool-execution' && <i className="pi pi-wrench pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {(currentStatus?.status === 'tool-execution' || currentStatus?.status === 'tool-executed') && <i className="pi pi-wrench pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'tool-error' && <i className="pi pi-exclamation-triangle" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                 </div>
@@ -2358,6 +2482,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                      <span>
                        🔧 Ejecutando: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
                        {currentStatus?.iteration && ` (${currentStatus.iteration}/${currentStatus.maxIterations})`}
+                     </span>
+                   ) :
+                   currentStatus?.status === 'tool-executed' ? (
+                     <span>
+                       🔧 Resultado recibido: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
                      </span>
                    ) :
                    currentStatus?.status === 'tool-error' ? (
