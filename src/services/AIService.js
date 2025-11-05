@@ -8,6 +8,7 @@ import debugLogger from '../utils/debugLogger';
 
 import fileAnalysisService from './FileAnalysisService';
 import mcpClient from './MCPClientService';
+import toolOrchestrator from './ToolOrchestrator';
 
 class AIService {
   constructor() {
@@ -20,6 +21,9 @@ class AIService {
     this.allowedDirectoriesCache = { value: null, fetchedAt: 0 };
     // Flag para invalidar información del filesystem cuando se modifica
     this._filesystemModified = false;
+    // Feature flags y orquestador
+    this.featureFlags = { structuredToolMessages: true };
+    this.toolOrchestrator = toolOrchestrator;
     this.models = {
       remote: [
         { 
@@ -3137,6 +3141,28 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
       if (mcpContext.hasTools) {
         const toolCall = this.detectToolCallInResponse(response);
         if (toolCall) {
+          if (this.featureFlags?.structuredToolMessages && this.toolOrchestrator) {
+            const callModelFn = async (provMessages, overrides = {}) => {
+              const adjusted = { ...options, ...overrides };
+              return await this.sendToLocalModelStreamingWithCallbacks(
+                model.id,
+                provMessages,
+                callbacks,
+                adjusted
+              );
+            };
+            return await this.toolOrchestrator.executeLoop({
+              modelId: model.id,
+              initialToolCall: toolCall,
+              baseProviderMessages: messages,
+              detectToolCallInResponse: (resp) => this.detectToolCallInResponse(resp),
+              callModelFn,
+              callbacks,
+              options,
+              maxIterations: 10,
+              turnId: options?.turnId
+            });
+          }
           return await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
         }
       }
