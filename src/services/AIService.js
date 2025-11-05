@@ -2553,15 +2553,24 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
       throw new Error('No hay conversación activa');
     }
 
+    // 🔧 VALIDACIÓN DE SINCRONIZACIÓN
+    console.log(`🔍 [AIService.sendMessage] Validación de conversación:`);
+    console.log(`   currentConversation.id: ${currentConversation.id}`);
+    console.log(`   conversationService.currentConversationId: ${conversationService.currentConversationId}`);
+    if (currentConversation.id !== conversationService.currentConversationId) {
+      console.warn(`⚠️ [AIService] DESINCRONIZACIÓN DETECTADA: ${currentConversation.id} vs ${conversationService.currentConversationId}`);
+    }
+
     // Obtener mensajes de la conversación actual
     const conversationMessages = currentConversation.messages || [];
     // Considerar "primera conversación" cuando solo hay 1 mensaje (el del usuario que acabamos de agregar)
     const isFirstMessage = conversationMessages.length === 1;
     
-    // No loguear aquí - los logs están en los métodos de envío específicos
+    console.log(`📋 [AIService] Mensajes en conversación actual: ${conversationMessages.length}`);
     
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
     let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
+    console.log(`📋 [AIService] Mensajes después de limitación: ${limitedMessages.length}`);
 
     // Construir contexto efímero de archivos adjuntos (RAG ligero)
     const attachedFiles = conversationService.getAttachedFiles();

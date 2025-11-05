@@ -292,14 +292,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAbortController(controller);
 
     try {
-      // CRÍTICO: Limpiar historial de AIService para evitar contaminación
-      aiService.clearHistory();
-      
-      // Asegurar que el servicio esté sincronizado con la conversación actual
+      // ============= PASO 1: SINCRONIZAR CONVERSACIÓN (PRIMERO) =============
+      // Asegurar que el servicio esté sincronizado con la conversación actual ANTES de limpiar historial
       if (currentConversationId && conversationService.currentConversationId !== currentConversationId) {
         console.log(`🔄 [AIChatPanel] Sincronizando conversación: ${currentConversationId}`);
         conversationService.loadConversation(currentConversationId);
       }
+      
+      // ============= PASO 2: LIMPIAR HISTORIAL (DESPUÉS) =============
+      // CRÍTICO: Limpiar historial de AIService DESPUÉS de sincronizar, para evitar usar conversación equivocada
+      aiService.clearHistory();
       
       // Agregar mensaje del usuario a la conversación con archivos adjuntos
       const userMessageObj = conversationService.addMessage('user', userMessage, {
