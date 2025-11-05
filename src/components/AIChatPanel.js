@@ -16,6 +16,7 @@ import MCPActiveTools from './MCPActiveTools';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 import mcpClient from '../services/MCPClientService';
+import '../utils/debugConversations'; // 🔧 Debug utility
 
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
@@ -376,6 +377,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           });
         },
         onToolResult: (toolData) => {
+          console.log('🔧 [AIChatPanel.onToolResult] Ejecutado:', {
+            toolName: toolData.toolName,
+            hasArgs: !!toolData.args,
+            hasResult: !!toolData.result
+          });
+          
           // Extraer texto legible del resultado (evitar mostrar JSON crudo)
           let resultText = '';
           const res = toolData.result;
@@ -389,6 +396,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           } else {
             try { resultText = JSON.stringify(res, null, 2); } catch { resultText = String(res ?? ''); }
           }
+
+          console.log(`   resultText length: ${resultText.length} chars`);
 
           // Guardar último resultado para posibles fallbacks del mensaje final
           lastToolResultRef.current = { toolName: toolData.toolName, text: resultText };
@@ -410,36 +419,43 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             pretty = 'Árbol generado';
           }
           const content = `🔧 ${toolData.toolName} · ${pretty}`;
-          const toolMsgId = Date.now();
+          
+          // ============= GUARDAR RESULTADO DE HERRAMIENTA EN CONVERSATIONSERVICE =============
+          // 🔧 Agregar el resultado de la herramienta a localStorage para persistencia
+          console.log(`   Guardando en conversationService: "${content}"`);
+          const toolMessageObj = conversationService.addMessage('system', content, {
+            toolName: toolData.toolName,
+            toolArgs: toolData.args,
+            isToolResult: true,
+            toolResultText: resultText
+          });
+          
+          console.log(`   ✅ Guardado en localStorage con ID: ${toolMessageObj.id}`);
+          
           setMessages(prev => {
             const idx = prev.findIndex(m => m.id === assistantMessageId);
             const arr = [...prev];
             arr.splice(idx >= 0 ? idx : arr.length, 0, {
-              id: toolMsgId,
+              id: toolMessageObj.id,
               role: 'system',
               content,
-              timestamp: toolMsgId,
-              metadata: { toolName: toolData.toolName, toolArgs: toolData.args, isToolResult: true },
+              timestamp: toolMessageObj.timestamp,
+              metadata: { toolName: toolData.toolName, toolArgs: toolData.args, isToolResult: true, toolResultText: resultText },
               subtle: true
             });
             return arr;
           });
         },
         onComplete: (data) => {
-          const files = aiService.detectFilesInResponse(data.response, userMessage);
-          
-          // Agregar respuesta del asistente a la conversación
-          const assistantMessageObj = conversationService.addMessage('assistant', data.response, {
-            latency: data.latency,
-            model: data.model,
-            provider: data.provider,
-            tokens: Math.ceil(data.response.length / 4),
-            files: files.length > 0 ? files : undefined
+          console.log('📤 [AIChatPanel.onComplete] Respuesta recibida:', {
+            hasResponse: !!data.response,
+            responseLength: data.response ? data.response.length : 0,
+            responsePreview: data.response ? data.response.substring(0, 100) : '(vacío)'
           });
           
-          // Calcular tokens reales de la respuesta
-          const responseTokens = Math.ceil(data.response.length / 4);
+          const files = aiService.detectFilesInResponse(data.response, userMessage);
           
+          // ============= CALCULAR SAFE RESPONSE PRIMERO (antes de guardar) =============
           // Si la respuesta está vacía, usar un fallback basado en el último resultado de tool
           const safeResponse = (data.response && data.response.trim().length > 0)
             ? data.response
@@ -453,6 +469,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 }
                 return 'Hecho.';
               })();
+          
+          console.log(`   Safe response: "${safeResponse.substring(0, 80)}"`);
+          
+          // ============= GUARDAR CON SAFE RESPONSE (no con el original vacío) =============
+          // Agregar respuesta del asistente a la conversación (usando safeResponse)
+          const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
+            latency: data.latency,
+            model: data.model,
+            provider: data.provider,
+            tokens: Math.ceil(safeResponse.length / 4),
+            files: files.length > 0 ? files : undefined
+          });
+          
+          console.log(`   ✅ Guardado en localStorage con ID: ${assistantMessageObj.id}`);
+          
+          // Calcular tokens reales de la respuesta
+          const responseTokens = Math.ceil(safeResponse.length / 4);
 
           // Actualizar mensaje final con archivos asociados
           setMessages(prev => prev.map(msg => 
@@ -679,11 +712,24 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       return;
     }
 
-    // Reset completo del estado antes de crear nueva conversación
+    // ============= RESET COMPLETO DEL ESTADO =============
     setMessages([]);
     setAttachedFiles([]);
     setInputValue('');
     setIsLoading(false);
+    setCurrentStatus(null);                       // 🔧 Limpiar estado actual
+    
+    // Limpiar AIService
+    aiService.clearHistory();                     // 🔧 Limpiar historial
+    
+    // Limpiar refs
+    lastToolResultRef.current = null;             // 🔧 Limpiar tool result
+    
+    // Limpiar detección de archivos
+    setDetectedFileTypes([]);
+    setFileTypeSuggestions([]);
+    setDetectionConfidence(0);
+    setShowFileTypeSuggestions(false);
 
     // Crear nueva conversación completamente limpia
     const newConversation = conversationService.createConversation(
@@ -704,25 +750,57 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   const handleLoadConversation = (conversationId) => {
-    // Limpiar UI primero para evitar mezclas
+    // ============= LIMPIEZA COMPLETA - Fase 1: UI States =============
     setMessages([]);
     setAttachedFiles([]);
+    setInputValue('');                           // 🔧 Limpiar input anterior
     setIsLoading(false);
+    setCurrentStatus(null);
     
+    // ============= LIMPIEZA COMPLETA - Fase 2: AIService State =============
+    aiService.clearHistory();                    // 🔧 Limpiar historial del AIService
+    
+    // ============= LIMPIEZA COMPLETA - Fase 3: Refs =============
+    lastToolResultRef.current = null;            // 🔧 Limpiar tool result ref
+    
+    // ============= LIMPIEZA COMPLETA - Fase 4: File Detection States =============
+    setDetectedFileTypes([]);                    // 🔧 Limpiar tipos de archivo detectados
+    setFileTypeSuggestions([]);                  // 🔧 Limpiar sugerencias
+    setDetectionConfidence(0);                   // 🔧 Limpiar confianza
+    setShowFileTypeSuggestions(false);           // 🔧 Ocultar sugerencias
+    
+    // ============= CARGAR CONVERSACIÓN LIMPIA =============
     const conversation = conversationService.loadConversation(conversationId);
     if (conversation) {
       setCurrentConversationId(conversation.id);
       setConversationTitle(conversation.title);
+      
+      // Cargar mensajes preservando toda la estructura incluyendo metadatos
       setMessages(conversation.messages.map(msg => ({
         id: msg.id,
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp,
-        metadata: msg.metadata
+        metadata: msg.metadata,
+        subtle: msg.subtle,
+        contextOptimization: msg.contextOptimization,
+        attachedFiles: msg.attachedFiles
       })));
+      
       // Cargar archivos adjuntos de la conversación
       const attachedFiles = conversationService.getAttachedFilesForConversation(conversationId);
       setAttachedFiles(attachedFiles || []);
+      
+      // Log detallado de los mensajes cargados
+      const msgSummary = conversation.messages.map(m => ({
+        role: m.role,
+        hasContent: !!m.content && m.content.trim().length > 0,
+        isToolResult: !!(m.metadata && m.metadata.isToolResult),
+        contentLength: m.content ? m.content.length : 0
+      }));
+      console.log(`✅ [AIChatPanel] Conversación cargada: ${conversation.id}`);
+      console.log(`   Mensajes: ${conversation.messages.length}`);
+      console.log(`   Resumen:`, msgSummary);
     }
   };
 
