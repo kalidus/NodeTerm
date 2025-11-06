@@ -127,6 +127,7 @@ class ToolOrchestrator {
     const seenInTurn = new Set();
     let lastToolName = null;
     let sameToolCount = 0;
+    let lastFollowUpResponse = null; // 🔧 Guardar la última respuesta del modelo
 
     let providerMessages = Array.isArray(baseProviderMessages) ? [...baseProviderMessages] : [];
 
@@ -142,12 +143,27 @@ class ToolOrchestrator {
       }
 
       const dedupeKey = this._makeDedupeKey(toolName, args);
-      if (seenInTurn.has(dedupeKey) || this._isDuplicate(conversationId, toolName, args)) {
+      // 🔧 CRÍTICO: Solo verificar duplicados DENTRO DEL MISMO TURNO (seenInTurn)
+      // NO bloquear herramientas que se usaron en turnos anteriores de la conversación
+      if (seenInTurn.has(dedupeKey)) {
+        console.log(`⚠️ [ToolOrchestrator] Tool duplicado en el mismo turno detectado: ${toolName}, omitiendo`);
         if (callbacks.onStatus) callbacks.onStatus({ status: 'warning', message: `Tool repetido omitido: ${toolName}`, provider: 'local', model: modelId, turnId });
         break;
       }
       seenInTurn.add(dedupeKey);
-      this._remember(conversationId, toolName, args);
+      // NO llamar a this._remember() - ya no necesitamos historial entre turnos
+      
+      // 🔧 NUEVA DEFENSA: Bloquear tools con el mismo nombre y mismo path/target en el mismo turno
+      // Esto previene sobrescribir el mismo archivo múltiples veces
+      if (args.path) {
+        const pathKey = `${toolName}:${args.path}`;
+        if (seenInTurn.has(pathKey)) {
+          console.warn(`⚠️ [ToolOrchestrator] Tool con el mismo path detectado: ${pathKey}, bloqueando para evitar sobrescritura`);
+          if (callbacks.onStatus) callbacks.onStatus({ status: 'warning', message: `Operación al mismo archivo bloqueada`, provider: 'local', model: modelId, turnId });
+          break;
+        }
+        seenInTurn.add(pathKey);
+      }
 
       const toolCallId = this._makeToolCallId(conversationId);
       conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { toolCallId, toolName, toolArgs: args, isToolCall: true, turnId });
@@ -179,17 +195,56 @@ class ToolOrchestrator {
 
       providerMessages.push({ role: 'system', content: `🔧 Resultado de ${toolName}:
 ${cleanText}` });
-      providerMessages.push({ role: 'system', content: 'IMPORTANTE: El resultado ya se mostró al usuario. No lo repitas. Si hace falta otra herramienta, pídela. Si no, responde con una frase breve de confirmación.' });
+      providerMessages.push({ role: 'system', content: `INSTRUCCIONES FINALES - LEER CUIDADOSAMENTE:
+1. El resultado de la herramienta YA fue mostrado al usuario - NO lo repitas.
+2. La tarea del usuario YA está completa - NO ejecutes más herramientas.
+3. NO respondas con JSON. NO respondas con tool calls.
+4. NO seas proactivo. NO hagas nada extra que el usuario no pidió.
+5. SOLO responde con una breve confirmación en español (1-2 líneas máximo).
+6. Ejemplo de respuesta correcta: "Hecho." o "Archivo creado correctamente." o "Operación completada."
+7. NO respondas con {"tool": null} ni ningún otro JSON.
+8. CRÍTICO: NO ejecutes el mismo tool otra vez. NO mejores ni modifiques nada. La tarea está COMPLETA.` });
 
-      const followUp = await callModelFn(providerMessages, { maxTokens: Math.min(500, options.maxTokens || 800) });
+      // 🔧 CRÍTICO: Reducir maxTokens agresivamente para evitar que el modelo genere más tool calls
+      // Solo debe generar "Hecho." o confirmación breve, no necesita razonar más
+      const followUp = await callModelFn(providerMessages, { maxTokens: 150, temperature: 0.3 });
+      lastFollowUpResponse = followUp; // 🔧 Guardar siempre la última respuesta
       currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(followUp) : null;
 
       if (!currentToolCall) return followUp;
+      
+      // Si hay otro tool call pero el loop se romperá (duplicado), devolver fallback
+      const dedupeKeyNext = this._makeDedupeKey(currentToolCall.toolName || currentToolCall.tool || currentToolCall.name, currentToolCall.arguments || {});
+      if (seenInTurn.has(dedupeKeyNext)) {
+        console.log(`⚠️ [ToolOrchestrator] Tool call duplicado detectado en followUp, usando fallback`);
+        // No intentar limpiar la respuesta, simplemente usar fallback
+        // Esto evita mostrar JSON parcial o caracteres sueltos como "}"
+        return 'Operación completada correctamente.';
+      }
     }
 
+    // 🔧 MEJORADO: Si el loop se agota, devolver la última respuesta del modelo que guardamos
+    console.warn(`⚠️ [ToolOrchestrator] Loop agotado, devolviendo última respuesta del modelo`);
+    if (lastFollowUpResponse && lastFollowUpResponse.trim().length > 0) {
+      console.log(`✅ [ToolOrchestrator] Devolviendo lastFollowUpResponse (${lastFollowUpResponse.length} chars)`);
+      // 🔧 CRÍTICO: Validar que NO sea un JSON de tool call
+      const trimmed = lastFollowUpResponse.trim();
+      if (trimmed.startsWith('{') && trimmed.includes('"tool"')) {
+        console.warn(`⚠️ [ToolOrchestrator] lastFollowUpResponse es un JSON de tool call, usando fallback`);
+        return 'Operación completada correctamente.';
+      }
+      return lastFollowUpResponse;
+    }
+    
+    // Fallback: buscar último mensaje del asistente en conversationService
+    console.log(`⚠️ [ToolOrchestrator] No hay lastFollowUpResponse, buscando en conversationService`);
     const conv = conversationService.getCurrentConversation();
-    const last = conv?.messages?.[conv.messages.length - 1];
-    return last?.content || 'Hecho.';
+    const assistantMessages = (conv?.messages || []).filter(m => m.role === 'assistant');
+    if (assistantMessages.length > 0) {
+      const last = assistantMessages[assistantMessages.length - 1];
+      return last.content || 'Operación completada.';
+    }
+    return 'Operación completada.';
   }
 }
 

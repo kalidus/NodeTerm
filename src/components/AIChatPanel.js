@@ -96,36 +96,35 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           attachedFiles: msg.attachedFiles
         }));
         
-        // 🔧 ESTRATEGIA DE SINCRONIZACIÓN ULTRA-INTELIGENTE:
-        // Comparar IDs de mensajes persistidos con los que ya tenemos en UI
-        const prevIds = new Set(prev.filter(m => !m.streaming).map(m => m.id));
+        // 🔧 LÓGICA SIMPLIFICADA Y ROBUSTA:
+        // localStorage es la fuente de verdad. Siempre sincronizamos desde allí.
+        // Solo mantenemos mensajes "streaming" temporales si el usuario está esperando respuesta.
+        
+        // Verificar si hay NUEVOS mensajes persistidos
+        const prevPersistedIds = new Set(prev.filter(m => !m.streaming).map(m => m.id));
         const persistedIds = new Set(persisted.map(m => m.id));
+        const newPersistedIds = persisted.filter(m => !prevPersistedIds.has(m.id)).map(m => m.id);
+        const hasNewPersistedMessages = newPersistedIds.length > 0;
         
-        // Verificar si hay nuevos IDs en persistidos que no están en prev
-        const hasNewPersistedMessages = persisted.some(m => !prevIds.has(m.id));
+        // Si hay nuevos mensajes persistidos, eliminar TODOS los streaming
+        // Si NO hay nuevos mensajes, mantener streaming existentes
+        const streaming = hasNewPersistedMessages ? [] : prev.filter(m => m.streaming === true);
         
-        let streaming = [];
-        if (hasNewPersistedMessages) {
-          // Hay NUEVOS mensajes persistidos (no solo actualizaciones) → Eliminar streaming
-          console.log(`   🧹 Nuevos mensajes persistidos detectados, eliminando mensajes streaming`);
-          streaming = [];
-        } else {
-          // No hay nuevos mensajes, solo actualizaciones → Preservar streaming
-          streaming = prev.filter(m => m.streaming === true);
-          if (streaming.length > 0) {
-            console.log(`   🔄 Preservando ${streaming.length} mensajes streaming`);
-          }
-        }
-        
-        // 🔧 OPTIMIZACIÓN: Solo actualizar si hay cambios reales
-        const newLength = persisted.length + streaming.length;
-        if (prev.length === newLength && !hasNewPersistedMessages && streaming.length === prev.filter(m => m.streaming).length) {
-          console.log(`   ↩️ Sin cambios detectados, preservando estado actual`);
+        // Si NO hay cambios (mismo número de mensajes persistidos y no hay streaming), no hacer nada
+        if (!hasNewPersistedMessages && streaming.length === 0 && prev.length === persisted.length) {
+          console.log(`   ↩️ Sin cambios, manteniendo estado actual`);
           return prev;
         }
         
-        console.log(`   ✅ Sincronizando: ${persisted.length} persistidos + ${streaming.length} streaming = ${newLength} total`);
-        return streaming.length > 0 ? [...persisted, ...streaming] : persisted;
+        // Merge: Combinar persistidos + streaming
+        const merged = [...persisted, ...streaming];
+        
+        console.log(`   ✅ Sincronizando: ${persisted.length} persistidos + ${streaming.length} streaming = ${merged.length} total`);
+        if (hasNewPersistedMessages) {
+          console.log(`   🆕 Nuevos mensajes: ${newPersistedIds.length}`);
+        }
+        
+        return merged;
       });
     };
 
@@ -368,20 +367,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // CRÍTICO: Limpiar historial de AIService DESPUÉS de sincronizar, para evitar usar conversación equivocada
       aiService.clearHistory();
       
-      // Agregar mensaje del usuario a la conversación con archivos adjuntos
+      // 🔧 SOLUCIÓN DEFINITIVA ANTI-DUPLICACIÓN:
+      // En lugar de agregar el mensaje del usuario manualmente y luego intentar sincronizar,
+      // agregamos un placeholder de "streaming" temporalmente y confiamos en que
+      // el evento 'conversation-updated' traerá el mensaje real persistido.
+      const streamingPlaceholderId = `streaming_user_${Date.now()}`;
+      
+      setMessages(prev => [...prev, {
+        id: streamingPlaceholderId,
+        role: 'user',
+        content: userMessage,
+        timestamp: Date.now(),
+        streaming: true, // Marcado como streaming para que el listener lo elimine cuando llegue el mensaje real
+        attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
+      }]);
+      
+      // Guardar en conversationService (que disparará el evento 'conversation-updated')
+      // El evento sincronizará automáticamente el mensaje real y eliminará el placeholder
       const userMessageObj = conversationService.addMessage('user', userMessage, {
         attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
       });
-      
-      // 🔧 RESTAURADO: Agregar mensaje del usuario manualmente para respuesta inmediata en la UI
-      // El evento 'conversation-updated' lo sincronizará más tarde, pero necesitamos respuesta inmediata
-      setMessages(prev => [...prev, {
-        id: userMessageObj.id,
-        role: 'user',
-        content: userMessage,
-        timestamp: userMessageObj.timestamp,
-        attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
-      }]);
 
       // Actualizar el título de la conversación si es el primer mensaje
       const currentConversation = conversationService.getCurrentConversation();
@@ -528,7 +533,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           console.log(`   resultText length: ${resultText.length} chars`);
 
           // Guardar último resultado para posibles fallbacks del mensaje final
-          lastToolResultRef.current = { toolName: toolData.toolName, text: resultText };
+          lastToolResultRef.current = { 
+            toolName: toolData.toolName, 
+            text: resultText,
+            timestamp: Date.now() // 🔧 Agregar timestamp para verificar si es reciente
+          };
 
           // Mensaje minimalista y bonito (sin rutas)
           const lower = resultText.toLowerCase();
@@ -588,13 +597,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // ============= CALCULAR SAFE RESPONSE PRIMERO (antes de guardar) =============
           // Si la respuesta está vacía, usar un fallback basado en el último resultado de tool
-          const looksLikeDirListing = (txt) => {
-            if (!txt || typeof txt !== 'string') return false;
-            const matches = (txt.match(/\[(FILE|DIR)\]/g) || []).length;
-            const lines = txt.split(/\r?\n/).length;
-            return matches >= 2 && lines >= 3;
-          };
-
+          
           const extractPlainResponse = (txt) => {
             if (!txt || typeof txt !== 'string') return txt;
             let raw = txt.trim();
@@ -622,33 +625,62 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             return patterns.some(p => t.includes(p));
           })();
 
+          // 🔧 LÓGICA MEJORADA: Solo usar "Hecho." si REALMENTE se ejecutó una herramienta
           let safeResponse = (normalizedResp && normalizedResp.trim().length > 0 && !isMetaResponse)
             ? normalizedResp
             : (() => {
-                // En modo estructurado, evitar duplicar el resultado de tool
-                if (aiService.featureFlags?.structuredToolMessages) {
-                  return 'Hecho.';
-                }
+                // Verificar si hay un resultado de tool RECIENTE (menos de 10 segundos)
                 const last = lastToolResultRef.current;
-                if (last && typeof last.text === 'string' && last.text.length > 0) {
+                const hasRecentToolResult = last && 
+                  typeof last.text === 'string' && 
+                  last.text.length > 0 &&
+                  last.timestamp && 
+                  (Date.now() - last.timestamp) < 10000; // 10 segundos
+                
+                if (hasRecentToolResult) {
+                  // Solo si hay un resultado de tool reciente, usar "Hecho."
+                  if (aiService.featureFlags?.structuredToolMessages) {
+                    return 'Hecho.';
+                  }
                   // Intentar sintetizar una frase breve
                   const pathMatch = last.text.match(/wrote to\s+(.+)$/i);
                   const path = pathMatch ? pathMatch[1] : '';
                   return path ? `Hecho. Archivo creado en ${path}.` : `Hecho. ${last.text}`;
                 }
-                return 'Hecho.';
+                
+                // Si NO hay resultado de tool reciente, retornar la respuesta original
+                // (aunque esté vacía) para no ocultar el problema
+                return normalizedResp || '(El modelo no generó una respuesta)';
               })();
 
-          if (aiService.featureFlags?.structuredToolMessages && looksLikeDirListing(normalizedResp)) {
-            safeResponse = 'Hecho.';
-          }
-          const norm = (s) => (s || '').trim();
-          if (aiService.featureFlags?.structuredToolMessages && lastToolResultRef.current?.text) {
-            const toolText = norm(lastToolResultRef.current.text);
-            const respText = norm(normalizedResp);
-            if (toolText && respText && (toolText === respText || toolText.includes(respText) || respText.includes(toolText))) {
-              safeResponse = 'Hecho.';
+          // 🔧 Detectar y ocultar respuestas que son SOLO metadata o tool calls del sistema
+          // Ejemplo: {"tool": null, ...} o {"tool": "write_file", "arguments": {...}}
+          const isSystemMetadata = (txt) => {
+            if (!txt || typeof txt !== 'string') return false;
+            const trimmed = txt.trim();
+            // Debe ser JSON puro
+            if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return false;
+            try {
+              const parsed = JSON.parse(trimmed);
+              // Es metadata si tiene el campo "tool" (independientemente de su valor)
+              if ('tool' in parsed) {
+                // CUALQUIER JSON con "tool" + "arguments" es metadata del sistema
+                if ('arguments' in parsed) return true;
+                // Si solo tiene "tool", también es metadata
+                const keys = Object.keys(parsed);
+                if (keys.length <= 2 && keys.includes('tool')) return true;
+                // Si tiene "message" pero es genérico, también es metadata
+                if (parsed.message && /^(hecho|done|complete|ok|ready)/i.test(parsed.message)) return true;
+              }
+            } catch {
+              return false;
             }
+            return false;
+          };
+
+          if (isSystemMetadata(safeResponse)) {
+            console.log(`   ⚠️ Respuesta es metadata del sistema, usando "Hecho."`);
+            safeResponse = 'Hecho.';
           }
           
           console.log(`   Safe response: "${safeResponse.substring(0, 80)}"`);
