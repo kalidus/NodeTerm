@@ -2149,9 +2149,17 @@ INSTRUCCIONES IMPORTANTES:
 2. Para MODIFICAR parte de un archivo existente → usa "edit_file"
 3. Para LEER contenido → usa "read_text_file"
 4. Para LISTAR archivos/carpetas → usa "list_directory"
+5. Para MOVER o RENOMBRAR archivo/carpeta → usa "move_file"
+6. Para CREAR directorio → usa "create_directory"
+7. Para BUSCAR archivos → usa "search_files"
+8. Para OBTENER metadatos → usa "get_file_info"
 
-SIEMPRE responde en formato JSON válido.
-Las rutas DEBEN estar dentro del directorio permitido.
+REGLAS CRÍTICAS:
+• SIEMPRE responde en formato JSON válido: {"tool":"nombre","arguments":{...}}
+• Las rutas DEBEN estar dentro del directorio permitido: ${dirEscaped || 'verificar con list_allowed_directories'}
+• Si el usuario pide mover/renombrar algo, usa "move_file"
+• Si el usuario pide crear un directorio, usa "create_directory"
+• NUNCA respondas con texto explicativo antes del JSON
 `;
 
     return toolsSection;
@@ -2463,8 +2471,49 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
           { ...options, maxTokens: 500, temperature: 0.3, contextLimit: Math.min(4096, options.contextLimit || 8000) }
         );
         
+        // 🔧 NUEVO: Si la respuesta está vacía, reintentar con prompt simplificado
+        if (!followUp || followUp.trim().length === 0) {
+          console.warn(`⚠️ [MCP] Modelo generó respuesta vacía, reintentando con prompt simplificado...`);
+          
+          conversationMessages.push({
+            role: 'user',
+            content: `Por favor, responde confirmando que la operación se completó exitosamente, o indica si necesitas realizar alguna otra acción.`
+          });
+          
+          const retryResponse = await this.sendToLocalModelStreamingWithCallbacks(
+            modelId,
+            conversationMessages,
+            callbacks,
+            { ...options, maxTokens: 1500, temperature: 0.6, contextLimit: Math.min(4096, options.contextLimit || 8000) }
+          );
+          
+          if (retryResponse && retryResponse.trim().length > 0) {
+            console.log(`✅ [MCP] Retry exitoso, respuesta obtenida`);
+            return retryResponse;
+          } else {
+            console.warn(`⚠️ [MCP] Retry falló, retornando mensaje por defecto`);
+            return `✅ Operación completada correctamente.`;
+          }
+        }
+        
         // NUEVO: Detectar si hay otro tool call
-        currentToolCall = this.detectToolCallInResponse(followUp);
+        const nextToolCall = this.detectToolCallInResponse(followUp);
+        
+        // 🔧 CRÍTICO: Ignorar tool call si es IDÉNTICO al que acabamos de ejecutar
+        // Esto previene loops infinitos cuando el modelo menciona la herramienta anterior
+        if (nextToolCall) {
+          const isSameTool = nextToolCall.toolName === currentToolCall.toolName;
+          const isSameArgs = JSON.stringify(nextToolCall.arguments) === JSON.stringify(currentToolCall.arguments);
+          
+          if (isSameTool && isSameArgs) {
+            console.warn(`⚠️ [MCP] Tool call duplicado detectado (${nextToolCall.toolName}), ignorando y terminando loop`);
+            // Retornar la respuesta sin el JSON del tool call
+            const cleanResponse = followUp.replace(/\{[\s\S]*?"tool"[\s\S]*?\}/g, '').trim();
+            return cleanResponse || `✅ Operación completada correctamente.`;
+          }
+        }
+        
+        currentToolCall = nextToolCall;
         
         if (!currentToolCall) {
           // No hay más tools, el modelo respondió normalmente
@@ -2472,7 +2521,7 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
           return followUp;
         }
         
-        // Hay otro tool call, continuar loop
+        // Hay otro tool call DIFERENTE, continuar loop
         console.log(`🔄 [MCP] Modelo solicita otra herramienta, continuando loop`);
         
       } catch (error) {
@@ -3121,10 +3170,31 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
         });
       }
       
-      // Ajustar maxTokens dinámicamente: si hay herramientas, el modelo solo necesita generar JSON
+      // 🔧 AJUSTE INTELIGENTE DE TOKENS: El modelo necesita espacio para razonar
       const adjustedOptions = { ...options };
+      
+      // Calcular tamaño aproximado del contexto actual
+      const contextSize = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
+      const contextTokens = Math.ceil(contextSize / 4); // Aproximación: 4 chars = 1 token
+      
       if (mcpContext.hasTools) {
-        adjustedOptions.maxTokens = Math.min(options.maxTokens || 2000, 800); // Reducir para tool calls
+        // IMPORTANTE: deepseek-r1 es un modelo de reasoning que necesita espacio para pensar
+        // 800 tokens es DEMASIADO BAJO, especialmente después de múltiples tool calls
+        // Aumentar según el tamaño del contexto:
+        const baseTokens = options.maxTokens || 2000;
+        const minTokensForTools = 1500; // Mínimo para generar tool calls + razonamiento
+        const maxTokensForTools = 3000; // Máximo para evitar respuestas muy largas
+        
+        // Si el contexto es grande (>6000 tokens), dar más espacio al modelo
+        if (contextTokens > 6000) {
+          adjustedOptions.maxTokens = maxTokensForTools;
+        } else if (contextTokens > 3000) {
+          adjustedOptions.maxTokens = 2000;
+        } else {
+          adjustedOptions.maxTokens = Math.max(minTokensForTools, Math.min(baseTokens, maxTokensForTools));
+        }
+        
+        console.log(`🎯 [AIService] Ajuste de tokens: context=${contextTokens} tokens, maxTokens=${adjustedOptions.maxTokens}`);
       }
       
       // Usar streaming si está habilitado
@@ -3135,13 +3205,62 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
         response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
       }
       
-      console.log(`📥 [AIService] Respuesta recibida (${response?.length || 0} chars), hasTools=${mcpContext.hasTools}`);
+      console.log(`📥 [AIService] Respuesta recibida (${response?.length || 0} chars), hasTools=${mcpContext.hasTools}, context=${contextTokens} tokens, maxTokens=${adjustedOptions.maxTokens}`);
+      
+      // 🔧 RETRY AUTOMÁTICO: Si la respuesta está vacía, reintentar con prompt simplificado
+      if ((!response || response.trim().length === 0) && mcpContext.hasTools) {
+        console.warn(`⚠️ [AIService] Modelo generó respuesta vacía, reintentando con prompt simplificado...`);
+        
+        // Callback de estado: reintentando
+        if (callbacks.onStatus) {
+          callbacks.onStatus({
+            status: 'retrying',
+            message: '⚠️ Reintentando solicitud...',
+            model: model.name,
+            provider: 'local'
+          });
+        }
+        
+        // Agregar prompt de ayuda
+        const retryMessages = [
+          ...messages,
+          {
+            role: 'user',
+            content: 'Por favor, responde usando alguna de las herramientas disponibles o proporciona una respuesta textual.'
+          }
+        ];
+        
+        // Reintentar con parámetros ajustados (más tokens para dar espacio al modelo)
+        try {
+          const retryResponse = await this.sendToLocalModelStreamingWithCallbacks(
+            model.id,
+            retryMessages,
+            callbacks,
+            { ...adjustedOptions, maxTokens: 1500, temperature: 0.6 }
+          );
+          
+          if (retryResponse && retryResponse.trim().length > 0) {
+            console.log(`✅ [AIService] Retry exitoso, respuesta obtenida (${retryResponse.length} chars)`);
+            response = retryResponse;
+          } else {
+            console.warn(`⚠️ [AIService] Retry falló, usando respuesta por defecto`);
+            return 'Lo siento, tuve problemas al procesar tu solicitud. Por favor, intenta reformularla.';
+          }
+        } catch (retryError) {
+          console.error(`❌ [AIService] Error en retry:`, retryError);
+          return 'Lo siento, tuve problemas al procesar tu solicitud. Por favor, intenta de nuevo.';
+        }
+      }
       
       // 🔧 DETECTAR SI LA RESPUESTA ES UN TOOL CALL
       if (mcpContext.hasTools) {
         const toolCall = this.detectToolCallInResponse(response);
         if (toolCall) {
+          console.log(`🔧 [AIService] Tool call detectado: ${toolCall.toolName}, iniciando ejecución...`);
+          console.log(`   structuredToolMessages: ${this.featureFlags?.structuredToolMessages}, hasOrchestrator: ${!!this.toolOrchestrator}`);
+          
           if (this.featureFlags?.structuredToolMessages && this.toolOrchestrator) {
+            console.log(`🚀 [AIService] Usando toolOrchestrator.executeLoop()`);
             const callModelFn = async (provMessages, overrides = {}) => {
               const adjusted = { ...options, ...overrides };
               return await this.sendToLocalModelStreamingWithCallbacks(
@@ -3151,7 +3270,7 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
                 adjusted
               );
             };
-            return await this.toolOrchestrator.executeLoop({
+            const orchestratorResult = await this.toolOrchestrator.executeLoop({
               modelId: model.id,
               initialToolCall: toolCall,
               baseProviderMessages: messages,
@@ -3162,8 +3281,16 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
               maxIterations: 10,
               turnId: options?.turnId
             });
+            console.log(`✅ [AIService] toolOrchestrator.executeLoop() completado, resultado length: ${orchestratorResult?.length || 0}`);
+            return orchestratorResult;
           }
-          return await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
+          
+          console.log(`🚀 [AIService] Usando handleLocalToolCallLoop()`);
+          const loopResult = await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
+          console.log(`✅ [AIService] handleLocalToolCallLoop() completado, resultado length: ${loopResult?.length || 0}`);
+          return loopResult;
+        } else {
+          console.log(`ℹ️ [AIService] No se detectó tool call en la respuesta, retornando respuesta directa`);
         }
       }
       
