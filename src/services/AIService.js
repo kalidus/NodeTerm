@@ -3617,42 +3617,48 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
             const parts = candidate.content?.parts || candidate.content || [];
             const calls = Array.isArray(parts) ? parts.filter(p => p.functionCall) : [];
             if (mcpContext.hasTools && calls.length > 0) {
-              const executionSummaries = [];
-              for (const c of calls) {
-                const fc = c.functionCall || {};
-                const fullName = fc.name || '';
-                const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
-                const serverId = normalized.serverId;
-                const toolName = normalized.toolName;
-                const callArgs = normalized.arguments;
-                try {
-                  const result = serverId ? await mcpClient.callTool(serverId, toolName, callArgs)
-                                          : await mcpClient.callTool(toolName, callArgs);
-                  const text = result?.content?.[0]?.text || 'OK';
-                  executionSummaries.push({ name: fullName, response: { text: text.substring(0, 1000) } });
-                } catch (e) {
-                  executionSummaries.push({ name: fullName, response: { error: e.message } });
+              // Ejecutar la primera tool y devolver resultado directamente (sin segunda llamada)
+              const firstCall = calls[0];
+              const fc = firstCall.functionCall || {};
+              const fullName = fc.name || '';
+              const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
+              const serverId = normalized.serverId;
+              const toolName = normalized.toolName;
+              const callArgs = normalized.arguments;
+              
+              // Guardar mensaje de tool call
+              conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { 
+                isToolCall: true, 
+                toolName, 
+                toolArgs: callArgs 
+              });
+              
+              try {
+                if (!serverId) {
+                  throw new Error(`No se pudo resolver el servidor para la herramienta ${toolName}`);
                 }
-              }
-              // Preparar second turn con functionResponse
-              const nextBody = { ...requestBody };
-              nextBody.contents = [
-                ...requestBody.contents,
-                {
-                  role: 'user',
-                  parts: executionSummaries.map(s => ({ functionResponse: { name: s.name, response: s.response } }))
+                const result = await mcpClient.callTool(serverId, toolName, callArgs);
+                const text = result?.content?.[0]?.text || 'OK';
+                
+                // Guardar resultado de la tool
+                conversationService.addMessage('tool', text, { 
+                  isToolResult: true, 
+                  toolName, 
+                  toolArgs: callArgs 
+                });
+                
+                // Callback de tool ejecutada
+                if (callbacks.onToolResult) {
+                  callbacks.onToolResult({ toolName, args: callArgs, result });
                 }
-              ];
-              const response2 = await fetch(requestUrl, { method: 'POST', headers, body: JSON.stringify(nextBody), signal: options.signal });
-              if (!response2.ok) {
-                const e2 = await response2.text();
-                throw new Error(e2 || 'Error tras tool calls (Gemini)');
+                
+                // Devolver "Hecho." para que se muestre el resultado formateado
+                return 'Hecho.';
+              } catch (e) {
+                const errorMsg = `❌ Error ejecutando herramienta: ${e.message}`;
+                conversationService.addMessage('tool', errorMsg, { error: true });
+                return errorMsg;
               }
-              const data2 = await response2.json();
-              const cand2 = (data2.candidates && data2.candidates[0]) || {};
-              const parts2 = cand2.content?.parts || cand2.content || [];
-              const text2 = Array.isArray(parts2) ? parts2.map(p => p.text).filter(Boolean).join('\n') : '';
-              return await this._handleRemotePostResponse(text2 || '', conversationMessages, mcpContext, callbacks, options, model);
             }
             const text = Array.isArray(parts) ? parts.map(p => p.text).filter(Boolean).join('\n') : '';
             return await this._handleRemotePostResponse(text || '', conversationMessages, mcpContext, callbacks, options, model);
