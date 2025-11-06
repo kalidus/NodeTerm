@@ -210,7 +210,13 @@ class ToolOrchestrator {
 
       // 🔧 CRÍTICO: Las instrucciones anti-proactividad van SOLO en el system message,
       // NO se guardan en conversationService para evitar contaminar el contexto
-      const antiProactivityPrompt = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      // Extraer la solicitud original del usuario para detectar múltiples acciones
+      const userMessage = providerMessages.find(m => m.role === 'user');
+      const userRequest = userMessage?.content || '';
+      const hasMultipleActions = /\by\b|\band\b|,/.test(userRequest.toLowerCase());
+      
+      let antiProactivityPrompt = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔧 Resultado de ${toolName}:
 ${cleanText}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -219,20 +225,34 @@ INSTRUCCIONES POST-EJECUCIÓN:
 1. ✅ La herramienta "${toolName}" YA se ejecutó exitosamente
 2. ✅ El resultado YA fue mostrado al usuario automáticamente
 3. ❌ NO repitas el resultado en tu respuesta
-4. ❌ NO ejecutes más herramientas (la tarea está completa)
-5. ❌ NO respondas con JSON ni tool calls
-6. ❌ NO seas proactivo (solo haz lo que el usuario pidió)
-7. ✅ SOLO responde: "Hecho." o "Operación completada."
+4. ❌ NO vuelvas a ejecutar "${toolName}" (ya se ejecutó)`;
 
-Si no estás seguro → responde: "Hecho."`;
+      if (hasMultipleActions) {
+        antiProactivityPrompt += `
+5. ⚠️ El usuario pidió: "${userRequest}"
+   Ya ejecutaste: ${toolName} ✓
+   
+   ¿Falta algo? Analiza la solicitud:
+   - Si FALTA ejecutar otra acción → ejecuta la siguiente herramienta en JSON
+   - Si YA completaste TODO → responde solo: "Hecho."
+   
+   IMPORTANTE: NO repitas ${toolName}`;
+      } else {
+        antiProactivityPrompt += `
+5. ✅ Tarea completa. Responde: "Hecho."`;
+      }
+      
+      antiProactivityPrompt += `\n\n⚠️ CRÍTICO: NO repitas "${toolName}" - ya se ejecutó.`;
 
       // Agregar el prompt SOLO a providerMessages (NO a conversationService)
       providerMessages.push({ role: 'system', content: antiProactivityPrompt });
 
-      // 🔧 Tokens ultra-bajos: solo espacio para "Hecho." (no reasoning)
+      // 🔧 Aumentar tokens para permitir tool calls adicionales
+      // Usar más tokens si detectamos múltiples acciones
+      const followUpTokens = hasMultipleActions ? 500 : 200;
       const followUp = await callModelFn(providerMessages, { 
-        maxTokens: 100, 
-        temperature: 0.2,
+        maxTokens: followUpTokens, 
+        temperature: 0.4,
         // 🔧 NO guardar este mensaje en conversationService
         skipSave: true 
       });
