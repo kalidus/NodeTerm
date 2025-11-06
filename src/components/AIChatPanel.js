@@ -382,10 +382,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           try {
             const s = statusData?.status;
             if (!window.__toolStatusRefs) {
-              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 2000 };
+              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 5000 };
             }
             const refs = window.__toolStatusRefs;
-            const MIN_MS = refs.minMs || 2000;
+            const MIN_MS = refs.minMs || 5000;
             if (s === 'tool-execution') {
               if (refs.timer) { clearTimeout(refs.timer); refs.timer = null; }
               refs.lastAt = Date.now();
@@ -432,8 +432,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
           // Respetar ventana mínima del estado de herramienta
           try {
-            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 2000 };
-            const MIN_MS = refs.minMs || 2000;
+            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 5000 };
+            const MIN_MS = refs.minMs || 5000;
             const elapsed = Date.now() - (refs.lastAt || 0);
             const next = { status: 'streaming', message: 'Recibiendo respuesta...', model: streamData.model, provider: streamData.provider };
             if (refs.lastAt && elapsed < MIN_MS) {
@@ -461,7 +461,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Mostrar estado "resultado recibido" con icono de herramienta
           try {
             if (!window.__toolStatusRefs) {
-              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 2000 };
+              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 3000 };
             }
             const refs = window.__toolStatusRefs;
             refs.lastAt = Date.now();
@@ -568,8 +568,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           };
 
           let normalizedResp = extractPlainResponse(data.response);
-          let safeResponse = (normalizedResp && normalizedResp.trim().length > 0)
-            ? data.response
+          // Heurística: si el modelo solo explica que "ya se listó" o repite el resultado, colapsar
+          const isMetaResponse = (() => {
+            const t = (normalizedResp || '').toLowerCase();
+            if (!t) return true;
+            const patterns = [
+              'ya ha sido mostrada', 'ya ha sido listado', 'ya se listó', 'ya se mostro', 'como se mostró', 'como se mostro',
+              'mostrada anteriormente', 'listado previamente', 'como arriba', 'as shown'
+            ];
+            return patterns.some(p => t.includes(p));
+          })();
+
+          let safeResponse = (normalizedResp && normalizedResp.trim().length > 0 && !isMetaResponse)
+            ? normalizedResp
             : (() => {
                 // En modo estructurado, evitar duplicar el resultado de tool
                 if (aiService.featureFlags?.structuredToolMessages) {
@@ -653,8 +664,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
           
           try {
-            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 2000 };
-            const MIN_MS = refs.minMs || 2000;
+            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 3000 };
+            const MIN_MS = refs.minMs || 3000;
             const elapsed = Date.now() - (refs.lastAt || 0);
               const applyComplete = () => setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
             if (refs.lastAt && elapsed < MIN_MS) {
@@ -1408,10 +1419,96 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const isStreaming = message.streaming;
     const hasContent = message.content && message.content.trim().length > 0;
     const isToolResult = !!(message.metadata && message.metadata.isToolResult);
+    const isToolCall = message.role === 'assistant_tool_call' || !!(message.metadata && message.metadata.isToolCall);
 
     // No renderizar el placeholder si está en streaming y aún no hay contenido
     if (isStreaming && !hasContent) {
       return null;
+    }
+
+    // Render especial para tool-call (card compacta)
+    if (isToolCall) {
+      const toolName = message.metadata?.toolName || (message.content || '').replace(/Llamando herramienta:\s*/i, '').trim();
+      return (
+        <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.6rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <i className="pi pi-wrench" style={{ color: '#ff9800', fontSize: '0.9rem' }} />
+            <strong style={{ color: '#fff' }}>{toolName || 'herramienta'}</strong>
+          </div>
+        </div>
+      );
+    }
+
+    // Render especial para resultado de tool (success card)
+    if (isToolResult || message.role === 'tool') {
+      const text = (message.content || '').trim();
+      const isDirToken = /\[(FILE|DIR)\]/.test(text);
+      const isBlock = isDirToken || text.includes('\n');
+      const isSuccess = /success|completad|hecho|ok/i.test(text) || (message.metadata?.error !== true);
+      const border = isSuccess ? 'rgba(76, 175, 80, 0.35)' : 'rgba(244, 67, 54, 0.35)';
+      const bg = isSuccess ? 'rgba(76, 175, 80, 0.10)' : 'rgba(244, 67, 54, 0.10)';
+      const icon = isSuccess ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle';
+      const iconColor = isSuccess ? '#4caf50' : '#f44336';
+      return (
+        <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
+          <div className={`ai-bubble assistant subtle`} style={{
+            width: '100%',
+            background: bg,
+            border: `1px solid ${border}`,
+            color: themeColors.textPrimary,
+            borderRadius: '8px',
+            padding: '0.6rem 0.8rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.45rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <i className={icon} style={{ color: iconColor, fontSize: '1rem' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <strong style={{ color: '#fff' }}>{message.metadata?.toolName || (isSuccess ? 'Acción completada' : 'Acción ejecutada')}</strong>
+                {message.metadata?.toolArgs?.path && (
+                  <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                    <i className="pi pi-folder" style={{ fontSize: '0.75rem', marginRight: '4px' }} />
+                    <code style={{ fontSize: '0.75rem' }}>{message.metadata.toolArgs.path}</code>
+                  </span>
+                )}
+              </div>
+            </div>
+            {isDirToken ? (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.35rem' }}>
+                {text.split(/\r?\n/).map((line, i) => {
+                  const m = line.match(/^\[(FILE|DIR)\]\s*(.*)$/i);
+                  if (!m) return null;
+                  const type = m[1].toUpperCase();
+                  const name = m[2];
+                  const rowIcon = type === 'DIR' ? 'pi pi-folder' : 'pi pi-file';
+                  const rowColor = type === 'DIR' ? '#9bd3ff' : '#e0e0e0';
+                  return (
+                    <li key={`row-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <i className={rowIcon} style={{ color: rowColor, fontSize: '0.9rem' }} />
+                      <span style={{ color: '#fff' }}>{name}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : isBlock ? (
+              <pre style={{
+                margin: 0,
+                background: 'rgba(0,0,0,0.25)',
+                borderRadius: '6px',
+                padding: '0.6rem 0.7rem',
+                maxHeight: '220px',
+                overflow: 'auto',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                fontSize: '0.82rem',
+                whiteSpace: 'pre-wrap'
+              }}>{text}</pre>
+            ) : (
+              <div style={{ opacity: 0.9 }}>{text}</div>
+            )}
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -2473,7 +2570,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
-                  {(currentStatus?.status === 'tool-execution' || currentStatus?.status === 'tool-executed') && <i className="pi pi-wrench pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {(currentStatus?.status === 'tool-execution' || currentStatus?.status === 'tool-executed') && <i className="pi pi-wrench pi-spin" style={{ color: '#fff', fontSize: '0.9rem' }} />}
                   {currentStatus?.status === 'tool-error' && <i className="pi pi-exclamation-triangle" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                 </div>
@@ -2495,11 +2592,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                    currentStatus?.status === 'streaming' ? 'Recibiendo respuesta...' :
                    currentStatus?.status === 'retrying' ? 'Reintentando...' :
                    currentStatus?.status === 'tool-execution' ? (
-                     <span>
-                       🔧 Ejecutando: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
-                       {currentStatus?.iteration && ` (${currentStatus.iteration}/${currentStatus.maxIterations})`}
-                     </span>
-                   ) :
+                    <span>
+                      🔧 <strong>Ejecutando herramienta…</strong>
+                      {currentStatus?.toolName && (
+                        <span style={{ opacity: 0.8 }}> · {currentStatus.toolName}</span>
+                      )}
+                    </span>
+                  ) :
                    currentStatus?.status === 'tool-executed' ? (
                      <span>
                        🔧 Resultado recibido: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
