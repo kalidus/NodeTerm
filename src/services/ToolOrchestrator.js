@@ -111,7 +111,9 @@ class ToolOrchestrator {
   }
 
   _dispatchConversationUpdated() {
-    try { window.dispatchEvent(new CustomEvent('conversation-updated')); } catch {}
+    // 🔧 YA NO ES NECESARIO: ConversationService.addMessage() ahora dispara el evento automáticamente
+    // Mantener este método por compatibilidad pero sin hacer nada
+    // El evento se dispara automáticamente cuando se guarda un mensaje en conversationService.addMessage()
   }
 
   async executeLoop({ modelId, initialToolCall, baseProviderMessages, detectToolCallInResponse, callModelFn, callbacks = {}, options = {}, maxIterations, turnId }) {
@@ -149,7 +151,7 @@ class ToolOrchestrator {
 
       const toolCallId = this._makeToolCallId(conversationId);
       conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { toolCallId, toolName, toolArgs: args, isToolCall: true, turnId });
-      this._dispatchConversationUpdated();
+      // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
       if (callbacks.onStatus) callbacks.onStatus({ status: 'tool-execution', message: `Ejecutando ${toolName}...`, provider: 'local', model: modelId, toolName, toolArgs: args, turnId });
 
       let result;
@@ -158,7 +160,7 @@ class ToolOrchestrator {
         if (callbacks.onToolResult) callbacks.onToolResult({ toolName, args, result });
       } catch (error) {
         conversationService.addMessage('tool', `❌ Error en ${toolName}: ${error.message}`, { toolCallId, toolName, toolArgs: args, error: true, turnId });
-        this._dispatchConversationUpdated();
+        // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
         providerMessages.push({ role: 'system', content: `❌ Error ejecutando herramienta ${toolName}: ${error.message}` });
         const errorFollowUp = await callModelFn(providerMessages, { maxTokens: Math.min(500, options.maxTokens || 1000) });
         return errorFollowUp;
@@ -167,7 +169,7 @@ class ToolOrchestrator {
       const cleanText = this._formatToolResult(result);
 
       conversationService.addMessage('tool', cleanText || `✔️ ${toolName} completado`, { toolCallId, toolName, toolArgs: args, isToolResult: true, turnId });
-      this._dispatchConversationUpdated();
+      // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
 
       // Registrar hecho breve
       try {

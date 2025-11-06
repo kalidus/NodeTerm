@@ -70,10 +70,21 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
   // Escuchar actualizaciones de la conversación para sincronizar mensajes en vivo
   useEffect(() => {
-    const handleConversationUpdate = () => {
+    const handleConversationUpdate = (event) => {
       const conv = conversationService.getCurrentConversation();
       if (!conv) return;
+      
+      // Logging detallado para debugging
+      const detail = event?.detail || {};
+      console.log(`🔔 [AIChatPanel] conversation-updated recibido:`, {
+        conversationId: detail.conversationId,
+        messageId: detail.messageId,
+        role: detail.role,
+        totalMessages: conv.messages?.length || 0
+      });
+      
       setMessages(prev => {
+        // Obtener mensajes persistidos desde localStorage
         const persisted = (conv.messages || []).map(msg => ({
           id: msg.id,
           role: msg.role,
@@ -84,7 +95,36 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           contextOptimization: msg.contextOptimization,
           attachedFiles: msg.attachedFiles
         }));
-        const streaming = prev.filter(m => m.streaming);
+        
+        // 🔧 ESTRATEGIA DE SINCRONIZACIÓN ULTRA-INTELIGENTE:
+        // Comparar IDs de mensajes persistidos con los que ya tenemos en UI
+        const prevIds = new Set(prev.filter(m => !m.streaming).map(m => m.id));
+        const persistedIds = new Set(persisted.map(m => m.id));
+        
+        // Verificar si hay nuevos IDs en persistidos que no están en prev
+        const hasNewPersistedMessages = persisted.some(m => !prevIds.has(m.id));
+        
+        let streaming = [];
+        if (hasNewPersistedMessages) {
+          // Hay NUEVOS mensajes persistidos (no solo actualizaciones) → Eliminar streaming
+          console.log(`   🧹 Nuevos mensajes persistidos detectados, eliminando mensajes streaming`);
+          streaming = [];
+        } else {
+          // No hay nuevos mensajes, solo actualizaciones → Preservar streaming
+          streaming = prev.filter(m => m.streaming === true);
+          if (streaming.length > 0) {
+            console.log(`   🔄 Preservando ${streaming.length} mensajes streaming`);
+          }
+        }
+        
+        // 🔧 OPTIMIZACIÓN: Solo actualizar si hay cambios reales
+        const newLength = persisted.length + streaming.length;
+        if (prev.length === newLength && !hasNewPersistedMessages && streaming.length === prev.filter(m => m.streaming).length) {
+          console.log(`   ↩️ Sin cambios detectados, preservando estado actual`);
+          return prev;
+        }
+        
+        console.log(`   ✅ Sincronizando: ${persisted.length} persistidos + ${streaming.length} streaming = ${newLength} total`);
         return streaming.length > 0 ? [...persisted, ...streaming] : persisted;
       });
     };
@@ -332,6 +372,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const userMessageObj = conversationService.addMessage('user', userMessage, {
         attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
       });
+      
+      // 🔧 RESTAURADO: Agregar mensaje del usuario manualmente para respuesta inmediata en la UI
+      // El evento 'conversation-updated' lo sincronizará más tarde, pero necesitamos respuesta inmediata
       setMessages(prev => [...prev, {
         id: userMessageObj.id,
         role: 'user',
@@ -612,6 +655,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // ============= GUARDAR CON SAFE RESPONSE (no con el original vacío) =============
           // Agregar respuesta del asistente a la conversación (usando safeResponse)
+          console.log(`💾 [AIChatPanel.onComplete] Guardando mensaje del asistente en localStorage...`);
+          console.log(`   Content length: ${safeResponse.length} chars`);
+          console.log(`   ConversationId: ${conversationService.currentConversationId}`);
+          
           const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
             latency: data.latency,
             model: data.model,
@@ -621,26 +668,17 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           });
           
           console.log(`   ✅ Guardado en localStorage con ID: ${assistantMessageObj.id}`);
+          console.log(`   ⏰ El evento 'conversation-updated' sincronizará la UI automáticamente...`);
           
           // Calcular tokens reales de la respuesta
           const responseTokens = Math.ceil(safeResponse.length / 4);
 
-          // Actualizar mensaje final con archivos asociados
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId ? {
-              ...msg,
-              id: assistantMessageObj.id,
-              content: safeResponse,
-              streaming: false,
-              metadata: {
-                latency: data.latency,
-                model: data.model,
-                provider: data.provider,
-                tokens: responseTokens,
-                files: files.length > 0 ? files : undefined
-              }
-            } : msg
-          ));
+          // 🔧 ELIMINADO EL FALLBACK MANUAL: El evento 'conversation-updated' automático
+          // de conversationService.addMessage() ya sincroniza los mensajes correctamente.
+          // Mantener el fallback causaba duplicación de mensajes en la UI.
+          
+          // El mensaje streaming se reemplazará automáticamente cuando el evento
+          // 'conversation-updated' se dispare y sincronice los mensajes persistidos.
           
           // Tokens calculados internamente por el sistema de ventana deslizante
           
@@ -898,8 +936,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Asegurar que los mensajes estén vacíos (doble verificación)
     setMessages([]);
 
-    // Disparar evento para actualizar el historial
-    window.dispatchEvent(new CustomEvent('conversation-updated'));
+    // 🔔 Disparar evento para actualizar el historial y sincronizar todos los listeners
+    window.dispatchEvent(new CustomEvent('conversation-updated', {
+      detail: { conversationId: newConversation.id, source: 'new' }
+    }));
   };
 
   const handleLoadConversation = (conversationId) => {
@@ -954,6 +994,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       console.log(`✅ [AIChatPanel] Conversación cargada: ${conversation.id}`);
       console.log(`   Mensajes: ${conversation.messages.length}`);
       console.log(`   Resumen:`, msgSummary);
+      
+      // 🔔 Disparar evento para notificar la carga y sincronizar todos los listeners
+      window.dispatchEvent(new CustomEvent('conversation-updated', {
+        detail: { conversationId: conversation.id, source: 'load' }
+      }));
     }
   };
 
