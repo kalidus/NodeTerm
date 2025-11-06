@@ -2141,7 +2141,16 @@ class AIService {
         if (has('write_file')) bullets.push('• "crear/guardar fichero" → write_file { path, content }');
         if (has('edit_file')) bullets.push('• "editar parte de un fichero" → edit_file { path, ... }');
         if (has('create_directory')) bullets.push('• "crear carpeta" → create_directory { path }');
-        if (has('move_file')) bullets.push('• "mover" o "renombrar" → move_file { origen, destino } (usa los nombres reales de parámetros mostrados abajo: source/destination, from/to, old/new)');
+        if (has('move_file')) {
+          // Obtener los nombres reales de parámetros de la tool move_file
+          const moveTool = list.find(t => t.name === 'move_file');
+          const moveSchema = moveTool?.inputSchema?.properties || {};
+          const moveParams = Object.keys(moveSchema);
+          const paramHint = moveParams.length >= 2 ? `{ ${moveParams[0]}, ${moveParams[1]} }` : '{ source, destination }';
+          bullets.push(`• "mover" o "renombrar" → move_file ${paramHint}`);
+          bullets.push(`  ⚠️ IMPORTANTE: El destino DEBE incluir el nombre del archivo completo.`);
+          bullets.push(`     Ejemplo: mover "file.txt" a carpeta "Proyectos" → { source: "ruta/file.txt", destination: "ruta/Proyectos/file.txt" }`);
+        }
         if (has('search_files')) bullets.push('• "buscar" → search_files { query, path? }');
         if (has('get_file_info')) bullets.push('• "ver info" → get_file_info { path }');
         if (bullets.length > 0) {
@@ -3617,48 +3626,97 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
             const parts = candidate.content?.parts || candidate.content || [];
             const calls = Array.isArray(parts) ? parts.filter(p => p.functionCall) : [];
             if (mcpContext.hasTools && calls.length > 0) {
-              // Ejecutar la primera tool y devolver resultado directamente (sin segunda llamada)
-              const firstCall = calls[0];
-              const fc = firstCall.functionCall || {};
-              const fullName = fc.name || '';
-              const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
-              const serverId = normalized.serverId;
-              const toolName = normalized.toolName;
-              const callArgs = normalized.arguments;
-              
-              // Guardar mensaje de tool call
-              conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { 
-                isToolCall: true, 
-                toolName, 
-                toolArgs: callArgs 
-              });
-              
-              try {
-                if (!serverId) {
-                  throw new Error(`No se pudo resolver el servidor para la herramienta ${toolName}`);
-                }
-                const result = await mcpClient.callTool(serverId, toolName, callArgs);
-                const text = result?.content?.[0]?.text || 'OK';
+              // Usar toolOrchestrator para ejecutar herramientas en loop
+              if (this.toolOrchestrator && calls.length === 1) {
+                const firstCall = calls[0];
+                const fc = firstCall.functionCall || {};
+                const fullName = fc.name || '';
+                const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
                 
-                // Guardar resultado de la tool
-                conversationService.addMessage('tool', text, { 
-                  isToolResult: true, 
+                const initialToolCall = {
+                  toolName: normalized.toolName,
+                  arguments: normalized.arguments,
+                  serverId: normalized.serverId
+                };
+                
+                try {
+                  const orchestratorResult = await this.toolOrchestrator.executeLoop({
+                    modelId: model.id,
+                    initialToolCall,
+                    baseProviderMessages: conversationMessages,
+                    detectToolCallInResponse: (resp) => this.detectToolCallInResponse(resp),
+                    callModelFn: async (updatedMessages) => {
+                      // Re-llamar a Gemini con mensajes actualizados
+                      const nextBody = { ...requestBody };
+                      nextBody.contents = updatedMessages.map(msg => ({
+                        role: msg.role === 'assistant' ? 'model' : 'user',
+                        parts: [{ text: msg.content }]
+                      }));
+                      const response2 = await fetch(requestUrl, { 
+                        method: 'POST', 
+                        headers, 
+                        body: JSON.stringify(nextBody), 
+                        signal: options.signal 
+                      });
+                      if (!response2.ok) {
+                        const e2 = await response2.text();
+                        throw new Error(e2 || 'Error en llamada secundaria');
+                      }
+                      const data2 = await response2.json();
+                      const cand2 = (data2.candidates && data2.candidates[0]) || {};
+                      const parts2 = cand2.content?.parts || cand2.content || [];
+                      return Array.isArray(parts2) ? parts2.map(p => p.text).filter(Boolean).join('\n') : '';
+                    },
+                    callbacks,
+                    options,
+                    maxIterations: 5,
+                    turnId: options?.turnId
+                  });
+                  return orchestratorResult;
+                } catch (error) {
+                  console.error('[MCP] Error en loop remoto (Gemini):', error);
+                  return `Error ejecutando herramienta: ${error.message}`;
+                }
+              }
+              
+              // Fallback: ejecutar todas las tools solicitadas en secuencia
+              for (const call of calls) {
+                const fc = call.functionCall || {};
+                const fullName = fc.name || '';
+                const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
+                const serverId = normalized.serverId;
+                const toolName = normalized.toolName;
+                const callArgs = normalized.arguments;
+                
+                conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { 
+                  isToolCall: true, 
                   toolName, 
                   toolArgs: callArgs 
                 });
                 
-                // Callback de tool ejecutada
-                if (callbacks.onToolResult) {
-                  callbacks.onToolResult({ toolName, args: callArgs, result });
+                try {
+                  if (!serverId) {
+                    throw new Error(`No se pudo resolver el servidor para la herramienta ${toolName}`);
+                  }
+                  const result = await mcpClient.callTool(serverId, toolName, callArgs);
+                  const text = result?.content?.[0]?.text || 'OK';
+                  
+                  conversationService.addMessage('tool', text, { 
+                    isToolResult: true, 
+                    toolName, 
+                    toolArgs: callArgs 
+                  });
+                  
+                  if (callbacks.onToolResult) {
+                    callbacks.onToolResult({ toolName, args: callArgs, result });
+                  }
+                } catch (e) {
+                  const errorMsg = `❌ Error ejecutando herramienta ${toolName}: ${e.message}`;
+                  conversationService.addMessage('tool', errorMsg, { error: true });
                 }
-                
-                // Devolver "Hecho." para que se muestre el resultado formateado
-                return 'Hecho.';
-              } catch (e) {
-                const errorMsg = `❌ Error ejecutando herramienta: ${e.message}`;
-                conversationService.addMessage('tool', errorMsg, { error: true });
-                return errorMsg;
               }
+              
+              return 'Hecho.';
             }
             const text = Array.isArray(parts) ? parts.map(p => p.text).filter(Boolean).join('\n') : '';
             return await this._handleRemotePostResponse(text || '', conversationMessages, mcpContext, callbacks, options, model);
