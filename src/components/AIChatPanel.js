@@ -552,7 +552,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             return matches >= 2 && lines >= 3;
           };
 
-          let safeResponse = (data.response && data.response.trim().length > 0)
+          const extractPlainResponse = (txt) => {
+            if (!txt || typeof txt !== 'string') return txt;
+            let raw = txt.trim();
+            // strip code fences ```json ... ```
+            if (/^```/.test(raw)) {
+              raw = raw.replace(/^```(?:json|tool|tool_call)?/i, '').replace(/```$/i, '').trim();
+            }
+            try {
+              const obj = JSON.parse(raw);
+              if (typeof obj?.response === 'string') return obj.response;
+              if (typeof obj?.message === 'string') return obj.message;
+              return txt;
+            } catch { return txt; }
+          };
+
+          let normalizedResp = extractPlainResponse(data.response);
+          let safeResponse = (normalizedResp && normalizedResp.trim().length > 0)
             ? data.response
             : (() => {
                 // En modo estructurado, evitar duplicar el resultado de tool
@@ -569,13 +585,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 return 'Hecho.';
               })();
 
-          if (aiService.featureFlags?.structuredToolMessages && looksLikeDirListing(data.response)) {
+          if (aiService.featureFlags?.structuredToolMessages && looksLikeDirListing(normalizedResp)) {
             safeResponse = 'Hecho.';
           }
           const norm = (s) => (s || '').trim();
           if (aiService.featureFlags?.structuredToolMessages && lastToolResultRef.current?.text) {
             const toolText = norm(lastToolResultRef.current.text);
-            const respText = norm(data.response);
+            const respText = norm(normalizedResp);
             if (toolText && respText && (toolText === respText || toolText.includes(respText) || respText.includes(toolText))) {
               safeResponse = 'Hecho.';
             }
@@ -640,7 +656,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 2000 };
             const MIN_MS = refs.minMs || 2000;
             const elapsed = Date.now() - (refs.lastAt || 0);
-            const applyComplete = () => setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
+              const applyComplete = () => setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
             if (refs.lastAt && elapsed < MIN_MS) {
               const delay = MIN_MS - elapsed;
               if (refs.timer) clearTimeout(refs.timer);
@@ -650,8 +666,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 refs.lastAt = 0;
               }, delay);
             } else {
-              applyComplete();
-              refs.lastAt = 0;
+                applyComplete();
+                refs.lastAt = 0;
             }
           } catch {
             setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
