@@ -2050,119 +2050,131 @@ class AIService {
   }
 
   /**
-   * Generar system prompt con tools MCP (para modelos sin function calling nativo)
+   * Generar system prompt UNIVERSAL para MCP (modelos sin function calling)
+   * - Agrupa por servidor
+   * - Formato de invocación recomendado: {"server":"<serverId>","tool":"<toolName>","arguments":{}}
+   * - Alternativa: {"tool":"<serverId>__<toolName>","arguments":{}}
    */
-  generateMCPSystemPrompt(tools, allowedDirsText = null) {
+  generateUniversalMCPSystemPrompt(tools, options = {}) {
     if (!tools || tools.length === 0) return '';
 
-    const dir = allowedDirsText ? allowedDirsText.split('\n')[0].replace('Allowed directories:', '').trim() : '';
-    const dirEscaped = dir.replace(/\\/g, '/');
+    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 8;
+    const serverHints = options.serverHints || {};
 
-    // NUEVO: Construir dinámicamente desde tools reales
-    let toolsSection = `HERRAMIENTAS DISPONIBLES (MCP Filesystem)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Agrupar tools por servidor
+    const serverIdToTools = tools.reduce((acc, t) => {
+      const sid = t.serverId || 'unknown';
+      if (!acc[sid]) acc[sid] = [];
+      acc[sid].push(t);
+      return acc;
+    }, {});
 
-Directorios permitidos: ${dirEscaped || 'N/A'}
+    let out = '';
+    out += 'HERRAMIENTAS DISPONIBLES (MCP)\n';
+    out += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    out += 'FORMATO RECOMENDADO:\n';
+    out += '{"server":"<serverId>","tool":"<toolName>","arguments":{...}}\n\n';
+    out += 'ALTERNATIVA NAMESPACED:\n';
+    out += '{"tool":"<serverId>__<toolName>","arguments":{...}}\n';
+    out += 'Nota: Usa SIEMPRE JSON válido sin texto extra.\n\n';
 
-FORMATO GENERAL: {"tool":"nombre_herramienta","arguments":{...}}
+    const serverIds = Object.keys(serverIdToTools).sort();
+    serverIds.forEach((serverId, sidx) => {
+      const list = serverIdToTools[serverId] || [];
+      // Selección Top‑K por servidor (simple: truncar por tamaño)
+      const selected = list.slice(0, Math.max(1, maxPerServer));
 
-`;
+      out += `Servidor: ${serverId}\n`;
+      out += `${'—'.repeat(10 + serverId.length)}\n`;
 
-    // Iterar sobre cada tool y generar documentación dinámica
-    for (let i = 0; i < tools.length; i++) {
-      const tool = tools[i];
-      const schema = tool.inputSchema || {};
-      const properties = schema.properties || {};
-      const required = schema.required || [];
-
-      toolsSection += `\n📌 ${tool.name.toUpperCase()}\n`;
-      toolsSection += `${'-'.repeat(tool.name.length + 3)}\n`;
-      
-      // Descripción
-      if (tool.description) {
-        toolsSection += `Descripción: ${tool.description}\n`;
-      }
-
-      // Parámetros
-      const paramKeys = Object.keys(properties);
-      if (paramKeys.length > 0) {
-        toolsSection += '\nParámetros:\n';
-        
-        paramKeys.forEach(paramName => {
-          const param = properties[paramName];
-          const isRequired = required.includes(paramName) ? 'REQUERIDO' : 'opcional';
-          const paramType = param.type || 'any';
-          const paramDesc = param.description || 'Sin descripción';
-          
-          toolsSection += `  • ${paramName} [${paramType}] (${isRequired}): ${paramDesc}\n`;
-        });
-      }
-
-      // Ejemplo JSON realista basado en schema
-      toolsSection += '\nEjemplo de uso:\n';
-      const exampleArgs = {};
-      paramKeys.forEach(paramName => {
-        const param = properties[paramName];
-        
-        // Generar valor de ejemplo según tipo
-        if (param.type === 'string') {
-          if (paramName.includes('path') || paramName.includes('file')) {
-            exampleArgs[paramName] = `${dirEscaped}/ejemplo.txt`;
-          } else if (paramName.includes('content') || paramName.includes('text')) {
-            exampleArgs[paramName] = 'contenido de ejemplo';
-          } else {
-            exampleArgs[paramName] = 'valor';
-          }
-        } else if (param.type === 'array') {
-          exampleArgs[paramName] = param.items?.type === 'object' 
-            ? [{ key: 'value' }] 
-            : ['item1', 'item2'];
-        } else if (param.type === 'object') {
-          exampleArgs[paramName] = { key: 'value' };
-        } else if (param.type === 'number') {
-          exampleArgs[paramName] = 0;
-        } else if (param.type === 'boolean') {
-          exampleArgs[paramName] = true;
-        } else {
-          exampleArgs[paramName] = 'valor';
+      // Hints específicos del servidor (p.ej., filesystem)
+      const hints = serverHints[serverId] || {};
+      if (hints.allowedDirsText) {
+        out += 'Directorios permitidos:\n';
+        // Imprimir máximo 3 líneas para no gastar tokens
+        const lines = String(hints.allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3);
+        lines.forEach(l => { out += `  - ${l}\n`; });
+        if ((String(hints.allowedDirsText).split('\n').length) > lines.length) {
+          out += '  - ...\n';
         }
+        out += '\n';
+      }
+
+      // Acciones comunes (sólo si es filesystem)
+      if (serverId === 'filesystem') {
+        const names = list.map(t => t.name);
+        const has = (n) => names.includes(n);
+        const bullets = [];
+        if (has('list_directory')) bullets.push('• "listar", "ver contenido" → list_directory { path }');
+        if (has('read_text_file')) bullets.push('• "leer fichero" → read_text_file { path }');
+        if (has('write_file')) bullets.push('• "crear/guardar fichero" → write_file { path, content }');
+        if (has('edit_file')) bullets.push('• "editar parte de un fichero" → edit_file { path, ... }');
+        if (has('create_directory')) bullets.push('• "crear carpeta" → create_directory { path }');
+        if (has('move_file')) bullets.push('• "mover" o "renombrar" → move_file { origen, destino } (usa los nombres reales de parámetros mostrados abajo: source/destination, from/to, old/new)');
+        if (has('search_files')) bullets.push('• "buscar" → search_files { query, path? }');
+        if (has('get_file_info')) bullets.push('• "ver info" → get_file_info { path }');
+        if (bullets.length > 0) {
+          out += 'Acciones comunes (filesystem):\n';
+          bullets.forEach(b => { out += `  ${b}\n`; });
+          out += 'Reglas: usa rutas dentro de los directorios permitidos; en Windows prefiere rutas tipo C:/...\n\n';
+        }
+      }
+
+      selected.forEach((tool, tidx) => {
+        const schema = tool.inputSchema || {};
+        const properties = schema.properties || {};
+        const required = schema.required || [];
+
+        out += `• ${tool.name}${tool.description ? ` — ${tool.description}` : ''}\n`;
+
+        const keys = Object.keys(properties);
+        if (keys.length > 0) {
+          out += '  Parámetros:\n';
+          keys.forEach((p) => {
+            const prop = properties[p] || {};
+            const t = prop.type || 'any';
+            const rq = required.includes(p) ? 'REQUERIDO' : 'opcional';
+            const d = prop.description || '';
+            out += `    - ${p} [${t}] (${rq})${d ? `: ${d}` : ''}\n`;
+          });
+        }
+
+        // Ejemplo compacto
+        const exampleArgs = {};
+        keys.forEach((p) => {
+          const prop = properties[p] || {};
+          if (prop.type === 'string') {
+            const isPathLike = /path|file|dir|directory/i.test(p);
+            if (isPathLike && hints.primaryDirNormalized) {
+              exampleArgs[p] = `${hints.primaryDirNormalized}/ejemplo.txt`;
+            } else {
+              exampleArgs[p] = 'texto';
+            }
+          }
+          else if (prop.type === 'number') exampleArgs[p] = 0;
+          else if (prop.type === 'boolean') exampleArgs[p] = true;
+          else if (prop.type === 'array') exampleArgs[p] = [];
+          else if (prop.type === 'object') exampleArgs[p] = {};
+          else exampleArgs[p] = 'valor';
+        });
+
+        out += '  Ejemplo:\n';
+        out += `  {"server":"${serverId}","tool":"${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
+        out += `  // o: {"tool":"${serverId}__${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
+        if (tidx < selected.length - 1) out += '\n';
       });
 
-      toolsSection += `{
-  "tool": "${tool.name}",
-  "arguments": ${JSON.stringify(exampleArgs, null, 4).split('\n').join('\n    ')}
-}\n`;
-
-      // Separador entre herramientas
-      if (i < tools.length - 1) {
-        toolsSection += `\n${'━'.repeat(70)}\n`;
+      if (sidx < serverIds.length - 1) {
+        out += `\n${'━'.repeat(70)}\n\n`;
       }
-    }
+    });
 
-    // Instrucciones finales
-    toolsSection += `
+    out += '\nREGLAS:\n';
+    out += '• Responde SOLO con JSON (sin explicación previa).\n';
+    out += '• Incluye SIEMPRE "arguments" (vacío si no hay).\n';
+    out += '• Si una tool existe en varios servidores, indica "server" o usa namespacing.\n';
 
-${'━'.repeat(70)}
-
-INSTRUCCIONES IMPORTANTES:
-1. Para CREAR o SOBRESCRIBIR archivo → usa "write_file"
-2. Para MODIFICAR parte de un archivo existente → usa "edit_file"
-3. Para LEER contenido → usa "read_text_file"
-4. Para LISTAR archivos/carpetas → usa "list_directory"
-5. Para MOVER o RENOMBRAR archivo/carpeta → usa "move_file"
-6. Para CREAR directorio → usa "create_directory"
-7. Para BUSCAR archivos → usa "search_files"
-8. Para OBTENER metadatos → usa "get_file_info"
-
-REGLAS CRÍTICAS:
-• SIEMPRE responde en formato JSON válido: {"tool":"nombre","arguments":{...}}
-• Las rutas DEBEN estar dentro del directorio permitido: ${dirEscaped || 'verificar con list_allowed_directories'}
-• Si el usuario pide mover/renombrar algo, usa "move_file"
-• Si el usuario pide crear un directorio, usa "create_directory"
-• NUNCA respondas con texto explicativo antes del JSON
-`;
-
-    return toolsSection;
+    return out;
   }
 
   /**
@@ -2351,8 +2363,27 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
       }
       
       try {
-        // Ejecutar la tool via MCP
-        const result = await mcpClient.callTool(currentToolCall.toolName, currentToolCall.arguments);
+        // Ejecutar la tool via MCP (soportar serverId y nombres namespaced)
+        let execResult = null;
+        let baseName = currentToolCall.toolName;
+        let serverIdHint = currentToolCall.serverId || null;
+
+        if (!serverIdHint && typeof baseName === 'string' && baseName.includes('__')) {
+          const idx = baseName.indexOf('__');
+          const sid = baseName.slice(0, idx);
+          const name = baseName.slice(idx + 2);
+          if (sid && name) {
+            serverIdHint = sid;
+            baseName = name;
+          }
+        }
+
+        if (serverIdHint) {
+          execResult = await mcpClient.callTool(serverIdHint, baseName, currentToolCall.arguments);
+        } else {
+          execResult = await mcpClient.callTool(baseName, currentToolCall.arguments);
+        }
+        const result = (execResult && execResult.success === true && execResult.result) ? execResult.result : execResult;
         
         // Verificar si hubo error en la tool
         if (result.isError) {
@@ -3137,18 +3168,37 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
         mcpContext = await this.injectMCPContext();
         
         if (mcpContext.hasTools) {
-          console.log(`🔌 [MCP] Inyectando ${mcpContext.tools.length} herramientas en system prompt`);
-          // Obtener directorios permitidos (cacheados) para instruir al modelo
-          const allowedDirs = await this.getAllowedDirectoriesCached();
-          const toolsPrompt = this.generateMCPSystemPrompt(mcpContext.tools, allowedDirs || null);
+          console.log(`🔌 [MCP] Inyectando ${mcpContext.tools.length} herramientas en system prompt (universal)`);
+
+          // Construir hints por servidor (filesystem: directorios permitidos)
+          const serverHints = {};
+          try {
+            const hasFilesystem = (mcpContext.tools || []).some(t => t.serverId === 'filesystem');
+            if (hasFilesystem) {
+              const allowedDirsText = await this.getAllowedDirectoriesCached();
+              if (allowedDirsText) {
+                const rawLines = String(allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean);
+                let first = rawLines[0] || '';
+                if (/^Allowed directories:/i.test(first)) {
+                  first = first.replace(/^Allowed directories:/i, '').trim();
+                }
+                const primaryDirNormalized = first ? first.replace(/\\/g, '/') : null;
+                serverHints['filesystem'] = {
+                  allowedDirsText,
+                  primaryDirNormalized
+                };
+              }
+            }
+          } catch (e) {
+            console.warn('⚠️ [MCP] No se pudieron obtener directorios permitidos:', e.message);
+          }
+
+          const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 8, serverHints });
           
-          // Buscar si ya hay un system message
           const systemIndex = messages.findIndex(m => m.role === 'system');
           if (systemIndex >= 0) {
-            // Añadir tools al system message existente
-            messages[systemIndex].content += toolsPrompt;
+            messages[systemIndex].content += (messages[systemIndex].content.endsWith('\n') ? '' : '\n\n') + toolsPrompt;
           } else {
-            // Crear nuevo system message al inicio
             messages.unshift({
               role: 'system',
               content: toolsPrompt

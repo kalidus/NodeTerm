@@ -400,7 +400,20 @@ class MCPClientService {
       console.log(`   Argumentos:`, args);
       
       // Buscar la tool en el cache para obtener el serverId
-      const tool = this.toolsCache.find(t => t.name === toolName);
+      let tool = this.toolsCache.find(t => t.name === toolName);
+      
+      // Resolver nombres namespaced <serverId>__<toolName>
+      if (!tool && typeof toolName === 'string' && toolName.includes('__')) {
+        const idx = toolName.indexOf('__');
+        const nsServerId = toolName.slice(0, idx);
+        const baseName = toolName.slice(idx + 2);
+        if (nsServerId && baseName) {
+          tool = this.toolsCache.find(t => t.serverId === nsServerId && t.name === baseName);
+          if (tool) {
+            console.log(`   Resuelto namespacing → serverId=${nsServerId}, tool=${baseName}`);
+          }
+        }
+      }
       
       if (!tool) {
         console.error(`❌ [MCP Client] Tool no encontrado: ${toolName}`);
@@ -418,7 +431,7 @@ class MCPClientService {
       }
       
       // Llamar a la tool via IPC
-      const result = await window.electron.mcp.callTool(serverId, toolName, args);
+      const result = await window.electron.mcp.callTool(serverId, tool.name, args);
       
       if (result.success) {
         console.log(`✅ [MCP Client] Tool ${toolName} ejecutado correctamente`);
