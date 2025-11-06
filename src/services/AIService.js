@@ -2093,16 +2093,19 @@ class AIService {
     }, {});
 
     let out = '';
-    out += 'INSTRUCCIONES CRÍTICAS - HERRAMIENTAS MCP\n';
+    out += 'INSTRUCCIONES CRÍTICAS - HERRAMIENTAS MCP (Modo ReAct)\n';
     out += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    out += 'DEBES usar las herramientas disponibles para responder a las solicitudes del usuario.\n';
-    out += 'NO pidas al usuario que especifique rutas si hay un directorio por defecto disponible.\n';
-    out += 'USA las herramientas automáticamente basándote en la intención del usuario.\n\n';
-    out += 'FORMATO RECOMENDADO:\n';
-    out += '{"server":"<serverId>","tool":"<toolName>","arguments":{...}}\n\n';
-    out += 'ALTERNATIVA NAMESPACED:\n';
-    out += '{"tool":"<serverId>__<toolName>","arguments":{...}}\n';
-    out += 'Nota: Usa SIEMPRE JSON válido sin texto extra.\n\n';
+    out += 'IMPORTANTE: Genera un PLAN de herramientas ANTES de ejecutar.\n\n';
+    out += 'Si el usuario pide UNA acción → genera una herramienta:\n';
+    out += '{"tool":"<serverId>__<toolName>","arguments":{...}}\n\n';
+    out += 'Si el usuario pide MÚLTIPLES acciones → genera un PLAN:\n';
+    out += '{"plan":[{"tool":"<name1>","arguments":{...}},{"tool":"<name2>","arguments":{...}}]}\n\n';
+    out += 'REGLAS:\n';
+    out += '1. Analiza la solicitud del usuario\n';
+    out += '2. Identifica TODAS las acciones necesarias\n';
+    out += '3. Genera el plan completo de UNA VEZ\n';
+    out += '4. NO ejecutes herramientas innecesarias\n';
+    out += '5. USA el directorio por defecto si no se especifica ruta\n\n';
 
     const serverIds = Object.keys(serverIdToTools).sort();
     serverIds.forEach((serverId, sidx) => {
@@ -2225,6 +2228,113 @@ class AIService {
     out += '• Si una tool existe en varios servidores, indica "server" o usa namespacing.\n';
 
     return out;
+  }
+
+  /**
+   * Detectar PLAN de herramientas (modo ReAct) en la respuesta
+   * Retorna: { isPlan: true, tools: [{tool, arguments}, ...] } o null
+   */
+  _detectToolPlan(response) {
+    if (!response || typeof response !== 'string') return null;
+    
+    // Buscar JSON con estructura de plan: {"plan": [...]}
+    const jsonPattern = /\{[\s\S]*?"plan"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g;
+    const matches = response.match(jsonPattern);
+    
+    if (!matches) return null;
+    
+    for (const jsonStr of matches) {
+      try {
+        const data = JSON.parse(jsonStr);
+        if (data.plan && Array.isArray(data.plan) && data.plan.length > 0) {
+          // Validar que cada elemento del plan tenga tool
+          const validTools = data.plan.filter(t => t && (t.tool || t.toolName));
+          if (validTools.length > 0) {
+            console.log(`✅ [MCP] Plan detectado con ${validTools.length} herramientas`);
+            return {
+              isPlan: true,
+              tools: validTools.map(t => ({
+                tool: t.tool || t.toolName,
+                toolName: t.tool || t.toolName,
+                arguments: t.arguments || t.args || {},
+                serverId: t.serverId || t.server || null
+              }))
+            };
+          }
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Ejecutar un PLAN completo de herramientas (modo ReAct)
+   */
+  async _executeToolPlan(plan, callbacks = {}) {
+    console.log(`🚀 [MCP] Ejecutando plan con ${plan.tools.length} herramientas`);
+    
+    const results = [];
+    for (let i = 0; i < plan.tools.length; i++) {
+      const toolSpec = plan.tools[i];
+      const toolName = toolSpec.toolName || toolSpec.tool;
+      const args = toolSpec.arguments || {};
+      
+      console.log(`   [${i + 1}/${plan.tools.length}] Ejecutando: ${toolName}`);
+      
+      // Normalizar y resolver serverId
+      const normalized = this._normalizeFunctionCall(toolName, args);
+      const serverId = normalized.serverId;
+      const actualToolName = normalized.toolName;
+      const callArgs = normalized.arguments;
+      
+      // Guardar mensaje de tool call
+      conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${actualToolName}`, {
+        isToolCall: true,
+        toolName: actualToolName,
+        toolArgs: callArgs
+      });
+      
+      // Callback de tool ejecutada
+      if (callbacks.onToolResult) {
+        callbacks.onToolResult({ toolName: actualToolName, args: callArgs, result: null });
+      }
+      
+      try {
+        if (!serverId) {
+          throw new Error(`No se pudo resolver el servidor para la herramienta ${actualToolName}`);
+        }
+        
+        const result = await mcpClient.callTool(serverId, actualToolName, callArgs);
+        const text = result?.content?.[0]?.text || 'OK';
+        
+        // Guardar resultado de la tool
+        conversationService.addMessage('tool', text, {
+          isToolResult: true,
+          toolName: actualToolName,
+          toolArgs: callArgs
+        });
+        
+        results.push({ tool: actualToolName, success: true, result: text });
+        
+        // Callback de tool ejecutada con resultado
+        if (callbacks.onToolResult) {
+          callbacks.onToolResult({ toolName: actualToolName, args: callArgs, result });
+        }
+        
+        console.log(`   ✅ [${i + 1}/${plan.tools.length}] ${actualToolName} completado`);
+      } catch (error) {
+        const errorMsg = `❌ Error ejecutando ${actualToolName}: ${error.message}`;
+        conversationService.addMessage('tool', errorMsg, { error: true });
+        results.push({ tool: actualToolName, success: false, error: error.message });
+        console.error(`   ❌ [${i + 1}/${plan.tools.length}] ${actualToolName} falló:`, error.message);
+      }
+    }
+    
+    console.log(`✅ [MCP] Plan completado: ${results.filter(r => r.success).length}/${results.length} exitosas`);
+    return 'Hecho.';
   }
 
   /**
@@ -3917,8 +4027,16 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         }
       }
       
-      // 🔧 DETECTAR SI LA RESPUESTA ES UN TOOL CALL
+      // 🔧 DETECTAR SI LA RESPUESTA ES UN PLAN o TOOL CALL
       if (mcpContext.hasTools) {
+        // Prioridad 1: Detectar PLAN (múltiples herramientas)
+        const toolPlan = this._detectToolPlan(response);
+        if (toolPlan) {
+          console.log(`📋 [AIService] Plan detectado con ${toolPlan.tools.length} herramientas, ejecutando...`);
+          return await this._executeToolPlan(toolPlan, callbacks);
+        }
+        
+        // Prioridad 2: Detectar tool call individual
         const toolCall = this.detectToolCallInResponse(response);
         if (toolCall) {
           console.log(`🔧 [AIService] Tool call detectado: ${toolCall.toolName}, iniciando ejecución...`);

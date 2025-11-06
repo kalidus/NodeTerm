@@ -216,6 +216,10 @@ class ToolOrchestrator {
       const userRequest = userMessage?.content || '';
       const hasMultipleActions = /\by\b|\band\b|,/.test(userRequest.toLowerCase());
       
+      // Detectar si ya completamos ambas acciones típicas: crear/escribir + listar
+      const executedTools = seenInTurn.size;
+      const isLikelyComplete = executedTools >= 2 && ['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(toolName);
+      
       let antiProactivityPrompt = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔧 Resultado de ${toolName}:
 ${cleanText}
@@ -227,7 +231,13 @@ INSTRUCCIONES POST-EJECUCIÓN:
 3. ❌ NO repitas el resultado en tu respuesta
 4. ❌ NO vuelvas a ejecutar "${toolName}" (ya se ejecutó)`;
 
-      if (hasMultipleActions) {
+      if (isLikelyComplete) {
+        // Si ya ejecutamos 2+ herramientas y la última fue listar directorio, terminamos
+        antiProactivityPrompt += `
+5. ✅ TAREA COMPLETADA - Ya ejecutaste ${executedTools} herramientas
+6. ❌ NO ejecutes MÁS herramientas
+7. ✅ Responde SOLO: "Hecho."`;
+      } else if (hasMultipleActions) {
         antiProactivityPrompt += `
 5. ⚠️ El usuario pidió: "${userRequest}"
    Ya ejecutaste: ${toolName} ✓
@@ -248,11 +258,11 @@ INSTRUCCIONES POST-EJECUCIÓN:
       providerMessages.push({ role: 'system', content: antiProactivityPrompt });
 
       // 🔧 Aumentar tokens para permitir tool calls adicionales
-      // Usar más tokens si detectamos múltiples acciones
-      const followUpTokens = hasMultipleActions ? 500 : 200;
+      // Usar MUY POCOS tokens si ya completamos la tarea
+      const followUpTokens = isLikelyComplete ? 50 : (hasMultipleActions ? 500 : 200);
       const followUp = await callModelFn(providerMessages, { 
         maxTokens: followUpTokens, 
-        temperature: 0.4,
+        temperature: isLikelyComplete ? 0.1 : 0.4, // Temperatura muy baja si ya terminamos
         // 🔧 NO guardar este mensaje en conversationService
         skipSave: true 
       });
