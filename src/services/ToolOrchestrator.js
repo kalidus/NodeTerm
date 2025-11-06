@@ -1,10 +1,25 @@
 /**
  * ToolOrchestrator - Orquestación de tool-calls MCP por conversación
  *
+ * FLUJO PRINCIPAL:
+ * ─────────────────
  * - Emite mensajes estructurados: 'assistant_tool_call' y 'tool'
  * - Ejecuta tools vía MCP y encadena iteraciones
  * - Reinyecta observaciones al modelo como mensajes 'system' efímeros
  * - Dedupe por (tool,args) con TTL y anti-loop en el mismo turno
+ * 
+ * ESTRATEGIA ANTI-PROACTIVIDAD:
+ * ──────────────────────────────
+ * Después de ejecutar un tool, se inyectan instrucciones TEMPORALES
+ * (NO se guardan en conversationService para evitar contaminar contexto):
+ * 
+ * • maxTokens: 100 → Solo espacio para "Hecho." (sin reasoning)
+ * • temperature: 0.2 → Casi determinista
+ * • maxIterations: 5 → Máximo 5 tools por turno
+ * • Bloqueo: mismo tool + mismo path = bloqueado en el mismo turno
+ * 
+ * Esto evita que el modelo sea "perezoso" en solicitudes posteriores
+ * del usuario por tener instrucciones "NO hagas nada" en el historial.
  */
 
 import { conversationService } from './ConversationService';
@@ -13,7 +28,7 @@ import mcpClient from './MCPClientService';
 class ToolOrchestrator {
   constructor() {
     this.stateByConversation = new Map();
-    this.defaultMaxIterations = 10;
+    this.defaultMaxIterations = 5; // 🔧 Reducido de 10 a 5 para limitar proactividad
     this.dedupeTtlMs = 2 * 60 * 1000; // 2 min
   }
 
@@ -193,21 +208,34 @@ class ToolOrchestrator {
         conversationService.addFact({ text: `Resultado ${toolName}: ${excerpt}`, toolName, toolArgs: args });
       } catch {}
 
-      providerMessages.push({ role: 'system', content: `🔧 Resultado de ${toolName}:
-${cleanText}` });
-      providerMessages.push({ role: 'system', content: `INSTRUCCIONES FINALES - LEER CUIDADOSAMENTE:
-1. El resultado de la herramienta YA fue mostrado al usuario - NO lo repitas.
-2. La tarea del usuario YA está completa - NO ejecutes más herramientas.
-3. NO respondas con JSON. NO respondas con tool calls.
-4. NO seas proactivo. NO hagas nada extra que el usuario no pidió.
-5. SOLO responde con una breve confirmación en español (1-2 líneas máximo).
-6. Ejemplo de respuesta correcta: "Hecho." o "Archivo creado correctamente." o "Operación completada."
-7. NO respondas con {"tool": null} ni ningún otro JSON.
-8. CRÍTICO: NO ejecutes el mismo tool otra vez. NO mejores ni modifiques nada. La tarea está COMPLETA.` });
+      // 🔧 CRÍTICO: Las instrucciones anti-proactividad van SOLO en el system message,
+      // NO se guardan en conversationService para evitar contaminar el contexto
+      const antiProactivityPrompt = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 Resultado de ${toolName}:
+${cleanText}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-      // 🔧 CRÍTICO: Reducir maxTokens agresivamente para evitar que el modelo genere más tool calls
-      // Solo debe generar "Hecho." o confirmación breve, no necesita razonar más
-      const followUp = await callModelFn(providerMessages, { maxTokens: 150, temperature: 0.3 });
+INSTRUCCIONES POST-EJECUCIÓN:
+1. ✅ La herramienta "${toolName}" YA se ejecutó exitosamente
+2. ✅ El resultado YA fue mostrado al usuario automáticamente
+3. ❌ NO repitas el resultado en tu respuesta
+4. ❌ NO ejecutes más herramientas (la tarea está completa)
+5. ❌ NO respondas con JSON ni tool calls
+6. ❌ NO seas proactivo (solo haz lo que el usuario pidió)
+7. ✅ SOLO responde: "Hecho." o "Operación completada."
+
+Si no estás seguro → responde: "Hecho."`;
+
+      // Agregar el prompt SOLO a providerMessages (NO a conversationService)
+      providerMessages.push({ role: 'system', content: antiProactivityPrompt });
+
+      // 🔧 Tokens ultra-bajos: solo espacio para "Hecho." (no reasoning)
+      const followUp = await callModelFn(providerMessages, { 
+        maxTokens: 100, 
+        temperature: 0.2,
+        // 🔧 NO guardar este mensaje en conversationService
+        skipSave: true 
+      });
       lastFollowUpResponse = followUp; // 🔧 Guardar siempre la última respuesta
       currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(followUp) : null;
 

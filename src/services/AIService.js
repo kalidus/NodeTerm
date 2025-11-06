@@ -2289,7 +2289,7 @@ REGLAS CRÍTICAS:
    * Manejar loop de tool calls para modelos locales (system prompt)
    * Soporta múltiples iteraciones, re-inyección de resultados, y detección de loops
    */
-  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations = 10) {
+  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations = 5) {
     let iteration = 0;
     let currentToolCall = toolCall;
     let conversationMessages = [...messages];
@@ -3278,7 +3278,7 @@ Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin 
               callModelFn,
               callbacks,
               options,
-              maxIterations: 10,
+              maxIterations: 5, // 🔧 Reducido de 10 a 5 para limitar proactividad
               turnId: options?.turnId
             });
             console.log(`✅ [AIService] toolOrchestrator.executeLoop() completado, resultado length: ${orchestratorResult?.length || 0}`);
