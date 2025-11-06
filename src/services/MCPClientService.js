@@ -393,35 +393,53 @@ class MCPClientService {
 
   /**
    * Llamar a una tool MCP
+   * Soporta dos firmas:
+   * - callTool(toolName, args) - busca el serverId automáticamente
+   * - callTool(serverId, toolName, args) - usa el serverId explícito
    */
-  async callTool(toolName, args = {}) {
+  async callTool(...params) {
     try {
-      console.log(`🔧 [MCP Client] Llamando a tool: ${toolName}`);
-      console.log(`   Argumentos:`, args);
+      let serverId, toolName, args;
       
-      // Buscar la tool en el cache para obtener el serverId
-      let tool = this.toolsCache.find(t => t.name === toolName);
-      
-      // Resolver nombres namespaced <serverId>__<toolName>
-      if (!tool && typeof toolName === 'string' && toolName.includes('__')) {
-        const idx = toolName.indexOf('__');
-        const nsServerId = toolName.slice(0, idx);
-        const baseName = toolName.slice(idx + 2);
-        if (nsServerId && baseName) {
-          tool = this.toolsCache.find(t => t.serverId === nsServerId && t.name === baseName);
-          if (tool) {
-            console.log(`   Resuelto namespacing → serverId=${nsServerId}, tool=${baseName}`);
+      // Detectar firma: 2 params (toolName, args) o 3 params (serverId, toolName, args)
+      if (params.length === 3) {
+        [serverId, toolName, args] = params;
+        args = args || {};
+        console.log(`🔧 [MCP Client] Llamando a tool: ${serverId}/${toolName}`);
+        console.log(`   Argumentos:`, args);
+      } else if (params.length === 2) {
+        [toolName, args] = params;
+        args = args || {};
+        console.log(`🔧 [MCP Client] Llamando a tool: ${toolName}`);
+        console.log(`   Argumentos:`, args);
+        
+        // Buscar la tool en el cache para obtener el serverId
+        let tool = this.toolsCache.find(t => t.name === toolName);
+        
+        // Resolver nombres namespaced <serverId>__<toolName>
+        if (!tool && typeof toolName === 'string' && toolName.includes('__')) {
+          const idx = toolName.indexOf('__');
+          const nsServerId = toolName.slice(0, idx);
+          const baseName = toolName.slice(idx + 2);
+          if (nsServerId && baseName) {
+            tool = this.toolsCache.find(t => t.serverId === nsServerId && t.name === baseName);
+            if (tool) {
+              console.log(`   Resuelto namespacing → serverId=${nsServerId}, tool=${baseName}`);
+              toolName = baseName;
+            }
           }
         }
+        
+        if (!tool) {
+          console.error(`❌ [MCP Client] Tool no encontrado: ${toolName}`);
+          throw new Error(`Tool no encontrado: ${toolName}`);
+        }
+        
+        serverId = tool.serverId;
+        console.log(`   Servidor: ${serverId}`);
+      } else {
+        throw new Error(`callTool requiere 2 o 3 parámetros, recibió ${params.length}`);
       }
-      
-      if (!tool) {
-        console.error(`❌ [MCP Client] Tool no encontrado: ${toolName}`);
-        throw new Error(`Tool no encontrado: ${toolName}`);
-      }
-      
-      const serverId = tool.serverId;
-      console.log(`   Servidor: ${serverId}`);
       
       // Verificar que el servidor esté activo
       const server = this.servers.find(s => s.id === serverId);
@@ -431,16 +449,16 @@ class MCPClientService {
       }
       
       // Llamar a la tool via IPC
-      const result = await window.electron.mcp.callTool(serverId, tool.name, args);
+      const result = await window.electron.mcp.callTool(serverId, toolName, args);
       
       if (result.success) {
-        console.log(`✅ [MCP Client] Tool ${toolName} ejecutado correctamente`);
+        console.log(`✅ [MCP Client] Tool ${serverId}/${toolName} ejecutado correctamente`);
         console.log(`   Resultado:`, result.result);
         this.notifyListeners('tool-called', { serverId, toolName, args, result: result.result });
         return result.result;
       } else {
-        console.error(`❌ [MCP Client] Error ejecutando tool ${toolName}:`, result.error);
-        throw new Error(result.error || `Error ejecutando tool ${toolName}`);
+        console.error(`❌ [MCP Client] Error ejecutando tool ${serverId}/${toolName}:`, result.error);
+        throw new Error(result.error || `Error ejecutando tool ${serverId}/${toolName}`);
       }
     } catch (error) {
       console.error(`[MCP Client] Error en callTool:`, error);
@@ -490,6 +508,45 @@ class MCPClientService {
       return result;
     } catch (error) {
       console.error('[MCP Client] Error obteniendo prompt:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Obtener prompt por identificador flexible:
+   * - getPromptAuto('serverId__promptName', args)
+   * - getPromptAuto({ server: 'serverId', name: 'promptName' }, args)
+   * - getPromptAuto('promptName', args) si es único entre servidores
+   */
+  async getPromptAuto(identifier, args = {}) {
+    try {
+      let serverId = null;
+      let promptName = null;
+      if (typeof identifier === 'string') {
+        if (identifier.includes('__')) {
+          const idx = identifier.indexOf('__');
+          serverId = identifier.slice(0, idx);
+          promptName = identifier.slice(idx + 2);
+        } else {
+          // Buscar por nombre único
+          const matches = (this.promptsCache || []).filter(p => p.name === identifier);
+          if (matches.length === 1) {
+            serverId = matches[0].serverId;
+            promptName = matches[0].name;
+          } else {
+            throw new Error('Prompt ambiguo o no encontrado: ' + identifier);
+          }
+        }
+      } else if (identifier && typeof identifier === 'object') {
+        serverId = identifier.server || identifier.serverId;
+        promptName = identifier.name;
+      }
+      if (!serverId || !promptName) {
+        throw new Error('Parámetros inválidos para getPromptAuto');
+      }
+      return await this.getPrompt(serverId, promptName, args);
+    } catch (error) {
+      console.error('[MCP Client] Error en getPromptAuto:', error.message);
       return { success: false, error: error.message };
     }
   }

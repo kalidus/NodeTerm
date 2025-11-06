@@ -356,6 +356,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAbortController(controller);
 
     try {
+      // Slash command: /prompts → listar prompts MCP
+      if (userMessage === '/prompts' || userMessage === '/prompt') {
+        const prompts = mcpClient.getAvailablePrompts() || [];
+        const byServer = prompts.reduce((acc, p) => { (acc[p.serverId] = acc[p.serverId] || []).push(p); return acc; }, {});
+        const lines = Object.keys(byServer).sort().flatMap(sid => {
+          const list = byServer[sid].map(p => `  - ${p.name}${p.description ? ` — ${p.description}` : ''}`);
+          return [`Servidor: ${sid}`, ...list, ''];
+        });
+        const content = lines.length > 0 ? lines.join('\n') : 'No hay prompts MCP disponibles.';
+        // Persistir mensaje usuario y respuesta como assistant
+        conversationService.addMessage('user', userMessage);
+        conversationService.addMessage('assistant', content);
+        setMessages(prev => [...prev, { id: Date.now(), role: 'assistant', content, timestamp: Date.now() }]);
+        setIsLoading(false);
+        return;
+      }
       // ============= PASO 1: SINCRONIZAR CONVERSACIÓN (PRIMERO) =============
       // Asegurar que el servicio esté sincronizado con la conversación actual ANTES de limpiar historial
       if (currentConversationId && conversationService.currentConversationId !== currentConversationId) {
