@@ -58,6 +58,25 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Estado para MCP tools
   const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
   const [activeMcpServers, setActiveMcpServers] = useState([]);
+  const [showMcpDialog, setShowMcpDialog] = useState(false);
+  const [selectedMcpServers, setSelectedMcpServers] = useState(() => {
+    // Cargar MCPs seleccionados del localStorage
+    try {
+      const saved = localStorage.getItem('selectedMcpServers');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [disabledMcpServers, setDisabledMcpServers] = useState(() => {
+    // Cargar MCPs desactivados del localStorage
+    try {
+      const saved = localStorage.getItem('disabledMcpServers');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Detectar si un texto parece un tool-call JSON para NO mostrarlo en streaming
   const looksLikeToolJson = useCallback((text) => {
@@ -248,7 +267,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     mcpClient.initialize().catch(error => {
       console.error('Error inicializando MCP client:', error);
     });
-  }, []);
+
+    // Iniciar MCPs marcados como por defecto después de 1 segundo
+    // (dar tiempo a que se inicialice MCPClient)
+    const initDefaultMcps = setTimeout(() => {
+      if (selectedMcpServers.length > 0) {
+        console.log('📌 Iniciando MCPs por defecto:', selectedMcpServers);
+        selectedMcpServers.forEach(serverId => {
+          mcpClient.startServer(serverId).catch(error => {
+            console.error(`Error iniciando MCP ${serverId}:`, error);
+          });
+        });
+      }
+    }, 1000);
+
+    return () => clearTimeout(initDefaultMcps);
+  }, [selectedMcpServers]);
 
   // Escuchar eventos del historial de conversaciones
   useEffect(() => {
@@ -999,6 +1033,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       modelType
     );
 
+    // Guardar MCPs seleccionados en la conversación
+    if (selectedMcpServers.length > 0) {
+      newConversation.selectedMcpServers = selectedMcpServers;
+      console.log('📌 MCPs seleccionados guardados en conversación:', selectedMcpServers);
+    }
+
     // Actualizar estado con la nueva conversación
     setCurrentConversationId(newConversation.id);
     setConversationTitle(newConversation.title);
@@ -1117,6 +1157,53 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         }
       }));
     }
+  };
+
+  // Manejar selección de MCPs
+  const handleToggleMcpSelection = (serverId) => {
+    setSelectedMcpServers(prev => {
+      let updated;
+      if (prev.includes(serverId)) {
+        updated = prev.filter(id => id !== serverId);
+      } else {
+        updated = [...prev, serverId];
+      }
+      // Guardar en localStorage
+      localStorage.setItem('selectedMcpServers', JSON.stringify(updated));
+      console.log('📌 MCPs seleccionados guardados:', updated);
+      return updated;
+    });
+  };
+
+  // Seleccionar/Deseleccionar todos
+  const handleToggleAllMcps = () => {
+    if (selectedMcpServers.length === activeMcpServers.length) {
+      // Si todos están seleccionados, deseleccionar todos
+      setSelectedMcpServers([]);
+      localStorage.setItem('selectedMcpServers', JSON.stringify([]));
+    } else {
+      // Si no todos están seleccionados, seleccionar todos
+      const allIds = activeMcpServers.map(s => s.id);
+      setSelectedMcpServers(allIds);
+      localStorage.setItem('selectedMcpServers', JSON.stringify(allIds));
+      console.log('📌 Todos los MCPs seleccionados:', allIds);
+    }
+  };
+
+  // Toggle activar/desactivar MCP
+  const handleToggleMcpActive = (serverId) => {
+    setDisabledMcpServers(prev => {
+      let updated;
+      if (prev.includes(serverId)) {
+        updated = prev.filter(id => id !== serverId);
+      } else {
+        updated = [...prev, serverId];
+      }
+      // Guardar en localStorage
+      localStorage.setItem('disabledMcpServers', JSON.stringify(updated));
+      console.log('🔌 MCPs desactivados guardados:', updated);
+      return updated;
+    });
   };
 
   const formatTimestamp = (timestamp) => {
@@ -2483,32 +2570,35 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   {currentModel}
                 </span>
               )}
-              {activeMcpServers && activeMcpServers.length > 0 && (
-                activeMcpServers.map((server, idx) => (
-                  <span 
-                    key={idx}
-                    title={server.name || server.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0.2rem 0.4rem',
-                      background: 'rgba(102, 187, 106, 0.2)',
-                      color: '#66bb6a',
-                      borderRadius: '8px',
-                      fontSize: '0.55rem',
-                      fontWeight: '600',
-                      whiteSpace: 'nowrap',
-                      border: '1px solid rgba(102, 187, 106, 0.4)',
-                      boxShadow: '0 0 4px rgba(102, 187, 106, 0.2)',
-                      maxWidth: '100px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                    <i className="pi pi-wrench" style={{ fontSize: '0.5rem', marginRight: '0.25rem' }} />
-                    {(server.name || server.id).substring(0, 12)}
-                  </span>
-                ))
+              {selectedMcpServers && selectedMcpServers.length > 0 && (
+                selectedMcpServers
+                  .map(serverId => activeMcpServers.find(s => s.id === serverId))
+                  .filter(server => server && !disabledMcpServers.includes(server.id))
+                  .map((server, idx) => (
+                    <span 
+                      key={idx}
+                      title={server.name || server.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.2rem 0.4rem',
+                        background: 'rgba(102, 187, 106, 0.2)',
+                        color: '#66bb6a',
+                        borderRadius: '8px',
+                        fontSize: '0.55rem',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        border: '1px solid rgba(102, 187, 106, 0.4)',
+                        boxShadow: '0 0 4px rgba(102, 187, 106, 0.2)',
+                        maxWidth: '100px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                      <i className="pi pi-wrench" style={{ fontSize: '0.5rem', marginRight: '0.25rem' }} />
+                      {(server.name || server.id).substring(0, 12)}
+                    </span>
+                  ))
               )}
             </div>
           </div>
@@ -2577,7 +2667,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
             {/* Botón toggle MCP Tools */}
             <button
-              onClick={() => setMcpToolsEnabled(!mcpToolsEnabled)}
+              onClick={() => setShowMcpDialog(true)}
               style={{
                 background: mcpToolsEnabled ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)',
                 border: `1px solid ${mcpToolsEnabled ? 'rgba(255, 152, 0, 0.4)' : themeColors.borderColor}`,
@@ -2601,7 +2691,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               }}
               title={mcpToolsEnabled ? 'MCP Tools Activado' : 'MCP Tools Desactivado'}
             >
-              <i className="pi pi-wrench" style={{ fontSize: '0.8rem' }} />
+              <i className="pi pi-wrench" style={{ 
+                fontSize: '0.8rem',
+                color: mcpToolsEnabled ? '#ff9800' : 'inherit'
+              }} />
             </button>
 
             {/* Botón para abrir en pestaña nueva */}
@@ -3348,6 +3441,235 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               inputRef.current?.focus();
             }}
           />
+        )}
+
+        {/* Diálogo de MCPs Activos */}
+        {showMcpDialog && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+          onClick={() => setShowMcpDialog(false)}>
+            <div style={{
+              background: themeColors.cardBackground,
+              border: `1px solid ${themeColors.borderColor}`,
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '70vh',
+              overflow: 'auto',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1.2rem', fontWeight: '600' }}>
+                  🔧 Servidores MCP Activos
+                </h2>
+                <button
+                  onClick={() => setShowMcpDialog(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: themeColors.textSecondary,
+                    cursor: 'pointer',
+                    fontSize: '1.5rem',
+                    padding: 0
+                  }}>
+                  ✕
+                </button>
+              </div>
+
+              <p style={{ margin: '0 0 1rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                Activa/desactiva MCPs y marca los que usarás por defecto
+              </p>
+
+              {activeMcpServers && activeMcpServers.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {/* Lista de MCPs con botones de acción */}
+                  {activeMcpServers.map((server, idx) => {
+                    const isSelected = selectedMcpServers.includes(server.id);
+                    const isDisabled = disabledMcpServers.includes(server.id);
+                    return (
+                      <div 
+                        key={idx}
+                        style={{
+                          padding: '0.8rem',
+                          background: isDisabled 
+                            ? 'rgba(200, 200, 200, 0.08)'
+                            : `linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(102, 187, 106, 0.03) 100%)`,
+                          border: isDisabled
+                            ? '1px solid rgba(200, 200, 200, 0.2)'
+                            : '1px solid rgba(102, 187, 106, 0.2)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.6rem',
+                          opacity: isDisabled ? 0.6 : 1,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          flex: 1
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: isDisabled ? 'rgba(200, 200, 200, 0.15)' : 'rgba(102, 187, 106, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: isDisabled ? '#999999' : '#66bb6a',
+                            flexShrink: 0
+                          }}>
+                            <i className="pi pi-wrench" style={{ fontSize: '1rem' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              color: isDisabled ? themeColors.textSecondary : themeColors.textPrimary,
+                              fontWeight: '600',
+                              fontSize: '0.95rem',
+                              textDecoration: isDisabled ? 'line-through' : 'none'
+                            }}>
+                              {server.name || server.id}
+                            </div>
+                            <div style={{
+                              color: themeColors.textSecondary,
+                              fontSize: '0.8rem',
+                              marginTop: '0.2rem'
+                            }}>
+                              {server.id}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          flexShrink: 0
+                        }}>
+                          {/* Botón Por Defecto */}
+                          <button
+                            onClick={() => handleToggleMcpSelection(server.id)}
+                            disabled={isDisabled}
+                            title={isSelected ? 'Remover de por defecto' : 'Usar por defecto'}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              background: isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                              border: isSelected ? '1px solid rgba(255, 193, 7, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '6px',
+                              color: isSelected ? '#ffc107' : themeColors.textSecondary,
+                              cursor: isDisabled ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s ease',
+                              fontSize: '0.8rem',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              whiteSpace: 'nowrap',
+                              opacity: isDisabled ? 0.5 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isDisabled) {
+                                e.currentTarget.style.background = isSelected ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isDisabled) {
+                                e.currentTarget.style.background = isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+                              }
+                            }}
+                          >
+                            <i className={`pi ${isSelected ? 'pi-star-fill' : 'pi-star'}`} style={{ fontSize: '0.75rem' }} />
+                            {isSelected ? 'Por defecto' : 'Por defecto'}
+                          </button>
+
+                          {/* Botón Activar/Desactivar */}
+                          <button
+                            onClick={() => handleToggleMcpActive(server.id)}
+                            title={isDisabled ? 'Activar MCP' : 'Desactivar MCP'}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              background: isDisabled 
+                                ? 'rgba(244, 67, 54, 0.2)'
+                                : 'rgba(76, 175, 80, 0.2)',
+                              border: isDisabled
+                                ? '1px solid rgba(244, 67, 54, 0.4)'
+                                : '1px solid rgba(76, 175, 80, 0.4)',
+                              borderRadius: '6px',
+                              color: isDisabled ? '#f44336' : '#66bb6a',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              fontSize: '0.8rem',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = isDisabled
+                                ? 'rgba(244, 67, 54, 0.3)'
+                                : 'rgba(76, 175, 80, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = isDisabled
+                                ? 'rgba(244, 67, 54, 0.2)'
+                                : 'rgba(76, 175, 80, 0.2)';
+                            }}
+                          >
+                            <i className={`pi ${isDisabled ? 'pi-times' : 'pi-check'}`} style={{ fontSize: '0.75rem' }} />
+                            {isDisabled ? 'Inactivo' : 'Activo'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '2rem',
+                  textAlign: 'center',
+                  color: themeColors.textSecondary
+                }}>
+                  <i className="pi pi-inbox" style={{ fontSize: '2rem', marginBottom: '0.5rem', display: 'block' }} />
+                  <p style={{ margin: 0 }}>No hay servidores MCP activos</p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem' }}>
+                    Configura servidores MCP en la configuración de IA
+                  </p>
+                </div>
+              )}
+
+              {/* Resumen de selección */}
+              {activeMcpServers && activeMcpServers.length > 0 && selectedMcpServers.length > 0 && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.8rem',
+                  background: 'rgba(255, 193, 7, 0.1)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                  borderRadius: '8px',
+                  color: themeColors.textSecondary,
+                  fontSize: '0.85rem'
+                }}>
+                  ⭐ {selectedMcpServers.length} MCP{selectedMcpServers.length !== 1 ? 's' : ''} marcado{selectedMcpServers.length !== 1 ? 's' : ''} como por defecto
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </>
