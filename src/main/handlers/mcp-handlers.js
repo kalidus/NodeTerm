@@ -44,6 +44,17 @@ function registerMCPHandlers() {
     }
   });
 
+  // Actualizar configuración de un servidor MCP
+  ipcMain.handle('mcp:update-config', async (event, { serverId, config }) => {
+    try {
+      const result = await mcpService.updateMCPServerConfig(serverId, config);
+      return result;
+    } catch (error) {
+      console.error('[MCP Handlers] Error actualizando configuración:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Desinstalar servidor MCP
   ipcMain.handle('mcp:uninstall', async (event, serverId) => {
     try {

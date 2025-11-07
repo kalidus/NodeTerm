@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electron', {
     toggle: (serverId, enabled) => ipcRenderer.invoke('mcp:toggle', { serverId, enabled }),
     start: (serverId) => ipcRenderer.invoke('mcp:start', serverId),
     stop: (serverId) => ipcRenderer.invoke('mcp:stop', serverId),
+    updateConfig: (serverId, config) => ipcRenderer.invoke('mcp:update-config', { serverId, config }),
     listTools: () => ipcRenderer.invoke('mcp:list-tools'),
     listResources: () => ipcRenderer.invoke('mcp:list-resources'),
     listPrompts: () => ipcRenderer.invoke('mcp:list-prompts'),

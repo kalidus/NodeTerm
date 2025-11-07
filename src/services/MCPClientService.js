@@ -360,6 +360,28 @@ class MCPClientService {
   }
 
   /**
+   * Actualizar configuración de un servidor MCP
+   */
+  async updateServerConfig(serverId, config) {
+    try {
+      if (!window.electron || !window.electron.mcp || !window.electron.mcp.updateConfig) {
+        console.error('[MCP Client] updateConfig IPC no disponible');
+        return { success: false, error: 'API updateConfig no disponible en preload' };
+      }
+
+      const result = await window.electron.mcp.updateConfig(serverId, config);
+      if (result.success) {
+        await this.refreshAll();
+        this.notifyListeners('server-config-updated', { serverId, config });
+      }
+      return result;
+    } catch (error) {
+      console.error('[MCP Client] Error actualizando configuración:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Llamar a una tool específica
    */
   async callTool(serverId, toolName, args = {}) {
