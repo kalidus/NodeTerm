@@ -622,7 +622,25 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
                     />
                   ) : (
                     <>
-                      <div className="conversation-title">{conversation.title}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                        <div className="conversation-title">{conversation.title}</div>
+                        {conversation.modelId && (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '0.2rem 0.5rem',
+                            background: `${themeColors.primaryColor}40`,
+                            color: themeColors.primaryColor,
+                            borderRadius: '10px',
+                            fontSize: '0.65rem',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap',
+                            border: `1px solid ${themeColors.primaryColor}60`,
+                            flexShrink: 0
+                          }}>
+                            {conversation.modelId}
+                          </span>
+                        )}
+                      </div>
                       <div className="conversation-preview">
                         {getConversationPreview(conversation)}
                       </div>
