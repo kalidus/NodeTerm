@@ -1,36 +1,55 @@
 {
-  "version": "1.0.0",
-  "lastUpdated": "2024-11-04",
+  "version": "1.1.0",
+  "lastUpdated": "2025-11-07",
   "categories": [
     {
       "id": "system",
-      "name": "Sistema",
+      "name": "Sistema y Archivos",
       "icon": "pi-desktop",
-      "description": "Herramientas para interactuar con el sistema de archivos y comandos"
+      "color": "#FF6B6B",
+      "description": "Sistema de archivos y gestión local"
+    },
+    {
+      "id": "automation",
+      "name": "Comandos y Automatización",
+      "icon": "pi-cog",
+      "color": "#AA96DA",
+      "description": "Ejecutar comandos shell, scripts y automatización del sistema"
     },
     {
       "id": "development",
       "name": "Desarrollo",
       "icon": "pi-code",
-      "description": "Herramientas para desarrollo de software y control de versiones"
+      "color": "#4ECDC4",
+      "description": "Git, GitHub y herramientas de desarrollo"
     },
     {
       "id": "data",
-      "name": "Datos",
+      "name": "Bases de Datos",
       "icon": "pi-database",
-      "description": "Acceso y manipulación de bases de datos y estructuras de datos"
+      "color": "#95E1D3",
+      "description": "SQLite, PostgreSQL y gestión de datos"
     },
     {
       "id": "web",
-      "name": "Web",
-      "icon": "pi-globe",
-      "description": "Herramientas para interactuar con la web y APIs"
+      "name": "Web y APIs",
+      "icon": "pi-cloud",
+      "color": "#F38181",
+      "description": "Peticiones HTTP, APIs REST y servicios web"
+    },
+    {
+      "id": "websearch",
+      "name": "Búsqueda Web",
+      "icon": "pi-search",
+      "color": "#FFD93D",
+      "description": "Búsqueda en internet, scraping y automatización web"
     },
     {
       "id": "productivity",
       "name": "Productividad",
       "icon": "pi-calendar",
-      "description": "Herramientas para mejorar la productividad"
+      "color": "#FCBAD3",
+      "description": "Memoria, colaboración y servicios en la nube"
     }
   ],
   "mcps": [
@@ -181,10 +200,32 @@
       "website": "https://github.com/modelcontextprotocol/servers"
     },
     {
+      "id": "fetch",
+      "name": "Fetch",
+      "package": "@modelcontextprotocol/server-fetch",
+      "category": "web",
+      "icon": "pi-download",
+      "description": "Realizar peticiones HTTP a APIs y sitios web. Soporta GET, POST y otros métodos HTTP.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "fetch_url",
+        "post_data",
+        "download_file"
+      ],
+      "useCases": [
+        "Consumir APIs REST",
+        "Descargar contenido web",
+        "Integración con servicios externos",
+        "Testing de endpoints"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
       "id": "puppeteer",
       "name": "Puppeteer",
       "package": "@modelcontextprotocol/server-puppeteer",
-      "category": "web",
+      "category": "websearch",
       "icon": "pi-globe",
       "description": "Automatizar navegación web con Puppeteer. Capturar screenshots, extraer datos y automatizar interacciones.",
       "capabilities": ["tools"],
@@ -206,24 +247,106 @@
       "website": "https://github.com/modelcontextprotocol/servers"
     },
     {
-      "id": "fetch",
-      "name": "Fetch",
-      "package": "@modelcontextprotocol/server-fetch",
-      "category": "web",
-      "icon": "pi-download",
-      "description": "Realizar peticiones HTTP a APIs y sitios web. Soporta GET, POST y otros métodos HTTP.",
+      "id": "brave-search",
+      "name": "Brave Search",
+      "package": "@modelcontextprotocol/server-brave-search",
+      "category": "websearch",
+      "icon": "pi-search",
+      "description": "Buscar en internet con Brave Search API. Obtener resultados de búsqueda web, noticias e imágenes con privacidad.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "apiKey": {
+          "type": "string",
+          "required": true,
+          "description": "API Key de Brave Search",
+          "secret": true
+        }
+      },
+      "tools": [
+        "web_search",
+        "local_search",
+        "news_search",
+        "image_search"
+      ],
+      "useCases": [
+        "Búsqueda web con privacidad",
+        "Investigación en tiempo real",
+        "Análisis de tendencias",
+        "Obtener información actualizada"
+      ],
+      "website": "https://brave.com/search/api/"
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "package": "@executeautomation/playwright-mcp-server",
+      "category": "websearch",
+      "icon": "pi-desktop",
+      "description": "Automatización web avanzada con Playwright. Testing E2E, scraping multi-navegador y automatización compleja.",
       "capabilities": ["tools"],
       "requiresConfig": false,
       "tools": [
-        "fetch_url",
-        "post_data",
-        "download_file"
+        "launch_browser",
+        "navigate_page",
+        "click_element",
+        "fill_form",
+        "screenshot",
+        "extract_content",
+        "run_script"
       ],
       "useCases": [
-        "Consumir APIs REST",
-        "Descargar contenido web",
-        "Integración con servicios externos",
-        "Testing de endpoints"
+        "Testing automatizado E2E",
+        "Web scraping avanzado",
+        "Automatización multi-navegador",
+        "Captura de datos dinámicos"
+      ],
+      "website": "https://github.com/executeautomation/playwright-mcp-server"
+    },
+    {
+      "id": "everything",
+      "name": "Everything CLI",
+      "package": "@modelcontextprotocol/server-everything",
+      "category": "automation",
+      "icon": "pi-bolt",
+      "description": "Ejecutar comandos shell y scripts del sistema. Control completo para automatización y operaciones del SO.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "run_command",
+        "execute_script",
+        "read_output",
+        "check_status"
+      ],
+      "useCases": [
+        "Automatización de tareas del sistema",
+        "Ejecutar scripts personalizados",
+        "Gestión de procesos",
+        "Operaciones del sistema operativo"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers",
+      "warning": "⚠️ Requiere permisos elevados. Úsalo con precaución."
+    },
+    {
+      "id": "sequential-thinking",
+      "name": "Sequential Thinking",
+      "package": "@modelcontextprotocol/server-sequential-thinking",
+      "category": "automation",
+      "icon": "pi-sitemap",
+      "description": "Habilita pensamiento secuencial estructurado para resolver problemas complejos paso a paso.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "think_step",
+        "analyze_problem",
+        "create_plan",
+        "validate_solution"
+      ],
+      "useCases": [
+        "Resolución de problemas complejos",
+        "Planificación estructurada",
+        "Debugging avanzado",
+        "Análisis paso a paso"
       ],
       "website": "https://github.com/modelcontextprotocol/servers"
     },
