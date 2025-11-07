@@ -125,18 +125,6 @@ class ToolOrchestrator {
         return JSON.stringify(result, null, 2);
       })();
       
-      // 🔍 DEBUG: Ver qué devuelve list_directory_with_sizes
-      if (toolName === 'list_directory_with_sizes') {
-        console.log(`📊 [ToolOrchestrator] list_directory_with_sizes resultado:`, {
-          toolName,
-          textLength: text.length,
-          primeras200: text.substring(0, 200),
-          tieneKB: text.includes('KB'),
-          tieneMB: text.includes('MB'),
-          tieneBytes: text.includes('bytes'),
-          tieneKib: text.includes('KiB')
-        });
-      }
       
       // ✅ NO envolver en backticks aquí - eso confunde al modelo
       // AIChatPanel.js se encargará del rendering con backticks
@@ -180,7 +168,6 @@ class ToolOrchestrator {
       // 🔧 CRÍTICO: Solo verificar duplicados DENTRO DEL MISMO TURNO (seenInTurn)
       // NO bloquear herramientas que se usaron en turnos anteriores de la conversación
       if (seenInTurn.has(dedupeKey)) {
-        console.log(`⚠️ [ToolOrchestrator] Tool duplicado en el mismo turno detectado: ${toolName}, omitiendo`);
         if (callbacks.onStatus) callbacks.onStatus({ status: 'warning', message: `Tool repetido omitido: ${toolName}`, provider: 'local', model: modelId, turnId });
         break;
       }
@@ -209,52 +196,39 @@ class ToolOrchestrator {
       if (['list_directory', 'directory_tree', 'list_directory_with_sizes', 'get_file_info', 'search_files'].includes(toolNameBase) && !args.path) {
         // Usar la ruta por defecto del filesystem
         args.path = 'C:\\Users\\kalid\\Downloads\\NodeTerm Drive'; // TODO: obtener dinámicamente
-        console.log(`✅ [ToolOrchestrator] Path inyectado para ${toolNameBase}: ${args.path}`);
       }
       
       // ✅ IMPROVED: Validar search_files - MCP NO soporta wildcards
       if (toolNameBase === 'search_files') {
-        console.log(`🔍 [ToolOrchestrator] search_files recibido con args:`, JSON.stringify(args));
-        
         // search_files requiere: path (string) y pattern (string)
         // Si el modelo envió "query" en lugar de "pattern", copiar el valor
         if (args.query && !args.pattern) {
           args.pattern = args.query;
           delete args.query;
-          console.log(`✅ [ToolOrchestrator] Renombrado 'query' → 'pattern': ${args.pattern}`);
         }
         
         if (!args.pattern || typeof args.pattern !== 'string') {
           args.pattern = '*';
-          console.log(`✅ [ToolOrchestrator] Pattern inyectado por defecto: *`);
         }
         
         // 🔧 CRÍTICO: Si el patrón contiene "*", MCP search_files NO lo soporta
         // Cambiar a list_directory y filtrar en el cliente
         if (args.pattern.includes('*')) {
-          console.log(`⚠️ [ToolOrchestrator] Patrón wildcard detectado: ${args.pattern}`);
-          console.log(`   MCP search_files NO soporta wildcards, usando list_directory + filtrado cliente`);
-          
           // Cambiar herramienta
           currentToolCall.toolName = 'filesystem__list_directory';
           currentToolCall.arguments = { path: args.path };
           
           // Guardar patrón para filtrar después
           currentToolCall._filterPattern = args.pattern;
-          console.log(`✅ [ToolOrchestrator] Cambiado a list_directory, se filtrará con: ${args.pattern}`);
           
           // Re-asignar args para que la ejecución use los nuevos argumentos
           args = { path: args.path };
           toolName = 'filesystem__list_directory';
-        } else {
-          console.log(`✅ [ToolOrchestrator] Búsqueda exacta (sin wildcards): ${args.pattern}`);
         }
       }
       
       // ✅ IMPROVED: Validar edit_file - requiere path y edits
       if (toolNameBase === 'edit_file') {
-        console.log(`🔍 [ToolOrchestrator] edit_file recibido con args:`, JSON.stringify(args));
-        
         // edit_file requiere: path (string) y edits (array de ediciones)
         // Formato esperado: { path: "...", edits: [{ oldText: "...", newText: "..." }] }
         // MCP usa camelCase: oldText, newText (NO snake_case)
@@ -270,7 +244,6 @@ class ToolOrchestrator {
               oldText: oldText,
               newText: editContent
             }];
-            console.log(`⚠️ [ToolOrchestrator] Construyendo edits desde argumentos alternativos`);
           } else {
             console.warn(`⚠️ [ToolOrchestrator] edit_file sin edits válidos, args:`, args);
             // Crear edits con valores por defecto
@@ -300,7 +273,6 @@ class ToolOrchestrator {
         
         // 🔧 Si hay patrón de filtrado (porque convertimos search_files a list_directory)
         if (currentToolCall._filterPattern && toolName === 'filesystem__list_directory') {
-          console.log(`🔍 [ToolOrchestrator] Filtrando resultado con patrón: ${currentToolCall._filterPattern}`);
           result = this._filterListDirectoryByPattern(result, currentToolCall._filterPattern);
         }
         
@@ -419,7 +391,6 @@ INSTRUCCIONES POST-EJECUCIÓN:
       // Si hay otro tool call pero el loop se romperá (duplicado), devolver fallback
       const dedupeKeyNext = this._makeDedupeKey(currentToolCall.toolName || currentToolCall.tool || currentToolCall.name, currentToolCall.arguments || {});
       if (seenInTurn.has(dedupeKeyNext)) {
-        console.log(`⚠️ [ToolOrchestrator] Tool call duplicado detectado en followUp, usando fallback`);
         // No intentar limpiar la respuesta, simplemente usar fallback
         // Esto evita mostrar JSON parcial o caracteres sueltos como "}"
         return 'Operación completada correctamente.';
@@ -427,20 +398,16 @@ INSTRUCCIONES POST-EJECUCIÓN:
     }
 
     // 🔧 MEJORADO: Si el loop se agota, devolver la última respuesta del modelo que guardamos
-    console.warn(`⚠️ [ToolOrchestrator] Loop agotado, devolviendo última respuesta del modelo`);
     if (lastFollowUpResponse && lastFollowUpResponse.trim().length > 0) {
-      console.log(`✅ [ToolOrchestrator] Devolviendo lastFollowUpResponse (${lastFollowUpResponse.length} chars)`);
       // 🔧 CRÍTICO: Validar que NO sea un JSON de tool call
       const trimmed = lastFollowUpResponse.trim();
       if (trimmed.startsWith('{') && trimmed.includes('"tool"')) {
-        console.warn(`⚠️ [ToolOrchestrator] lastFollowUpResponse es un JSON de tool call, usando fallback`);
         return 'Operación completada correctamente.';
       }
       return lastFollowUpResponse;
     }
     
     // Fallback: buscar último mensaje del asistente en conversationService
-    console.log(`⚠️ [ToolOrchestrator] No hay lastFollowUpResponse, buscando en conversationService`);
     const conv = conversationService.getCurrentConversation();
     const assistantMessages = (conv?.messages || []).filter(m => m.role === 'assistant');
     if (assistantMessages.length > 0) {
@@ -500,7 +467,6 @@ INSTRUCCIONES POST-EJECUCIÓN:
         return { content: [{ type: 'text', text: 'No matches found' }] };
       }
       
-      console.log(`   ✅ Encontrados ${filtered.length} coincidencias`);
       
       // Retornar resultado filtrado
       return {

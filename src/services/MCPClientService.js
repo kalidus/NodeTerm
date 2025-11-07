@@ -319,12 +319,9 @@ class MCPClientService {
    */
   async startServer(serverId) {
     try {
-      console.log(`🚀 [MCP Client] Iniciando servidor: ${serverId}`);
-      
       const result = await window.electron.mcp.start(serverId);
       
       if (result.success) {
-        console.log(`✅ [MCP Client] Servidor ${serverId} iniciado`);
         await this.refreshAll();
         this.notifyListeners('server-started', { serverId });
       } else {
@@ -405,13 +402,9 @@ class MCPClientService {
       if (params.length === 3) {
         [serverId, toolName, args] = params;
         args = args || {};
-        console.log(`🔧 [MCP Client] Llamando a tool: ${serverId}/${toolName}`);
-        console.log(`   Argumentos:`, args);
       } else if (params.length === 2) {
         [toolName, args] = params;
         args = args || {};
-        console.log(`🔧 [MCP Client] Llamando a tool: ${toolName}`);
-        console.log(`   Argumentos:`, args);
         
         // Buscar la tool en el cache para obtener el serverId
         let tool = this.toolsCache.find(t => t.name === toolName);
@@ -424,7 +417,6 @@ class MCPClientService {
           if (nsServerId && baseName) {
             tool = this.toolsCache.find(t => t.serverId === nsServerId && t.name === baseName);
             if (tool) {
-              console.log(`   Resuelto namespacing → serverId=${nsServerId}, tool=${baseName}`);
               toolName = baseName;
             }
           }
@@ -436,7 +428,6 @@ class MCPClientService {
         }
         
         serverId = tool.serverId;
-        console.log(`   Servidor: ${serverId}`);
       } else {
         throw new Error(`callTool requiere 2 o 3 parámetros, recibió ${params.length}`);
       }
@@ -452,8 +443,6 @@ class MCPClientService {
       const result = await window.electron.mcp.callTool(serverId, toolName, args);
       
       if (result.success) {
-        console.log(`✅ [MCP Client] Tool ${serverId}/${toolName} ejecutado correctamente`);
-        console.log(`   Resultado:`, result.result);
         this.notifyListeners('tool-called', { serverId, toolName, args, result: result.result });
         return result.result;
       } else {

@@ -243,14 +243,6 @@ class ConversationService {
     // 🔧 Validar que el contenido no sea null/undefined
     const safeContent = content ?? '';
     
-    // 🔧 Log detallado para debugging
-    console.log(`📝 [ConversationService.addMessage] Agregando mensaje:`, {
-      conversationId: this.currentConversationId,
-      role,
-      contentLength: safeContent.length,
-      contentPreview: safeContent.substring(0, 80),
-      hasMetadata: !!metadata && Object.keys(metadata).length > 0
-    });
     
     if (!safeContent || safeContent.trim().length === 0) {
       console.warn(`⚠️ [ConversationService.addMessage] Mensaje VACÍO detectado:`, {
