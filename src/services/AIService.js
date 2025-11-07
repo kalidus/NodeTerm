@@ -2155,7 +2155,7 @@ class AIService {
           bullets.push(`  ⚠️ IMPORTANTE: El destino DEBE incluir el nombre del archivo completo.`);
           bullets.push(`     Ejemplo: mover "file.txt" a carpeta "Proyectos" → { source: "ruta/file.txt", destination: "ruta/Proyectos/file.txt" }`);
         }
-        if (has('search_files')) bullets.push('• "buscar" → search_files { query, path? }');
+        if (has('search_files')) bullets.push('• "buscar ficheros" → search_files { pattern: "*.txt" o "p*" o "MoonlightSetup*", path } [Busca recursivamente por patrón, la búsqueda alcanza subcarpetas]');
         if (has('get_file_info')) bullets.push('• "ver info" → get_file_info { path }');
         if (bullets.length > 0) {
           out += 'Acciones comunes (filesystem):\n';
