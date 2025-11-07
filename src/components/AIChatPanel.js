@@ -631,8 +631,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // Si usamos mensajes estructurados, el orquestador ya persistirá y emitirá 'conversation-updated'
           if (aiService.featureFlags?.structuredToolMessages) {
+            console.log(`   📋 Mensajes estructurados activos, esperando que el orquestador guarde con metadatos correctos...`);
             return;
           }
+          
           // Flujo legacy: persistir un mensaje de sistema minimalista y reflejar en UI
           console.log(`   Guardando en conversationService: "${content}"`);
           const toolMessageObj = conversationService.addMessage('system', content, {
@@ -1667,7 +1669,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Render especial para resultado de tool (success card)
     if (isToolResult || message.role === 'tool') {
-      const text = (message.content || '').trim();
+      // ✅ CRITICAL FIX: Usar toolResultText de metadatos, NO content (que es solo un resumen)
+      const text = (message.metadata?.toolResultText || message.content || '').trim();
       const isDirToken = /\[(FILE|DIR)\]/.test(text);
       const isBlock = isDirToken || text.includes('\n');
       const isSuccess = /success|completad|hecho|ok/i.test(text) || (message.metadata?.error !== true);
@@ -1675,6 +1678,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const bg = isSuccess ? 'rgba(76, 175, 80, 0.10)' : 'rgba(244, 67, 54, 0.10)';
       const icon = isSuccess ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle';
       const iconColor = isSuccess ? '#4caf50' : '#f44336';
+      
+      // 🔧 DEBUG: Detectar si falta metadata
+      if (!message.metadata?.toolResultText && text.includes('Successfully')) {
+        console.warn(`⚠️ [renderMessage] Mensaje de tool sin toolResultText:`, {
+          toolName: message.metadata?.toolName,
+          hasToolResultText: !!message.metadata?.toolResultText,
+          contentLength: (message.content || '').length,
+          messageId: message.id
+        });
+      }
       return (
         <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
           <div className={`ai-bubble assistant subtle`} style={{
@@ -1717,20 +1730,17 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   );
                 })}
               </ul>
-            ) : isBlock ? (
-              <pre style={{
-                margin: 0,
-                background: 'rgba(0,0,0,0.25)',
-                borderRadius: '6px',
-                padding: '0.6rem 0.7rem',
-                maxHeight: '220px',
-                overflow: 'auto',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                fontSize: '0.82rem',
-                whiteSpace: 'pre-wrap'
-              }}>{text}</pre>
             ) : (
-              <div style={{ opacity: 0.9 }}>{text}</div>
+              // ✅ Renderizar toolResultText con markdown para procesar **negrita**, etc.
+              <div 
+                className="ai-md"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+                style={{ 
+                  opacity: isBlock ? 0.95 : 0.9,
+                  maxHeight: isBlock ? '220px' : 'auto',
+                  overflow: isBlock ? 'auto' : 'visible'
+                }}
+              />
             )}
           </div>
         </div>
