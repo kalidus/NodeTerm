@@ -57,6 +57,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   
   // Estado para MCP tools
   const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
+  const [activeMcpServers, setActiveMcpServers] = useState([]);
 
   // Detectar si un texto parece un tool-call JSON para NO mostrarlo en streaming
   const looksLikeToolJson = useCallback((text) => {
@@ -266,6 +267,27 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => {
       window.removeEventListener('load-conversation', handleLoadConversationEvent);
       window.removeEventListener('new-conversation', handleNewConversationEvent);
+    };
+  }, []);
+
+  // Escuchar cambios en los servidores MCP activos
+  useEffect(() => {
+    const updateMcpServers = () => {
+      const servers = mcpClient.getActiveServers();
+      setActiveMcpServers(servers || []);
+    };
+    
+    updateMcpServers();
+    
+    // Listener para cambios en MCP
+    const unsubscribe = mcpClient.addListener((event) => {
+      if (event === 'servers-updated' || event === 'tools-updated') {
+        updateMcpServers();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
@@ -1016,6 +1038,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       setCurrentConversationId(conversation.id);
       setConversationTitle(conversation.title);
       
+      // Restaurar el modelo de la conversación si existe
+      if (conversation.modelId) {
+        aiService.setCurrentModel(conversation.modelId, conversation.modelType);
+        setCurrentModel(conversation.modelId);
+        setModelType(conversation.modelType);
+      }
+      
       // Cargar mensajes preservando toda la estructura incluyendo metadatos
       setMessages(conversation.messages.map(msg => ({
         id: msg.id,
@@ -1071,6 +1100,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     aiService.setCurrentModel(modelId, modelType);
     setCurrentModel(modelId);
     setModelType(modelType);
+    
+    // Actualizar el modelo en la conversación actual
+    const currentConversation = conversationService.getCurrentConversation();
+    if (currentConversation) {
+      currentConversation.modelId = modelId;
+      currentConversation.modelType = modelType;
+      currentConversation.updatedAt = Date.now();
+      conversationService.saveConversations();
+      
+      // Disparar evento para actualizar el historial
+      window.dispatchEvent(new CustomEvent('conversation-updated', {
+        detail: {
+          conversationId: currentConversation.id,
+          type: 'model-changed'
+        }
+      }));
+    }
   };
 
   const formatTimestamp = (timestamp) => {
@@ -2417,13 +2463,53 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               <i className="pi pi-comments" style={{ color: 'white', fontSize: '1rem' }} />
             </div>
 
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1rem', fontWeight: '600', lineHeight: '1.2' }}>
                 {conversationTitle || 'Chat de IA'}
               </h2>
-              <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.7rem', lineHeight: '1.1' }}>
-                {currentModel ? `Modelo: ${currentModel}` : 'Selecciona un modelo en configuración'}
-              </p>
+              {currentModel && (
+                <span style={{
+                  display: 'inline-block',
+                  padding: '0.2rem 0.5rem',
+                  background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`,
+                  color: 'white',
+                  borderRadius: '10px',
+                  fontSize: '0.6rem',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap',
+                  boxShadow: `0 2px 4px ${themeColors.primaryColor}40`,
+                  border: `1px solid ${themeColors.primaryColor}60`
+                }}>
+                  {currentModel}
+                </span>
+              )}
+              {activeMcpServers && activeMcpServers.length > 0 && (
+                activeMcpServers.map((server, idx) => (
+                  <span 
+                    key={idx}
+                    title={server.name || server.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0.2rem 0.4rem',
+                      background: 'rgba(102, 187, 106, 0.2)',
+                      color: '#66bb6a',
+                      borderRadius: '8px',
+                      fontSize: '0.55rem',
+                      fontWeight: '600',
+                      whiteSpace: 'nowrap',
+                      border: '1px solid rgba(102, 187, 106, 0.4)',
+                      boxShadow: '0 0 4px rgba(102, 187, 106, 0.2)',
+                      maxWidth: '100px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                    <i className="pi pi-wrench" style={{ fontSize: '0.5rem', marginRight: '0.25rem' }} />
+                    {(server.name || server.id).substring(0, 12)}
+                  </span>
+                ))
+              )}
             </div>
           </div>
 
