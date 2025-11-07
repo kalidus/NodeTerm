@@ -206,10 +206,48 @@ class ToolOrchestrator {
       
       // Inyectar path por defecto si es necesario
       const toolNameBase = toolName.includes('__') ? toolName.split('__')[1] : toolName;
-      if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(toolNameBase) && !args.path) {
+      if (['list_directory', 'directory_tree', 'list_directory_with_sizes', 'get_file_info', 'search_files'].includes(toolNameBase) && !args.path) {
         // Usar la ruta por defecto del filesystem
         args.path = 'C:\\Users\\kalid\\Downloads\\NodeTerm Drive'; // TODO: obtener dinámicamente
         console.log(`✅ [ToolOrchestrator] Path inyectado para ${toolNameBase}: ${args.path}`);
+      }
+      
+      // ✅ IMPROVED: Validar edit_file - requiere path y edits
+      if (toolNameBase === 'edit_file') {
+        console.log(`🔍 [ToolOrchestrator] edit_file recibido con args:`, JSON.stringify(args));
+        
+        // edit_file requiere: path (string) y edits (array de ediciones)
+        // Formato esperado: { path: "...", edits: [{ oldText: "...", newText: "..." }] }
+        // MCP usa camelCase: oldText, newText (NO snake_case)
+        
+        if (!args.edits || !Array.isArray(args.edits)) {
+          // Si no hay edits válidos, intentar construirlo desde otros parámetros
+          // El modelo podría haber pasado: replacement, content, new_content, text, oldText/newText, old_text/new_text, etc.
+          if (args.replacement || args.content || args.new_content || args.text || args.newText || args.new_text) {
+            const editContent = args.replacement || args.content || args.new_content || args.text || args.newText || args.new_text;
+            const oldText = args.oldText || args.old_text || args.originalText || args.original_text || '';
+            
+            args.edits = [{ 
+              oldText: oldText,
+              newText: editContent
+            }];
+            console.log(`⚠️ [ToolOrchestrator] Construyendo edits desde argumentos alternativos`);
+          } else {
+            console.warn(`⚠️ [ToolOrchestrator] edit_file sin edits válidos, args:`, args);
+            // Crear edits con valores por defecto
+            args.edits = [{ oldText: '', newText: '' }];
+          }
+        } else {
+          // Validar que los elementos de edits tengan las propiedades correctas (camelCase)
+          args.edits = args.edits.map(edit => {
+            // Convertir snake_case a camelCase si es necesario
+            const normalized = {
+              oldText: edit.oldText || edit.old_text || edit.originalText || '',
+              newText: edit.newText || edit.new_text || edit.replacement || ''
+            };
+            return normalized;
+          });
+        }
       }
       
       const toolCallId = this._makeToolCallId(conversationId);
@@ -248,6 +286,7 @@ class ToolOrchestrator {
         detectedLanguage = langMap[ext] || '';
       }
 
+      // ✅ CRITICAL: Guardar toolResultText para que AIChatPanel lo renderice correctamente
       const metadata = { 
         toolCallId, 
         toolName, 
@@ -255,7 +294,8 @@ class ToolOrchestrator {
         isToolResult: true, 
         turnId,
         detectedLanguage,
-        filePath: args?.path || ''
+        filePath: args?.path || '',
+        toolResultText: cleanText  // ← CRUCIAL para renderizado en AIChatPanel
       };
       
       conversationService.addMessage('tool', cleanText || `✔️ ${toolName} completado`, metadata);
