@@ -1,99 +1,177 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
+import { InputSwitch } from 'primereact/inputswitch';
 import mcpCatalogData from '../data/mcp-catalog.json';
 
-// Componente: Sección colapsable simple y robusta
-const CollapsibleSection = ({
+// Componente: Tarjeta de categoría
+const CategoryCard = ({
   id,
   icon,
   color,
   title,
   description,
   count,
-  expanded,
-  onToggle,
-  themeColors,
-  children
-}) => {
-  return (
-    <div key={id} style={{
-      background: themeColors.cardBackground,
-      border: `1px solid ${themeColors.borderColor}`,
-      borderRadius: '10px'
-    }}>
-      <div
-        onClick={() => onToggle(id)}
-        aria-expanded={expanded}
-        style={{
-          padding: '0.875rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.625rem',
-          cursor: 'pointer',
-          userSelect: 'none',
-          background: expanded ? `${color}15` : 'transparent',
-          borderBottom: expanded ? `1px solid ${themeColors.borderColor}` : 'none'
-        }}
-      >
-        <div style={{
-          width: '36px',
-          height: '36px',
-          background: `${color}20`,
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0
-        }}>
-          <i className={icon} style={{ fontSize: '1.1rem', color: color }} />
-        </div>
+  installedCount,
+  activeCount,
+  onSelect,
+  themeColors
+}) => (
+  <button
+    type="button"
+    key={id}
+    onClick={() => onSelect(id)}
+    style={{
+      textAlign: 'left',
+      background: `linear-gradient(135deg, rgba(16, 20, 28, 0.6) 0%, rgba(16, 20, 28, 0.4) 100%)`,
+      backdropFilter: 'blur(8px) saturate(140%)',
+      WebkitBackdropFilter: 'blur(8px) saturate(140%)',
+      border: `2px solid ${color}30`,
+      borderRadius: '12px',
+      padding: '1rem',
+      cursor: 'pointer',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      position: 'relative',
+      overflow: 'hidden',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '220px',
+      outline: 'none',
+      color: themeColors.textPrimary
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = 'translateY(-6px)';
+    e.currentTarget.style.borderColor = color;
+    e.currentTarget.style.boxShadow = `0 12px 32px ${color}30, inset 0 1px 0 rgba(255,255,255,0.05)`;
+  }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.borderColor = `${color}30`;
+      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)';
+    }}
+  >
+    <div style={{
+      position: 'absolute',
+      top: '-20px',
+      right: '-20px',
+      width: '100px',
+      height: '100px',
+      borderRadius: '50%',
+      background: `${color}10`,
+      filter: 'blur(30px)',
+      pointerEvents: 'none'
+    }} />
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: themeColors.textPrimary }}>{title}</h3>
-            <span style={{
-              fontSize: '0.65rem',
-              padding: '0.125rem 0.4rem',
-              background: `${color}20`,
-              border: `1px solid ${color}40`,
-              borderRadius: '8px',
-              fontWeight: '600',
-              color
-            }}>{count}</span>
-          </div>
-          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.7rem', color: themeColors.textSecondary, lineHeight: '1.2' }}>{description}</p>
-        </div>
-
-        <i className={expanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'} style={{ fontSize: '0.8rem', color: themeColors.textSecondary }} />
+    <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{
+        width: '44px',
+        height: '44px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '12px',
+        background: `${color}20`,
+        border: `1px solid ${color}40`,
+        boxShadow: `0 2px 8px ${color}20`
+      }}>
+        <i className={icon} style={{ color: color, fontSize: '1.2rem' }} />
       </div>
 
-      {expanded && (
-        <div style={{ padding: '0.75rem' }}>
-          {children}
+      <div>
+        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: themeColors.textPrimary }}>
+          {title}
+        </h3>
+        <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.8rem', color: themeColors.textSecondary, lineHeight: 1.4 }}>
+          {description}
+        </p>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gap: '0.75rem',
+        marginTop: 'auto',
+        marginBottom: '0.75rem',
+        paddingBottom: '0.75rem',
+        borderBottom: `1px solid ${color}20`
+      }}>
+        <div>
+          <div style={{
+            fontSize: '0.7rem',
+            color: themeColors.textSecondary,
+            marginBottom: '0.3rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            fontWeight: 600
+          }}>
+            MCPs
+          </div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 700, color: color }}>
+            {count}
+          </div>
         </div>
-      )}
+        <div>
+          <div style={{
+            fontSize: '0.7rem',
+            color: themeColors.textSecondary,
+            marginBottom: '0.3rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            fontWeight: 600
+          }}>
+            Disponibles
+          </div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 700, color: color }}>
+            {Math.max(count - installedCount, 0) > 0 ? Math.max(count - installedCount, 0) : (activeCount > 0 ? '✓' : '-') }
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '0.5rem',
+        color: color,
+        fontSize: '0.8rem',
+        fontWeight: 600,
+        padding: '0.6rem',
+        background: `${color}15`,
+        borderRadius: '10px',
+        border: `1px solid ${color}30`,
+        transition: 'all 0.2s ease'
+      }}>
+        <span>Ver detalles</span>
+        <i className="pi pi-arrow-right" style={{ fontSize: '0.8rem' }} />
+      </div>
     </div>
-  );
-};
+  </button>
+);
 
 // Componente: Tarjeta MCP compacta
-const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors }) => {
+const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors, accentColor }) => {
   const buttonLabel = installed ? 'Instalado' : (mcp.requiresConfig ? 'Configurar' : 'Instalar');
   const buttonIcon = installed ? 'pi pi-check' : (mcp.requiresConfig ? 'pi pi-cog' : 'pi pi-download');
+  const color = accentColor || themeColors.primaryColor;
 
   return (
     <div style={{
-      background: themeColors.cardBackground,
-      border: `1px solid ${installed ? 'rgba(100, 200, 100, 0.4)' : themeColors.borderColor}`,
-      borderRadius: '10px',
-      padding: '0.75rem',
+      background: `linear-gradient(135deg, rgba(16, 20, 28, 0.6) 0%, rgba(16, 20, 28, 0.4) 100%)`,
+      border: `1.5px solid ${installed ? 'rgba(100, 200, 100, 0.4)' : `${color}30`}`,
+      borderRadius: '12px',
+      padding: '0.95rem',
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.5rem',
-      position: 'relative'
+      gap: '0.65rem',
+      position: 'relative',
+      boxShadow: installed
+        ? '0 6px 16px rgba(76, 175, 80, 0.25)'
+        : '0 4px 14px rgba(0,0,0,0.18)',
+      transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+      minHeight: '210px'
     }}>
       {installed && (
         <div style={{
@@ -106,7 +184,9 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors }) => {
           padding: '0.15rem 0.4rem',
           fontSize: '0.65rem',
           fontWeight: '600',
-          color: themeColors.textPrimary
+          color: themeColors.textPrimary,
+          backdropFilter: 'blur(8px)',
+          borderRadius: '10px'
         }}>
           {serverState?.running ? '● ACTIVO' : '○ Instalado'}
         </div>
@@ -114,35 +194,37 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors }) => {
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', paddingRight: installed ? '3.5rem' : '0' }}>
         <div style={{
-          width: '32px',
-          height: '32px',
-          background: `${themeColors.primaryColor}20`,
-          borderRadius: '8px',
+          width: '40px',
+          height: '40px',
+          background: `${color}20`,
+          borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0
+          flexShrink: 0,
+          border: `1px solid ${color}40`,
+          boxShadow: `0 2px 8px ${color}20`
         }}>
-          <i className={mcp.icon} style={{ fontSize: '1rem', color: themeColors.primaryColor }} />
+          <i className={mcp.icon} style={{ fontSize: '1rem', color }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: '600', color: themeColors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mcp.name}</h4>
-          <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.65rem', color: themeColors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mcp.package}</p>
+          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: themeColors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mcp.name}</h4>
+          <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.7rem', color: themeColors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.2px' }}>{mcp.package}</p>
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: '0.75rem', color: themeColors.textSecondary, lineHeight: '1.3', flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{mcp.description}</p>
+      <p style={{ margin: 0, fontSize: '0.78rem', color: themeColors.textSecondary, lineHeight: '1.4', flex: 1, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{mcp.description}</p>
 
       {mcp.warning && (
-        <div style={{ padding: '0.375rem', background: 'rgba(255, 152, 0, 0.1)', border: '1px solid rgba(255, 152, 0, 0.3)', borderRadius: '6px', fontSize: '0.7rem', color: '#ff9800' }}>⚠️ {mcp.warning}</div>
+        <div style={{ padding: '0.375rem', background: 'rgba(255, 152, 0, 0.12)', border: '1px solid rgba(255, 152, 0, 0.35)', borderRadius: '8px', fontSize: '0.72rem', color: '#ffb74d' }}>⚠️ {mcp.warning}</div>
       )}
 
       <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
         {mcp.capabilities?.map(cap => (
-          <span key={cap} style={{ fontSize: '0.625rem', padding: '0.15rem 0.4rem', background: `${themeColors.primaryColor}15`, border: `1px solid ${themeColors.primaryColor}40`, borderRadius: '6px', color: themeColors.textPrimary, fontWeight: '500' }}>{cap}</span>
+          <span key={cap} style={{ fontSize: '0.65rem', padding: '0.2rem 0.45rem', background: `${color}15`, border: `1px solid ${color}30`, borderRadius: '6px', color: themeColors.textPrimary, fontWeight: '500', backdropFilter: 'blur(3px)' }}>{cap}</span>
         ))}
         {mcp.tools && (
-          <span style={{ fontSize: '0.625rem', padding: '0.15rem 0.4rem', background: 'rgba(100, 200, 100, 0.1)', border: '1px solid rgba(100, 200, 100, 0.3)', borderRadius: '6px', color: themeColors.textPrimary, fontWeight: '500' }}>🔧 {mcp.tools.length}</span>
+          <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.45rem', background: 'rgba(100, 200, 100, 0.12)', border: '1px solid rgba(100, 200, 100, 0.35)', borderRadius: '6px', color: themeColors.textPrimary, fontWeight: '500' }}>🔧 {mcp.tools.length}</span>
         )}
       </div>
 
@@ -151,7 +233,25 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors }) => {
         icon={buttonIcon}
         disabled={installed}
         onClick={() => onInstall(mcp)}
-        style={{ width: '100%', background: installed ? 'rgba(100, 200, 100, 0.2)' : themeColors.primaryColor, border: installed ? '1px solid rgba(100, 200, 100, 0.4)' : 'none', color: installed ? themeColors.textSecondary : 'white', borderRadius: '7px', fontSize: '0.75rem', padding: '0.4rem', cursor: installed ? 'not-allowed' : 'pointer', opacity: installed ? 0.7 : 1, fontWeight: '500' }}
+        style={{
+          width: '100%',
+          background: installed ? 'rgba(100, 200, 100, 0.18)' : color,
+          border: installed ? '1px solid rgba(100, 200, 100, 0.35)' : 'none',
+          color: installed ? themeColors.textSecondary : 'white',
+          borderRadius: '8px',
+          fontSize: '0.78rem',
+          padding: '0.45rem',
+          cursor: installed ? 'not-allowed' : 'pointer',
+          opacity: installed ? 0.7 : 1,
+          fontWeight: '600',
+          transition: 'transform 0.18s ease'
+        }}
+        onMouseEnter={(e) => {
+          if (!installed) e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
       />
     </div>
   );
@@ -159,8 +259,7 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors }) => {
 
 const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const allCategoryIds = useMemo(() => mcpCatalogData.categories.map(c => c.id), []);
-  const [expandedCategories, setExpandedCategories] = useState(() => allCategoryIds);
+  const VALID_CATEGORY_IDS = ['system','automation','development','data','web','websearch','productivity'];
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [selectedMCP, setSelectedMCP] = useState(null);
   const [configValues, setConfigValues] = useState({});
@@ -168,10 +267,8 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
   const [customPackage, setCustomPackage] = useState('');
   const [customId, setCustomId] = useState('');
   const [customArgs, setCustomArgs] = useState('');
-
-  useEffect(() => {
-    setExpandedCategories(allCategoryIds);
-  }, [allCategoryIds]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
 
   const isInstalled = (mcpId) => installedServers.some(s => s.id === mcpId);
   const getServerState = (mcpId) => installedServers.find(s => s.id === mcpId) || null;
@@ -198,6 +295,8 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
     return grouped;
   }, [filteredMCPs]);
 
+  const selectedCategory = selectedCategoryId ? mcpsByCategory[selectedCategoryId] : null;
+
   const stats = useMemo(() => {
     const total = mcpCatalogData.mcps.length;
     let installed = 0; let active = 0;
@@ -205,11 +304,9 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
     return { total, installed, active, available: total - installed };
   }, [installedServers]);
 
-  const toggleCategory = (categoryId) => {
-    setExpandedCategories(prev => prev.includes(categoryId) ? prev.filter(id => id !== categoryId) : [...prev, categoryId]);
-  };
-  const toggleAllCategories = () => {
-    setExpandedCategories(prev => prev.length === mcpCatalogData.categories.length ? [] : mcpCatalogData.categories.map(c => c.id));
+  const handleSelectCategory = (categoryId) => {
+    setSelectedCategoryId(categoryId);
+    setShowCategoryDialog(true);
   };
 
   const handleInstall = (mcp) => {
@@ -217,18 +314,32 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
       setSelectedMCP(mcp); setConfigValues({}); setShowConfigDialog(true);
       return;
     }
-    const config = { command: 'npx', args: ['-y', mcp.package], enabled: true, autostart: false, autoRestart: true };
+    const cmd = mcp.runCommand || 'npx';
+    const baseArgs = cmd === 'uvx' ? [mcp.package] : ['-y', mcp.package];
+    const config = { command: cmd, args: baseArgs, enabled: true, autostart: false, autoRestart: true };
     if (onInstall) onInstall(mcp.id, config);
   };
 
   const handleConfirmInstall = () => {
     if (!selectedMCP) return;
-    const args = ['-y', selectedMCP.package];
+    const cmd = selectedMCP.runCommand || 'npx';
+    const args = cmd === 'uvx' ? [selectedMCP.package] : ['-y', selectedMCP.package];
+    const env = {};
     if (selectedMCP.configSchema) {
       for (const [key, schema] of Object.entries(selectedMCP.configSchema)) {
         const value = configValues[key];
         if (!value) continue;
-        if (schema.type === 'array') {
+        if (schema.envName) {
+          // Mandar como variable de entorno
+          if (schema.type === 'array') {
+            const arrayValue = Array.isArray(value) ? value : value.split(',').map(v => v.trim());
+            env[schema.envName] = arrayValue.join(',');
+          } else if (schema.type === 'boolean') {
+            env[schema.envName] = value ? 'true' : 'false';
+          } else {
+            env[schema.envName] = value;
+          }
+        } else if (schema.type === 'array') {
           const arrayValue = Array.isArray(value) ? value : value.split(',').map(v => v.trim());
           arrayValue.forEach(v => args.push(v));
         } else {
@@ -236,7 +347,7 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
         }
       }
     }
-    const config = { command: 'npx', args, enabled: true, autostart: false, autoRestart: true, configValues };
+    const config = { command: cmd, args, enabled: true, autostart: false, autoRestart: true, configValues, env };
     if (onInstall) onInstall(selectedMCP.id, config);
     setShowConfigDialog(false); setSelectedMCP(null); setConfigValues({});
   };
@@ -283,47 +394,46 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
 
       {/* Botones */}
       <div style={{ display: 'flex', gap: '0.625rem', flexShrink: 0 }}>
-        <Button label={expandedCategories.length === mcpCatalogData.categories.length ? 'Colapsar Todo' : 'Expandir Todo'} icon={expandedCategories.length === mcpCatalogData.categories.length ? 'pi pi-minus' : 'pi pi-plus'} onClick={toggleAllCategories} style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, color: themeColors.textPrimary, borderRadius: '8px', fontSize: '0.75rem', padding: '0.4rem 0.875rem' }} />
         <Button label="MCP Personalizado" icon="pi pi-plus-circle" onClick={() => setShowCustomDialog(true)} style={{ background: themeColors.primaryColor, border: 'none', color: 'white', borderRadius: '8px', fontSize: '0.75rem', padding: '0.4rem 0.875rem', fontWeight: '500' }} />
       </div>
 
       {/* Categorías */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.625rem', paddingRight: '0.25rem', minHeight: 0 }}>
-        {mcpCatalogData.categories.map(category => {
-          const categoryData = mcpsByCategory[category.id];
-          if (!categoryData) return null;
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingRight: '0.25rem', minHeight: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.1rem', paddingTop: '0.5rem' }}>
+        {VALID_CATEGORY_IDS.map(categoryId => {
+          const base = (mcpCatalogData.categories || []).find(c => c.id === categoryId) || { id: categoryId, name: categoryId, icon: 'pi-folder', color: '#888', description: '' };
+          const categoryData = mcpsByCategory[categoryId] || { ...base, mcps: [] };
           const mcpCount = categoryData.mcps?.length || 0;
           if (mcpCount === 0 && searchTerm.trim()) return null;
-          const expanded = expandedCategories.includes(category.id);
+          const installedCount = categoryData.mcps.filter(mcp => isInstalled(mcp.id)).length;
+          const activeCount = categoryData.mcps.filter(mcp => {
+            const server = getServerState(mcp.id);
+            return !!server?.running;
+          }).length;
 
           return (
-            <CollapsibleSection
-              key={category.id}
-              id={category.id}
-              icon={category.icon}
-              color={category.color}
-              title={category.name}
-              description={category.description}
+            <CategoryCard
+              key={categoryId}
+              icon={base.icon}
+              color={base.color}
+              title={base.name}
+              description={base.description}
               count={mcpCount}
-              expanded={expanded}
-              onToggle={toggleCategory}
+              installedCount={installedCount}
+              activeCount={activeCount}
+              onSelect={handleSelectCategory}
+              id={categoryId}
               themeColors={themeColors}
-            >
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.625rem' }}>
-                {mcpCount > 0 ? (
-                  categoryData.mcps.map(mcp => (
-                    <MCPCard key={mcp.id} mcp={mcp} installed={isInstalled(mcp.id)} serverState={getServerState(mcp.id)} onInstall={handleInstall} themeColors={themeColors} />
-                  ))
-                ) : (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1.5rem', color: themeColors.textSecondary, fontSize: '0.8rem' }}>
-                    <i className="pi pi-inbox" style={{ fontSize: '1.75rem', marginBottom: '0.5rem', display: 'block' }} />
-                    <p style={{ margin: 0 }}>No hay MCPs en esta categoría</p>
-                  </div>
-                )}
-              </div>
-            </CollapsibleSection>
+            />
           );
         })}
+        {(searchTerm.trim() && Object.values(mcpsByCategory).every(category => (category?.mcps?.length || 0) === 0)) && (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '1.5rem', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+            <i className="pi pi-inbox" style={{ fontSize: '1.75rem', marginBottom: '0.5rem', display: 'block' }} />
+            <p style={{ margin: 0 }}>No encontramos MCPs que coincidan con tu búsqueda.</p>
+          </div>
+        )}
+        </div>
       </div>
 
       {/* Diálogos */}
@@ -334,7 +444,12 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
             <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: '600', color: themeColors.textPrimary }}>{key} {schema.required && <span style={{ color: '#f44336' }}>*</span>}</label>
               {schema.description && (<p style={{ margin: 0, fontSize: '0.7rem', color: themeColors.textSecondary }}>{schema.description}</p>)}
-              {schema.type === 'array' ? (
+              {schema.type === 'boolean' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <InputSwitch checked={!!configValues[key]} onChange={(e) => setConfigValues({ ...configValues, [key]: e.value })} />
+                  <span style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>{configValues[key] ? 'Sí' : 'No'}</span>
+                </div>
+              ) : schema.type === 'array' ? (
                 <InputTextarea value={configValues[key] || ''} onChange={(e) => setConfigValues({ ...configValues, [key]: e.target.value })} placeholder={schema.example ? `Ejemplo: ${schema.example.join(', ')}` : 'Separar con comas'} rows={3} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, borderRadius: '8px', color: themeColors.textPrimary, fontSize: '0.8rem', padding: '0.5rem' }} />
               ) : (
                 <InputText type={schema.secret ? 'password' : 'text'} value={configValues[key] || ''} onChange={(e) => setConfigValues({ ...configValues, [key]: e.target.value })} placeholder={schema.example || `Ingresa ${key}`} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, borderRadius: '8px', color: themeColors.textPrimary, fontSize: '0.8rem', padding: '0.5rem' }} />
@@ -368,6 +483,43 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
             <Button label="Instalar" icon="pi pi-download" onClick={handleCustomInstall} disabled={!customPackage.trim() || !customId.trim()} style={{ flex: 1, background: themeColors.primaryColor, border: 'none', color: 'white', borderRadius: '8px', opacity: (!customPackage.trim() || !customId.trim()) ? 0.5 : 1 }} />
           </div>
         </div>
+      </Dialog>
+
+      <Dialog
+        header={selectedCategory ? selectedCategory.name : ''}
+        visible={showCategoryDialog}
+        onHide={() => {
+          setShowCategoryDialog(false);
+          setSelectedCategoryId(null);
+        }}
+        style={{ width: '720px', maxWidth: '95vw' }}
+        contentStyle={{ background: themeColors.cardBackground, padding: '1.25rem', maxHeight: '70vh' }}
+      >
+        {selectedCategory ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', height: '100%' }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: themeColors.textSecondary, lineHeight: '1.4' }}>{selectedCategory.description}</p>
+            {selectedCategory.mcps && selectedCategory.mcps.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                {selectedCategory.mcps.map(mcp => (
+                  <MCPCard
+                    key={mcp.id}
+                    mcp={mcp}
+                    installed={isInstalled(mcp.id)}
+                    serverState={getServerState(mcp.id)}
+                    onInstall={handleInstall}
+                    themeColors={themeColors}
+                    accentColor={selectedCategory.color}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '1.5rem', color: themeColors.textSecondary, fontSize: '0.8rem' }}>
+                <i className="pi pi-inbox" style={{ fontSize: '1.75rem', marginBottom: '0.5rem', display: 'block' }} />
+                <p style={{ margin: 0 }}>No hay MCPs en esta categoría</p>
+              </div>
+            )}
+          </div>
+        ) : null}
       </Dialog>
     </div>
   );

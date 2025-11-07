@@ -145,7 +145,12 @@ class MCPService {
       
       const childProcess = spawn(config.command, spawnArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        shell: isWindows
+        shell: isWindows,
+        cwd: config.cwd || undefined,
+        env: {
+          ...process.env,
+          ...(config.env || {})
+        }
       });
 
       const mcpProcess = {
@@ -628,6 +633,34 @@ class MCPService {
     await this.saveConfig();
 
     console.log(`✅ [MCP] ${serverId} desinstalado`);
+
+    return { success: true };
+  }
+
+  /**
+   * Actualizar configuración de un servidor MCP (y reiniciar si está corriendo)
+   */
+  async updateMCPServerConfig(serverId, newConfig) {
+    const existing = this.mcpConfig.mcpServers[serverId];
+    if (!existing) {
+      return { success: false, error: `MCP ${serverId} no encontrado` };
+    }
+
+    // Mezclar configuración, sin perder propiedades conocidas
+    const merged = {
+      ...existing,
+      ...newConfig,
+      args: Array.isArray(newConfig.args) ? newConfig.args : (existing.args || []),
+      env: { ...(existing.env || {}), ...(newConfig.env || {}) }
+    };
+    this.mcpConfig.mcpServers[serverId] = merged;
+    await this.saveConfig();
+
+    // Reiniciar si está corriendo para aplicar cambios
+    if (this.mcpProcesses.has(serverId)) {
+      await this.stopMCPServer(serverId);
+      await this.startMCPServer(serverId);
+    }
 
     return { success: true };
   }

@@ -10,6 +10,70 @@
       "description": "Sistema de archivos y gestión local"
     },
     {
+      "id": "cli-mcp-server",
+      "name": "CLI MCP Server",
+      "package": "cli-mcp-server",
+      "runCommand": "uvx",
+      "category": "automation",
+      "icon": "pi-terminal",
+      "description": "Ejecución segura de comandos CLI con listas blancas de comandos/flags, validación de rutas y timeouts.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "ALLOWED_DIR": {
+          "type": "string",
+          "required": true,
+          "description": "Directorio base permitido (todas las rutas deben estar dentro)",
+          "example": "C:/Users/kalid/Documents",
+          "envName": "ALLOWED_DIR"
+        },
+        "ALLOWED_COMMANDS": {
+          "type": "string",
+          "required": false,
+          "description": "Comandos permitidos separados por coma o 'all'",
+          "example": "ls,cat,pwd,echo",
+          "envName": "ALLOWED_COMMANDS"
+        },
+        "ALLOWED_FLAGS": {
+          "type": "string",
+          "required": false,
+          "description": "Flags permitidas separadas por coma o 'all'",
+          "example": "-l,-a,--help,--version",
+          "envName": "ALLOWED_FLAGS"
+        },
+        "MAX_COMMAND_LENGTH": {
+          "type": "string",
+          "required": false,
+          "description": "Longitud máxima del comando",
+          "example": "1024",
+          "envName": "MAX_COMMAND_LENGTH"
+        },
+        "COMMAND_TIMEOUT": {
+          "type": "string",
+          "required": false,
+          "description": "Timeout de ejecución en segundos",
+          "example": "30",
+          "envName": "COMMAND_TIMEOUT"
+        },
+        "ALLOW_SHELL_OPERATORS": {
+          "type": "boolean",
+          "required": false,
+          "description": "Permitir operadores de shell (&&, |, >, >>)",
+          "envName": "ALLOW_SHELL_OPERATORS"
+        }
+      },
+      "tools": [
+        "run_command",
+        "show_security_rules"
+      ],
+      "useCases": [
+        "Ejecución controlada de comandos",
+        "Automatización segura de tareas",
+        "Inspección de políticas de seguridad"
+      ],
+      "website": "https://github.com/MladenSU/cli-mcp-server"
+    },
+    {
       "id": "automation",
       "name": "Comandos y Automatización",
       "icon": "pi-cog",

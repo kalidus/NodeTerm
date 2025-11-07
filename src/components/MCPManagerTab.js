@@ -3,6 +3,9 @@ import { Button } from 'primereact/button';
 import { InputSwitch } from 'primereact/inputswitch';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
+import { Dialog } from 'primereact/dialog';
+import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
 import MCPCatalog from './MCPCatalog';
 import mcpClient from '../services/MCPClientService';
 
@@ -12,6 +15,10 @@ const MCPManagerTab = ({ themeColors }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
   const toastRef = React.useRef(null);
+  const [showInstalledDialog, setShowInstalledDialog] = useState(false);
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [selectedServer, setSelectedServer] = useState(null);
+  const [editingConfig, setEditingConfig] = useState({});
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -63,6 +70,56 @@ const MCPManagerTab = ({ themeColors }) => {
   const showToast = (severity, summary, detail) => {
     if (toastRef.current) {
       toastRef.current.show({ severity, summary, detail, life: 3000 });
+    }
+  };
+
+  const openConfigFor = (server) => {
+    setSelectedServer(server);
+    // Obtener MCP del catálogo para ver configSchema
+    const mcpData = require('../data/mcp-catalog.json');
+    const mcp = mcpData.mcps?.find(m => m.id === server.id);
+    
+    // Mapear valores guardados a configSchema
+    const configValues = {};
+    if (mcp?.configSchema) {
+      for (const [key, schema] of Object.entries(mcp.configSchema)) {
+        if (schema.envName && server.config?.env?.[schema.envName]) {
+          configValues[key] = server.config.env[schema.envName];
+        } else if (server.config?.configValues?.[key]) {
+          configValues[key] = server.config.configValues[key];
+        }
+      }
+    }
+    
+    setEditingConfig({
+      command: server?.config?.command || 'npx',
+      args: Array.isArray(server?.config?.args) ? server.config.args.join(' ') : (server?.config?.args || ''),
+      enabled: !!server?.config?.enabled,
+      autostart: !!server?.config?.autostart,
+      autoRestart: server?.config?.autoRestart !== false,
+      configValues,
+      mcp
+    });
+    setShowConfigDialog(true);
+  };
+
+  const handleSaveConfig = async () => {
+    if (!selectedServer) return;
+    const payload = {
+      command: editingConfig.command || 'npx',
+      args: typeof editingConfig.args === 'string' ? editingConfig.args.split(' ').filter(Boolean) : (editingConfig.args || []),
+      enabled: !!editingConfig.enabled,
+      autostart: !!editingConfig.autostart,
+      autoRestart: !!editingConfig.autoRestart
+    };
+    const result = await mcpClient.updateServerConfig(selectedServer.id, payload);
+    if (result?.success) {
+      showToast('success', 'Guardado', 'Configuración actualizada');
+      setShowConfigDialog(false);
+      setSelectedServer(null);
+      await loadData();
+    } else {
+      showToast('error', 'Error', result?.error || 'No se pudo guardar');
     }
   };
 
@@ -350,6 +407,20 @@ const MCPManagerTab = ({ themeColors }) => {
             fontWeight: '500'
           }}
         />
+        <Button
+          label="Ver instalados"
+          icon="pi pi-server"
+          onClick={() => setShowInstalledDialog(true)}
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: `1px solid ${themeColors.borderColor}`,
+            color: themeColors.textPrimary,
+            borderRadius: '8px',
+            fontSize: '0.85rem',
+            padding: '0.65rem 1.0rem',
+            fontWeight: '500'
+          }}
+        />
       </div>
 
       {/* Catálogo a pantalla completa */}
@@ -376,6 +447,133 @@ const MCPManagerTab = ({ themeColors }) => {
           />
         </div>
       </div>
+      {/* Diálogo: MCPs Instalados */}
+      <Dialog
+        header={`MCPs Instalados (${servers.length})`}
+        visible={showInstalledDialog}
+        onHide={() => setShowInstalledDialog(false)}
+        style={{ width: '900px', maxWidth: '95vw' }}
+        contentStyle={{ background: themeColors.cardBackground, maxHeight: '70vh', overflowY: 'auto' }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {servers.length === 0 ? (
+            <div style={{ textAlign: 'center', color: themeColors.textSecondary, padding: '1rem' }}>
+              No hay MCPs instalados
+            </div>
+          ) : (
+            servers.map(server => (
+              <div key={server.id} style={{
+                background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
+                border: `2px solid ${server.running ? 'rgba(100, 200, 100, 0.5)' : themeColors.borderColor}`,
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: themeColors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {server.id}
+                      </h4>
+                      {server.running && (
+                        <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', background: 'rgba(100, 200, 100, 0.2)', border: '1px solid rgba(100, 200, 100, 0.5)', borderRadius: '10px', color: '#66bb6a', fontWeight: '600' }}>
+                          ACTIVO
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.7rem', color: themeColors.textSecondary }}>Estado: <span style={{ color: server.running ? '#66bb6a' : '#9e9e9e', fontWeight: '500' }}>{server.state || 'stopped'}</span></p>
+                  </div>
+                  <InputSwitch checked={server.config?.enabled} onChange={() => handleToggleServer(server.id, server.config?.enabled)} style={{ transform: 'scale(0.9)' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {server.config?.enabled && !server.running && (
+                    <Button label="Iniciar" icon="pi pi-play" onClick={() => handleStartServer(server.id)} style={{ flex: 1, background: 'rgba(100, 200, 100, 0.2)', border: '1px solid rgba(100, 200, 100, 0.5)', color: '#66bb6a', borderRadius: '8px' }} />
+                  )}
+                  {server.running && (
+                    <Button label="Detener" icon="pi pi-stop" onClick={() => handleStopServer(server.id)} style={{ flex: 1, background: 'rgba(255, 193, 7, 0.2)', border: '1px solid rgba(255, 193, 7, 0.5)', color: '#ffc107', borderRadius: '8px' }} />
+                  )}
+                  <Button label="Configurar" icon="pi pi-cog" onClick={() => openConfigFor(server)} style={{ flex: 1, background: themeColors.primaryColor, border: 'none', color: 'white', borderRadius: '8px' }} />
+                  <Button icon="pi pi-trash" onClick={() => handleUninstall(server.id)} tooltip="Desinstalar" tooltipOptions={{ position: 'top' }} style={{ background: 'rgba(244, 67, 54, 0.2)', border: '1px solid rgba(244, 67, 54, 0.5)', color: '#f44336', borderRadius: '8px', minWidth: 'auto', aspectRatio: '1' }} />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Dialog>
+
+      {/* Diálogo: Configurar MCP */}
+      <Dialog
+        header={selectedServer ? `Configurar ${selectedServer.id}` : 'Configurar MCP'}
+        visible={showConfigDialog}
+        onHide={() => setShowConfigDialog(false)}
+        style={{ width: '700px', maxWidth: '95vw' }}
+        contentStyle={{ background: themeColors.cardBackground, maxHeight: '70vh', overflowY: 'auto' }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Sección: Comando y Toggles */}
+          <div style={{ borderBottom: `1px solid ${themeColors.borderColor}`, paddingBottom: '1rem' }}>
+            <h4 style={{ margin: 0, marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600', color: themeColors.textPrimary }}>Configuración General</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary, display: 'block', marginBottom: '0.3rem' }}>Comando</label>
+                <InputText value={editingConfig.command || ''} onChange={(e) => setEditingConfig({ ...editingConfig, command: e.target.value })} style={{ width: '100%' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary }}>Opciones</label>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <InputSwitch checked={!!editingConfig.enabled} onChange={(e) => setEditingConfig({ ...editingConfig, enabled: e.value })} />
+                    <span style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>Enabled</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <InputSwitch checked={!!editingConfig.autostart} onChange={(e) => setEditingConfig({ ...editingConfig, autostart: e.value })} />
+                    <span style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>Autostart</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: '0.75rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary, display: 'block', marginBottom: '0.3rem' }}>Args (separados por espacios)</label>
+              <InputTextarea value={editingConfig.args || ''} onChange={(e) => setEditingConfig({ ...editingConfig, args: e.target.value })} rows={2} style={{ width: '100%', fontSize: '0.75rem' }} />
+            </div>
+          </div>
+
+          {/* Sección: Configuración Específica del MCP */}
+          {editingConfig.mcp?.configSchema && (
+            <div>
+              <h4 style={{ margin: 0, marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: '600', color: themeColors.textPrimary }}>Configuración de {editingConfig.mcp.name}</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {Object.entries(editingConfig.mcp.configSchema).map(([key, schema]) => (
+                  <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary }}>
+                      {key} {schema.required && <span style={{ color: '#f44336' }}>*</span>}
+                    </label>
+                    {schema.description && <p style={{ margin: 0, fontSize: '0.7rem', color: themeColors.textSecondary }}>{schema.description}</p>}
+                    {schema.type === 'boolean' ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <InputSwitch checked={!!editingConfig.configValues?.[key]} onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.value } })} />
+                        <span style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>{editingConfig.configValues?.[key] ? 'Sí' : 'No'}</span>
+                      </div>
+                    ) : schema.type === 'array' ? (
+                      <InputTextarea value={editingConfig.configValues?.[key] || ''} onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.target.value } })} placeholder={schema.example ? `Ejemplo: ${schema.example.join(', ')}` : 'Separar con comas'} rows={2} style={{ width: '100%', fontSize: '0.75rem' }} />
+                    ) : (
+                      <InputText type={schema.secret ? 'password' : 'text'} value={editingConfig.configValues?.[key] || ''} onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.target.value } })} placeholder={schema.example || `Ingresa ${key}`} style={{ width: '100%', fontSize: '0.75rem' }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Botones */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', borderTop: `1px solid ${themeColors.borderColor}`, paddingTop: '0.75rem' }}>
+            <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowConfigDialog(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, color: themeColors.textPrimary, borderRadius: '8px' }} />
+            <Button label="Guardar" icon="pi pi-save" onClick={handleSaveConfig} style={{ flex: 1, background: themeColors.primaryColor, border: 'none', color: 'white', borderRadius: '8px' }} />
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };
