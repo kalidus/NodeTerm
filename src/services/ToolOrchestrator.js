@@ -167,8 +167,8 @@ class ToolOrchestrator {
 
     while (currentToolCall && iteration < limit) {
       iteration += 1;
-      const toolName = currentToolCall.toolName || currentToolCall.tool || currentToolCall.name;
-      const args = currentToolCall.arguments || currentToolCall.args || {};
+      let toolName = currentToolCall.toolName || currentToolCall.tool || currentToolCall.name;
+      let args = currentToolCall.arguments || currentToolCall.args || {};
 
       if (toolName === lastToolName) sameToolCount += 1; else { lastToolName = toolName; sameToolCount = 1; }
       if (sameToolCount > 2) {
@@ -210,6 +210,45 @@ class ToolOrchestrator {
         // Usar la ruta por defecto del filesystem
         args.path = 'C:\\Users\\kalid\\Downloads\\NodeTerm Drive'; // TODO: obtener dinámicamente
         console.log(`✅ [ToolOrchestrator] Path inyectado para ${toolNameBase}: ${args.path}`);
+      }
+      
+      // ✅ IMPROVED: Validar search_files - MCP NO soporta wildcards
+      if (toolNameBase === 'search_files') {
+        console.log(`🔍 [ToolOrchestrator] search_files recibido con args:`, JSON.stringify(args));
+        
+        // search_files requiere: path (string) y pattern (string)
+        // Si el modelo envió "query" en lugar de "pattern", copiar el valor
+        if (args.query && !args.pattern) {
+          args.pattern = args.query;
+          delete args.query;
+          console.log(`✅ [ToolOrchestrator] Renombrado 'query' → 'pattern': ${args.pattern}`);
+        }
+        
+        if (!args.pattern || typeof args.pattern !== 'string') {
+          args.pattern = '*';
+          console.log(`✅ [ToolOrchestrator] Pattern inyectado por defecto: *`);
+        }
+        
+        // 🔧 CRÍTICO: Si el patrón contiene "*", MCP search_files NO lo soporta
+        // Cambiar a list_directory y filtrar en el cliente
+        if (args.pattern.includes('*')) {
+          console.log(`⚠️ [ToolOrchestrator] Patrón wildcard detectado: ${args.pattern}`);
+          console.log(`   MCP search_files NO soporta wildcards, usando list_directory + filtrado cliente`);
+          
+          // Cambiar herramienta
+          currentToolCall.toolName = 'filesystem__list_directory';
+          currentToolCall.arguments = { path: args.path };
+          
+          // Guardar patrón para filtrar después
+          currentToolCall._filterPattern = args.pattern;
+          console.log(`✅ [ToolOrchestrator] Cambiado a list_directory, se filtrará con: ${args.pattern}`);
+          
+          // Re-asignar args para que la ejecución use los nuevos argumentos
+          args = { path: args.path };
+          toolName = 'filesystem__list_directory';
+        } else {
+          console.log(`✅ [ToolOrchestrator] Búsqueda exacta (sin wildcards): ${args.pattern}`);
+        }
       }
       
       // ✅ IMPROVED: Validar edit_file - requiere path y edits
@@ -258,6 +297,13 @@ class ToolOrchestrator {
       let result;
       try {
         result = await mcpClient.callTool(toolName, args);
+        
+        // 🔧 Si hay patrón de filtrado (porque convertimos search_files a list_directory)
+        if (currentToolCall._filterPattern && toolName === 'filesystem__list_directory') {
+          console.log(`🔍 [ToolOrchestrator] Filtrando resultado con patrón: ${currentToolCall._filterPattern}`);
+          result = this._filterListDirectoryByPattern(result, currentToolCall._filterPattern);
+        }
+        
         if (callbacks.onToolResult) callbacks.onToolResult({ toolName, args, result });
       } catch (error) {
         conversationService.addMessage('tool', `❌ Error en ${toolName}: ${error.message}`, { toolCallId, toolName, toolArgs: args, error: true, turnId });
@@ -402,6 +448,71 @@ INSTRUCCIONES POST-EJECUCIÓN:
       return last.content || 'Operación completada.';
     }
     return 'Operación completada.';
+  }
+
+  /**
+   * 🔧 Filtrar resultado de list_directory con un patrón wildcard
+   * Convierte p* a expresión regular y filtra los archivos
+   */
+  _filterListDirectoryByPattern(result, pattern) {
+    try {
+      // Parsear resultado de list_directory
+      // Típicamente contiene líneas como: "[FILE] nombre.txt" o "[DIR] nombre"
+      const lines = result?.content?.[0]?.text?.split('\n') || result?.toString?.().split('\n') || [];
+      
+      // Convertir wildcard pattern a regex
+      // p* → /^p/i (empieza con p, case insensitive)
+      // *.txt → /\.txt$/i (termina con .txt, case insensitive)
+      // *pkate* → /pkate/i (contiene pkate, case insensitive)
+      let regexPattern;
+      if (pattern === '*') {
+        regexPattern = /.*/; // Todos
+      } else if (pattern.startsWith('*') && pattern.endsWith('*')) {
+        // *PALABRA* → contiene
+        const word = pattern.slice(1, -1);
+        regexPattern = new RegExp(word, 'i');
+      } else if (pattern.startsWith('*')) {
+        // *TERMINA → termina con
+        const end = pattern.slice(1);
+        regexPattern = new RegExp(end + '$', 'i');
+      } else if (pattern.endsWith('*')) {
+        // EMPIEZA* → empieza con
+        const start = pattern.slice(0, -1);
+        regexPattern = new RegExp('^' + start, 'i');
+      } else {
+        // Búsqueda exacta
+        regexPattern = new RegExp('^' + pattern + '$', 'i');
+      }
+      
+      console.log(`   Regex generado: ${regexPattern}`);
+      
+      // Filtrar líneas
+      const filtered = lines.filter(line => {
+        // Extraer nombre del archivo/carpeta (después de [FILE] o [DIR])
+        const match = line.match(/^\[(?:FILE|DIR)\]\s+(.+)$/);
+        if (!match) return false;
+        const name = match[1].trim();
+        return regexPattern.test(name);
+      });
+      
+      if (filtered.length === 0) {
+        console.log(`   ❌ No hay coincidencias con patrón: ${pattern}`);
+        return { content: [{ type: 'text', text: 'No matches found' }] };
+      }
+      
+      console.log(`   ✅ Encontrados ${filtered.length} coincidencias`);
+      
+      // Retornar resultado filtrado
+      return {
+        content: [{
+          type: 'text',
+          text: filtered.join('\n')
+        }]
+      };
+    } catch (error) {
+      console.error(`❌ Error filtrando: ${error.message}`);
+      return result; // Devolver resultado original en caso de error
+    }
   }
 }
 
