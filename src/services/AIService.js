@@ -2140,6 +2140,7 @@ class AIService {
         const has = (n) => names.includes(n);
         const bullets = [];
         if (has('list_directory')) bullets.push('• "listar", "ver contenido" → list_directory { path }');
+        if (has('list_directory_with_sizes')) bullets.push('• "listar con tamaños" → list_directory_with_sizes { path } [📊 Muestra tamaños, mejor para comparar]');
         if (has('read_text_file')) bullets.push('• "leer fichero" → read_text_file { path }');
         if (has('write_file')) bullets.push('• "crear/guardar fichero" → write_file { path, content }');
         if (has('edit_file')) bullets.push('• "editar parte de un fichero" → edit_file { path, ... }');
@@ -2853,18 +2854,31 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
           }
         }
 
-        const defaultInfoLocal = this._getMcpDefaultDir(serverIdHint || 'filesystem');
-        const defaultPathLocal = defaultInfoLocal?.raw || defaultInfoLocal?.normalized || null;
-        if (defaultPathLocal && (!currentToolCall.arguments || typeof currentToolCall.arguments !== 'object')) {
+        // 🔧 CRITICAL FIX: Asegurar que arguments siempre sea un objeto válido
+        if (!currentToolCall.arguments || typeof currentToolCall.arguments !== 'object') {
           currentToolCall.arguments = {};
         }
-        if (defaultPathLocal && currentToolCall.arguments) {
+
+        const defaultInfoLocal = this._getMcpDefaultDir(serverIdHint || 'filesystem');
+        const defaultPathLocal = defaultInfoLocal?.raw || defaultInfoLocal?.normalized || null;
+        
+        // ✅ FIXED: Inyectar path ANTES de validar
+        if (defaultPathLocal) {
           if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(baseName) && !currentToolCall.arguments.path) {
             currentToolCall.arguments.path = defaultPathLocal;
+            console.log(`✅ [MCP] Path inyectado para ${baseName}: ${defaultPathLocal}`);
           }
           if (baseName === 'read_text_file' && !currentToolCall.arguments.path) {
             currentToolCall.arguments.path = defaultPathLocal;
+            console.log(`✅ [MCP] Path inyectado para ${baseName}: ${defaultPathLocal}`);
           }
+        }
+
+        // 🔍 DEBUG: Validar argumentos antes de ejecutar
+        console.log(`🔧 [MCP] Ejecutando ${baseName} con argumentos:`, JSON.stringify(currentToolCall.arguments));
+        
+        if (!currentToolCall.arguments || Object.keys(currentToolCall.arguments).length === 0) {
+          console.warn(`⚠️ [MCP] ADVERTENCIA: Argumentos vacíos para ${baseName}, pueden fallar`);
         }
 
         if (serverIdHint) {
@@ -2915,13 +2929,32 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
         
         console.log(`✅ [MCP] ${currentToolCall.toolName} completado`);
         
+        // ✅ IMPROVED: Detectar lenguaje para archivos de texto
+        let detectedLanguage = '';
+        if (baseName === 'read_text_file') {
+          const filePath = currentToolCall.arguments?.path || '';
+          const ext = filePath.split('.').pop()?.toLowerCase() || '';
+          const langMap = {
+            'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+            'py': 'python', 'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c', 'hpp': 'cpp',
+            'cs': 'csharp', 'php': 'php', 'rb': 'ruby', 'go': 'go', 'rs': 'rust', 'swift': 'swift',
+            'kt': 'kotlin', 'scala': 'scala', 'sh': 'bash', 'bash': 'bash', 'zsh': 'bash', 'fish': 'bash',
+            'ps1': 'powershell', 'json': 'json', 'yaml': 'yaml', 'yml': 'yaml', 'xml': 'xml',
+            'html': 'html', 'htm': 'html', 'css': 'css', 'scss': 'scss', 'sass': 'sass', 'less': 'less',
+            'sql': 'sql', 'md': 'markdown', 'mdx': 'markdown', 'txt': 'text', 'log': 'text'
+          };
+          detectedLanguage = langMap[ext] || '';
+        }
+        
         // Notificar a la UI con el resultado de la tool
         if (callbacks && typeof callbacks.onToolResult === 'function') {
           try {
             callbacks.onToolResult({
               toolName: currentToolCall.toolName,
               args: currentToolCall.arguments,
-              result
+              result,
+              detectedLanguage,
+              filePath: currentToolCall.arguments?.path
             });
           } catch (cbErr) {
             console.warn('⚠️ [MCP] onToolResult callback lanzó un error:', cbErr.message);
@@ -2943,23 +2976,68 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
             return '✅ Archivo editado correctamente';
           }
           
-          // Listados de directorios - formatear bonito
+          // ✅ NO procesar aquí - dejar para AIChatPanel.js
+          // Solo devolver el texto sin formateo para que renderMarkdown lo procese
           if (text.includes('[FILE]') || text.includes('[DIR]')) {
-            const lines = text.split('\n').filter(l => l.trim());
-            const dirs = lines.filter(l => l.includes('[DIR]')).map(l => '📁 ' + l.replace('[DIR]', '').trim());
-            const files = lines.filter(l => l.includes('[FILE]')).map(l => '📄 ' + l.replace('[FILE]', '').trim());
-            
-            let output = [];
-            if (dirs.length > 0) {
-              output.push('**Directorios:**\n' + dirs.join('\n'));
-            }
-            if (files.length > 0) {
-              output.push('**Archivos:**\n' + files.join('\n'));
-            }
-            return output.join('\n\n');
+            return text;
           }
           
-          // Contenido de archivos o texto general
+          // ✅ IMPROVED: Contenido de archivos - detectar lenguaje y formatear como código
+          // Detectar extensión si está disponible en los metadatos o por patrones
+          if (currentToolCall.toolName === 'read_text_file' || currentToolCall.toolName === 'read_file' || baseName === 'read_text_file') {
+            const filePath = currentToolCall.arguments?.path || '';
+            const ext = filePath.split('.').pop()?.toLowerCase() || '';
+            
+            // Map extensiones a lenguajes soportados en markdown
+            const langMap = {
+              'js': 'javascript',
+              'jsx': 'javascript',
+              'ts': 'typescript',
+              'tsx': 'typescript',
+              'py': 'python',
+              'java': 'java',
+              'cpp': 'cpp',
+              'c': 'c',
+              'h': 'c',
+              'hpp': 'cpp',
+              'cs': 'csharp',
+              'php': 'php',
+              'rb': 'ruby',
+              'go': 'go',
+              'rs': 'rust',
+              'swift': 'swift',
+              'kt': 'kotlin',
+              'scala': 'scala',
+              'sh': 'bash',
+              'bash': 'bash',
+              'zsh': 'bash',
+              'fish': 'bash',
+              'ps1': 'powershell',
+              'json': 'json',
+              'yaml': 'yaml',
+              'yml': 'yaml',
+              'xml': 'xml',
+              'html': 'html',
+              'htm': 'html',
+              'css': 'css',
+              'scss': 'scss',
+              'sass': 'sass',
+              'less': 'less',
+              'sql': 'sql',
+              'md': 'markdown',
+              'mdx': 'markdown',
+              'txt': 'text',
+              'log': 'text'
+            };
+            
+            const lang = langMap[ext] || '';
+            console.log(`📄 [MCP] Detectado lenguaje para ${ext}: ${lang}`);
+            
+            // No añadir bloques de código aquí - se manejan en AIChatPanel.js
+            return text;
+          }
+          
+          // Texto general o resultado de otros comandos
           return text;
         })();
         
