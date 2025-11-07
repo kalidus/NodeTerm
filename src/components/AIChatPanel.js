@@ -412,7 +412,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAbortController(controller);
 
     try {
-      // Slash command: /prompts → listar prompts MCP
+       // Slash command: /prompts → listar prompts MCP
       if (userMessage === '/prompts' || userMessage === '/prompt') {
         const prompts = mcpClient.getAvailablePrompts() || [];
         const byServer = prompts.reduce((acc, p) => { (acc[p.serverId] = acc[p.serverId] || []).push(p); return acc; }, {});
@@ -763,36 +763,58 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             safeResponse = 'Hecho.';
           }
           
-          console.log(`   Safe response: "${safeResponse.substring(0, 80)}"`);
+          // ✅ IMPROVED: Detectar si la respuesta es SOLO JSON de tool call (no debería guardarse como respuesta)
+          const isJsonToolCall = (() => {
+            const trimmed = safeResponse.trim();
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+              try {
+                const parsed = JSON.parse(trimmed);
+                // Es un tool call si tiene "tool" o "use_tool"
+                return parsed.tool || parsed.use_tool;
+              } catch (e) {
+                return false;
+              }
+            }
+            return false;
+          })();
           
-          // ============= GUARDAR CON SAFE RESPONSE (no con el original vacío) =============
-          // Agregar respuesta del asistente a la conversación (usando safeResponse)
-          console.log(`💾 [AIChatPanel.onComplete] Guardando mensaje del asistente en localStorage...`);
-          console.log(`   Content length: ${safeResponse.length} chars`);
-          console.log(`   ConversationId: ${conversationService.currentConversationId}`);
-          
-          const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
-            latency: data.latency,
-            model: data.model,
-            provider: data.provider,
-            tokens: Math.ceil(safeResponse.length / 4),
-            files: files.length > 0 ? files : undefined
-          });
-          
-          console.log(`   ✅ Guardado en localStorage con ID: ${assistantMessageObj.id}`);
-          console.log(`   ⏰ El evento 'conversation-updated' sincronizará la UI automáticamente...`);
-          
-          // Calcular tokens reales de la respuesta
-          const responseTokens = Math.ceil(safeResponse.length / 4);
+          if (isJsonToolCall) {
+            console.log(`   ⚠️ Respuesta es JSON de tool call puro, NO guardando como respuesta del asistente`);
+            console.log(`   Tool detectado: ${isJsonToolCall}`);
+            // NO guardar esta respuesta - ya fue manejada por ToolOrchestrator
+            // Solo retornar para que la UI se actualice
+          } else {
+            console.log(`   Safe response: "${safeResponse.substring(0, 80)}"`);
+            
+            // ============= GUARDAR CON SAFE RESPONSE (no con el original vacío) =============
+            // Agregar respuesta del asistente a la conversación (usando safeResponse)
+            console.log(`💾 [AIChatPanel.onComplete] Guardando mensaje del asistente en localStorage...`);
+            console.log(`   Content length: ${safeResponse.length} chars`);
+            console.log(`   ConversationId: ${conversationService.currentConversationId}`);
+            
+              const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
+                latency: data.latency,
+                model: data.model,
+                provider: data.provider,
+                tokens: Math.ceil(safeResponse.length / 4),
+                files: files.length > 0 ? files : undefined
+              });
+              
+              console.log(`   ✅ Guardado en localStorage con ID: ${assistantMessageObj.id}`);
+              console.log(`   ⏰ El evento 'conversation-updated' sincronizará la UI automáticamente...`);
+              
+              // Calcular tokens reales de la respuesta
+              const responseTokens = Math.ceil(safeResponse.length / 4);
 
-          // 🔧 ELIMINADO EL FALLBACK MANUAL: El evento 'conversation-updated' automático
-          // de conversationService.addMessage() ya sincroniza los mensajes correctamente.
-          // Mantener el fallback causaba duplicación de mensajes en la UI.
-          
-          // El mensaje streaming se reemplazará automáticamente cuando el evento
-          // 'conversation-updated' se dispare y sincronice los mensajes persistidos.
-          
-          // Tokens calculados internamente por el sistema de ventana deslizante
+              // 🔧 ELIMINADO EL FALLBACK MANUAL: El evento 'conversation-updated' automático
+              // de conversationService.addMessage() ya sincroniza los mensajes correctamente.
+              // Mantener el fallback causaba duplicación de mensajes en la UI.
+              
+              // El mensaje streaming se reemplazará automáticamente cuando el evento
+              // 'conversation-updated' se dispare y sincronice los mensajes persistidos.
+              
+              // Tokens calculados internamente por el sistema de ventana deslizante
+          }
           
           // 🪟 NOTIFICACIÓN SUTIL de optimización de contexto (como ChatGPT)
           if (aiService.lastContextOptimization && 
@@ -1654,6 +1676,27 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const hasContent = message.content && message.content.trim().length > 0;
     const isToolResult = !!(message.metadata && message.metadata.isToolResult);
     const isToolCall = message.role === 'assistant_tool_call' || !!(message.metadata && message.metadata.isToolCall);
+
+    // ✅ IMPROVED: NO renderizar mensajes que sean JSON puro de tool calls
+    const isJsonToolCall = (() => {
+      if (!message.content) return false;
+      const trimmed = message.content.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          return parsed.tool || parsed.use_tool;
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    })();
+    
+    if (isJsonToolCall && !isToolCall && !isToolResult) {
+      // Es JSON puro de tool call y no está marcado como tal - NO renderizar
+      console.log(`🔍 [renderMessage] Omitiendo JSON puro de tool call:`, message.content.substring(0, 50));
+      return null;
+    }
 
     // No renderizar el placeholder si está en streaming y aún no hay contenido
     if (isStreaming && !hasContent) {

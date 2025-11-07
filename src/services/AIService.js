@@ -2143,7 +2143,7 @@ class AIService {
         if (has('list_directory_with_sizes')) bullets.push('• "listar con tamaños" → list_directory_with_sizes { path } [📊 Muestra tamaños, mejor para comparar]');
         if (has('read_text_file')) bullets.push('• "leer fichero" → read_text_file { path }');
         if (has('write_file')) bullets.push('• "crear/guardar fichero" → write_file { path, content }');
-        if (has('edit_file')) bullets.push('• "editar parte de un fichero" → edit_file { path, ... }');
+        if (has('edit_file')) bullets.push('• "editar parte de un fichero" → edit_file { path, edits: [{ old_text: "buscar", new_text: "reemplazar" }] }');
         if (has('create_directory')) bullets.push('• "crear carpeta" → create_directory { path }');
         if (has('move_file')) {
           // Obtener los nombres reales de parámetros de la tool move_file
