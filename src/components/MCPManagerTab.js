@@ -183,89 +183,154 @@ const MCPManagerTab = ({ themeColors }) => {
       flexDirection: 'column',
       gap: '1.5rem',
       padding: '1rem',
-      height: '600px',
-      overflow: 'hidden'
+      height: '100%',
+      overflow: 'hidden',
+      minHeight: 0
     }}>
       <Toast ref={toastRef} />
 
-      {/* Resumen rápido */}
+      {/* Resumen rápido mejorado con iconos y colores */}
       <div style={{
         background: `linear-gradient(135deg, ${themeColors.primaryColor}20 0%, ${themeColors.primaryColor}10 100%)`,
         border: `1px solid ${themeColors.primaryColor}40`,
         borderRadius: '12px',
-        padding: '1rem',
+        padding: '1.25rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '1rem'
+        gap: '1.5rem'
       }}>
-        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-          <div>
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* MCP Activos */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
-              fontSize: '0.75rem',
-              color: themeColors.textSecondary,
-              marginBottom: '0.25rem'
+              width: '42px',
+              height: '42px',
+              background: 'rgba(100, 200, 100, 0.2)',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(100, 200, 100, 0.4)'
             }}>
-              MCPs Activos
+              <i className="pi pi-check-circle" style={{ fontSize: '1.2rem', color: '#66bb6a' }} />
             </div>
-            <div style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: themeColors.textPrimary
-            }}>
-              {stats?.activeServers || 0}
+            <div>
+              <div style={{
+                fontSize: '0.7rem',
+                color: themeColors.textSecondary,
+                marginBottom: '0.2rem',
+                fontWeight: '500'
+              }}>
+                MCPs Activos
+              </div>
+              <div style={{
+                fontSize: '1.4rem',
+                fontWeight: '700',
+                color: '#66bb6a'
+              }}>
+                {stats?.activeServers || 0}
+              </div>
             </div>
           </div>
           
-          <div>
+          {/* Herramientas */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
-              fontSize: '0.75rem',
-              color: themeColors.textSecondary,
-              marginBottom: '0.25rem'
+              width: '42px',
+              height: '42px',
+              background: 'rgba(33, 150, 243, 0.2)',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(33, 150, 243, 0.4)'
             }}>
-              Herramientas
+              <i className="pi pi-wrench" style={{ fontSize: '1.2rem', color: '#2196f3' }} />
             </div>
-            <div style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: themeColors.textPrimary
-            }}>
-              {stats?.totalTools || 0}
+            <div>
+              <div style={{
+                fontSize: '0.7rem',
+                color: themeColors.textSecondary,
+                marginBottom: '0.2rem',
+                fontWeight: '500'
+              }}>
+                Herramientas
+              </div>
+              <div style={{
+                fontSize: '1.4rem',
+                fontWeight: '700',
+                color: '#2196f3'
+              }}>
+                {stats?.totalTools || 0}
+              </div>
             </div>
           </div>
           
-          <div>
+          {/* Resources */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
-              fontSize: '0.75rem',
-              color: themeColors.textSecondary,
-              marginBottom: '0.25rem'
+              width: '42px',
+              height: '42px',
+              background: 'rgba(156, 39, 176, 0.2)',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(156, 39, 176, 0.4)'
             }}>
-              Resources
+              <i className="pi pi-box" style={{ fontSize: '1.2rem', color: '#9c27b0' }} />
             </div>
-            <div style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: themeColors.textPrimary
-            }}>
-              {stats?.totalResources || 0}
+            <div>
+              <div style={{
+                fontSize: '0.7rem',
+                color: themeColors.textSecondary,
+                marginBottom: '0.2rem',
+                fontWeight: '500'
+              }}>
+                Resources
+              </div>
+              <div style={{
+                fontSize: '1.4rem',
+                fontWeight: '700',
+                color: '#9c27b0'
+              }}>
+                {stats?.totalResources || 0}
+              </div>
             </div>
           </div>
 
-          <div>
+          {/* Prompts */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{
-              fontSize: '0.75rem',
-              color: themeColors.textSecondary,
-              marginBottom: '0.25rem'
+              width: '42px',
+              height: '42px',
+              background: 'rgba(255, 152, 0, 0.2)',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(255, 152, 0, 0.4)'
             }}>
-              Prompts
+              <i className="pi pi-comment" style={{ fontSize: '1.2rem', color: '#ff9800' }} />
             </div>
-            <div style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: themeColors.textPrimary
-            }}>
-              {stats?.totalPrompts || 0}
+            <div>
+              <div style={{
+                fontSize: '0.7rem',
+                color: themeColors.textSecondary,
+                marginBottom: '0.2rem',
+                fontWeight: '500'
+              }}>
+                Prompts
+              </div>
+              <div style={{
+                fontSize: '1.4rem',
+                fontWeight: '700',
+                color: '#ff9800'
+              }}>
+                {stats?.totalPrompts || 0}
+              </div>
             </div>
           </div>
         </div>
@@ -276,255 +341,39 @@ const MCPManagerTab = ({ themeColors }) => {
           onClick={loadData}
           disabled={refreshing}
           style={{
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            color: themeColors.textPrimary,
+            background: themeColors.primaryColor,
+            border: 'none',
+            color: 'white',
             borderRadius: '8px',
-            fontSize: '0.85rem'
+            fontSize: '0.85rem',
+            padding: '0.65rem 1.25rem',
+            fontWeight: '500'
           }}
         />
       </div>
 
-      {/* Layout de 2 columnas */}
-      <div style={{
-        flex: 1,
-        display: 'grid',
-        gridTemplateColumns: '400px 1fr',
-        gap: '1.5rem',
-        minHeight: 0
-      }}>
-        {/* Columna izquierda: MCPs Instalados */}
-        <div style={{
+      {/* Catálogo a pantalla completa */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <h3 style={{
+          margin: 0,
+          fontSize: '1rem',
+          fontWeight: '600',
+          color: themeColors.textPrimary,
           display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          minHeight: 0
+          alignItems: 'center',
+          gap: '0.5rem',
+          flexShrink: 0
         }}>
-          <h3 style={{
-            margin: 0,
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: themeColors.textPrimary,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <i className="pi pi-server" />
-            MCPs Instalados ({servers.length})
-          </h3>
+          <i className="pi pi-th-large" />
+          Catálogo de MCPs
+        </h3>
 
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            padding: '0.25rem'
-          }}>
-            {servers.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '2rem',
-                color: themeColors.textSecondary,
-                fontSize: '0.9rem'
-              }}>
-                <i className="pi pi-inbox" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }} />
-                <p style={{ margin: 0 }}>No hay MCPs instalados</p>
-                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem' }}>
-                  Instala un MCP desde el catálogo →
-                </p>
-              </div>
-            ) : (
-              servers.map(server => (
-                <div
-                  key={server.id}
-                  style={{
-                    background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
-                    border: `1px solid ${server.running ? 'rgba(100, 200, 100, 0.4)' : themeColors.borderColor}`,
-                    borderRadius: '10px',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem'
-                  }}
-                >
-                  {/* Header con nombre y toggle */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{
-                        margin: 0,
-                        fontSize: '0.95rem',
-                        fontWeight: '600',
-                        color: themeColors.textPrimary,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {server.id}
-                      </h4>
-                      <p style={{
-                        margin: '0.15rem 0 0 0',
-                        fontSize: '0.75rem',
-                        color: themeColors.textSecondary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}>
-                        <span style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
-                          background: server.running ? '#66bb6a' : '#757575'
-                        }} />
-                        {server.state || 'stopped'}
-                      </p>
-                    </div>
-
-                    <InputSwitch
-                      checked={server.config.enabled}
-                      onChange={(e) => handleToggleServer(server.id, server.config.enabled)}
-                      style={{ transform: 'scale(0.85)' }}
-                    />
-                  </div>
-
-                  {/* Estadísticas */}
-                  {server.running && (
-                    <div style={{
-                      display: 'flex',
-                      gap: '1rem',
-                      fontSize: '0.75rem',
-                      color: themeColors.textSecondary
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <i className="pi pi-wrench" />
-                        <span>{server.toolsCount || 0} tools</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <i className="pi pi-box" />
-                        <span>{server.resourcesCount || 0} resources</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <i className="pi pi-comment" />
-                        <span>{server.promptsCount || 0} prompts</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Botones de acción */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {server.config.enabled && !server.running && (
-                      <Button
-                        label="Iniciar"
-                        icon="pi pi-play"
-                        onClick={() => handleStartServer(server.id)}
-                        style={{
-                          flex: 1,
-                          background: 'rgba(100, 200, 100, 0.2)',
-                          border: '1px solid rgba(100, 200, 100, 0.4)',
-                          color: themeColors.textPrimary,
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          padding: '0.4rem'
-                        }}
-                      />
-                    )}
-
-                    {server.running && (
-                      <Button
-                        label="Detener"
-                        icon="pi pi-stop"
-                        onClick={() => handleStopServer(server.id)}
-                        style={{
-                          flex: 1,
-                          background: 'rgba(255, 193, 7, 0.2)',
-                          border: '1px solid rgba(255, 193, 7, 0.4)',
-                          color: themeColors.textPrimary,
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          padding: '0.4rem'
-                        }}
-                      />
-                    )}
-
-                    <Button
-                      icon="pi pi-cog"
-                      onClick={() => {
-                        // TODO: Abrir diálogo de configuración
-                        showToast('info', 'Próximamente', 'Función de configuración en desarrollo');
-                      }}
-                      tooltip="Configurar"
-                      tooltipOptions={{ position: 'top' }}
-                      style={{
-                        background: 'rgba(33, 150, 243, 0.2)',
-                        border: '1px solid rgba(33, 150, 243, 0.4)',
-                        color: '#2196f3',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        padding: '0.4rem',
-                        minWidth: 'auto',
-                        aspectRatio: '1'
-                      }}
-                    />
-                    
-                    <Button
-                      icon="pi pi-trash"
-                      onClick={() => handleUninstall(server.id)}
-                      tooltip="Desinstalar"
-                      tooltipOptions={{ position: 'top' }}
-                      style={{
-                        background: 'rgba(244, 67, 54, 0.2)',
-                        border: '1px solid rgba(244, 67, 54, 0.4)',
-                        color: '#f44336',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        padding: '0.4rem',
-                        minWidth: 'auto',
-                        aspectRatio: '1'
-                      }}
-                    />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Columna derecha: Catálogo */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          minHeight: 0
-        }}>
-          <h3 style={{
-            margin: 0,
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: themeColors.textPrimary,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <i className="pi pi-th-large" />
-            Catálogo de MCPs
-          </h3>
-
-          <div style={{
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <MCPCatalog
-              installedServers={servers}
-              onInstall={handleInstall}
-              themeColors={themeColors}
-            />
-          </div>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <MCPCatalog
+            installedServers={servers}
+            onInstall={handleInstall}
+            themeColors={themeColors}
+          />
         </div>
       </div>
     </div>
