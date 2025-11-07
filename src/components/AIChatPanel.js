@@ -1762,28 +1762,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 // Parsear líneas y separarlas en directorios y archivos
                 const lines = text.split(/\r?\n/).filter(l => l.trim());
                 const items = lines.map(line => {
-                  // Regex más flexible: captura [FILE/DIR], nombre, y opcionalmente tamaño
-                  // Ejemplos:
-                  // [FILE] nombre.txt
-                  // [FILE] nombre.txt 123.45 KB
-                  // [DIR] carpeta
-                  const m = line.match(/^\[(FILE|DIR)\]\s+(.+?)(?:\s+([\d.]+\s+[KMGT]i?B))?\s*$/i);
-                  if (!m) return null;
-                  const type = m[1].toUpperCase();
-                  let name = m[2].trim();
-                  let size = m[3] ? m[3].trim() : null;
+                  // Regex: captura [FILE/DIR] y todo lo demás
+                  const typeMatch = line.match(/^\[(FILE|DIR)\]\s+(.+)$/i);
+                  if (!typeMatch) return null;
                   
-                  // Si el nombre contiene lo que parece un tamaño, extraerlo
-                  // Ej: "nombre.txt 123.45 KB" → name="nombre.txt", size="123.45 KB"
-                  if (!size) {
-                    const lastSpaceIdx = name.lastIndexOf(' ');
-                    if (lastSpaceIdx > 0) {
-                      const potential = name.substring(lastSpaceIdx + 1);
-                      if (/^[\d.]+\s*[KMGT]i?B$/.test(potential)) {
-                        size = potential;
-                        name = name.substring(0, lastSpaceIdx).trim();
-                      }
-                    }
+                  const type = typeMatch[1].toUpperCase();
+                  let content = typeMatch[2];
+                  
+                  // ✅ IMPROVED: Extraer el tamaño del FINAL del contenido
+                  // El tamaño está siempre al final: "123 KB", "0 B", "1.5 MB", etc.
+                  const sizeRegex = /\s+([\d.]+\s*[KMGT]?i?B)\s*$/i;
+                  const sizeMatch = content.match(sizeRegex);
+                  
+                  let name = content;
+                  let size = null;
+                  
+                  if (sizeMatch) {
+                    // Tamaño encontrado al final
+                    size = sizeMatch[1].trim();
+                    // Nombre es todo excepto el tamaño al final
+                    name = content.substring(0, sizeMatch.index).trim();
                   }
                   
                   return { type, name, size };
