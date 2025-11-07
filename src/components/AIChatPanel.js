@@ -637,12 +637,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // Flujo legacy: persistir un mensaje de sistema minimalista y reflejar en UI
           console.log(`   Guardando en conversationService: "${content}"`);
-          const toolMessageObj = conversationService.addMessage('system', content, {
+          
+          // ✅ IMPROVED: Guardar metadatos adicionales (lenguaje detectado, ruta)
+          const metadata = {
             toolName: toolData.toolName,
             toolArgs: toolData.args,
             isToolResult: true,
-            toolResultText: resultText
-          });
+            toolResultText: resultText,
+            detectedLanguage: toolData.detectedLanguage || '',
+            filePath: toolData.filePath || ''
+          };
+          
+          const toolMessageObj = conversationService.addMessage('system', content, metadata);
           
           console.log(`   ✅ Guardado en localStorage con ID: ${toolMessageObj.id}`);
           
@@ -654,7 +660,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               role: 'system',
               content,
               timestamp: toolMessageObj.timestamp,
-              metadata: { toolName: toolData.toolName, toolArgs: toolData.args, isToolResult: true, toolResultText: resultText },
+              metadata,
               subtle: true
             });
             return arr;
@@ -1672,12 +1678,25 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // ✅ CRITICAL FIX: Usar toolResultText de metadatos, NO content (que es solo un resumen)
       const text = (message.metadata?.toolResultText || message.content || '').trim();
       const isDirToken = /\[(FILE|DIR)\]/.test(text);
+      const isCodeBlock = text.includes('```') || message.metadata?.detectedLanguage;
       const isBlock = isDirToken || text.includes('\n');
       const isSuccess = /success|completad|hecho|ok/i.test(text) || (message.metadata?.error !== true);
       const border = isSuccess ? 'rgba(76, 175, 80, 0.35)' : 'rgba(244, 67, 54, 0.35)';
       const bg = isSuccess ? 'rgba(76, 175, 80, 0.10)' : 'rgba(244, 67, 54, 0.10)';
       const icon = isSuccess ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle';
       const iconColor = isSuccess ? '#4caf50' : '#f44336';
+      
+      // 🔧 DEBUG: Para list_directory_with_sizes
+      if (message.metadata?.toolName === 'list_directory_with_sizes') {
+        console.log(`📊 [renderMessage] list_directory_with_sizes:`, {
+          toolName: message.metadata?.toolName,
+          textLength: text.length,
+          primeras200: text.substring(0, 200),
+          tieneKB: text.includes('KB'),
+          tieneMB: text.includes('MB'),
+          tieneBytes: text.includes('bytes')
+        });
+      }
       
       // 🔧 DEBUG: Detectar si falta metadata
       if (!message.metadata?.toolResultText && text.includes('Successfully')) {
@@ -1688,6 +1707,24 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           messageId: message.id
         });
       }
+      
+      // ✅ IMPROVED: Formatear contenido con backticks si no los tiene
+      let displayText = text;
+      
+      // Si es read_text_file con lenguaje detectado, envolver con lenguaje
+      if (message.metadata?.toolName === 'read_text_file' && message.metadata?.detectedLanguage && !text.includes('```')) {
+        const lang = message.metadata.detectedLanguage;
+        displayText = `\`\`\`${lang}\n${text}\n\`\`\``;
+      }
+      // Si es list_directory y NO tiene backticks, envolver
+      else if ((message.metadata?.toolName === 'list_directory' || message.metadata?.toolName === 'list_directory_with_sizes' || message.metadata?.toolName === 'directory_tree') && !text.includes('```')) {
+        displayText = `\`\`\`\n${text}\n\`\`\``;
+      }
+      // Si tiene [FILE] o [DIR] pero no backticks, envolver
+      else if ((text.includes('[FILE]') || text.includes('[DIR]')) && !text.includes('```')) {
+        displayText = `\`\`\`\n${text}\n\`\`\``;
+      }
+      
       return (
         <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
           <div className={`ai-bubble assistant subtle`} style={{
@@ -1705,7 +1742,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               <i className={icon} style={{ color: iconColor, fontSize: '1rem' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <strong style={{ color: '#fff' }}>{message.metadata?.toolName || (isSuccess ? 'Acción completada' : 'Acción ejecutada')}</strong>
-                {message.metadata?.toolArgs?.path && (
+                {message.metadata?.filePath && (
+                  <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                    <i className="pi pi-file" style={{ fontSize: '0.75rem', marginRight: '4px' }} />
+                    <code style={{ fontSize: '0.75rem' }}>{message.metadata.filePath}</code>
+                  </span>
+                )}
+                {message.metadata?.toolArgs?.path && !message.metadata?.filePath && (
                   <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
                     <i className="pi pi-folder" style={{ fontSize: '0.75rem', marginRight: '4px' }} />
                     <code style={{ fontSize: '0.75rem' }}>{message.metadata.toolArgs.path}</code>
@@ -1714,31 +1757,78 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               </div>
             </div>
             {isDirToken ? (
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.35rem' }}>
-                {text.split(/\r?\n/).map((line, i) => {
-                  const m = line.match(/^\[(FILE|DIR)\]\s*(.*)$/i);
+              // ✅ IMPROVED: Listado de directorios formateado bonito (con o sin tamaños)
+              (() => {
+                // Parsear líneas y separarlas en directorios y archivos
+                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                const items = lines.map(line => {
+                  // Regex más flexible: captura [FILE/DIR], nombre, y opcionalmente tamaño
+                  // Ejemplos:
+                  // [FILE] nombre.txt
+                  // [FILE] nombre.txt 123.45 KB
+                  // [DIR] carpeta
+                  const m = line.match(/^\[(FILE|DIR)\]\s+(.+?)(?:\s+([\d.]+\s+[KMGT]i?B))?\s*$/i);
                   if (!m) return null;
                   const type = m[1].toUpperCase();
-                  const name = m[2];
-                  const rowIcon = type === 'DIR' ? 'pi pi-folder' : 'pi pi-file';
-                  const rowColor = type === 'DIR' ? '#9bd3ff' : '#e0e0e0';
-                  return (
-                    <li key={`row-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <i className={rowIcon} style={{ color: rowColor, fontSize: '0.9rem' }} />
-                      <span style={{ color: '#fff' }}>{name}</span>
-                    </li>
-                  );
-                })}
-              </ul>
+                  let name = m[2].trim();
+                  let size = m[3] ? m[3].trim() : null;
+                  
+                  // Si el nombre contiene lo que parece un tamaño, extraerlo
+                  // Ej: "nombre.txt 123.45 KB" → name="nombre.txt", size="123.45 KB"
+                  if (!size) {
+                    const lastSpaceIdx = name.lastIndexOf(' ');
+                    if (lastSpaceIdx > 0) {
+                      const potential = name.substring(lastSpaceIdx + 1);
+                      if (/^[\d.]+\s*[KMGT]i?B$/.test(potential)) {
+                        size = potential;
+                        name = name.substring(0, lastSpaceIdx).trim();
+                      }
+                    }
+                  }
+                  
+                  return { type, name, size };
+                }).filter(Boolean);
+
+                // Separar directorios de archivos
+                const dirs = items.filter(i => i.type === 'DIR').sort((a, b) => a.name.localeCompare(b.name));
+                const files = items.filter(i => i.type === 'FILE').sort((a, b) => a.name.localeCompare(b.name));
+
+                return (
+                  <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                    {dirs.length > 0 && (
+                      <div style={{ marginBottom: '0.5rem' }}>
+                        {dirs.map((item, i) => (
+                          <div key={`dir-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9bd3ff' }}>
+                            <span>📁</span>
+                            <span>{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {files.length > 0 && (
+                      <div>
+                        {files.map((item, i) => (
+                          <div key={`file-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e0e0e0' }}>
+                            <span>📄</span>
+                            <span style={{ flex: 1 }}>{item.name}</span>
+                            {item.size && <span style={{ marginLeft: 'auto', textAlign: 'right', color: '#a0a0a0', fontSize: '0.8rem' }}>{item.size}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
             ) : (
-              // ✅ Renderizar toolResultText con markdown para procesar **negrita**, etc.
+              // ✅ IMPROVED: Renderizar con soporte para bloques de código (sin truncar)
               <div 
                 className="ai-md"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
                 style={{ 
                   opacity: isBlock ? 0.95 : 0.9,
-                  maxHeight: isBlock ? '220px' : 'auto',
-                  overflow: isBlock ? 'auto' : 'visible'
+                  maxHeight: isCodeBlock ? 'none' : (isBlock ? '300px' : 'auto'),
+                  overflow: isCodeBlock ? 'visible' : (isBlock ? 'auto' : 'visible'),
+                  width: '100%'
                 }}
               />
             )}

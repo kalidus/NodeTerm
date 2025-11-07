@@ -111,17 +111,36 @@ class ToolOrchestrator {
     }
   }
 
-  _formatToolResult(result) {
+  _formatToolResult(result, toolName = '', args = {}) {
     if (!result) return '';
     try {
-      if (typeof result === 'object' && Array.isArray(result.content)) {
-        const textItems = result.content
-          .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
-          .map(it => it.text.trim());
-        return textItems.join('\n');
+      const text = (() => {
+        if (typeof result === 'object' && Array.isArray(result.content)) {
+          const textItems = result.content
+            .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
+            .map(it => it.text.trim());
+          return textItems.join('\n');
+        }
+        if (typeof result === 'string') return result;
+        return JSON.stringify(result, null, 2);
+      })();
+      
+      // 🔍 DEBUG: Ver qué devuelve list_directory_with_sizes
+      if (toolName === 'list_directory_with_sizes') {
+        console.log(`📊 [ToolOrchestrator] list_directory_with_sizes resultado:`, {
+          toolName,
+          textLength: text.length,
+          primeras200: text.substring(0, 200),
+          tieneKB: text.includes('KB'),
+          tieneMB: text.includes('MB'),
+          tieneBytes: text.includes('bytes'),
+          tieneKib: text.includes('KiB')
+        });
       }
-      if (typeof result === 'string') return result;
-      return JSON.stringify(result, null, 2);
+      
+      // ✅ NO envolver en backticks aquí - eso confunde al modelo
+      // AIChatPanel.js se encargará del rendering con backticks
+      return text;
     } catch { return String(result); }
   }
 
@@ -180,6 +199,19 @@ class ToolOrchestrator {
         seenInTurn.add(pathKey);
       }
 
+      // ✅ IMPROVED: Validar y completar argumentos antes de ejecutar
+      if (!args || typeof args !== 'object' || Array.isArray(args)) {
+        args = {};
+      }
+      
+      // Inyectar path por defecto si es necesario
+      const toolNameBase = toolName.includes('__') ? toolName.split('__')[1] : toolName;
+      if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(toolNameBase) && !args.path) {
+        // Usar la ruta por defecto del filesystem
+        args.path = 'C:\\Users\\kalid\\Downloads\\NodeTerm Drive'; // TODO: obtener dinámicamente
+        console.log(`✅ [ToolOrchestrator] Path inyectado para ${toolNameBase}: ${args.path}`);
+      }
+      
       const toolCallId = this._makeToolCallId(conversationId);
       conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { toolCallId, toolName, toolArgs: args, isToolCall: true, turnId });
       // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
@@ -197,9 +229,36 @@ class ToolOrchestrator {
         return errorFollowUp;
       }
 
-      const cleanText = this._formatToolResult(result);
+      const cleanText = this._formatToolResult(result, toolName, args);
+      
+      // ✅ IMPROVED: Detectar lenguaje para archivos de texto
+      let detectedLanguage = '';
+      if (toolName === 'read_text_file') {
+        const filePath = args?.path || '';
+        const ext = filePath.split('.').pop()?.toLowerCase() || '';
+        const langMap = {
+          'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+          'py': 'python', 'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c', 'hpp': 'cpp',
+          'cs': 'csharp', 'php': 'php', 'rb': 'ruby', 'go': 'go', 'rs': 'rust', 'swift': 'swift',
+          'kt': 'kotlin', 'scala': 'scala', 'sh': 'bash', 'bash': 'bash', 'zsh': 'bash', 'fish': 'bash',
+          'ps1': 'powershell', 'json': 'json', 'yaml': 'yaml', 'yml': 'yaml', 'xml': 'xml',
+          'html': 'html', 'htm': 'html', 'css': 'css', 'scss': 'scss', 'sass': 'sass', 'less': 'less',
+          'sql': 'sql', 'md': 'markdown', 'mdx': 'markdown', 'txt': 'text', 'log': 'text'
+        };
+        detectedLanguage = langMap[ext] || '';
+      }
 
-      conversationService.addMessage('tool', cleanText || `✔️ ${toolName} completado`, { toolCallId, toolName, toolArgs: args, isToolResult: true, turnId });
+      const metadata = { 
+        toolCallId, 
+        toolName, 
+        toolArgs: args, 
+        isToolResult: true, 
+        turnId,
+        detectedLanguage,
+        filePath: args?.path || ''
+      };
+      
+      conversationService.addMessage('tool', cleanText || `✔️ ${toolName} completado`, metadata);
       // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
 
       // Registrar hecho breve
