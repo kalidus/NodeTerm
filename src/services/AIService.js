@@ -2709,8 +2709,6 @@ class AIService {
     const jsonPattern = /\{[\s\S]*?"(?:tool|use_tool)"[\s\S]*\}/g;
     const matches = response.match(jsonPattern);
     
-    console.log(`   Encontrados ${matches?.length || 0} candidatos JSON`);
-    
     if (!matches) {
       console.log(`⚠️ [MCP] No se encontró JSON con 'tool' o 'use_tool'`);
       return null;
@@ -3967,7 +3965,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         mcpContext = await this.injectMCPContext();
         
         if (mcpContext.hasTools) {
-          console.log(`🔌 [MCP] Inyectando ${mcpContext.tools.length} herramientas en system prompt (universal)`);
 
           // Construir hints por servidor (filesystem: directorios permitidos)
           const serverHints = {};
@@ -4047,7 +4044,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           adjustedOptions.maxTokens = Math.max(minTokensForTools, Math.min(baseTokens, maxTokensForTools));
         }
         
-        console.log(`🎯 [AIService] Ajuste de tokens: context=${contextTokens} tokens, maxTokens=${adjustedOptions.maxTokens}`);
       }
       
       // Usar streaming si está habilitado
@@ -4058,7 +4054,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
       }
       
-      console.log(`📥 [AIService] Respuesta recibida (${response?.length || 0} chars), hasTools=${mcpContext.hasTools}, context=${contextTokens} tokens, maxTokens=${adjustedOptions.maxTokens}`);
       
       // 🔧 RETRY AUTOMÁTICO: Si la respuesta está vacía, reintentar con prompt simplificado
       if ((!response || response.trim().length === 0) && mcpContext.hasTools) {
@@ -4201,7 +4196,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     };
     
     // Log compacto
-    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -4260,7 +4254,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     };
     
     // Log compacto
-    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -4334,7 +4327,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     };
     
     // Log compacto
-    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -4428,7 +4420,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     };
     
     // Log compacto
-    console.log(`🚀 Ollama: ${requestBody.model}, ${requestBody.messages.length} msgs`);
     
     // Callback de estado: generando
     if (callbacks.onStatus) {

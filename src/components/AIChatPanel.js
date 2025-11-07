@@ -94,14 +94,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const conv = conversationService.getCurrentConversation();
       if (!conv) return;
       
-      // Logging detallado para debugging
       const detail = event?.detail || {};
-      console.log(`🔔 [AIChatPanel] conversation-updated recibido:`, {
-        conversationId: detail.conversationId,
-        messageId: detail.messageId,
-        role: detail.role,
-        totalMessages: conv.messages?.length || 0
-      });
       
       setMessages(prev => {
         // Obtener mensajes persistidos desde localStorage
@@ -132,17 +125,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         
         // Si NO hay cambios (mismo número de mensajes persistidos y no hay streaming), no hacer nada
         if (!hasNewPersistedMessages && streaming.length === 0 && prev.length === persisted.length) {
-          console.log(`   ↩️ Sin cambios, manteniendo estado actual`);
           return prev;
         }
         
         // Merge: Combinar persistidos + streaming
         const merged = [...persisted, ...streaming];
-        
-        console.log(`   ✅ Sincronizando: ${persisted.length} persistidos + ${streaming.length} streaming = ${merged.length} total`);
-        if (hasNewPersistedMessages) {
-          console.log(`   🆕 Nuevos mensajes: ${newPersistedIds.length}`);
-        }
         
         return merged;
       });
@@ -602,7 +589,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             try { resultText = JSON.stringify(res, null, 2); } catch { resultText = String(res ?? ''); }
           }
 
-          console.log(`   resultText length: ${resultText.length} chars`);
 
           // Guardar último resultado para posibles fallbacks del mensaje final
           lastToolResultRef.current = { 
@@ -650,8 +636,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           const toolMessageObj = conversationService.addMessage('system', content, metadata);
           
-          console.log(`   ✅ Guardado en localStorage con ID: ${toolMessageObj.id}`);
-          
           setMessages(prev => {
             const idx = prev.findIndex(m => m.id === assistantMessageId);
             const arr = [...prev];
@@ -667,11 +651,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           });
         },
         onComplete: (data) => {
-          console.log('📤 [AIChatPanel.onComplete] Respuesta recibida:', {
-            hasResponse: !!data.response,
-            responseLength: data.response ? data.response.length : 0,
-            responsePreview: data.response ? data.response.substring(0, 100) : '(vacío)'
-          });
           
           const files = aiService.detectFilesInResponse(data.response, userMessage);
           
@@ -800,8 +779,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 files: files.length > 0 ? files : undefined
               });
               
-              console.log(`   ✅ Guardado en localStorage con ID: ${assistantMessageObj.id}`);
-              console.log(`   ⏰ El evento 'conversation-updated' sincronizará la UI automáticamente...`);
               
               // Calcular tokens reales de la respuesta
               const responseTokens = Math.ceil(safeResponse.length / 4);
