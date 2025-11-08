@@ -311,7 +311,14 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
 
   const handleInstall = (mcp) => {
     if (mcp.requiresConfig) {
-      setSelectedMCP(mcp); setConfigValues({}); setShowConfigDialog(true);
+      setSelectedMCP(mcp);
+      // Usar valores recomendados si existen
+      if (mcp.recommendedConfig) {
+        setConfigValues(mcp.recommendedConfig);
+      } else {
+        setConfigValues({});
+      }
+      setShowConfigDialog(true);
       return;
     }
     const cmd = mcp.runCommand || 'npx';
