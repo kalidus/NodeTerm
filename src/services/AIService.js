@@ -1961,6 +1961,21 @@ class AIService {
   }
 
   /**
+   * FILTRAR tools por contexto/relevancia
+   * Limita a solo las herramientas esenciales
+   */
+  filterToolsByContext(tools, message = '') {
+    const essentialToolNames = ['read_file', 'list_directory', 'write_file', 'goto_url', 'screenshot', 'run_command'];
+    
+    const filtered = tools.filter(t => {
+      return essentialToolNames.some(ename => t.name.includes(ename));
+    });
+    
+    console.log(`🔍 [Tools Filter] ${tools.length} tools → ${filtered.length} tools esenciales`);
+    return filtered;
+  }
+
+  /**
    * Inyectar contexto MCP (tools, resources, prompts) en los mensajes
    */
   async injectMCPContext() {
@@ -1971,9 +1986,12 @@ class AIService {
       }
 
       // Obtener tools disponibles
-      const tools = mcpClient.getAvailableTools();
+      let tools = mcpClient.getAvailableTools();
       const resources = mcpClient.getAvailableResources();
       const prompts = mcpClient.getAvailablePrompts();
+
+      // 🔍 FILTRAR TOOLS (solo esenciales)
+      tools = this.filterToolsByContext(tools);
 
       console.log(`🔌 [MCP] ${tools.length} tools expuestas, ${resources.length} resources, ${prompts.length} prompts disponibles`);
 
