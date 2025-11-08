@@ -717,6 +717,7 @@ class MCPService {
         autostart: config.autostart !== undefined ? config.autostart : false,
         autoRestart: false,
         mode: config.mode || 'scraping',
+        renderMode: config.renderMode || 'static',
         options: config.options || {},
         allowedDomains: config.allowedDomains || []
       };
@@ -778,6 +779,7 @@ class MCPService {
         ...existing,
         ...newConfig,
         mode: newConfig.mode || existing.mode || 'scraping',
+        renderMode: newConfig.renderMode || existing.renderMode || 'static',
         options: { ...(existing.options || {}), ...(newConfig.options || {}) },
         allowedDomains: Array.isArray(newConfig.allowedDomains) ? newConfig.allowedDomains : (existing.allowedDomains || [])
       };

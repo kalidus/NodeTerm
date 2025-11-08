@@ -318,6 +318,8 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
         timeoutMs: '5000',
         maxContentLength: '200000',
         allowedDomains: '',
+        userAgent: 'NodeTerm-WebSearch/1.0',
+        renderMode: 'static',
         apiEndpoint: '',
         apiKey: '',
         apiProvider: ''
@@ -348,6 +350,7 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
 
     if (selectedMCP.type === 'native') {
       const mode = (configValues.mode || 'scraping').toLowerCase() === 'api' ? 'api' : 'scraping';
+      const renderMode = (configValues.renderMode || 'static').toLowerCase() === 'rendered' ? 'rendered' : 'static';
       const maxResults = Number(configValues.maxResults) || 5;
       const timeoutMs = Number(configValues.timeoutMs) || 5000;
       const maxContentLength = Number(configValues.maxContentLength) || 200000;
@@ -372,6 +375,7 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
         type: 'native',
         enabled: true,
         autostart: false,
+        renderMode,
         mode,
         allowedDomains,
         options

@@ -343,6 +343,12 @@
           "description": "User-Agent personalizado para las peticiones.",
           "example": "NodeTerm-WebSearch/1.0"
         },
+        "renderMode": {
+          "type": "string",
+          "required": false,
+          "description": "Modo de renderizado: static (por defecto) o rendered (usa BrowserWindow).",
+          "example": "static"
+        },
         "apiEndpoint": {
           "type": "string",
           "required": false,
@@ -366,7 +372,8 @@
         "timeoutMs": "5000",
         "maxContentLength": "200000",
         "allowedDomains": "",
-        "userAgent": "NodeTerm-WebSearch/1.0"
+        "userAgent": "NodeTerm-WebSearch/1.0",
+        "renderMode": "static"
       },
       "tools": [
         "web_search",

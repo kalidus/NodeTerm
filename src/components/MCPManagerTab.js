@@ -103,6 +103,7 @@ const MCPManagerTab = ({ themeColors }) => {
       const nativeOptions = server.config?.options || {};
       const api = nativeOptions.api || {};
       configValues.mode = server.config?.mode || 'scraping';
+      configValues.renderMode = server.config?.renderMode || 'static';
       configValues.maxResults = nativeOptions.maxResults !== undefined ? String(nativeOptions.maxResults) : '';
       configValues.timeoutMs = nativeOptions.timeoutMs !== undefined ? String(nativeOptions.timeoutMs) : '';
       configValues.maxContentLength = nativeOptions.maxContentLength !== undefined ? String(nativeOptions.maxContentLength) : '';
@@ -141,7 +142,9 @@ const MCPManagerTab = ({ themeColors }) => {
     let payload;
 
     if (isNative) {
+      const configValues = editingConfig.configValues || {};
       const mode = (configValues.mode || 'scraping').toLowerCase() === 'api' ? 'api' : 'scraping';
+      const renderMode = (configValues.renderMode || 'static').toLowerCase() === 'rendered' ? 'rendered' : 'static';
       const parseNumber = (value, fallback) => {
         const num = Number(value);
         return Number.isFinite(num) && num > 0 ? num : fallback;
@@ -156,6 +159,7 @@ const MCPManagerTab = ({ themeColors }) => {
         type: 'native',
         enabled: !!editingConfig.enabled,
         autostart: !!editingConfig.autostart,
+        renderMode,
         mode,
         allowedDomains,
         options: {
