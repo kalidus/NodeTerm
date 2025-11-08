@@ -253,7 +253,28 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setAttachedFiles([]);
     
     // Inicializar MCP client
-    mcpClient.initialize().catch(error => {
+    mcpClient.initialize().then(() => {
+      // Sincronizar MCPs instalados con localStorage
+      // Si un MCP está configured como enabled en mcp-config.json, agregarlo a selectedMcpServers
+      const allServers = mcpClient.getAllServers();
+      const enabledServerIds = allServers
+        .filter(s => s.config?.enabled)
+        .map(s => s.id);
+      
+      // Merge: mantener lo que ya está en localStorage + agregar nuevos enabled
+      setSelectedMcpServers(prev => {
+        const merged = new Set([...prev, ...enabledServerIds]);
+        const merged_array = Array.from(merged);
+        
+        // Solo actualizar si hay cambios
+        if (JSON.stringify(merged_array) !== JSON.stringify(prev)) {
+          console.log('🔄 Sincronizando MCPs instalados con localStorage:', merged_array);
+          localStorage.setItem('selectedMcpServers', JSON.stringify(merged_array));
+          return merged_array;
+        }
+        return prev;
+      });
+    }).catch(error => {
       console.error('Error inicializando MCP client:', error);
     });
 
@@ -293,11 +314,36 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     };
   }, []);
 
-  // Escuchar cambios en los servidores MCP activos
+  // Escuchar evento para abrir AIConfigDialog en pestaña MCP
+  useEffect(() => {
+    const handleOpenAIConfig = (event) => {
+      console.log('🔔 [AIChatPanel] Evento open-ai-config recibido:', event.detail);
+      
+      if (event.detail?.tab === 'mcp-manager') {
+        // Guardar el servidor a seleccionar en window para que MCPManagerTab lo lea cuando se carguen los datos
+        if (event.detail?.selectServer) {
+          window.__mcpConfigSelectServer = event.detail.selectServer;
+          console.log('💾 [AIChatPanel] Guardado servidor a seleccionar:', window.__mcpConfigSelectServer);
+        }
+        
+        // Abrir el diálogo en la pestaña MCP
+        console.log('📖 [AIChatPanel] Abriendo AIConfigDialog con pestaña MCP Tools');
+        setShowConfigDialog(true);
+      }
+    };
+
+    window.addEventListener('open-ai-config', handleOpenAIConfig);
+    return () => {
+      window.removeEventListener('open-ai-config', handleOpenAIConfig);
+    };
+  }, []);
+
+  // Escuchar cambios en los servidores MCP (todos, no solo activos)
   useEffect(() => {
     const updateMcpServers = () => {
-      const servers = mcpClient.getActiveServers();
-      setActiveMcpServers(servers || []);
+      // Obtener TODOS los MCPs instalados, no solo los activos
+      const allServers = mcpClient.getAllServers();
+      setActiveMcpServers(allServers || []);
     };
     
     updateMcpServers();
@@ -3647,26 +3693,66 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}
             onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1.2rem', fontWeight: '600' }}>
-                  🔧 Servidores MCP Activos
-                </h2>
-                <button
-                  onClick={() => setShowMcpDialog(false)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: themeColors.textSecondary,
-                    cursor: 'pointer',
-                    fontSize: '1.5rem',
-                    padding: 0
-                  }}>
-                  ✕
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div>
+                  <h2 style={{ margin: '0 0 0.25rem 0', color: themeColors.textPrimary, fontSize: '1.2rem', fontWeight: '600' }}>
+                    🔧 Servidores MCP
+                  </h2>
+                  <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.8rem' }}>
+                    {activeMcpServers.length} servidor{activeMcpServers.length !== 1 ? 's' : ''} instalado{activeMcpServers.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      setShowMcpDialog(false);
+                      // Disparar evento para abrir AIConfigDialog (donde está MCPManagerTab)
+                      window.dispatchEvent(new CustomEvent('open-ai-config', { 
+                        detail: { tab: 'mcp-manager' } 
+                      }));
+                    }}
+                    title="Configurar y instalar MCPs"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${themeColors.borderColor}`,
+                      color: themeColors.textPrimary,
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      e.currentTarget.style.borderColor = themeColors.primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.borderColor = themeColors.borderColor;
+                    }}
+                  >
+                    ⚙️
+                  </button>
+                  <button
+                    onClick={() => setShowMcpDialog(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: themeColors.textSecondary,
+                      cursor: 'pointer',
+                      fontSize: '1.5rem',
+                      padding: 0
+                    }}>
+                    ✕
+                  </button>
+                </div>
               </div>
 
               <p style={{ margin: '0 0 1rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
-                Activa/desactiva MCPs y marca los que usarás por defecto
+                Selecciona qué MCPs usar por defecto. Gestiona instalaciones en ⚙️
               </p>
 
               {activeMcpServers && activeMcpServers.length > 0 ? (
@@ -3674,24 +3760,30 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   {/* Lista de MCPs con botones de acción */}
                   {activeMcpServers.map((server, idx) => {
                     const isSelected = selectedMcpServers.includes(server.id);
-                    const isDisabled = disabledMcpServers.includes(server.id);
+                    const isConfigured = server.config?.enabled; // Estado en mcp-config.json
+                    const isRunning = server.running && server.state === 'ready'; // Proceso activo
+                    
                     return (
                       <div 
                         key={idx}
                         style={{
                           padding: '0.8rem',
-                          background: isDisabled 
-                            ? 'rgba(200, 200, 200, 0.08)'
-                            : `linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(102, 187, 106, 0.03) 100%)`,
-                          border: isDisabled
-                            ? '1px solid rgba(200, 200, 200, 0.2)'
-                            : '1px solid rgba(102, 187, 106, 0.2)',
+                          background: !isConfigured 
+                            ? 'rgba(200, 100, 100, 0.08)'
+                            : isRunning
+                              ? `linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(102, 187, 106, 0.03) 100%)`
+                              : 'rgba(255, 193, 7, 0.08)',
+                          border: !isConfigured
+                            ? '1px solid rgba(200, 100, 100, 0.2)'
+                            : isRunning
+                              ? '1px solid rgba(102, 187, 106, 0.2)'
+                              : '1px solid rgba(255, 193, 7, 0.2)',
                           borderRadius: '8px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           gap: '0.6rem',
-                          opacity: isDisabled ? 0.6 : 1,
+                          opacity: !isConfigured ? 0.6 : 1,
                           transition: 'all 0.2s ease'
                         }}
                       >
@@ -3705,30 +3797,57 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                             width: '32px',
                             height: '32px',
                             borderRadius: '50%',
-                            background: isDisabled ? 'rgba(200, 200, 200, 0.15)' : 'rgba(102, 187, 106, 0.15)',
+                            background: !isConfigured 
+                              ? 'rgba(200, 100, 100, 0.15)' 
+                              : isRunning
+                                ? 'rgba(102, 187, 106, 0.15)'
+                                : 'rgba(255, 193, 7, 0.15)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: isDisabled ? '#999999' : '#66bb6a',
-                            flexShrink: 0
+                            color: !isConfigured 
+                              ? '#c06464'
+                              : isRunning
+                                ? '#66bb6a'
+                                : '#ffc107',
+                            flexShrink: 0,
+                            position: 'relative'
                           }}>
                             <i className="pi pi-wrench" style={{ fontSize: '1rem' }} />
+                            {isRunning && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '-2px',
+                                right: '-2px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#66bb6a',
+                                boxShadow: '0 0 6px #66bb6a'
+                              }} />
+                            )}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
-                              color: isDisabled ? themeColors.textSecondary : themeColors.textPrimary,
+                              color: !isConfigured ? themeColors.textSecondary : themeColors.textPrimary,
                               fontWeight: '600',
                               fontSize: '0.95rem',
-                              textDecoration: isDisabled ? 'line-through' : 'none'
+                              textDecoration: !isConfigured ? 'line-through' : 'none'
                             }}>
                               {server.name || server.id}
                             </div>
                             <div style={{
                               color: themeColors.textSecondary,
-                              fontSize: '0.8rem',
-                              marginTop: '0.2rem'
+                              fontSize: '0.75rem',
+                              marginTop: '0.2rem',
+                              display: 'flex',
+                              gap: '0.5rem',
+                              alignItems: 'center'
                             }}>
-                              {server.id}
+                              <span>{server.id}</span>
+                              {!isConfigured && <span style={{ color: '#c06464', fontWeight: '600' }}>● Deshabilitado</span>}
+                              {isConfigured && !isRunning && <span style={{ color: '#ffc107', fontWeight: '600' }}>● Detenido</span>}
+                              {isRunning && <span style={{ color: '#66bb6a', fontWeight: '600' }}>● En ejecución</span>}
                             </div>
                           </div>
                         </div>
@@ -3736,13 +3855,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.4rem',
-                          flexShrink: 0
+                          gap: '0.3rem',
+                          flexShrink: 0,
+                          flexWrap: 'wrap',
+                          justifyContent: 'flex-end'
                         }}>
                           {/* Botón Por Defecto */}
                           <button
                             onClick={() => handleToggleMcpSelection(server.id)}
-                            disabled={isDisabled}
+                            disabled={!isConfigured}
                             title={isSelected ? 'Remover de por defecto' : 'Usar por defecto'}
                             style={{
                               padding: '0.4rem 0.8rem',
@@ -3750,48 +3871,52 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                               border: isSelected ? '1px solid rgba(255, 193, 7, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
                               borderRadius: '6px',
                               color: isSelected ? '#ffc107' : themeColors.textSecondary,
-                              cursor: isDisabled ? 'not-allowed' : 'pointer',
+                              cursor: !isConfigured ? 'not-allowed' : 'pointer',
                               transition: 'all 0.2s ease',
-                              fontSize: '0.8rem',
+                              fontSize: '0.75rem',
                               fontWeight: '600',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '0.3rem',
                               whiteSpace: 'nowrap',
-                              opacity: isDisabled ? 0.5 : 1
+                              opacity: !isConfigured ? 0.5 : 1
                             }}
                             onMouseEnter={(e) => {
-                              if (!isDisabled) {
+                              if (isConfigured) {
                                 e.currentTarget.style.background = isSelected ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 255, 255, 0.1)';
                               }
                             }}
                             onMouseLeave={(e) => {
-                              if (!isDisabled) {
+                              if (isConfigured) {
                                 e.currentTarget.style.background = isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.05)';
                               }
                             }}
                           >
-                            <i className={`pi ${isSelected ? 'pi-star-fill' : 'pi-star'}`} style={{ fontSize: '0.75rem' }} />
-                            {isSelected ? 'Por defecto' : 'Por defecto'}
+                            <i className={`pi ${isSelected ? 'pi-star-fill' : 'pi-star'}`} style={{ fontSize: '0.65rem' }} />
                           </button>
 
-                          {/* Botón Activar/Desactivar */}
+                          {/* Botón Enable/Disable (abre settings) */}
                           <button
-                            onClick={() => handleToggleMcpActive(server.id)}
-                            title={isDisabled ? 'Activar MCP' : 'Desactivar MCP'}
+                            onClick={() => {
+                              setShowMcpDialog(false);
+                              window.dispatchEvent(new CustomEvent('open-ai-config', { 
+                                detail: { tab: 'mcp-manager', selectServer: server.id } 
+                              }));
+                            }}
+                            title={isConfigured ? 'Configurar' : 'Habilitar'}
                             style={{
                               padding: '0.4rem 0.8rem',
-                              background: isDisabled 
+                              background: !isConfigured
                                 ? 'rgba(244, 67, 54, 0.2)'
                                 : 'rgba(76, 175, 80, 0.2)',
-                              border: isDisabled
+                              border: !isConfigured
                                 ? '1px solid rgba(244, 67, 54, 0.4)'
                                 : '1px solid rgba(76, 175, 80, 0.4)',
                               borderRadius: '6px',
-                              color: isDisabled ? '#f44336' : '#66bb6a',
+                              color: !isConfigured ? '#f44336' : '#66bb6a',
                               cursor: 'pointer',
                               transition: 'all 0.2s ease',
-                              fontSize: '0.8rem',
+                              fontSize: '0.75rem',
                               fontWeight: '600',
                               display: 'flex',
                               alignItems: 'center',
@@ -3799,18 +3924,25 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                               whiteSpace: 'nowrap'
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = isDisabled
+                              e.currentTarget.style.background = !isConfigured
                                 ? 'rgba(244, 67, 54, 0.3)'
                                 : 'rgba(76, 175, 80, 0.3)';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.background = isDisabled
+                              e.currentTarget.style.background = !isConfigured
                                 ? 'rgba(244, 67, 54, 0.2)'
                                 : 'rgba(76, 175, 80, 0.2)';
                             }}
                           >
-                            <i className={`pi ${isDisabled ? 'pi-times' : 'pi-check'}`} style={{ fontSize: '0.75rem' }} />
-                            {isDisabled ? 'Inactivo' : 'Activo'}
+                            {!isConfigured ? (
+                              <>
+                                <i className="pi pi-times" style={{ fontSize: '0.65rem' }} />
+                              </>
+                            ) : (
+                              <>
+                                <i className="pi pi-cog" style={{ fontSize: '0.65rem' }} />
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
