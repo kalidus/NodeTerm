@@ -114,22 +114,31 @@ class ToolOrchestrator {
   _formatToolResult(result, toolName = '', args = {}) {
     if (!result) return '';
     try {
-      const text = (() => {
-        if (typeof result === 'object' && Array.isArray(result.content)) {
-          const textItems = result.content
-            .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
-            .map(it => it.text.trim());
-          return textItems.join('\n');
-        }
-        if (typeof result === 'string') return result;
-        return JSON.stringify(result, null, 2);
-      })();
+      let text = '';
       
+      // Extraer el texto del resultado
+      if (typeof result === 'object' && Array.isArray(result.content)) {
+        const textItems = result.content
+          .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
+          .map(it => it.text.trim());
+        text = textItems.join('\n');
+      } else if (typeof result === 'string') {
+        text = result;
+      } else {
+        text = JSON.stringify(result, null, 2);
+      }
       
-      // ✅ NO envolver en backticks aquí - eso confunde al modelo
-      // AIChatPanel.js se encargará del rendering con backticks
+      // 🔧 IMPORTANTE: Si el texto parece ser JSON, envolverlo en backticks SIEMPRE
+      const trimmed = text.trim();
+      if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'))) {
+        return `\`\`\`json\n${trimmed}\n\`\`\``;
+      }
+      
       return text;
-    } catch { return String(result); }
+    } catch (e) { 
+      console.error(`❌ [ToolOrchestrator._formatToolResult] Error:`, e);
+      return String(result); 
+    }
   }
 
   _dispatchConversationUpdated() {
