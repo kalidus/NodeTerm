@@ -165,6 +165,12 @@ const AIConfigDialog = ({ visible, onHide }) => {
       mcpClient.initialize().catch(error => {
         console.error('Error inicializando MCP client:', error);
       });
+      
+      // Si hay un servidor pendiente de seleccionar, cambiar a la pestaña MCP
+      if (window.__mcpConfigSelectServer) {
+        console.log('🎯 [AIConfigDialog] Servidor pendiente detectado, cambiando a pestaña MCP Tools');
+        setActiveIndex(4); // Índice 4 es la pestaña "🔌 MCP Tools"
+      }
     }
   }, [visible]);
 

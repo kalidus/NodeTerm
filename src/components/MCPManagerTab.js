@@ -51,13 +51,29 @@ const MCPManagerTab = ({ themeColors }) => {
     };
   }, []);
 
+
   const loadData = async () => {
     try {
       setRefreshing(true);
       // Solo refrescar servidores, el resto se obtiene del cache
       await mcpClient.refreshServers();
-      setServers(mcpClient.getServers());
+      const freshServers = mcpClient.getServers();
+      setServers(freshServers);
       setStats(mcpClient.getStats());
+      
+      // Verificar si hay un servidor pendiente de seleccionar
+      const pendingServerId = window.__mcpConfigSelectServer;
+      if (pendingServerId) {
+        console.log('🔍 [MCP Manager] loadData: Servidor pendiente detectado:', pendingServerId);
+        const server = freshServers.find(s => s.id === pendingServerId);
+        if (server) {
+          console.log('✅ [MCP Manager] loadData: Abriendo configuración para:', pendingServerId);
+          setTimeout(() => {
+            openConfigFor(server);
+            window.__mcpConfigSelectServer = null;
+          }, 100);
+        }
+      }
     } catch (error) {
       console.error('Error cargando datos MCP:', error);
       showToast('error', 'Error', 'No se pudieron cargar los datos de MCP');

@@ -193,6 +193,20 @@ class MCPClientService {
   }
 
   /**
+   * Obtener todos los servidores (alias explícito para getServers)
+   */
+  getAllServers() {
+    return this.servers;
+  }
+
+  /**
+   * Obtener servidores instalados (enabled)
+   */
+  getInstalledServers() {
+    return this.servers.filter(s => s.config?.enabled);
+  }
+
+  /**
    * Obtener todas las tools disponibles
    */
   getAvailableTools() {
