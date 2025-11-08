@@ -279,7 +279,7 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
     return mcpCatalogData.mcps.filter(mcp =>
       mcp.name.toLowerCase().includes(term) ||
       mcp.description.toLowerCase().includes(term) ||
-      mcp.package.toLowerCase().includes(term) ||
+      (mcp.package && mcp.package.toLowerCase().includes(term)) ||
       (mcp.tools && mcp.tools.some(t => t.toLowerCase().includes(term)))
     );
   }, [searchTerm]);
@@ -310,6 +310,22 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
   };
 
   const handleInstall = (mcp) => {
+    if (mcp.type === 'native') {
+      setSelectedMCP(mcp);
+      setConfigValues(mcp.recommendedConfig || {
+        mode: 'scraping',
+        maxResults: '5',
+        timeoutMs: '5000',
+        maxContentLength: '200000',
+        allowedDomains: '',
+        apiEndpoint: '',
+        apiKey: '',
+        apiProvider: ''
+      });
+      setShowConfigDialog(true);
+      return;
+    }
+
     if (mcp.requiresConfig) {
       setSelectedMCP(mcp);
       // Usar valores recomendados si existen
@@ -329,6 +345,44 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
 
   const handleConfirmInstall = () => {
     if (!selectedMCP) return;
+
+    if (selectedMCP.type === 'native') {
+      const mode = (configValues.mode || 'scraping').toLowerCase() === 'api' ? 'api' : 'scraping';
+      const maxResults = Number(configValues.maxResults) || 5;
+      const timeoutMs = Number(configValues.timeoutMs) || 5000;
+      const maxContentLength = Number(configValues.maxContentLength) || 200000;
+      const allowedDomains = (configValues.allowedDomains || '')
+        .split(',')
+        .map(domain => domain.trim())
+        .filter(Boolean);
+
+      const options = {
+        maxResults,
+        timeoutMs,
+        maxContentLength,
+        userAgent: configValues.userAgent || undefined,
+        api: {
+          endpoint: configValues.apiEndpoint || '',
+          key: configValues.apiKey || '',
+          provider: configValues.apiProvider || ''
+        }
+      };
+
+      const config = {
+        type: 'native',
+        enabled: true,
+        autostart: false,
+        mode,
+        allowedDomains,
+        options
+      };
+
+      if (onInstall) onInstall(selectedMCP.id, config);
+      setShowConfigDialog(false);
+      setSelectedMCP(null);
+      setConfigValues({});
+      return;
+    }
     const cmd = selectedMCP.runCommand || 'npx';
     const args = cmd === 'uvx' ? [selectedMCP.package] : ['-y', selectedMCP.package];
     const env = {};

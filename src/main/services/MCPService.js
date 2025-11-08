@@ -13,6 +13,7 @@ const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const { app } = require('electron');
+const WebSearchNativeServer = require('./native/WebSearchNativeServer');
 
 // Note: En el main process no podemos usar import ES6, pero los logs irán al renderer
 // El logging detallado se hará en consola del main process
@@ -20,6 +21,8 @@ const { app } = require('electron');
 class MCPService {
   constructor() {
     this.mcpProcesses = new Map(); // Map<serverId, MCPProcess>
+    this.nativeFactories = new Map(); // Map<serverId, () => NativeServer>
+    this.registerNativeFactories();
     this.mcpConfig = null;
     this.configPath = path.join(app.getPath('userData'), 'mcp-config.json');
     this.messageIdCounter = 0;
@@ -31,6 +34,10 @@ class MCPService {
     this.keepaliveMaxFailures = 2;
     this.keepaliveTimers = new Map();
     this.verboseLogs = false;
+  }
+
+  registerNativeFactories() {
+    this.nativeFactories.set('web-search-native', (config) => new WebSearchNativeServer(config));
   }
 
   /**
@@ -137,6 +144,10 @@ class MCPService {
       throw new Error(`MCP ${serverId} está deshabilitado`);
     }
 
+    if (config.type === 'native') {
+      return this.startNativeMCPServer(serverId, config);
+    }
+
     console.log(`🚀 [MCP] Iniciando ${serverId}...`);
     console.log(`   Comando: ${config.command}`);
     console.log(`   Args:`, config.args);
@@ -203,6 +214,54 @@ class MCPService {
     } catch (error) {
       this.mcpProcesses.delete(serverId);
       console.error(`❌ [MCP] Error iniciando ${serverId}:`, error);
+      throw error;
+    }
+  }
+
+  async startNativeMCPServer(serverId, config) {
+    console.log(`🚀 [MCP] Iniciando servidor nativo ${serverId}...`);
+
+    const factory =
+      this.nativeFactories.get(serverId) ||
+      this.nativeFactories.get(config.nativeType || config.id);
+
+    if (!factory) {
+      throw new Error(`No existe factory nativa registrada para ${serverId}`);
+    }
+
+    try {
+      const bridge = factory({
+        serverId,
+        options: config.options || {},
+        allowedDomains: config.allowedDomains || [],
+        mode: config.mode || 'scraping'
+      });
+
+      this.mcpProcesses.set(serverId, {
+        type: 'native',
+        serverId,
+        config,
+        bridge,
+        state: 'starting',
+        tools: [],
+        resources: [],
+        prompts: [],
+        capabilities: null
+      });
+
+      await this.initializeMCPServer(serverId);
+      await this.refreshServerCapabilities(serverId);
+
+      const mcpProcess = this.mcpProcesses.get(serverId);
+      if (mcpProcess) {
+        mcpProcess.state = 'ready';
+      }
+
+      console.log(`✅ [MCP] Servidor nativo ${serverId} iniciado correctamente`);
+      return { success: true, serverId };
+    } catch (error) {
+      this.mcpProcesses.delete(serverId);
+      console.error(`❌ [MCP] Error iniciando servidor nativo ${serverId}:`, error);
       throw error;
     }
   }
@@ -345,6 +404,10 @@ class MCPService {
       throw new Error(`MCP ${serverId} no está en ejecución`);
     }
 
+    if (mcpProcess.type === 'native') {
+      return this.sendNativeRequest(serverId, mcpProcess, method, params);
+    }
+
     const id = ++this.messageIdCounter;
     const request = {
       jsonrpc: '2.0',
@@ -386,6 +449,25 @@ class MCPService {
         reject(error);
       }
     });
+  }
+
+  async sendNativeRequest(serverId, mcpProcess, method, params = {}) {
+    if (!mcpProcess.bridge || typeof mcpProcess.bridge.handleRequest !== 'function') {
+      throw new Error(`MCP ${serverId} no tiene bridge nativo válido`);
+    }
+
+    console.log(`📤 [MCP ${serverId}] (nativo) Ejecutando ${method}`);
+    if (this.verboseLogs) {
+      console.log(`   Params:`, JSON.stringify(params, null, 2));
+    }
+
+    try {
+      const result = await mcpProcess.bridge.handleRequest(method, params);
+      return result;
+    } catch (error) {
+      console.error(`❌ [MCP ${serverId}] Error en request nativa ${method}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -430,6 +512,15 @@ class MCPService {
     if (!mcpProcess) {
       throw new Error(`MCP ${serverId} no está en ejecución`);
     }
+
+     if (mcpProcess.type === 'native') {
+       if (mcpProcess.bridge && typeof mcpProcess.bridge.handleNotification === 'function') {
+         await mcpProcess.bridge.handleNotification(method, params);
+       } else {
+         console.log(`ℹ️ [MCP ${serverId}] Notificación nativa ${method} ignorada (sin handler).`);
+       }
+       return;
+     }
 
     const notification = {
       jsonrpc: '2.0',
@@ -494,6 +585,15 @@ class MCPService {
         pending.reject(new Error('Servidor MCP detenido'));
       }
       this.pendingRequests.clear();
+
+      if (mcpProcess.type === 'native') {
+        if (mcpProcess.bridge && typeof mcpProcess.bridge.shutdown === 'function') {
+          await mcpProcess.bridge.shutdown();
+        }
+        this.mcpProcesses.delete(serverId);
+        console.log(`✅ [MCP] ${serverId} (nativo) detenido`);
+        return { success: true };
+      }
 
       // Terminar proceso
       mcpProcess.process.kill('SIGTERM');
@@ -608,19 +708,31 @@ class MCPService {
       throw new Error(`MCP ${serverId} ya está instalado`);
     }
 
-    // Validar configuración
-    if (!config.command || !config.args) {
-      console.error('❌ [MCP Service] Configuración inválida:', config);
-      throw new Error('Configuración inválida: se requiere command y args');
-    }
+    let fullConfig;
 
-    // Agregar configuración por defecto
-    const fullConfig = {
-      ...config,
-      enabled: config.enabled !== undefined ? config.enabled : true,
-      autostart: config.autostart !== undefined ? config.autostart : false, // Cambiar a false por defecto
-      autoRestart: config.autoRestart !== undefined ? config.autoRestart : true
-    };
+    if (config.type === 'native') {
+      fullConfig = {
+        type: 'native',
+        enabled: config.enabled !== undefined ? config.enabled : true,
+        autostart: config.autostart !== undefined ? config.autostart : false,
+        autoRestart: false,
+        mode: config.mode || 'scraping',
+        options: config.options || {},
+        allowedDomains: config.allowedDomains || []
+      };
+    } else {
+      if (!config.command || !config.args) {
+        console.error('❌ [MCP Service] Configuración inválida:', config);
+        throw new Error('Configuración inválida: se requiere command y args');
+      }
+
+      fullConfig = {
+        ...config,
+        enabled: config.enabled !== undefined ? config.enabled : true,
+        autostart: config.autostart !== undefined ? config.autostart : false, // Cambiar a false por defecto
+        autoRestart: config.autoRestart !== undefined ? config.autoRestart : true
+      };
+    }
 
     console.log('   Config completa:', JSON.stringify(fullConfig, null, 2));
 
@@ -659,13 +771,24 @@ class MCPService {
       return { success: false, error: `MCP ${serverId} no encontrado` };
     }
 
-    // Mezclar configuración, sin perder propiedades conocidas
-    const merged = {
-      ...existing,
-      ...newConfig,
-      args: Array.isArray(newConfig.args) ? newConfig.args : (existing.args || []),
-      env: { ...(existing.env || {}), ...(newConfig.env || {}) }
-    };
+    let merged;
+
+    if (existing.type === 'native') {
+      merged = {
+        ...existing,
+        ...newConfig,
+        mode: newConfig.mode || existing.mode || 'scraping',
+        options: { ...(existing.options || {}), ...(newConfig.options || {}) },
+        allowedDomains: Array.isArray(newConfig.allowedDomains) ? newConfig.allowedDomains : (existing.allowedDomains || [])
+      };
+    } else {
+      merged = {
+        ...existing,
+        ...newConfig,
+        args: Array.isArray(newConfig.args) ? newConfig.args : (existing.args || []),
+        env: { ...(existing.env || {}), ...(newConfig.env || {}) }
+      };
+    }
     this.mcpConfig.mcpServers[serverId] = merged;
     await this.saveConfig();
 

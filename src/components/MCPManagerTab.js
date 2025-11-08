@@ -97,7 +97,21 @@ const MCPManagerTab = ({ themeColors }) => {
     
     // Mapear valores guardados a configSchema
     const configValues = {};
-    if (mcp?.configSchema) {
+    const isNative = server?.config?.type === 'native';
+
+    if (isNative) {
+      const nativeOptions = server.config?.options || {};
+      const api = nativeOptions.api || {};
+      configValues.mode = server.config?.mode || 'scraping';
+      configValues.maxResults = nativeOptions.maxResults !== undefined ? String(nativeOptions.maxResults) : '';
+      configValues.timeoutMs = nativeOptions.timeoutMs !== undefined ? String(nativeOptions.timeoutMs) : '';
+      configValues.maxContentLength = nativeOptions.maxContentLength !== undefined ? String(nativeOptions.maxContentLength) : '';
+      configValues.userAgent = nativeOptions.userAgent || '';
+      configValues.allowedDomains = (server.config?.allowedDomains || []).join(', ');
+      configValues.apiEndpoint = api.endpoint || '';
+      configValues.apiKey = api.key || '';
+      configValues.apiProvider = api.provider || '';
+    } else if (mcp?.configSchema) {
       for (const [key, schema] of Object.entries(mcp.configSchema)) {
         if (schema.envName && server.config?.env?.[schema.envName]) {
           configValues[key] = server.config.env[schema.envName];
@@ -108,8 +122,9 @@ const MCPManagerTab = ({ themeColors }) => {
     }
     
     setEditingConfig({
-      command: server?.config?.command || 'npx',
-      args: Array.isArray(server?.config?.args) ? server.config.args.join(' ') : (server?.config?.args || ''),
+      type: server?.config?.type || 'external',
+      command: isNative ? '' : (server?.config?.command || 'npx'),
+      args: isNative ? '' : (Array.isArray(server?.config?.args) ? server.config.args.join(' ') : (server?.config?.args || '')),
       enabled: !!server?.config?.enabled,
       autostart: !!server?.config?.autostart,
       autoRestart: server?.config?.autoRestart !== false,
@@ -121,22 +136,57 @@ const MCPManagerTab = ({ themeColors }) => {
 
   const handleSaveConfig = async () => {
     if (!selectedServer) return;
-    // Construir payload base
-    const payload = {
-      command: editingConfig.command || 'npx',
-      args: typeof editingConfig.args === 'string' ? editingConfig.args.split(' ').filter(Boolean) : (editingConfig.args || []),
-      enabled: !!editingConfig.enabled,
-      autostart: !!editingConfig.autostart,
-      autoRestart: !!editingConfig.autoRestart
-    };
+    const isNative = editingConfig.type === 'native';
+    const configValues = editingConfig.configValues || {};
+    let payload;
+
+    if (isNative) {
+      const mode = (configValues.mode || 'scraping').toLowerCase() === 'api' ? 'api' : 'scraping';
+      const parseNumber = (value, fallback) => {
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0 ? num : fallback;
+      };
+
+      const allowedDomains = (configValues.allowedDomains || '')
+        .split(',')
+        .map(domain => domain.trim())
+        .filter(Boolean);
+
+      payload = {
+        type: 'native',
+        enabled: !!editingConfig.enabled,
+        autostart: !!editingConfig.autostart,
+        mode,
+        allowedDomains,
+        options: {
+          maxResults: parseNumber(configValues.maxResults, 5),
+          timeoutMs: parseNumber(configValues.timeoutMs, 5000),
+          maxContentLength: parseNumber(configValues.maxContentLength, 200000),
+          userAgent: configValues.userAgent || undefined,
+          api: {
+            endpoint: configValues.apiEndpoint || '',
+            key: configValues.apiKey || '',
+            provider: configValues.apiProvider || ''
+          }
+        }
+      };
+    } else {
+      // Construir payload base para servidores externos
+      payload = {
+        command: editingConfig.command || 'npx',
+        args: typeof editingConfig.args === 'string' ? editingConfig.args.split(' ').filter(Boolean) : (editingConfig.args || []),
+        enabled: !!editingConfig.enabled,
+        autostart: !!editingConfig.autostart,
+        autoRestart: !!editingConfig.autoRestart
+      };
+    }
     
     // Mapear configSchema → env/configValues para persistir correctamente
     try {
       const mcp = editingConfig.mcp || null;
-      const configValues = editingConfig.configValues || {};
       const env = {};
       
-      if (mcp && mcp.configSchema) {
+      if (!isNative && mcp && mcp.configSchema) {
         for (const [key, schema] of Object.entries(mcp.configSchema)) {
           const raw = configValues[key];
           if (raw === undefined || raw === null || raw === '') continue;
@@ -580,10 +630,12 @@ const MCPManagerTab = ({ themeColors }) => {
           <div style={{ borderBottom: `1px solid ${themeColors.borderColor}`, paddingBottom: '1rem' }}>
             <h4 style={{ margin: 0, marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: '600', color: themeColors.textPrimary }}>Configuración General</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary, display: 'block', marginBottom: '0.3rem' }}>Comando</label>
-                <InputText value={editingConfig.command || ''} onChange={(e) => setEditingConfig({ ...editingConfig, command: e.target.value })} style={{ width: '100%' }} />
-              </div>
+              {editingConfig.type !== 'native' && (
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary, display: 'block', marginBottom: '0.3rem' }}>Comando</label>
+                  <InputText value={editingConfig.command || ''} onChange={(e) => setEditingConfig({ ...editingConfig, command: e.target.value })} style={{ width: '100%' }} />
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary }}>Opciones</label>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -598,10 +650,12 @@ const MCPManagerTab = ({ themeColors }) => {
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: '0.75rem' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary, display: 'block', marginBottom: '0.3rem' }}>Args (separados por espacios)</label>
-              <InputTextarea value={editingConfig.args || ''} onChange={(e) => setEditingConfig({ ...editingConfig, args: e.target.value })} rows={2} style={{ width: '100%', fontSize: '0.75rem' }} />
-            </div>
+            {editingConfig.type !== 'native' && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textSecondary, display: 'block', marginBottom: '0.3rem' }}>Args (separados por espacios)</label>
+                <InputTextarea value={editingConfig.args || ''} onChange={(e) => setEditingConfig({ ...editingConfig, args: e.target.value })} rows={2} style={{ width: '100%', fontSize: '0.75rem' }} />
+              </div>
+            )}
           </div>
 
           {/* Sección: Configuración Específica del MCP */}
