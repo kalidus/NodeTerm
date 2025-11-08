@@ -1962,23 +1962,49 @@ class AIService {
 
   /**
    * FILTRAR tools por contexto/relevancia
-   * Limita a solo las herramientas esenciales
+   * Selecciona solo las herramientas más apropiadas para la pregunta
    */
   filterToolsByContext(tools, message = '') {
-    const essentialToolNames = ['read_file', 'list_directory', 'write_file', 'goto_url', 'screenshot', 'run_command'];
-    
+    const lowerMsg = message.toLowerCase();
+    let selectedTools = [];
+
+    // 🌐 Si es sobre WEB (URL, busca, sitio, página) → Solo Puppeteer + Filesystem
+    if (lowerMsg.includes('http') || lowerMsg.includes('url') || lowerMsg.includes('busca') || 
+        lowerMsg.includes('sitio') || lowerMsg.includes('página') || lowerMsg.includes('web') ||
+        lowerMsg.includes('.com') || lowerMsg.includes('web search') || lowerMsg.includes('google')) {
+      selectedTools = ['web_search', 'fetch_page', 'extract_text', 'goto_url', 'screenshot'];
+      console.log(`🌐 [Tools Filter] Modo WEB: WebSearch nativo`);
+    }
+    // 📁 Si es sobre ARCHIVOS → Solo Filesystem
+    else if (lowerMsg.includes('archivo') || lowerMsg.includes('archivo') || lowerMsg.includes('carpeta') ||
+             lowerMsg.includes('directorio') || lowerMsg.includes('leer') || lowerMsg.includes('crear archivo')) {
+      selectedTools = ['read_file', 'list_directory', 'write_file'];
+      console.log(`📁 [Tools Filter] Modo ARCHIVOS: Filesystem solo`);
+    }
+    // 🔧 Si es sobre COMANDOS → run_command
+    else if (lowerMsg.includes('comando') || lowerMsg.includes('ejecuta') || lowerMsg.includes('run') ||
+             lowerMsg.includes('script') || lowerMsg.includes('terminal') || lowerMsg.includes('shell')) {
+      selectedTools = ['run_command'];
+      console.log(`🔧 [Tools Filter] Modo COMANDOS: CLI solo`);
+    }
+    // ❓ Por defecto: esenciales sin run_command (web prioritario)
+    else {
+      selectedTools = ['read_file', 'list_directory', 'write_file', 'web_search', 'goto_url', 'screenshot'];
+      console.log(`❓ [Tools Filter] Modo DEFAULT: Web + Filesystem (NO CLI)`);
+    }
+
     const filtered = tools.filter(t => {
-      return essentialToolNames.some(ename => t.name.includes(ename));
+      return selectedTools.some(st => t.name.includes(st));
     });
-    
-    console.log(`🔍 [Tools Filter] ${tools.length} tools → ${filtered.length} tools esenciales`);
+
+    console.log(`🔍 [Tools Filter] ${tools.length} tools → ${filtered.length} tools relevantes`);
     return filtered;
   }
 
   /**
    * Inyectar contexto MCP (tools, resources, prompts) en los mensajes
    */
-  async injectMCPContext() {
+  async injectMCPContext(message = '') {
     try {
       // Verificar si hay MCPs activos
       if (!mcpClient.hasActiveServers()) {
@@ -1990,8 +2016,8 @@ class AIService {
       const resources = mcpClient.getAvailableResources();
       const prompts = mcpClient.getAvailablePrompts();
 
-      // 🔍 FILTRAR TOOLS (solo esenciales)
-      tools = this.filterToolsByContext(tools);
+      // 🔍 FILTRAR TOOLS (contextual)
+      tools = this.filterToolsByContext(tools, message);
 
       console.log(`🔌 [MCP] ${tools.length} tools expuestas, ${resources.length} resources, ${prompts.length} prompts disponibles`);
 
@@ -3586,7 +3612,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       let mcpContext = { tools: [], hasTools: false };
       if (mcpEnabled) {
         try {
-          const ctx = await this.injectMCPContext();
+          const ctx = await this.injectMCPContext(message);
           mcpContext = { tools: ctx.tools || [], hasTools: (ctx.tools || []).length > 0 };
         } catch (e) {
           console.warn('[MCP] Error obteniendo contexto MCP (remote):', e.message);
@@ -3980,7 +4006,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       let mcpContext = { tools: [], resources: [], prompts: [], hasTools: false };
       
       if (mcpEnabled) {
-        mcpContext = await this.injectMCPContext();
+        mcpContext = await this.injectMCPContext(message);
         
         if (mcpContext.hasTools) {
 

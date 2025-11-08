@@ -297,6 +297,91 @@
       "website": "https://github.com/modelcontextprotocol/servers"
     },
     {
+      "id": "web-search-native",
+      "name": "Web Search (Nativo)",
+      "package": "native:web-search",
+      "type": "native",
+      "category": "websearch",
+      "icon": "pi-search",
+      "description": "Búsquedas web integradas directamente en NodeTerm. Usa scraping ligero (DuckDuckGo) o una API externa opcional.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "mode": {
+          "type": "string",
+          "required": false,
+          "description": "Modo de búsqueda: scraping (por defecto) o api.",
+          "example": "scraping"
+        },
+        "maxResults": {
+          "type": "string",
+          "required": false,
+          "description": "Resultados máximos por búsqueda (1-10).",
+          "example": "5"
+        },
+        "timeoutMs": {
+          "type": "string",
+          "required": false,
+          "description": "Timeout por request en milisegundos.",
+          "example": "5000"
+        },
+        "maxContentLength": {
+          "type": "string",
+          "required": false,
+          "description": "Máximo de bytes/char a descargar por página.",
+          "example": "200000"
+        },
+        "allowedDomains": {
+          "type": "array",
+          "required": false,
+          "description": "Lista de dominios permitidos (vacío = todos).",
+          "example": ["elpais.com", "bbc.com"]
+        },
+        "userAgent": {
+          "type": "string",
+          "required": false,
+          "description": "User-Agent personalizado para las peticiones.",
+          "example": "NodeTerm-WebSearch/1.0"
+        },
+        "apiEndpoint": {
+          "type": "string",
+          "required": false,
+          "description": "Endpoint de la API de búsqueda (si usas modo api)."
+        },
+        "apiKey": {
+          "type": "string",
+          "required": false,
+          "description": "API Key para la búsqueda externa.",
+          "secret": true
+        },
+        "apiProvider": {
+          "type": "string",
+          "required": false,
+          "description": "Nombre del proveedor API (solo informativo)."
+        }
+      },
+      "recommendedConfig": {
+        "mode": "scraping",
+        "maxResults": "5",
+        "timeoutMs": "5000",
+        "maxContentLength": "200000",
+        "allowedDomains": "",
+        "userAgent": "NodeTerm-WebSearch/1.0"
+      },
+      "tools": [
+        "web_search",
+        "fetch_page",
+        "extract_text"
+      ],
+      "useCases": [
+        "Consultar noticias o eventos en tiempo real",
+        "Extraer titulares relevantes para investigación",
+        "Descargar HTML de referencia para análisis",
+        "Obtener texto limpio de páginas web sin abrir Puppeteer"
+      ],
+      "website": "https://github.com/kalidus/NodeTerm"
+    },
+    {
       "id": "puppeteer",
       "name": "Puppeteer",
       "package": "@modelcontextprotocol/server-puppeteer",
