@@ -105,6 +105,7 @@ const MCPManagerTab = ({ themeColors }) => {
 
   const handleSaveConfig = async () => {
     if (!selectedServer) return;
+    // Construir payload base
     const payload = {
       command: editingConfig.command || 'npx',
       args: typeof editingConfig.args === 'string' ? editingConfig.args.split(' ').filter(Boolean) : (editingConfig.args || []),
@@ -112,13 +113,60 @@ const MCPManagerTab = ({ themeColors }) => {
       autostart: !!editingConfig.autostart,
       autoRestart: !!editingConfig.autoRestart
     };
+    
+    // Mapear configSchema → env/configValues para persistir correctamente
+    try {
+      const mcp = editingConfig.mcp || null;
+      const configValues = editingConfig.configValues || {};
+      const env = {};
+      
+      if (mcp && mcp.configSchema) {
+        for (const [key, schema] of Object.entries(mcp.configSchema)) {
+          const raw = configValues[key];
+          if (raw === undefined || raw === null || raw === '') continue;
+          
+          let value = raw;
+          if (schema.type === 'array') {
+            value = Array.isArray(raw) ? raw.join(',') : String(raw).split(',').map(v => v.trim()).join(',');
+          } else if (schema.type === 'boolean') {
+            value = raw ? 'true' : 'false';
+          } else {
+            value = String(raw);
+          }
+          
+          if (schema.envName) {
+            env[schema.envName] = value;
+          }
+        }
+      }
+      
+      if (Object.keys(env).length > 0) {
+        payload.env = env;
+      }
+      
+      // Si es cli-mcp-server (o runtime python) y tenemos ALLOWED_DIR, establecer cwd para persistir el directorio
+      const allowedDir = (payload.env && payload.env.ALLOWED_DIR) ? payload.env.ALLOWED_DIR : undefined;
+      const isCli = selectedServer.id === 'cli-mcp-server' || (mcp && mcp.runtime === 'python');
+      if (isCli && allowedDir && allowedDir.trim().length > 0) {
+        payload.cwd = allowedDir;
+      }
+      
+      // Guardar también los valores visibles por si la UI los requiere
+      payload.configValues = configValues;
+    } catch (e) {
+      console.warn('[MCP Manager] No se pudieron mapear configValues/env:', e?.message);
+    }
+    
+    // Cerrar inmediatamente para evitar el “doble clic” perceptivo; reabrir solo si falla
+    setShowConfigDialog(false);
     const result = await mcpClient.updateServerConfig(selectedServer.id, payload);
     if (result?.success) {
       showToast('success', 'Guardado', 'Configuración actualizada');
-      setShowConfigDialog(false);
       setSelectedServer(null);
       await loadData();
     } else {
+      // Reabrir si hubo error para que el usuario pueda corregir
+      setShowConfigDialog(true);
       showToast('error', 'Error', result?.error || 'No se pudo guardar');
     }
   };

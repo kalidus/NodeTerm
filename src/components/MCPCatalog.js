@@ -354,7 +354,12 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
         }
       }
     }
-    const config = { command: cmd, args, enabled: true, autostart: false, autoRestart: true, configValues, env };
+    // Ajuste para servidores Python/CLI: usar ALLOWED_DIR como cwd si está disponible
+    let cwd;
+    if ((selectedMCP.id === 'cli-mcp-server' || selectedMCP.runtime === 'python') && env && env.ALLOWED_DIR) {
+      cwd = env.ALLOWED_DIR;
+    }
+    const config = { command: cmd, args, enabled: true, autostart: false, autoRestart: true, configValues, env, ...(cwd ? { cwd } : {}) };
     if (onInstall) onInstall(selectedMCP.id, config);
     setShowConfigDialog(false); setSelectedMCP(null); setConfigValues({});
   };

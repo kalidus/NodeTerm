@@ -74,6 +74,19 @@ class MCPService {
         this.mcpConfig = JSON.parse(data);
         console.log(`📄 [MCP] Configuración cargada: ${Object.keys(this.mcpConfig.mcpServers || {}).length} servidores`);
         this.verboseLogs = !!this.mcpConfig.verbose || !!process.env.MCP_VERBOSE;
+        
+        // Migración/auto-fix: si cli-mcp-server no tiene cwd pero sí ALLOWED_DIR, usarlo como cwd
+        try {
+          const cfg = this.mcpConfig?.mcpServers || {};
+          const cliCfg = cfg['cli-mcp-server'];
+          if (cliCfg && !cliCfg.cwd && cliCfg.env && typeof cliCfg.env.ALLOWED_DIR === 'string' && cliCfg.env.ALLOWED_DIR.trim().length > 0) {
+            cliCfg.cwd = cliCfg.env.ALLOWED_DIR;
+            console.log(`🔧 [MCP] Ajuste automático: establecido cwd de cli-mcp-server a ${cliCfg.cwd}`);
+            await this.saveConfig();
+          }
+        } catch (e) {
+          console.warn('⚠️ [MCP] No se pudo aplicar migración de cwd para cli-mcp-server:', e.message);
+        }
       } else {
         // Crear configuración por defecto
         this.mcpConfig = {
