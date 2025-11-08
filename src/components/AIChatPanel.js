@@ -85,6 +85,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     if (/```\s*(json|tool|tool_call)/i.test(head)) return true;
     if (/\"use_tool\"\s*:\s*\"/i.test(head)) return true;
     if (/\"tool\"\s*:\s*\"/i.test(head)) return true;
+    // Nuevo: también considerar planes {"plan":[...]}
+    if (/\"plan\"\s*:\s*\[/i.test(head)) return true;
     return false;
   }, []);
 
@@ -145,7 +147,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Solo considerar JSON si empieza con { y contiene "tool" o "use_tool" en los primeros 100 chars
     if (t.startsWith('{')) {
       const head = t.substring(0, 100);
-      return head.includes('"tool"') || head.includes('"use_tool"');
+      return head.includes('"tool"') || head.includes('"use_tool"') || head.includes('"plan"');
     }
     // Bloques de código explícitos
     if (t.startsWith('```json') || t.startsWith('```tool')) return true;
@@ -1669,8 +1671,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       return false;
     })();
     
-    if (isJsonToolCall && !isToolCall && !isToolResult) {
+    if (isJsonToolCall && !isToolCall && !isToolResult && message.role !== 'tool') {
       // Es JSON puro de tool call y no está marcado como tal - NO renderizar
+      // PERO: Si es un resultado de tool, SÍ renderizar
       console.log(`🔍 [renderMessage] Omitiendo JSON puro de tool call:`, message.content.substring(0, 50));
       return null;
     }
@@ -1695,6 +1698,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Render especial para resultado de tool (success card)
     if (isToolResult || message.role === 'tool') {
+      console.log(`🔍 [renderMessage] Tool result detectado:`, {
+        isToolResult,
+        messageRole: message.role,
+        toolName: message.metadata?.toolName,
+        hasToolResultText: !!message.metadata?.toolResultText,
+        messageId: message.id
+      });
+      
       // ✅ CRITICAL FIX: Usar toolResultText de metadatos, NO content (que es solo un resumen)
       const text = (message.metadata?.toolResultText || message.content || '').trim();
       const isDirToken = /\[(FILE|DIR)\]/.test(text);
@@ -1726,6 +1737,54 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           contentLength: (message.content || '').length,
           messageId: message.id
         });
+      }
+      
+      // 🔧 ESPECIAL: Si es run_command, renderizar como terminal/shell output
+      if (message.metadata?.toolName?.includes('run_command')) {
+        const trimmed = text.trim();
+        const isJson = (trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'));
+        
+        return (
+          <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
+            <div className={`ai-bubble assistant subtle`} style={{
+              width: '100%',
+              background: bg,
+              border: `1px solid ${border}`,
+              color: themeColors.textPrimary,
+              borderRadius: '8px',
+              padding: '0.6rem 0.8rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.45rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <i className={icon} style={{ color: iconColor, fontSize: '1rem' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <strong style={{ color: '#fff' }}>🖥️ {message.metadata?.toolName || 'Comando ejecutado'}</strong>
+                  {message.metadata?.toolArgs?.command && (
+                    <span style={{ fontSize: '0.75rem', opacity: 0.8, fontFamily: 'monospace' }}>
+                      <code style={{ fontSize: '0.75rem', color: '#a0a0a0' }}>{message.metadata.toolArgs.command}</code>
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Renderizar como terminal si es JSON, sino como texto */}
+              <div 
+                className="ai-md"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(isJson ? `\`\`\`json\n${text}\n\`\`\`` : `\`\`\`shell\n${text}\n\`\`\``) }}
+                style={{ 
+                  opacity: 0.95,
+                  maxHeight: 'none',
+                  overflow: 'visible',
+                  width: '100%',
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem'
+                }}
+              />
+            </div>
+          </div>
+        );
       }
       
       // ✅ IMPROVED: Formatear contenido con backticks si no los tiene
