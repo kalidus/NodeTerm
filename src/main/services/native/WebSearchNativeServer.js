@@ -6,6 +6,7 @@ class WebSearchNativeServer {
     this.mode = initialConfig.mode || 'scraping';
     this.options = initialConfig.options || {};
     this.allowedDomains = initialConfig.allowedDomains || [];
+    this.renderMode = initialConfig.renderMode || 'static';
     this.updateServiceConfig();
   }
 
@@ -17,7 +18,8 @@ class WebSearchNativeServer {
       maxContentLength: this.options.maxContentLength || 200000,
       allowedDomains: this.allowedDomains,
       api: this.options.api || {},
-      userAgent: this.options.userAgent || 'NodeTerm-WebSearch/1.0'
+      userAgent: this.options.userAgent || 'NodeTerm-WebSearch/1.0',
+      renderMode: this.renderMode
     });
   }
 
@@ -105,6 +107,10 @@ class WebSearchNativeServer {
                 maximum: 500000,
                 default: 200000,
                 description: 'Máximo de bytes a descargar.'
+              },
+              render: {
+                type: 'boolean',
+                description: 'Si es true, renderiza la página con un motor headless (BrowserWindow).'
               }
             },
             required: ['url']
@@ -127,6 +133,10 @@ class WebSearchNativeServer {
                 maximum: 200000,
                 default: 60000,
                 description: 'Cantidad máxima de texto a devolver.'
+              },
+              render: {
+                type: 'boolean',
+                description: 'Renderizar la página antes de extraer el texto.'
               }
             },
             required: ['url']
@@ -201,9 +211,12 @@ class WebSearchNativeServer {
     }
 
     const maxLength = args.maxLength || this.options.maxContentLength || 200000;
+    const useRender = args.render === true || this.renderMode === 'rendered';
+
     const page = await webSearchService.fetchPage(url, {
       maxContentLength: maxLength,
-      allowedDomains: this.allowedDomains
+      allowedDomains: this.allowedDomains,
+      render: useRender
     });
 
     return {
@@ -224,9 +237,12 @@ class WebSearchNativeServer {
     }
 
     const maxLength = args.maxLength || 60000;
+    const useRender = args.render === true || this.renderMode === 'rendered';
+
     const result = await webSearchService.extractText(url, {
       maxContentLength: maxLength,
-      allowedDomains: this.allowedDomains
+      allowedDomains: this.allowedDomains,
+      render: useRender
     });
 
     const fullText = result.text || '';
@@ -251,6 +267,9 @@ class WebSearchNativeServer {
 
     if (preview.trim()) {
       lines.push(preview.trim());
+      if (result.snippet && !preview.includes(result.snippet)) {
+        lines.push(`Snippet detectado: ${result.snippet}`);
+      }
       if (truncated) {
         lines.push('… (texto truncado, usa el campo data.text para el contenido completo)');
       }
