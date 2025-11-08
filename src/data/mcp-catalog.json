@@ -10,70 +10,6 @@
       "description": "Sistema de archivos y gestión local"
     },
     {
-      "id": "cli-mcp-server",
-      "name": "CLI MCP Server",
-      "package": "cli-mcp-server",
-      "runCommand": "uvx",
-      "category": "automation",
-      "icon": "pi-terminal",
-      "description": "Ejecución segura de comandos CLI con listas blancas de comandos/flags, validación de rutas y timeouts.",
-      "capabilities": ["tools"],
-      "requiresConfig": true,
-      "configSchema": {
-        "ALLOWED_DIR": {
-          "type": "string",
-          "required": true,
-          "description": "Directorio base permitido (todas las rutas deben estar dentro)",
-          "example": "C:/Users/kalid/Documents",
-          "envName": "ALLOWED_DIR"
-        },
-        "ALLOWED_COMMANDS": {
-          "type": "string",
-          "required": false,
-          "description": "Comandos permitidos separados por coma o 'all'",
-          "example": "ls,cat,pwd,echo",
-          "envName": "ALLOWED_COMMANDS"
-        },
-        "ALLOWED_FLAGS": {
-          "type": "string",
-          "required": false,
-          "description": "Flags permitidas separadas por coma o 'all'",
-          "example": "-l,-a,--help,--version",
-          "envName": "ALLOWED_FLAGS"
-        },
-        "MAX_COMMAND_LENGTH": {
-          "type": "string",
-          "required": false,
-          "description": "Longitud máxima del comando",
-          "example": "1024",
-          "envName": "MAX_COMMAND_LENGTH"
-        },
-        "COMMAND_TIMEOUT": {
-          "type": "string",
-          "required": false,
-          "description": "Timeout de ejecución en segundos",
-          "example": "30",
-          "envName": "COMMAND_TIMEOUT"
-        },
-        "ALLOW_SHELL_OPERATORS": {
-          "type": "boolean",
-          "required": false,
-          "description": "Permitir operadores de shell (&&, |, >, >>)",
-          "envName": "ALLOW_SHELL_OPERATORS"
-        }
-      },
-      "tools": [
-        "run_command",
-        "show_security_rules"
-      ],
-      "useCases": [
-        "Ejecución controlada de comandos",
-        "Automatización segura de tareas",
-        "Inspección de políticas de seguridad"
-      ],
-      "website": "https://github.com/MladenSU/cli-mcp-server"
-    },
-    {
       "id": "automation",
       "name": "Comandos y Automatización",
       "icon": "pi-cog",
@@ -149,6 +85,81 @@
         "Gestión de directorios de proyecto"
       ],
       "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "cli-mcp-server",
+      "name": "CLI MCP Server",
+      "package": "cli-mcp-server",
+      "runCommand": "uvx",
+      "category": "system",
+      "runtime": "python",
+      "icon": "pi-terminal",
+      "description": "🔒 Ejecución segura de comandos CLI con listas blancas de comandos/flags, validación de rutas y timeouts. Permite ejecutar comandos shell con control total y auditoría. 🐍 Requiere: Python + UV",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "ALLOWED_DIR": {
+          "type": "string",
+          "required": true,
+          "description": "📁 Directorio base permitido (todas las rutas deben estar dentro). Ej: C:/Users/kalid/Documents",
+          "example": "C:/Users/kalid/Documents",
+          "envName": "ALLOWED_DIR"
+        },
+        "ALLOWED_COMMANDS": {
+          "type": "string",
+          "required": false,
+          "description": "⚙️ Comandos permitidos separados por coma o escribe 'all' para permitir todos",
+          "example": "dir,copy,move,del,powershell,npm,node",
+          "envName": "ALLOWED_COMMANDS"
+        },
+        "ALLOWED_FLAGS": {
+          "type": "string",
+          "required": false,
+          "description": "🚩 Flags permitidas separadas por coma o escribe 'all'",
+          "example": "-r,-f,--help,--version",
+          "envName": "ALLOWED_FLAGS"
+        },
+        "MAX_COMMAND_LENGTH": {
+          "type": "string",
+          "required": false,
+          "description": "📏 Longitud máxima del comando (caracteres)",
+          "example": "1024",
+          "envName": "MAX_COMMAND_LENGTH"
+        },
+        "COMMAND_TIMEOUT": {
+          "type": "string",
+          "required": false,
+          "description": "⏱️ Timeout de ejecución en segundos",
+          "example": "30",
+          "envName": "COMMAND_TIMEOUT"
+        },
+        "ALLOW_SHELL_OPERATORS": {
+          "type": "boolean",
+          "required": false,
+          "description": "Permitir operadores de shell (&&, |, >, >>)",
+          "envName": "ALLOW_SHELL_OPERATORS"
+        }
+      },
+      "tools": [
+        "run_command",
+        "show_security_rules"
+      ],
+      "useCases": [
+        "Ejecución segura de comandos del sistema",
+        "Automatización de tareas con auditoría",
+        "Scripting controlado desde la IA",
+        "Inspección de políticas de seguridad"
+      ],
+      "website": "https://github.com/MladenSU/cli-mcp-server",
+      "warning": "⚠️ Requiere instalación previa de UV (Python). Ver docs/INSTALACION_UV_PYTHON.md. Ejecuta comandos del sistema - configura solo directorios y comandos permitidos.",
+      "recommendedConfig": {
+        "ALLOWED_DIR": "C:/Users/kalid",
+        "ALLOWED_COMMANDS": "dir,cd,copy,move,del,powershell,npm,node,git,python,pip,ls,cat,pwd",
+        "ALLOWED_FLAGS": "-r,-f,-a,--help,--version,-l,--recursive",
+        "COMMAND_TIMEOUT": "30",
+        "MAX_COMMAND_LENGTH": "2048",
+        "ALLOW_SHELL_OPERATORS": true
+      }
     },
     {
       "id": "github",
@@ -366,30 +377,6 @@
         "Captura de datos dinámicos"
       ],
       "website": "https://github.com/executeautomation/playwright-mcp-server"
-    },
-    {
-      "id": "everything",
-      "name": "Everything CLI",
-      "package": "@modelcontextprotocol/server-everything",
-      "category": "automation",
-      "icon": "pi-bolt",
-      "description": "Ejecutar comandos shell y scripts del sistema. Control completo para automatización y operaciones del SO.",
-      "capabilities": ["tools"],
-      "requiresConfig": false,
-      "tools": [
-        "run_command",
-        "execute_script",
-        "read_output",
-        "check_status"
-      ],
-      "useCases": [
-        "Automatización de tareas del sistema",
-        "Ejecutar scripts personalizados",
-        "Gestión de procesos",
-        "Operaciones del sistema operativo"
-      ],
-      "website": "https://github.com/modelcontextprotocol/servers",
-      "warning": "⚠️ Requiere permisos elevados. Úsalo con precaución."
     },
     {
       "id": "sequential-thinking",
