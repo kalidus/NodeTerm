@@ -8,6 +8,7 @@ import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
+import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
@@ -116,8 +117,15 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   
-  // Estado para modo de visualización (conexiones o passwords)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords'
+  // Estado para modo de visualización (conexiones, passwords, filesystem)
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem'
+  const [filesystemStatus, setFilesystemStatus] = useState({
+    active: false,
+    allowedPaths: [],
+    defaultPath: null,
+    server: null,
+    conversationId: null
+  });
   
   // Escuchar evento para cambiar a vista de conexiones
   useEffect(() => {
@@ -131,6 +139,23 @@ const Sidebar = React.memo(({
       window.removeEventListener('switch-to-connections', handleSwitchToConnections);
     };
   }, []);
+
+  useEffect(() => {
+    const handleFilesystemStatus = (event) => {
+      const detail = event?.detail || {};
+      if (detail.type !== 'filesystem') return;
+      setFilesystemStatus(detail);
+      if (!detail.active) {
+        setViewMode(prev => (prev === 'filesystem' ? 'connections' : prev));
+      }
+    };
+    window.addEventListener('filesystem-mcp-status', handleFilesystemStatus);
+    return () => {
+      window.removeEventListener('filesystem-mcp-status', handleFilesystemStatus);
+    };
+  }, []);
+
+  const filesystemAvailable = !!filesystemStatus?.active;
   
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
@@ -1654,6 +1679,34 @@ const Sidebar = React.memo(({
                 color: '#ffc107'
               }} 
             />
+
+            {filesystemAvailable && (
+              <Button
+                icon="pi pi-folder-open"
+                className="p-button-rounded p-button-text sidebar-action-button"
+                onClick={() => {
+                  setViewMode('filesystem');
+                  setSidebarCollapsed(false);
+                }}
+                tooltip="Filesystem MCP"
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                }}
+              />
+            )}
             
             {/* Botón de Chat de IA */}
             <Button 
@@ -1834,6 +1887,19 @@ const Sidebar = React.memo(({
                     tooltip="Gestor de passwords" 
                     tooltipOptions={{ position: 'bottom' }}
                   />
+                  {filesystemAvailable && (
+                    <Button
+                      icon="pi pi-folder-open"
+                      className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
+                      onClick={() => setViewMode('filesystem')}
+                      tooltip="Explorador MCP"
+                      tooltipOptions={{ position: 'bottom' }}
+                      style={{
+                        borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
+                        color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined
+                      }}
+                    />
+                  )}
                 </div>
               </div>
               <Divider className="my-2" />
@@ -1888,6 +1954,17 @@ const Sidebar = React.memo(({
                 onShowImportDialog={setShowImportDialog}
               />
             </>
+          ) : viewMode === 'filesystem' ? (
+            <SidebarFilesystemExplorer
+              status={filesystemStatus}
+              onBackToConnections={() => setViewMode('connections')}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
+              explorerFont={explorerFont}
+              explorerFontSize={explorerFontSize}
+              uiTheme={uiTheme}
+              showToast={showToast}
+            />
           ) : (
             // Vista de passwords
             <PasswordManagerSidebar
@@ -1897,8 +1974,8 @@ const Sidebar = React.memo(({
               confirmDialog={confirmDialog}
               uiTheme={uiTheme}
               onBackToConnections={() => setViewMode('connections')}
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
               iconTheme={iconTheme}
               iconSize={iconSize}
               folderIconSize={folderIconSize}
@@ -1906,9 +1983,9 @@ const Sidebar = React.memo(({
               explorerFont={explorerFont}
               explorerFontSize={explorerFontSize}
               masterKey={masterKey}
-            secureStorage={secureStorage}
-            setShowSettingsDialog={setShowSettingsDialog}
-            onShowImportDialog={setShowImportDialog}
+              secureStorage={secureStorage}
+              setShowSettingsDialog={setShowSettingsDialog}
+              onShowImportDialog={setShowImportDialog}
               sidebarFilter={sidebarFilter}
             />
           )}
