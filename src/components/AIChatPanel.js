@@ -16,6 +16,7 @@ import MCPActiveTools from './MCPActiveTools';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 import mcpClient from '../services/MCPClientService';
+import debugLogger from '../utils/debugLogger';
 import '../utils/debugConversations'; // 🔧 Debug utility
 
 // Importar tema de highlight.js
@@ -39,6 +40,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [currentStatus, setCurrentStatus] = useState(null);
   const [abortController, setAbortController] = useState(null);
   const lastToolResultRef = useRef(null);
+  const loggedToolMessageIdsRef = useRef(new Set());
   
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -77,6 +79,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       return [];
     }
   });
+
+  const logConversation = useCallback((level, message, data) => {
+    const args = data ? [data] : [];
+    switch (level) {
+      case 'error':
+        debugLogger.error('AIChatConversation', message, ...args);
+        break;
+      case 'warn':
+        debugLogger.warn('AIChatConversation', message, ...args);
+        break;
+      case 'debug':
+        debugLogger.debug('AIChatConversation', message, ...args);
+        break;
+      default:
+        debugLogger.info('AIChatConversation', message, ...args);
+    }
+  }, []);
 
   // Detectar si un texto parece un tool-call JSON para NO mostrarlo en streaming
   const looksLikeToolJson = useCallback((text) => {
@@ -140,6 +159,31 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     window.addEventListener('conversation-updated', handleConversationUpdate);
     return () => window.removeEventListener('conversation-updated', handleConversationUpdate);
   }, []);
+
+  useEffect(() => {
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return;
+    }
+    const logged = loggedToolMessageIdsRef.current;
+    messages.forEach(msg => {
+      const isToolResult = msg?.metadata?.isToolResult || msg?.role === 'tool';
+      if (!isToolResult || !msg?.id || logged.has(msg.id)) {
+        return;
+      }
+      logged.add(msg.id);
+      logConversation('info', 'Resultado de herramienta persistido', {
+        messageId: msg.id,
+        toolName: msg?.metadata?.toolName,
+        hasToolResultText: !!msg?.metadata?.toolResultText
+      });
+      if (!msg?.metadata?.toolResultText) {
+        logConversation('warn', 'Resultado de herramienta sin toolResultText', {
+          messageId: msg.id,
+          toolName: msg?.metadata?.toolName
+        });
+      }
+    });
+  }, [messages, logConversation]);
 
   const looksLikeJsonStart = useCallback((text) => {
     if (!text || typeof text !== 'string') return false;
@@ -266,7 +310,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         const filteredPrev = prev.filter(id => existingServerIds.has(id));
         const removed = prev.filter(id => !existingServerIds.has(id));
         if (removed.length > 0) {
-          console.log('🧹 Limpiando MCPs inexistentes del localStorage:', removed);
+          debugLogger.debug('AIChatPanel.MCP', 'Limpiando MCPs inexistentes del localStorage', removed);
         }
 
         const merged = new Set([...filteredPrev, ...enabledServerIds]);
@@ -274,7 +318,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
         // Solo actualizar si hay cambios
         if (JSON.stringify(merged_array) !== JSON.stringify(prev)) {
-          console.log('🔄 Sincronizando MCPs instalados con localStorage:', merged_array);
+          debugLogger.debug('AIChatPanel.MCP', 'Sincronizando MCPs instalados con localStorage', merged_array);
           localStorage.setItem('selectedMcpServers', JSON.stringify(merged_array));
           return merged_array;
         }
@@ -297,10 +341,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
         if (validServerIds.length !== selectedMcpServers.length) {
           const skipped = selectedMcpServers.filter(id => !availableServerIds.has(id));
-          console.log('⚠️ Omitiendo MCPs sin configuración al iniciar:', skipped);
+          debugLogger.debug('AIChatPanel.MCP', 'Omitiendo MCPs sin configuración al iniciar', skipped);
         }
 
-        console.log('📌 Iniciando MCPs por defecto:', validServerIds);
+        debugLogger.debug('AIChatPanel.MCP', 'Iniciando MCPs por defecto', validServerIds);
         validServerIds.forEach(serverId => {
           mcpClient.startServer(serverId).catch(error => {
             console.error(`Error iniciando MCP ${serverId}:`, error);
@@ -335,17 +379,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Escuchar evento para abrir AIConfigDialog en pestaña MCP
   useEffect(() => {
     const handleOpenAIConfig = (event) => {
-      console.log('🔔 [AIChatPanel] Evento open-ai-config recibido:', event.detail);
+      debugLogger.debug('AIChatPanel.UI', 'Evento open-ai-config recibido', event.detail);
       
       if (event.detail?.tab === 'mcp-manager') {
         // Guardar el servidor a seleccionar en window para que MCPManagerTab lo lea cuando se carguen los datos
         if (event.detail?.selectServer) {
           window.__mcpConfigSelectServer = event.detail.selectServer;
-          console.log('💾 [AIChatPanel] Guardado servidor a seleccionar:', window.__mcpConfigSelectServer);
+          debugLogger.debug('AIChatPanel.UI', 'Servidor MCP seleccionado para configuración', window.__mcpConfigSelectServer);
         }
         
         // Abrir el diálogo en la pestaña MCP
-        console.log('📖 [AIChatPanel] Abriendo AIConfigDialog con pestaña MCP Tools');
         setShowConfigDialog(true);
       }
     };
@@ -460,6 +503,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setCurrentStatus(null);
     // No limpiar detectedFiles aquí - mantener archivos de conversaciones anteriores
 
+    logConversation('info', 'Usuario envía mensaje', {
+      conversationId: currentConversationId,
+      length: userMessage.length,
+      attachedFiles: attachedFiles.length
+    });
+
     // Crear AbortController para cancelar si es necesario
     const controller = new AbortController();
     setAbortController(controller);
@@ -484,7 +533,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // ============= PASO 1: SINCRONIZAR CONVERSACIÓN (PRIMERO) =============
       // Asegurar que el servicio esté sincronizado con la conversación actual ANTES de limpiar historial
       if (currentConversationId && conversationService.currentConversationId !== currentConversationId) {
-        console.log(`🔄 [AIChatPanel] Sincronizando conversación: ${currentConversationId}`);
+        logConversation('info', 'Sincronizando conversación activa', {
+          conversationId: currentConversationId
+        });
         conversationService.loadConversation(currentConversationId);
       }
       
@@ -626,7 +677,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
         },
         onToolResult: (toolData) => {
-          console.log('🔧 [AIChatPanel.onToolResult] Ejecutado:', {
+          logConversation('info', 'Resultado de herramienta recibido (stream)', {
             toolName: toolData.toolName,
             hasArgs: !!toolData.args,
             hasResult: !!toolData.result
@@ -683,12 +734,17 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // Si usamos mensajes estructurados, el orquestador ya persistirá y emitirá 'conversation-updated'
           if (aiService.featureFlags?.structuredToolMessages) {
-            console.log(`   📋 Mensajes estructurados activos, esperando que el orquestador guarde con metadatos correctos...`);
+            logConversation('debug', 'Mensajes estructurados: esperando persistencia del orquestador', {
+              toolName: toolData.toolName
+            });
             return;
           }
           
           // Flujo legacy: persistir un mensaje de sistema minimalista y reflejar en UI
-          console.log(`   Guardando en conversationService: "${content}"`);
+          logConversation('debug', 'Persistiendo resultado de herramienta (legacy)', {
+            toolName: toolData.toolName,
+            message: content
+          });
           
           // ✅ IMPROVED: Guardar metadatos adicionales (lenguaje detectado, ruta)
           const metadata = {
@@ -804,7 +860,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           };
 
           if (isSystemMetadata(safeResponse)) {
-            console.log(`   ⚠️ Respuesta es metadata del sistema, usando "Hecho."`);
+            logConversation('warn', 'Respuesta del modelo contiene solo metadata del sistema', {
+              conversationId: conversationService.currentConversationId
+            });
             safeResponse = 'Hecho.';
           }
           
@@ -824,18 +882,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           })();
           
           if (isJsonToolCall) {
-            console.log(`   ⚠️ Respuesta es JSON de tool call puro, NO guardando como respuesta del asistente`);
-            console.log(`   Tool detectado: ${isJsonToolCall}`);
+            logConversation('warn', 'Respuesta del modelo es un tool call puro. Se omite el guardado.', {
+              conversationId: conversationService.currentConversationId,
+              tool: isJsonToolCall
+            });
             // NO guardar esta respuesta - ya fue manejada por ToolOrchestrator
             // Solo retornar para que la UI se actualice
           } else {
-            console.log(`   Safe response: "${safeResponse.substring(0, 80)}"`);
-            
-            // ============= GUARDAR CON SAFE RESPONSE (no con el original vacío) =============
-            // Agregar respuesta del asistente a la conversación (usando safeResponse)
-            console.log(`💾 [AIChatPanel.onComplete] Guardando mensaje del asistente en localStorage...`);
-            console.log(`   Content length: ${safeResponse.length} chars`);
-            console.log(`   ConversationId: ${conversationService.currentConversationId}`);
+            logConversation('info', 'Guardando respuesta del asistente', {
+              safePreview: safeResponse.substring(0, 80),
+              length: safeResponse.length,
+              conversationId: conversationService.currentConversationId
+            });
             
               const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
                 latency: data.latency,
@@ -943,7 +1001,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     } catch (error) {
       // Si es error de cancelación, no mostrar como error
       if (error.name === 'AbortError') {
-        console.log('💡 Generación cancelada por el usuario');
+        logConversation('info', 'Generación cancelada por el usuario', {
+          conversationId: currentConversationId
+        });
         setCurrentStatus({
           status: 'cancelled',
           message: 'Generación cancelada'
@@ -951,7 +1011,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         return; // No mostrar mensaje de error para cancelaciones
       }
       
-      console.error('Error enviando mensaje:', error);
+      logConversation('error', 'Error enviando mensaje al modelo', {
+        conversationId: currentConversationId,
+        error: error?.message
+      });
       
       setCurrentStatus({
         status: 'error',
@@ -1039,9 +1102,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const inputHasText = !!inputValue.trim();
 
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
-      console.log('🛑 [AIChatPanel] Limpiar chat ignorado: la conversación está vacía');
+      logConversation('debug', 'Solicitud de limpiar chat ignorada: conversación vacía');
       return;
     }
+
+    loggedToolMessageIdsRef.current = new Set();
 
     setMessages([]);
     aiService.clearHistory();
@@ -1070,13 +1135,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Si hay desincronización (UI tiene mensajes pero servicio no), limpiar UI
     if (uiHasMessages && !serviceHasMessages) {
-      console.log('🔧 [AIChatPanel] Limpiando UI desincronizada');
+      logConversation('warn', 'UI desincronizada detectada, limpiando mensajes locales');
       setMessages([]);
       setAttachedFiles([]);
     }
 
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
-      console.log('🛑 [AIChatPanel] Nueva conversación ignorada: la actual está vacía');
+      logConversation('debug', 'Nueva conversación ignorada: estado actual vacío');
       return;
     }
 
@@ -1109,8 +1174,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Guardar MCPs seleccionados en la conversación
     if (selectedMcpServers.length > 0) {
       newConversation.selectedMcpServers = selectedMcpServers;
-      console.log('📌 MCPs seleccionados guardados en conversación:', selectedMcpServers);
+      logConversation('debug', 'MCPs asociados a nueva conversación', {
+        conversationId: newConversation.id,
+        servers: selectedMcpServers
+      });
     }
+
+    loggedToolMessageIdsRef.current = new Set();
 
     // Actualizar estado con la nueva conversación
     setCurrentConversationId(newConversation.id);
@@ -1133,6 +1203,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setIsLoading(false);
     setCurrentStatus(null);
     
+    loggedToolMessageIdsRef.current = new Set();
+    
     // ============= LIMPIEZA COMPLETA - Fase 2: AIService State =============
     aiService.clearHistory();                    // 🔧 Limpiar historial del AIService
     
@@ -1153,9 +1225,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       
       // Restaurar el modelo de la conversación si existe
       if (conversation.modelId) {
-        aiService.setCurrentModel(conversation.modelId, conversation.modelType);
-        setCurrentModel(conversation.modelId);
-        setModelType(conversation.modelType);
+        try {
+          aiService.setCurrentModel(conversation.modelId, conversation.modelType);
+          setCurrentModel(conversation.modelId);
+          setModelType(conversation.modelType);
+        } catch (error) {
+          logConversation('error', 'No se pudo seleccionar el modelo de la conversación', {
+            conversationId,
+            modelId: conversation.modelId,
+            modelType: conversation.modelType,
+            error: error?.message
+          });
+          setCurrentStatus({
+            status: 'error',
+            message: 'El modelo configurado ya no está disponible. Selecciona otro modelo e inténtalo de nuevo.'
+          });
+        }
       }
       
       // Cargar mensajes preservando toda la estructura incluyendo metadatos
@@ -1181,9 +1266,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         isToolResult: !!(m.metadata && m.metadata.isToolResult),
         contentLength: m.content ? m.content.length : 0
       }));
-      console.log(`✅ [AIChatPanel] Conversación cargada: ${conversation.id}`);
-      console.log(`   Mensajes: ${conversation.messages.length}`);
-      console.log(`   Resumen:`, msgSummary);
+      logConversation('info', 'Conversación cargada', {
+        conversationId: conversation.id,
+        messages: conversation.messages.length,
+        summary: msgSummary
+      });
       
       // 🔔 Disparar evento para notificar la carga y sincronizar todos los listeners
       window.dispatchEvent(new CustomEvent('conversation-updated', {
@@ -1243,7 +1330,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
       // Guardar en localStorage
       localStorage.setItem('selectedMcpServers', JSON.stringify(updated));
-      console.log('📌 MCPs seleccionados guardados:', updated);
+      debugLogger.debug('AIChatPanel.MCP', 'MCPs seleccionados actualizados', updated);
       return updated;
     });
   };
@@ -1259,7 +1346,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const allIds = activeMcpServers.map(s => s.id);
       setSelectedMcpServers(allIds);
       localStorage.setItem('selectedMcpServers', JSON.stringify(allIds));
-      console.log('📌 Todos los MCPs seleccionados:', allIds);
+      debugLogger.debug('AIChatPanel.MCP', 'Todos los MCPs seleccionados', allIds);
     }
   };
 
@@ -1274,7 +1361,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
       // Guardar en localStorage
       localStorage.setItem('disabledMcpServers', JSON.stringify(updated));
-      console.log('🔌 MCPs desactivados guardados:', updated);
+      debugLogger.debug('AIChatPanel.MCP', 'MCPs desactivados actualizados', updated);
       return updated;
     });
   };
@@ -1287,52 +1374,59 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
   // Función para copiar código al portapapeles
   const copyCode = useCallback((codeId) => {
-    console.log('copyCode called with ID:', codeId);
     const codeElement = document.getElementById(codeId);
-    console.log('Code element found:', codeElement);
-    
-    if (codeElement) {
-      const codeText = codeElement.textContent || codeElement.innerText;
-      console.log('Code text to copy:', codeText);
-      
-      // Mostrar feedback visual inmediatamente
-      const button = document.querySelector(`[data-code-id="${codeId}"]`);
-      if (button) {
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i class="pi pi-spin pi-spinner"></i> Copiando...';
-        button.style.background = 'rgba(255, 193, 7, 0.2)';
-        button.style.borderColor = 'rgba(255, 193, 7, 0.4)';
-        
-        // Intentar copiar con Clipboard API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(codeText).then(() => {
-            console.log('Code copied successfully');
-            button.innerHTML = '<i class="pi pi-check"></i> Copiado';
-            button.style.background = 'rgba(100, 200, 100, 0.2)';
-            button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
-            
-            setTimeout(() => {
-              button.innerHTML = originalText;
-              button.style.background = '';
-              button.style.borderColor = '';
-            }, 2000);
-          }).catch(err => {
-            console.error('Clipboard API error:', err);
-            // Fallback
-            fallbackCopy(codeText, button, originalText);
-          });
-        } else {
-          // Fallback para navegadores que no soportan Clipboard API
-          fallbackCopy(codeText, button, originalText);
-        }
-      }
+    if (!codeElement) {
+      debugLogger.warn('AIChatPanel.Copy', 'No se encontró el elemento de código', { codeId });
+      return;
+    }
+
+    const button = document.querySelector(`[data-code-id="${codeId}"]`);
+    if (!button) {
+      debugLogger.debug('AIChatPanel.Copy', 'Botón de copiado no encontrado', { codeId });
+      return;
+    }
+
+    const originalText = button.innerHTML;
+    const codeText = codeElement.textContent || codeElement.innerText;
+
+    const restore = (text = originalText) => {
+      button.innerHTML = text;
+      button.style.background = '';
+      button.style.borderColor = '';
+    };
+
+    const showSuccess = () => {
+      button.innerHTML = '<i class="pi pi-check"></i> Copiado';
+      button.style.background = 'rgba(100, 200, 100, 0.2)';
+      button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+      setTimeout(() => restore(), 2000);
+    };
+
+    const showError = () => {
+      button.innerHTML = '<i class="pi pi-times"></i> Error';
+      button.style.background = 'rgba(220, 53, 69, 0.2)';
+      button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+      setTimeout(() => restore(), 2000);
+    };
+
+    button.innerHTML = '<i class="pi pi-spin pi-spinner"></i> Copiando...';
+    button.style.background = 'rgba(255, 193, 7, 0.2)';
+    button.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(codeText)
+        .then(showSuccess)
+        .catch(err => {
+          debugLogger.warn('AIChatPanel.Copy', 'Clipboard API error, usando fallback', { codeId, error: err?.message });
+          fallbackCopy(codeText, button, originalText, showSuccess, showError);
+        });
     } else {
-      console.error('Code element not found with ID:', codeId);
+      fallbackCopy(codeText, button, originalText, showSuccess, showError);
     }
   }, []);
 
   // Función de respaldo para copiar
-  const fallbackCopy = (text, button, originalText) => {
+  const fallbackCopy = (text, button, originalText, onSuccess, onError) => {
     try {
       const textArea = document.createElement('textarea');
       textArea.value = text;
@@ -1347,30 +1441,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       document.body.removeChild(textArea);
       
       if (successful) {
-        console.log('Code copied with fallback method');
-        button.innerHTML = '<i class="pi pi-check"></i> Copiado';
-        button.style.background = 'rgba(100, 200, 100, 0.2)';
-        button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         throw new Error('execCommand failed');
       }
-      
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.style.background = '';
-        button.style.borderColor = '';
-      }, 2000);
     } catch (err) {
-      console.error('Fallback copy failed:', err);
-      button.innerHTML = '<i class="pi pi-times"></i> Error';
-      button.style.background = 'rgba(220, 53, 69, 0.2)';
-      button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
-      
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.style.background = '';
-        button.style.borderColor = '';
-      }, 2000);
+      debugLogger.error('AIChatPanel.Copy', 'Fallback copy failed', { error: err?.message });
+      if (onError) {
+        onError();
+      } else {
+        button.innerHTML = '<i class="pi pi-times"></i> Error';
+        button.style.background = 'rgba(220, 53, 69, 0.2)';
+        button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.style.background = '';
+          button.style.borderColor = '';
+        }, 2000);
+      }
     }
   };
 
@@ -1480,7 +1570,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
       return tempDiv.innerHTML;
     } catch (error) {
-      console.warn('⚠️ No se pudieron ajustar los enlaces del markdown:', error);
+      debugLogger.warn('AIChatPanel.Markdown', 'No se pudieron ajustar los enlaces del markdown', {
+        error: error?.message
+      });
       return html;
     }
   };
@@ -1692,7 +1784,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Aplicar el resaltado de forma segura
           hljs.highlightElement(block);
         } catch (error) {
-          console.warn('Error highlighting code block:', error);
+          debugLogger.warn('AIChatPanel.Markdown', 'Error al aplicar highlight en bloque de código', {
+            error: error?.message
+          });
           // En caso de error, asegurar que el contenido esté limpio y escapado
           sanitizeCodeContent(block);
         }
@@ -1769,7 +1863,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     if (isJsonToolCall && !isToolCall && !isToolResult && message.role !== 'tool') {
       // Es JSON puro de tool call y no está marcado como tal - NO renderizar
       // PERO: Si es un resultado de tool, SÍ renderizar
-      console.log(`🔍 [renderMessage] Omitiendo JSON puro de tool call:`, message.content.substring(0, 50));
       return null;
     }
 
@@ -1793,14 +1886,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Render especial para resultado de tool (success card)
     if (isToolResult || message.role === 'tool') {
-      console.log(`🔍 [renderMessage] Tool result detectado:`, {
-        isToolResult,
-        messageRole: message.role,
-        toolName: message.metadata?.toolName,
-        hasToolResultText: !!message.metadata?.toolResultText,
-        messageId: message.id
-      });
-      
       // ✅ CRITICAL FIX: Usar toolResultText de metadatos, NO content (que es solo un resumen)
       const text = (message.metadata?.toolResultText || message.content || '').trim();
       const isDirToken = /\[(FILE|DIR)\]/.test(text);
@@ -1813,27 +1898,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const iconColor = isSuccess ? '#4caf50' : '#f44336';
       
       // 🔧 DEBUG: Para list_directory_with_sizes
-      if (message.metadata?.toolName === 'list_directory_with_sizes') {
-        console.log(`📊 [renderMessage] list_directory_with_sizes:`, {
-          toolName: message.metadata?.toolName,
-          textLength: text.length,
-          primeras200: text.substring(0, 200),
-          tieneKB: text.includes('KB'),
-          tieneMB: text.includes('MB'),
-          tieneBytes: text.includes('bytes')
-        });
-      }
-      
-      // 🔧 DEBUG: Detectar si falta metadata
-      if (!message.metadata?.toolResultText && text.includes('Successfully')) {
-        console.warn(`⚠️ [renderMessage] Mensaje de tool sin toolResultText:`, {
-          toolName: message.metadata?.toolName,
-          hasToolResultText: !!message.metadata?.toolResultText,
-          contentLength: (message.content || '').length,
-          messageId: message.id
-        });
-      }
-      
       // 🔧 ESPECIAL: Si es run_command, renderizar como terminal/shell output
       if (message.metadata?.toolName?.includes('run_command')) {
         const trimmed = text.trim();
