@@ -7,6 +7,9 @@ class WebSearchNativeServer {
     this.options = initialConfig.options || {};
     this.allowedDomains = initialConfig.allowedDomains || [];
     this.renderMode = initialConfig.renderMode || 'static';
+    this.renderDelayMs = typeof initialConfig.renderDelayMs === 'number'
+      ? initialConfig.renderDelayMs
+      : (typeof this.options.renderDelayMs === 'number' ? this.options.renderDelayMs : 1200);
     this.updateServiceConfig();
   }
 
@@ -19,7 +22,8 @@ class WebSearchNativeServer {
       allowedDomains: this.allowedDomains,
       api: this.options.api || {},
       userAgent: this.options.userAgent || 'NodeTerm-WebSearch/1.0',
-      renderMode: this.renderMode
+      renderMode: this.renderMode,
+      renderDelayMs: this.renderDelayMs
     });
   }
 
@@ -91,6 +95,32 @@ class WebSearchNativeServer {
           }
         },
         {
+          name: 'site_search',
+          description: 'Realiza una búsqueda web limitada a un dominio específico y devuelve enlaces relevantes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                description: 'URL o dominio base donde limitar la búsqueda.',
+                format: 'uri'
+              },
+              query: {
+                type: 'string',
+                description: 'Palabras clave a buscar dentro del sitio.'
+              },
+              maxResults: {
+                type: 'number',
+                minimum: 1,
+                maximum: 10,
+                default: 6,
+                description: 'Número máximo de enlaces a devolver.'
+              }
+            },
+            required: ['url', 'query']
+          }
+        },
+        {
           name: 'fetch_page',
           description: 'Descarga el HTML de una página web (con límites de tamaño y timeout).',
           inputSchema: {
@@ -118,7 +148,7 @@ class WebSearchNativeServer {
         },
         {
           name: 'extract_text',
-          description: 'Descarga una página y devuelve texto plano limpio.',
+          description: 'Descarga una página, extrae el contenido principal y devuelve resumen, markdown y texto plano.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -130,9 +160,9 @@ class WebSearchNativeServer {
               maxLength: {
                 type: 'number',
                 minimum: 1024,
-                maximum: 200000,
-                default: 60000,
-                description: 'Cantidad máxima de texto a devolver.'
+                maximum: 500000,
+                default: 200000,
+                description: 'Cantidad máxima de texto a procesar.'
               },
               render: {
                 type: 'boolean',
@@ -153,6 +183,8 @@ class WebSearchNativeServer {
     switch (toolName) {
       case 'web_search':
         return this.executeWebSearch(args);
+      case 'site_search':
+        return this.executeSiteSearch(args);
       case 'fetch_page':
         return this.executeFetchPage(args);
       case 'extract_text':
@@ -204,13 +236,61 @@ class WebSearchNativeServer {
     };
   }
 
+  async executeSiteSearch(args = {}) {
+    const url = (args.url || '').trim();
+    const query = (args.query || '').trim();
+    if (!url) {
+      throw new Error('Se requiere el argumento "url".');
+    }
+    if (!query) {
+      throw new Error('Se requiere el argumento "query".');
+    }
+
+    const maxResults = Math.min(Math.max(args.maxResults || 6, 1), 10);
+
+    const results = await webSearchService.searchSite(url, query, {
+      maxResults,
+      mode: this.mode,
+      allowedDomains: this.allowedDomains
+    });
+
+    const lines = results.length
+      ? results.map((r, idx) => {
+          const displayUrl = r.url.length > 120 ? `${r.url.slice(0, 117)}...` : r.url;
+          const snippet = r.snippet ? `\n  ${r.snippet}` : '';
+          return `${idx + 1}. ${r.title}\n   ${displayUrl}${snippet}`;
+        }).join('\n\n')
+      : 'No se encontraron resultados relevantes en el sitio.';
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: [
+            `Resultados en ${url} para "${query}":`,
+            '',
+            lines
+          ].join('\n').trim()
+        }
+      ],
+      data: {
+        url,
+        query,
+        results
+      }
+    };
+  }
+
   async executeFetchPage(args = {}) {
     const url = (args.url || '').trim();
     if (!url) {
       throw new Error('Se requiere el argumento "url".');
     }
 
-    const maxLength = args.maxLength || this.options.maxContentLength || 200000;
+    const maxLengthRaw = Number(args.maxLength);
+    const maxLength = Number.isFinite(maxLengthRaw) && maxLengthRaw > 0
+      ? maxLengthRaw
+      : Math.max(400000, this.options.maxContentLength || 200000);
     const useRender = args.render === true || this.renderMode === 'rendered';
 
     const page = await webSearchService.fetchPage(url, {
@@ -219,11 +299,18 @@ class WebSearchNativeServer {
       render: useRender
     });
 
+    const mainLength = page.content ? page.content.length : 0;
+    const originalLength = page.originalContent ? page.originalContent.length : mainLength;
+
     return {
       content: [
         {
           type: 'text',
-          text: `Contenido HTML descargado (${page.content.length} caracteres)`
+          text: [
+            `HTML principal (${mainLength} caracteres)`,
+            `HTML original (${originalLength} caracteres)`,
+            `Renderizado: ${useRender ? 'sí' : 'no'}`
+          ].join('\n')
         }
       ],
       data: page
@@ -236,7 +323,10 @@ class WebSearchNativeServer {
       throw new Error('Se requiere el argumento "url".');
     }
 
-    const maxLength = args.maxLength || 60000;
+    const maxLengthRaw = Number(args.maxLength);
+    const maxLength = Number.isFinite(maxLengthRaw) && maxLengthRaw > 0
+      ? maxLengthRaw
+      : Math.max(400000, this.options.maxContentLength || 200000);
     const useRender = args.render === true || this.renderMode === 'rendered';
 
     const result = await webSearchService.extractText(url, {
@@ -245,37 +335,97 @@ class WebSearchNativeServer {
       render: useRender
     });
 
-    const fullText = result.text || '';
-    let preview = fullText;
-    let truncated = false;
-
-    const PREVIEW_LIMIT = 1200;
-    if (preview.length > PREVIEW_LIMIT) {
-      preview = `${preview.slice(0, PREVIEW_LIMIT)}…`;
-      truncated = true;
-    }
-
+    const fullText = result.rawText || result.text || '';
     const looksLikeNotFound = /404/i.test(fullText) && /not found|page could not be found|doesn'?t exist/i.test(fullText);
 
     const lines = [
-      `Texto extraído (${fullText.length} caracteres)`
+      `Contenido extraído (${fullText.length} caracteres procesados)`
     ];
 
+    if (result.title) {
+      lines.push(`Título: ${result.title}`);
+    }
+
+    if (result.metadata?.byline) {
+      lines.push(`Autoría: ${result.metadata.byline}`);
+    }
+
+    if (result.summary) {
+      lines.push('Resumen:');
+      lines.push(result.summary);
+    }
+
+    const headlineEntries = Array.isArray(result.headlineLinks) && result.headlineLinks.length
+      ? result.headlineLinks.map(item => ({
+          text: (item.text || '').trim(),
+          href: (item.href || '').trim()
+        }))
+      : (Array.isArray(result.headlines) ? result.headlines.map(text => ({ text: (text || '').trim(), href: '' })) : []);
+
+    const headlineTextSet = new Set(
+      headlineEntries
+        .map(item => (item.text || '').toLowerCase())
+        .filter(Boolean)
+    );
+
+    if (headlineEntries.length) {
+      lines.push('');
+      lines.push('Titulares detectados:');
+      headlineEntries.slice(0, 20).forEach((headline, idx) => {
+        const display = headline.href ? `${headline.text} → ${headline.href}` : headline.text;
+        lines.push(`${idx + 1}. ${display}`);
+      });
+    }
+
+    const structureHeadings = Array.isArray(result.headings)
+      ? result.headings.filter(h => {
+          const text = (h.text || '').trim();
+          if (!text) return false;
+          const key = text.toLowerCase();
+          if (headlineTextSet.has(key)) return false;
+          return true;
+        })
+      : [];
+
+    if (structureHeadings.length && structureHeadings.length < 6) {
+      const dedupeStructure = new Set();
+      const headingLines = structureHeadings
+        .filter(h => {
+          const key = (h.text || '').trim().toLowerCase();
+          if (!key) return false;
+          if (dedupeStructure.has(key)) return false;
+          dedupeStructure.add(key);
+          return true;
+        })
+        .slice(0, 12)
+        .map(h => {
+          const prefix = '  '.repeat(Math.max(0, Math.min((h.level || 1) - 1, 4)));
+          return `${prefix}- [H${h.level || '?'}] ${h.text}`;
+        });
+      if (headingLines.length) {
+        lines.push('');
+        lines.push('Estructura detectada:');
+        lines.push(...headingLines);
+      }
+    }
+
+    if (Array.isArray(result.links) && result.links.length) {
+      const linkLines = result.links.slice(0, 6).map(link => `- ${link.text} → ${link.href}`);
+      if (linkLines.length) {
+        lines.push('');
+        lines.push('Enlaces principales:');
+        lines.push(...linkLines);
+      }
+    }
+
     if (looksLikeNotFound) {
+      lines.push('');
       lines.push('⚠️ El sitio devolvió un texto que parece un error (404 / no encontrado). Puede requerir JavaScript o una navegación con Puppeteer.');
     }
 
-    if (preview.trim()) {
-      lines.push(preview.trim());
-      if (result.snippet && !preview.includes(result.snippet)) {
-        lines.push(`Snippet detectado: ${result.snippet}`);
-      }
-      if (truncated) {
-        lines.push('… (texto truncado, usa el campo data.text para el contenido completo)');
-      }
-    } else if (!looksLikeNotFound) {
-      lines.push('No se encontró texto significativo en la página.');
-    }
+    lines.push('');
+    lines.push('El cuerpo completo está disponible en data.markdown (Markdown) y data.rawText (texto plano).');
+    lines.push(`Renderizado: ${useRender ? 'sí' : 'no'}`);
 
     return {
       content: [
@@ -284,7 +434,11 @@ class WebSearchNativeServer {
           text: lines.join('\n\n')
         }
       ],
-      data: result
+      data: {
+        ...result,
+        requestedUrl: url,
+        renderUsed: useRender
+      }
     };
   }
 
