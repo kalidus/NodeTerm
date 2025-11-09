@@ -1436,6 +1436,37 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   // Función para renderizar Markdown con formato ChatGPT-like
+  const enforceLinkTargets = (html) => {
+    if (!html) return '';
+
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+
+      const anchors = tempDiv.querySelectorAll('a');
+      anchors.forEach((anchor) => {
+        anchor.setAttribute('target', '_blank');
+
+        const relAttr = anchor.getAttribute('rel') || '';
+        const relValues = relAttr.split(/\s+/).filter(Boolean);
+
+        if (!relValues.includes('noopener')) {
+          relValues.push('noopener');
+        }
+        if (!relValues.includes('noreferrer')) {
+          relValues.push('noreferrer');
+        }
+
+        anchor.setAttribute('rel', relValues.join(' '));
+      });
+
+      return tempDiv.innerHTML;
+    } catch (error) {
+      console.warn('⚠️ No se pudieron ajustar los enlaces del markdown:', error);
+      return html;
+    }
+  };
+
   const renderMarkdown = (content) => {
     if (!content) return '';
     
@@ -1544,7 +1575,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         SANITIZE_DOM: false
       });
       
-      return cleanHtml;
+      return enforceLinkTargets(cleanHtml);
     } catch (error) {
       console.error('❌ Error rendering markdown:', error);
       // Escapar el contenido si hay error
