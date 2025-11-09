@@ -255,17 +255,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Inicializar MCP client
     mcpClient.initialize().then(() => {
       // Sincronizar MCPs instalados con localStorage
-      // Si un MCP está configured como enabled en mcp-config.json, agregarlo a selectedMcpServers
       const allServers = mcpClient.getAllServers();
+      const existingServerIds = new Set(allServers.map(s => s.id));
       const enabledServerIds = allServers
         .filter(s => s.config?.enabled)
         .map(s => s.id);
-      
-      // Merge: mantener lo que ya está en localStorage + agregar nuevos enabled
+
+      // Merge: mantener lo que ya está en localStorage (filtrado) + agregar nuevos enabled
       setSelectedMcpServers(prev => {
-        const merged = new Set([...prev, ...enabledServerIds]);
+        const filteredPrev = prev.filter(id => existingServerIds.has(id));
+        const removed = prev.filter(id => !existingServerIds.has(id));
+        if (removed.length > 0) {
+          console.log('🧹 Limpiando MCPs inexistentes del localStorage:', removed);
+        }
+
+        const merged = new Set([...filteredPrev, ...enabledServerIds]);
         const merged_array = Array.from(merged);
-        
+
         // Solo actualizar si hay cambios
         if (JSON.stringify(merged_array) !== JSON.stringify(prev)) {
           console.log('🔄 Sincronizando MCPs instalados con localStorage:', merged_array);
@@ -282,8 +288,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // (dar tiempo a que se inicialice MCPClient)
     const initDefaultMcps = setTimeout(() => {
       if (selectedMcpServers.length > 0) {
-        console.log('📌 Iniciando MCPs por defecto:', selectedMcpServers);
-        selectedMcpServers.forEach(serverId => {
+        const availableServerIds = new Set(mcpClient.getAllServers().map(s => s.id));
+        const validServerIds = selectedMcpServers.filter(id => availableServerIds.has(id));
+
+        if (validServerIds.length === 0) {
+          return;
+        }
+
+        if (validServerIds.length !== selectedMcpServers.length) {
+          const skipped = selectedMcpServers.filter(id => !availableServerIds.has(id));
+          console.log('⚠️ Omitiendo MCPs sin configuración al iniciar:', skipped);
+        }
+
+        console.log('📌 Iniciando MCPs por defecto:', validServerIds);
+        validServerIds.forEach(serverId => {
           mcpClient.startServer(serverId).catch(error => {
             console.error(`Error iniciando MCP ${serverId}:`, error);
           });
