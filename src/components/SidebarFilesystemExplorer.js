@@ -678,58 +678,76 @@ const SidebarFilesystemExplorer = ({
         ref={contextMenuRef}
         autoZIndex={true}
       />
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.5rem 0.5rem 0.25rem 0.5rem'
-        }}
-      >
-        <Button
-          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'}
-          className="p-button-rounded p-button-text sidebar-action-button"
-          onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)}
-          tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'}
-          tooltipOptions={{ position: 'bottom' }}
-          style={{ ...headerButtonStyle, marginRight: 8 }}
+      
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        padding: '0.5rem 0.5rem 0.25rem 0.5rem',
+        width: '100%',
+        boxSizing: 'border-box',
+        overflow: 'visible'
+      }}>
+        <Button 
+          icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
+          className="p-button-rounded p-button-text sidebar-action-button" 
+          onClick={() => setSidebarCollapsed(v => !v)} 
+          tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+          tooltipOptions={{ position: 'bottom' }} 
+          style={{ 
+            marginRight: 8, 
+            flexShrink: 0,
+            width: '40px',
+            height: '40px',
+            minWidth: '40px',
+            minHeight: '40px',
+            fontSize: '18px'
+          }} 
         />
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Button
-            icon="pi pi-search"
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={openChatTab}
-            tooltip="Chat de IA"
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 4, 
+          marginLeft: 'auto',
+          flexShrink: 0,
+          overflow: 'visible'
+        }}>
+          <Button 
+            icon="pi pi-comments" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            onClick={openChatTab} 
+            tooltip="Chat de IA" 
             tooltipOptions={{ position: 'bottom' }}
-            style={headerButtonStyle}
+            style={{ flexShrink: 0 }}
           />
-          <Button
-            icon="pi pi-th-large"
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={openCreateGroupDialog}
-            tooltip="Crear grupo de pestañas"
-            tooltipOptions={{ position: 'bottom' }}
-            style={headerButtonStyle}
-          />
-          <Button
-            icon="pi pi-folder"
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={openCreateFolderDialog}
-            tooltip="Nueva carpeta"
+          <Button 
+            icon="pi pi-folder" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            onClick={openCreateFolderDialog} 
+            tooltip="Nueva carpeta" 
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading || allowedPaths.length === 0}
-            style={headerButtonStyle}
+            style={{ flexShrink: 0 }}
           />
-          <Button
-            icon="pi pi-refresh"
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={() => handleRefreshNode()}
-            tooltip="Recargar carpeta"
+          <Button 
+            icon="pi pi-th-large" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            onClick={openCreateGroupDialog} 
+            tooltip="Crear grupo de pestañas" 
+            tooltipOptions={{ position: 'bottom' }}
+            style={{ flexShrink: 0 }}
+          />
+          <Button 
+            icon="pi pi-refresh" 
+            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            onClick={() => handleRefreshNode()} 
+            tooltip="Recargar carpeta" 
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading}
-            style={headerButtonStyle}
+            style={{ flexShrink: 0 }}
           />
         </div>
       </div>
+      
       <Divider className="my-2" />
 
       <div

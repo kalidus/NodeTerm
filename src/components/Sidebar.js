@@ -1596,106 +1596,60 @@ const Sidebar = React.memo(({
             display: 'flex', 
             flexDirection: 'column',
             alignItems: 'flex-start', // Alinear a la izquierda
-            padding: '8px 2px',
+            padding: '8px 2px 100px 2px',
             width: '100%',
             visibility: 'visible',
             opacity: 1,
             zIndex: 1000,
-            gap: '8px'
+            gap: '8px',
+            boxSizing: 'border-box'
           }}>
-            {/* Botón de colapsar */}
-            <Button 
-              icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setSidebarCollapsed(v => !v)} 
-              tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important'
-              }} 
-            />
-            
-            {/* Botón de conexiones */}
-            <Button 
-              icon="pi pi-sitemap" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => {
-                setViewMode('connections');
-                setSidebarCollapsed(false);
-              }} 
-              tooltip="Conexiones" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#2196f3'
-              }} 
-            />
-            
-            {/* Botón de passwords */}
-            <Button 
-              icon="pi pi-key" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => {
-                setViewMode('passwords');
-                setSidebarCollapsed(false);
-              }} 
-              tooltip="Passwords" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#ffc107'
-              }} 
-            />
-
-            {filesystemAvailable && (
-              <Button
-                icon="pi pi-folder-open"
-                className="p-button-rounded p-button-text sidebar-action-button"
+            <div style={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '8px',
+              width: '100%'
+            }}>
+              {/* Botón de colapsar */}
+              <Button 
+                icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => setSidebarCollapsed(v => !v)} 
+                tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important'
+                }} 
+              />
+              
+              {/* Botón de conexiones */}
+              <Button 
+                icon="pi pi-sitemap" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
                 onClick={() => {
-                  setViewMode('filesystem');
+                  setViewMode('connections');
                   setSidebarCollapsed(false);
-                }}
-                tooltip="Filesystem MCP"
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                }} 
+                tooltip="Conexiones" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
                   fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
@@ -1703,70 +1657,139 @@ const Sidebar = React.memo(({
                   justifyContent: 'center',
                   visibility: 'visible !important',
                   opacity: '1 !important',
-                  color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
-                }}
+                  color: '#2196f3'
+                }} 
               />
-            )}
-            
-            {/* Botón de Chat de IA */}
-            <Button 
-              icon="pi pi-comments" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => {
-                // Crear pestaña de IA
-                const newAITab = {
-                  key: `ai-chat-${Date.now()}`,
-                  label: 'Chat IA',
-                  type: 'ai-chat',
-                  createdAt: Date.now(),
-                  groupId: null
-                };
+              
+              {/* Botón de passwords */}
+              <Button 
+                icon="pi pi-key" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => {
+                  setViewMode('passwords');
+                  setSidebarCollapsed(false);
+                }} 
+                tooltip="Passwords" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#ffc107'
+                }} 
+              />
+              
+              {/* Botón de Chat de IA */}
+              <Button 
+                icon="pi pi-comments" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => {
+                  // Crear pestaña de IA
+                  const newAITab = {
+                    key: `ai-chat-${Date.now()}`,
+                    label: 'Chat IA',
+                    type: 'ai-chat',
+                    createdAt: Date.now(),
+                    groupId: null
+                  };
 
-                // Disparar evento para crear la pestaña
-                window.dispatchEvent(new CustomEvent('create-ai-tab', {
-                  detail: { tab: newAITab }
-                }));
-              }} 
-              tooltip="Chat de IA" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important'
-              }} 
-            />
-            
-            {/* Botón de nuevo grupo */}
-            <Button 
-              icon="pi pi-th-large" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setShowCreateGroupDialog(true)} 
-              tooltip="Crear grupo de pestañas" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important'
-              }} 
-            />
+                  // Disparar evento para crear la pestaña
+                  window.dispatchEvent(new CustomEvent('create-ai-tab', {
+                    detail: { tab: newAITab }
+                  }));
+                }} 
+                tooltip="Chat de IA" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important'
+                }} 
+              />
+              
+              {/* Botón de nuevo grupo */}
+              <Button 
+                icon="pi pi-th-large" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => setShowCreateGroupDialog(true)} 
+                tooltip="Crear grupo de pestañas" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important'
+                }} 
+              />
+            </div>
+
+            <div style={{ flexGrow: 1 }} />
+
+            {filesystemAvailable && (
+              <>
+                <div
+                  style={{
+                    width: '60%',
+                    height: 1,
+                    backgroundColor: 'var(--ui-sidebar-border, rgba(255,255,255,0.18))',
+                    opacity: 0.6,
+                    margin: '4px 0 6px 0',
+                    alignSelf: 'center'
+                  }}
+                />
+                <Button
+                  icon="pi pi-folder-open"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={() => {
+                    setViewMode('filesystem');
+                    setSidebarCollapsed(false);
+                  }}
+                  tooltip="Filesystem MCP"
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                  }}
+                />
+              </>
+            )}
           </div>
 
           {/* Botones de menú de aplicación y configuración en la parte inferior */}
