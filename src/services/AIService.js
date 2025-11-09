@@ -1787,7 +1787,9 @@ class AIService {
             } else {
               // Modelo no conocido, no agregarlo a la lista predefinida
               // Solo marcar como no disponible en la configuración
-              console.log(`Modelo ${modelName} está instalado pero no está en la configuración predefinida`);
+              debugLogger.debug('AIService.Models', 'Modelo detectado fuera de la configuración predefinida', {
+                modelName
+              });
             }
           }
         });
@@ -1865,6 +1867,11 @@ class AIService {
       const errorMsg = type === 'local' 
         ? `El modelo ${modelName} no está instalado. Instálalo primero en Ollama.`
         : `El modelo ${modelName} no está disponible. Configura la API Key correspondiente.`;
+      debugLogger.error('AIService', 'Modelo no disponible al intentar seleccionarlo', {
+        modelId,
+        modelType: type,
+        message: errorMsg
+      });
       throw new Error(errorMsg);
     }
     
@@ -1973,31 +1980,34 @@ class AIService {
         lowerMsg.includes('sitio') || lowerMsg.includes('página') || lowerMsg.includes('web') ||
         lowerMsg.includes('.com') || lowerMsg.includes('web search') || lowerMsg.includes('google')) {
       selectedTools = ['web_search', 'site_search', 'fetch_page', 'extract_text', 'goto_url', 'screenshot'];
-      console.log(`🌐 [Tools Filter] Modo WEB: WebSearch nativo`);
+      debugLogger.debug('AIService.ToolsFilter', 'Modo WEB: WebSearch nativo');
     }
     // 📁 Si es sobre ARCHIVOS → Solo Filesystem
     else if (lowerMsg.includes('archivo') || lowerMsg.includes('archivo') || lowerMsg.includes('carpeta') ||
              lowerMsg.includes('directorio') || lowerMsg.includes('leer') || lowerMsg.includes('crear archivo')) {
       selectedTools = ['read_file', 'list_directory', 'write_file'];
-      console.log(`📁 [Tools Filter] Modo ARCHIVOS: Filesystem solo`);
+      debugLogger.debug('AIService.ToolsFilter', 'Modo ARCHIVOS: Filesystem solo');
     }
     // 🔧 Si es sobre COMANDOS → run_command
     else if (lowerMsg.includes('comando') || lowerMsg.includes('ejecuta') || lowerMsg.includes('run') ||
              lowerMsg.includes('script') || lowerMsg.includes('terminal') || lowerMsg.includes('shell')) {
       selectedTools = ['run_command'];
-      console.log(`🔧 [Tools Filter] Modo COMANDOS: CLI solo`);
+      debugLogger.debug('AIService.ToolsFilter', 'Modo COMANDOS: CLI solo');
     }
     // ❓ Por defecto: esenciales sin run_command (web prioritario)
     else {
       selectedTools = ['read_file', 'list_directory', 'write_file', 'web_search', 'site_search', 'goto_url', 'screenshot'];
-      console.log(`❓ [Tools Filter] Modo DEFAULT: Web + Filesystem (NO CLI)`);
+      debugLogger.debug('AIService.ToolsFilter', 'Modo DEFAULT: Web + Filesystem (NO CLI)');
     }
 
     const filtered = tools.filter(t => {
       return selectedTools.some(st => t.name.includes(st));
     });
 
-    console.log(`🔍 [Tools Filter] ${tools.length} tools → ${filtered.length} tools relevantes`);
+    debugLogger.debug('AIService.ToolsFilter', 'Tools filtrados por contexto', {
+      disponibles: tools.length,
+      relevantes: filtered.length
+    });
     return filtered;
   }
 
@@ -2019,7 +2029,11 @@ class AIService {
       // 🔍 FILTRAR TOOLS (contextual)
       tools = this.filterToolsByContext(tools, message);
 
-      console.log(`🔌 [MCP] ${tools.length} tools expuestas, ${resources.length} resources, ${prompts.length} prompts disponibles`);
+      debugLogger.debug('AIService.MCP', 'Contexto MCP generado', {
+        tools: tools.length,
+        resources: resources.length,
+        prompts: prompts.length
+      });
 
       return {
         tools,
@@ -2073,7 +2087,9 @@ class AIService {
       }
       return dirsText;
     } catch (err) {
-      console.warn('⚠️ [MCP] No se pudieron cachear los directorios permitidos:', err.message);
+      debugLogger.warn('AIService.MCP', 'No se pudieron cachear los directorios permitidos', {
+        error: err.message
+      });
       return null;
     }
   }
@@ -2295,7 +2311,9 @@ class AIService {
           // Validar que cada elemento del plan tenga tool
           const validTools = data.plan.filter(t => t && (t.tool || t.toolName));
           if (validTools.length > 0) {
-            console.log(`✅ [MCP] Plan detectado con ${validTools.length} herramientas`);
+            debugLogger.debug('AIService.MCP', 'Plan detectado con herramientas válidas', {
+              herramientas: validTools.length
+            });
             return {
               isPlan: true,
               tools: validTools.map(t => ({
@@ -2319,7 +2337,9 @@ class AIService {
    * Ejecutar un PLAN completo de herramientas (modo ReAct)
    */
   async _executeToolPlan(plan, callbacks = {}) {
-    console.log(`🚀 [MCP] Ejecutando plan con ${plan.tools.length} herramientas`);
+    debugLogger.debug('AIService.MCP', 'Ejecutando plan de herramientas', {
+      herramientas: plan.tools.length
+    });
     
     const results = [];
     for (let i = 0; i < plan.tools.length; i++) {
@@ -2327,7 +2347,11 @@ class AIService {
       const toolName = toolSpec.toolName || toolSpec.tool;
       const args = toolSpec.arguments || {};
       
-      console.log(`   [${i + 1}/${plan.tools.length}] Ejecutando: ${toolName}`);
+      debugLogger.debug('AIService.MCP', 'Ejecutando herramienta del plan', {
+        indice: i + 1,
+        total: plan.tools.length,
+        tool: toolName
+      });
       
       // Normalizar y resolver serverId
       const normalized = this._normalizeFunctionCall(toolName, args);
@@ -2369,7 +2393,11 @@ class AIService {
           callbacks.onToolResult({ toolName: actualToolName, args: callArgs, result });
         }
         
-        console.log(`   ✅ [${i + 1}/${plan.tools.length}] ${actualToolName} completado`);
+        debugLogger.debug('AIService.MCP', 'Herramienta del plan completada', {
+          indice: i + 1,
+          total: plan.tools.length,
+          tool: actualToolName
+        });
       } catch (error) {
         const errorMsg = `❌ Error ejecutando ${actualToolName}: ${error.message}`;
         conversationService.addMessage('tool', errorMsg, { error: true });
@@ -2378,7 +2406,10 @@ class AIService {
       }
     }
     
-    console.log(`✅ [MCP] Plan completado: ${results.filter(r => r.success).length}/${results.length} exitosas`);
+    debugLogger.debug('AIService.MCP', 'Plan completado', {
+      exitosas: results.filter(r => r.success).length,
+      total: results.length
+    });
     return 'Hecho.';
   }
 
@@ -2389,12 +2420,13 @@ class AIService {
     if (!response || typeof response !== 'string') return null;
     
     // NUEVO: Log agresivo para ver la respuesta COMPLETA
-    console.log(`🔎 [MCP] detectToolCallInResponse ENTRADA:`);
-    console.log(`   Tipo: ${typeof response}`);
-    console.log(`   Largo: ${response?.length} chars`);
-    console.log(`   Contenido: ${response?.substring(0, 200)}`);
-    console.log(`   ¿Incluye "tool"? ${response?.includes('"tool"')}`);
-    console.log(`   ¿Incluye "{"? ${response?.includes('{')}`);
+    debugLogger.debug('AIService.MCP', 'detectToolCallInResponse entrada', {
+      tipo: typeof response,
+      length: response?.length,
+      muestra: response?.substring(0, 200),
+      incluyeTool: response?.includes('"tool"'),
+      incluyeLlave: response?.includes('{')
+    });
     
     try {
       // Estrategia 1: Bloques explícitos con backticks (```json...```)
@@ -2407,7 +2439,9 @@ class AIService {
     } catch (error) {
       // Error inesperado en detección
       if (response.trim().startsWith('{') && response.trim().endsWith('}')) {
-        console.log('⚠️ [MCP] JSON inválido detectado:', error.message.substring(0, 100));
+        debugLogger.debug('AIService.MCP', 'JSON inválido detectado al buscar tool call', {
+          error: error.message.substring(0, 100)
+        });
       }
       return null;
     }
@@ -2530,7 +2564,7 @@ class AIService {
   }
 
   _normalizeFunctionCall(fullName, rawArgs) {
-    console.log('[MCP] _normalizeFunctionCall entrada', { fullName, rawArgs });
+    debugLogger.debug('AIService.MCP', '_normalizeFunctionCall entrada', { fullName, rawArgs });
     let argsObj;
     if (!rawArgs) {
       argsObj = {};
@@ -2577,7 +2611,12 @@ class AIService {
     }
 
     if (!serverId) {
-      console.warn('[MCP] _normalizeFunctionCall sin serverId resuelto', { fullName, rawArgs, toolName, argsObj });
+      debugLogger.warn('AIService.MCP', '_normalizeFunctionCall sin serverId resuelto', {
+        fullName,
+        rawArgs,
+        toolName,
+        argsObj
+      });
     }
 
     // Construir argumentos limpios
@@ -2643,7 +2682,7 @@ class AIService {
 
     const resolved = this._resolveToolInfo(toolName, serverId);
     const normalized = { serverId: resolved.serverId, toolName: resolved.toolName, arguments: finalArgs };
-    console.log('[MCP] _normalizeFunctionCall salida', normalized);
+    debugLogger.debug('AIService.MCP', '_normalizeFunctionCall salida', normalized);
     return normalized;
   }
 
@@ -2745,7 +2784,7 @@ class AIService {
    */
   _extractToolCallFromJSON(response) {
     // NUEVO: Log para debugging
-    console.log(`🔍 [MCP] Buscando JSON en respuesta (${response.length} chars)...`);
+    debugLogger.debug('AIService.MCP', 'Buscando JSON en respuesta', { length: response.length });
     
     // Buscar JSON que contenga "tool" o "use_tool"
     // Permite preámbulo y epilogo alrededor del JSON
@@ -2754,29 +2793,32 @@ class AIService {
     const matches = response.match(jsonPattern);
     
     if (!matches) {
-      console.log(`⚠️ [MCP] No se encontró JSON con 'tool' o 'use_tool'`);
+      debugLogger.debug('AIService.MCP', 'No se encontró JSON con tool/use_tool');
       return null;
     }
     
     // Intentar cada JSON encontrado (puede haber múltiples)
     for (let i = 0; i < matches.length; i++) {
       const jsonStr = matches[i];
-      console.log(`   Intentando candidato ${i + 1}: ${jsonStr.substring(0, 50).replace(/\n/g, '\\n')}...`);
+      debugLogger.debug('AIService.MCP', 'Intentando candidato para tool call', {
+        indice: i + 1,
+        preview: jsonStr.substring(0, 50).replace(/\n/g, '\\n')
+      });
       
       try {
         const data = JSON.parse(jsonStr);
         const toolCall = this._normalizeToolCall(data);
         if (toolCall) {
-          console.log(`✅ [MCP] Tool call detectado: ${toolCall.toolName}`);
+          debugLogger.debug('AIService.MCP', 'Tool call detectado', { tool: toolCall.toolName });
           return toolCall;
         }
       } catch (e) {
-        console.log(`      ❌ JSON inválido: ${e.message}`);
+        debugLogger.debug('AIService.MCP', 'JSON inválido durante parseo de tool call', { error: e.message });
         continue;
       }
     }
     
-    console.log(`❌ [MCP] Ninguno de los candidatos fue un tool call válido`);
+    debugLogger.debug('AIService.MCP', 'Ningún candidato fue un tool call válido');
     return null;
   }
 
@@ -2826,21 +2868,30 @@ class AIService {
     })();
     const inferredIntent = this._inferFilesystemIntent(lastUserGoal || '');
     
-    console.log(`🔄 [MCP] Iniciando loop de tool calls (máx ${maxIterations} iteraciones)`);
+    debugLogger.debug('AIService.MCP', 'Iniciando loop de tool calls', { maxIterations });
     
     while (currentToolCall && iteration < maxIterations) {
       iteration++;
       
-      console.log(`🔧 [MCP] Iteración ${iteration}/${maxIterations}: ${currentToolCall.toolName}`);
+      debugLogger.debug('AIService.MCP', 'Iteración de loop tool call', {
+        iteration,
+        maxIterations,
+        tool: currentToolCall.toolName
+      });
       
       // NEW: Detect infinite loops (same tool repeated)
       if (lastToolName === currentToolCall.toolName) {
         consecutiveRepeats++;
-        console.warn(`⚠️ [MCP] Mismo tool repetido ${consecutiveRepeats}x: ${currentToolCall.toolName}`);
+        debugLogger.warn('AIService.MCP', 'Mismo tool repetido consecutivamente', {
+          repeticiones: consecutiveRepeats,
+          tool: currentToolCall.toolName
+        });
         
         // Si el mismo tool se pide 2 veces seguidas (es decir, 3 veces en total), probablemente es un loop
         if (consecutiveRepeats >= 2) {
-          console.warn(`⚠️ [MCP] Loop infinito detectado, deteniendo y retornando respuesta`);
+          debugLogger.warn('AIService.MCP', 'Loop infinito detectado, deteniendo ejecución', {
+            tool: currentToolCall.toolName
+          });
           if (callbacks.onStatus) {
             callbacks.onStatus({
               status: 'warning',
@@ -2908,19 +2959,30 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
         if (defaultPathLocal) {
           if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(baseName) && !currentToolCall.arguments.path) {
             currentToolCall.arguments.path = defaultPathLocal;
-            console.log(`✅ [MCP] Path inyectado para ${baseName}: ${defaultPathLocal}`);
+            debugLogger.debug('AIService.MCP', 'Path inyectado para herramienta', {
+              tool: baseName,
+              path: defaultPathLocal
+            });
           }
           if (baseName === 'read_text_file' && !currentToolCall.arguments.path) {
             currentToolCall.arguments.path = defaultPathLocal;
-            console.log(`✅ [MCP] Path inyectado para ${baseName}: ${defaultPathLocal}`);
+            debugLogger.debug('AIService.MCP', 'Path inyectado para herramienta', {
+              tool: baseName,
+              path: defaultPathLocal
+            });
           }
         }
 
         // 🔍 DEBUG: Validar argumentos antes de ejecutar
-        console.log(`🔧 [MCP] Ejecutando ${baseName} con argumentos:`, JSON.stringify(currentToolCall.arguments));
+        debugLogger.debug('AIService.MCP', 'Ejecutando herramienta', {
+          tool: baseName,
+          args: currentToolCall.arguments
+        });
         
         if (!currentToolCall.arguments || Object.keys(currentToolCall.arguments).length === 0) {
-          console.warn(`⚠️ [MCP] ADVERTENCIA: Argumentos vacíos para ${baseName}, pueden fallar`);
+          debugLogger.warn('AIService.MCP', 'Argumentos vacíos para herramienta, puede fallar', {
+            tool: baseName
+          });
         }
 
         if (serverIdHint) {
@@ -2969,7 +3031,9 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
           continue;
         }
         
-        console.log(`✅ [MCP] ${currentToolCall.toolName} completado`);
+        debugLogger.debug('AIService.MCP', 'Ejecución de herramienta completada', {
+          tool: currentToolCall.toolName
+        });
         
         // ✅ IMPROVED: Detectar lenguaje para archivos de texto
         let detectedLanguage = '';
@@ -2999,7 +3063,9 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
               filePath: currentToolCall.arguments?.path
             });
           } catch (cbErr) {
-            console.warn('⚠️ [MCP] onToolResult callback lanzó un error:', cbErr.message);
+            debugLogger.warn('AIService.MCP', 'onToolResult callback lanzó un error', {
+              error: cbErr?.message
+            });
           }
         }
         
@@ -3073,7 +3139,10 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
             };
             
             const lang = langMap[ext] || '';
-            console.log(`📄 [MCP] Detectado lenguaje para ${ext}: ${lang}`);
+            debugLogger.debug('AIService.MCP', 'Lenguaje detectado para archivo', {
+              extension: ext,
+              lenguaje: lang
+            });
             
             // No añadir bloques de código aquí - se manejan en AIChatPanel.js
             return text;
@@ -3090,7 +3159,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
         }
         
         // NUEVO: Re-inyectar resultado en conversación para que el modelo lo vea
-        console.log(`📝 [MCP] Re-inyectando resultado en conversación`);
+        debugLogger.debug('AIService.MCP', 'Reinyectando resultado en conversación');
         conversationMessages.push({
           role: 'user',
           content: `✅ Herramienta COMPLETADA: ${currentToolCall.toolName}
@@ -3115,7 +3184,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         
         // 🔧 NUEVO: Si la respuesta está vacía, reintentar con prompt simplificado
         if (!followUp || followUp.trim().length === 0) {
-          console.warn(`⚠️ [MCP] Modelo generó respuesta vacía, reintentando con prompt simplificado...`);
+          debugLogger.warn('AIService.MCP', 'Modelo generó respuesta vacía tras ejecutar tool; reintentando con prompt simplificado');
           
           conversationMessages.push({
             role: 'user',
@@ -3130,10 +3199,10 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           );
           
           if (retryResponse && retryResponse.trim().length > 0) {
-            console.log(`✅ [MCP] Retry exitoso, respuesta obtenida`);
+            debugLogger.debug('AIService.MCP', 'Retry exitoso tras respuesta vacía');
             return retryResponse;
           } else {
-            console.warn(`⚠️ [MCP] Retry falló, retornando mensaje por defecto`);
+            debugLogger.warn('AIService.MCP', 'Retry falló después de respuesta vacía, retornando mensaje por defecto');
             return `✅ Operación completada correctamente.`;
           }
         }
@@ -3148,7 +3217,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           const isSameArgs = JSON.stringify(nextToolCall.arguments) === JSON.stringify(currentToolCall.arguments);
           
           if (isSameTool && isSameArgs) {
-            console.warn(`⚠️ [MCP] Tool call duplicado detectado (${nextToolCall.toolName}), ignorando y terminando loop`);
+            debugLogger.warn('AIService.MCP', 'Tool call duplicado detectado; terminando loop', {
+              tool: nextToolCall.toolName
+            });
             // Retornar la respuesta sin el JSON del tool call
             const cleanResponse = followUp.replace(/\{[\s\S]*?"tool"[\s\S]*?\}/g, '').trim();
             return cleanResponse || `✅ Operación completada correctamente.`;
@@ -3159,15 +3230,18 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         
         if (!currentToolCall) {
           // No hay más tools, el modelo respondió normalmente
-          console.log(`✅ [MCP] Loop completado, modelo respondió sin pedir tools`);
+          debugLogger.debug('AIService.MCP', 'Loop completado, el modelo respondió sin pedir más herramientas');
           return followUp;
         }
         
         // Hay otro tool call DIFERENTE, continuar loop
-        console.log(`🔄 [MCP] Modelo solicita otra herramienta, continuando loop`);
+        debugLogger.debug('AIService.MCP', 'Modelo solicita otra herramienta, continuando loop');
         
       } catch (error) {
-        console.error(`❌ [MCP] Error ejecutando tool ${currentToolCall.toolName}:`, error);
+        debugLogger.error('AIService.MCP', 'Error ejecutando herramienta', {
+          tool: currentToolCall.toolName,
+          error: error?.message
+        });
         
         // Callback de error
         if (callbacks.onStatus) {
@@ -3203,7 +3277,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
     
     // Si llegamos aquí, excedimos las iteraciones máximas
-    console.warn(`⚠️ [MCP] Límite de iteraciones alcanzado (${maxIterations})`);
+    debugLogger.warn('AIService.MCP', 'Límite de iteraciones alcanzado en loop de herramientas', {
+      maxIterations
+    });
     
     if (callbacks.onStatus) {
       callbacks.onStatus({
@@ -3249,11 +3325,15 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
 
     // 🔧 VALIDACIÓN DE SINCRONIZACIÓN
-    console.log(`🔍 [AIService.sendMessage] Validación de conversación:`);
-    console.log(`   currentConversation.id: ${currentConversation.id}`);
-    console.log(`   conversationService.currentConversationId: ${conversationService.currentConversationId}`);
+    debugLogger.info('AIService.Conversation', 'Validación de conversación', {
+      currentId: currentConversation.id,
+      serviceId: conversationService.currentConversationId
+    });
     if (currentConversation.id !== conversationService.currentConversationId) {
-      console.warn(`⚠️ [AIService] DESINCRONIZACIÓN DETECTADA: ${currentConversation.id} vs ${conversationService.currentConversationId}`);
+      debugLogger.warn('AIService.Conversation', 'Desincronización detectada', {
+        currentId: currentConversation.id,
+        serviceId: conversationService.currentConversationId
+      });
     }
 
     // Obtener mensajes de la conversación actual
@@ -3261,11 +3341,15 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     // Considerar "primera conversación" cuando solo hay 1 mensaje (el del usuario que acabamos de agregar)
     const isFirstMessage = conversationMessages.length === 1;
     
-    console.log(`📋 [AIService] Mensajes en conversación actual: ${conversationMessages.length}`);
+    debugLogger.debug('AIService.Conversation', 'Mensajes en conversación actual', {
+      total: conversationMessages.length
+    });
     
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
     let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
-    console.log(`📋 [AIService] Mensajes después de limitación: ${limitedMessages.length}`);
+    debugLogger.debug('AIService.Conversation', 'Mensajes después de limitación', {
+      total: limitedMessages.length
+    });
 
     // Construir contexto efímero de archivos adjuntos (RAG ligero)
     const attachedFiles = conversationService.getAttachedFiles();
@@ -3300,7 +3384,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
 
     // Log compacto
-    console.log(`📤 Enviando ${providerMessages.length} mensaje(s) al modelo`);
+    debugLogger.info('AIService.Conversation', 'Enviando mensajes al modelo', {
+      mensajes: providerMessages.length
+    });
 
     // Metadatos para la UI: indicar si se usó contexto efímero y qué archivos
     const ephemeralFilesUsed = (ephemeralContext && ephemeralContext.length > 0)
@@ -3460,7 +3546,11 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
             
             // Si es error 503 (modelo sobrecargado) y no es el último intento, reintentar
             if (response.status === 503 && attempt < 3) {
-              console.log(`⚠️ Modelo ${model.id} sobrecargado, reintentando en ${attempt * 2} segundos... (intento ${attempt}/3)`);
+              debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado, reintentando', {
+                modelId: model.id,
+                intento: attempt,
+                delayMs: attempt * 2000
+              });
               await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Esperar 2, 4 segundos
               continue;
             }
@@ -3483,7 +3573,11 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           
           // Si es error de modelo sobrecargado y no es el último intento, reintentar
           if (error.message.includes('overloaded') && attempt < 3) {
-            console.log(`⚠️ Modelo ${model.id} sobrecargado, reintentando en ${attempt * 2} segundos... (intento ${attempt}/3)`);
+            debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado (mensaje), reintentando', {
+              modelId: model.id,
+              intento: attempt,
+              delayMs: attempt * 2000
+            });
             await new Promise(resolve => setTimeout(resolve, attempt * 2000));
             continue;
           }
@@ -3499,11 +3593,16 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       
       throw lastError;
     } catch (error) {
-      console.error('Error llamando a API remota:', error);
+      debugLogger.error('AIService.RemoteModel', 'Error llamando a API remota', {
+        modelId: model.id,
+        error: error?.message
+      });
       
       // Si es error de modelo sobrecargado, intentar con otro modelo del mismo proveedor
       if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
-        console.log(`🔄 Modelo ${model.id} sobrecargado, intentando fallback automático...`);
+        debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
+          modelId: model.id
+        });
         
         // Buscar otros modelos del mismo proveedor que no hayan sido intentados
         const alternativeModels = this.models.remote.filter(m => 
@@ -3514,7 +3613,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         
         if (alternativeModels.length > 0) {
           const fallbackModel = alternativeModels[0];
-          console.log(`🔄 Cambiando a modelo fallback: ${fallbackModel.name}`);
+          debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
+            fallbackModel: fallbackModel.name
+          });
           
           // Temporalmente cambiar el modelo actual para el fallback
           const originalModel = this.currentModel;
@@ -3615,7 +3716,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           const ctx = await this.injectMCPContext(message);
           mcpContext = { tools: ctx.tools || [], hasTools: (ctx.tools || []).length > 0 };
         } catch (e) {
-          console.warn('[MCP] Error obteniendo contexto MCP (remote):', e.message);
+          debugLogger.warn('AIService.MCP', 'Error obteniendo contexto MCP (remote)', {
+            error: e.message
+          });
         }
       }
       // Preparar mensajes según el proveedor
@@ -4034,7 +4137,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
               }
             }
           } catch (e) {
-            console.warn('⚠️ [MCP] No se pudieron obtener directorios permitidos:', e.message);
+            debugLogger.warn('AIService.MCP', 'No se pudieron obtener directorios permitidos', {
+              error: e.message
+            });
           }
 
           const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 8, serverHints });
@@ -4101,7 +4206,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       
       // 🔧 RETRY AUTOMÁTICO: Si la respuesta está vacía, reintentar con prompt simplificado
       if ((!response || response.trim().length === 0) && mcpContext.hasTools) {
-        console.warn(`⚠️ [AIService] Modelo generó respuesta vacía, reintentando con prompt simplificado...`);
+        debugLogger.warn('AIService.Toolchain', 'Modelo generó respuesta vacía; reintentando con prompt simplificado');
         
         // Callback de estado: reintentando
         if (callbacks.onStatus) {
@@ -4132,14 +4237,18 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           );
           
           if (retryResponse && retryResponse.trim().length > 0) {
-            console.log(`✅ [AIService] Retry exitoso, respuesta obtenida (${retryResponse.length} chars)`);
+            debugLogger.debug('AIService.Toolchain', 'Retry de modelo exitoso', {
+              respuestaLength: retryResponse.length
+            });
             response = retryResponse;
           } else {
-            console.warn(`⚠️ [AIService] Retry falló, usando respuesta por defecto`);
+            debugLogger.warn('AIService.Toolchain', 'Retry falló, usando respuesta por defecto');
             return 'Lo siento, tuve problemas al procesar tu solicitud. Por favor, intenta reformularla.';
           }
         } catch (retryError) {
-          console.error(`❌ [AIService] Error en retry:`, retryError);
+          debugLogger.error('AIService.Toolchain', 'Error durante retry de modelo', {
+            error: retryError?.message
+          });
           return 'Lo siento, tuve problemas al procesar tu solicitud. Por favor, intenta de nuevo.';
         }
       }
@@ -4149,18 +4258,23 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         // Prioridad 1: Detectar PLAN (múltiples herramientas)
         const toolPlan = this._detectToolPlan(response);
         if (toolPlan) {
-          console.log(`📋 [AIService] Plan detectado con ${toolPlan.tools.length} herramientas, ejecutando...`);
+          debugLogger.debug('AIService.Toolchain', 'Plan detectado; ejecutando herramientas', {
+            herramientas: toolPlan.tools.length
+          });
           return await this._executeToolPlan(toolPlan, callbacks);
         }
         
         // Prioridad 2: Detectar tool call individual
         const toolCall = this.detectToolCallInResponse(response);
         if (toolCall) {
-          console.log(`🔧 [AIService] Tool call detectado: ${toolCall.toolName}, iniciando ejecución...`);
-          console.log(`   structuredToolMessages: ${this.featureFlags?.structuredToolMessages}, hasOrchestrator: ${!!this.toolOrchestrator}`);
+          debugLogger.info('AIService.Toolchain', 'Tool call detectado; iniciando ejecución', {
+            tool: toolCall.toolName,
+            structuredToolMessages: this.featureFlags?.structuredToolMessages,
+            hasOrchestrator: !!this.toolOrchestrator
+          });
           
           if (this.featureFlags?.structuredToolMessages && this.toolOrchestrator) {
-            console.log(`🚀 [AIService] Usando toolOrchestrator.executeLoop()`);
+            debugLogger.debug('AIService.Toolchain', 'Usando toolOrchestrator.executeLoop');
             const callModelFn = async (provMessages, overrides = {}) => {
               const adjusted = { ...options, ...overrides };
               return await this.sendToLocalModelStreamingWithCallbacks(
@@ -4181,23 +4295,30 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
               maxIterations: 5, // 🔧 Reducido de 10 a 5 para limitar proactividad
               turnId: options?.turnId
             });
-            console.log(`✅ [AIService] toolOrchestrator.executeLoop() completado, resultado length: ${orchestratorResult?.length || 0}`);
+            debugLogger.debug('AIService.Toolchain', 'toolOrchestrator.executeLoop completado', {
+              resultadoLength: orchestratorResult?.length || 0
+            });
             return orchestratorResult;
           }
           
-          console.log(`🚀 [AIService] Usando handleLocalToolCallLoop()`);
+          debugLogger.debug('AIService.Toolchain', 'Usando handleLocalToolCallLoop');
           const loopResult = await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
-          console.log(`✅ [AIService] handleLocalToolCallLoop() completado, resultado length: ${loopResult?.length || 0}`);
+          debugLogger.debug('AIService.Toolchain', 'handleLocalToolCallLoop completado', {
+            resultadoLength: loopResult?.length || 0
+          });
           return loopResult;
         } else {
           // Si no hay tool, intentar detectar PROMPT MCP
           const promptCall = this.detectPromptCallInResponse(response);
           if (promptCall) {
-            console.log(`💬 [MCP] Prompt solicitado: ${promptCall.promptName} (${promptCall.serverId || 'sin server'})`);
+            debugLogger.debug('AIService.MCP', 'Prompt solicitado por el modelo', {
+              prompt: promptCall.promptName,
+              server: promptCall.serverId || 'sin server'
+            });
             const promptResult = await this._handlePromptCallAndContinue(promptCall, messages, callbacks, options, model.id);
             return promptResult;
           }
-          console.log(`ℹ️ [AIService] No se detectó tool/prompt call en la respuesta, retornando respuesta directa`);
+          debugLogger.debug('AIService.Toolchain', 'No se detectó tool/prompt call; retornando respuesta directa');
         }
       }
       
@@ -4252,23 +4373,29 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Error de Ollama:', errorText);
+      debugLogger.error('AIService.LocalModel', 'Error de Ollama', {
+        error: errorText
+      });
       throw new Error(`Error del servidor Ollama (${response.status})`);
     }
 
     const data = await response.json();
     
     // NUEVO: Log detallado de respuesta
-    console.log(`📨 [Ollama Raw Response]:`, JSON.stringify(data).substring(0, 200));
-    console.log(`   message:`, data.message);
-    console.log(`   message.content:`, data.message?.content);
-    console.log(`   content length:`, data.message?.content?.length || 0);
+    debugLogger.debug('AIService.LocalModel', 'Respuesta cruda de Ollama', {
+      resumida: JSON.stringify(data).substring(0, 200),
+      message: data.message,
+      contentLength: data.message?.content?.length || 0
+    });
     
     // La respuesta de Ollama viene en data.message.content
     if (data.message && data.message.content) {
       return data.message.content;
     } else {
-      console.error(`❌ [Ollama] Respuesta vacía o inválida`, { message: data.message, content: data.message?.content });
+      debugLogger.error('AIService.LocalModel', 'Respuesta vacía o inválida de Ollama', {
+        message: data.message,
+        content: data.message?.content
+      });
       throw new Error('Respuesta inválida del modelo local');
     }
   }
@@ -4654,7 +4781,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       const histories = JSON.parse(localStorage.getItem('ai-conversations') || '{}');
       this.conversationHistory = histories[conversationId] || [];
     } catch (error) {
-      console.error('Error cargando historial:', error);
+      debugLogger.error('AIService.History', 'Error cargando historial', {
+        error: error?.message
+      });
     }
   }
 
@@ -4667,7 +4796,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       histories[conversationId] = this.conversationHistory;
       localStorage.setItem('ai-conversations', JSON.stringify(histories));
     } catch (error) {
-      console.error('Error guardando historial:', error);
+      debugLogger.error('AIService.History', 'Error guardando historial', {
+        error: error?.message
+      });
     }
   }
 
@@ -4708,7 +4839,10 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
 
     // 🔪 TRUNCAMIENTO INTELIGENTE (como los grandes modelos)
-    console.log(`🪟 [AIService] Ventana deslizante activada: ${totalTokens} > ${targetLimit} tokens`);
+    debugLogger.debug('AIService.History', 'Ventana deslizante activada', {
+      totalTokens,
+      targetLimit
+    });
 
     // Estrategia: mantener los mensajes más recientes hasta alcanzar el límite
     let truncatedMessages = [];
@@ -4746,7 +4880,10 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
 
     // Registro para transparencia (como ChatGPT - opcional y sutil)
     if (truncatedCount > 0) {
-      console.log(`📄 [AIService] Contexto optimizado: ${truncatedCount} mensajes antiguos archivados para mantener fluidez (${totalTokens - runningTotal} tokens liberados)`);
+      debugLogger.debug('AIService.History', 'Contexto optimizado', {
+        mensajesArchivados: truncatedCount,
+        tokensLiberados: totalTokens - runningTotal
+      });
       
       // Notificación sutil opcional (muy discreta, como los grandes modelos)
       this.lastContextOptimization = {
@@ -5797,7 +5934,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     const codeLower = code.toLowerCase();
     const userContextLower = userContext.toLowerCase();
     
-    console.log('🔍 Validando relevancia:', {
+    debugLogger.debug('AIService.Relevance', 'Validando relevancia', {
       userContext: userContext.substring(0, 50),
       language,
       codePreview: code.substring(0, 50)
@@ -5817,7 +5954,8 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                          codeLower.includes('mi aplicación') ||
                          codeLower.includes('aplicación electrónica');
       
-      console.log('🔍 Electron validation:', isRelevant, {
+      debugLogger.debug('AIService.Relevance', 'Electron validation', {
+        isRelevant,
         hasElectron: codeLower.includes('electron'),
         hasAppOn: codeLower.includes('app.on'),
         hasBrowserWindow: codeLower.includes('browserwindow'),
@@ -5834,7 +5972,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                          codeLower.includes('import react') ||
                          codeLower.includes('from "react"');
       
-      console.log('🔍 React validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'React validation', { isRelevant });
       return isRelevant;
     }
     
@@ -5842,7 +5980,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       const isRelevant = codeLower.includes('vue') || 
                          codeLower.includes('import') && codeLower.includes('vue');
       
-      console.log('🔍 Vue validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Vue validation', { isRelevant });
       return isRelevant;
     }
     
@@ -5851,7 +5989,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                          codeLower.includes('def ') || 
                          codeLower.includes('pandas');
       
-      console.log('🔍 Python validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Python validation', { isRelevant });
       return isRelevant;
     }
     
@@ -5861,7 +5999,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                          codeLower.includes('beautifulsoup') ||
                          codeLower.includes('fetch(');
       
-      console.log('🔍 Web scraper validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Web scraper validation', { isRelevant });
       return isRelevant;
     }
     
@@ -5871,7 +6009,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                          codeLower.includes('dataframe') ||
                          codeLower.includes('csv');
       
-      console.log('🔍 Data analysis validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Data analysis validation', { isRelevant });
       return isRelevant;
     }
     
@@ -5893,12 +6031,17 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         codeLower.includes('<body')
       ));
       
-      console.log('🔍 Generic project validation:', isRelevant, { language, hasJS: language === 'javascript', hasHTML: language === 'html' });
+      debugLogger.debug('AIService.Relevance', 'Generic project validation', {
+        isRelevant,
+        language,
+        hasJS: language === 'javascript',
+        hasHTML: language === 'html'
+      });
       return isRelevant;
     }
     
     // Si no hay contexto específico conocido, RECHAZAR por defecto (más restrictivo)
-    console.log('⚠️ Contexto no reconocido, rechazando archivo');
+    debugLogger.debug('AIService.Relevance', 'Contexto no reconocido; rechazando archivo');
     return false;
   }
 
