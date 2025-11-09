@@ -6,6 +6,20 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { InputSwitch } from 'primereact/inputswitch';
 import mcpCatalogData from '../data/mcp-catalog.json';
 
+const normalizePrimeIcon = (iconName) => {
+  if (!iconName) return 'pi pi-question-circle';
+  const trimmed = iconName.trim();
+  if (trimmed.startsWith('pi pi-')) return trimmed;
+  if (trimmed.startsWith('pi-')) return `pi ${trimmed}`;
+  if (trimmed.startsWith('pi ')) return trimmed;
+  if (trimmed.startsWith('pi')) {
+    const normalized = trimmed.replace(/^pi/, '').trim();
+    if (normalized.startsWith('pi-')) return `pi ${normalized}`;
+    return `pi pi-${normalized.replace(/^pi-/, '')}`;
+  }
+  return `pi pi-${trimmed.replace(/^pi-/, '')}`;
+};
+
 // Componente: Tarjeta de categoría
 const CategoryCard = ({
   id,
@@ -77,7 +91,7 @@ const CategoryCard = ({
         border: `1px solid ${color}40`,
         boxShadow: `0 2px 8px ${color}20`
       }}>
-        <i className={icon} style={{ color: color, fontSize: '1.2rem' }} />
+      <i className={normalizePrimeIcon(icon)} style={{ color: color, fontSize: '1.2rem' }} />
       </div>
 
       <div>
@@ -205,7 +219,7 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors, accentCo
           border: `1px solid ${color}40`,
           boxShadow: `0 2px 8px ${color}20`
         }}>
-          <i className={mcp.icon} style={{ fontSize: '1rem', color }} />
+        <i className={normalizePrimeIcon(mcp.icon)} style={{ fontSize: '1rem', color }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: themeColors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mcp.name}</h4>
