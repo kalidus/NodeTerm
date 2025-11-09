@@ -419,6 +419,11 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             font-size: 0.9rem;
             margin-bottom: 0.3rem;
             line-height: 1.2;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
 
           .conversation-preview {
@@ -622,7 +627,7 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
                     />
                   ) : (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', minWidth: 0 }}>
                         <div className="conversation-title">{conversation.title}</div>
                         {conversation.modelId && (
                           <span style={{
