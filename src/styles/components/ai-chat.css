@@ -9,7 +9,7 @@
   color: inherit;
   width: 100%;
   max-width: 100% !important;
-  overflow: hidden !important;
+  overflow: hidden;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 1fr;

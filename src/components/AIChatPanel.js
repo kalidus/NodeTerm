@@ -1821,8 +1821,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(isJson ? `\`\`\`json\n${text}\n\`\`\`` : `\`\`\`shell\n${text}\n\`\`\``) }}
                 style={{ 
                   opacity: 0.95,
-                  maxHeight: 'none',
-                  overflow: 'visible',
+                  maxHeight: '520px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  scrollbarGutter: 'stable both-edges',
                   width: '100%',
                   fontFamily: 'monospace',
                   fontSize: '0.85rem'
@@ -1949,8 +1951,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
                 style={{ 
                   opacity: isBlock ? 0.95 : 0.9,
-                  maxHeight: isCodeBlock ? 'none' : (isBlock ? '300px' : 'auto'),
-                  overflow: isCodeBlock ? 'visible' : (isBlock ? 'auto' : 'visible'),
+                  maxHeight: isCodeBlock ? 'none' : (isBlock ? '520px' : 'auto'),
+                  overflowY: isCodeBlock ? 'visible' : (isBlock ? 'auto' : 'visible'),
+                  overflowX: 'hidden',
+                  scrollbarGutter: isBlock ? 'stable both-edges' : undefined,
                   width: '100%'
                 }}
               />

@@ -1972,7 +1972,7 @@ class AIService {
     if (lowerMsg.includes('http') || lowerMsg.includes('url') || lowerMsg.includes('busca') || 
         lowerMsg.includes('sitio') || lowerMsg.includes('página') || lowerMsg.includes('web') ||
         lowerMsg.includes('.com') || lowerMsg.includes('web search') || lowerMsg.includes('google')) {
-      selectedTools = ['web_search', 'fetch_page', 'extract_text', 'goto_url', 'screenshot'];
+      selectedTools = ['web_search', 'site_search', 'fetch_page', 'extract_text', 'goto_url', 'screenshot'];
       console.log(`🌐 [Tools Filter] Modo WEB: WebSearch nativo`);
     }
     // 📁 Si es sobre ARCHIVOS → Solo Filesystem
@@ -1989,7 +1989,7 @@ class AIService {
     }
     // ❓ Por defecto: esenciales sin run_command (web prioritario)
     else {
-      selectedTools = ['read_file', 'list_directory', 'write_file', 'web_search', 'goto_url', 'screenshot'];
+      selectedTools = ['read_file', 'list_directory', 'write_file', 'web_search', 'site_search', 'goto_url', 'screenshot'];
       console.log(`❓ [Tools Filter] Modo DEFAULT: Web + Filesystem (NO CLI)`);
     }
 
