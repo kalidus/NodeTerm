@@ -41,6 +41,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [abortController, setAbortController] = useState(null);
   const lastToolResultRef = useRef(null);
   const loggedToolMessageIdsRef = useRef(new Set());
+  const filesystemStatusRef = useRef('');
   
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -418,6 +419,140 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     return () => {
       if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const filesystemServer = activeMcpServers.find(server => server.id === 'filesystem');
+    const isDisabled = disabledMcpServers.includes('filesystem');
+    const isSelected = selectedMcpServers.includes('filesystem') && !isDisabled;
+    const isRunning = filesystemServer?.running && filesystemServer?.state === 'ready';
+    const isEnabled = filesystemServer?.config?.enabled !== false;
+    const isAvailable = Boolean(
+      mcpToolsEnabled &&
+      filesystemServer &&
+      isSelected &&
+      isRunning &&
+      isEnabled
+    );
+
+    const normalizeAllowedPaths = (rawValue) => {
+      if (!rawValue) return [];
+
+      const pushValuesFrom = (value, target, seen) => {
+        if (!value) return;
+        let paths = [];
+        if (Array.isArray(value)) {
+          paths = value;
+        } else if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (!trimmed) return;
+          const looksLikeJsonArray = trimmed.startsWith('[') && trimmed.endsWith(']');
+          if (looksLikeJsonArray) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              if (Array.isArray(parsed)) {
+                paths = parsed;
+              } else {
+                paths = [trimmed];
+              }
+            } catch {
+              paths = trimmed.split(/\r?\n|,/);
+            }
+          } else {
+            paths = trimmed.split(/\r?\n|,/);
+          }
+        } else if (typeof value === 'object') {
+          paths = Object.values(value || {});
+        }
+
+        paths
+          .map(path => (typeof path === 'string' ? path.trim() : String(path || '').trim()))
+          .filter(Boolean)
+          .forEach(path => {
+            if (!seen.has(path)) {
+              seen.add(path);
+              target.push(path);
+            }
+          });
+      };
+
+      const collected = [];
+      const seen = new Set();
+
+      pushValuesFrom(rawValue, collected, seen);
+      return collected;
+    };
+
+    let allowedPaths = [];
+    if (isAvailable && filesystemServer) {
+      const candidates = [
+        filesystemServer.config?.configValues?.allowedPaths,
+        filesystemServer.config?.allowedPaths,
+        filesystemServer.config?.options?.allowedPaths,
+        filesystemServer.allowedPaths,
+        filesystemServer.config?.env?.ALLOWED_PATHS,
+        filesystemServer.config?.env?.ALLOWED_DIR
+      ];
+
+      candidates.forEach(candidate => {
+        const paths = normalizeAllowedPaths(candidate);
+        if (paths.length > 0) {
+          allowedPaths = Array.from(new Set([...allowedPaths, ...paths]));
+        }
+      });
+    }
+
+    const serverMeta = filesystemServer
+      ? {
+          id: filesystemServer.id,
+          name: filesystemServer.name || filesystemServer.id,
+          state: filesystemServer.state || null,
+          running: Boolean(filesystemServer.running),
+          enabled: filesystemServer.config?.enabled !== false,
+          version: filesystemServer.version || null
+        }
+      : null;
+
+    const detail = {
+      type: 'filesystem',
+      conversationId: currentConversationId || null,
+      active: isAvailable,
+      isSelected: Boolean(isSelected && filesystemServer),
+      running: Boolean(isRunning),
+      allowedPaths: allowedPaths,
+      defaultPath: allowedPaths.length > 0 ? allowedPaths[0] : null,
+      server: serverMeta
+    };
+
+    const serialized = JSON.stringify(detail);
+    if (filesystemStatusRef.current !== serialized) {
+      filesystemStatusRef.current = serialized;
+      window.dispatchEvent(new CustomEvent('filesystem-mcp-status', { detail }));
+    }
+  }, [
+    activeMcpServers,
+    selectedMcpServers,
+    disabledMcpServers,
+    mcpToolsEnabled,
+    currentConversationId
+  ]);
+
+  useEffect(() => {
+    return () => {
+      filesystemStatusRef.current = '';
+      window.dispatchEvent(new CustomEvent('filesystem-mcp-status', {
+        detail: {
+          type: 'filesystem',
+          conversationId: null,
+          active: false,
+          isSelected: false,
+          running: false,
+          allowedPaths: [],
+          defaultPath: null,
+          server: null
+        }
+      }));
     };
   }, []);
 
