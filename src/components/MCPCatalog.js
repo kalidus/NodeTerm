@@ -404,9 +404,41 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
     const cmd = selectedMCP.runCommand || 'npx';
     const args = cmd === 'uvx' ? [selectedMCP.package] : ['-y', selectedMCP.package];
     const env = {};
+    
+    // Función helper para agregar flags de PowerShell por defecto a ALLOWED_FLAGS
+    const ensurePowerShellFlags = (flagsStr) => {
+      if (!flagsStr || flagsStr.trim() === '' || flagsStr.toLowerCase() === 'all') {
+        return flagsStr; // No modificar si está vacío o es 'all'
+      }
+      const defaultPowerShellFlags = ['-command', '-Command', '-ExecutionPolicy', '-NoProfile', '-NonInteractive'];
+      const existingFlags = flagsStr.split(',').map(f => f.trim()).filter(Boolean);
+      const existingLower = existingFlags.map(f => f.toLowerCase());
+      
+      // Agregar flags de PowerShell que no estén ya presentes
+      defaultPowerShellFlags.forEach(flag => {
+        if (!existingLower.includes(flag.toLowerCase())) {
+          existingFlags.push(flag);
+        }
+      });
+      
+      return existingFlags.join(',');
+    };
+    
+    // Procesar configValues y asegurar flags de PowerShell para cli-mcp-server
+    const processedConfigValues = { ...configValues };
+    if (selectedMCP.id === 'cli-mcp-server') {
+      // Si ALLOWED_FLAGS no está definido o está vacío, usar la configuración recomendada del catálogo
+      if (processedConfigValues.ALLOWED_FLAGS === undefined || !processedConfigValues.ALLOWED_FLAGS || processedConfigValues.ALLOWED_FLAGS.trim() === '') {
+        processedConfigValues.ALLOWED_FLAGS = selectedMCP.recommendedConfig?.ALLOWED_FLAGS || processedConfigValues.ALLOWED_FLAGS || '';
+      } else {
+        // Si tiene valor, asegurar que incluye flags de PowerShell
+        processedConfigValues.ALLOWED_FLAGS = ensurePowerShellFlags(processedConfigValues.ALLOWED_FLAGS);
+      }
+    }
+    
     if (selectedMCP.configSchema) {
       for (const [key, schema] of Object.entries(selectedMCP.configSchema)) {
-        const value = configValues[key];
+        const value = processedConfigValues[key];
         if (!value) continue;
         if (schema.envName) {
           // Mandar como variable de entorno
@@ -431,7 +463,7 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
     if ((selectedMCP.id === 'cli-mcp-server' || selectedMCP.runtime === 'python') && env && env.ALLOWED_DIR) {
       cwd = env.ALLOWED_DIR;
     }
-    const config = { command: cmd, args, enabled: true, autostart: false, autoRestart: true, configValues, env, ...(cwd ? { cwd } : {}) };
+    const config = { command: cmd, args, enabled: true, autostart: false, autoRestart: true, configValues: processedConfigValues, env, ...(cwd ? { cwd } : {}) };
     if (onInstall) onInstall(selectedMCP.id, config);
     setShowConfigDialog(false); setSelectedMCP(null); setConfigValues({});
   };

@@ -83,16 +83,56 @@ class MCPService {
         this.verboseLogs = !!this.mcpConfig.verbose || !!process.env.MCP_VERBOSE;
         
         // Migración/auto-fix: si cli-mcp-server no tiene cwd pero sí ALLOWED_DIR, usarlo como cwd
+        // También asegurar que ALLOWED_FLAGS incluye flags de PowerShell por defecto
         try {
           const cfg = this.mcpConfig?.mcpServers || {};
           const cliCfg = cfg['cli-mcp-server'];
-          if (cliCfg && !cliCfg.cwd && cliCfg.env && typeof cliCfg.env.ALLOWED_DIR === 'string' && cliCfg.env.ALLOWED_DIR.trim().length > 0) {
-            cliCfg.cwd = cliCfg.env.ALLOWED_DIR;
-            console.log(`🔧 [MCP] Ajuste automático: establecido cwd de cli-mcp-server a ${cliCfg.cwd}`);
-            await this.saveConfig();
+          let needsSave = false;
+          
+          if (cliCfg) {
+            // Migración 1: establecer cwd si no existe pero sí ALLOWED_DIR
+            if (!cliCfg.cwd && cliCfg.env && typeof cliCfg.env.ALLOWED_DIR === 'string' && cliCfg.env.ALLOWED_DIR.trim().length > 0) {
+              cliCfg.cwd = cliCfg.env.ALLOWED_DIR;
+              console.log(`🔧 [MCP] Ajuste automático: establecido cwd de cli-mcp-server a ${cliCfg.cwd}`);
+              needsSave = true;
+            }
+            
+            // Migración 2: asegurar que ALLOWED_FLAGS incluye flags de PowerShell
+            const defaultPowerShellFlags = ['-command', '-Command', '-ExecutionPolicy', '-NoProfile', '-NonInteractive'];
+            if (cliCfg.env && cliCfg.env.ALLOWED_FLAGS) {
+              const currentFlags = cliCfg.env.ALLOWED_FLAGS;
+              // Solo procesar si no es 'all' y no está vacío
+              if (currentFlags.toLowerCase() !== 'all' && currentFlags.trim() !== '') {
+                const existingFlags = currentFlags.split(',').map(f => f.trim()).filter(Boolean);
+                const existingLower = existingFlags.map(f => f.toLowerCase());
+                let addedFlags = false;
+                
+                // Agregar flags de PowerShell que no estén ya presentes
+                defaultPowerShellFlags.forEach(flag => {
+                  if (!existingLower.includes(flag.toLowerCase())) {
+                    existingFlags.push(flag);
+                    addedFlags = true;
+                  }
+                });
+                
+                if (addedFlags) {
+                  cliCfg.env.ALLOWED_FLAGS = existingFlags.join(',');
+                  console.log(`🔧 [MCP] Ajuste automático: agregadas flags de PowerShell a ALLOWED_FLAGS de cli-mcp-server`);
+                  needsSave = true;
+                }
+              }
+            } else if (cliCfg.env) {
+              // Si ALLOWED_FLAGS no existe, usar valores por defecto recomendados (ya incluyen PowerShell)
+              // Esto solo se aplica si el servidor está configurado pero no tiene ALLOWED_FLAGS definido
+              // No lo hacemos automáticamente para no sobrescribir configuraciones intencionalmente vacías
+            }
+            
+            if (needsSave) {
+              await this.saveConfig();
+            }
           }
         } catch (e) {
-          console.warn('⚠️ [MCP] No se pudo aplicar migración de cwd para cli-mcp-server:', e.message);
+          console.warn('⚠️ [MCP] No se pudo aplicar migración para cli-mcp-server:', e.message);
         }
       } else {
         // Crear configuración por defecto

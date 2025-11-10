@@ -6132,28 +6132,11 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
   }
 
   /**
-   * ✅ NUEVO: Validar y gestionar memoria antes de cargar modelo
+   * ℹ️ NOTA: Validación de memoria ahora es PASIVA
+   * - El monitoreo solo reporta datos
+   * - Las descargas son MANUALES (widget)
+   * - Sin auto-descarga automática
    */
-  async validateModelMemory(modelId, modelType) {
-    if (modelType !== 'local') return true; // Cloud no tiene límites locales
-
-    const model = this.getAllLocalModels().find(m => m.id === modelId);
-    if (!model) return false;
-
-    // Obtener tamaño del modelo (estimar si no está disponible)
-    const sizeGB = model.ramRequired 
-      ? parseFloat(model.ramRequired) 
-      : 4; // Default 4GB para modelos 7B
-
-    const canLoad = await this.memoryService.canLoadModel(sizeGB);
-    
-    if (canLoad.wouldExceedLimit) {
-      console.warn(`[AIService] 🧠 Modelo ${modelId} excedería límite. Aplicando LRU...`);
-      await this.memoryService.enforceMemoryLimit();
-    }
-
-    return canLoad.canFit || canLoad.wouldExceedLimit; // Intentar aunque exceda
-  }
 
   /**
    * ✅ NUEVO: Calcular contexto dinámico según RAM disponible
@@ -6163,7 +6146,8 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
   }
 
   /**
-   * ✅ NUEVO: Cambiar modelo con gestión de memoria
+   * 📝 Cambiar modelo - SIN auto-descarga
+   * La descarga del modelo anterior es MANUAL (widget)
    */
   async switchModel(newModelId, newModelType) {
     const oldModel = this.currentModel;
@@ -6172,21 +6156,9 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     this.currentModel = newModelId;
     this.modelType = newModelType;
 
-    // Si ambos son modelos locales, considerar descargar antiguo después
     if (oldType === 'local' && newModelType === 'local' && oldModel !== newModelId) {
       console.log(`[AIService] 📊 Cambio de modelo: ${oldModel} → ${newModelId}`);
-      
-      // Descargar modelo anterior después de 3 segundos (dar tiempo para recuperar)
-      setTimeout(async () => {
-        try {
-          const shouldUnload = true; // Por ahora, descargar automáticamente
-          if (shouldUnload) {
-            await this.memoryService.unloadModel(oldModel);
-          }
-        } catch (error) {
-          console.error('[AIService] Error descargando modelo anterior:', error);
-        }
-      }, 3000);
+      console.log(`[AIService] 💡 Para liberar RAM de "${oldModel}", usa Ctrl+M y haz clic en [❌ Descargar]`);
     }
 
     this.saveConfig();
