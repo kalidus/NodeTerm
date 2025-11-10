@@ -63,7 +63,6 @@ class DebugLogger {
     }
     this.currentLevel = level;
     this.saveConfig();
-    console.log(`🔧 [DebugLogger] Nivel de logging establecido a: ${this.getLevelName(level)}`);
   }
 
   /**
@@ -72,7 +71,6 @@ class DebugLogger {
   enableModule(moduleName) {
     this.enabledModules.add(moduleName);
     this.saveConfig();
-    console.log(`🔧 [DebugLogger] Módulo habilitado: ${moduleName}`);
   }
 
   /**
@@ -81,7 +79,6 @@ class DebugLogger {
   disableModule(moduleName) {
     this.enabledModules.delete(moduleName);
     this.saveConfig();
-    console.log(`🔧 [DebugLogger] Módulo deshabilitado: ${moduleName}`);
   }
 
   /**

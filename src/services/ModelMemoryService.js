@@ -100,7 +100,6 @@ class ModelMemoryService extends EventEmitter {
       try {
         const stats = await window.electron.ipcRenderer.invoke('system:get-memory-stats');
         if (stats && stats.ok) {
-          console.log('[ModelMemory] 📊 Datos de RAM obtenidos vía IPC (REALES)');
           return {
             totalMB: stats.totalMB,
             freeMB: stats.freeMB,
@@ -120,7 +119,6 @@ class ModelMemoryService extends EventEmitter {
         const freeMemory = os.freemem();
         const usedMemory = totalMemory - freeMemory;
 
-        console.log('[ModelMemory] 📊 Datos de RAM obtenidos vía Node.js os module');
         return {
           totalMB: Math.round(totalMemory / 1024 / 1024),
           freeMB: Math.round(freeMemory / 1024 / 1024),
@@ -183,7 +181,6 @@ class ModelMemoryService extends EventEmitter {
             lastUsedAt: new Date(model.expires_at || Date.now())
           });
         }
-        console.log(`[ModelMemory] 📍 ${this.loadedModels.size} modelos detectados`);
       }
 
       this.emit('modelsUpdated', this.loadedModels);
@@ -449,7 +446,6 @@ class ModelMemoryService extends EventEmitter {
           const gpuStats = await window.electron.system.getGPUStats();
           
           if (gpuStats && gpuStats.ok && gpuStats.type) {
-            console.log(`[ModelMemory] 🎮 GPU detectada: ${gpuStats.type.toUpperCase()}`);
             return {
               available: true,
               gpus: [{

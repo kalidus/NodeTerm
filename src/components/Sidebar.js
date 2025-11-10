@@ -26,9 +26,6 @@ function logSetNodes(source, nodes) {
 function safeUnblockForms(showToast) {
   try {
     const blockedInputs = detectBlockedInputs();
-    if (blockedInputs.length > 0) {
-      console.log(`🔓 Desbloqueando ${blockedInputs.length} formularios bloqueados:`, blockedInputs);
-    }
     unblockAllInputs();
     
     if (blockedInputs.length > 0 && showToast) {
@@ -284,7 +281,6 @@ const Sidebar = React.memo(({
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
-    console.log('handleAppMenuClick ejecutado - menú unificado');
     const menuStructure = createAppMenu(setShowImportDialog);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
@@ -1867,7 +1863,6 @@ const Sidebar = React.memo(({
               icon="pi pi-bars"
               className="p-button-rounded p-button-text sidebar-action-button"
               onClick={(e) => {
-                console.log('Click en botón del menú detectado');
                 handleAppMenuClick(e);
               }}
               tooltip="Menú de la aplicación"
