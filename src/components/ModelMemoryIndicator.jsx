@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import modelMemoryService from '../services/ModelMemoryService';
 
-const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
+const ModelMemoryIndicator = ({ visible = true, themeColors = {}, onExpandedChange }) => {
   const [stats, setStats] = useState(null);
   const [gpuMemory, setGpuMemory] = useState(null);
   const [expandedModels, setExpandedModels] = useState(false);
@@ -61,6 +61,12 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
     const interval = setInterval(updateStats, 5000);
     return () => clearInterval(interval);
   }, [visible]);
+
+  useEffect(() => {
+    if (onExpandedChange) {
+      onExpandedChange(expandedMemory);
+    }
+  }, [expandedMemory, onExpandedChange]);
 
   if (!visible || !stats) return null;
 
@@ -147,7 +153,7 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
         <div
           style={{
             padding: '0 12px 12px 12px',
-            maxHeight: '400px',
+            maxHeight: '70vh',
             overflow: 'auto',
             borderTop: `1px solid ${borderColorTheme}`,
             transition: 'all 0.3s ease'

@@ -66,6 +66,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [activeMcpServers, setActiveMcpServers] = useState([]);
   const [showMcpDialog, setShowMcpDialog] = useState(false);
   const [showMemoryIndicator, setShowMemoryIndicator] = useState(true); // ✅ NUEVO - Mostrar por defecto
+  const [mcpExpanded, setMcpExpanded] = useState(false);
+  const [memoryExpanded, setMemoryExpanded] = useState(false);
+  const [showMcpPanel, setShowMcpPanel] = useState(false); // Panel de herramientas MCP
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false); // Panel de memoria
+  const [toolsCount, setToolsCount] = useState(0); // Conteo de herramientas MCP
   const [selectedMcpServers, setSelectedMcpServers] = useState(() => {
     // Cargar MCPs seleccionados del localStorage
     try {
@@ -278,6 +283,31 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   }, [currentTheme]);
 
   // Cargar configuración inicial
+  // Efecto para actualizar conteo de herramientas MCP
+  useEffect(() => {
+    const updateToolsCount = () => {
+      try {
+        const tools = mcpClient.getAvailableTools();
+        setToolsCount(tools.length);
+      } catch (error) {
+        console.error('[AIChatPanel] Error actualizando conteo de herramientas:', error);
+      }
+    };
+
+    updateToolsCount();
+    
+    // Listener para cambios en MCP
+    const unsubscribe = mcpClient.addListener((event) => {
+      if (event === 'tools-updated' || event === 'servers-updated') {
+        updateToolsCount();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     const config = aiService.loadConfig();
     setCurrentModel(aiService.currentModel);
@@ -3867,18 +3897,34 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             borderTop: `1px solid ${themeColors.borderColor}`
           }}
         >
-          {/* Container para Herramientas MCP y Memoria - Lado a lado */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.6rem' }}>
-            {/* Herramientas MCP activas */}
-            <div>
-              <MCPActiveTools themeColors={themeColors} />
+          
+          {/* Panel desplegable para Herramientas MCP */}
+          {showMcpPanel && (
+            <div style={{ 
+              marginBottom: '0.6rem',
+              maxHeight: '70vh',
+              overflow: 'auto',
+              animation: 'slideUp 0.3s ease'
+            }}>
+              <MCPActiveTools themeColors={themeColors} onExpandedChange={setMcpExpanded} />
             </div>
-            
-            {/* ✅ Widget de Memoria */}
-            <div>
-              <ModelMemoryIndicator visible={showMemoryIndicator} themeColors={themeColors} />
+          )}
+
+          {/* Panel desplegable para Memoria */}
+          {showMemoryPanel && (
+            <div style={{ 
+              marginBottom: '0.6rem',
+              maxHeight: '70vh',
+              overflow: 'auto',
+              animation: 'slideUp 0.3s ease'
+            }}>
+              <ModelMemoryIndicator 
+                visible={showMemoryIndicator} 
+                themeColors={themeColors}
+                onExpandedChange={setMemoryExpanded}
+              />
             </div>
-          </div>
+          )}
           
           {/* Indicadores de rendimiento */}
           <AIPerformanceStats
@@ -3889,6 +3935,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             messages={messages}
             isLoading={isLoading}
             attachedFiles={attachedFiles}
+            showMcpPanel={showMcpPanel}
+            onToggleMcpPanel={() => setShowMcpPanel(!showMcpPanel)}
+            showMemoryPanel={showMemoryPanel}
+            onToggleMemoryPanel={() => setShowMemoryPanel(!showMemoryPanel)}
+            toolsCount={toolsCount}
           />
           
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
