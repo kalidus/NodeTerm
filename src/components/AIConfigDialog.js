@@ -9,6 +9,7 @@ import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import MCPManagerTab from './MCPManagerTab';
 import mcpClient from '../services/MCPClientService';
+import modelMemoryService from '../services/ModelMemoryService';
 
 // Definición de categorías de uso
 const USE_CASE_CATEGORIES = [
@@ -3167,6 +3168,65 @@ const AIConfigDialog = ({ visible, onHide }) => {
     );
   };
 
+  // ✅ NUEVO: Renderizar configuración de memoria
+  const renderMemoryConfig = () => {
+    const memoryLimitOptions = [
+      { label: '💾 Bajo (2GB)', value: 2000, desc: 'Para laptops limitadas' },
+      { label: '🖥️ Medio (6GB)', value: 6000, desc: 'Desktop estándar (RECOMENDADO)' },
+      { label: '🖥️🖥️ Alto (12GB)', value: 12000, desc: 'Workstation' },
+      { label: '🔥 Muy Alto (24GB)', value: 24000, desc: 'Server/Gaming' }
+    ];
+
+    return (
+      <div style={{ padding: '1rem', maxHeight: '500px', overflowY: 'auto' }}>
+        <h3 style={{ marginBottom: '1rem', color: themeColors.textPrimary }}>🧠 Configuración de Memoria</h3>
+
+        <div style={{ marginBottom: '2rem' }}>
+          <label style={{ display: 'block', marginBottom: '1rem', fontWeight: 'bold', color: themeColors.textPrimary }}>
+            Límite de RAM para Modelos Locales:
+          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.8rem' }}>
+            {memoryLimitOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  modelMemoryService.setMemoryLimit(opt.value);
+                  aiService.saveConfig();
+                }}
+                style={{
+                  padding: '1rem',
+                  background: modelMemoryService.memoryLimit === opt.value ? 'rgba(76, 204, 240, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  border: modelMemoryService.memoryLimit === opt.value ? '2px solid rgba(76, 204, 240, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  color: themeColors.textPrimary,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div>{opt.label}</div>
+                <div style={{ fontSize: '0.75rem', color: themeColors.textSecondary, marginTop: '0.3rem' }}>
+                  {opt.desc}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(76, 204, 240, 0.1)', border: '1px solid rgba(76, 204, 240, 0.3)', borderRadius: '8px', padding: '1rem', fontSize: '0.85rem', color: themeColors.textSecondary }}>
+          <strong style={{ color: themeColors.textPrimary }}>ℹ️ Información:</strong>
+          <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
+            <li>Los modelos se descargarán automáticamente si se excede el límite</li>
+            <li>El contexto se ajustará dinámicamente según la RAM disponible</li>
+            <li>Presiona <strong>Ctrl+M</strong> en el chat para ver estadísticas</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog
       header="Configuración de IA"
@@ -3200,6 +3260,9 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="🔌 MCP Tools">
           <MCPManagerTab themeColors={themeColors} />
+        </TabPanel>
+        <TabPanel header="🧠 Memoria">
+          {renderMemoryConfig()}
         </TabPanel>
       </TabView>
       </div>

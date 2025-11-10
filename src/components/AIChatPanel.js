@@ -13,6 +13,7 @@ import FileTypeDetectionPanel from './FileTypeDetectionPanel';
 import FileUploader from './FileUploader';
 import AIPerformanceStats from './AIPerformanceStats';
 import MCPActiveTools from './MCPActiveTools';
+import ModelMemoryIndicator from './ModelMemoryIndicator';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 import mcpClient from '../services/MCPClientService';
@@ -62,6 +63,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
   const [activeMcpServers, setActiveMcpServers] = useState([]);
   const [showMcpDialog, setShowMcpDialog] = useState(false);
+  const [showMemoryIndicator, setShowMemoryIndicator] = useState(false); // ✅ NUEVO
   const [selectedMcpServers, setSelectedMcpServers] = useState(() => {
     // Cargar MCPs seleccionados del localStorage
     try {
@@ -420,6 +422,30 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, []);
+
+  // ✅ NUEVO: Iniciar monitoreo de memoria al cargar el componente
+  useEffect(() => {
+    console.log('[AIChatPanel] Iniciando monitoreo de memoria...');
+    aiService.memoryService.startMonitoring();
+
+    return () => {
+      // Opcional: detener monitoreo al desmontar
+      // aiService.memoryService.stopMonitoring();
+    };
+  }, []);
+
+  // ✅ NUEVO: Shortcut Ctrl+M para mostrar/ocultar widget de memoria
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'm') {
+        e.preventDefault();
+        setShowMemoryIndicator(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -3761,6 +3787,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             isLoading={isLoading}
             attachedFiles={attachedFiles}
           />
+
+          {/* ✅ NUEVO: Widget de Memoria - Presiona Ctrl+M para mostrar */}
+          <ModelMemoryIndicator visible={showMemoryIndicator} themeColors={themeColors} />
           
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
             <textarea
