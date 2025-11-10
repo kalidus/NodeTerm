@@ -600,3 +600,39 @@
 
 /* Los estilos del input del chat de IA se manejan dinámicamente en el componente */
 
+/* ============================================
+   ESTILOS GLOBALES DEL SCROLLBAR PARA CHAT DE IA
+   ============================================ */
+
+/* Aplicar al historial de conversaciones */
+#ai-chat-panel .conversation-list::-webkit-scrollbar,
+.ai-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+#ai-chat-panel .conversation-list::-webkit-scrollbar-track,
+.ai-scrollbar::-webkit-scrollbar-track {
+  background: var(--ui-sidebar-bg, #1e1e1e) !important;
+  border-radius: 3px !important;
+}
+
+#ai-chat-panel .conversation-list::-webkit-scrollbar-thumb,
+.ai-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-border, #3e3e42) !important;
+  border-radius: 3px !important;
+  opacity: 0.6 !important;
+}
+
+#ai-chat-panel .conversation-list::-webkit-scrollbar-thumb:hover,
+.ai-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-sidebar-text, #cccccc) !important;
+  opacity: 0.8 !important;
+}
+
+/* Firefox scrollbar */
+#ai-chat-panel .conversation-list {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e) !important;
+}
+

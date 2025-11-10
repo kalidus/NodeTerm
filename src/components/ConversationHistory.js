@@ -363,34 +363,7 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             padding: 0.5rem;
           }
 
-          /* Estilos de scroll personalizados para el historial de conversaciones */
-          .conversation-list::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-          }
-
-          .conversation-list::-webkit-scrollbar-track {
-            background: ${themeColors.background};
-            border-radius: 3px;
-          }
-
-          .conversation-list::-webkit-scrollbar-thumb {
-            background: ${themeColors.borderColor};
-            border-radius: 3px;
-            opacity: 0.6;
-            transition: all 0.2s ease;
-          }
-
-          .conversation-list::-webkit-scrollbar-thumb:hover {
-            background: ${themeColors.textSecondary};
-            opacity: 0.8;
-          }
-
-          /* Firefox scrollbar para historial de conversaciones */
-          .conversation-list {
-            scrollbar-width: thin;
-            scrollbar-color: ${themeColors.borderColor} ${themeColors.background};
-          }
+          /* Estilos de scroll personalizados: removidos, usados desde AIChatTab */
 
           .conversation-item {
             padding: 0.8rem;

@@ -2767,22 +2767,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
 
 
+          /* Scrollbar personalizado SOLO para el área principal de mensajes */
           .ai-scrollbar::-webkit-scrollbar {
-            width: 8px;
+            width: 6px !important;
+            height: 6px !important;
           }
 
           .ai-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
+            background: ${themeColors.background} !important;
+            border-radius: 3px !important;
           }
 
           .ai-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
+            background: ${themeColors.borderColor} !important;
+            border-radius: 3px !important;
+            opacity: 0.6 !important;
           }
 
           .ai-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.3);
+            background: ${themeColors.textSecondary} !important;
+            opacity: 0.8 !important;
           }
 
           /* Estilos específicos para el input del chat de IA con color del tema */
@@ -3100,6 +3104,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       </style>
 
       <div
+        id="ai-chat-panel"
         className="ai-chat-panel"
         style={{
           height: '100%',

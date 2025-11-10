@@ -137,7 +137,47 @@ const AIChatTab = ({
   // Sin terminal local o terminal maximizada
   if (!showLocalTerminal) {
     return (
-      <div style={{
+      <>
+        <style>
+          {`
+            /* Scrollbar con colores del tema */
+            .conversation-list::-webkit-scrollbar {
+              width: 6px !important;
+              height: 6px !important;
+            }
+            .conversation-list::-webkit-scrollbar-track {
+              background: var(--ui-sidebar-bg, #1e1e1e) !important;
+            }
+            .conversation-list::-webkit-scrollbar-thumb {
+              background: var(--ui-sidebar-border, #3e3e42) !important;
+              border-radius: 3px !important;
+              opacity: 0.6 !important;
+            }
+            .conversation-list::-webkit-scrollbar-thumb:hover {
+              background: var(--ui-sidebar-text, #cccccc) !important;
+              opacity: 0.8 !important;
+            }
+
+            /* Scrollbar para área de mensajes */
+            .ai-scrollbar::-webkit-scrollbar {
+              width: 6px !important;
+              height: 6px !important;
+            }
+            .ai-scrollbar::-webkit-scrollbar-track {
+              background: var(--ui-sidebar-bg, #1e1e1e) !important;
+            }
+            .ai-scrollbar::-webkit-scrollbar-thumb {
+              background: var(--ui-sidebar-border, #3e3e42) !important;
+              border-radius: 3px !important;
+              opacity: 0.6 !important;
+            }
+            .ai-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: var(--ui-sidebar-text, #cccccc) !important;
+              opacity: 0.8 !important;
+            }
+          `}
+        </style>
+        <div style={{
         height: '100%',
         width: '100%',
         display: 'flex',
@@ -178,13 +218,27 @@ const AIChatTab = ({
           />
         </div>
       </div>
+        </>
     );
   }
 
   // Terminal maximizada
   if (terminalState === 'maximized') {
     return (
-      <div style={{
+      <>
+        <style>
+          {`
+            .conversation-list::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+            .conversation-list::-webkit-scrollbar-track { background: var(--ui-sidebar-bg, #1e1e1e) !important; }
+            .conversation-list::-webkit-scrollbar-thumb { background: var(--ui-sidebar-border, #3e3e42) !important; border-radius: 3px !important; opacity: 0.6 !important; }
+            .conversation-list::-webkit-scrollbar-thumb:hover { background: var(--ui-sidebar-text, #cccccc) !important; opacity: 0.8 !important; }
+            .ai-scrollbar::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+            .ai-scrollbar::-webkit-scrollbar-track { background: var(--ui-sidebar-bg, #1e1e1e) !important; }
+            .ai-scrollbar::-webkit-scrollbar-thumb { background: var(--ui-sidebar-border, #3e3e42) !important; border-radius: 3px !important; opacity: 0.6 !important; }
+            .ai-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--ui-sidebar-text, #cccccc) !important; opacity: 0.8 !important; }
+          `}
+        </style>
+        <div style={{
         height: '100%',
         width: '100%',
         display: 'flex',
@@ -211,11 +265,25 @@ const AIChatTab = ({
           />
         </div>
       </div>
+      </>
     );
   }
 
   // Terminal normal con resize
   return (
+    <>
+      <style>
+        {`
+          .conversation-list::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+          .conversation-list::-webkit-scrollbar-track { background: var(--ui-sidebar-bg, #1e1e1e) !important; }
+          .conversation-list::-webkit-scrollbar-thumb { background: var(--ui-sidebar-border, #3e3e42) !important; border-radius: 3px !important; opacity: 0.6 !important; }
+          .conversation-list::-webkit-scrollbar-thumb:hover { background: var(--ui-sidebar-text, #cccccc) !important; opacity: 0.8 !important; }
+          .ai-scrollbar::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+          .ai-scrollbar::-webkit-scrollbar-track { background: var(--ui-sidebar-bg, #1e1e1e) !important; }
+          .ai-scrollbar::-webkit-scrollbar-thumb { background: var(--ui-sidebar-border, #3e3e42) !important; border-radius: 3px !important; opacity: 0.6 !important; }
+          .ai-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--ui-sidebar-text, #cccccc) !important; opacity: 0.8 !important; }
+        `}
+      </style>
     <div 
       ref={containerRef}
       style={{
@@ -318,6 +386,7 @@ const AIChatTab = ({
         />
       </div>
     </div>
+    </>
   );
 };
 
