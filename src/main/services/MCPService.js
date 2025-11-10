@@ -171,8 +171,10 @@ class MCPService {
    * Iniciar servidor MCP
    */
   async startMCPServer(serverId) {
+    // ✅ Si ya está corriendo, devolver éxito (idempotente)
     if (this.mcpProcesses.has(serverId)) {
-      throw new Error(`MCP ${serverId} ya está en ejecución`);
+      console.log(`ℹ️ [MCP] ${serverId} ya está en ejecución, devolviendo éxito`);
+      return { success: true, serverId, alreadyRunning: true };
     }
 
     const config = this.mcpConfig.mcpServers[serverId];

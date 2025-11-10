@@ -30,8 +30,6 @@ class MCPClientService {
     if (this.initialized) return { success: true };
 
     try {
-      console.log('🔧 [MCP Client] Inicializando...');
-      
       const result = await window.electron.mcp.initialize();
       
       if (result.success) {
@@ -42,8 +40,6 @@ class MCPClientService {
         
         // Auto-refresh cada 30 segundos
         this.startAutoRefresh();
-        
-        console.log('✅ [MCP Client] Inicializado correctamente');
       } else {
         console.error('❌ [MCP Client] Error inicializando:', result.error);
       }

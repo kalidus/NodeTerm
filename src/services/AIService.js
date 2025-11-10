@@ -1283,7 +1283,7 @@ class AIService {
         
         // Buscar configuración exacta primero
         if (localConfigs[modelId]) {
-          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada para ${modelId}:`, localConfigs[modelId]);
+          debugLogger.debug('AIService', `Usando configuración guardada para ${modelId}`);
           return localConfigs[modelId];
         }
         
@@ -1291,7 +1291,7 @@ class AIService {
         // Esto permite que modelos como "llama3.2:latest" usen la configuración de "llama3.2"
         const baseModelId = modelId.split(':')[0];
         if (baseModelId !== modelId && localConfigs[baseModelId]) {
-          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada para ${baseModelId} (base de ${modelId}):`, localConfigs[baseModelId]);
+          debugLogger.debug('AIService', `Usando configuración guardada para ${baseModelId} (base de ${modelId})`);
           return localConfigs[baseModelId];
         }
         
@@ -1301,7 +1301,7 @@ class AIService {
           return modelId.includes(key) || key.includes(baseModelId);
         });
         if (matchingKey) {
-          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada (coincidencia parcial) ${matchingKey} para ${modelId}:`, localConfigs[matchingKey]);
+          debugLogger.debug('AIService', `Usando configuración guardada (coincidencia parcial) ${matchingKey} para ${modelId}`);
           return localConfigs[matchingKey];
         }
       } catch (e) {
@@ -6424,11 +6424,6 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     this.currentModel = newModelId;
     this.modelType = newModelType;
 
-    if (oldType === 'local' && newModelType === 'local' && oldModel !== newModelId) {
-      console.log(`[AIService] 📊 Cambio de modelo: ${oldModel} → ${newModelId}`);
-      console.log(`[AIService] 💡 Para liberar RAM de "${oldModel}", usa Ctrl+M y haz clic en [❌ Descargar]`);
-    }
-
     this.saveConfig();
   }
 
@@ -6441,14 +6436,11 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       const config = JSON.parse(localStorage.getItem('ai-service-config') || '{}');
       
       if (!config.currentModel || !config.modelType) {
-        console.log('[AIService] ℹ️ No hay modelo anterior guardado');
         return false;
       }
 
       const modelId = config.currentModel;
       const modelType = config.modelType;
-
-      console.log(`[AIService] 🚀 Intentando recargar modelo: ${modelId} (${modelType})`);
 
       // Si es modelo local, verificar que existe
       if (modelType === 'local') {
@@ -6481,22 +6473,18 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
 
       // Si es local, usar ModelMemoryService para cargarlo en memoria
       if (modelType === 'local') {
-        console.log(`[AIService] 🔥 Cargando modelo Ollama en memoria: ${modelId}`);
         try {
           // Usar loadModelToMemory que usa /api/generate con keep_alive
           const loaded = await this.memoryService.loadModelToMemory(modelId);
-          if (loaded) {
-            console.log(`[AIService] ✅ Modelo ${modelId} cargado en memoria exitosamente`);
-          } else {
-            console.warn(`[AIService] ⚠️ No se pudo cargar ${modelId}, pero puede cargar automáticamente`);
+          if (!loaded) {
+            console.warn(`[AIService] ⚠️ No se pudo precargar ${modelId}, pero Ollama lo cargará automáticamente`);
           }
         } catch (error) {
-          console.warn(`[AIService] ⚠️ Error cargando modelo: ${error.message}`);
+          console.warn(`[AIService] ⚠️ Error precargando modelo: ${error.message}`);
           // No es crítico, Ollama cargará automáticamente cuando se use
         }
       }
 
-      console.log(`[AIService] ✅ Modelo ${modelId} listo para usar`);
       return true;
 
     } catch (error) {

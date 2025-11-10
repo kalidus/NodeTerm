@@ -21,23 +21,33 @@
  * ❌ OBSOLETO: Límites automáticos (ahora es solo información)
  */
 
-// ✅ Fallback para entornos sin Node.js (navegador)
+// ✅ Detectar si estamos en Node.js o navegador
+const isNodeEnvironment = typeof window === 'undefined';
+
+// ✅ Cargar módulos de Node.js SOLO si estamos en Node.js
 let os = null;
-try {
-  os = require('os');
-} catch (e) {
-  // En navegador, 'os' no existe - usar fallback
-  console.warn('[ModelMemory] Módulo "os" no disponible, usando fallback');
-  os = null;
+if (isNodeEnvironment) {
+  try {
+    os = require('os');
+  } catch (e) {
+    // Fallback
+    os = null;
+  }
 }
 
 // ✅ Fallback para EventEmitter en navegador
 let EventEmitter = null;
-try {
-  EventEmitter = require('events');
-} catch (e) {
-  // En navegador, usar polyfill simple
-  console.warn('[ModelMemory] EventEmitter no disponible, usando polyfill');
+if (isNodeEnvironment) {
+  try {
+    EventEmitter = require('events');
+  } catch (e) {
+    // Fallback a polyfill
+    EventEmitter = null;
+  }
+}
+
+// Si estamos en navegador, usar polyfill de EventEmitter
+if (!EventEmitter) {
   EventEmitter = class {
     constructor() {
       this.listeners = {};
@@ -66,10 +76,13 @@ try {
 
 // ✅ Importar GPUMemoryService
 let gpuMemoryService = null;
-try {
-  gpuMemoryService = require('./GPUMemoryService').default;
-} catch (e) {
-  console.warn('[ModelMemory] GPUMemoryService no disponible');
+if (isNodeEnvironment) {
+  try {
+    gpuMemoryService = require('./GPUMemoryService').default;
+  } catch (e) {
+    // GPUMemoryService no disponible
+    gpuMemoryService = null;
+  }
 }
 
 class ModelMemoryService extends EventEmitter {
@@ -82,8 +95,6 @@ class ModelMemoryService extends EventEmitter {
     this.monitoringEnabled = false;
     this.checkInterval = 30000; // 30 segundos - solo para actualizar datos
     this.lastSystemMemory = null; // Cache del último estado del sistema
-    
-    console.log('[ModelMemory] ✅ Servicio inicializado (MONITOREO PASIVO - sin auto-unload)');
   }
 
   /**
@@ -201,8 +212,6 @@ class ModelMemoryService extends EventEmitter {
    */
   async loadModelToMemory(modelName) {
     try {
-      console.log(`[ModelMemory] 🚀 Cargando modelo en memoria: ${modelName}`);
-      
       // Usar /api/generate para hacer "warm up" del modelo
       // keep_alive: -1 = mantener indefinidamente (hasta que Ollama decida descargarlo por otros modelos)
       // stream: false = no queremos generar respuesta, solo cargar el modelo
@@ -219,7 +228,6 @@ class ModelMemoryService extends EventEmitter {
       });
 
       if (response.ok) {
-        console.log(`[ModelMemory] ✅ ${modelName} cargado en memoria`);
         this.emit('modelLoaded', modelName);
         return true;
       } else {
@@ -247,8 +255,6 @@ class ModelMemoryService extends EventEmitter {
    */
   async unloadModel(modelName) {
     try {
-      console.log(`[ModelMemory] 📤 Descargando ${modelName} de RAM...`);
-      
       // Usar /api/generate con keep_alive: 0 para descargar inmediatamente
       // stream: false = no queremos generar respuesta
       const response = await fetch(`${this.ollamaUrl}/api/generate`, {
@@ -263,7 +269,6 @@ class ModelMemoryService extends EventEmitter {
       });
 
       if (response.ok) {
-        console.log(`[ModelMemory] ✅ ${modelName} descargado de RAM (archivo en disco protegido)`);
         this.emit('modelUnloaded', modelName);
         return true;
       } else {
@@ -407,8 +412,6 @@ class ModelMemoryService extends EventEmitter {
       }
     };
 
-    console.log(`[ModelMemory] ✅ MONITOREO PASIVO iniciado (cada ${this.checkInterval / 1000}s)`);
-    console.log('[ModelMemory] 📍 Solo observa datos. Descarga manual solo via botón.');
     monitor();
   }
 
@@ -417,7 +420,6 @@ class ModelMemoryService extends EventEmitter {
    */
   stopMonitoring() {
     this.monitoringEnabled = false;
-    console.log('[ModelMemory] ⛔ Monitoreo detenido');
     this.emit('monitoringStopped');
   }
 
@@ -431,7 +433,6 @@ class ModelMemoryService extends EventEmitter {
    */
   async cleanup() {
     this.stopMonitoring();
-    console.log('[ModelMemory] 🧹 Limpieza completada');
   }
 
   /**

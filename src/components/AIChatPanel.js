@@ -323,7 +323,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       if (loaded) {
         setCurrentModel(aiService.currentModel);
         setModelType(aiService.modelType);
-        console.log(`[AIChatPanel] ✅ Modelo restaurado: ${aiService.currentModel}`);
       }
     })();
     
@@ -470,7 +469,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // El monitoreo SOLO observa RAM cada 30s, sin tomar acciones automáticas
   // Las descargas son MANUALES via widget (Ctrl+M)
   useEffect(() => {
-    console.log('[AIChatPanel] Iniciando monitoreo PASIVO de memoria (sin auto-unload)...');
     aiService.memoryService.startMonitoring();
 
     return () => {
@@ -1519,14 +1517,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const oldModel = aiService.currentModel;
       const oldType = aiService.modelType;
 
-      console.log(`[AIChatPanel] 🔄 Cambio de modelo: ${oldModel} (${oldType}) → ${modelId} (${modelType})`);
-
       // ========== PASO 1: NO descargar modelo antiguo ==========
       // ⚠️ NUNCA usar /api/delete - borra archivos permanentemente
       // Ollama descargará automáticamente el modelo anterior cuando sea necesario
       if (oldType === 'local' && oldModel && oldModel !== modelId) {
-        console.log(`[AIChatPanel] 📝 Modelo anterior ${oldModel} permanece en disco`);
-        console.log(`[AIChatPanel] 📝 Ollama lo descargará automáticamente de RAM cuando sea necesario`);
         setModelSwitchProgress(15);
       }
 
@@ -1547,7 +1541,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
 
       // ========== PASO 3: Cargar modelo nuevo en memoria ==========
-      console.log(`[AIChatPanel] 🚀 Cargando modelo nuevo: ${modelId}`);
       setModelSwitchProgress(50);
 
       // Si es modelo local, cargarlo en memoria usando ModelMemoryService
@@ -1555,7 +1548,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         try {
           const loaded = await aiService.memoryService.loadModelToMemory(modelId);
           if (loaded) {
-            console.log(`[AIChatPanel] ✅ Modelo ${modelId} cargado en memoria`);
             setModelSwitchProgress(90);
           } else {
             console.warn(`[AIChatPanel] ⚠️ Modelo ${modelId} cargará automáticamente`);
@@ -1573,7 +1565,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           setModelSwitchProgress(100);
           
           setTimeout(() => {
-            console.log(`[AIChatPanel] ✅ Modelo ${modelId} listo para usar`);
             setIsModelSwitching(false);
             setModelSwitchProgress(0);
 
