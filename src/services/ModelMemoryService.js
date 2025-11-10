@@ -438,14 +438,47 @@ class ModelMemoryService extends EventEmitter {
   }
 
   /**
-   * 🎮 NUEVO: Obtener estadísticas de GPU
+   * 🎮 NUEVO: Obtener estadísticas de GPU vía IPC
+   * Soporta NVIDIA, AMD, Apple Silicon
    */
   async getGPUStats() {
-    if (!gpuMemoryService) {
-      return null;
-    }
+    try {
+      // Opción 1: Intentar obtener datos REALES vía IPC (Electron)
+      if (typeof window !== 'undefined' && window.electron && window.electron.system) {
+        try {
+          const gpuStats = await window.electron.system.getGPUStats();
+          
+          if (gpuStats && gpuStats.ok && gpuStats.type) {
+            console.log(`[ModelMemory] 🎮 GPU detectada: ${gpuStats.type.toUpperCase()}`);
+            return {
+              available: true,
+              gpus: [{
+                name: `${gpuStats.type.toUpperCase()} GPU`,
+                totalGB: (gpuStats.totalMB / 1024).toFixed(2),
+                usedGB: (gpuStats.usedMB / 1024).toFixed(2),
+                freeGB: (gpuStats.freeMB / 1024).toFixed(2),
+                usagePercent: gpuStats.usagePercent || 0,
+                status: '✅ Activa'
+              }]
+            };
+          }
+        } catch (error) {
+          console.warn('[ModelMemory] IPC GPU error:', error.message);
+        }
+      }
 
-    return await gpuMemoryService.getGPUStats();
+      // Fallback: Si no hay GPU o IPC no disponible
+      return {
+        available: false,
+        gpus: []
+      };
+    } catch (error) {
+      console.warn('[ModelMemory] Error obteniendo stats GPU:', error.message);
+      return {
+        available: false,
+        gpus: []
+      };
+    }
   }
 
   /**
