@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import mcpClient from '../services/MCPClientService';
 
-const MCPActiveTools = ({ themeColors }) => {
+const MCPActiveTools = ({ themeColors, onExpandedChange }) => {
   const [tools, setTools] = useState([]);
   const [servers, setServers] = useState([]);
   const [expanded, setExpanded] = useState(false);
@@ -22,6 +22,12 @@ const MCPActiveTools = ({ themeColors }) => {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (onExpandedChange) {
+      onExpandedChange(expanded);
+    }
+  }, [expanded, onExpandedChange]);
 
   const loadData = () => {
     setTools(mcpClient.getAvailableTools());
@@ -102,7 +108,9 @@ const MCPActiveTools = ({ themeColors }) => {
           display: 'flex',
           flexDirection: 'column',
           gap: '0.75rem',
-          animation: 'slideIn 0.2s ease'
+          animation: 'slideIn 0.2s ease',
+          maxHeight: '70vh',
+          overflow: 'auto'
         }}>
           {/* Servidores activos */}
           <div>

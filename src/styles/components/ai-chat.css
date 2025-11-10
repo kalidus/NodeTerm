@@ -636,3 +636,18 @@
   scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e) !important;
 }
 
+/* ============================================
+   ANIMACIÓN DESPLEGABLE HACIA ARRIBA
+   ============================================ */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
