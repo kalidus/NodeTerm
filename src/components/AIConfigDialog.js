@@ -724,6 +724,19 @@ const AIConfigDialog = ({ visible, onHide }) => {
                           ✓ Instalado
                         </span>
                       )}
+                      {model.mcpCompatibility === 'excellent' && (
+                        <span style={{
+                          background: 'rgba(33, 150, 243, 0.2)',
+                          color: '#2196F3',
+                          padding: '0.1rem 0.5rem',
+                          borderRadius: '12px',
+                          fontSize: '0.65rem',
+                          fontWeight: '600',
+                          border: '1px solid rgba(33, 150, 243, 0.4)'
+                        }}>
+                          🔧 MCP
+                        </span>
+                      )}
                     </div>
                     
                     <p style={{ margin: '0.25rem 0 0.5rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
@@ -2139,6 +2152,42 @@ const AIConfigDialog = ({ visible, onHide }) => {
                           }}>
                             <i className="pi pi-check-circle" style={{ fontSize: '0.6rem' }} />
                             Seleccionado
+                          </span>
+                        )}
+
+                        {/* 🔧 Badge de compatibilidad MCP */}
+                        {model.mcpCompatibility === 'excellent' && (
+                          <span style={{
+                            background: 'rgba(33, 150, 243, 0.2)',
+                            color: '#2196F3',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: '1px solid rgba(33, 150, 243, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <i className="pi pi-bolt" style={{ fontSize: '0.6rem' }} />
+                            Optimizado para MCP
+                          </span>
+                        )}
+                        {model.mcpCompatibility === 'good' && (
+                          <span style={{
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            color: '#4CAF50',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: '1px solid rgba(76, 175, 80, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                            Soporta MCP
                           </span>
                         )}
                       </div>

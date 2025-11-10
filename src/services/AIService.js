@@ -180,6 +180,7 @@ class AIService {
             size: '4.7GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'good',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -198,6 +199,7 @@ class AIService {
             size: '40GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente + GPU potente',
@@ -270,6 +272,7 @@ class AIService {
             size: '5.2GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -306,6 +309,7 @@ class AIService {
             size: '4.7GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -324,6 +328,7 @@ class AIService {
             size: '5.2GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -342,6 +347,7 @@ class AIService {
             size: '9.0GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -360,6 +366,7 @@ class AIService {
             size: '20GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -378,6 +385,7 @@ class AIService {
             size: '43GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -396,6 +404,7 @@ class AIService {
             size: '404GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente + GPU muy potente',
@@ -1972,46 +1981,103 @@ class AIService {
 
   /**
    * FILTRAR tools por contexto/relevancia
-   * Selecciona solo las herramientas más apropiadas para la pregunta
+   * ✨ MEJORADO: Filtrado más agresivo con scoring y límite máximo
    */
   filterToolsByContext(tools, message = '') {
+    const MAX_TOOLS = 6; // Límite máximo de tools para no abrumar al modelo
     const lowerMsg = message.toLowerCase();
-    let selectedTools = [];
-
-    // 🌐 Si es sobre WEB (URL, busca, sitio, página) → Solo Puppeteer + Filesystem
-    if (lowerMsg.includes('http') || lowerMsg.includes('url') || lowerMsg.includes('busca') || 
-        lowerMsg.includes('sitio') || lowerMsg.includes('página') || lowerMsg.includes('web') ||
-        lowerMsg.includes('.com') || lowerMsg.includes('web search') || lowerMsg.includes('google')) {
-      selectedTools = ['web_search', 'site_search', 'fetch_page', 'extract_text', 'goto_url', 'screenshot'];
-      debugLogger.debug('AIService.ToolsFilter', 'Modo WEB: WebSearch nativo');
-    }
-    // 📁 Si es sobre ARCHIVOS → Solo Filesystem
-    else if (lowerMsg.includes('archivo') || lowerMsg.includes('archivo') || lowerMsg.includes('carpeta') ||
-             lowerMsg.includes('directorio') || lowerMsg.includes('leer') || lowerMsg.includes('crear archivo')) {
-      selectedTools = ['read_file', 'list_directory', 'write_file'];
-      debugLogger.debug('AIService.ToolsFilter', 'Modo ARCHIVOS: Filesystem solo');
-    }
-    // 🔧 Si es sobre COMANDOS → run_command
-    else if (lowerMsg.includes('comando') || lowerMsg.includes('ejecuta') || lowerMsg.includes('run') ||
-             lowerMsg.includes('script') || lowerMsg.includes('terminal') || lowerMsg.includes('shell')) {
-      selectedTools = ['run_command'];
-      debugLogger.debug('AIService.ToolsFilter', 'Modo COMANDOS: CLI solo');
-    }
-    // ❓ Por defecto: esenciales sin run_command (web prioritario)
-    else {
-      selectedTools = ['read_file', 'list_directory', 'write_file', 'web_search', 'site_search', 'goto_url', 'screenshot'];
-      debugLogger.debug('AIService.ToolsFilter', 'Modo DEFAULT: Web + Filesystem (NO CLI)');
-    }
-
-    const filtered = tools.filter(t => {
-      return selectedTools.some(st => t.name.includes(st));
+    
+    // Calcular score de relevancia para cada tool
+    const toolsWithScore = tools.map(tool => {
+      let score = 0;
+      const toolName = tool.name.toLowerCase();
+      const toolDesc = (tool.description || '').toLowerCase();
+      
+      // Búsquedas en web/internet
+      if (lowerMsg.match(/busca|search|google|web|internet|sitio|página|url|http|\.com/)) {
+        if (toolName.includes('search') || toolName.includes('web') || toolName.includes('fetch')) score += 10;
+        if (toolName.includes('goto') || toolName.includes('screenshot')) score += 5;
+      }
+      
+      // Archivos: LEER
+      if (lowerMsg.match(/lee|leer|muestra|abre|ver|contenido|archivo|file/)) {
+        if (toolName.includes('read_file') || toolName.includes('read_text')) score += 10;
+        if (toolName.includes('get_file_info')) score += 5;
+      }
+      
+      // Archivos: CREAR/ESCRIBIR
+      if (lowerMsg.match(/crea|crear|escribe|guarda|guardar|genera|nuevo archivo|write/)) {
+        if (toolName.includes('write_file') || toolName.includes('create')) score += 10;
+        if (toolName.includes('append')) score += 5;
+      }
+      
+      // Archivos: EDITAR/MODIFICAR
+      if (lowerMsg.match(/edita|editar|modifica|cambia|actualiza|reemplaza|edit/)) {
+        if (toolName.includes('edit_file') || toolName.includes('update')) score += 10;
+        if (toolName.includes('write_file')) score += 3; // Fallback
+      }
+      
+      // Directorios: LISTAR
+      if (lowerMsg.match(/lista|listar|directorio|carpeta|folder|contenido|archivos en/)) {
+        if (toolName.includes('list_directory')) score += 10;
+        if (toolName.includes('directory_tree')) score += 7;
+        if (toolName.includes('list_directory_with_sizes')) score += 8;
+      }
+      
+      // Archivos: BUSCAR
+      if (lowerMsg.match(/busca archivo|encuentra archivo|search.*file|find.*file|patrón/)) {
+        if (toolName.includes('search_files') || toolName.includes('find')) score += 10;
+      }
+      
+      // Archivos: MOVER/RENOMBRAR
+      if (lowerMsg.match(/mueve|mover|renombra|rename|move/)) {
+        if (toolName.includes('move_file') || toolName.includes('rename')) score += 10;
+      }
+      
+      // Archivos: ELIMINAR
+      if (lowerMsg.match(/elimina|borrar|delete|remove/)) {
+        if (toolName.includes('delete') || toolName.includes('remove')) score += 10;
+      }
+      
+      // Comandos/CLI
+      if (lowerMsg.match(/ejecuta|comando|command|run|terminal|shell|script/)) {
+        if (toolName.includes('run_command') || toolName.includes('execute')) score += 10;
+      }
+      
+      // Base de datos
+      if (lowerMsg.match(/query|sql|database|tabla|consulta/)) {
+        if (toolName.includes('query') || toolName.includes('sql')) score += 10;
+      }
+      
+      // Penalizar tools genéricas si hay específicas
+      if (toolName === 'write_file' && lowerMsg.includes('edit')) score -= 3;
+      if (toolName === 'read_file' && lowerMsg.includes('list')) score -= 3;
+      
+      return { tool, score };
     });
+    
+    // Ordenar por score descendente
+    toolsWithScore.sort((a, b) => b.score - a.score);
+    
+    // Tomar las top N más relevantes
+    const topTools = toolsWithScore
+      .filter(t => t.score > 0) // Solo las que tienen score positivo
+      .slice(0, MAX_TOOLS)
+      .map(t => t.tool);
+    
+    // Si no hay tools con score, usar un conjunto mínimo por defecto
+    if (topTools.length === 0) {
+      const defaultNames = ['read_file', 'list_directory', 'write_file'];
+      topTools.push(...tools.filter(t => defaultNames.some(dn => t.name.includes(dn))).slice(0, 3));
+    }
 
-    debugLogger.debug('AIService.ToolsFilter', 'Tools filtrados por contexto', {
+    debugLogger.debug('AIService.ToolsFilter', 'Tools filtrados con scoring', {
       disponibles: tools.length,
-      relevantes: filtered.length
+      relevantes: topTools.length,
+      topScores: toolsWithScore.slice(0, 3).map(t => ({ name: t.tool.name, score: t.score }))
     });
-    return filtered;
+    
+    return topTools;
   }
 
   /**
@@ -2098,16 +2164,131 @@ class AIService {
   }
 
   /**
+   * Generar few-shot examples para mejorar comprensión de tools
+   * 📚 Los ejemplos ayudan al modelo a entender el uso correcto
+   */
+  generateToolExamples(tools, provider) {
+    // Seleccionar hasta 3 ejemplos representativos
+    const exampleTools = tools.slice(0, 3);
+    
+    if (exampleTools.length === 0) return '';
+    
+    let examples = '\n🎯 EJEMPLOS DE USO:\n\n';
+    
+    exampleTools.forEach((tool, idx) => {
+      const params = tool.inputSchema?.properties || {};
+      const required = tool.inputSchema?.required || [];
+      
+      // Generar ejemplo de parámetros
+      const exampleArgs = {};
+      Object.keys(params).forEach(key => {
+        if (required.includes(key)) {
+          const param = params[key];
+          // Generar valor de ejemplo según el tipo
+          if (param.type === 'string') {
+            if (key === 'path' || key === 'file' || key === 'source' || key === 'destination') {
+              exampleArgs[key] = '/ruta/archivo.txt';
+            } else if (key === 'content' || key === 'text') {
+              exampleArgs[key] = 'contenido del texto';
+            } else if (key === 'pattern') {
+              exampleArgs[key] = '*.txt';
+            } else {
+              exampleArgs[key] = 'valor';
+            }
+          } else if (param.type === 'number' || param.type === 'integer') {
+            exampleArgs[key] = 100;
+          } else if (param.type === 'boolean') {
+            exampleArgs[key] = true;
+          } else if (param.type === 'array') {
+            exampleArgs[key] = [];
+          } else {
+            exampleArgs[key] = param.example || 'valor';
+          }
+        }
+      });
+      
+      const toolName = tool.serverId ? `${tool.serverId}__${tool.name}` : tool.name;
+      
+      examples += `Ejemplo ${idx + 1}:\n`;
+      examples += `Usuario: "${this._generateUserExampleForTool(tool)}"\n`;
+      examples += `Tool llamada: ${toolName}\n`;
+      examples += `Argumentos: ${JSON.stringify(exampleArgs, null, 2)}\n\n`;
+    });
+    
+    return examples;
+  }
+  
+  /**
+   * Generar ejemplo de petición del usuario para una tool
+   */
+  _generateUserExampleForTool(tool) {
+    const name = tool.name;
+    
+    if (name.includes('list') && name.includes('directory')) {
+      return 'Lista los archivos del directorio actual';
+    } else if (name.includes('read') && name.includes('file')) {
+      return 'Lee el contenido del archivo config.json';
+    } else if (name.includes('write') && name.includes('file')) {
+      return 'Crea un archivo llamado notas.txt con el texto "Hola mundo"';
+    } else if (name.includes('edit') && name.includes('file')) {
+      return 'Cambia la línea que dice "version: 1.0" por "version: 2.0"';
+    } else if (name.includes('search')) {
+      return 'Busca todos los archivos .txt en el directorio';
+    } else if (name.includes('create') && name.includes('directory')) {
+      return 'Crea una carpeta llamada "proyectos"';
+    } else if (name.includes('move')) {
+      return 'Mueve el archivo documento.txt a la carpeta backup';
+    } else if (name.includes('delete')) {
+      return 'Elimina el archivo temporal.tmp';
+    } else if (name.includes('get') && name.includes('info')) {
+      return 'Dame información del archivo imagen.png';
+    }
+    
+    return `Usa la herramienta ${name}`;
+  }
+
+  /**
    * Convertir tools MCP a formato function calling del proveedor
+   * ✨ MEJORADO: Enriquece descripciones automáticamente para mejor comprensión
    */
   convertMCPToolsToProviderFormat(tools, provider, options = {}) {
     if (!tools || tools.length === 0) return [];
 
     return tools.map(tool => {
+      // 🔍 Enriquecer descripción automáticamente
+      let enrichedDescription = tool.description || `Herramienta ${tool.name}`;
+      
+      // Agregar contexto de parámetros importantes a la descripción
+      if (tool.inputSchema && tool.inputSchema.properties) {
+        const params = tool.inputSchema.properties;
+        const required = tool.inputSchema.required || [];
+        
+        // Si hay parámetros requeridos, mencionarlos en la descripción
+        if (required.length > 0) {
+          const requiredParams = required.map(r => `'${r}'`).join(', ');
+          enrichedDescription += `. Requiere: ${requiredParams}`;
+        }
+        
+        // Agregar hints específicos por tipo de tool
+        if (tool.name.includes('read') || tool.name.includes('list')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite OBTENER o VER información';
+        } else if (tool.name.includes('write') || tool.name.includes('create')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite CREAR o GUARDAR contenido';
+        } else if (tool.name.includes('edit') || tool.name.includes('update') || tool.name.includes('modify')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite MODIFICAR contenido existente';
+        } else if (tool.name.includes('delete') || tool.name.includes('remove')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite ELIMINAR algo';
+        } else if (tool.name.includes('search') || tool.name.includes('find')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite BUSCAR o ENCONTRAR algo';
+        } else if (tool.name.includes('move') || tool.name.includes('rename')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite MOVER o RENOMBRAR';
+        }
+      }
+
       // Formato común para function calling
       const toolDef = {
         name: (options.namespace ? `${tool.serverId}__${tool.name}` : tool.name),
-        description: tool.description || `Herramienta ${tool.name} del servidor ${tool.serverId}`,
+        description: enrichedDescription,
         parameters: tool.inputSchema || { type: 'object', properties: {} }
       };
 
@@ -2137,14 +2318,12 @@ class AIService {
 
   /**
    * Generar system prompt UNIVERSAL para MCP (modelos sin function calling)
-   * - Agrupa por servidor
-   * - Formato de invocación recomendado: {"server":"<serverId>","tool":"<toolName>","arguments":{}}
-   * - Alternativa: {"tool":"<serverId>__<toolName>","arguments":{}}
+   * ✨ MEJORADO: Más simple, directo y con ejemplos
    */
   generateUniversalMCPSystemPrompt(tools, options = {}) {
     if (!tools || tools.length === 0) return '';
 
-    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 8;
+    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 6; // Reducido de 8 a 6
     const serverHints = options.serverHints || {};
 
     // Agrupar tools por servidor
@@ -2156,19 +2335,18 @@ class AIService {
     }, {});
 
     let out = '';
-    out += 'INSTRUCCIONES CRÍTICAS - HERRAMIENTAS MCP (Modo ReAct)\n';
-    out += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    out += 'IMPORTANTE: Genera un PLAN de herramientas ANTES de ejecutar.\n\n';
-    out += 'Si el usuario pide UNA acción → genera una herramienta:\n';
+    out += '🔧 HERRAMIENTAS DISPONIBLES\n';
+    out += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    out += '⚡ FORMATO SIMPLE:\n';
+    out += 'Responde SOLO con este JSON cuando necesites usar una herramienta:\n';
     out += '{"tool":"<serverId>__<toolName>","arguments":{...}}\n\n';
-    out += 'Si el usuario pide MÚLTIPLES acciones → genera un PLAN:\n';
-    out += '{"plan":[{"tool":"<name1>","arguments":{...}},{"tool":"<name2>","arguments":{...}}]}\n\n';
-    out += 'REGLAS:\n';
-    out += '1. Analiza la solicitud del usuario\n';
-    out += '2. Identifica TODAS las acciones necesarias\n';
-    out += '3. Genera el plan completo de UNA VEZ\n';
-    out += '4. NO ejecutes herramientas innecesarias\n';
-    out += '5. USA el directorio por defecto si no se especifica ruta\n\n';
+    out += '📌 REGLAS IMPORTANTES:\n';
+    out += '1. Usa la herramienta MÁS ESPECÍFICA para la tarea\n';
+    out += '2. Si pide LEER → usa read_file\n';
+    out += '3. Si pide LISTAR → usa list_directory\n';
+    out += '4. Si pide CREAR → usa write_file\n';
+    out += '5. Si pide EDITAR → usa edit_file (NO write_file)\n';
+    out += '6. NO uses write_file para editar, usa edit_file\n\n';
 
     const serverIds = Object.keys(serverIdToTools).sort();
     serverIds.forEach((serverId, sidx) => {
@@ -2286,10 +2464,27 @@ class AIService {
       }
     });
 
-    out += '\nREGLAS:\n';
-    out += '• Responde SOLO con JSON (sin explicación previa).\n';
-    out += '• Incluye SIEMPRE "arguments" (vacío si no hay).\n';
-    out += '• Si una tool existe en varios servidores, indica "server" o usa namespacing.\n';
+    out += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    
+    // ✨ NUEVO: Agregar few-shot examples (máximo 3)
+    out += '🎯 EJEMPLOS PRÁCTICOS:\n\n';
+    out += 'Ejemplo 1 - LISTAR archivos:\n';
+    out += 'Usuario: "Lista los archivos del directorio actual"\n';
+    out += 'Tú respondes: {"tool":"filesystem__list_directory","arguments":{"path":"."}}\n\n';
+    
+    out += 'Ejemplo 2 - LEER archivo:\n';
+    out += 'Usuario: "Lee el contenido del archivo config.json"\n';
+    out += 'Tú respondes: {"tool":"filesystem__read_file","arguments":{"path":"config.json"}}\n\n';
+    
+    out += 'Ejemplo 3 - CREAR archivo:\n';
+    out += 'Usuario: "Crea un archivo notas.txt con el texto Hola mundo"\n';
+    out += 'Tú respondes: {"tool":"filesystem__write_file","arguments":{"path":"notas.txt","content":"Hola mundo"}}\n\n';
+    
+    out += '⚠️ CRÍTICO:\n';
+    out += '• Responde SOLO con JSON, sin texto adicional antes o después\n';
+    out += '• Si pide EDITAR, usa edit_file, NO write_file\n';
+    out += '• Si no especifica ruta, usa la ruta por defecto\n';
+    out += '• Siempre incluye "arguments" (usa {} si no hay parámetros)\n\n';
 
     return out;
   }
@@ -3749,7 +3944,39 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           const providerTools = this.convertMCPToolsToProviderFormat(mcpContext.tools, 'openai', { namespace: true });
           if (providerTools.length > 0) {
             requestBody.tools = providerTools;
-            requestBody.tool_choice = 'auto';
+            
+            // ✨ MEJORADO: Configuración inteligente de tool_choice
+            // Detectar si la pregunta REQUIERE usar una tool
+            const lowerMsg = message.toLowerCase();
+            const requiresTool = lowerMsg.match(/lista|lee|crea|busca|muestra|guarda|edita/) && 
+                                 lowerMsg.match(/archivo|directorio|carpeta|file/);
+            
+            if (requiresTool && providerTools.length <= 3) {
+              // Si claramente necesita una tool y hay pocas opciones, forzar uso
+              requestBody.tool_choice = 'required';
+            } else {
+              requestBody.tool_choice = 'auto';
+            }
+            
+            // ✨ Ajustar temperatura para mejor precisión con tools
+            requestBody.temperature = Math.min(options.temperature || 0.7, 0.3);
+            
+            // ✨ NUEVO: Agregar few-shot examples como mensaje de sistema
+            const examples = this.generateToolExamples(mcpContext.tools, 'openai');
+            if (examples && examples.length > 0) {
+              // Buscar si ya hay un mensaje de sistema
+              const systemMsgIndex = requestBody.messages.findIndex(m => m.role === 'system');
+              if (systemMsgIndex >= 0) {
+                // Agregar ejemplos al mensaje de sistema existente
+                requestBody.messages[systemMsgIndex].content += '\n\n' + examples;
+              } else {
+                // Crear nuevo mensaje de sistema con ejemplos
+                requestBody.messages.unshift({
+                  role: 'system',
+                  content: 'Usa las herramientas disponibles cuando sea necesario.' + examples
+                });
+              }
+            }
           }
         }
       } else if (model.provider === 'anthropic') {
@@ -3771,6 +3998,13 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           const providerTools = this.convertMCPToolsToProviderFormat(mcpContext.tools, 'anthropic', { namespace: true });
           if (providerTools.length > 0) {
             requestBody.tools = providerTools;
+            
+            // ✨ NUEVO: Agregar few-shot examples como system prompt
+            const examples = this.generateToolExamples(mcpContext.tools, 'anthropic');
+            if (examples && examples.length > 0) {
+              // Anthropic usa un campo 'system' separado
+              requestBody.system = 'Usa las herramientas disponibles cuando sea necesario.' + examples;
+            }
           }
         }
       } else if (model.provider === 'google') {
@@ -3802,7 +4036,15 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
               parameters: this._toGeminiSchema(fn.parameters)
             }));
             requestBody.tools = [{ function_declarations: functionDecls }];
-            requestBody.tool_config = { function_calling_config: { mode: 'AUTO' } };
+            
+            // ✨ MEJORADO: Configuración inteligente del modo de function calling
+            const lowerMsg = message.toLowerCase();
+            const requiresTool = lowerMsg.match(/lista|lee|crea|busca|muestra|guarda|edita/) && 
+                                 lowerMsg.match(/archivo|directorio|carpeta|file/);
+            
+            // Gemini acepta: AUTO, ANY (required), NONE
+            const mode = (requiresTool && functionDecls.length <= 3) ? 'ANY' : 'AUTO';
+            requestBody.tool_config = { function_calling_config: { mode } };
 
             // Inyectar prompt universal como systemInstruction con hints (filesystem)
             try {
@@ -3823,8 +4065,13 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                   serverHints['filesystem'] = { allowedDirsText, primaryDirNormalized, defaultRaw: first || null };
                 }
               }
-              const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 8, serverHints });
-              requestBody.systemInstruction = { role: 'system', parts: [{ text: toolsPrompt }] };
+              const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 6, serverHints });
+              
+              // ✨ NUEVO: Agregar few-shot examples para mejorar precisión
+              const examples = this.generateToolExamples(mcpContext.tools, 'google');
+              const enhancedPrompt = toolsPrompt + examples;
+              
+              requestBody.systemInstruction = { role: 'system', parts: [{ text: enhancedPrompt }] };
             } catch (_) {}
           }
         }
@@ -4145,7 +4392,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
             });
           }
 
-          const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 8, serverHints });
+          const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 6, serverHints });
           
           const systemIndex = messages.findIndex(m => m.role === 'system');
           if (systemIndex >= 0) {
@@ -4198,6 +4445,21 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         
       }
       
+      // 🔍 DEBUG: Mostrar qué se envía al modelo
+      if (mcpContext.hasTools) {
+        const systemMsg = messages.find(m => m.role === 'system');
+        if (systemMsg) {
+          const promptLength = systemMsg.content.length;
+          const promptPreview = systemMsg.content.substring(0, 500);
+          debugLogger.debug('AIService.LocalModel', 'Prompt system enviado', {
+            length: promptLength,
+            tokensAprox: Math.ceil(promptLength / 4),
+            preview: promptPreview + '...',
+            toolsCount: mcpContext.tools.length
+          });
+        }
+      }
+      
       // Usar streaming si está habilitado
       let response;
       if (adjustedOptions.useStreaming) {
@@ -4206,6 +4468,12 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
       }
       
+      // 🔍 DEBUG: Mostrar qué responde el modelo
+      debugLogger.debug('AIService.LocalModel', 'Respuesta del modelo', {
+        isEmpty: !response || response.trim().length === 0,
+        length: response?.length || 0,
+        preview: response ? response.substring(0, 200) : '(vacío)'
+      });
       
       // 🔧 RETRY AUTOMÁTICO: Si la respuesta está vacía, reintentar con prompt simplificado
       if ((!response || response.trim().length === 0) && mcpContext.hasTools) {
