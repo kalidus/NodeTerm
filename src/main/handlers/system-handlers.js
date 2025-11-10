@@ -1,6 +1,7 @@
 const { ipcMain, clipboard, dialog, BrowserWindow, app, shell } = require('electron');
 const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 
 /**
  * Handlers para funcionalidades del sistema
@@ -140,6 +141,35 @@ function registerSystemHandlers() {
       return { ok: true, latest };
     } catch (e) {
       return { ok: false, error: e?.message };
+    }
+  });
+
+  // === SYSTEM MEMORY HANDLERS ===
+
+  // Handler para obtener estadísticas reales de memoria del sistema
+  ipcMain.handle('system:get-memory-stats', async () => {
+    try {
+      const totalMemory = os.totalmem();
+      const freeMemory = os.freemem();
+      const usedMemory = totalMemory - freeMemory;
+
+      return {
+        ok: true,
+        totalMB: Math.round(totalMemory / 1024 / 1024),
+        freeMB: Math.round(freeMemory / 1024 / 1024),
+        usedMB: Math.round(usedMemory / 1024 / 1024),
+        usagePercent: Math.round((usedMemory / totalMemory) * 100)
+      };
+    } catch (e) {
+      return { 
+        ok: false, 
+        error: e?.message,
+        // Fallback en caso de error
+        totalMB: 16000,
+        freeMB: 8000,
+        usedMB: 8000,
+        usagePercent: 50
+      };
     }
   });
 }

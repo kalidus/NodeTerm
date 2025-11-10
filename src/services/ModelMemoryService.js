@@ -4,7 +4,8 @@
  * ⚙️ ARQUITECTURA:
  * - MONITOREO: Observa RAM y modelos cada 30 segundos (SIN acciones automáticas)
  * - ESTADÍSTICAS: Emite eventos con datos actualizados para widget
- * - DESCARGA MANUAL: Solo por botón en widget (llamada explícita a unloadModel)
+ * - CARGA DE MODELOS: Usa /api/generate con keep_alive para mantener en memoria
+ * - SIN ELIMINACIÓN: NUNCA usa /api/delete (eso borra los archivos permanentemente)
  * 
  * Funcionalidades:
  * - ✅ Detecta RAM disponible en el sistema
@@ -12,9 +13,11 @@
  * - ✅ Monitorea GPU memory (NVIDIA/AMD/Apple)
  * - ✅ Estadísticas y reportes en tiempo real
  * - ✅ Contexto dinámico según RAM disponible
- * - ✅ Descarga manual de modelos (sin auto-unload)
+ * - ✅ Carga modelos en memoria usando /api/generate (NO delete)
+ * - ✅ Confía en que Ollama descarga automáticamente modelos inactivos
  * 
- * ❌ OBSOLETO: Auto-descarga LRU (ahora es manual)
+ * ❌ NUNCA: /api/delete (borra archivos permanentemente)
+ * ❌ OBSOLETO: Auto-descarga LRU (ahora confía en Ollama)
  * ❌ OBSOLETO: Límites automáticos (ahora es solo información)
  */
 
@@ -78,6 +81,7 @@ class ModelMemoryService extends EventEmitter {
     this.monitoringInterval = null;
     this.monitoringEnabled = false;
     this.checkInterval = 30000; // 30 segundos - solo para actualizar datos
+    this.lastSystemMemory = null; // Cache del último estado del sistema
     
     console.log('[ModelMemory] ✅ Servicio inicializado (MONITOREO PASIVO - sin auto-unload)');
   }
@@ -85,52 +89,57 @@ class ModelMemoryService extends EventEmitter {
   /**
    * ✅ 1. OBTENER MEMORIA DEL SISTEMA (RAM + GPU)
    * Retorna información de RAM disponible en el SO
+   * 
+   * Primero intenta obtener datos REALES vía IPC (Electron)
+   * Si no está disponible, usa el módulo 'os' de Node.js
+   * Si nada funciona, devuelve valores por defecto
    */
-  getSystemMemory() {
-    // Fallback para navegador o si 'os' no está disponible
-    if (!os) {
-      // Devolver valores estimados cuando no hay acceso a memoria real
-      return {
-        totalMB: 16000,  // Estimado: 16GB RAM
-        freeMB: 8000,    // Estimado: 8GB libre
-        usedMB: 8000,    // Estimado: 8GB usado
-        usagePercent: 50,  // 50% por defecto
-        // GPU (si está disponible)
-        gpuMemory: null // Se detectará si CUDA/ROCm está disponible
-      };
-    }
-
-    try {
-      const totalMemory = os.totalmem();
-      const freeMemory = os.freemem();
-      const usedMemory = totalMemory - freeMemory;
-
-      const result = {
-        totalMB: Math.round(totalMemory / 1024 / 1024),
-        freeMB: Math.round(freeMemory / 1024 / 1024),
-        usedMB: Math.round(usedMemory / 1024 / 1024),
-        usagePercent: Math.round((usedMemory / totalMemory) * 100)
-      };
-
-      // 🎮 Intentar detectar GPU memory (opcional, requiere CUDA/ROCm)
+  async getSystemMemory() {
+    // Opción 1: Intentar obtener datos REALES vía IPC (Electron)
+    if (typeof window !== 'undefined' && window.electron) {
       try {
-        result.gpuMemory = this._detectGPUMemory();
-      } catch (e) {
-        result.gpuMemory = null;
+        const stats = await window.electron.invoke('system:get-memory-stats');
+        if (stats && stats.ok) {
+          console.log('[ModelMemory] 📊 Datos de RAM obtenidos vía IPC (REALES)');
+          return {
+            totalMB: stats.totalMB,
+            freeMB: stats.freeMB,
+            usedMB: stats.usedMB,
+            usagePercent: stats.usagePercent
+          };
+        }
+      } catch (error) {
+        console.warn('[ModelMemory] ⚠️ IPC no disponible, intentando Node.js os module...');
       }
-
-      return result;
-    } catch (error) {
-      console.error('[ModelMemory] Error obteniendo memoria del sistema:', error);
-      // Fallback en caso de error
-      return {
-        totalMB: 16000,
-        freeMB: 8000,
-        usedMB: 8000,
-        usagePercent: 50,
-        gpuMemory: null
-      };
     }
+
+    // Opción 2: Fallback - usar módulo 'os' si está disponible
+    if (os) {
+      try {
+        const totalMemory = os.totalmem();
+        const freeMemory = os.freemem();
+        const usedMemory = totalMemory - freeMemory;
+
+        console.log('[ModelMemory] 📊 Datos de RAM obtenidos vía Node.js os module');
+        return {
+          totalMB: Math.round(totalMemory / 1024 / 1024),
+          freeMB: Math.round(freeMemory / 1024 / 1024),
+          usedMB: Math.round(usedMemory / 1024 / 1024),
+          usagePercent: Math.round((usedMemory / totalMemory) * 100)
+        };
+      } catch (error) {
+        console.warn('[ModelMemory] ⚠️ Error con Node.js os module');
+      }
+    }
+
+    // Opción 3: Fallback final - valores por defecto
+    console.warn('[ModelMemory] ⚠️ Usando valores por defecto (no se pudo obtener datos reales)');
+    return {
+      totalMB: 16000,
+      freeMB: 8000,
+      usedMB: 8000,
+      usagePercent: 50
+    };
   }
 
   /**
@@ -186,45 +195,86 @@ class ModelMemoryService extends EventEmitter {
   }
 
   /**
-   * ✅ 3. DESCARGAR MODELO DE RAM
-   * NOTA: Ollama maneja esto automáticamente con timeout
-   * Este método es un fallback - Ollama descarga modelos cuando están inactivos
+   * ✅ 3. CARGAR MODELO EN MEMORIA
+   * Usa /api/generate con keep_alive para mantener el modelo en memoria
+   * NO usa /api/delete (que borra archivos permanentemente)
+   * 
+   * ⚠️ IMPORTANTE: Este método CARGA el modelo cuando se selecciona
+   * Ollama automáticamente descargará de RAM modelos inactivos según OLLAMA_MAX_LOADED_MODELS
+   */
+  async loadModelToMemory(modelName) {
+    try {
+      console.log(`[ModelMemory] 🚀 Cargando modelo en memoria: ${modelName}`);
+      
+      // Usar /api/generate para hacer "warm up" del modelo
+      // keep_alive: -1 = mantener indefinidamente (hasta que Ollama decida descargarlo por otros modelos)
+      // stream: false = no queremos generar respuesta, solo cargar el modelo
+      
+      const response = await fetch(`${this.ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          prompt: '', // Prompt vacío, solo para cargar
+          stream: false,
+          keep_alive: -1 // Mantener modelo en memoria indefinidamente
+        })
+      });
+
+      if (response.ok) {
+        console.log(`[ModelMemory] ✅ ${modelName} cargado en memoria`);
+        this.emit('modelLoaded', modelName);
+        return true;
+      } else {
+        console.warn(`[ModelMemory] ⚠️ HTTP ${response.status} al cargar ${modelName}`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`[ModelMemory] ⚠️ Error cargando ${modelName}:`, error.message);
+      this.emit('loadFailed', { modelName, error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * ✅ DESCARGAR MODELO DE RAM (Opción B: Control Manual)
+   * 
+   * Descarga el modelo de RAM INMEDIATAMENTE usando keep_alive: 0
+   * ⚠️ El archivo del modelo PERMANECE en disco (~/.ollama/models)
+   * Solo se descarga de RAM, nunca se borra el archivo
+   * 
+   * Ollama automáticamente también descarga modelos cuando:
+   * 1. El modelo está inactivo por tiempo (configurable con keep_alive en requests)
+   * 2. Se alcanza OLLAMA_MAX_LOADED_MODELS (por defecto 3 modelos)
+   * 3. Se necesita memoria para otros modelos
    */
   async unloadModel(modelName) {
     try {
-      console.log(`[ModelMemory] 🔄 Marcando ${modelName} para descarga automática...`);
+      console.log(`[ModelMemory] 📤 Descargando ${modelName} de RAM...`);
       
-      // Estrategia: En lugar de llamar a /api/delete (que no siempre existe),
-      // confiamos en que Ollama descargará el modelo automáticamente después del timeout
-      // Esto es más compatible con diferentes versiones de Ollama
-      
-      // Intentar endpoint alternativo si existe
-      try {
-        const response = await fetch(`${this.ollamaUrl}/api/delete`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: modelName,
-            delete_model: false
-          })
-        });
+      // Usar /api/generate con keep_alive: 0 para descargar inmediatamente
+      // stream: false = no queremos generar respuesta
+      const response = await fetch(`${this.ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          prompt: '',
+          stream: false,
+          keep_alive: 0  // ← Descargar inmediatamente de RAM
+        })
+      });
 
-        if (response.ok) {
-          this.loadedModels.delete(modelName);
-          console.log(`[ModelMemory] ✅ ${modelName} descargado de RAM`);
-          this.emit('modelUnloaded', modelName);
-          return true;
-        }
-      } catch (e) {
-        // Endpoint no disponible, usar fallback
+      if (response.ok) {
+        console.log(`[ModelMemory] ✅ ${modelName} descargado de RAM (archivo en disco protegido)`);
+        this.emit('modelUnloaded', modelName);
+        return true;
+      } else {
+        console.warn(`[ModelMemory] ⚠️ HTTP ${response.status} al descargar ${modelName}`);
+        return false;
       }
-
-      // Fallback: simplemente registrar que el modelo debería descargarse
-      console.log(`[ModelMemory] ✅ ${modelName} se descargará automáticamente en segundos (Ollama timeout)`);
-      this.emit('modelUnloaded', modelName);
-      return true;
     } catch (error) {
-      console.error(`[ModelMemory] ⚠️ No se puede forzar descarga de ${modelName}, se hará automáticamente:`, error.message);
+      console.error(`[ModelMemory] ⚠️ Error descargando ${modelName}:`, error.message);
       this.emit('unloadFailed', { modelName, error: error.message });
       return false;
     }
@@ -244,9 +294,17 @@ class ModelMemoryService extends EventEmitter {
 
   /**
    * ✅ 5. OBTENER ESTADÍSTICAS DETALLADAS
+   * Usa memoria cacheada del último monitoreo
    */
   getMemoryStats() {
-    const systemMem = this.getSystemMemory();
+    // Usar el último sistema memory cacheado
+    const systemMem = this.lastSystemMemory || {
+      totalMB: 16000,
+      freeMB: 8000,
+      usedMB: 8000,
+      usagePercent: 50
+    };
+
     const models = Array.from(this.loadedModels.entries()).map(([name, info]) => ({
       name,
       sizeGB: (info.size / 1024 / 1024 / 1024).toFixed(2),
@@ -276,8 +334,12 @@ class ModelMemoryService extends EventEmitter {
    * ⚠️ NOTA: Descarga solo por acción manual del usuario (botón en widget)
    */
   async monitorMemory() {
-    // El monitoreo solo actualiza datos, nada más
+    // El monitoreo obtiene datos REALES del sistema
     await this.getLoadedModels();
+    
+    // ✅ Obtener datos REALES de RAM (vía IPC si está disponible)
+    this.lastSystemMemory = await this.getSystemMemory();
+    
     const stats = this.getMemoryStats();
     
     // Solo emitir evento para que el widget se actualice
