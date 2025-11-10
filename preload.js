@@ -46,6 +46,10 @@ contextBridge.exposeInMainWorld('electron', {
     getPrompt: (serverId, promptName, args) => ipcRenderer.invoke('mcp:get-prompt', { serverId, promptName, args }),
     refreshCapabilities: (serverId) => ipcRenderer.invoke('mcp:refresh-capabilities', serverId)
   },
+  system: {
+    getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
+    getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
