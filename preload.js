@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^guacamole:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
+        /^system:.*$/,
         'process-pdf',
         'process-pdf-buffer',
         'create-temp-file',

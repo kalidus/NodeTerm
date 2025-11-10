@@ -90,15 +90,15 @@ class ModelMemoryService extends EventEmitter {
    * ✅ 1. OBTENER MEMORIA DEL SISTEMA (RAM + GPU)
    * Retorna información de RAM disponible en el SO
    * 
-   * Primero intenta obtener datos REALES vía IPC (Electron)
+   * Primero intenta obtener datos REALES vía IPC (Electron - window.electron.ipcRenderer)
    * Si no está disponible, usa el módulo 'os' de Node.js
    * Si nada funciona, devuelve valores por defecto
    */
   async getSystemMemory() {
     // Opción 1: Intentar obtener datos REALES vía IPC (Electron)
-    if (typeof window !== 'undefined' && window.electron) {
+    if (typeof window !== 'undefined' && window.electron && window.electron.ipcRenderer) {
       try {
-        const stats = await window.electron.invoke('system:get-memory-stats');
+        const stats = await window.electron.ipcRenderer.invoke('system:get-memory-stats');
         if (stats && stats.ok) {
           console.log('[ModelMemory] 📊 Datos de RAM obtenidos vía IPC (REALES)');
           return {
@@ -109,7 +109,7 @@ class ModelMemoryService extends EventEmitter {
           };
         }
       } catch (error) {
-        console.warn('[ModelMemory] ⚠️ IPC no disponible, intentando Node.js os module...');
+        console.warn('[ModelMemory] ⚠️ IPC error:', error.message);
       }
     }
 
