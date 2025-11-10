@@ -1701,6 +1701,32 @@ const App = () => {
     return getFilteredTabs();
   }, [getFilteredTabs]);
 
+  const [isHomeAIChatVisible, setIsHomeAIChatVisible] = useState(false);
+
+  useEffect(() => {
+    const handleHomeAIChatVisibility = (event) => {
+      setIsHomeAIChatVisible(!!event?.detail?.visible);
+    };
+    window.addEventListener('ai-chat-home-visibility', handleHomeAIChatVisibility);
+    return () => {
+      window.removeEventListener('ai-chat-home-visibility', handleHomeAIChatVisibility);
+    };
+  }, []);
+
+  const activeTab = filteredTabs[activeTabIndex] || null;
+  const isAIChatActive = activeTab?.type === 'ai-chat' || (activeTab?.type === 'home' && isHomeTabActive && isHomeAIChatVisible);
+
+  const handleToggleLocalTerminalForAIChat = useCallback(() => {
+    if (!activeTab) return;
+    if (activeTab.type === 'ai-chat') {
+      window.dispatchEvent(new CustomEvent('ai-chat-toggle-local-terminal', {
+        detail: { tabKey: activeTab.key }
+      }));
+    } else if (activeTab.type === 'home' && isHomeTabActive && isHomeAIChatVisible) {
+      window.dispatchEvent(new CustomEvent('ai-chat-home-toggle-terminal'));
+    }
+  }, [activeTab, isHomeTabActive, isHomeAIChatVisible]);
+
   // === PROPS MEMOIZADAS PARA SIDEBAR ===
   // Memoizar props que no cambian frecuentemente
   const memoizedSidebarProps = useMemo(() => ({
@@ -1766,7 +1792,9 @@ const App = () => {
     
     // Encriptación
     masterKey,
-    secureStorage
+    secureStorage,
+    isAIChatActive,
+    onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
@@ -1784,7 +1812,8 @@ const App = () => {
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
     
     // Dependencias de encriptación
-    masterKey, secureStorage
+    masterKey, secureStorage,
+    isAIChatActive, handleToggleLocalTerminalForAIChat
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
