@@ -155,7 +155,7 @@
       "recommendedConfig": {
         "ALLOWED_DIR": "C:/Users/kalid",
         "ALLOWED_COMMANDS": "dir,cd,copy,move,del,powershell,npm,node,git,python,pip,ls,cat,pwd",
-        "ALLOWED_FLAGS": "-r,-f,-a,--help,--version,-l,--recursive",
+        "ALLOWED_FLAGS": "-r,-f,-a,--help,--version,-l,--recursive,-command,-Command,-ExecutionPolicy,-NoProfile,-NonInteractive",
         "COMMAND_TIMEOUT": "30",
         "MAX_COMMAND_LENGTH": "2048",
         "ALLOW_SHELL_OPERATORS": true

@@ -9,6 +9,7 @@ import debugLogger from '../utils/debugLogger';
 import fileAnalysisService from './FileAnalysisService';
 import mcpClient from './MCPClientService';
 import toolOrchestrator from './ToolOrchestrator';
+import modelMemoryService from './ModelMemoryService';
 
 class AIService {
   constructor() {
@@ -25,6 +26,8 @@ class AIService {
     // Feature flags y orquestador
     this.featureFlags = { structuredToolMessages: true };
     this.toolOrchestrator = toolOrchestrator;
+    // Servicio de gestión de memoria
+    this.memoryService = modelMemoryService;
     this.models = {
       remote: [
         { 
@@ -4406,11 +4409,15 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
   async sendToLocalModelStreaming(modelId, messages, options) {
     const ollamaUrl = this.getOllamaUrl();
     
+    // ✅ NUEVO: Contexto dinámico basado en RAM disponible
+    const systemMem = this.memoryService.getSystemMemory();
+    const dynamicContext = this._calcDynamicContext(systemMem.freeMB);
+
     // Preparar opciones con configuración (usar valores de options directamente, sin defaults hardcodeados)
     const ollamaOptions = {
       temperature: options.temperature ?? 0.7,
       num_predict: options.maxTokens ?? 4000,
-      num_ctx: options.contextLimit ?? 8000,
+      num_ctx: options.contextLimit ?? dynamicContext, // ✅ Dinámico
       top_k: options.top_k ?? 40,
       top_p: options.top_p ?? 0.9,
       repeat_penalty: options.repeat_penalty ?? 1.1
@@ -6122,6 +6129,67 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
       'txt': 'txt'
     };
     return extensions[language] || 'txt';
+  }
+
+  /**
+   * ✅ NUEVO: Validar y gestionar memoria antes de cargar modelo
+   */
+  async validateModelMemory(modelId, modelType) {
+    if (modelType !== 'local') return true; // Cloud no tiene límites locales
+
+    const model = this.getAllLocalModels().find(m => m.id === modelId);
+    if (!model) return false;
+
+    // Obtener tamaño del modelo (estimar si no está disponible)
+    const sizeGB = model.ramRequired 
+      ? parseFloat(model.ramRequired) 
+      : 4; // Default 4GB para modelos 7B
+
+    const canLoad = await this.memoryService.canLoadModel(sizeGB);
+    
+    if (canLoad.wouldExceedLimit) {
+      console.warn(`[AIService] 🧠 Modelo ${modelId} excedería límite. Aplicando LRU...`);
+      await this.memoryService.enforceMemoryLimit();
+    }
+
+    return canLoad.canFit || canLoad.wouldExceedLimit; // Intentar aunque exceda
+  }
+
+  /**
+   * ✅ NUEVO: Calcular contexto dinámico según RAM disponible
+   */
+  _calcDynamicContext(freeRAMMB) {
+    return this.memoryService.calcDynamicContext(freeRAMMB);
+  }
+
+  /**
+   * ✅ NUEVO: Cambiar modelo con gestión de memoria
+   */
+  async switchModel(newModelId, newModelType) {
+    const oldModel = this.currentModel;
+    const oldType = this.modelType;
+
+    this.currentModel = newModelId;
+    this.modelType = newModelType;
+
+    // Si ambos son modelos locales, considerar descargar antiguo después
+    if (oldType === 'local' && newModelType === 'local' && oldModel !== newModelId) {
+      console.log(`[AIService] 📊 Cambio de modelo: ${oldModel} → ${newModelId}`);
+      
+      // Descargar modelo anterior después de 3 segundos (dar tiempo para recuperar)
+      setTimeout(async () => {
+        try {
+          const shouldUnload = true; // Por ahora, descargar automáticamente
+          if (shouldUnload) {
+            await this.memoryService.unloadModel(oldModel);
+          }
+        } catch (error) {
+          console.error('[AIService] Error descargando modelo anterior:', error);
+        }
+      }, 3000);
+    }
+
+    this.saveConfig();
   }
 }
 
