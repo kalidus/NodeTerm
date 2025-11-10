@@ -53,6 +53,20 @@ const HomeTab = ({
     return () => window.removeEventListener('theme-changed', onThemeChanged);
   }, []);
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('ai-chat-home-visibility', {
+      detail: { visible: showAIChat }
+    }));
+  }, [showAIChat]);
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent('ai-chat-home-visibility', {
+        detail: { visible: false }
+      }));
+    };
+  }, []);
+
   // Cargar conexiones recientes y passwords recientes
   useEffect(() => {
     loadRecentConnections();
@@ -362,6 +376,17 @@ const HomeTab = ({
   const handleToggleAIChat = () => {
     setShowAIChat(prev => !prev);
   };
+
+  useEffect(() => {
+    const handleExternalToggle = () => {
+      if (!showAIChat) return;
+      handleToggleTerminalVisibility();
+    };
+    window.addEventListener('ai-chat-home-toggle-terminal', handleExternalToggle);
+    return () => {
+      window.removeEventListener('ai-chat-home-toggle-terminal', handleExternalToggle);
+    };
+  }, [showAIChat, handleToggleTerminalVisibility]);
 
   // Determinar el tamaño del panel superior
   const getTopPanelSize = () => {

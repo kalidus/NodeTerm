@@ -109,6 +109,9 @@ const Sidebar = React.memo(({
   // Encriptación
   masterKey,
   secureStorage,
+
+  isAIChatActive = false,
+  onToggleLocalTerminalForAIChat,
   
   // Filtro de búsqueda desde TitleBar
   sidebarFilter = ''
@@ -157,6 +160,12 @@ const Sidebar = React.memo(({
 
   const filesystemAvailable = !!filesystemStatus?.active;
   
+  useEffect(() => {
+    if (!isAIChatActive && viewMode === 'filesystem') {
+      setViewMode('connections');
+    }
+  }, [isAIChatActive, viewMode, setViewMode]);
+
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
     const theme = iconThemes[themeName];
@@ -1751,7 +1760,7 @@ const Sidebar = React.memo(({
 
             <div style={{ flexGrow: 1 }} />
 
-            {filesystemAvailable && (
+            {filesystemAvailable && isAIChatActive && (
               <>
                 <div
                   style={{
@@ -1789,6 +1798,33 @@ const Sidebar = React.memo(({
                   }}
                 />
               </>
+            )}
+
+            {isAIChatActive && onToggleLocalTerminalForAIChat && (
+              <Button
+                icon="pi pi-desktop"
+                className="p-button-rounded p-button-text sidebar-action-button"
+                onClick={() => {
+                  onToggleLocalTerminalForAIChat();
+                }}
+                tooltip="Terminal local"
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#90caf9'
+                }}
+              />
             )}
           </div>
 
@@ -1910,7 +1946,7 @@ const Sidebar = React.memo(({
                     tooltip="Gestor de passwords" 
                     tooltipOptions={{ position: 'bottom' }}
                   />
-                  {filesystemAvailable && (
+                  {filesystemAvailable && isAIChatActive && (
                     <Button
                       icon="pi pi-folder-open"
                       className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
@@ -1920,6 +1956,19 @@ const Sidebar = React.memo(({
                       style={{
                         borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
                         color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined
+                      }}
+                    />
+                  )}
+                  {isAIChatActive && onToggleLocalTerminalForAIChat && (
+                    <Button
+                      icon="pi pi-desktop"
+                      className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                      onClick={() => onToggleLocalTerminalForAIChat()}
+                      tooltip="Terminal local"
+                      tooltipOptions={{ position: 'bottom' }}
+                      style={{
+                        borderColor: '#90caf9',
+                        color: '#90caf9'
                       }}
                     />
                   )}
