@@ -7,11 +7,18 @@
  * - Apple Silicon via Metal
  */
 
+// ✅ Detectar si estamos en Node.js o navegador
+const isNodeEnvironment = typeof window === 'undefined';
+
+// ✅ Cargar child_process SOLO si estamos en Node.js
 let childProcess = null;
-try {
-  childProcess = require('child_process');
-} catch (e) {
-  console.warn('[GPUMemory] child_process no disponible (ejecutando en navegador)');
+if (isNodeEnvironment) {
+  try {
+    childProcess = require('child_process');
+  } catch (e) {
+    // child_process no disponible
+    childProcess = null;
+  }
 }
 
 class GPUMemoryService {

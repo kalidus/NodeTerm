@@ -1382,7 +1382,19 @@ const AIConfigDialog = ({ visible, onHide }) => {
         logo: '🦙',
         description: 'Familia completa de modelos Llama de Meta',
         models: localModels.filter(m => m.id.includes('llama')),
-        installed: localModels.filter(m => m.id.includes('llama')).some(m => m.downloaded)
+        installed: localModels.filter(m => m.id.includes('llama')).some(m => m.downloaded),
+        supportsMCP: true
+      },
+      {
+        id: 'deepseek',
+        name: 'DeepSeek',
+        icon: 'pi pi-search',
+        color: '#7C3AED',
+        logo: '🔍',
+        description: 'Modelos DeepSeek con excelente análisis y razonamiento',
+        models: localModels.filter(m => m.id.includes('deepseek')),
+        installed: localModels.filter(m => m.id.includes('deepseek')).some(m => m.downloaded),
+        supportsMCP: true
       },
       {
         id: 'mistral',
@@ -1403,16 +1415,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
         description: 'Modelos Qwen de Alibaba optimizados para múltiples idiomas',
         models: localModels.filter(m => m.id.includes('qwen')),
         installed: localModels.filter(m => m.id.includes('qwen')).some(m => m.downloaded)
-      },
-      {
-        id: 'deepseek',
-        name: 'DeepSeek',
-        icon: 'pi pi-search',
-        color: '#7C3AED',
-        logo: '🔍',
-        description: 'Modelos DeepSeek con excelente análisis y razonamiento',
-        models: localModels.filter(m => m.id.includes('deepseek')),
-        installed: localModels.filter(m => m.id.includes('deepseek')).some(m => m.downloaded)
       },
       {
         id: 'orca',
@@ -1606,8 +1608,26 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     {provider.logo}
                   </div>
                   
-                  {/* Indicador de estado + botón configurar */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {/* Indicador de estado + badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {provider.supportsMCP && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        background: 'rgba(52, 168, 219, 0.15)',
+                        color: '#34A8DB',
+                        padding: '0.3rem 0.75rem',
+                        borderRadius: '20px',
+                        fontSize: '0.65rem',
+                        fontWeight: '700',
+                        border: '1px solid rgba(52, 168, 219, 0.4)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <i className="pi pi-plug" style={{ fontSize: '0.6rem' }} />
+                        MCP
+                      </div>
+                    )}
                     {provider.installed ? (
                       <div style={{
                         display: 'flex',
@@ -3217,56 +3237,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
     );
   };
 
-  // ✅ NUEVO: Renderizar configuración de memoria (MONITOREO PASIVO)
-  const renderMemoryConfig = () => {
-    return (
-      <div style={{ padding: '1rem', maxHeight: '600px', overflowY: 'auto' }}>
-        <h3 style={{ marginBottom: '1rem', color: themeColors.textPrimary }}>🧠 Monitoreo de Memoria</h3>
-
-        {/* ℹ️ Explicación arquitectura */}
-        <div style={{ background: 'rgba(76, 204, 240, 0.1)', border: '1px solid rgba(76, 204, 240, 0.3)', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem', fontSize: '0.85rem', color: themeColors.textSecondary }}>
-          <strong style={{ color: themeColors.textPrimary }}>📍 Cómo funciona:</strong>
-          <ul style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
-            <li><strong>Monitoreo pasivo</strong>: Observa RAM cada 30 segundos</li>
-            <li><strong>Sin auto-descarga</strong>: Los modelos NO se borran automáticamente</li>
-            <li><strong>Control manual</strong>: Tú decides cuándo descargar (botón en widget)</li>
-            <li><strong>Contexto dinámico</strong>: Se ajusta según RAM disponible</li>
-          </ul>
-        </div>
-
-        {/* Acciones disponibles */}
-        <div style={{ background: 'rgba(76, 204, 240, 0.15)', border: '1px solid rgba(76, 204, 240, 0.4)', borderRadius: '8px', padding: '1rem' }}>
-          <strong style={{ color: themeColors.textPrimary, display: 'block', marginBottom: '0.8rem' }}>🎮 Acciones:</strong>
-          
-          <div style={{ fontSize: '0.85rem', color: themeColors.textSecondary, lineHeight: '1.6' }}>
-            <strong style={{ color: themeColors.textPrimary }}>1. Ver estadísticas:</strong>
-            <div style={{ marginBottom: '1rem', marginLeft: '1rem' }}>
-              Presiona <strong>Ctrl+M</strong> en el chat para abrir el widget de memoria.
-            </div>
-
-            <strong style={{ color: themeColors.textPrimary }}>2. Descargar modelo:</strong>
-            <div style={{ marginBottom: '1rem', marginLeft: '1rem' }}>
-              En el widget, haz clic en el botón <strong>[❌ Descargar]</strong> del modelo que no necesites.
-            </div>
-
-            <strong style={{ color: themeColors.textPrimary }}>3. Monitorear uso:</strong>
-            <div style={{ marginLeft: '1rem' }}>
-              El widget se actualiza automáticamente cada 5 segundos.
-            </div>
-          </div>
-        </div>
-
-        {/* Información extra */}
-        <div style={{ background: 'rgba(255, 193, 7, 0.1)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: '8px', padding: '1rem', marginTop: '1.5rem', fontSize: '0.8rem', color: themeColors.textSecondary }}>
-          <strong style={{ color: '#ffc107' }}>💡 Nota:</strong>
-          <p style={{ margin: '0.5rem 0 0 0' }}>
-            La descarga es <strong>manual</strong> porque tú sabes mejor cuándo necesitas un modelo.
-            El sistema solo observa y reporta datos.
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <Dialog
@@ -3301,9 +3271,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="🔌 MCP Tools">
           <MCPManagerTab themeColors={themeColors} />
-        </TabPanel>
-        <TabPanel header="🧠 Memoria">
-          {renderMemoryConfig()}
         </TabPanel>
       </TabView>
       </div>
