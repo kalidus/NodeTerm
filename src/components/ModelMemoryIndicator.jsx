@@ -3,6 +3,7 @@ import modelMemoryService from '../services/ModelMemoryService';
 
 const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
   const [stats, setStats] = useState(null);
+  const [gpuMemory, setGpuMemory] = useState(null);
   const [expandedModels, setExpandedModels] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -32,6 +33,16 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
         await modelMemoryService.getLoadedModels();
         const newStats = modelMemoryService.getMemoryStats();
         setStats(newStats);
+
+        // 🎮 Cargar GPU stats
+        try {
+          const gpuStats = await modelMemoryService.getGPUStats();
+          setGpuMemory(gpuStats);
+        } catch (e) {
+          // GPU no disponible
+          setGpuMemory(null);
+        }
+
         setUpdating(false);
       } catch (error) {
         console.error('[ModelMemoryIndicator] Error actualizando stats:', error);
@@ -191,7 +202,7 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
         )}
       </div>
 
-      {/* Resumen */}
+      {/* Resumen RAM */}
       <div
         style={{
           marginTop: '8px',
@@ -203,13 +214,71 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
         }}
       >
         <span>
-          📊 Modelos: <strong>{stats.totalModelMemoryGB}GB</strong> /{' '}
-          <strong>{(stats.memoryLimitMB / 1024).toFixed(1)}GB</strong>
+          📊 Modelos en RAM: <strong>{stats.totalModelMemoryGB}GB</strong>
         </span>
         <span style={{ color: colors.textSecondary }}>
           Libre: <strong>{(systemMem.freeMB / 1024).toFixed(1)}GB</strong>
         </span>
       </div>
+
+      {/* 🎮 NUEVO: GPU Memory si está disponible */}
+      {gpuMemory && (
+        <div
+          style={{
+            marginTop: '12px',
+            paddingTop: '12px',
+            borderTop: '1px solid #333'
+          }}
+        >
+          <div style={{ marginBottom: '8px', color: colors.colorOk, fontWeight: 'bold' }}>
+            🎮 GPU Memory
+          </div>
+          {gpuMemory.available && gpuMemory.gpus && gpuMemory.gpus.length > 0 ? (
+            <div style={{ paddingLeft: '12px' }}>
+              {gpuMemory.gpus.map((gpu, idx) => (
+                <div key={idx} style={{ marginBottom: '8px', fontSize: '11px' }}>
+                  <div style={{ color: colors.textPrimary, fontWeight: 'bold', marginBottom: '4px' }}>
+                    {gpu.name}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textSecondary }}>
+                    <span>
+                      VRAM: {gpu.usedGB}/{gpu.totalGB}GB ({gpu.usagePercent}%)
+                    </span>
+                    <span>{gpu.status}</span>
+                  </div>
+                  <div
+                    style={{
+                      background: '#333',
+                      height: '4px',
+                      borderRadius: '2px',
+                      marginTop: '4px',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div
+                      style={{
+                        background:
+                          gpu.usagePercent > 80
+                            ? colors.colorDanger
+                            : gpu.usagePercent > 50
+                            ? colors.colorWarning
+                            : colors.colorOk,
+                        height: '100%',
+                        width: `${gpu.usagePercent}%`,
+                        transition: 'width 0.3s'
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: '11px', color: colors.textSecondary }}>
+              Sin GPU detectada o sin soporte
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status indicator */}
       <div

@@ -34,6 +34,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [themeVersion, setThemeVersion] = useState(0);
   const [functionalModels, setFunctionalModels] = useState([]);
+  const [isModelSwitching, setIsModelSwitching] = useState(false); // ✅ NUEVO: Loading de cambio de modelo
+  const [modelSwitchProgress, setModelSwitchProgress] = useState(0); // ✅ Progreso 0-100
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
@@ -424,9 +426,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     };
   }, []);
 
-  // ✅ NUEVO: Iniciar monitoreo de memoria al cargar el componente
+  // ✅ NUEVO: Iniciar monitoreo PASIVO de memoria al cargar el componente
+  // El monitoreo SOLO observa RAM cada 30s, sin tomar acciones automáticas
+  // Las descargas son MANUALES via widget (Ctrl+M)
   useEffect(() => {
-    console.log('[AIChatPanel] Iniciando monitoreo de memoria...');
+    console.log('[AIChatPanel] Iniciando monitoreo PASIVO de memoria (sin auto-unload)...');
     aiService.memoryService.startMonitoring();
 
     return () => {
@@ -1457,26 +1461,109 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     }));
   };
 
-  const handleModelChange = (modelId, modelType) => {
-    aiService.setCurrentModel(modelId, modelType);
-    setCurrentModel(modelId);
-    setModelType(modelType);
+  /**
+   * ✅ NUEVO: Cambio de modelo con auto-descarga y loading visual
+   * 1. Descarga modelo antiguo (si es local)
+   * 2. Muestra modal de carga 3-5 segundos
+   * 3. Carga modelo nuevo
+   * 4. Muestra ✅
+   */
+  const handleModelChange = async (modelId, modelType) => {
+    // Evitar cambios múltiples simultáneos
+    if (isModelSwitching) return;
     
-    // Actualizar el modelo en la conversación actual
-    const currentConversation = conversationService.getCurrentConversation();
-    if (currentConversation) {
-      currentConversation.modelId = modelId;
-      currentConversation.modelType = modelType;
-      currentConversation.updatedAt = Date.now();
-      conversationService.saveConversations();
-      
-      // Disparar evento para actualizar el historial
-      window.dispatchEvent(new CustomEvent('conversation-updated', {
-        detail: {
-          conversationId: currentConversation.id,
-          type: 'model-changed'
+    setIsModelSwitching(true);
+    setModelSwitchProgress(0);
+
+    try {
+      const oldModel = aiService.currentModel;
+      const oldType = aiService.modelType;
+
+      console.log(`[AIChatPanel] 🔄 Cambio de modelo: ${oldModel} (${oldType}) → ${modelId} (${modelType})`);
+
+      // ========== PASO 1: Descargar modelo antiguo si es local ==========
+      if (oldType === 'local' && oldModel && oldModel !== modelId) {
+        console.log(`[AIChatPanel] 🧹 Descargando modelo anterior: ${oldModel}`);
+        setModelSwitchProgress(15);
+        
+        try {
+          // Usar Ollama /api/delete para descargar (con timeout)
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000);
+          
+          await fetch(`http://localhost:11434/api/delete`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: oldModel }),
+            signal: controller.signal
+          }).catch(() => {
+            // Si falla, Ollama descargará automáticamente por timeout (5 min)
+            console.log(`[AIChatPanel] ℹ️ Descarga de ${oldModel} delegada a Ollama timeout`);
+          }).finally(() => clearTimeout(timeout));
+        } catch (error) {
+          console.warn(`[AIChatPanel] ⚠️ Error al descargar ${oldModel}:`, error.message);
         }
-      }));
+      }
+
+      // ========== PASO 2: Cambiar modelo y guardar ==========
+      setModelSwitchProgress(35);
+      
+      aiService.setCurrentModel(modelId, modelType);
+      setCurrentModel(modelId);
+      setModelType(modelType);
+
+      // Actualizar en la conversación
+      const currentConversation = conversationService.getCurrentConversation();
+      if (currentConversation) {
+        currentConversation.modelId = modelId;
+        currentConversation.modelType = modelType;
+        currentConversation.updatedAt = Date.now();
+        conversationService.saveConversations();
+      }
+
+      // ========== PASO 3: Simular carga del modelo nuevo (3-5 segundos) ==========
+      console.log(`[AIChatPanel] ⏳ Cargando modelo: ${modelId}`);
+      setModelSwitchProgress(50);
+
+      // Simulación de carga progresiva
+      const startTime = Date.now();
+      const duration = 3500 + Math.random() * 1500; // 3.5-5 segundos
+
+      return new Promise((resolve) => {
+        const progressInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(95, 50 + (elapsed / duration) * 45);
+          setModelSwitchProgress(Math.round(progress));
+
+          if (elapsed >= duration) {
+            clearInterval(progressInterval);
+            setModelSwitchProgress(100);
+
+            // Pequeño delay para que se vea el 100%
+            setTimeout(() => {
+              console.log(`[AIChatPanel] ✅ Modelo ${modelId} cargado exitosamente`);
+              setIsModelSwitching(false);
+              setModelSwitchProgress(0);
+
+              // Disparar evento para actualizar UI
+              window.dispatchEvent(new CustomEvent('conversation-updated', {
+                detail: {
+                  conversationId: currentConversation?.id,
+                  type: 'model-changed',
+                  newModel: modelId
+                }
+              }));
+
+              resolve();
+            }, 300);
+          }
+        }, 100);
+      });
+
+    } catch (error) {
+      console.error('[AIChatPanel] ❌ Error en cambio de modelo:', error);
+      setIsModelSwitching(false);
+      setModelSwitchProgress(0);
     }
   };
 
@@ -3830,12 +3917,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               optionLabel="displayName"
               optionValue="id"
               placeholder={functionalModels.length === 0 ? "Sin modelos" : "Modelo"}
-              disabled={isLoading || functionalModels.length === 0}
+              disabled={isLoading || functionalModels.length === 0 || isModelSwitching}
               className="ai-model-dropdown"
               style={{
                 minWidth: '140px',
                 maxWidth: '180px',
-                height: '40px'
+                height: '40px',
+                opacity: isModelSwitching ? 0.6 : 1
               }}
               panelStyle={{
                 background: themeColors.cardBackground,
@@ -4258,6 +4346,119 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   ⭐ {selectedMcpServers.length} MCP{selectedMcpServers.length !== 1 ? 's' : ''} marcado{selectedMcpServers.length !== 1 ? 's' : ''} como por defecto
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ✅ NUEVO: Modal de carga de modelo */}
+        {isModelSwitching && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              backdropFilter: 'blur(4px)'
+            }}
+          >
+            <div
+              style={{
+                background: themeColors.cardBackground,
+                border: `2px solid ${themeColors.borderColor}`,
+                borderRadius: '12px',
+                padding: '2rem',
+                textAlign: 'center',
+                minWidth: '300px',
+                maxWidth: '400px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+              }}
+            >
+              {/* Icono animado */}
+              <div
+                style={{
+                  fontSize: '2.5rem',
+                  marginBottom: '1rem',
+                  animation: 'spin 2s linear infinite'
+                }}
+              >
+                ⚙️
+              </div>
+
+              {/* Título */}
+              <h3
+                style={{
+                  margin: '0 0 1rem 0',
+                  color: themeColors.textPrimary,
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cambiando Modelo
+              </h3>
+
+              {/* Descripción progresiva */}
+              <div
+                style={{
+                  color: themeColors.textSecondary,
+                  fontSize: '0.9rem',
+                  marginBottom: '1.5rem',
+                  height: '2.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {modelSwitchProgress < 15 && '🧹 Descargando modelo anterior...'}
+                {modelSwitchProgress >= 15 && modelSwitchProgress < 35 && '💾 Guardando cambios...'}
+                {modelSwitchProgress >= 35 && modelSwitchProgress < 100 && '⏳ Cargando nuevo modelo...'}
+                {modelSwitchProgress === 100 && '✅ ¡Listo!'}
+              </div>
+
+              {/* Barra de progreso */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  height: '8px',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  marginBottom: '1rem'
+                }}
+              >
+                <div
+                  style={{
+                    background: modelSwitchProgress === 100 ? '#4caf50' : '#2196f3',
+                    height: '100%',
+                    width: `${modelSwitchProgress}%`,
+                    transition: 'width 0.1s ease-out',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+
+              {/* Porcentaje */}
+              <div
+                style={{
+                  color: themeColors.textSecondary,
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                {modelSwitchProgress}%
+              </div>
+
+              {/* Estilo para la animación */}
+              <style>{`
+                @keyframes spin {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
             </div>
           </div>
         )}

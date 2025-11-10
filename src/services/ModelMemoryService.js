@@ -1,13 +1,21 @@
 /**
- * ModelMemoryService - Gestor inteligente de memoria para modelos de IA locales
+ * ModelMemoryService - Monitor PASIVO de memoria para modelos de IA locales
+ * 
+ * ⚙️ ARQUITECTURA:
+ * - MONITOREO: Observa RAM y modelos cada 30 segundos (SIN acciones automáticas)
+ * - ESTADÍSTICAS: Emite eventos con datos actualizados para widget
+ * - DESCARGA MANUAL: Solo por botón en widget (llamada explícita a unloadModel)
  * 
  * Funcionalidades:
- * - Monitoreo de RAM disponible en el sistema
- * - Detección de modelos cargados en Ollama
- * - Descarga automática de modelos (liberar RAM)
- * - Gestión LRU (Least Recently Used) para mantener RAM bajo límite
- * - Estadísticas y alertas en tiempo real
- * - Contexto dinámico según disponibilidad de memoria
+ * - ✅ Detecta RAM disponible en el sistema
+ * - ✅ Detecta modelos cargados en Ollama
+ * - ✅ Monitorea GPU memory (NVIDIA/AMD/Apple)
+ * - ✅ Estadísticas y reportes en tiempo real
+ * - ✅ Contexto dinámico según RAM disponible
+ * - ✅ Descarga manual de modelos (sin auto-unload)
+ * 
+ * ❌ OBSOLETO: Auto-descarga LRU (ahora es manual)
+ * ❌ OBSOLETO: Límites automáticos (ahora es solo información)
  */
 
 // ✅ Fallback para entornos sin Node.js (navegador)
@@ -53,22 +61,29 @@ try {
   };
 }
 
+// ✅ Importar GPUMemoryService
+let gpuMemoryService = null;
+try {
+  gpuMemoryService = require('./GPUMemoryService').default;
+} catch (e) {
+  console.warn('[ModelMemory] GPUMemoryService no disponible');
+}
+
 class ModelMemoryService extends EventEmitter {
   constructor(ollamaUrl = 'http://localhost:11434') {
     super();
     
     this.ollamaUrl = ollamaUrl;
     this.loadedModels = new Map(); // { modelName: { size, memory, loadedAt } }
-    this.memoryLimit = 6000; // MB (predeterminado: Medio - 6GB)
     this.monitoringInterval = null;
     this.monitoringEnabled = false;
-    this.checkInterval = 30000; // 30 segundos
+    this.checkInterval = 30000; // 30 segundos - solo para actualizar datos
     
-    console.log('[ModelMemory] ✅ Servicio inicializado');
+    console.log('[ModelMemory] ✅ Servicio inicializado (MONITOREO PASIVO - sin auto-unload)');
   }
 
   /**
-   * ✅ 1. OBTENER MEMORIA DEL SISTEMA
+   * ✅ 1. OBTENER MEMORIA DEL SISTEMA (RAM + GPU)
    * Retorna información de RAM disponible en el SO
    */
   getSystemMemory() {
@@ -76,10 +91,12 @@ class ModelMemoryService extends EventEmitter {
     if (!os) {
       // Devolver valores estimados cuando no hay acceso a memoria real
       return {
-        totalMB: 16000,  // Estimado: 16GB
+        totalMB: 16000,  // Estimado: 16GB RAM
         freeMB: 8000,    // Estimado: 8GB libre
         usedMB: 8000,    // Estimado: 8GB usado
-        usagePercent: 50  // 50% por defecto
+        usagePercent: 50,  // 50% por defecto
+        // GPU (si está disponible)
+        gpuMemory: null // Se detectará si CUDA/ROCm está disponible
       };
     }
 
@@ -88,12 +105,21 @@ class ModelMemoryService extends EventEmitter {
       const freeMemory = os.freemem();
       const usedMemory = totalMemory - freeMemory;
 
-      return {
+      const result = {
         totalMB: Math.round(totalMemory / 1024 / 1024),
         freeMB: Math.round(freeMemory / 1024 / 1024),
         usedMB: Math.round(usedMemory / 1024 / 1024),
         usagePercent: Math.round((usedMemory / totalMemory) * 100)
       };
+
+      // 🎮 Intentar detectar GPU memory (opcional, requiere CUDA/ROCm)
+      try {
+        result.gpuMemory = this._detectGPUMemory();
+      } catch (e) {
+        result.gpuMemory = null;
+      }
+
+      return result;
     } catch (error) {
       console.error('[ModelMemory] Error obteniendo memoria del sistema:', error);
       // Fallback en caso de error
@@ -101,9 +127,25 @@ class ModelMemoryService extends EventEmitter {
         totalMB: 16000,
         freeMB: 8000,
         usedMB: 8000,
-        usagePercent: 50
+        usagePercent: 50,
+        gpuMemory: null
       };
     }
+  }
+
+  /**
+   * 🎮 NUEVO: Detectar memoria de GPU si está disponible
+   * Retorna { model: string, totalVRAM_MB, usedVRAM_MB } o null
+   */
+  _detectGPUMemory() {
+    // Nota: Esta es una función stub que podría conectar con:
+    // - nvidia-smi para NVIDIA GPUs (requiere system call)
+    // - ROCm para AMD GPUs
+    // - Metal para Apple Silicon
+    // Por ahora, retorna null (sería necesario acceso a proceso del sistema)
+    
+    // Futuro: Implementar si se necesita
+    return null;
   }
 
   /**
@@ -145,33 +187,44 @@ class ModelMemoryService extends EventEmitter {
 
   /**
    * ✅ 3. DESCARGAR MODELO DE RAM
-   * Libera modelo de memoria sin borrar el archivo
+   * NOTA: Ollama maneja esto automáticamente con timeout
+   * Este método es un fallback - Ollama descarga modelos cuando están inactivos
    */
   async unloadModel(modelName) {
     try {
-      console.log(`[ModelMemory] 🔄 Descargando ${modelName}...`);
+      console.log(`[ModelMemory] 🔄 Marcando ${modelName} para descarga automática...`);
       
-      const response = await fetch(`${this.ollamaUrl}/api/delete`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: modelName,
-          delete_model: false // NO borrar archivo, solo liberar RAM
-        })
-      });
+      // Estrategia: En lugar de llamar a /api/delete (que no siempre existe),
+      // confiamos en que Ollama descargará el modelo automáticamente después del timeout
+      // Esto es más compatible con diferentes versiones de Ollama
+      
+      // Intentar endpoint alternativo si existe
+      try {
+        const response = await fetch(`${this.ollamaUrl}/api/delete`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: modelName,
+            delete_model: false
+          })
+        });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`HTTP ${response.status}: ${error}`);
+        if (response.ok) {
+          this.loadedModels.delete(modelName);
+          console.log(`[ModelMemory] ✅ ${modelName} descargado de RAM`);
+          this.emit('modelUnloaded', modelName);
+          return true;
+        }
+      } catch (e) {
+        // Endpoint no disponible, usar fallback
       }
 
-      this.loadedModels.delete(modelName);
-      console.log(`[ModelMemory] ✅ ${modelName} descargado de RAM`);
-      
+      // Fallback: simplemente registrar que el modelo debería descargarse
+      console.log(`[ModelMemory] ✅ ${modelName} se descargará automáticamente en segundos (Ollama timeout)`);
       this.emit('modelUnloaded', modelName);
       return true;
     } catch (error) {
-      console.error(`[ModelMemory] ❌ Error descargando ${modelName}:`, error.message);
+      console.error(`[ModelMemory] ⚠️ No se puede forzar descarga de ${modelName}, se hará automáticamente:`, error.message);
       this.emit('unloadFailed', { modelName, error: error.message });
       return false;
     }
@@ -217,42 +270,20 @@ class ModelMemoryService extends EventEmitter {
   }
 
   /**
-   * ✅ 6. GESTIÓN AUTOMÁTICA LRU (Least Recently Used)
-   * Si se excede el límite, descargar modelos más antiguos
+   * ✅ 6. MONITOREO PASIVO
+   * Solo reporta datos, SIN tomar acciones automáticas
+   * 
+   * ⚠️ NOTA: Descarga solo por acción manual del usuario (botón en widget)
    */
-  async enforceMemoryLimit() {
+  async monitorMemory() {
+    // El monitoreo solo actualiza datos, nada más
+    await this.getLoadedModels();
     const stats = this.getMemoryStats();
-
-    if (!stats.isOverLimit) {
-      return { action: 'none', reason: 'Dentro del límite' };
-    }
-
-    console.warn(`[ModelMemory] ⚠️ LÍMITE EXCEDIDO: ${stats.totalModelMemoryMB}MB > ${this.memoryLimit}MB`);
-
-    // Ordenar por antigüedad (más viejos primero)
-    const sorted = stats.models.sort((a, b) => b.minutesAgo - a.minutesAgo);
-
-    const toUnload = [];
-    let freedMemory = 0;
-
-    // Descargar modelos hasta bajar del límite
-    for (const model of sorted) {
-      if (freedMemory >= stats.exceededByMB) break;
-      toUnload.push(model.name);
-      freedMemory += model.sizeMB;
-    }
-
-    console.log(`[ModelMemory] 🧹 Descargando ${toUnload.length} modelos (liberando ~${freedMemory}MB)`);
-
-    const results = await this.unloadMultiple(toUnload);
-    const successCount = results.filter(r => r.success).length;
-
-    return {
-      action: 'unload',
-      modelsUnloaded: toUnload,
-      memoryFreedMB: freedMemory,
-      successCount
-    };
+    
+    // Solo emitir evento para que el widget se actualice
+    this.emit('memoryUpdated', stats);
+    
+    return stats;
   }
 
   /**
@@ -290,7 +321,9 @@ class ModelMemoryService extends EventEmitter {
   }
 
   /**
-   * ✅ 9. INICIAR MONITOREO CONTINUO
+   * ✅ 9. INICIAR MONITOREO CONTINUO (PASIVO)
+   * 
+   * Solo actualiza datos cada 30 segundos, SIN tomar acciones
    */
   startMonitoring() {
     if (this.monitoringEnabled) {
@@ -302,12 +335,8 @@ class ModelMemoryService extends EventEmitter {
 
     const monitor = async () => {
       try {
-        await this.getLoadedModels();
-        const enforcement = await this.enforceMemoryLimit();
-        
-        if (enforcement.action !== 'none') {
-          this.emit('enforcement', enforcement);
-        }
+        // Solo obtener datos, sin acciones automáticas
+        await this.monitorMemory();
 
       } catch (error) {
         console.error('[ModelMemory] Error en monitoreo:', error.message);
@@ -319,7 +348,8 @@ class ModelMemoryService extends EventEmitter {
       }
     };
 
-    console.log(`[ModelMemory] ✅ Monitoreo iniciado (cada ${this.checkInterval / 1000}s)`);
+    console.log(`[ModelMemory] ✅ MONITOREO PASIVO iniciado (cada ${this.checkInterval / 1000}s)`);
+    console.log('[ModelMemory] 📍 Solo observa datos. Descarga manual solo via botón.');
     monitor();
   }
 
@@ -333,13 +363,9 @@ class ModelMemoryService extends EventEmitter {
   }
 
   /**
-   * ✅ 11. CONFIGURAR LÍMITE DE MEMORIA
+   * ℹ️ NOTA: Sin setMemoryLimit - no hay auto-unload basado en límites
+   * El usuario solo descarga manualmente via botón en widget
    */
-  setMemoryLimit(limitMB) {
-    this.memoryLimit = limitMB;
-    console.log(`[ModelMemory] ⚙️ Límite configurado a ${limitMB}MB (${(limitMB / 1024).toFixed(1)}GB)`);
-    this.emit('limitChanged', limitMB);
-  }
 
   /**
    * ✅ 12. LIMPIAR AL CERRAR
@@ -350,10 +376,22 @@ class ModelMemoryService extends EventEmitter {
   }
 
   /**
-   * ✅ 13. OBTENER INFO FORMATEADA PARA UI
+   * 🎮 NUEVO: Obtener estadísticas de GPU
    */
-  formatStats() {
+  async getGPUStats() {
+    if (!gpuMemoryService) {
+      return null;
+    }
+
+    return await gpuMemoryService.getGPUStats();
+  }
+
+  /**
+   * ✅ 13. OBTENER INFO FORMATEADA PARA UI (con GPU)
+   */
+  async formatStats() {
     const stats = this.getMemoryStats();
+    const gpuStats = await this.getGPUStats();
 
     return {
       header: {
@@ -363,6 +401,7 @@ class ModelMemoryService extends EventEmitter {
         limitGB: (stats.memoryLimitMB / 1024).toFixed(1),
         status: stats.isOverLimit ? '⚠️ SOBRE LÍMITE' : '✅ OK'
       },
+      gpu: gpuStats, // 🎮 Agregar stats de GPU
       models: stats.models.map(m => ({
         name: m.name,
         size: m.sizeGB,

@@ -118,6 +118,9 @@ const MCPManagerTab = ({ themeColors }) => {
           configValues[key] = server.config.env[schema.envName];
         } else if (server.config?.configValues?.[key]) {
           configValues[key] = server.config.configValues[key];
+        } else if (mcp.recommendedConfig && mcp.recommendedConfig[key] !== undefined) {
+          // Si no existe el valor pero hay una configuración recomendada, usarla
+          configValues[key] = mcp.recommendedConfig[key];
         }
       }
     }
@@ -190,9 +193,42 @@ const MCPManagerTab = ({ themeColors }) => {
       const mcp = editingConfig.mcp || null;
       const env = {};
       
+      // Función helper para agregar flags de PowerShell por defecto a ALLOWED_FLAGS
+      const ensurePowerShellFlags = (flagsStr) => {
+        if (!flagsStr || flagsStr.trim() === '' || flagsStr.toLowerCase() === 'all') {
+          return flagsStr; // No modificar si está vacío o es 'all'
+        }
+        const defaultPowerShellFlags = ['-command', '-Command', '-ExecutionPolicy', '-NoProfile', '-NonInteractive'];
+        const existingFlags = flagsStr.split(',').map(f => f.trim()).filter(Boolean);
+        const existingLower = existingFlags.map(f => f.toLowerCase());
+        
+        // Agregar flags de PowerShell que no estén ya presentes
+        defaultPowerShellFlags.forEach(flag => {
+          if (!existingLower.includes(flag.toLowerCase())) {
+            existingFlags.push(flag);
+          }
+        });
+        
+        return existingFlags.join(',');
+      };
+      
+      // Procesar configValues y asegurar flags de PowerShell para cli-mcp-server
+      const processedConfigValues = { ...configValues };
+      if (selectedServer.id === 'cli-mcp-server' && processedConfigValues.ALLOWED_FLAGS !== undefined) {
+        if (!processedConfigValues.ALLOWED_FLAGS || processedConfigValues.ALLOWED_FLAGS.trim() === '') {
+          // Si está vacío, usar la configuración recomendada del catálogo si existe
+          if (mcp && mcp.recommendedConfig && mcp.recommendedConfig.ALLOWED_FLAGS) {
+            processedConfigValues.ALLOWED_FLAGS = mcp.recommendedConfig.ALLOWED_FLAGS;
+          }
+        } else {
+          // Si tiene valor, asegurar que incluye flags de PowerShell
+          processedConfigValues.ALLOWED_FLAGS = ensurePowerShellFlags(processedConfigValues.ALLOWED_FLAGS);
+        }
+      }
+      
       if (!isNative && mcp && mcp.configSchema) {
         for (const [key, schema] of Object.entries(mcp.configSchema)) {
-          const raw = configValues[key];
+          const raw = processedConfigValues[key];
           if (raw === undefined || raw === null || raw === '') continue;
           
           let value = raw;
@@ -221,8 +257,8 @@ const MCPManagerTab = ({ themeColors }) => {
         payload.cwd = allowedDir;
       }
       
-      // Guardar también los valores visibles por si la UI los requiere
-      payload.configValues = configValues;
+      // Guardar también los valores visibles por si la UI los requiere (con valores procesados)
+      payload.configValues = processedConfigValues;
     } catch (e) {
       console.warn('[MCP Manager] No se pudieron mapear configValues/env:', e?.message);
     }
