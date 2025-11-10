@@ -4412,7 +4412,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     // ✅ NUEVO: Contexto dinámico basado en RAM disponible
     const systemMem = this.memoryService.getSystemMemory();
     const dynamicContext = this._calcDynamicContext(systemMem.freeMB);
-
+    
     // Preparar opciones con configuración (usar valores de options directamente, sin defaults hardcodeados)
     const ollamaOptions = {
       temperature: options.temperature ?? 0.7,
@@ -6162,6 +6162,79 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
 
     this.saveConfig();
+  }
+
+  /**
+   * ✅ NUEVO: Cargar modelo automáticamente al reiniciar
+   * Intenta cargar el último modelo usado
+   */
+  async autoLoadLastModel() {
+    try {
+      const config = JSON.parse(localStorage.getItem('ai-service-config') || '{}');
+      
+      if (!config.currentModel || !config.modelType) {
+        console.log('[AIService] ℹ️ No hay modelo anterior guardado');
+        return false;
+      }
+
+      const modelId = config.currentModel;
+      const modelType = config.modelType;
+
+      console.log(`[AIService] 🚀 Intentando recargar modelo: ${modelId} (${modelType})`);
+
+      // Si es modelo local, verificar que existe
+      if (modelType === 'local') {
+        const localModel = this.getAllLocalModels().find(m => m.id === modelId);
+        
+        if (!localModel) {
+          console.warn(`[AIService] ⚠️ Modelo local ${modelId} no encontrado`);
+          return false;
+        }
+
+        if (!localModel.downloaded) {
+          console.warn(`[AIService] ⚠️ Modelo ${modelId} no está descargado`);
+          return false;
+        }
+      }
+
+      // Si es modelo remoto, verificar que existe
+      if (modelType === 'remote') {
+        const remoteModel = this.models.remote.find(m => m.id === modelId);
+        
+        if (!remoteModel) {
+          console.warn(`[AIService] ⚠️ Modelo remoto ${modelId} no encontrado`);
+          return false;
+        }
+      }
+
+      // Cargar el modelo
+      this.currentModel = modelId;
+      this.modelType = modelType;
+
+      // Si es local, usar ModelMemoryService para cargarlo en memoria
+      if (modelType === 'local') {
+        console.log(`[AIService] 🔥 Cargando modelo Ollama en memoria: ${modelId}`);
+        try {
+          // Usar loadModelToMemory que usa /api/generate con keep_alive
+          const loaded = await this.memoryService.loadModelToMemory(modelId);
+          if (loaded) {
+            console.log(`[AIService] ✅ Modelo ${modelId} cargado en memoria exitosamente`);
+          } else {
+            console.warn(`[AIService] ⚠️ No se pudo cargar ${modelId}, pero puede cargar automáticamente`);
+          }
+        } catch (error) {
+          console.warn(`[AIService] ⚠️ Error cargando modelo: ${error.message}`);
+          // No es crítico, Ollama cargará automáticamente cuando se use
+        }
+      }
+
+      console.log(`[AIService] ✅ Modelo ${modelId} listo para usar`);
+      return true;
+
+    } catch (error) {
+      console.error('[AIService] ❌ Error al cargar modelo automáticamente:', error);
+      return false;
+    }
   }
 }
 

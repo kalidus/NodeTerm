@@ -88,16 +88,23 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
           alignItems: 'center'
         }}
       >
-        <span
-          style={{
-            fontWeight: 'bold',
-            color: statusColor
-          }}
-        >
-          💻 Sistema: {systemMem.usedMB}MB / {systemMem.totalMB}MB ({systemMem.usagePercent}%)
-        </span>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontWeight: 'bold',
+              color: statusColor,
+              marginBottom: '4px'
+            }}
+          >
+            💻 Sistema: {systemMem.usedMB}MB / {systemMem.totalMB}MB ({systemMem.usagePercent}%)
+          </div>
+          <div style={{ fontSize: '12px', color: colors.textSecondary }}>
+            📊 Disponible: <strong>{systemMem.freeMB}MB</strong> | 
+            <strong style={{ marginLeft: '8px' }}>Usado: {systemMem.usedMB}MB</strong>
+          </div>
+        </div>
         {isWarning && (
-          <span style={{ color: colors.textError }}>⚠️ LÍMITE EXCEDIDO</span>
+          <span style={{ color: colors.textError, marginLeft: '12px', whiteSpace: 'nowrap' }}>⚠️ LÍMITE</span>
         )}
       </div>
 
@@ -167,32 +174,38 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
                       onClick={async () => {
                         try {
                           await modelMemoryService.unloadModel(model.name);
-                          const newStats = modelMemoryService.getMemoryStats();
-                          setStats(newStats);
+                          // Actualizar stats después de descargar
+                          setTimeout(async () => {
+                            await modelMemoryService.getLoadedModels();
+                            const newStats = modelMemoryService.getMemoryStats();
+                            setStats(newStats);
+                          }, 500);
                         } catch (error) {
                           console.error('[ModelMemoryIndicator] Error descargando:', error);
                         }
                       }}
                       style={{
-                        background: '#333',
-                        color: colors.textError,
-                        border: '1px solid #555',
+                        background: '#ff6b6b',
+                        color: '#000',
+                        border: '1px solid #ff5555',
                         borderRadius: '4px',
-                        padding: '2px 6px',
+                        padding: '4px 8px',
                         cursor: 'pointer',
                         fontSize: '11px',
+                        fontWeight: 'bold',
                         transition: 'all 0.2s'
                       }}
                       onMouseOver={(e) => {
-                        e.target.style.background = '#444';
-                        e.target.style.color = '#ff6b6b';
+                        e.target.style.background = '#ff5555';
+                        e.target.style.transform = 'scale(1.05)';
                       }}
                       onMouseOut={(e) => {
-                        e.target.style.background = '#333';
-                        e.target.style.color = colors.textError;
+                        e.target.style.background = '#ff6b6b';
+                        e.target.style.transform = 'scale(1)';
                       }}
+                      title="Descargar de RAM (archivo en disco permanece protegido)"
                     >
-                      ❌ Descargar
+                      📤 Liberar
                     </button>
                   </div>
                 </div>
@@ -205,20 +218,22 @@ const ModelMemoryIndicator = ({ visible = true, themeColors = {} }) => {
       {/* Resumen RAM */}
       <div
         style={{
-          marginTop: '8px',
-          paddingTop: '8px',
-          borderTop: '1px solid #333',
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '12px'
+          marginTop: '12px',
+          paddingTop: '12px',
+          borderTop: '1px solid #333'
         }}
       >
-        <span>
-          📊 Modelos en RAM: <strong>{stats.totalModelMemoryGB}GB</strong>
-        </span>
-        <span style={{ color: colors.textSecondary }}>
-          Libre: <strong>{(systemMem.freeMB / 1024).toFixed(1)}GB</strong>
-        </span>
+        <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+          <span>📊 Modelos cargados: </span>
+          <strong style={{ color: colors.colorOk }}>{stats.totalModelMemoryGB}GB</strong>
+        </div>
+        <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+          <span>💾 Disponible: </span>
+          <strong style={{ color: colors.colorOk }}>{(systemMem.freeMB / 1024).toFixed(1)}GB</strong>
+        </div>
+        <div style={{ fontSize: '11px', color: colors.textSecondary }}>
+          ℹ️ Ollama descargará automáticamente modelos inactivos cuando sea necesario
+        </div>
       </div>
 
       {/* 🎮 NUEVO: GPU Memory si está disponible */}

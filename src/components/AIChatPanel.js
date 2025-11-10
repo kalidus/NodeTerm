@@ -286,6 +286,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Cargar modelos funcionales
     const functional = aiService.getFunctionalModels();
     setFunctionalModels(functional);
+
+    // ✅ NUEVO: Cargar automáticamente el último modelo usado
+    (async () => {
+      const loaded = await aiService.autoLoadLastModel();
+      if (loaded) {
+        setCurrentModel(aiService.currentModel);
+        setModelType(aiService.modelType);
+        console.log(`[AIChatPanel] ✅ Modelo restaurado: ${aiService.currentModel}`);
+      }
+    })();
     
     // SIEMPRE empezar con una nueva conversación limpia
     // No cargar conversación anterior automáticamente para evitar mezcla de contenido
@@ -1481,83 +1491,74 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
       console.log(`[AIChatPanel] 🔄 Cambio de modelo: ${oldModel} (${oldType}) → ${modelId} (${modelType})`);
 
-      // ========== PASO 1: Descargar modelo antiguo si es local ==========
+      // ========== PASO 1: NO descargar modelo antiguo ==========
+      // ⚠️ NUNCA usar /api/delete - borra archivos permanentemente
+      // Ollama descargará automáticamente el modelo anterior cuando sea necesario
       if (oldType === 'local' && oldModel && oldModel !== modelId) {
-        console.log(`[AIChatPanel] 🧹 Descargando modelo anterior: ${oldModel}`);
+        console.log(`[AIChatPanel] 📝 Modelo anterior ${oldModel} permanece en disco`);
+        console.log(`[AIChatPanel] 📝 Ollama lo descargará automáticamente de RAM cuando sea necesario`);
         setModelSwitchProgress(15);
-        
-        try {
-          // Usar Ollama /api/delete para descargar (con timeout)
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 3000);
-          
-          await fetch(`http://localhost:11434/api/delete`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: oldModel }),
-            signal: controller.signal
-          }).catch(() => {
-            // Si falla, Ollama descargará automáticamente por timeout (5 min)
-            console.log(`[AIChatPanel] ℹ️ Descarga de ${oldModel} delegada a Ollama timeout`);
-          }).finally(() => clearTimeout(timeout));
-        } catch (error) {
-          console.warn(`[AIChatPanel] ⚠️ Error al descargar ${oldModel}:`, error.message);
-        }
       }
 
       // ========== PASO 2: Cambiar modelo y guardar ==========
       setModelSwitchProgress(35);
       
-      aiService.setCurrentModel(modelId, modelType);
-      setCurrentModel(modelId);
-      setModelType(modelType);
-
+    aiService.setCurrentModel(modelId, modelType);
+    setCurrentModel(modelId);
+    setModelType(modelType);
+    
       // Actualizar en la conversación
-      const currentConversation = conversationService.getCurrentConversation();
-      if (currentConversation) {
-        currentConversation.modelId = modelId;
-        currentConversation.modelType = modelType;
-        currentConversation.updatedAt = Date.now();
-        conversationService.saveConversations();
+    const currentConversation = conversationService.getCurrentConversation();
+    if (currentConversation) {
+      currentConversation.modelId = modelId;
+      currentConversation.modelType = modelType;
+      currentConversation.updatedAt = Date.now();
+      conversationService.saveConversations();
       }
 
-      // ========== PASO 3: Simular carga del modelo nuevo (3-5 segundos) ==========
-      console.log(`[AIChatPanel] ⏳ Cargando modelo: ${modelId}`);
+      // ========== PASO 3: Cargar modelo nuevo en memoria ==========
+      console.log(`[AIChatPanel] 🚀 Cargando modelo nuevo: ${modelId}`);
       setModelSwitchProgress(50);
 
-      // Simulación de carga progresiva
-      const startTime = Date.now();
-      const duration = 3500 + Math.random() * 1500; // 3.5-5 segundos
-
-      return new Promise((resolve) => {
-        const progressInterval = setInterval(() => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min(95, 50 + (elapsed / duration) * 45);
-          setModelSwitchProgress(Math.round(progress));
-
-          if (elapsed >= duration) {
-            clearInterval(progressInterval);
-            setModelSwitchProgress(100);
-
-            // Pequeño delay para que se vea el 100%
-            setTimeout(() => {
-              console.log(`[AIChatPanel] ✅ Modelo ${modelId} cargado exitosamente`);
-              setIsModelSwitching(false);
-              setModelSwitchProgress(0);
-
-              // Disparar evento para actualizar UI
-              window.dispatchEvent(new CustomEvent('conversation-updated', {
-                detail: {
-                  conversationId: currentConversation?.id,
-                  type: 'model-changed',
-                  newModel: modelId
-                }
-              }));
-
-              resolve();
-            }, 300);
+      // Si es modelo local, cargarlo en memoria usando ModelMemoryService
+      if (modelType === 'local') {
+        try {
+          const loaded = await aiService.memoryService.loadModelToMemory(modelId);
+          if (loaded) {
+            console.log(`[AIChatPanel] ✅ Modelo ${modelId} cargado en memoria`);
+            setModelSwitchProgress(90);
+          } else {
+            console.warn(`[AIChatPanel] ⚠️ Modelo ${modelId} cargará automáticamente`);
+            setModelSwitchProgress(75);
           }
-        }, 100);
+        } catch (error) {
+          console.warn(`[AIChatPanel] ⚠️ Error cargando ${modelId}: ${error.message}`);
+          setModelSwitchProgress(75);
+        }
+      }
+
+      // Pequeño delay para que se vea el 100%
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          setModelSwitchProgress(100);
+          
+          setTimeout(() => {
+            console.log(`[AIChatPanel] ✅ Modelo ${modelId} listo para usar`);
+            setIsModelSwitching(false);
+            setModelSwitchProgress(0);
+
+            // Disparar evento para actualizar UI
+      window.dispatchEvent(new CustomEvent('conversation-updated', {
+        detail: {
+                conversationId: currentConversation?.id,
+                type: 'model-changed',
+                newModel: modelId
+        }
+      }));
+
+            resolve();
+          }, 300);
+        }, 500);
       });
 
     } catch (error) {
