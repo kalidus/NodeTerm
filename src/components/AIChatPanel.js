@@ -65,7 +65,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
   const [activeMcpServers, setActiveMcpServers] = useState([]);
   const [showMcpDialog, setShowMcpDialog] = useState(false);
-  const [showMemoryIndicator, setShowMemoryIndicator] = useState(false); // ✅ NUEVO
+  const [showMemoryIndicator, setShowMemoryIndicator] = useState(true); // ✅ NUEVO - Mostrar por defecto
   const [selectedMcpServers, setSelectedMcpServers] = useState(() => {
     // Cargar MCPs seleccionados del localStorage
     try {
@@ -3867,8 +3867,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             borderTop: `1px solid ${themeColors.borderColor}`
           }}
         >
-          {/* Herramientas MCP activas */}
-          <MCPActiveTools themeColors={themeColors} />
+          {/* Container para Herramientas MCP y Memoria - Lado a lado */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.6rem' }}>
+            {/* Herramientas MCP activas */}
+            <div>
+              <MCPActiveTools themeColors={themeColors} />
+            </div>
+            
+            {/* ✅ Widget de Memoria */}
+            <div>
+              <ModelMemoryIndicator visible={showMemoryIndicator} themeColors={themeColors} />
+            </div>
+          </div>
           
           {/* Indicadores de rendimiento */}
           <AIPerformanceStats
@@ -3880,9 +3890,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             isLoading={isLoading}
             attachedFiles={attachedFiles}
           />
-
-          {/* ✅ NUEVO: Widget de Memoria - Presiona Ctrl+M para mostrar */}
-          <ModelMemoryIndicator visible={showMemoryIndicator} themeColors={themeColors} />
           
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
             <textarea
