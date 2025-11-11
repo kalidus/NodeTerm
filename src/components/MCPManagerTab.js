@@ -89,11 +89,127 @@ const MCPManagerTab = ({ themeColors }) => {
     }
   };
 
+  const sanitizeFilesystemPath = (rawPath) => {
+    if (Array.isArray(rawPath)) {
+      return sanitizeFilesystemPath(rawPath[0]);
+    }
+    if (rawPath && typeof rawPath === 'object') {
+      const firstValue = Object.values(rawPath)[0];
+      return sanitizeFilesystemPath(firstValue);
+    }
+    if (typeof rawPath !== 'string') {
+      return '';
+    }
+    const trimmed = rawPath.trim();
+    if (!trimmed) {
+      return '';
+    }
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed.slice(1, -1);
+    }
+    return trimmed;
+  };
+
+  const stringifyArgsArray = (argsArray) => {
+    if (!Array.isArray(argsArray)) {
+      return '';
+    }
+    return argsArray
+      .map((arg) => {
+        if (arg === undefined || arg === null) {
+          return '';
+        }
+        const value = String(arg);
+        if (!value) {
+          return '';
+        }
+        if (/\s/.test(value)) {
+          const escaped = value.replace(/"/g, '\\"');
+          return `"${escaped}"`;
+        }
+        return value;
+      })
+      .filter(Boolean)
+      .join(' ');
+  };
+
+  const buildFilesystemArgsString = (path) => {
+    const sanitizedPath = sanitizeFilesystemPath(path);
+    const argsList = ['-y', '@modelcontextprotocol/server-filesystem'];
+    if (sanitizedPath) {
+      argsList.push(sanitizedPath);
+    }
+    return stringifyArgsArray(argsList);
+  };
+
+  const updateFilesystemAllowedPath = (rawValue) => {
+    const normalized = sanitizeFilesystemPath(rawValue);
+    setEditingConfig((prev) => {
+      const nextConfigValues = { ...(prev.configValues || {}) };
+      nextConfigValues.allowedPaths = normalized;
+      const targetId = (selectedServer?.id || prev?.mcp?.id || '').toLowerCase();
+      if (targetId === 'filesystem') {
+        return {
+          ...prev,
+          configValues: nextConfigValues,
+          args: buildFilesystemArgsString(normalized)
+        };
+      }
+      return {
+        ...prev,
+        configValues: nextConfigValues
+      };
+    });
+  };
+
+  const handleBrowseFilesystemPath = async () => {
+    const targetId = (selectedServer?.id || editingConfig?.mcp?.id || '').toLowerCase();
+    if (targetId !== 'filesystem') {
+      return;
+    }
+    try {
+      if (
+        typeof window === 'undefined' ||
+        !window?.electron?.dialog?.showOpenDialog
+      ) {
+        showToast('warn', 'No disponible', 'El selector de directorios requiere la app de escritorio');
+        return;
+      }
+      const result = await window.electron.dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar directorio permitido'
+      });
+      if (result && !result.canceled) {
+        const selectedPath =
+          (Array.isArray(result.filePaths) && result.filePaths[0]) ||
+          result.filePath ||
+          null;
+        if (selectedPath) {
+          updateFilesystemAllowedPath(selectedPath);
+        }
+      }
+    } catch (error) {
+      console.error('Error abriendo dialog:', error);
+      showToast('error', 'Error', 'No se pudo abrir el selector de directorio');
+    }
+  };
+
   const openConfigFor = (server) => {
     setSelectedServer(server);
     // Obtener MCP del catálogo para ver configSchema
+    // FORZAR recarga del catálogo cada vez para evitar cache de require
+    try {
+      const catalogPath = require.resolve('../data/mcp-catalog.json');
+      delete require.cache[catalogPath];
+    } catch (e) {
+      // Ignore if path resolution fails
+    }
     const mcpData = require('../data/mcp-catalog.json');
     const mcp = mcpData.mcps?.find(m => m.id === server.id);
+    console.log('[MCP Manager] openConfigFor - MCP cargado:', { serverId: server.id, mcpFound: !!mcp, hasConfigSchema: !!mcp?.configSchema });
     
     // Mapear valores guardados a configSchema
     const configValues = {};
@@ -125,10 +241,61 @@ const MCPManagerTab = ({ themeColors }) => {
       }
     }
     
+    // 🔧 ARREGLADO: Al convertir args a string, envolver en comillas si hay espacios
+    let argsStr = '';
+    if (!isNative && server?.config?.args) {
+      if (Array.isArray(server.config.args)) {
+        argsStr = server.config.args.map(arg => {
+          // Si el argumento contiene espacios, envolverlo en comillas dobles
+          return arg.includes(' ') ? `"${arg}"` : arg;
+        }).join(' ');
+      } else {
+        argsStr = server.config.args;
+      }
+    }
+
+    if (!isNative && server?.id === 'filesystem') {
+      const candidates = [
+        configValues.allowedPaths,
+        server?.config?.configValues?.allowedPaths,
+        server?.config?.allowedPaths,
+        server?.config?.options?.allowedPaths,
+        server?.allowedPaths
+      ];
+
+      let normalizedPath = '';
+      for (const candidate of candidates) {
+        const sanitized = sanitizeFilesystemPath(candidate);
+        if (sanitized) {
+          normalizedPath = sanitized;
+          break;
+        }
+      }
+
+      if (!normalizedPath && server?.config?.args) {
+        let parsedArgs = [];
+        if (Array.isArray(server.config.args)) {
+          parsedArgs = server.config.args;
+        } else if (typeof server.config.args === 'string') {
+          const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+          let match;
+          while ((match = regex.exec(server.config.args)) !== null) {
+            parsedArgs.push(match[1] || match[2] || match[0]);
+          }
+        }
+        if (parsedArgs.length >= 3) {
+          normalizedPath = sanitizeFilesystemPath(parsedArgs[2]);
+        }
+      }
+
+      configValues.allowedPaths = normalizedPath;
+      argsStr = buildFilesystemArgsString(normalizedPath);
+    }
+    
     setEditingConfig({
       type: server?.config?.type || 'external',
       command: isNative ? '' : (server?.config?.command || 'npx'),
-      args: isNative ? '' : (Array.isArray(server?.config?.args) ? server.config.args.join(' ') : (server?.config?.args || '')),
+      args: argsStr,
       enabled: !!server?.config?.enabled,
       autostart: !!server?.config?.autostart,
       autoRestart: server?.config?.autoRestart !== false,
@@ -179,9 +346,41 @@ const MCPManagerTab = ({ themeColors }) => {
       };
     } else {
       // Construir payload base para servidores externos
+      
+      let parsedArgs = [];
+      
+      // 🔧 ESPECIAL: Para filesystem, construir args automáticamente desde allowedPaths
+      if (selectedServer.id === 'filesystem') {
+        const normalizedPath = sanitizeFilesystemPath(editingConfig.configValues?.allowedPaths);
+        parsedArgs = [
+          '-y',
+          '@modelcontextprotocol/server-filesystem'
+        ];
+        if (normalizedPath) {
+          parsedArgs.push(normalizedPath);
+        }
+        console.log('[MCP Manager] Args construidos automáticamente para filesystem:', parsedArgs);
+      } else {
+        // Para otros MCPs, parsear args respetando comillas y paths con espacios
+        if (typeof editingConfig.args === 'string') {
+          const argsStr = editingConfig.args.trim();
+          if (argsStr) {
+            // Parser simple que respeta comillas simples y dobles
+            const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+            let match;
+            while ((match = regex.exec(argsStr)) !== null) {
+              // match[1] para comillas dobles, match[2] para simples, match[0] para sin comillas
+              parsedArgs.push(match[1] || match[2] || match[0]);
+            }
+          }
+        } else if (Array.isArray(editingConfig.args)) {
+          parsedArgs = editingConfig.args;
+        }
+      }
+      
       payload = {
         command: editingConfig.command || 'npx',
-        args: typeof editingConfig.args === 'string' ? editingConfig.args.split(' ').filter(Boolean) : (editingConfig.args || []),
+        args: parsedArgs,
         enabled: !!editingConfig.enabled,
         autostart: !!editingConfig.autostart,
         autoRestart: !!editingConfig.autoRestart
@@ -258,7 +457,21 @@ const MCPManagerTab = ({ themeColors }) => {
       }
       
       // Guardar también los valores visibles por si la UI los requiere (con valores procesados)
-      payload.configValues = processedConfigValues;
+      if (selectedServer.id === 'filesystem') {
+        const normalizedPath = sanitizeFilesystemPath(processedConfigValues.allowedPaths);
+        const allowedPathsArray = normalizedPath ? [normalizedPath] : [];
+        payload.configValues = {
+          ...processedConfigValues,
+          allowedPaths: allowedPathsArray
+        };
+        if (allowedPathsArray.length > 0) {
+          payload.allowedPaths = allowedPathsArray;
+        } else {
+          delete payload.allowedPaths;
+        }
+      } else {
+        payload.configValues = processedConfigValues;
+      }
     } catch (e) {
       console.warn('[MCP Manager] No se pudieron mapear configValues/env:', e?.message);
     }
@@ -713,6 +926,30 @@ const MCPManagerTab = ({ themeColors }) => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <InputSwitch checked={!!editingConfig.configValues?.[key]} onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.value } })} />
                         <span style={{ fontSize: '0.75rem', color: themeColors.textSecondary }}>{editingConfig.configValues?.[key] ? 'Sí' : 'No'}</span>
+                      </div>
+                    ) : key === 'allowedPaths' ? (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <InputText 
+                          type='text' 
+                          value={sanitizeFilesystemPath(editingConfig.configValues?.[key])} 
+                          onChange={(e) => updateFilesystemAllowedPath(e.target.value)} 
+                          placeholder="C:\path\to\directory"
+                          style={{ flex: 1, fontSize: '0.75rem' }} 
+                        />
+                        <Button 
+                          icon="pi pi-folder-open" 
+                          onClick={handleBrowseFilesystemPath}
+                          tooltip="Explorar..."
+                          tooltipOptions={{ position: 'top' }}
+                          style={{ 
+                            background: 'rgba(33, 150, 243, 0.2)', 
+                            border: '1px solid rgba(33, 150, 243, 0.5)', 
+                            color: '#2196f3', 
+                            borderRadius: '8px',
+                            minWidth: 'auto',
+                            aspectRatio: '1'
+                          }} 
+                        />
                       </div>
                     ) : schema.type === 'array' ? (
                       <InputTextarea value={editingConfig.configValues?.[key] || ''} onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.target.value } })} placeholder={schema.example ? `Ejemplo: ${schema.example.join(', ')}` : 'Separar con comas'} rows={2} style={{ width: '100%', fontSize: '0.75rem' }} />

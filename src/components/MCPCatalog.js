@@ -284,6 +284,60 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
 
+  // Funciones helper para manejar allowedPaths en filesystem
+  const sanitizeFilesystemPath = (rawPath) => {
+    if (Array.isArray(rawPath)) {
+      return sanitizeFilesystemPath(rawPath[0]);
+    }
+    if (rawPath && typeof rawPath === 'object') {
+      const firstValue = Object.values(rawPath)[0];
+      return sanitizeFilesystemPath(firstValue);
+    }
+    if (typeof rawPath !== 'string') {
+      return '';
+    }
+    const trimmed = rawPath.trim();
+    if (!trimmed) {
+      return '';
+    }
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed.slice(1, -1);
+    }
+    return trimmed;
+  };
+
+  const handleBrowseFilesystemPath = async () => {
+    try {
+      if (
+        typeof window === 'undefined' ||
+        !window?.electron?.dialog?.showOpenDialog
+      ) {
+        return;
+      }
+      const result = await window.electron.dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar directorio permitido'
+      });
+      if (result && !result.canceled) {
+        const selectedPath =
+          (Array.isArray(result.filePaths) && result.filePaths[0]) ||
+          result.filePath ||
+          null;
+        if (selectedPath) {
+          setConfigValues({
+            ...configValues,
+            allowedPaths: selectedPath
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error abriendo dialog:', error);
+    }
+  };
+
   const isInstalled = (mcpId) => installedServers.some(s => s.id === mcpId);
   const getServerState = (mcpId) => installedServers.find(s => s.id === mcpId) || null;
 
@@ -564,6 +618,31 @@ const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <InputSwitch checked={!!configValues[key]} onChange={(e) => setConfigValues({ ...configValues, [key]: e.value })} />
                   <span style={{ fontSize: '0.8rem', color: themeColors.textSecondary }}>{configValues[key] ? 'Sí' : 'No'}</span>
+                </div>
+              ) : key === 'allowedPaths' ? (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                  <InputText 
+                    type='text' 
+                    value={sanitizeFilesystemPath(configValues[key])} 
+                    onChange={(e) => setConfigValues({ ...configValues, [key]: e.target.value })} 
+                    placeholder="C:\path\to\directory"
+                    style={{ flex: 1, fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, borderRadius: '8px', color: themeColors.textPrimary, padding: '0.5rem' }} 
+                  />
+                  <Button 
+                    icon="pi pi-folder-open" 
+                    onClick={handleBrowseFilesystemPath}
+                    tooltip="Explorar..."
+                    tooltipOptions={{ position: 'top' }}
+                    style={{ 
+                      background: 'rgba(33, 150, 243, 0.2)', 
+                      border: '1px solid rgba(33, 150, 243, 0.5)', 
+                      color: '#2196f3', 
+                      borderRadius: '8px',
+                      minWidth: 'auto',
+                      aspectRatio: '1',
+                      padding: '0.5rem'
+                    }} 
+                  />
                 </div>
               ) : schema.type === 'array' ? (
                 <InputTextarea value={configValues[key] || ''} onChange={(e) => setConfigValues({ ...configValues, [key]: e.target.value })} placeholder={schema.example ? `Ejemplo: ${schema.example.join(', ')}` : 'Separar con comas'} rows={3} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, borderRadius: '8px', color: themeColors.textPrimary, fontSize: '0.8rem', padding: '0.5rem' }} />
