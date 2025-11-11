@@ -2354,7 +2354,9 @@ class AIService {
       }
       if (hints.defaultRaw) {
         out += `⚠️ DEFAULT PATH: ${hints.defaultRaw}\n`;
-        out += `IMPORTANTE: Si el usuario NO especifica ruta completa, USA este directorio.\n`;
+        out += `CRÍTICO: SIEMPRE usa rutas ABSOLUTAS comenzando con este directorio.\n`;
+        out += `Ejemplo correcto: "${hints.defaultRaw}\\archivo.txt"\n`;
+        out += `Ejemplo INCORRECTO: "archivo.txt" (ruta relativa - NO usar)\n`;
       }
 
       // Acciones comunes (sólo si es filesystem) - OPTIMIZADO
@@ -2424,11 +2426,16 @@ class AIService {
       }
     });
 
-    // Ejemplos compactos
+    // Ejemplos compactos con rutas absolutas
     out += '\nEJEMPLOS:\n';
-    out += 'Listar: {"tool":"filesystem__list_directory","arguments":{"path":"."}}\n';
-    out += 'Leer: {"tool":"filesystem__read_file","arguments":{"path":"config.json"}}\n';
-    out += 'Crear: {"tool":"filesystem__write_file","arguments":{"path":"file.txt","content":"texto"}}\n\n';
+    // Usar el defaultRaw si está disponible para filesystem
+    const fsHints = serverHints['filesystem'] || {};
+    const basePath = fsHints.defaultRaw || 'C:\\path\\to\\dir';
+    const sep = basePath.includes('\\') ? '\\' : '/';
+    out += `Listar: {"tool":"filesystem__list_directory","arguments":{"path":"${basePath}"}}\n`;
+    out += `Leer: {"tool":"filesystem__read_file","arguments":{"path":"${basePath}${sep}config.json"}}\n`;
+    out += `Crear: {"tool":"filesystem__write_file","arguments":{"path":"${basePath}${sep}file.txt","content":"texto"}}\n\n`;
+    out += 'CRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
     out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n\n';
 
     return out;
