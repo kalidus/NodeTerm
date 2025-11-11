@@ -305,12 +305,9 @@ class MCPClientService {
    */
   async toggleServer(serverId, enabled) {
     try {
-      console.log(`🔄 [MCP Client] ${enabled ? 'Activando' : 'Desactivando'} servidor: ${serverId}`);
-      
       const result = await window.electron.mcp.toggle(serverId, enabled);
       
       if (result.success) {
-        console.log(`✅ [MCP Client] Servidor ${serverId} ${enabled ? 'activado' : 'desactivado'}`);
         await this.refreshAll();
         this.notifyListeners('server-toggled', { serverId, enabled });
       } else {

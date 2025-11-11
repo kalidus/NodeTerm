@@ -351,18 +351,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
       // Merge: mantener lo que ya está en localStorage (filtrado) + agregar nuevos enabled
       setSelectedMcpServers(prev => {
+        // PASO 1: Filtrar MCPs que no existen
         const filteredPrev = prev.filter(id => existingServerIds.has(id));
+        
+        // PASO 2: Filtrar MCPs que fueron deshabilitados
+        const stillEnabledPrev = filteredPrev.filter(id => {
+          const server = allServers.find(s => s.id === id);
+          return server && server.config?.enabled !== false;
+        });
+        
         const removed = prev.filter(id => !existingServerIds.has(id));
-        if (removed.length > 0) {
-          debugLogger.debug('AIChatPanel.MCP', 'Limpiando MCPs inexistentes del localStorage', removed);
-        }
-
-        const merged = new Set([...filteredPrev, ...enabledServerIds]);
+        const disabled = filteredPrev.filter(id => !stillEnabledPrev.includes(id));
+        
+        const merged = new Set([...stillEnabledPrev, ...enabledServerIds]);
         const merged_array = Array.from(merged);
 
         // Solo actualizar si hay cambios
         if (JSON.stringify(merged_array) !== JSON.stringify(prev)) {
-          debugLogger.debug('AIChatPanel.MCP', 'Sincronizando MCPs instalados con localStorage', merged_array);
           localStorage.setItem('selectedMcpServers', JSON.stringify(merged_array));
           return merged_array;
         }
@@ -376,19 +381,18 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // (dar tiempo a que se inicialice MCPClient)
     const initDefaultMcps = setTimeout(() => {
       if (selectedMcpServers.length > 0) {
-        const availableServerIds = new Set(mcpClient.getAllServers().map(s => s.id));
-        const validServerIds = selectedMcpServers.filter(id => availableServerIds.has(id));
+        const allServers = mcpClient.getAllServers();
+        const serverMap = new Map(allServers.map(s => [s.id, s]));
+        
+        // Filtrar: solo MCPs que existen AND están habilitados
+        const validServerIds = selectedMcpServers.filter(id => {
+          const server = serverMap.get(id);
+          if (!server) return false;
+          if (server.config?.enabled === false) return false;
+          return true;
+        });
 
-        if (validServerIds.length === 0) {
-          return;
-        }
-
-        if (validServerIds.length !== selectedMcpServers.length) {
-          const skipped = selectedMcpServers.filter(id => !availableServerIds.has(id));
-          debugLogger.debug('AIChatPanel.MCP', 'Omitiendo MCPs sin configuración al iniciar', skipped);
-        }
-
-        debugLogger.debug('AIChatPanel.MCP', 'Iniciando MCPs por defecto', validServerIds);
+        if (validServerIds.length === 0) return;
         validServerIds.forEach(serverId => {
           mcpClient.startServer(serverId).catch(error => {
             console.error(`Error iniciando MCP ${serverId}:`, error);
@@ -460,6 +464,33 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
     });
 
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // ✅ NUEVO: Sincronizar selectedMcpServers cuando un MCP es deshabilitado
+  useEffect(() => {
+    const handleMcpToggle = (event, data) => {
+      if (event === 'server-toggled') {
+        const { serverId, enabled } = data;
+        
+        if (!enabled) {
+          // Si se deshabilita un MCP, removerlo de selectedMcpServers
+          setSelectedMcpServers(prev => {
+            if (prev.includes(serverId)) {
+              const updated = prev.filter(id => id !== serverId);
+              localStorage.setItem('selectedMcpServers', JSON.stringify(updated));
+              return updated;
+            }
+            return prev;
+          });
+        }
+      }
+    };
+    
+    const unsubscribe = mcpClient.addListener(handleMcpToggle);
+    
     return () => {
       if (unsubscribe) unsubscribe();
     };
