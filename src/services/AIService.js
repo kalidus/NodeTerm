@@ -2323,7 +2323,7 @@ class AIService {
   generateUniversalMCPSystemPrompt(tools, options = {}) {
     if (!tools || tools.length === 0) return '';
 
-    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 6; // Reducido de 8 a 6
+    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 6;
     const serverHints = options.serverHints || {};
 
     // Agrupar tools por servidor
@@ -2335,76 +2335,40 @@ class AIService {
     }, {});
 
     let out = '';
-    out += '🔧 HERRAMIENTAS DISPONIBLES\n';
-    out += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    out += '⚡ FORMATO SIMPLE:\n';
-    out += 'Responde SOLO con este JSON cuando necesites usar una herramienta:\n';
-    out += '{"tool":"<serverId>__<toolName>","arguments":{...}}\n\n';
-    out += '📌 REGLAS IMPORTANTES:\n';
-    out += '1. Usa la herramienta MÁS ESPECÍFICA para la tarea\n';
-    out += '2. Si pide LEER → usa read_file\n';
-    out += '3. Si pide LISTAR → usa list_directory\n';
-    out += '4. Si pide CREAR → usa write_file\n';
-    out += '5. Si pide EDITAR → usa edit_file (NO write_file)\n';
-    out += '6. NO uses write_file para editar, usa edit_file\n\n';
+    out += 'HERRAMIENTAS DISPONIBLES:\n\n';
+    out += 'Formato: {"tool":"<server>__<name>","arguments":{...}}\n';
+    out += 'Reglas: leer→read_file, listar→list_directory, crear→write_file, editar→edit_file (NO write_file para editar)\n\n';
 
     const serverIds = Object.keys(serverIdToTools).sort();
     serverIds.forEach((serverId, sidx) => {
       const list = serverIdToTools[serverId] || [];
-      // Selección Top‑K por servidor (simple: truncar por tamaño)
       const selected = list.slice(0, Math.max(1, maxPerServer));
 
-      out += `Servidor: ${serverId}\n`;
-      out += `${'—'.repeat(10 + serverId.length)}\n`;
+      out += `[${serverId}]\n`;
 
       // Hints específicos del servidor (p.ej., filesystem)
       const hints = serverHints[serverId] || {};
       if (hints.allowedDirsText) {
-        out += 'Directorios permitidos:\n';
-        // Imprimir máximo 3 líneas para no gastar tokens
-        const lines = String(hints.allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3);
-        lines.forEach(l => { out += `  - ${l}\n`; });
-        if ((String(hints.allowedDirsText).split('\n').length) > lines.length) {
-          out += '  - ...\n';
-        }
-        out += '\n';
+        const lines = String(hints.allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 2);
+        out += `Dirs: ${lines.join(', ')}${lines.length < 2 ? '' : '...'}\n`;
       }
       if (hints.defaultRaw) {
-        out += `⚠️ IMPORTANTE: Si el usuario pide "listar directorio" o similar SIN especificar ruta,\n`;
-        out += `   USA AUTOMÁTICAMENTE este directorio: ${hints.defaultRaw}\n`;
-        out += `   NO pidas al usuario que especifique la ruta.\n\n`;
+        out += `Default path: ${hints.defaultRaw} (usa si no especifica ruta)\n`;
       }
 
-      // Acciones comunes (sólo si es filesystem)
+      // Acciones comunes (sólo si es filesystem) - OPTIMIZADO
       if (serverId === 'filesystem') {
         const names = list.map(t => t.name);
         const has = (n) => names.includes(n);
-        const bullets = [];
-        if (has('list_directory')) bullets.push('• "listar", "ver contenido" → list_directory { path }');
-        if (has('list_directory_with_sizes')) bullets.push('• "listar con tamaños" → list_directory_with_sizes { path } [📊 Muestra tamaños, mejor para comparar]');
-        if (has('read_text_file')) bullets.push('• "leer fichero" → read_text_file { path }');
-        if (has('write_file')) bullets.push('• "crear/guardar fichero" → write_file { path, content }');
-        if (has('edit_file')) bullets.push('• "editar parte de un fichero" → edit_file { path, edits: [{ old_text: "buscar", new_text: "reemplazar" }] }');
-        if (has('create_directory')) bullets.push('• "crear carpeta" → create_directory { path }');
-        if (has('move_file')) {
-          // Obtener los nombres reales de parámetros de la tool move_file
-          const moveTool = list.find(t => t.name === 'move_file');
-          const moveSchema = moveTool?.inputSchema?.properties || {};
-          const moveParams = Object.keys(moveSchema);
-          const paramHint = moveParams.length >= 2 ? `{ ${moveParams[0]}, ${moveParams[1]} }` : '{ source, destination }';
-          bullets.push(`• "mover" o "renombrar" → move_file ${paramHint}`);
-          bullets.push(`  ⚠️ IMPORTANTE: El destino DEBE incluir el nombre del archivo completo.`);
-          bullets.push(`     Ejemplo: mover "file.txt" a carpeta "Proyectos" → { source: "ruta/file.txt", destination: "ruta/Proyectos/file.txt" }`);
-        }
-        if (has('search_files')) bullets.push('• "buscar ficheros" → search_files { pattern: "*.txt" o "p*" o "MoonlightSetup*", path } [Busca recursivamente por patrón, la búsqueda alcanza subcarpetas]');
-        if (has('get_file_info')) bullets.push('• "ver info" → get_file_info { path }');
-        if (bullets.length > 0) {
-          out += 'Acciones comunes (filesystem):\n';
-          bullets.forEach(b => { out += `  ${b}\n`; });
-          if (hints.defaultRaw) {
-            out += `  • Si el usuario no indica ruta, usa ${hints.defaultRaw}\n`;
-          }
-          out += '  • Usa rutas dentro de los directorios permitidos; en Windows prefiere rutas absolutas.\n\n';
+        const actions = [];
+        if (has('list_directory')) actions.push('listar→list_directory');
+        if (has('read_text_file')) actions.push('leer→read_text_file');
+        if (has('write_file')) actions.push('crear→write_file');
+        if (has('edit_file')) actions.push('editar→edit_file');
+        if (has('move_file')) actions.push('mover→move_file(source,destination con nombre completo)');
+        if (has('search_files')) actions.push('buscar→search_files(pattern,path)');
+        if (actions.length > 0) {
+          out += `Acciones: ${actions.join(', ')}\n`;
         }
       }
 
@@ -2412,24 +2376,22 @@ class AIService {
         const schema = tool.inputSchema || {};
         const properties = schema.properties || {};
         const required = schema.required || [];
-
-        out += `• ${tool.name}${tool.description ? ` — ${tool.description}` : ''}\n`;
-
         const keys = Object.keys(properties);
-        if (keys.length > 0) {
-          out += '  Parámetros:\n';
-          keys.forEach((p) => {
-            const prop = properties[p] || {};
-            const t = prop.type || 'any';
-            const rq = required.includes(p) ? 'REQUERIDO' : 'opcional';
-            const d = prop.description || '';
-            out += `    - ${p} [${t}] (${rq})${d ? `: ${d}` : ''}\n`;
-          });
+
+        // Formato compacto: nombre(params) - descripción
+        const reqParams = keys.filter(k => required.includes(k));
+        const optParams = keys.filter(k => !required.includes(k));
+        const paramsList = [...reqParams, ...optParams.map(p => `${p}?`)];
+        
+        out += `${tool.name}(${paramsList.join(',')})`;
+        if (tool.description) {
+          out += ` - ${tool.description.slice(0, 60)}${tool.description.length > 60 ? '...' : ''}`;
         }
+        out += '\n';
 
         // Ejemplo compacto
         const exampleArgs = {};
-        keys.forEach((p) => {
+        reqParams.forEach((p) => {
           const prop = properties[p] || {};
           if (prop.type === 'string') {
             const isPathLike = /path|file|dir|directory/i.test(p);
@@ -2440,51 +2402,33 @@ class AIService {
                 exampleArgs[p] = baseRaw;
               } else {
                 const sep = needsSep ? (baseRaw.includes('\\') ? '\\' : '/') : '';
-                exampleArgs[p] = `${baseRaw}${sep}ejemplo.txt`;
+                exampleArgs[p] = `${baseRaw}${sep}file.txt`;
               }
             } else {
-              exampleArgs[p] = 'texto';
+              exampleArgs[p] = 'value';
             }
           }
-          else if (prop.type === 'number') exampleArgs[p] = 0;
-          else if (prop.type === 'boolean') exampleArgs[p] = true;
           else if (prop.type === 'array') exampleArgs[p] = [];
           else if (prop.type === 'object') exampleArgs[p] = {};
-          else exampleArgs[p] = 'valor';
+          else exampleArgs[p] = prop.type === 'number' ? 0 : true;
         });
 
-        out += '  Ejemplo:\n';
-        out += `  {"server":"${serverId}","tool":"${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
-        out += `  // o: {"tool":"${serverId}__${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
-        if (tidx < selected.length - 1) out += '\n';
+        if (keys.length > 0) {
+          out += `  {"tool":"${serverId}__${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
+        }
       });
 
       if (sidx < serverIds.length - 1) {
-        out += `\n${'━'.repeat(70)}\n\n`;
+        out += '\n';
       }
     });
 
-    out += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-    
-    // ✨ NUEVO: Agregar few-shot examples (máximo 3)
-    out += '🎯 EJEMPLOS PRÁCTICOS:\n\n';
-    out += 'Ejemplo 1 - LISTAR archivos:\n';
-    out += 'Usuario: "Lista los archivos del directorio actual"\n';
-    out += 'Tú respondes: {"tool":"filesystem__list_directory","arguments":{"path":"."}}\n\n';
-    
-    out += 'Ejemplo 2 - LEER archivo:\n';
-    out += 'Usuario: "Lee el contenido del archivo config.json"\n';
-    out += 'Tú respondes: {"tool":"filesystem__read_file","arguments":{"path":"config.json"}}\n\n';
-    
-    out += 'Ejemplo 3 - CREAR archivo:\n';
-    out += 'Usuario: "Crea un archivo notas.txt con el texto Hola mundo"\n';
-    out += 'Tú respondes: {"tool":"filesystem__write_file","arguments":{"path":"notas.txt","content":"Hola mundo"}}\n\n';
-    
-    out += '⚠️ CRÍTICO:\n';
-    out += '• Responde SOLO con JSON, sin texto adicional antes o después\n';
-    out += '• Si pide EDITAR, usa edit_file, NO write_file\n';
-    out += '• Si no especifica ruta, usa la ruta por defecto\n';
-    out += '• Siempre incluye "arguments" (usa {} si no hay parámetros)\n\n';
+    // Ejemplos compactos
+    out += '\nEJEMPLOS:\n';
+    out += 'Listar: {"tool":"filesystem__list_directory","arguments":{"path":"."}}\n';
+    out += 'Leer: {"tool":"filesystem__read_file","arguments":{"path":"config.json"}}\n';
+    out += 'Crear: {"tool":"filesystem__write_file","arguments":{"path":"file.txt","content":"texto"}}\n\n';
+    out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n\n';
 
     return out;
   }

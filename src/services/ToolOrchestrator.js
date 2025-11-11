@@ -128,6 +128,9 @@ class ToolOrchestrator {
         text = JSON.stringify(result, null, 2);
       }
       
+      // 🗜️ OPTIMIZACIÓN: Comprimir resultados largos inteligentemente
+      text = this._compressToolResult(text, toolName, args);
+      
       // 🔧 IMPORTANTE: Si el texto parece ser JSON, envolverlo en backticks SIEMPRE
       const trimmed = text.trim();
       if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'))) {
@@ -139,6 +142,84 @@ class ToolOrchestrator {
       console.error(`❌ [ToolOrchestrator._formatToolResult] Error:`, e);
       return String(result); 
     }
+  }
+
+  /**
+   * 🗜️ Comprimir resultados de herramientas para reducir tokens enviados al modelo
+   * Mantiene información relevante pero reduce verbosidad
+   */
+  _compressToolResult(text, toolName, args) {
+    if (!text || text.length < 500) return text; // Resultados cortos, no comprimir
+
+    const lines = text.split('\n');
+    
+    // CASO 1: Listado de directorios (list_directory, list_directory_with_sizes)
+    if (toolName === 'list_directory' || toolName === 'list_directory_with_sizes') {
+      const files = lines.filter(l => l.includes('[FILE]'));
+      const dirs = lines.filter(l => l.includes('[DIR]'));
+      
+      // Si hay muchos archivos/dirs, resumir
+      if (files.length + dirs.length > 20) {
+        const summary = [];
+        summary.push(`${dirs.length} carpetas, ${files.length} archivos`);
+        
+        // Mostrar primeros 5 y últimos 3
+        if (dirs.length > 0) {
+          summary.push('\nCarpetas (primeras 5):');
+          dirs.slice(0, 5).forEach(d => summary.push(d));
+          if (dirs.length > 5) summary.push(`... y ${dirs.length - 5} más`);
+        }
+        
+        if (files.length > 0) {
+          summary.push('\nArchivos (primeros 5):');
+          files.slice(0, 5).forEach(f => summary.push(f));
+          if (files.length > 5) summary.push(`... y ${files.length - 5} más`);
+        }
+        
+        return summary.join('\n');
+      }
+    }
+    
+    // CASO 2: Contenido de archivos (read_text_file)
+    if (toolName === 'read_text_file') {
+      // Si el archivo es muy largo, truncar y dar estadísticas
+      if (lines.length > 100) {
+        const preview = lines.slice(0, 50).join('\n');
+        return `${preview}\n\n[... ${lines.length - 50} líneas más, total ${lines.length} líneas]`;
+      }
+    }
+    
+    // CASO 3: Búsqueda de archivos (search_files)
+    if (toolName === 'search_files') {
+      if (lines.length > 15) {
+        const preview = lines.slice(0, 10).join('\n');
+        return `${preview}\n... y ${lines.length - 10} resultados más (total ${lines.length})`;
+      }
+    }
+    
+    // CASO 4: JSON largo
+    const trimmed = text.trim();
+    if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && text.length > 1000) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        // Resumir JSON grande
+        if (Array.isArray(parsed)) {
+          return `[Array con ${parsed.length} elementos]`;
+        } else if (typeof parsed === 'object') {
+          const keys = Object.keys(parsed);
+          return `{${keys.slice(0, 5).join(', ')}${keys.length > 5 ? `, ... +${keys.length - 5}` : ''}}`;
+        }
+      } catch (e) {
+        // Si no es JSON válido, continuar
+      }
+    }
+    
+    // CASO 5: Texto largo genérico - truncar a 800 caracteres
+    if (text.length > 1500) {
+      return text.slice(0, 800) + `\n\n[... ${text.length - 800} caracteres más]`;
+    }
+    
+    return text;
   }
 
   _dispatchConversationUpdated() {
