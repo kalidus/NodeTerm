@@ -14,6 +14,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { app } = require('electron');
 const WebSearchNativeServer = require('./native/WebSearchNativeServer');
+const SSHTerminalNativeServer = require('./native/SSHTerminalNativeServer');
 
 // Note: En el main process no podemos usar import ES6, pero los logs irán al renderer
 // El logging detallado se hará en consola del main process
@@ -38,6 +39,7 @@ class MCPService {
 
   registerNativeFactories() {
     this.nativeFactories.set('web-search-native', (config) => new WebSearchNativeServer(config));
+    this.nativeFactories.set('ssh-terminal', (config) => new SSHTerminalNativeServer(config));
   }
 
   /**

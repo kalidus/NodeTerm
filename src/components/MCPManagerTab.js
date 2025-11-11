@@ -6,6 +6,7 @@ import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
+import { Dropdown } from 'primereact/dropdown';
 import MCPCatalog from './MCPCatalog';
 import mcpClient from '../services/MCPClientService';
 
@@ -19,6 +20,19 @@ const MCPManagerTab = ({ themeColors }) => {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [selectedServer, setSelectedServer] = useState(null);
   const [editingConfig, setEditingConfig] = useState({});
+  
+  // Estados para SSH/Terminal MCP
+  const [showAddSSHDialog, setShowAddSSHDialog] = useState(false);
+  const [sshFormData, setSSHFormData] = useState({
+    id: '',
+    name: '',
+    host: '',
+    port: 22,
+    username: '',
+    password: '',
+    usePrivateKey: false,
+    privateKey: ''
+  });
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -194,6 +208,102 @@ const MCPManagerTab = ({ themeColors }) => {
     } catch (error) {
       console.error('Error abriendo dialog:', error);
       showToast('error', 'Error', 'No se pudo abrir el selector de directorio');
+    }
+  };
+
+  // ==================== Funciones para SSH/Terminal MCP ====================
+  
+  const handleAddSSHConnection = () => {
+    const connections = editingConfig.configValues?.sshConnections || [];
+    
+    // Validar campos requeridos
+    if (!sshFormData.name || !sshFormData.host || !sshFormData.username) {
+      showToast('warn', 'Campos incompletos', 'Nombre, Host y Usuario son requeridos');
+      return;
+    }
+    
+    // Validar que haya password o privateKey
+    if (!sshFormData.usePrivateKey && !sshFormData.password) {
+      showToast('warn', 'Autenticación requerida', 'Debes proporcionar password o llave privada');
+      return;
+    }
+    
+    // Generar ID si no existe
+    const id = sshFormData.id || `ssh_${Date.now()}`;
+    
+    const newConnection = {
+      id,
+      name: sshFormData.name,
+      host: sshFormData.host,
+      port: sshFormData.port || 22,
+      username: sshFormData.username,
+      ...(sshFormData.usePrivateKey 
+        ? { privateKey: sshFormData.privateKey }
+        : { password: sshFormData.password }
+      )
+    };
+    
+    setEditingConfig({
+      ...editingConfig,
+      configValues: {
+        ...editingConfig.configValues,
+        sshConnections: [...connections, newConnection]
+      }
+    });
+    
+    // Limpiar formulario y cerrar dialog
+    setSSHFormData({
+      id: '',
+      name: '',
+      host: '',
+      port: 22,
+      username: '',
+      password: '',
+      usePrivateKey: false,
+      privateKey: ''
+    });
+    setShowAddSSHDialog(false);
+    showToast('success', 'Conexión agregada', `${newConnection.name} añadido correctamente`);
+  };
+  
+  const handleRemoveSSHConnection = (index) => {
+    const connections = editingConfig.configValues?.sshConnections || [];
+    const removed = connections[index];
+    
+    setEditingConfig({
+      ...editingConfig,
+      configValues: {
+        ...editingConfig.configValues,
+        sshConnections: connections.filter((_, i) => i !== index)
+      }
+    });
+    
+    showToast('info', 'Conexión eliminada', `${removed.name} eliminado`);
+  };
+  
+  const handleTestSSHConnection = async (conn) => {
+    showToast('info', 'Probando...', `Probando conexión a ${conn.name}...`);
+    
+    try {
+      // Llamar a la tool test_ssh_connection si el servidor está activo
+      const server = servers.find(s => s.id === 'ssh-terminal');
+      if (!server || !server.running) {
+        showToast('warn', 'MCP no activo', 'Activa el MCP SSH/Terminal para probar conexiones');
+        return;
+      }
+      
+      const result = await mcpClient.callTool('ssh-terminal', 'test_ssh_connection', { hostId: conn.id });
+      
+      if (result.success && result.content && result.content[0]) {
+        const testResult = JSON.parse(result.content[0].text);
+        if (testResult.success) {
+          showToast('success', '✅ Conexión exitosa', `Conectado a ${conn.name} en ${testResult.latency}`);
+        } else {
+          showToast('error', '❌ Error de conexión', testResult.message);
+        }
+      }
+    } catch (error) {
+      showToast('error', 'Error', `No se pudo probar la conexión: ${error.message}`);
     }
   };
 
@@ -915,7 +1025,7 @@ const MCPManagerTab = ({ themeColors }) => {
             <div>
               <h4 style={{ margin: 0, marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: '600', color: themeColors.textPrimary }}>Configuración de {editingConfig.mcp.name}</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {Object.entries(editingConfig.mcp.configSchema).map(([key, schema]) => (
+                {Object.entries(editingConfig.mcp.configSchema).filter(([key]) => key !== 'sshConnections').map(([key, schema]) => (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary }}>
                       {key} {schema.required && <span style={{ color: '#f44336' }}>*</span>}
@@ -950,6 +1060,17 @@ const MCPManagerTab = ({ themeColors }) => {
                           }} 
                         />
                       </div>
+                    ) : key === 'preferredTerminal' ? (
+                      <Dropdown
+                        value={editingConfig.configValues?.[key] || 'wsl'}
+                        options={[
+                          { label: '🐧 WSL (Ubuntu/Linux)', value: 'wsl' },
+                          { label: '🔵 Cygwin', value: 'cygwin' },
+                          { label: '⚡ PowerShell', value: 'powershell' }
+                        ]}
+                        onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.value } })}
+                        style={{ width: '100%', fontSize: '0.75rem' }}
+                      />
                     ) : schema.type === 'array' ? (
                       <InputTextarea value={editingConfig.configValues?.[key] || ''} onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.target.value } })} placeholder={schema.example ? `Ejemplo: ${schema.example.join(', ')}` : 'Separar con comas'} rows={2} style={{ width: '100%', fontSize: '0.75rem' }} />
                     ) : (
@@ -961,10 +1082,256 @@ const MCPManagerTab = ({ themeColors }) => {
             </div>
           )}
 
+          {/* Sección especial: SSH/Terminal - Gestión de conexiones SSH */}
+          {selectedServer?.id === 'ssh-terminal' && (
+            <div style={{ borderTop: `1px solid ${themeColors.borderColor}`, paddingTop: '1rem' }}>
+              <h4 style={{ margin: 0, marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: '600', color: themeColors.textPrimary, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <i className="pi pi-server" style={{ fontSize: '1rem' }} />
+                Conexiones SSH
+              </h4>
+              
+              {/* Lista de conexiones SSH */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                {(editingConfig.configValues?.sshConnections || []).length === 0 ? (
+                  <div style={{ 
+                    padding: '1rem', 
+                    background: 'rgba(255,255,255,0.03)', 
+                    borderRadius: '8px', 
+                    textAlign: 'center',
+                    border: `1px dashed ${themeColors.borderColor}`
+                  }}>
+                    <i className="pi pi-info-circle" style={{ fontSize: '1.5rem', color: themeColors.textSecondary, marginBottom: '0.5rem' }} />
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: themeColors.textSecondary }}>
+                      No hay conexiones SSH configuradas. Agrega una para ejecutar comandos remotos.
+                    </p>
+                  </div>
+                ) : (
+                  (editingConfig.configValues.sshConnections || []).map((conn, idx) => (
+                    <div key={idx} style={{
+                      padding: '0.75rem',
+                      background: 'rgba(100, 200, 100, 0.05)',
+                      border: '1px solid rgba(100, 200, 100, 0.3)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '600', fontSize: '0.8rem', color: themeColors.textPrimary, marginBottom: '0.2rem' }}>
+                          {conn.name}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: themeColors.textSecondary }}>
+                          {conn.username}@{conn.host}:{conn.port || 22}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: themeColors.textSecondary, marginTop: '0.2rem' }}>
+                          {conn.privateKey ? '🔑 Llave privada' : '🔒 Password'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <Button
+                          icon="pi pi-check"
+                          tooltip="Probar conexión"
+                          tooltipOptions={{ position: 'top' }}
+                          onClick={() => handleTestSSHConnection(conn)}
+                          style={{
+                            background: 'rgba(33, 150, 243, 0.2)',
+                            border: '1px solid rgba(33, 150, 243, 0.5)',
+                            color: '#2196f3',
+                            borderRadius: '6px',
+                            minWidth: 'auto',
+                            padding: '0.4rem 0.6rem'
+                          }}
+                        />
+                        <Button
+                          icon="pi pi-trash"
+                          tooltip="Eliminar"
+                          tooltipOptions={{ position: 'top' }}
+                          onClick={() => handleRemoveSSHConnection(idx)}
+                          style={{
+                            background: 'rgba(244, 67, 54, 0.2)',
+                            border: '1px solid rgba(244, 67, 54, 0.5)',
+                            color: '#f44336',
+                            borderRadius: '6px',
+                            minWidth: 'auto',
+                            padding: '0.4rem 0.6rem'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              {/* Botón agregar conexión */}
+              <Button
+                label="+ Agregar Conexión SSH"
+                icon="pi pi-plus"
+                onClick={() => setShowAddSSHDialog(true)}
+                style={{
+                  width: '100%',
+                  background: themeColors.primaryColor,
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  padding: '0.6rem'
+                }}
+              />
+            </div>
+          )}
+
           {/* Botones */}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', borderTop: `1px solid ${themeColors.borderColor}`, paddingTop: '0.75rem' }}>
             <Button label="Cancelar" icon="pi pi-times" onClick={() => setShowConfigDialog(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: `1px solid ${themeColors.borderColor}`, color: themeColors.textPrimary, borderRadius: '8px' }} />
             <Button label="Guardar" icon="pi pi-save" onClick={handleSaveConfig} style={{ flex: 1, background: themeColors.primaryColor, border: 'none', color: 'white', borderRadius: '8px' }} />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Diálogo: Agregar Conexión SSH */}
+      <Dialog
+        header="➕ Agregar Conexión SSH"
+        visible={showAddSSHDialog}
+        onHide={() => setShowAddSSHDialog(false)}
+        style={{ width: '600px', maxWidth: '95vw' }}
+        contentStyle={{ background: themeColors.cardBackground }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary, display: 'block', marginBottom: '0.3rem' }}>
+              Nombre <span style={{ color: '#f44336' }}>*</span>
+            </label>
+            <InputText
+              value={sshFormData.name}
+              onChange={(e) => setSSHFormData({ ...sshFormData, name: e.target.value })}
+              placeholder="Ej: Servidor Producción"
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary, display: 'block', marginBottom: '0.3rem' }}>
+                Host <span style={{ color: '#f44336' }}>*</span>
+              </label>
+              <InputText
+                value={sshFormData.host}
+                onChange={(e) => setSSHFormData({ ...sshFormData, host: e.target.value })}
+                placeholder="192.168.1.100 o miservidor.com"
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary, display: 'block', marginBottom: '0.3rem' }}>
+                Puerto
+              </label>
+              <InputText
+                type="number"
+                value={sshFormData.port}
+                onChange={(e) => setSSHFormData({ ...sshFormData, port: parseInt(e.target.value) || 22 })}
+                placeholder="22"
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary, display: 'block', marginBottom: '0.3rem' }}>
+              Usuario <span style={{ color: '#f44336' }}>*</span>
+            </label>
+            <InputText
+              value={sshFormData.username}
+              onChange={(e) => setSSHFormData({ ...sshFormData, username: e.target.value })}
+              placeholder="root, ubuntu, admin, etc."
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ 
+            background: 'rgba(255,255,255,0.03)', 
+            padding: '0.75rem', 
+            borderRadius: '8px',
+            border: `1px solid ${themeColors.borderColor}`
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <InputSwitch
+                checked={sshFormData.usePrivateKey}
+                onChange={(e) => setSSHFormData({ ...sshFormData, usePrivateKey: e.value })}
+              />
+              <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary }}>
+                Usar Llave Privada (en lugar de password)
+              </label>
+            </div>
+
+            {!sshFormData.usePrivateKey ? (
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary, display: 'block', marginBottom: '0.3rem' }}>
+                  Password <span style={{ color: '#f44336' }}>*</span>
+                </label>
+                <InputText
+                  type="password"
+                  value={sshFormData.password}
+                  onChange={(e) => setSSHFormData({ ...sshFormData, password: e.target.value })}
+                  placeholder="Contraseña SSH"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            ) : (
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '500', color: themeColors.textPrimary, display: 'block', marginBottom: '0.3rem' }}>
+                  Llave Privada <span style={{ color: '#f44336' }}>*</span>
+                </label>
+                <InputTextarea
+                  value={sshFormData.privateKey}
+                  onChange={(e) => setSSHFormData({ ...sshFormData, privateKey: e.target.value })}
+                  placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;..."
+                  rows={4}
+                  style={{ width: '100%', fontSize: '0.7rem', fontFamily: 'monospace' }}
+                />
+                <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.65rem', color: themeColors.textSecondary }}>
+                  💡 Puedes usar tu llave privada de ~/.ssh/id_rsa
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <Button
+              label="Cancelar"
+              icon="pi pi-times"
+              onClick={() => {
+                setShowAddSSHDialog(false);
+                setSSHFormData({
+                  id: '',
+                  name: '',
+                  host: '',
+                  port: 22,
+                  username: '',
+                  password: '',
+                  usePrivateKey: false,
+                  privateKey: ''
+                });
+              }}
+              style={{
+                flex: 1,
+                background: 'rgba(255,255,255,0.05)',
+                border: `1px solid ${themeColors.borderColor}`,
+                color: themeColors.textPrimary,
+                borderRadius: '8px'
+              }}
+            />
+            <Button
+              label="Agregar"
+              icon="pi pi-check"
+              onClick={handleAddSSHConnection}
+              style={{
+                flex: 1,
+                background: themeColors.primaryColor,
+                border: 'none',
+                color: 'white',
+                borderRadius: '8px'
+              }}
+            />
           </div>
         </div>
       </Dialog>
