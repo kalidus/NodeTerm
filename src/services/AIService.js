@@ -2574,10 +2574,19 @@ class AIService {
     try {
       // Estrategia 1: Bloques explícitos con backticks (```json...```)
       const toolCall = this._extractToolCallFromCodeBlock(response);
-      if (toolCall) return toolCall;
+      if (toolCall) {
+        console.log('🔧 [AIService] Tool call detectado en code block:', toolCall);
+        return toolCall;
+      }
       
       // Estrategia 2: JSON flexible en cualquier posición (con preámbulo/epilogo)
-      return this._extractToolCallFromJSON(response);
+      const jsonToolCall = this._extractToolCallFromJSON(response);
+      if (jsonToolCall) {
+        console.log('🔧 [AIService] Tool call detectado en JSON:', jsonToolCall);
+      } else {
+        console.warn('⚠️ [AIService] NO SE DETECTÓ tool call en la respuesta:', response.slice(0, 300));
+      }
+      return jsonToolCall;
       
     } catch (error) {
       // Error inesperado en detección
@@ -2586,6 +2595,7 @@ class AIService {
           error: error.message.substring(0, 100)
         });
       }
+      console.error('❌ [AIService] Error detectando tool call:', error.message);
       return null;
     }
   }
