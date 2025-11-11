@@ -2163,6 +2163,90 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     );
   };
 
+  // 🎨 Componente para Tool Execution Card (Estilo ChatGPT/Claude)
+  const ToolExecutionCard = ({ toolName, toolArgs, toolResult, isError = false, initialExpanded = false }) => {
+    const [expanded, setExpanded] = useState(initialExpanded);
+
+    // Determinar icono por tipo de herramienta
+    const getToolIcon = () => {
+      if (toolName.includes('filesystem') || toolName.includes('file') || toolName.includes('directory')) {
+        return '📁';
+      } else if (toolName.includes('web') || toolName.includes('search') || toolName.includes('http')) {
+        return '🌐';
+      } else if (toolName.includes('cli') || toolName.includes('command') || toolName.includes('run')) {
+        return '🖥️';
+      }
+      return '🔧';
+    };
+
+    // Limpiar nombre de herramienta (remover prefijo server__)
+    const cleanToolName = toolName.includes('__') ? toolName.split('__')[1] : toolName;
+
+    // Formatear argumentos para mostrar
+    const formatArgs = () => {
+      if (!toolArgs || Object.keys(toolArgs).length === 0) return null;
+      
+      return Object.entries(toolArgs).map(([key, value]) => {
+        // Truncar valores largos
+        let displayValue = String(value);
+        if (displayValue.length > 100) {
+          displayValue = displayValue.slice(0, 100) + '...';
+        }
+        
+        return (
+          <div key={key} className="tool-card-param">
+            <span className="tool-card-param-label">{key}:</span>
+            <span className="tool-card-param-value">{displayValue}</span>
+          </div>
+        );
+      });
+    };
+
+    return (
+      <div className="tool-execution-card">
+        <div className="tool-card-header" onClick={() => setExpanded(!expanded)}>
+          <span className="tool-card-icon">{getToolIcon()}</span>
+          <div className="tool-card-info">
+            <div className="tool-card-name">
+              {cleanToolName}
+            </div>
+            <div className="tool-card-status">
+              {isError ? (
+                <>
+                  <i className="pi pi-times-circle" style={{ color: '#f44336' }} />
+                  <span>Error</span>
+                </>
+              ) : (
+                <>
+                  <i className="pi pi-check-circle" style={{ color: '#4caf50' }} />
+                  <span>Completado</span>
+                </>
+              )}
+            </div>
+          </div>
+          <span className={`tool-card-toggle ${expanded ? 'expanded' : ''}`}>
+            ▼
+          </span>
+        </div>
+        
+        <div className={`tool-card-content ${expanded ? 'expanded' : ''}`}>
+          <div className="tool-card-body">
+            {formatArgs()}
+            
+            {toolResult && (
+              <div className={`tool-card-result ${isError ? 'error' : ''}`}>
+                <strong>{isError ? 'Error:' : 'Resultado:'}</strong>
+                <div style={{ marginTop: '0.4rem', whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
+                  {String(toolResult).slice(0, 500)}{String(toolResult).length > 500 ? '...' : ''}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
@@ -2218,211 +2302,33 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       return null;
     }
 
-    // Render especial para tool-call (card compacta)
+    // Render especial para tool-call (card compacta) - OCULTO, se muestra solo en el result
     if (isToolCall) {
-      const toolName = message.metadata?.toolName || (message.content || '').replace(/Llamando herramienta:\s*/i, '').trim();
-      return (
-        <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.6rem', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <i className="pi pi-wrench" style={{ color: '#ff9800', fontSize: '0.9rem' }} />
-            <strong style={{ color: '#fff' }}>{toolName || 'herramienta'}</strong>
-          </div>
-        </div>
-      );
+      // NO renderizar tool call separado, se mostrará integrado con el resultado
+      return null;
     }
 
-    // Render especial para resultado de tool (success card)
+    // 🎨 Render NUEVO: Tool Execution Card (Estilo ChatGPT/Claude)
     if (isToolResult || message.role === 'tool') {
-      // ✅ CRITICAL FIX: Usar toolResultText de metadatos, NO content (que es solo un resumen)
       const text = (message.metadata?.toolResultText || message.content || '').trim();
-      const isDirToken = /\[(FILE|DIR)\]/.test(text);
-      const isCodeBlock = text.includes('```') || message.metadata?.detectedLanguage;
-      const isBlock = isDirToken || text.includes('\n');
-      const isSuccess = /success|completad|hecho|ok/i.test(text) || (message.metadata?.error !== true);
-      const border = isSuccess ? 'rgba(76, 175, 80, 0.35)' : 'rgba(244, 67, 54, 0.35)';
-      const bg = isSuccess ? 'rgba(76, 175, 80, 0.10)' : 'rgba(244, 67, 54, 0.10)';
-      const icon = isSuccess ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle';
-      const iconColor = isSuccess ? '#4caf50' : '#f44336';
-      
-      // 🔧 DEBUG: Para list_directory_with_sizes
-      // 🔧 ESPECIAL: Si es run_command, renderizar como terminal/shell output
-      if (message.metadata?.toolName?.includes('run_command')) {
-        const trimmed = text.trim();
-        const isJson = (trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'));
-        
-        return (
-          <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
-            <div className={`ai-bubble assistant subtle`} style={{
-              width: '100%',
-              background: bg,
-              border: `1px solid ${border}`,
-              color: themeColors.textPrimary,
-              borderRadius: '8px',
-              padding: '0.6rem 0.8rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.45rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <i className={icon} style={{ color: iconColor, fontSize: '1rem' }} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <strong style={{ color: '#fff' }}>🖥️ {message.metadata?.toolName || 'Comando ejecutado'}</strong>
-                  {message.metadata?.toolArgs?.command && (
-                    <span style={{ fontSize: '0.75rem', opacity: 0.8, fontFamily: 'monospace' }}>
-                      <code style={{ fontSize: '0.75rem', color: '#a0a0a0' }}>{message.metadata.toolArgs.command}</code>
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              {/* Renderizar como terminal si es JSON, sino como texto */}
-              <div 
-                className="ai-md"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(isJson ? `\`\`\`json\n${text}\n\`\`\`` : `\`\`\`shell\n${text}\n\`\`\``) }}
-                style={{ 
-                  opacity: 0.95,
-                  maxHeight: '520px',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  scrollbarGutter: 'stable both-edges',
-                  width: '100%',
-                  fontFamily: 'monospace',
-                  fontSize: '0.85rem'
-                }}
-              />
-            </div>
-          </div>
-        );
-      }
-      
-      // ✅ IMPROVED: Formatear contenido con backticks si no los tiene
-      let displayText = text;
-      
-      // Si es read_text_file con lenguaje detectado, envolver con lenguaje
-      if (message.metadata?.toolName === 'read_text_file' && message.metadata?.detectedLanguage && !text.includes('```')) {
-        const lang = message.metadata.detectedLanguage;
-        displayText = `\`\`\`${lang}\n${text}\n\`\`\``;
-      }
-      // Si es list_directory y NO tiene backticks, envolver
-      else if ((message.metadata?.toolName === 'list_directory' || message.metadata?.toolName === 'list_directory_with_sizes' || message.metadata?.toolName === 'directory_tree') && !text.includes('```')) {
-        displayText = `\`\`\`\n${text}\n\`\`\``;
-      }
-      // Si tiene [FILE] o [DIR] pero no backticks, envolver
-      else if ((text.includes('[FILE]') || text.includes('[DIR]')) && !text.includes('```')) {
-        displayText = `\`\`\`\n${text}\n\`\`\``;
-      }
-      
+      const toolName = message.metadata?.toolName || 'tool';
+      const toolArgs = message.metadata?.toolArgs || {};
+      const isError = message.metadata?.error === true;
+
       return (
         <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
-          <div className={`ai-bubble assistant subtle`} style={{
-            width: '100%',
-            background: bg,
-            border: `1px solid ${border}`,
-            color: themeColors.textPrimary,
-            borderRadius: '8px',
-            padding: '0.6rem 0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.45rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <i className={icon} style={{ color: iconColor, fontSize: '1rem' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <strong style={{ color: '#fff' }}>{message.metadata?.toolName || (isSuccess ? 'Acción completada' : 'Acción ejecutada')}</strong>
-                {message.metadata?.filePath && (
-                  <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                    <i className="pi pi-file" style={{ fontSize: '0.75rem', marginRight: '4px' }} />
-                    <code style={{ fontSize: '0.75rem' }}>{message.metadata.filePath}</code>
-                  </span>
-                )}
-                {message.metadata?.toolArgs?.path && !message.metadata?.filePath && (
-                  <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                    <i className="pi pi-folder" style={{ fontSize: '0.75rem', marginRight: '4px' }} />
-                    <code style={{ fontSize: '0.75rem' }}>{message.metadata.toolArgs.path}</code>
-                  </span>
-                )}
-              </div>
-            </div>
-            {isDirToken ? (
-              // ✅ IMPROVED: Listado de directorios formateado bonito (con o sin tamaños)
-              (() => {
-                // Parsear líneas y separarlas en directorios y archivos
-                const lines = text.split(/\r?\n/).filter(l => l.trim());
-                const items = lines.map(line => {
-                  // Regex: captura [FILE/DIR] y todo lo demás
-                  const typeMatch = line.match(/^\[(FILE|DIR)\]\s+(.+)$/i);
-                  if (!typeMatch) return null;
-                  
-                  const type = typeMatch[1].toUpperCase();
-                  let content = typeMatch[2];
-                  
-                  // ✅ IMPROVED: Extraer el tamaño del FINAL del contenido
-                  // El tamaño está siempre al final: "123 KB", "0 B", "1.5 MB", etc.
-                  const sizeRegex = /\s+([\d.]+\s*[KMGT]?i?B)\s*$/i;
-                  const sizeMatch = content.match(sizeRegex);
-                  
-                  let name = content;
-                  let size = null;
-                  
-                  if (sizeMatch) {
-                    // Tamaño encontrado al final
-                    size = sizeMatch[1].trim();
-                    // Nombre es todo excepto el tamaño al final
-                    name = content.substring(0, sizeMatch.index).trim();
-                  }
-                  
-                  return { type, name, size };
-                }).filter(Boolean);
-
-                // Separar directorios de archivos
-                const dirs = items.filter(i => i.type === 'DIR').sort((a, b) => a.name.localeCompare(b.name));
-                const files = items.filter(i => i.type === 'FILE').sort((a, b) => a.name.localeCompare(b.name));
-
-                return (
-                  <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                    {dirs.length > 0 && (
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        {dirs.map((item, i) => (
-                          <div key={`dir-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#9bd3ff' }}>
-                            <span>📁</span>
-                            <span>{item.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {files.length > 0 && (
-                      <div>
-                        {files.map((item, i) => (
-                          <div key={`file-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e0e0e0' }}>
-                            <span>📄</span>
-                            <span style={{ flex: 1 }}>{item.name}</span>
-                            {item.size && <span style={{ marginLeft: 'auto', textAlign: 'right', color: '#a0a0a0', fontSize: '0.8rem' }}>{item.size}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()
-            ) : (
-              // ✅ IMPROVED: Renderizar con soporte para bloques de código (sin truncar)
-              <div 
-                className="ai-md"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(displayText) }}
-                style={{ 
-                  opacity: isBlock ? 0.95 : 0.9,
-                  maxHeight: isCodeBlock ? 'none' : (isBlock ? '520px' : 'auto'),
-                  overflowY: isCodeBlock ? 'visible' : (isBlock ? 'auto' : 'visible'),
-                  overflowX: 'hidden',
-                  scrollbarGutter: isBlock ? 'stable both-edges' : undefined,
-                  width: '100%'
-                }}
-              />
-            )}
-          </div>
+          <ToolExecutionCard
+            toolName={toolName}
+            toolArgs={toolArgs}
+            toolResult={text}
+            isError={isError}
+            initialExpanded={false}
+          />
         </div>
       );
     }
+
+    // ✨ Renderizado normal de mensajes (usuario/asistente/system)
 
     return (
       <div
