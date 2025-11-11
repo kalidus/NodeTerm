@@ -819,14 +819,35 @@ class MCPService {
     let merged;
 
     if (existing.type === 'native') {
-      merged = {
-        ...existing,
-        ...newConfig,
-        mode: newConfig.mode || existing.mode || 'scraping',
-        renderMode: newConfig.renderMode || existing.renderMode || 'static',
-        options: { ...(existing.options || {}), ...(newConfig.options || {}) },
-        allowedDomains: Array.isArray(newConfig.allowedDomains) ? newConfig.allowedDomains : (existing.allowedDomains || [])
-      };
+      // 🔧 Lógica específica para ssh-terminal
+      if (serverId === 'ssh-terminal') {
+        merged = {
+          ...existing,
+          ...newConfig,
+          enabled: newConfig.enabled !== undefined ? newConfig.enabled : existing.enabled,
+          autostart: newConfig.autostart !== undefined ? newConfig.autostart : existing.autostart,
+          options: {
+            preferredTerminal: newConfig.options?.preferredTerminal || existing.options?.preferredTerminal || 'wsl',
+            allowedDir: newConfig.options?.allowedDir || existing.options?.allowedDir || '',
+            allowedCommands: newConfig.options?.allowedCommands || existing.options?.allowedCommands || 'all',
+            commandTimeout: newConfig.options?.commandTimeout || existing.options?.commandTimeout || 30,
+            sshConnections: Array.isArray(newConfig.options?.sshConnections) 
+              ? newConfig.options.sshConnections 
+              : (existing.options?.sshConnections || [])
+          }
+        };
+      } 
+      // 🔧 Lógica específica para web-search-native
+      else {
+        merged = {
+          ...existing,
+          ...newConfig,
+          mode: newConfig.mode || existing.mode || 'scraping',
+          renderMode: newConfig.renderMode || existing.renderMode || 'static',
+          options: { ...(existing.options || {}), ...(newConfig.options || {}) },
+          allowedDomains: Array.isArray(newConfig.allowedDomains) ? newConfig.allowedDomains : (existing.allowedDomains || [])
+        };
+      }
     } else {
       merged = {
         ...existing,
@@ -835,6 +856,8 @@ class MCPService {
         env: { ...(existing.env || {}), ...(newConfig.env || {}) }
       };
     }
+    
+    console.log(`💾 [MCP] Guardando configuración para ${serverId}:`, JSON.stringify(merged, null, 2));
     this.mcpConfig.mcpServers[serverId] = merged;
     await this.saveConfig();
 

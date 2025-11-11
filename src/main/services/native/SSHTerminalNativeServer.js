@@ -77,6 +77,46 @@ class SSHTerminalNativeServer {
   }
 
   /**
+   * 🤖 Detectar tipo de comando (linux vs windows)
+   * Esto permite auto-seleccionar el terminal apropiado
+   */
+  detectCommandType(command) {
+    const baseCommand = command.trim().split(/\s+/)[0].toLowerCase();
+    
+    // Comandos típicos de Linux/Unix
+    const linuxCommands = [
+      'ls', 'cd', 'pwd', 'cat', 'grep', 'awk', 'sed', 'find', 'which',
+      'echo', 'touch', 'mkdir', 'rm', 'cp', 'mv', 'chmod', 'chown',
+      'ps', 'kill', 'top', 'df', 'du', 'tar', 'gzip', 'gunzip',
+      'curl', 'wget', 'ssh', 'scp', 'rsync', 'git', 'npm', 'node',
+      'python', 'python3', 'pip', 'apt', 'apt-get', 'yum', 'dnf',
+      'systemctl', 'service', 'docker', 'kubectl', 'vim', 'nano',
+      'tail', 'head', 'less', 'more', 'sort', 'uniq', 'wc', 'diff',
+      'bash', 'sh', 'zsh', 'make', 'gcc', 'g++', 'java', 'javac'
+    ];
+    
+    // Comandos típicos de PowerShell/Windows
+    const windowsCommands = [
+      'get-', 'set-', 'new-', 'remove-', 'start-', 'stop-', 'test-',
+      'dir', 'copy', 'move', 'del', 'type', 'cls', 'ipconfig',
+      'netstat', 'tasklist', 'taskkill', 'reg', 'sc'
+    ];
+    
+    // Verificar si es comando Linux
+    if (linuxCommands.includes(baseCommand)) {
+      return 'linux';
+    }
+    
+    // Verificar si es comando Windows/PowerShell
+    if (windowsCommands.some(win => baseCommand.startsWith(win))) {
+      return 'windows';
+    }
+    
+    // Por defecto, asumir Linux (ya que la mayoría de comandos dev son Linux)
+    return 'linux';
+  }
+
+  /**
    * Validar que la ruta esté dentro del directorio permitido
    */
   isPathAllowed(commandPath) {
@@ -148,23 +188,17 @@ class SSHTerminalNativeServer {
       tools: [
         {
           name: 'execute_local',
-          description: 'Ejecuta un comando en el terminal local (WSL, Cygwin o PowerShell). Respeta las políticas de seguridad configuradas.',
+          description: 'Ejecuta comandos en la terminal local. Comandos Linux (ls, cat, pwd) se ejecutan en WSL/Ubuntu. Comandos Windows (Get-Process, dir) se ejecutan en PowerShell. La detección es automática.',
           inputSchema: {
             type: 'object',
             properties: {
               command: {
                 type: 'string',
-                description: 'Comando a ejecutar (ej: "ls -la", "dir", "cat file.txt")'
-              },
-              terminal: {
-                type: 'string',
-                enum: ['wsl', 'cygwin', 'powershell', 'auto'],
-                default: 'auto',
-                description: 'Terminal a usar. "auto" usa el preferido configurado.'
+                description: 'Comando a ejecutar (ej: "ls -la" o "Get-Process")'
               },
               workingDir: {
                 type: 'string',
-                description: 'Directorio de trabajo (opcional, debe estar en ALLOWED_DIR)'
+                description: 'Directorio de trabajo opcional'
               }
             },
             required: ['command']
@@ -172,17 +206,17 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'execute_ssh',
-          description: 'Ejecuta un comando en un servidor remoto por SSH. Usa el pool de conexiones para eficiencia.',
+          description: 'Ejecuta un comando en un servidor remoto por SSH. Primero usa list_ssh_hosts para ver servidores disponibles.',
           inputSchema: {
             type: 'object',
             properties: {
               hostId: {
                 type: 'string',
-                description: 'ID del host SSH configurado (usar list_ssh_hosts para ver disponibles)'
+                description: 'ID del servidor SSH (ejemplo: "server1")'
               },
               command: {
                 type: 'string',
-                description: 'Comando a ejecutar en el servidor remoto'
+                description: 'Comando Linux a ejecutar (ej: "ls -la")'
               }
             },
             required: ['hostId', 'command']
@@ -190,7 +224,7 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'list_terminals',
-          description: 'Lista los terminales locales disponibles en el sistema.',
+          description: 'Lista las terminales locales disponibles: distribuciones WSL (Ubuntu, Kali, etc.), Cygwin, PowerShell. Usa esto para responder qué sistemas operativos están instalados.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -199,7 +233,7 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'list_ssh_hosts',
-          description: 'Lista los hosts SSH configurados y disponibles para conexión.',
+          description: 'Lista los servidores SSH configurados con su nombre, host, usuario y estado. Usa esto antes de execute_ssh.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -222,7 +256,7 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'show_security_rules',
-          description: 'Muestra las reglas de seguridad activas (comandos permitidos, directorio base, etc.)',
+          description: 'Muestra qué comandos están permitidos y en qué directorios se pueden ejecutar.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -296,7 +330,7 @@ class SSHTerminalNativeServer {
    * TOOL: execute_local - Ejecutar comando local
    */
   async executeLocal(args) {
-    const { command, terminal = 'auto', workingDir } = args;
+    const { command, workingDir } = args;
     
     // Validación de seguridad
     if (!this.isCommandAllowed(command)) {
@@ -307,41 +341,122 @@ class SSHTerminalNativeServer {
       throw new Error(`❌ Directorio no permitido: "${workingDir}". Debe estar en: ${this.allowedDir}`);
     }
     
-    // Normalizar el terminal: remover "local:" si existe, convertir a minúsculas
-    let normalizedTerminal = terminal;
-    if (typeof normalizedTerminal === 'string') {
-      // Remover prefijo "local:" si existe
-      normalizedTerminal = normalizedTerminal.replace(/^local:/i, '');
-      // Convertir a minúsculas
-      normalizedTerminal = normalizedTerminal.toLowerCase().trim();
+    // 🤖 AUTO-DETECCIÓN SIEMPRE ACTIVA
+    // El terminal se selecciona automáticamente basado en el tipo de comando
+    let targetTerminal;
+    {
+      // Detectar tipo de comando
+      const commandType = this.detectCommandType(command);
+      
+      // Obtener distribuciones WSL disponibles
+      const wslDistros = await this.detectWSLDistros();
+      const wslDistroIds = wslDistros.map(d => d.id);
+      const hasCygwin = require('fs').existsSync('C:\\cygwin64\\bin\\bash.exe');
+      
+      if (commandType === 'linux') {
+        // 🎯 PRIORIDAD CORRECTA: WSL primero, luego Cygwin
+        // 1. Verificar si preferredTerminal está disponible y NO es powershell
+        if (this.preferredTerminal && this.preferredTerminal !== 'powershell') {
+          // Validar que el preferredTerminal esté realmente disponible
+          if (this.preferredTerminal === 'wsl' && wslDistros.length > 0) {
+            targetTerminal = 'wsl';
+          } else if (wslDistroIds.includes(this.preferredTerminal)) {
+            targetTerminal = this.preferredTerminal;
+          } else if (this.preferredTerminal === 'cygwin' && hasCygwin) {
+            targetTerminal = 'cygwin';
+          } else {
+            // preferredTerminal no disponible, hacer fallback
+            console.warn(`⚠️ [Auto-detección] Terminal preferido "${this.preferredTerminal}" no disponible, usando fallback`);
+            if (wslDistroIds.includes('ubuntu')) {
+              targetTerminal = 'ubuntu';
+            } else if (wslDistroIds.length > 0) {
+              targetTerminal = wslDistroIds[0];
+            } else if (hasCygwin) {
+              targetTerminal = 'cygwin';
+            } else {
+              throw new Error(`❌ No hay terminales Linux disponibles. Terminal preferido "${this.preferredTerminal}" no está instalado.`);
+            }
+          }
+        }
+        // 2. Si no hay preferredTerminal válido, usar Ubuntu si está disponible
+        else if (wslDistroIds.includes('ubuntu')) {
+          targetTerminal = 'ubuntu';
+        }
+        // 3. Si no hay Ubuntu, usar primera distribución WSL disponible
+        else if (wslDistroIds.length > 0) {
+          targetTerminal = wslDistroIds[0];
+        }
+        // 4. Si no hay WSL, intentar Cygwin
+        else if (hasCygwin) {
+          targetTerminal = 'cygwin';
+        }
+        // 5. Error: no hay terminales Linux
+        else {
+          throw new Error(`❌ No hay terminales Linux disponibles. Comando "${command}" requiere Linux/WSL/Cygwin. Instala WSL o Cygwin.`);
+        }
+      } else {
+        // Para comandos Windows, usar PowerShell
+        targetTerminal = 'powershell';
+      }
+      
+      console.log(`🤖 [Auto-detección] Comando "${command}" detectado como ${commandType} → usando ${targetTerminal}`);
     }
-    
-    // Determinar terminal a usar
-    const targetTerminal = normalizedTerminal === 'auto' ? this.preferredTerminal : normalizedTerminal;
     
     // Ejecutar según el terminal
     let result;
-    switch (targetTerminal) {
-      case 'wsl':
-        result = await this.executeInWSL(command, workingDir);
-        break;
-      case 'cygwin':
-        result = await this.executeInCygwin(command, workingDir);
-        break;
-      case 'powershell':
-        result = await this.executeInPowerShell(command, workingDir);
-        break;
-      default:
-        throw new Error(`❌ Terminal desconocido: "${targetTerminal}". Usa: wsl, cygwin o powershell`);
+    let terminalLabel = targetTerminal;
+    
+    // Detectar distribuciones WSL disponibles
+    const wslDistros = await this.detectWSLDistros();
+    const wslDistroIds = wslDistros.map(d => d.id);
+    
+    // 🔧 Construir label descriptivo para el resultado
+    let displayLabel = terminalLabel;
+    
+    // Verificar disponibilidad del terminal ANTES de ejecutar
+    if (targetTerminal === 'cygwin') {
+      const fs = require('fs');
+      if (!fs.existsSync('C:\\cygwin64\\bin\\bash.exe')) {
+        throw new Error(`❌ Cygwin no está instalado en C:\\cygwin64. Terminales disponibles: wsl, ${wslDistroIds.join(', ')}, powershell`);
+      }
     }
     
-    return this.formatCommandResult(result, `local:${targetTerminal}`);
+    if (targetTerminal === 'wsl' || wslDistroIds.includes(targetTerminal)) {
+      // Es WSL o una distribución específica
+      if (wslDistros.length === 0 && targetTerminal === 'wsl') {
+        throw new Error(`❌ WSL no está disponible. Instala WSL o usa: cygwin, powershell`);
+      }
+      
+      const distroName = targetTerminal === 'wsl' ? null : wslDistros.find(d => d.id === targetTerminal)?.name;
+      
+      if (targetTerminal !== 'wsl' && !distroName) {
+        throw new Error(`❌ Distribución "${targetTerminal}" no encontrada. Distribuciones disponibles: ${wslDistroIds.join(', ')}`);
+      }
+      
+      result = await this.executeInWSL(command, workingDir, distroName);
+      displayLabel = distroName ? `wsl:${distroName}` : 'wsl';
+    } else if (targetTerminal === 'cygwin') {
+      result = await this.executeInCygwin(command, workingDir);
+      displayLabel = 'cygwin';
+    } else if (targetTerminal === 'powershell') {
+      result = await this.executeInPowerShell(command, workingDir);
+      displayLabel = 'powershell';
+    } else {
+      // Terminal desconocido - mostrar opciones disponibles
+      const availableTerminals = ['wsl', ...wslDistroIds, 'cygwin', 'powershell'];
+      throw new Error(`❌ Terminal desconocido: "${targetTerminal}". Terminales disponibles: ${availableTerminals.join(', ')}`);
+    }
+    
+    return this.formatCommandResult(result, `local:${displayLabel}`);
   }
 
   /**
    * Ejecutar comando en WSL
+   * @param {string} command - Comando a ejecutar
+   * @param {string} workingDir - Directorio de trabajo (opcional)
+   * @param {string} distroName - Nombre de la distribución específica (opcional, ej: "Ubuntu", "kali-linux")
    */
-  async executeInWSL(command, workingDir) {
+  async executeInWSL(command, workingDir, distroName = null) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         process.kill();
@@ -357,7 +472,18 @@ class SSHTerminalNativeServer {
         wslCommand = `cd "${wslPath}" && ${command}`;
       }
       
-      const process = spawn('wsl', ['-e', 'bash', '-c', wslCommand], {
+      // Construir argumentos para WSL
+      const wslArgs = [];
+      
+      // Si se especifica una distribución, usar -d
+      if (distroName) {
+        wslArgs.push('-d', distroName);
+      }
+      
+      // Agregar comando
+      wslArgs.push('-e', 'bash', '-c', wslCommand);
+      
+      const process = spawn('wsl', wslArgs, {
         shell: false,
         windowsHide: true
       });
@@ -380,7 +506,7 @@ class SSHTerminalNativeServer {
       
       process.on('error', (err) => {
         clearTimeout(timeout);
-        reject(new Error(`Error ejecutando WSL: ${err.message}`));
+        reject(new Error(`Error ejecutando WSL${distroName ? ` (${distroName})` : ''}: ${err.message}`));
       });
     });
   }
@@ -489,8 +615,11 @@ class SSHTerminalNativeServer {
   async executeSSH(args) {
     const { hostId, command } = args;
     
-    // Buscar configuración del host
-    const hostConfig = this.sshConnections.find(h => h.id === hostId);
+    // 🔗 Buscar configuración del host (MCP + NodeTerm)
+    const nodetermConnections = await this.loadNodeTermSSHConnections();
+    const allConnections = [...this.sshConnections, ...nodetermConnections];
+    
+    const hostConfig = allConnections.find(h => h.id === hostId);
     if (!hostConfig) {
       throw new Error(`❌ Host SSH no configurado: "${hostId}". Usa list_ssh_hosts para ver hosts disponibles.`);
     }
@@ -552,26 +681,80 @@ class SSHTerminalNativeServer {
   }
 
   /**
+   * Detectar distribuciones WSL instaladas
+   */
+  async detectWSLDistros() {
+    const distros = [];
+    try {
+      const { execSync } = require('child_process');
+      // Ejecutar wsl --list --quiet para obtener lista de distribuciones
+      const output = execSync('wsl --list --quiet', { 
+        timeout: 3000, 
+        windowsHide: true,
+        encoding: 'utf16le' // WSL devuelve UTF-16LE
+      }).toString();
+      
+      // Parsear las líneas (cada línea es una distribución)
+      const lines = output.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => line.replace(/\0/g, '')); // Remover null bytes
+      
+      for (const distroName of lines) {
+        if (distroName) {
+          // Normalizar nombre para ID (minúsculas, sin espacios)
+          const distroId = distroName.toLowerCase().replace(/\s+/g, '-');
+          distros.push({
+            id: distroId,
+            name: distroName,
+            fullName: `WSL (${distroName})`,
+            type: 'wsl-distro'
+          });
+        }
+      }
+    } catch (e) {
+      console.log('[SSH Terminal MCP] No se pudo detectar distribuciones WSL:', e.message);
+    }
+    return distros;
+  }
+
+  /**
    * TOOL: list_terminals - Listar terminales disponibles
    */
   async listTerminals() {
     const terminals = [];
     
-    // Detectar WSL
-    try {
-      const { execSync } = require('child_process');
-      execSync('wsl --list', { timeout: 2000, windowsHide: true });
+    // Detectar distribuciones WSL específicas
+    const wslDistros = await this.detectWSLDistros();
+    if (wslDistros.length > 0) {
+      // Agregar cada distribución como terminal separado
+      for (const distro of wslDistros) {
+        terminals.push({
+          id: distro.id,
+          name: distro.fullName,
+          available: true,
+          type: 'wsl',
+          distro: distro.name,
+          preferred: this.preferredTerminal === distro.id
+        });
+      }
+      
+      // Agregar WSL genérico también (usa la distribución por defecto)
       terminals.push({
         id: 'wsl',
-        name: 'WSL (Windows Subsystem for Linux)',
+        name: 'WSL (distribución por defecto)',
         available: true,
-        preferred: this.preferredTerminal === 'wsl'
+        type: 'wsl',
+        preferred: this.preferredTerminal === 'wsl',
+        note: 'Usa la distribución configurada como default en WSL'
       });
-    } catch (e) {
+    } else {
+      // WSL no disponible
       terminals.push({
         id: 'wsl',
         name: 'WSL (Windows Subsystem for Linux)',
         available: false,
+        type: 'wsl',
         reason: 'No instalado o no disponible'
       });
     }
@@ -583,6 +766,7 @@ class SSHTerminalNativeServer {
       id: 'cygwin',
       name: 'Cygwin',
       available: cygwinAvailable,
+      type: 'cygwin',
       preferred: this.preferredTerminal === 'cygwin',
       ...(!cygwinAvailable && { reason: 'No instalado en C:\\cygwin64' })
     });
@@ -592,13 +776,18 @@ class SSHTerminalNativeServer {
       id: 'powershell',
       name: 'PowerShell',
       available: true,
+      type: 'powershell',
       preferred: this.preferredTerminal === 'powershell'
     });
+    
+    const availableCount = terminals.filter(t => t.available).length;
     
     return {
       terminals,
       preferredTerminal: this.preferredTerminal,
-      summary: `${terminals.filter(t => t.available).length}/${terminals.length} terminales disponibles`
+      wslDistributions: wslDistros.length,
+      summary: `${availableCount} terminales disponibles`,
+      availableTerminals: terminals.filter(t => t.available).map(t => t.id)
     };
   }
 
@@ -606,24 +795,34 @@ class SSHTerminalNativeServer {
    * TOOL: list_ssh_hosts - Listar hosts SSH configurados
    */
   async listSSHHosts() {
-    if (this.sshConnections.length === 0) {
+    // 🔗 Integrar conexiones de NodeTerm automáticamente
+    const nodetermConnections = await this.loadNodeTermSSHConnections();
+    const allConnections = [...this.sshConnections, ...nodetermConnections];
+    
+    if (allConnections.length === 0) {
       return {
         hosts: [],
-        message: 'No hay hosts SSH configurados. Agrégalos en la configuración del MCP.'
+        message: '📡 No hay hosts SSH configurados.\n\n' +
+                 '**Opciones:**\n' +
+                 '1. ✅ Agrega conexiones en NodeTerm (Sidebar → SSH)\n' +
+                 '2. ⚙️ Configura en MCP: Configuración → MCP Tools → SSH/Terminal\n\n' +
+                 '💡 Las conexiones de NodeTerm se detectan automáticamente!'
       };
     }
     
-    const hosts = this.sshConnections.map(host => {
+    const hosts = allConnections.map(host => {
       const poolEntry = this.sshPool.get(host.id);
       const isConnected = poolEntry && poolEntry.isConnected && poolEntry.isConnected();
+      const source = host._source === 'nodeterm' ? '🔗 NodeTerm' : '⚙️ MCP';
       
       return {
         id: host.id,
-        name: host.name,
+        name: `${host.name} [${source}]`,
         host: host.host,
         port: host.port || 22,
         username: host.username,
         status: isConnected ? 'connected' : 'disconnected',
+        source: host._source || 'mcp',
         ...(isConnected && {
           connectedSince: new Date(poolEntry._createdAt).toISOString(),
           lastUsed: new Date(poolEntry._lastUsed).toISOString()
@@ -634,8 +833,59 @@ class SSHTerminalNativeServer {
     return {
       hosts,
       totalConfigured: hosts.length,
-      activeConnections: hosts.filter(h => h.status === 'connected').length
+      activeConnections: hosts.filter(h => h.status === 'connected').length,
+      nodetermConnections: nodetermConnections.length,
+      message: `✅ Detectadas ${nodetermConnections.length} conexiones de NodeTerm automáticamente`
     };
+  }
+
+  /**
+   * 🔗 Cargar conexiones SSH desde NodeTerm
+   * Lee el archivo mcp-config.json o usa el parámetro global si está disponible
+   */
+  async loadNodeTermSSHConnections() {
+    try {
+      const { app } = require('electron');
+      const fs = require('fs').promises;
+      const path = require('path');
+      
+      // Intentar leer archivo de configuración de NodeTerm
+      const userDataPath = app.getPath('userData');
+      const nodetermConfigPath = path.join(userDataPath, 'nodeterm-ssh-connections.json');
+      
+      // Verificar si existe el archivo
+      const exists = await fs.access(nodetermConfigPath).then(() => true).catch(() => false);
+      
+      if (!exists) {
+        // Si no existe, intentar leer desde localStorage vía IPC (si estamos en el contexto correcto)
+        // Por ahora, retornar vacío
+        return [];
+      }
+      
+      const configData = await fs.readFile(nodetermConfigPath, 'utf8');
+      const connections = JSON.parse(configData);
+      
+      // Filtrar solo conexiones SSH válidas
+      const sshConnections = connections
+        .filter(conn => conn.type === 'ssh' && conn.host && conn.username)
+        .map(conn => ({
+          id: conn.id || `nodeterm_${conn.host}_${conn.username}`,
+          name: conn.name || `${conn.username}@${conn.host}`,
+          host: conn.host,
+          port: conn.port || 22,
+          username: conn.username,
+          password: conn.password || '',
+          _source: 'nodeterm'
+        }));
+      
+      console.log(`🔗 [SSH Terminal MCP] Cargadas ${sshConnections.length} conexiones SSH de NodeTerm`);
+      return sshConnections;
+      
+    } catch (error) {
+      // No es crítico, simplemente no hay conexiones de NodeTerm
+      console.log(`ℹ️ [SSH Terminal MCP] No se cargaron conexiones de NodeTerm:`, error.message);
+      return [];
+    }
   }
 
   /**
@@ -722,13 +972,19 @@ class SSHTerminalNativeServer {
   formatCommandResult(result, source) {
     const { stdout, stderr, exitCode } = result;
     
-    let formatted = `🖥️ Comando ejecutado en: ${source}\n`;
-    formatted += `📊 Exit Code: ${exitCode}\n\n`;
+    // 🔧 Combinar stdout + stderr (muchos comandos usan stderr para output informativo)
+    const combinedOutput = (stdout.trim() + '\n' + stderr.trim()).trim();
+    
+    let formatted = '';
     
     if (exitCode === 0) {
-      formatted += `✅ Resultado:\n${stdout.trim() || '(sin output)'}`;
+      // ✅ Éxito - mostrar solo resultado sin Exit Code
+      formatted += `✅ Ejecutado en ${source}\n\n`;
+      formatted += combinedOutput || '✓ Comando completado sin output';
     } else {
-      formatted += `❌ Error:\n${stderr.trim() || stdout.trim() || '(sin información de error)'}`;
+      // ❌ Error - mostrar Exit Code y error
+      formatted += `❌ Error en ${source} (Exit Code: ${exitCode})\n\n`;
+      formatted += combinedOutput || '(sin información de error)';
     }
     
     return formatted;

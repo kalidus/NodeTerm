@@ -2336,8 +2336,8 @@ class AIService {
 
     let out = '';
     out += 'HERRAMIENTAS DISPONIBLES:\n\n';
-    out += 'Formato: {"tool":"<server>__<name>","arguments":{...}}\n';
-    out += 'Reglas: leer→read_file, listar→list_directory, crear→write_file, editar→edit_file (NO write_file para editar)\n\n';
+    out += 'Formato JSON: {"tool":"<server>__<name>","arguments":{...}}\n';
+    out += 'Usa estas herramientas cuando el usuario pida ejecutar comandos, listar archivos, o trabajar con servidores.\n\n';
 
     const serverIds = Object.keys(serverIdToTools).sort();
     serverIds.forEach((serverId, sidx) => {
@@ -2381,14 +2381,15 @@ class AIService {
         const required = schema.required || [];
         const keys = Object.keys(properties);
 
-        // Formato compacto: nombre(params) - descripción
+        // Formato compacto: nombre(params) - descripción COMPLETA (sin truncar)
         const reqParams = keys.filter(k => required.includes(k));
         const optParams = keys.filter(k => !required.includes(k));
         const paramsList = [...reqParams, ...optParams.map(p => `${p}?`)];
         
         out += `${tool.name}(${paramsList.join(',')})`;
         if (tool.description) {
-          out += ` - ${tool.description.slice(0, 60)}${tool.description.length > 60 ? '...' : ''}`;
+          // ✅ Mostrar descripción completa (era 60 caracteres, muy corto)
+          out += ` - ${tool.description}`;
         }
         out += '\n';
 

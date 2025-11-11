@@ -326,17 +326,34 @@ const MCPManagerTab = ({ themeColors }) => {
 
     if (isNative) {
       const nativeOptions = server.config?.options || {};
-      const api = nativeOptions.api || {};
-      configValues.mode = server.config?.mode || 'scraping';
-      configValues.renderMode = server.config?.renderMode || 'static';
-      configValues.maxResults = nativeOptions.maxResults !== undefined ? String(nativeOptions.maxResults) : '';
-      configValues.timeoutMs = nativeOptions.timeoutMs !== undefined ? String(nativeOptions.timeoutMs) : '';
-      configValues.maxContentLength = nativeOptions.maxContentLength !== undefined ? String(nativeOptions.maxContentLength) : '';
-      configValues.userAgent = nativeOptions.userAgent || '';
-      configValues.allowedDomains = (server.config?.allowedDomains || []).join(', ');
-      configValues.apiEndpoint = api.endpoint || '';
-      configValues.apiKey = api.key || '';
-      configValues.apiProvider = api.provider || '';
+      
+      // Manejar según el tipo de MCP nativo
+      if (server.id === 'web-search-native') {
+        // Web Search Native
+        const api = nativeOptions.api || {};
+        configValues.mode = server.config?.mode || 'scraping';
+        configValues.renderMode = server.config?.renderMode || 'static';
+        configValues.maxResults = nativeOptions.maxResults !== undefined ? String(nativeOptions.maxResults) : '';
+        configValues.timeoutMs = nativeOptions.timeoutMs !== undefined ? String(nativeOptions.timeoutMs) : '';
+        configValues.maxContentLength = nativeOptions.maxContentLength !== undefined ? String(nativeOptions.maxContentLength) : '';
+        configValues.userAgent = nativeOptions.userAgent || '';
+        configValues.allowedDomains = (server.config?.allowedDomains || []).join(', ');
+        configValues.apiEndpoint = api.endpoint || '';
+        configValues.apiKey = api.key || '';
+        configValues.apiProvider = api.provider || '';
+      } else if (server.id === 'ssh-terminal') {
+        // SSH/Terminal
+        configValues.preferredTerminal = nativeOptions.preferredTerminal || 'wsl';
+        configValues.allowedDir = nativeOptions.allowedDir || '';
+        configValues.allowedCommands = nativeOptions.allowedCommands || 'all';
+        configValues.commandTimeout = nativeOptions.commandTimeout || '30';
+        configValues.sshConnections = nativeOptions.sshConnections || [];
+        
+        console.log('[MCP Manager] Cargando configuración SSH/Terminal:', configValues);
+      } else {
+        // MCP nativo genérico - copiar todas las opciones
+        Object.assign(configValues, nativeOptions);
+      }
     } else if (mcp?.configSchema) {
       for (const [key, schema] of Object.entries(mcp.configSchema)) {
         if (schema.envName && server.config?.env?.[schema.envName]) {
@@ -422,37 +439,66 @@ const MCPManagerTab = ({ themeColors }) => {
 
     if (isNative) {
       const configValues = editingConfig.configValues || {};
-      const mode = (configValues.mode || 'scraping').toLowerCase() === 'api' ? 'api' : 'scraping';
-      const renderMode = (configValues.renderMode || 'static').toLowerCase() === 'rendered' ? 'rendered' : 'static';
-      const parseNumber = (value, fallback) => {
-        const num = Number(value);
-        return Number.isFinite(num) && num > 0 ? num : fallback;
-      };
+      
+      // Manejar según el tipo de MCP nativo
+      if (selectedServer.id === 'web-search-native') {
+        // Web Search Native - configuración específica
+        const mode = (configValues.mode || 'scraping').toLowerCase() === 'api' ? 'api' : 'scraping';
+        const renderMode = (configValues.renderMode || 'static').toLowerCase() === 'rendered' ? 'rendered' : 'static';
+        const parseNumber = (value, fallback) => {
+          const num = Number(value);
+          return Number.isFinite(num) && num > 0 ? num : fallback;
+        };
 
-      const allowedDomains = (configValues.allowedDomains || '')
-        .split(',')
-        .map(domain => domain.trim())
-        .filter(Boolean);
+        const allowedDomains = (configValues.allowedDomains || '')
+          .split(',')
+          .map(domain => domain.trim())
+          .filter(Boolean);
 
-      payload = {
-        type: 'native',
-        enabled: !!editingConfig.enabled,
-        autostart: !!editingConfig.autostart,
-        renderMode,
-        mode,
-        allowedDomains,
-        options: {
-          maxResults: parseNumber(configValues.maxResults, 5),
-          timeoutMs: parseNumber(configValues.timeoutMs, 5000),
-          maxContentLength: parseNumber(configValues.maxContentLength, 200000),
-          userAgent: configValues.userAgent || undefined,
-          api: {
-            endpoint: configValues.apiEndpoint || '',
-            key: configValues.apiKey || '',
-            provider: configValues.apiProvider || ''
+        payload = {
+          type: 'native',
+          enabled: !!editingConfig.enabled,
+          autostart: !!editingConfig.autostart,
+          renderMode,
+          mode,
+          allowedDomains,
+          options: {
+            maxResults: parseNumber(configValues.maxResults, 5),
+            timeoutMs: parseNumber(configValues.timeoutMs, 5000),
+            maxContentLength: parseNumber(configValues.maxContentLength, 200000),
+            userAgent: configValues.userAgent || undefined,
+            api: {
+              endpoint: configValues.apiEndpoint || '',
+              key: configValues.apiKey || '',
+              provider: configValues.apiProvider || ''
+            }
           }
-        }
-      };
+        };
+      } else if (selectedServer.id === 'ssh-terminal') {
+        // SSH/Terminal - configuración específica
+        payload = {
+          type: 'native',
+          enabled: !!editingConfig.enabled,
+          autostart: !!editingConfig.autostart,
+          options: {
+            preferredTerminal: configValues.preferredTerminal || 'wsl',
+            allowedDir: configValues.allowedDir || '',
+            allowedCommands: configValues.allowedCommands || 'all',
+            commandTimeout: configValues.commandTimeout || '30',
+            sshConnections: configValues.sshConnections || []
+          }
+        };
+        
+        console.log('[MCP Manager] Guardando configuración SSH/Terminal:', payload);
+      } else {
+        // MCP nativo genérico - usar configValues directamente
+        payload = {
+          type: 'native',
+          enabled: !!editingConfig.enabled,
+          autostart: !!editingConfig.autostart,
+          options: configValues
+        };
+      }
     } else {
       // Construir payload base para servidores externos
       
