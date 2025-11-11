@@ -209,7 +209,6 @@ const MCPManagerTab = ({ themeColors }) => {
     }
     const mcpData = require('../data/mcp-catalog.json');
     const mcp = mcpData.mcps?.find(m => m.id === server.id);
-    console.log('[MCP Manager] openConfigFor - MCP cargado:', { serverId: server.id, mcpFound: !!mcp, hasConfigSchema: !!mcp?.configSchema });
     
     // Mapear valores guardados a configSchema
     const configValues = {};
