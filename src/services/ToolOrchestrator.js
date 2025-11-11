@@ -433,50 +433,88 @@ ${cleanText}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 INSTRUCCIONES POST-EJECUCIÓN:
-1. ✅ La herramienta "${toolName}" YA se ejecutó exitosamente
-2. ✅ El resultado YA fue mostrado al usuario automáticamente
-3. ❌ NO repitas el resultado en tu respuesta
-4. ❌ NO vuelvas a ejecutar "${toolName}" (ya se ejecutó)`;
+1. ✅ La herramienta "${toolName}" se ejecutó exitosamente
+2. ✅ El resultado fue capturado y se mostrará al usuario
+3. ✅ AHORA: Explica brevemente (2-3 oraciones) QUÉ hiciste y el RESULTADO
+4. ❌ NO repitas todo el contenido del resultado (solo resúmelo)
+5. ❌ NO vuelvas a ejecutar "${toolName}" (ya se ejecutó)`;
 
       if (isLikelyComplete) {
         // Si ya ejecutamos 2+ herramientas y la última fue listar directorio, terminamos
         antiProactivityPrompt += `
-5. ✅ TAREA COMPLETADA - Ya ejecutaste ${executedTools} herramientas
-6. ❌ NO ejecutes MÁS herramientas
-7. ✅ Responde SOLO: "Hecho."`;
+6. ✅ TAREA COMPLETADA - Ya ejecutaste ${executedTools} herramientas
+7. ❌ NO ejecutes MÁS herramientas
+8. ✅ Explica brevemente qué completaste (ejemplo: "He creado el archivo X y listado el directorio Y")`;
       } else if (hasMultipleActions) {
         antiProactivityPrompt += `
-5. ⚠️ El usuario pidió: "${userRequest}"
+6. ⚠️ El usuario pidió: "${userRequest}"
    Ya ejecutaste: ${toolName} ✓
    
    ¿Falta algo? Analiza la solicitud:
    - Si FALTA ejecutar otra acción → ejecuta la siguiente herramienta en JSON
-   - Si YA completaste TODO → responde solo: "Hecho."
+   - Si YA completaste TODO → explica brevemente lo que hiciste
    
    IMPORTANTE: NO repitas ${toolName}`;
       } else {
         antiProactivityPrompt += `
-5. ✅ Tarea completa. Responde: "Hecho."`;
+6. ✅ Tarea completa. Explica brevemente el resultado (ejemplo: "He creado el archivo script.py con el código solicitado")`;
       }
       
-      antiProactivityPrompt += `\n\n⚠️ CRÍTICO: NO repitas "${toolName}" - ya se ejecutó.`;
+      antiProactivityPrompt += `\n\n⚠️ CRÍTICO: Explica QUÉ hiciste, pero NO ejecutes más herramientas ni repitas todo el resultado.`;
 
       // Agregar el prompt SOLO a providerMessages (NO a conversationService)
       providerMessages.push({ role: 'system', content: antiProactivityPrompt });
 
-      // 🔧 Aumentar tokens para permitir tool calls adicionales
-      // Usar MUY POCOS tokens si ya completamos la tarea
-      const followUpTokens = isLikelyComplete ? 50 : (hasMultipleActions ? 500 : 200);
+      // 🔧 Aumentar tokens para permitir explicaciones decentes
+      // Balancear entre explicación y evitar proactividad excesiva
+      const followUpTokens = isLikelyComplete ? 300 : (hasMultipleActions ? 500 : 400);
       const followUp = await callModelFn(providerMessages, { 
         maxTokens: followUpTokens, 
-        temperature: isLikelyComplete ? 0.1 : 0.4, // Temperatura muy baja si ya terminamos
+        temperature: isLikelyComplete ? 0.5 : 0.6, // Temperatura moderada para explicaciones naturales
         // 🔧 NO guardar este mensaje en conversationService
         skipSave: true 
       });
-      lastFollowUpResponse = followUp; // 🔧 Guardar siempre la última respuesta
+      
+      // 🔧 CRÍTICO: Limpiar JSON de tool calls de la respuesta final al usuario
+      let cleanedFollowUp = followUp;
+      if (followUp && typeof followUp === 'string') {
+        const trimmed = followUp.trim();
+        
+        // 🔍 IMPORTANTE: Verificar si el resultado de la herramienta tuvo ERROR
+        const hadError = cleanText && (
+          cleanText.toLowerCase().includes('error:') ||
+          cleanText.toLowerCase().includes('access denied') ||
+          cleanText.toLowerCase().includes('permission denied') ||
+          cleanText.toLowerCase().includes('failed') ||
+          cleanText.toLowerCase().includes('not found')
+        );
+        
+        // Si la respuesta completa es JSON puro de tool call, reemplazar con fallback
+        if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+          console.warn('[ToolOrchestrator] Respuesta es JSON puro, usando fallback descriptivo');
+          
+          if (hadError) {
+            // Si hubo error, reportarlo en lugar de decir "completado"
+            cleanedFollowUp = `Hubo un problema: ${cleanText.slice(0, 200)}`;
+          } else {
+            // Sin error, usar fallback de éxito
+            if (toolName.includes('write') || toolName.includes('create')) {
+              cleanedFollowUp = 'He completado la operación de escritura/creación.';
+            } else if (toolName.includes('read')) {
+              cleanedFollowUp = 'He leído el contenido solicitado.';
+            } else if (toolName.includes('list')) {
+              cleanedFollowUp = 'He listado el contenido del directorio.';
+            } else {
+              cleanedFollowUp = 'Operación completada correctamente.';
+            }
+          }
+        }
+      }
+      
+      lastFollowUpResponse = cleanedFollowUp; // 🔧 Guardar siempre la última respuesta (limpia)
       currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(followUp) : null;
 
-      if (!currentToolCall) return followUp;
+      if (!currentToolCall) return cleanedFollowUp;
       
       // Si hay otro tool call pero el loop se romperá (duplicado), devolver fallback
       const dedupeKeyNext = this._makeDedupeKey(currentToolCall.toolName || currentToolCall.tool || currentToolCall.name, currentToolCall.arguments || {});
