@@ -432,50 +432,73 @@ class ToolOrchestrator {
 ${cleanText}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-INSTRUCCIONES POST-EJECUCIÓN:
-1. ✅ La herramienta "${toolName}" se ejecutó exitosamente
-2. ✅ El resultado fue capturado y se mostrará al usuario
-3. ✅ AHORA: Explica brevemente (2-3 oraciones) QUÉ hiciste y el RESULTADO
-4. ❌ NO repitas todo el contenido del resultado (solo resúmelo)
-5. ❌ NO vuelvas a ejecutar "${toolName}" (ya se ejecutó)`;
+⚠️ INSTRUCCIONES CRÍTICAS - LEE CUIDADOSAMENTE:
+
+1. ✅ La herramienta "${toolName}" YA se ejecutó exitosamente
+2. ✅ El resultado ya fue capturado y guardado
+3. ✅ AHORA responde en TEXTO NATURAL explicando brevemente (2-3 oraciones) qué hiciste
+
+❌ PROHIBIDO ABSOLUTAMENTE:
+- NO generes ningún JSON
+- NO generes ningún código con {"tool": ...}
+- NO uses bloques de código con tool calls
+- NO repitas el resultado completo
+- NO vuelvas a llamar "${toolName}"
+
+✅ RESPUESTA ESPERADA: Solo texto natural explicando la operación.
+Ejemplo: "He creado el archivo X con el contenido solicitado."`;
 
       if (isLikelyComplete) {
         // Si ya ejecutamos 2+ herramientas y la última fue listar directorio, terminamos
         antiProactivityPrompt += `
-6. ✅ TAREA COMPLETADA - Ya ejecutaste ${executedTools} herramientas
-7. ❌ NO ejecutes MÁS herramientas
-8. ✅ Explica brevemente qué completaste (ejemplo: "He creado el archivo X y listado el directorio Y")`;
+
+ESTADO: TAREA COMPLETADA (${executedTools} herramientas ejecutadas)
+❌ NO ejecutes MÁS herramientas
+✅ Solo explica brevemente qué completaste
+Ejemplo: "He creado el archivo X y listado el directorio Y."`;
       } else if (hasMultipleActions) {
         antiProactivityPrompt += `
-6. ⚠️ El usuario pidió: "${userRequest}"
-   Ya ejecutaste: ${toolName} ✓
-   
-   ¿Falta algo? Analiza la solicitud:
-   - Si FALTA ejecutar otra acción → ejecuta la siguiente herramienta en JSON
-   - Si YA completaste TODO → explica brevemente lo que hiciste
-   
-   IMPORTANTE: NO repitas ${toolName}`;
+
+ESTADO: Solicitud con múltiples acciones
+Usuario pidió: "${userRequest}"
+Ya ejecutaste: ${toolName} ✓
+
+¿Falta algo?
+- Si FALTA ejecutar otra acción → genera JSON para la siguiente herramienta
+- Si YA completaste TODO → responde SOLO en texto natural
+
+IMPORTANTE: NO repitas ${toolName}`;
       } else {
         antiProactivityPrompt += `
-6. ✅ Tarea completa. Explica brevemente el resultado (ejemplo: "He creado el archivo script.py con el código solicitado")`;
+
+ESTADO: Tarea simple completada
+✅ Solo responde en texto natural
+❌ NO generes JSON ni código
+Ejemplo: "He creado el archivo script.py con el código solicitado."`;
       }
-      
-      antiProactivityPrompt += `\n\n⚠️ CRÍTICO: Explica QUÉ hiciste, pero NO ejecutes más herramientas ni repitas todo el resultado.`;
 
       // Agregar el prompt SOLO a providerMessages (NO a conversationService)
       providerMessages.push({ role: 'system', content: antiProactivityPrompt });
 
-      // 🔧 Aumentar tokens para permitir explicaciones decentes
-      // Balancear entre explicación y evitar proactividad excesiva
-      const followUpTokens = isLikelyComplete ? 300 : (hasMultipleActions ? 500 : 400);
+      // 🔧 Aumentar tokens y temperatura para explicaciones naturales
+      // Queremos que el modelo explique, no que genere más JSON
+      const followUpTokens = isLikelyComplete ? 200 : (hasMultipleActions ? 500 : 300);
       const followUp = await callModelFn(providerMessages, { 
         maxTokens: followUpTokens, 
-        temperature: isLikelyComplete ? 0.5 : 0.6, // Temperatura moderada para explicaciones naturales
+        temperature: isLikelyComplete ? 0.7 : (hasMultipleActions ? 0.6 : 0.7), // Más temperatura = más natural, menos JSON
         // 🔧 NO guardar este mensaje en conversationService
         skipSave: true 
       });
       
-      // 🔧 CRÍTICO: Limpiar JSON de tool calls de la respuesta final al usuario
+      console.log('🔍 [ToolOrchestrator] Respuesta del modelo después de tool:', {
+        followUpPreview: followUp?.slice(0, 200),
+        length: followUp?.length,
+        esJSON: followUp?.trim().startsWith('{'),
+        iteration,
+        toolName
+      });
+      
+      // 🚨 CRÍTICO: Si el modelo está generando el MISMO tool call otra vez, cortarlo
       let cleanedFollowUp = followUp;
       if (followUp && typeof followUp === 'string') {
         const trimmed = followUp.trim();
@@ -489,17 +512,39 @@ INSTRUCCIONES POST-EJECUCIÓN:
           cleanText.toLowerCase().includes('not found')
         );
         
-        // Si la respuesta completa es JSON puro de tool call, reemplazar con fallback
-        if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+        // 🚨 Caso 1: Bloque de código con JSON (```json\n{...})
+        if (trimmed.startsWith('```json') || trimmed.startsWith('```\n{')) {
+          // El modelo está devolviendo un tool call en markdown
+          console.warn('[ToolOrchestrator] Respuesta es código JSON, reemplazando con fallback');
+          
+          if (hadError) {
+            cleanedFollowUp = `Hubo un problema: ${cleanText.slice(0, 200)}`;
+          } else {
+            // Generar explicación basada en el tool ejecutado
+            if (toolName.includes('write') || toolName.includes('create')) {
+              cleanedFollowUp = `He creado el archivo correctamente.`;
+            } else if (toolName.includes('read')) {
+              cleanedFollowUp = 'He leído el contenido del archivo.';
+            } else if (toolName.includes('list')) {
+              cleanedFollowUp = 'He listado el contenido del directorio.';
+            } else if (toolName.includes('edit') || toolName.includes('modify')) {
+              cleanedFollowUp = 'He modificado el archivo correctamente.';
+            } else {
+              cleanedFollowUp = 'Operación completada correctamente.';
+            }
+          }
+        }
+        // 🚨 Caso 2: JSON puro (sin backticks)
+        else if (trimmed.startsWith('{') && 
+                 trimmed.endsWith('}') && 
+                 /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
           console.warn('[ToolOrchestrator] Respuesta es JSON puro, usando fallback descriptivo');
           
           if (hadError) {
-            // Si hubo error, reportarlo en lugar de decir "completado"
             cleanedFollowUp = `Hubo un problema: ${cleanText.slice(0, 200)}`;
           } else {
-            // Sin error, usar fallback de éxito
             if (toolName.includes('write') || toolName.includes('create')) {
-              cleanedFollowUp = 'He completado la operación de escritura/creación.';
+              cleanedFollowUp = 'He creado el archivo correctamente.';
             } else if (toolName.includes('read')) {
               cleanedFollowUp = 'He leído el contenido solicitado.';
             } else if (toolName.includes('list')) {
@@ -509,12 +554,27 @@ INSTRUCCIONES POST-EJECUCIÓN:
             }
           }
         }
+        // 🚨 Caso 3: Texto + JSON trailing
+        else {
+          const jsonStart = trimmed.indexOf('\n{');
+          if (jsonStart > 50 && /\"tool\"|\"arguments\"/.test(trimmed.slice(jsonStart, jsonStart + 200))) {
+            // Hay texto antes del JSON, quedarnos solo con el texto
+            cleanedFollowUp = trimmed.slice(0, jsonStart).trim();
+            console.log('[ToolOrchestrator] Extraído texto explicativo, removido JSON trailing');
+          }
+        }
       }
       
       lastFollowUpResponse = cleanedFollowUp; // 🔧 Guardar siempre la última respuesta (limpia)
       currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(followUp) : null;
 
-      if (!currentToolCall) return cleanedFollowUp;
+      if (!currentToolCall) {
+        console.log('✅ [ToolOrchestrator] Devolviendo respuesta final:', {
+          cleanedPreview: cleanedFollowUp?.slice(0, 200),
+          length: cleanedFollowUp?.length
+        });
+        return cleanedFollowUp;
+      }
       
       // Si hay otro tool call pero el loop se romperá (duplicado), devolver fallback
       const dedupeKeyNext = this._makeDedupeKey(currentToolCall.toolName || currentToolCall.tool || currentToolCall.name, currentToolCall.arguments || {});

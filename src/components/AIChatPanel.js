@@ -1013,6 +1013,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         },
         onComplete: (data) => {
           
+          console.log('🔍 [AIChatPanel.onComplete] Respuesta recibida:', {
+            responsePreview: data.response?.slice(0, 300),
+            responseLength: data.response?.length,
+            esJSON: data.response?.trim().startsWith('{')
+          });
+          
           const files = aiService.detectFilesInResponse(data.response, userMessage);
           
           // ============= CALCULAR SAFE RESPONSE PRIMERO (antes de guardar) =============
@@ -1124,7 +1130,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
           
           // ✅ IMPROVED: Detectar si la respuesta es SOLO JSON de tool call (no debería guardarse como respuesta)
+          // NOTA: Esta detección solo se aplica si structuredToolMessages ESTÁ activo (Tool Orchestrator maneja el JSON)
           const isJsonToolCall = (() => {
+            // Si NO hay orchestrator, el JSON se manejará en otro lugar
+            if (!aiService.featureFlags?.structuredToolMessages) {
+              return false;
+            }
+            
             const trimmed = safeResponse.trim();
             
             // Caso 1: JSON completo y válido
@@ -2324,46 +2336,29 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const isToolResult = !!(message.metadata && message.metadata.isToolResult);
     const isToolCall = message.role === 'assistant_tool_call' || !!(message.metadata && message.metadata.isToolCall);
 
-    // ✅ IMPROVED: NO renderizar mensajes que sean JSON puro de tool calls
-    const isJsonToolCall = (() => {
-      if (!message.content) return false;
-      const trimmed = message.content.trim();
+    // ✅ SIMPLE: Si orchestrator está activo, NO renderizar NINGÚN JSON de tool calls
+    if (aiService.featureFlags?.structuredToolMessages && !isToolCall && !isToolResult && message.role === 'assistant') {
+      const trimmed = message.content?.trim() || '';
       
-      // Verificar si es JSON que parece un tool call (incluso truncado)
-      if (trimmed.startsWith('{')) {
-        // Caso 1: JSON completo
-        if (trimmed.endsWith('}') || trimmed.endsWith('}}')) {
-          try {
-            const cleanJson = trimmed.endsWith('}}') ? trimmed.slice(0, -1) : trimmed;
-            const parsed = JSON.parse(cleanJson);
-            // Tiene campos de tool call
-            return parsed.tool || parsed.use_tool || parsed.arguments || parsed.plan;
-          } catch (e) {
-            // JSON truncado - verificar patrones
-            if (/\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
-              return true;
-            }
-            return false;
-          }
-        }
-        
-        // Caso 2: JSON incompleto/truncado que contiene patrones de tool call
-        if (/\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
-          return true;
-        }
+      // Si el mensaje comienza con { y parece JSON de tool call, NO renderizarlo
+      if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"/.test(trimmed.slice(0, 200))) {
+        debugLogger.warn('AIChatPanel.Render', 'Omitiendo JSON de tool call (orchestrator activo)', {
+          messageId: message.id,
+          preview: trimmed.slice(0, 80)
+        });
+        return null;
       }
       
-      return false;
-    })();
-    
-    if (isJsonToolCall && !isToolCall && !isToolResult && message.role !== 'tool') {
-      // Es JSON puro de tool call y no está marcado como tal - NO renderizar
-      // PERO: Si es un resultado de tool, SÍ renderizar
-      debugLogger.warn('AIChatPanel.Render', 'Omitiendo mensaje JSON de tool call', {
-        messageId: message.id,
-        preview: message.content.slice(0, 80)
-      });
-      return null;
+      // Si el mensaje tiene texto + JSON trailing, extraer solo el texto
+      const jsonStart = trimmed.indexOf('\n{');
+      if (jsonStart > 50 && /\"tool\"|\"arguments\"/.test(trimmed.slice(jsonStart, jsonStart + 200))) {
+        // Hay texto antes del JSON - renderizar solo el texto
+        message.content = trimmed.slice(0, jsonStart).trim();
+        debugLogger.info('AIChatPanel.Render', 'Extraído texto, removido JSON trailing', {
+          original: trimmed.length,
+          limpio: message.content.length
+        });
+      }
     }
 
     // No renderizar el placeholder si está en streaming y aún no hay contenido
@@ -2384,14 +2379,89 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       const toolArgs = message.metadata?.toolArgs || {};
       const isError = message.metadata?.error === true;
 
+      // 🔍 Detectar si es código generado y mostrarlo ANTES de la tarjeta
+      let codeToShow = null;
+      let detectedLanguage = null;
+      
+      if ((toolName.includes('write') || toolName.includes('edit') || toolName.includes('create')) && toolArgs.path && toolArgs.content) {
+        // Detectar lenguaje por extensión de archivo
+        const path = toolArgs.path;
+        const ext = path.split('.').pop()?.toLowerCase();
+        
+        const langMap = {
+          'js': 'javascript',
+          'jsx': 'javascript',
+          'ts': 'typescript',
+          'tsx': 'typescript',
+          'py': 'python',
+          'go': 'go',
+          'rs': 'rust',
+          'java': 'java',
+          'c': 'c',
+          'cpp': 'cpp',
+          'cs': 'csharp',
+          'php': 'php',
+          'rb': 'ruby',
+          'swift': 'swift',
+          'kt': 'kotlin',
+          'scala': 'scala',
+          'sh': 'bash',
+          'bash': 'bash',
+          'zsh': 'bash',
+          'ps1': 'powershell',
+          'sql': 'sql',
+          'html': 'html',
+          'css': 'css',
+          'scss': 'scss',
+          'json': 'json',
+          'xml': 'xml',
+          'yaml': 'yaml',
+          'yml': 'yaml',
+          'md': 'markdown',
+          'r': 'r',
+          'lua': 'lua',
+          'vim': 'vim',
+          'dart': 'dart',
+          'ex': 'elixir',
+          'exs': 'elixir',
+          'erl': 'erlang',
+          'clj': 'clojure',
+          'fs': 'fsharp',
+          'hs': 'haskell'
+        };
+        
+        if (ext && langMap[ext]) {
+          detectedLanguage = langMap[ext];
+          codeToShow = toolArgs.content;
+        }
+      }
+
       return (
         <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
+          {/* 🎨 Mostrar CÓDIGO primero si fue generado (estilo ChatGPT limpio) */}
+          {codeToShow && (
+            <div style={{ marginBottom: '0.8rem', width: '100%' }}>
+              <div 
+                className="ai-md"
+                dangerouslySetInnerHTML={{ 
+                  __html: renderMarkdown(`\`\`\`${detectedLanguage}\n${codeToShow}\n\`\`\``)
+                }}
+                ref={(el) => {
+                  if (el) {
+                    highlightCodeBlocks(el);
+                  }
+                }}
+              />
+            </div>
+          )}
+          
+          {/* 🎨 Tarjeta de Tool Execution (colapsada si ya se mostró código) */}
           <ToolExecutionCard
             toolName={toolName}
             toolArgs={toolArgs}
             toolResult={text}
             isError={isError}
-            initialExpanded={false}
+            initialExpanded={codeToShow ? false : false}
           />
         </div>
       );
