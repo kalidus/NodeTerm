@@ -1034,6 +1034,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           };
 
           let normalizedResp = extractPlainResponse(data.response);
+          
+          // 🔍 DEBUG: Log de la respuesta para diagnosticar problemas
+          logConversation('debug', 'Respuesta del modelo recibida', {
+            raw: data.response?.slice(0, 200),
+            normalized: normalizedResp?.slice(0, 200),
+            isEmpty: !normalizedResp || normalizedResp.trim().length === 0
+          });
+          
           // Heurística: si el modelo solo explica que "ya se listó" o repite el resultado, colapsar
           const isMetaResponse = (() => {
             const t = (normalizedResp || '').toLowerCase();
@@ -1058,14 +1066,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   (Date.now() - last.timestamp) < 10000; // 10 segundos
                 
                 if (hasRecentToolResult) {
-                  // Solo si hay un resultado de tool reciente, usar "Hecho."
+                  // Si hay resultado de tool reciente, sintetizar una explicación breve
                   if (aiService.featureFlags?.structuredToolMessages) {
-                    return 'Hecho.';
+                    // Intentar crear una descripción más útil basada en el toolName
+                    const toolName = last.toolName || '';
+                    if (toolName.includes('write') || toolName.includes('create')) {
+                      return 'He completado la operación de escritura/creación.';
+                    } else if (toolName.includes('read') || toolName.includes('list')) {
+                      return 'He obtenido la información solicitada.';
+                    } else if (toolName.includes('edit') || toolName.includes('modify')) {
+                      return 'He realizado las modificaciones solicitadas.';
+                    }
+                    return 'Operación completada correctamente.';
                   }
-                  // Intentar sintetizar una frase breve
+                  // Intentar sintetizar una frase breve del resultado
                   const pathMatch = last.text.match(/wrote to\s+(.+)$/i);
                   const path = pathMatch ? pathMatch[1] : '';
-                  return path ? `Hecho. Archivo creado en ${path}.` : `Hecho. ${last.text}`;
+                  return path ? `He creado el archivo en ${path}.` : `Operación completada: ${last.text.slice(0, 50)}`;
                 }
                 
                 // Si NO hay resultado de tool reciente, retornar la respuesta original
@@ -1102,7 +1119,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             logConversation('warn', 'Respuesta del modelo contiene solo metadata del sistema', {
               conversationId: conversationService.currentConversationId
             });
-            safeResponse = 'Hecho.';
+            // En lugar de "Hecho." genérico, usar una descripción más útil
+            safeResponse = 'Operación completada correctamente.';
           }
           
           // ✅ IMPROVED: Detectar si la respuesta es SOLO JSON de tool call (no debería guardarse como respuesta)
@@ -1140,14 +1158,65 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           })();
           
           if (isJsonToolCall) {
-            logConversation('warn', 'Respuesta del modelo es un tool call puro. Se omite el guardado.', {
+            logConversation('warn', 'Respuesta del modelo es un tool call puro. Reemplazando con fallback.', {
               conversationId: conversationService.currentConversationId,
               tool: isJsonToolCall,
               preview: safeResponse.slice(0, 100)
             });
-            // NO guardar esta respuesta - ya fue manejada por ToolOrchestrator
-            // Solo retornar para que la UI se actualice
-          } else {
+            
+            // 🔍 CRÍTICO: Verificar si la última operación tuvo ERROR
+            // Buscar el último mensaje tool para ver si tiene error
+            const lastToolMessage = messages.slice().reverse().find(m => 
+              m.role === 'tool' || m.role === 'system' && m.metadata?.isToolResult
+            );
+            
+            const hadError = lastToolMessage?.metadata?.error === true;
+            
+            if (hadError) {
+              // Si hubo error, NO decir "completado", avisar del error
+              const errorText = lastToolMessage?.metadata?.toolResultText || lastToolMessage?.content || '';
+              const errorPreview = errorText.slice(0, 150);
+              safeResponse = `Hubo un problema al ejecutar la operación: ${errorPreview}`;
+              logConversation('error', 'Tool tuvo error, usando mensaje de error en fallback', {
+                error: errorPreview
+              });
+            } else {
+              // Sin error, usar fallback descriptivo normal
+              const last = lastToolResultRef.current;
+              if (last && last.toolName) {
+                logConversation('info', 'Usando fallback basado en toolName', {
+                  toolName: last.toolName
+                });
+                
+                if (last.toolName.includes('write') || last.toolName.includes('create')) {
+                  safeResponse = 'He completado la operación de escritura/creación del archivo.';
+                } else if (last.toolName.includes('read')) {
+                  safeResponse = 'He leído el contenido del archivo.';
+                } else if (last.toolName.includes('list')) {
+                  safeResponse = 'He listado el contenido del directorio.';
+                } else if (last.toolName.includes('edit') || last.toolName.includes('modify')) {
+                  safeResponse = 'He realizado las modificaciones solicitadas.';
+                } else if (last.toolName.includes('delete') || last.toolName.includes('remove')) {
+                  safeResponse = 'He eliminado el archivo/directorio.';
+                } else if (last.toolName.includes('move') || last.toolName.includes('rename')) {
+                  safeResponse = 'He movido/renombrado el archivo.';
+                } else if (last.toolName.includes('search') || last.toolName.includes('find')) {
+                  safeResponse = 'He completado la búsqueda.';
+                } else if (last.toolName.includes('run') || last.toolName.includes('execute')) {
+                  safeResponse = 'He ejecutado el comando.';
+                } else {
+                  safeResponse = 'Operación completada correctamente.';
+                }
+              } else {
+                // Sin información de tool reciente, usar fallback genérico
+                logConversation('warn', 'No hay lastToolResult disponible, usando fallback genérico');
+                safeResponse = 'Operación completada correctamente.';
+              }
+            }
+          }
+          
+          // Guardar la respuesta
+          {
             logConversation('info', 'Guardando respuesta del asistente', {
               safePreview: safeResponse.substring(0, 80),
               length: safeResponse.length,

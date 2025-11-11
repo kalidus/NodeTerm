@@ -2353,7 +2353,8 @@ class AIService {
         out += `Dirs: ${lines.join(', ')}${lines.length < 2 ? '' : '...'}\n`;
       }
       if (hints.defaultRaw) {
-        out += `Default path: ${hints.defaultRaw} (usa si no especifica ruta)\n`;
+        out += `⚠️ DEFAULT PATH: ${hints.defaultRaw}\n`;
+        out += `IMPORTANTE: Si el usuario NO especifica ruta completa, USA este directorio.\n`;
       }
 
       // Acciones comunes (sólo si es filesystem) - OPTIMIZADO
