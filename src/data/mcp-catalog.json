@@ -666,6 +666,70 @@
         "TENABLE_ACCESS_KEY": "",
         "TENABLE_SECRET_KEY": ""
       }
+    },
+    {
+      "id": "ssh-terminal",
+      "name": "SSH/Terminal",
+      "package": "native:ssh-terminal",
+      "type": "native",
+      "category": "automation",
+      "icon": "pi-server",
+      "description": "🔒 Ejecutar comandos locales (WSL, Cygwin, PowerShell) o remotos por SSH. Control total con listas blancas de comandos, directorios y timeouts configurables.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "preferredTerminal": {
+          "type": "string",
+          "required": false,
+          "description": "🖥️ Terminal preferido para comandos locales: wsl, cygwin, powershell",
+          "example": "wsl",
+          "envName": "PREFERRED_TERMINAL"
+        },
+        "allowedDir": {
+          "type": "string",
+          "required": false,
+          "description": "📁 Directorio base permitido para comandos locales (vacío = sin restricción)",
+          "example": "C:/Users/kalid/Documents",
+          "envName": "ALLOWED_DIR"
+        },
+        "allowedCommands": {
+          "type": "string",
+          "required": false,
+          "description": "⚙️ Comandos permitidos (separados por coma) o 'all' para todos",
+          "example": "ls,cat,grep,find,cd,pwd,echo,mkdir,rm,cp,mv",
+          "envName": "ALLOWED_COMMANDS"
+        },
+        "commandTimeout": {
+          "type": "string",
+          "required": false,
+          "description": "⏱️ Timeout de ejecución en segundos",
+          "example": "30",
+          "envName": "COMMAND_TIMEOUT"
+        }
+      },
+      "recommendedConfig": {
+        "preferredTerminal": "wsl",
+        "allowedDir": "",
+        "allowedCommands": "all",
+        "commandTimeout": "30"
+      },
+      "tools": [
+        "execute_local",
+        "execute_ssh",
+        "list_terminals",
+        "list_ssh_hosts",
+        "test_ssh_connection",
+        "show_security_rules"
+      ],
+      "useCases": [
+        "Ejecutar comandos Linux desde Windows (WSL/Cygwin)",
+        "Gestionar servidores remotos Linux por SSH",
+        "Automatizar tareas del sistema de forma segura",
+        "Operaciones en múltiples entornos desde un solo lugar",
+        "Monitoreo y administración de infraestructura"
+      ],
+      "website": "https://github.com/kalidus/NodeTerm",
+      "warning": "⚠️ Ejecuta comandos del sistema - configura cuidadosamente comandos y directorios permitidos. Las conexiones SSH deben configurarse desde la UI."
     }
   ]
 }
