@@ -273,7 +273,7 @@ const MCPCard = ({ mcp, installed, serverState, onInstall, themeColors, accentCo
 
 const MCPCatalog = ({ installedServers = [], onInstall, themeColors }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const VALID_CATEGORY_IDS = ['system','automation','development','data','web','websearch','productivity'];
+  const VALID_CATEGORY_IDS = ['system','automation','development','data','web','websearch','productivity','security'];
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [selectedMCP, setSelectedMCP] = useState(null);
   const [configValues, setConfigValues] = useState({});

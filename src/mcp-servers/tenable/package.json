@@ -1,0 +1,26 @@
+{
+  "name": "tenable-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Tenable.io Asset Management and Vulnerability Assessment",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0"
+  },
+  "keywords": [
+    "mcp",
+    "tenable",
+    "security",
+    "vulnerability",
+    "asset-management"
+  ],
+  "author": "NodeTerm",
+  "license": "MIT"
+}
+
+

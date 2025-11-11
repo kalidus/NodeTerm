@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "lastUpdated": "2025-11-07",
+  "version": "1.2.0",
+  "lastUpdated": "2025-11-10",
   "categories": [
     {
       "id": "system",
@@ -50,6 +50,13 @@
       "icon": "pi-calendar",
       "color": "#FCBAD3",
       "description": "Memoria, colaboración y servicios en la nube"
+    },
+    {
+      "id": "security",
+      "name": "Seguridad",
+      "icon": "pi-shield",
+      "color": "#FF5252",
+      "description": "Análisis de vulnerabilidades, auditoría de seguridad y gestión de activos"
     }
   ],
   "mcps": [
@@ -614,6 +621,51 @@
         "Workflows de desarrollo"
       ],
       "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "tenable",
+      "name": "Tenable.io",
+      "package": "tenable-mcp-server",
+      "category": "security",
+      "icon": "pi-shield",
+      "description": "🔒 Gestión de activos y análisis de vulnerabilidades con Tenable.io. Obtén información de activos, búsquedas avanzadas y detalles de vulnerabilidades.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "TENABLE_ACCESS_KEY": {
+          "type": "string",
+          "required": true,
+          "description": "Access Key de Tenable.io",
+          "secret": true,
+          "envName": "TENABLE_ACCESS_KEY"
+        },
+        "TENABLE_SECRET_KEY": {
+          "type": "string",
+          "required": true,
+          "description": "Secret Key de Tenable.io",
+          "secret": true,
+          "envName": "TENABLE_SECRET_KEY"
+        }
+      },
+      "tools": [
+        "get_assets",
+        "get_asset_details",
+        "search_assets",
+        "get_asset_vulnerabilities"
+      ],
+      "useCases": [
+        "Listar y gestionar activos de red",
+        "Buscar activos por hostname o IP",
+        "Obtener detalles completos de activos",
+        "Analizar vulnerabilidades por activo",
+        "Auditoría de seguridad automatizada"
+      ],
+      "website": "https://www.tenable.com/products/tenable-io",
+      "warning": "🔑 Requiere credenciales de Tenable.io. Accede a cloud.tenable.com → Settings → My Account → API Keys para obtenerlas.",
+      "recommendedConfig": {
+        "TENABLE_ACCESS_KEY": "",
+        "TENABLE_SECRET_KEY": ""
+      }
     }
   ]
 }
