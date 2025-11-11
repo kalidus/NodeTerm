@@ -408,11 +408,21 @@ INSTRUCCIONES POST-EJECUCIÓN:
 
     // 🔧 MEJORADO: Si el loop se agota, devolver la última respuesta del modelo que guardamos
     if (lastFollowUpResponse && lastFollowUpResponse.trim().length > 0) {
-      // 🔧 CRÍTICO: Validar que NO sea un JSON de tool call
+      // 🔧 CRÍTICO: Validar que NO sea un JSON de tool call (incluso truncado)
       const trimmed = lastFollowUpResponse.trim();
-      if (trimmed.startsWith('{') && trimmed.includes('"tool"')) {
+      
+      // Caso 1: JSON que contiene "tool", "arguments", "use_tool", o "plan"
+      if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+        console.warn('[ToolOrchestrator] JSON de tool call detectado en respuesta final, ignorando');
         return 'Operación completada correctamente.';
       }
+      
+      // Caso 2: JSON truncado (termina con }})
+      if (trimmed.endsWith('}}')) {
+        console.warn('[ToolOrchestrator] JSON truncado (}) detectado en respuesta final');
+        return 'Operación completada correctamente.';
+      }
+      
       return lastFollowUpResponse;
     }
     

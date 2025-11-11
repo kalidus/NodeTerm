@@ -116,6 +116,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     if (/\"tool\"\s*:\s*\"/i.test(head)) return true;
     // Nuevo: también considerar planes {"plan":[...]}
     if (/\"plan\"\s*:\s*\[/i.test(head)) return true;
+    // CRÍTICO: Detectar {"arguments":{...}} - es un tool call JSON sin "tool"
+    if (/\"arguments\"\s*:\s*\{/i.test(head)) return true;
+    // CRÍTICO: Detectar JSON que comienza directo (sin explicación de texto)
+    if (head.trimStart().startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(head.slice(0, 300))) return true;
     return false;
   }, []);
 
@@ -198,10 +202,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const looksLikeJsonStart = useCallback((text) => {
     if (!text || typeof text !== 'string') return false;
     const t = text.trimStart();
-    // Solo considerar JSON si empieza con { y contiene "tool" o "use_tool" en los primeros 100 chars
+    // Solo considerar JSON si empieza con { y contiene "tool" o "use_tool" en los primeros 300 chars
     if (t.startsWith('{')) {
-      const head = t.substring(0, 100);
-      return head.includes('"tool"') || head.includes('"use_tool"') || head.includes('"plan"');
+      const head = t.substring(0, 300);
+      // CRÍTICO: Detectar "arguments" también
+      return head.includes('"tool"') || head.includes('"use_tool"') || head.includes('"plan"') || head.includes('"arguments"');
     }
     // Bloques de código explícitos
     if (t.startsWith('```json') || t.startsWith('```tool')) return true;
@@ -1103,22 +1108,42 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // ✅ IMPROVED: Detectar si la respuesta es SOLO JSON de tool call (no debería guardarse como respuesta)
           const isJsonToolCall = (() => {
             const trimmed = safeResponse.trim();
-            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            
+            // Caso 1: JSON completo y válido
+            if (trimmed.startsWith('{') && (trimmed.endsWith('}') || trimmed.endsWith('}}'))) {
               try {
-                const parsed = JSON.parse(trimmed);
-                // Es un tool call si tiene "tool" o "use_tool"
-                return parsed.tool || parsed.use_tool;
+                // Si puede ser parseado como JSON, verificar si tiene campos de tool
+                const cleanJson = trimmed.endsWith('}}') ? trimmed.slice(0, -1) : trimmed; // Remover }} extra
+                const parsed = JSON.parse(cleanJson);
+                // Es un tool call si tiene "tool", "use_tool", "arguments", o "plan"
+                return parsed.tool || parsed.use_tool || parsed.arguments || parsed.plan;
               } catch (e) {
+                // JSON inválido/truncado - podría ser un tool call cortado
+                // Verificar si contiene patrones de tool call JSON
+                if (/\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+                  logConversation('warn', 'JSON de tool call truncado o malformado detectado', {
+                    preview: trimmed.slice(0, 100),
+                    isValid: false
+                  });
+                  return true; // Tratarlo como tool call para evitar guardarlo
+                }
                 return false;
               }
             }
+            
+            // Caso 2: JSON que comienza la respuesta (sin explicación antes)
+            if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+              return true;
+            }
+            
             return false;
           })();
           
           if (isJsonToolCall) {
             logConversation('warn', 'Respuesta del modelo es un tool call puro. Se omite el guardado.', {
               conversationId: conversationService.currentConversationId,
-              tool: isJsonToolCall
+              tool: isJsonToolCall,
+              preview: safeResponse.slice(0, 100)
             });
             // NO guardar esta respuesta - ya fue manejada por ToolOrchestrator
             // Solo retornar para que la UI se actualice
@@ -2150,20 +2175,41 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const isJsonToolCall = (() => {
       if (!message.content) return false;
       const trimmed = message.content.trim();
-      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          return parsed.tool || parsed.use_tool;
-        } catch (e) {
-          return false;
+      
+      // Verificar si es JSON que parece un tool call (incluso truncado)
+      if (trimmed.startsWith('{')) {
+        // Caso 1: JSON completo
+        if (trimmed.endsWith('}') || trimmed.endsWith('}}')) {
+          try {
+            const cleanJson = trimmed.endsWith('}}') ? trimmed.slice(0, -1) : trimmed;
+            const parsed = JSON.parse(cleanJson);
+            // Tiene campos de tool call
+            return parsed.tool || parsed.use_tool || parsed.arguments || parsed.plan;
+          } catch (e) {
+            // JSON truncado - verificar patrones
+            if (/\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+              return true;
+            }
+            return false;
+          }
+        }
+        
+        // Caso 2: JSON incompleto/truncado que contiene patrones de tool call
+        if (/\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+          return true;
         }
       }
+      
       return false;
     })();
     
     if (isJsonToolCall && !isToolCall && !isToolResult && message.role !== 'tool') {
       // Es JSON puro de tool call y no está marcado como tal - NO renderizar
       // PERO: Si es un resultado de tool, SÍ renderizar
+      debugLogger.warn('AIChatPanel.Render', 'Omitiendo mensaje JSON de tool call', {
+        messageId: message.id,
+        preview: message.content.slice(0, 80)
+      });
       return null;
     }
 
