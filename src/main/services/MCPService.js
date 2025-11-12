@@ -192,10 +192,6 @@ class MCPService {
       return this.startNativeMCPServer(serverId, config);
     }
 
-    console.log(`🚀 [MCP] Iniciando ${serverId}...`);
-    console.log(`   Comando: ${config.command}`);
-    console.log(`   Args:`, config.args);
-
     try {
       // Detectar plataforma ANTES de crear la variable local 'childProcess'
       const isWindows = process.platform === 'win32';
@@ -208,7 +204,6 @@ class MCPService {
           // Si el argumento contiene espacios, envolverlo en comillas
           return arg.includes(' ') ? `"${arg}"` : arg;
         });
-        console.log(`   Args procesados para Windows:`, spawnArgs);
       }
       
       const childProcess = spawn(config.command, spawnArgs, {
@@ -251,8 +246,6 @@ class MCPService {
 
       // Iniciar keepalive
       this.startKeepalive(serverId);
-
-      console.log(`✅ [MCP] ${serverId} iniciado correctamente`);
       
       return { success: true, serverId };
     } catch (error) {
@@ -263,8 +256,6 @@ class MCPService {
   }
 
   async startNativeMCPServer(serverId, config) {
-    console.log(`🚀 [MCP] Iniciando servidor nativo ${serverId}...`);
-
     const factory =
       this.nativeFactories.get(serverId) ||
       this.nativeFactories.get(config.nativeType || config.id);
@@ -296,7 +287,6 @@ class MCPService {
       // 🔗 Guardar referencia global para SSH Terminal
       if (serverId === 'ssh-terminal') {
         global.sshTerminalServer = bridge;
-        console.log(`🔗 [MCP] Referencia global ssh-terminal registrada`);
       }
 
       await this.initializeMCPServer(serverId);
@@ -307,7 +297,6 @@ class MCPService {
         mcpProcess.state = 'ready';
       }
 
-      console.log(`✅ [MCP] Servidor nativo ${serverId} iniciado correctamente`);
       return { success: true, serverId };
     } catch (error) {
       this.mcpProcesses.delete(serverId);
@@ -322,18 +311,15 @@ class MCPService {
   setupProcessHandlers(mcpProcess) {
     const { process, serverId } = mcpProcess;
 
-    console.log(`🔌 [MCP ${serverId}] Configurando handlers de proceso...`);
-
     // stdout: recibir respuestas JSON-RPC
     process.stdout.on('data', (data) => {
-      console.log(`📨 [MCP ${serverId}] stdout recibido (${data.length} bytes)`);
       this.handleStdoutData(serverId, data);
     });
 
     // stderr: logs y errores
     process.stderr.on('data', (data) => {
       const message = data.toString().trim();
-      if (message) {
+      if (message && this.verboseLogs) {
         console.log(`📝 [MCP ${serverId}] stderr:`, message);
       }
     });
@@ -350,7 +336,6 @@ class MCPService {
       mcpProcess.state = 'error';
     });
     
-    console.log(`✅ [MCP ${serverId}] Handlers configurados`);
   }
 
   /**
@@ -371,7 +356,6 @@ class MCPService {
     const lines = mcpProcess.buffer.split('\n');
     mcpProcess.buffer = lines.pop() || ''; // Guardar última línea incompleta
 
-    console.log(`   ${lines.length} línea(s) completa(s) para procesar`);
 
     for (const line of lines) {
       if (!line.trim()) continue;
@@ -421,7 +405,6 @@ class MCPService {
     
     // Respuesta a una petición nuestra
     if (message.id !== undefined) {
-      console.log(`   Es respuesta a request #${message.id}`);
       const pending = this.pendingRequests.get(message.id);
       if (pending) {
         clearTimeout(pending.timeout);
@@ -431,11 +414,8 @@ class MCPService {
           console.error(`   ❌ Error en respuesta:`, message.error);
           pending.reject(new Error(`MCP Error: ${message.error.message || JSON.stringify(message.error)}`));
         } else {
-          console.log(`   ✅ Respuesta exitosa`);
           pending.resolve(message.result);
         }
-      } else {
-        console.warn(`   ⚠️ No hay request pendiente con id ${message.id}`);
       }
     }
     
@@ -466,12 +446,9 @@ class MCPService {
       params
     };
 
-    console.log(`📤 [MCP ${serverId}] Enviando request #${id}: ${method}`);
     if (this.verboseLogs) {
+      console.log(`📤 [MCP ${serverId}] Enviando request #${id}: ${method}`);
       console.log(`   Params:`, JSON.stringify(params, null, 2));
-    } else {
-      const keys = Object.keys(params || {});
-      console.log(`   Params keys: ${keys.join(', ') || '(sin params)'}`);
     }
 
     return new Promise((resolve, reject) => {
@@ -488,8 +465,6 @@ class MCPService {
         const message = JSON.stringify(request) + '\n';
         if (this.verboseLogs) {
           console.log(`📝 [MCP ${serverId}] Escribiendo en stdin:`, message.trim());
-        } else {
-          console.log(`📝 [MCP ${serverId}] Escribiendo en stdin: { id: ${id}, method: ${method} }`);
         }
         mcpProcess.process.stdin.write(message);
       } catch (error) {
@@ -524,8 +499,6 @@ class MCPService {
    * Inicializar servidor MCP (handshake)
    */
   async initializeMCPServer(serverId) {
-    console.log(`🤝 [MCP ${serverId}] Inicializando handshake...`);
-
     const result = await this.sendRequest(serverId, 'initialize', {
       protocolVersion: '2024-11-05',
       capabilities: {
@@ -545,7 +518,6 @@ class MCPService {
       mcpProcess.capabilities = result.capabilities;
       mcpProcess.state = 'ready';
       console.log(`✅ [MCP ${serverId}] Handshake completado`);
-      console.log(`   Capacidades:`, JSON.stringify(result.capabilities, null, 2));
     }
 
     // Enviar initialized notification
@@ -566,8 +538,6 @@ class MCPService {
      if (mcpProcess.type === 'native') {
        if (mcpProcess.bridge && typeof mcpProcess.bridge.handleNotification === 'function') {
          await mcpProcess.bridge.handleNotification(method, params);
-       } else {
-         console.log(`ℹ️ [MCP ${serverId}] Notificación nativa ${method} ignorada (sin handler).`);
        }
        return;
      }
@@ -596,21 +566,27 @@ class MCPService {
       if (mcpProcess.capabilities?.tools) {
         const toolsResult = await this.sendRequest(serverId, 'tools/list');
         mcpProcess.tools = toolsResult.tools || [];
-        console.log(`🔧 [MCP ${serverId}] Tools disponibles: ${mcpProcess.tools.length}`);
+        if (this.verboseLogs) {
+          console.log(`🔧 [MCP ${serverId}] Tools disponibles: ${mcpProcess.tools.length}`);
+        }
       }
 
       // Listar resources
       if (mcpProcess.capabilities?.resources) {
         const resourcesResult = await this.sendRequest(serverId, 'resources/list');
         mcpProcess.resources = resourcesResult.resources || [];
-        console.log(`📦 [MCP ${serverId}] Resources disponibles: ${mcpProcess.resources.length}`);
+        if (this.verboseLogs) {
+          console.log(`📦 [MCP ${serverId}] Resources disponibles: ${mcpProcess.resources.length}`);
+        }
       }
 
       // Listar prompts
       if (mcpProcess.capabilities?.prompts) {
         const promptsResult = await this.sendRequest(serverId, 'prompts/list');
         mcpProcess.prompts = promptsResult.prompts || [];
-        console.log(`💬 [MCP ${serverId}] Prompts disponibles: ${mcpProcess.prompts.length}`);
+        if (this.verboseLogs) {
+          console.log(`💬 [MCP ${serverId}] Prompts disponibles: ${mcpProcess.prompts.length}`);
+        }
       }
     } catch (error) {
       console.error(`❌ [MCP ${serverId}] Error refrescando capabilities:`, error.message);
