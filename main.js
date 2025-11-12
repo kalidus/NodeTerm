@@ -505,6 +505,34 @@ function createWindow() {
 
 // Funciones de WSL movidas a main/services/WSLService.js
 
+// 🔗 IPC Handler para sincronizar conexiones SSH con el MCP (usando on() para mayor compatibilidad)
+ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
+  try {
+    console.log('🔴 [MAIN SSH HANDLER] ¡¡¡EJECUTADO!!!');
+    console.log('[SSH MCP] Handler invocado con conexiones:', Array.isArray(connections) ? connections.length : 'NO ES ARRAY');
+    
+    if (!Array.isArray(connections)) {
+      console.warn('[SSH MCP] ⚠️ Parámetro no es un array:', typeof connections);
+      return;
+    }
+    
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    const userDataPath = app.getPath('userData');
+    const sshConnectionsPath = path.join(userDataPath, 'mcp-ssh-connections.json');
+    
+    console.log(`📝 [SSH MCP] Guardando ${connections.length} conexiones en ${sshConnectionsPath}`);
+    
+    // Guardar las conexiones en un archivo que el MCP pueda leer
+    await fs.writeFile(sshConnectionsPath, JSON.stringify(connections, null, 2), 'utf8');
+    
+    console.log(`🔗 [SSH MCP] ✅ Guardadas ${connections.length} conexiones SSH correctamente`);
+  } catch (error) {
+    console.error('[APP SSH] ❌ Error guardando conexiones:', error.message);
+  }
+});
+
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
   // console.log('🚀 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs

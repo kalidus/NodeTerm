@@ -409,6 +409,136 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => clearTimeout(initDefaultMcps);
   }, [selectedMcpServers]);
 
+  // 🔗 Sincronizar conexiones SSH con el MCP (sin depender de MCPManagerTab)
+  useEffect(() => {
+    const syncSSHConnectionsToMCP = async () => {
+      try {
+        let allSSHConnections = [];
+
+        // 1️⃣ Intentar leer desde nodeterm_favorite_connections
+        try {
+          const favoritesStr = localStorage.getItem('nodeterm_favorite_connections');
+          if (favoritesStr) {
+            const favorites = JSON.parse(favoritesStr);
+            const sshFavorites = favorites.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
+            allSSHConnections = allSSHConnections.concat(sshFavorites);
+            console.log(`✅ [AIChatPanel] ${sshFavorites.length} conexiones encontradas en favoritos`);
+          }
+        } catch (e) {
+          console.log('[AIChatPanel] ℹ️ Error leyendo favoritos:', e.message);
+        }
+
+        // 2️⃣ Intentar leer desde nodeterm_connection_history (recientes)
+        try {
+          const historyStr = localStorage.getItem('nodeterm_connection_history');
+          if (historyStr) {
+            const history = JSON.parse(historyStr);
+            const sshHistory = history.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
+            // Agregar solo las que no estén ya en favorites
+            const newConnections = sshHistory.filter(
+              histConn => !allSSHConnections.some(fav => fav.id === histConn.id)
+            );
+            allSSHConnections = allSSHConnections.concat(newConnections);
+            console.log(`✅ [AIChatPanel] ${newConnections.length} nuevas conexiones encontradas en historial`);
+          }
+        } catch (e) {
+          console.log('[AIChatPanel] ℹ️ Error leyendo historial:', e.message);
+        }
+
+        // 3️⃣ Si no hay nada, intentar desde basicapp2_tree_data (árbol del sidebar)
+        if (allSSHConnections.length === 0) {
+          try {
+            const treeDataStr = localStorage.getItem('basicapp2_tree_data');
+            if (treeDataStr) {
+              const nodes = JSON.parse(treeDataStr);
+              
+              // Extraer todas las conexiones SSH del árbol (recursivamente)
+              const extractSSHNodes = (nodes) => {
+                let sshNodes = [];
+                for (const node of nodes) {
+                  if (node.data && node.data.type === 'ssh') {
+                    sshNodes.push(node);
+                  }
+                  if (node.children && node.children.length > 0) {
+                    sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                  }
+                }
+                return sshNodes;
+              };
+              
+              const sshNodes = extractSSHNodes(nodes);
+              allSSHConnections = sshNodes.map(node => ({
+                id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+                type: 'ssh',
+                name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+                host: node.data.host,
+                port: node.data.port || 22,
+                username: node.data.username || node.data.user,
+                password: node.data.password || '',
+                privateKey: node.data.privateKey || ''
+              }));
+              console.log(`✅ [AIChatPanel] ${allSSHConnections.length} conexiones encontradas en árbol del sidebar`);
+            }
+          } catch (e) {
+            console.log('[AIChatPanel] ℹ️ Error leyendo árbol:', e.message);
+          }
+        }
+
+        console.log(`[AIChatPanel] 📊 Total de conexiones SSH encontradas: ${allSSHConnections.length}`);
+        
+        if (allSSHConnections.length === 0) {
+          console.log('[AIChatPanel] ⚠️ No se encontraron conexiones SSH en ninguna fuente');
+          return;
+        }
+        
+        // Convertir a formato que el MCP entienda (si vienen del árbol, ya están convertidas)
+        const connections = allSSHConnections.map(conn => ({
+          id: conn.id || conn.key || `ssh_${conn.host}_${conn.username}`,
+          type: 'ssh',
+          name: conn.name || conn.label || `${conn.username}@${conn.host}`,
+          host: conn.host,
+          port: conn.port || 22,
+          username: conn.username || conn.user,
+          password: conn.password || '',
+          privateKey: conn.privateKey || ''
+        }));
+
+        // Guardar en el main process vía IPC (usando send en lugar de invoke para evitar timeouts)
+        if (window.electron?.ipcRenderer) {
+          try {
+            console.log('[AIChatPanel] 📡 Enviando conexiones al main process via IPC...');
+            console.log('[AIChatPanel] 🚀 Enviando:', JSON.stringify(connections).substring(0, 100) + '...');
+            
+            // Usar send() en lugar de invoke() para evitar timeouts
+            window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
+            
+            console.log(`✅ [AIChatPanel] ${connections.length} conexiones SSH enviadas al main process`);
+          } catch (ipcError) {
+            console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
+          }
+        } else {
+          console.error('[AIChatPanel] ❌ window.electron.ipcRenderer NO está disponible');
+        }
+      } catch (error) {
+        console.error('[AIChatPanel] ❌ Error en sincronización SSH:', error);
+      }
+    };
+
+    // Sincronizar al montar el componente
+    syncSSHConnectionsToMCP();
+
+    // Escuchar cambios en el árbol de conexiones
+    const handleTreeUpdated = () => {
+      syncSSHConnectionsToMCP();
+    };
+
+    window.addEventListener('connections-updated', handleTreeUpdated);
+    
+    return () => {
+      window.removeEventListener('connections-updated', handleTreeUpdated);
+    };
+  }, []);
+
   // Escuchar eventos del historial de conversaciones
   useEffect(() => {
     const handleLoadConversationEvent = (event) => {

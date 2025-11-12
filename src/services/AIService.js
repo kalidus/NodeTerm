@@ -2017,11 +2017,33 @@ class AIService {
         if (toolName.includes('write_file')) score += 3; // Fallback
       }
       
-      // Directorios: LISTAR
-      if (lowerMsg.match(/lista|listar|directorio|carpeta|folder|contenido|archivos en/)) {
-        if (toolName.includes('list_directory')) score += 10;
-        if (toolName.includes('directory_tree')) score += 7;
-        if (toolName.includes('list_directory_with_sizes')) score += 8;
+      // SSH/Terminal: HOSTS y CONEXIONES (ALTA PRIORIDAD)
+      if (lowerMsg.match(/ssh|host|conexión|remota|servidor|terminal remota|red|conecta|conectar|ejecuta en|comando remoto|archivo en el servidor/i)) {
+        if (toolName.includes('execute_ssh')) score += 20; // MÁS ALTO que read_text_file
+        if (toolName.includes('list_ssh_hosts')) score += 15;
+        if (toolName.includes('test_ssh')) score += 12;
+        // PENALIZAR herramientas de filesystem cuando estamos en contexto SSH
+        if (toolName.includes('read_text_file')) score -= 10;
+        if (toolName.includes('list_directory')) score -= 10;
+      }
+      
+      // Terminal/Comandos LOCALES
+      if (lowerMsg.match(/local|máquina local|powershell|wsl|terminal local/i)) {
+        if (toolName.includes('execute_local')) score += 12;
+      }
+      
+      // Directorios: LISTAR (pero SIN interferir con SSH)
+      if (lowerMsg.match(/lista|listar/) && !lowerMsg.match(/ssh|host|conexión|remota|servidor|conecta|ejecuta/i)) {
+        if (lowerMsg.match(/directorio|carpeta|folder|contenido|archivos en/)) {
+          if (toolName.includes('list_directory')) score += 10;
+          if (toolName.includes('directory_tree')) score += 7;
+          if (toolName.includes('list_directory_with_sizes')) score += 8;
+        }
+      }
+      
+      // PENALIZAR read_text_file si hay contexto de SSH
+      if (lowerMsg.match(/ssh|remoto|servidor|conecta/i) && toolName.includes('read_text_file')) {
+        score -= 15; // Castigar fuertemente
       }
       
       // Archivos: BUSCAR
