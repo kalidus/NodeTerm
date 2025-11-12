@@ -400,7 +400,9 @@ class MCPService {
           summary = 'response(result)';
         }
       }
-      console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido (#${id}): ${summary}`);
+      if (this.verboseLogs) {
+        console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido (#${id}): ${summary}`);
+      }
     }
     
     // Respuesta a una petición nuestra
@@ -421,7 +423,9 @@ class MCPService {
     
     // Notificación del servidor (sin id)
     if (message.method && message.id === undefined) {
-      console.log(`📨 [MCP ${serverId}] Notificación:`, message.method);
+      if (this.verboseLogs) {
+        console.log(`📨 [MCP ${serverId}] Notificación:`, message.method);
+      }
     }
   }
 
