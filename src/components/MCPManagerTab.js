@@ -93,12 +93,18 @@ const MCPManagerTab = ({ themeColors }) => {
             allSSHConnections = sshNodes.map(node => ({
               id: node.key || `ssh_${node.data.host}_${node.data.username}`,
               type: 'ssh',
+              label: node.label, // Guardar el label original del nodo
               name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
-              host: node.data.host,
+              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
               port: node.data.port || 22,
               username: node.data.username || node.data.user,
               password: node.data.password || '',
-              privateKey: node.data.privateKey || ''
+              privateKey: node.data.privateKey || '',
+              // Datos de Bastion Wallix si existen
+              useBastionWallix: node.data.useBastionWallix || false,
+              bastionHost: node.data.bastionHost || '',
+              bastionUser: node.data.bastionUser || '',
+              targetServer: node.data.targetServer || ''
             }));
           }
         } catch (e) {}
@@ -120,8 +126,23 @@ const MCPManagerTab = ({ themeColors }) => {
         // Guardar todas las conexiones del árbol en memoria del MCP
         if (window.electron?.ipcRenderer) {
           try {
-            window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
-            console.log(`✅ [MCPManagerTab] ${connections.length} conexiones SSH sincronizadas en memoria`);
+            // Enviar múltiples veces para asegurar entrega
+            const sendConnections = (attempt = 0) => {
+              try {
+                window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
+                console.log(`📤 [MCPManagerTab] Intento ${attempt + 1}: ${connections.length} conexiones enviadas`);
+              } catch (err) {
+                console.error(`❌ [MCPManagerTab] Error en intento ${attempt + 1}:`, err.message);
+              }
+            };
+            
+            // Enviar inmediatamente y re-enviar con delays progresivos
+            sendConnections(0);
+            setTimeout(() => sendConnections(1), 200);
+            setTimeout(() => sendConnections(2), 1000);
+            setTimeout(() => sendConnections(3), 2000);
+            
+            console.log(`✅ [MCPManagerTab] ${connections.length} conexiones SSH programadas para sincronización`);
           } catch (ipcError) {
             console.error('[MCPManagerTab] Error en IPC:', ipcError.message);
           }
