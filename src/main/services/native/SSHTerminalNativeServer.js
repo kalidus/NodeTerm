@@ -677,18 +677,41 @@ class SSHTerminalNativeServer {
     if (!hostConfig && hostId) {
       const lowerHostId = String(hostId).toLowerCase();
       hostConfig = allConnections.find(h => {
-        const cleanName = h.name.split('[')[0].trim().toLowerCase();
-        return cleanName === lowerHostId || h.id.toLowerCase() === lowerHostId;
+        // Buscar en: label (original del nodo), name, y id
+        const cleanLabel = (h.label || '').toLowerCase();
+        const cleanName = (h.name || '').split('[')[0].trim().toLowerCase();
+        const cleanId = (h.id || '').toLowerCase();
+        
+        // Match exacto en cualquiera de los campos
+        return (
+          cleanLabel === lowerHostId ||
+          cleanName === lowerHostId ||
+          cleanId === lowerHostId ||
+          cleanLabel.includes(lowerHostId) ||
+          cleanName.includes(lowerHostId)
+        );
       });
     }
     
     if (!hostConfig) {
+      const availableLabels = allConnections.map(h => `"${h.label || h.name}"`).join(', ');
       const availableNames = allConnections.map(h => `"${h.name.split('[')[0].trim()}"`).join(', ');
       const availableIds = allConnections.map(h => `"${h.id}"`).slice(0, 5).join(', ');
       const availableMsg = allConnections.length > 0 
-        ? `\n\n📌 Nombres disponibles: ${availableNames}\n📌 IDs disponibles: ${availableIds}${allConnections.length > 5 ? '... y más' : ''}`
+        ? `\n\n📌 Labels disponibles: ${availableLabels.substring(0, 200)}...\n📌 Nombres disponibles: ${availableNames.substring(0, 150)}\n📌 IDs disponibles: ${availableIds}${allConnections.length > 5 ? '... y más' : ''}`
         : `\n\n⚠️ No hay hosts SSH disponibles. Usa list_ssh_hosts para ver opciones.`;
       throw new Error(`❌ Host SSH no encontrado: "${hostId || 'undefined'}"${availableMsg}`);
+    }
+    
+    // DEBUG: Log si tiene datos de Bastion
+    console.log(`🔍 [SSH MCP] Configuración encontrada para: ${hostId}`);
+    if (hostConfig.useBastionWallix) {
+      console.log(`   🔗 BASTION WALLIX DETECTADO`);
+      console.log(`      bastionHost: ${hostConfig.bastionHost}`);
+      console.log(`      bastionUser: ${hostConfig.bastionUser}`);
+      console.log(`      targetServer: ${hostConfig.targetServer}`);
+    } else {
+      console.log(`   ❌ NO ES BASTION (useBastionWallix=${hostConfig.useBastionWallix})`);
     }
     
     // Validación de seguridad
@@ -702,15 +725,13 @@ class SSHTerminalNativeServer {
     if (!ssh || !ssh.isConnected || !ssh.isConnected()) {
       console.log(`🔌 [SSH Terminal MCP] Conectando a ${hostConfig.name} (${hostConfig.host})...`);
       
+      // ⚠️ CONSTRUCCIÓN DE CONFIGURACIÓN SSH - Manejo especial para Bastion Wallix
       const sshConfig = {
-        host: hostConfig.host,
-        port: hostConfig.port || 22,
-        username: hostConfig.username,
         readyTimeout: 20000,
         keepaliveInterval: 60000
       };
       
-      // Autenticación por password o llave privada
+      // Autenticación por password o llave privada (SIEMPRE requerida)
       if (hostConfig.password) {
         sshConfig.password = hostConfig.password;
       } else if (hostConfig.privateKey) {
@@ -718,6 +739,26 @@ class SSHTerminalNativeServer {
       } else {
         throw new Error(`❌ Host ${hostId}: No se configuró password ni privateKey`);
       }
+      
+      // ✅ USAR EXACTAMENTE LA MISMA LÓGICA QUE LA APP
+      // La app usa SSH2 con estos parámetros - simplemente replicar eso
+      
+      // Para Bastion Wallix: usar bastionUser como username y bastionHost como host
+      if (hostConfig.useBastionWallix && hostConfig.bastionHost && hostConfig.bastionUser) {
+        console.log(`🔗 [SSH Terminal MCP] BASTION Wallix - Conectando a través de ${hostConfig.bastionHost}`);
+        sshConfig.host = hostConfig.bastionHost;
+        sshConfig.port = parseInt(hostConfig.port) || 22;
+        sshConfig.username = hostConfig.bastionUser; // Formato especial: rt01119@default@HOST:SSH:rt01119
+      }
+      // Para conexión directa: usar host y username normales
+      else {
+        console.log(`🔗 [SSH Terminal MCP] Conexión DIRECTA a ${hostConfig.host}`);
+        sshConfig.host = hostConfig.host;
+        sshConfig.port = parseInt(hostConfig.port) || 22;
+        sshConfig.username = hostConfig.username || hostConfig.user;
+      }
+      
+      console.log(`🔧 [SSH Terminal MCP] SSH - Host: "${sshConfig.host}:${sshConfig.port}" | Usuario: "${sshConfig.username}"`);
       
       ssh = new SSH2Promise(sshConfig);
       await ssh.connect();
@@ -946,22 +987,29 @@ class SSHTerminalNativeServer {
       // Filtrar solo conexiones SSH válidas
       const sshConnections = connections
         .filter(conn => {
-          const isValid = conn && conn.type === 'ssh' && conn.host && conn.username;
+          // El campo puede ser "username" o "user" (NodeTerm usa "user")
+          const username = conn.username || conn.user;
+          const isValid = conn && conn.type === 'ssh' && conn.host && username;
           if (!isValid) {
-            console.log(`🚫 [SSH Terminal MCP] Conexión descartada:`, conn);
+            console.log(`🚫 [SSH Terminal MCP] Conexión descartada (falta host o usuario):`, conn);
           }
           return isValid;
         })
-        .map(conn => ({
-          id: conn.id || `nodeterm_${conn.host}_${conn.username}`,
-          name: conn.name || `${conn.username}@${conn.host}`,
-          host: conn.host,
-          port: conn.port || 22,
-          username: conn.username,
-          password: conn.password || '',
-          privateKey: conn.privateKey || '',
-          _source: 'nodeterm'
-        }));
+        .map(conn => {
+          const username = conn.username || conn.user;
+          return {
+            id: conn.id || `nodeterm_${conn.host}_${username}`,
+            name: conn.name || `${username}@${conn.host}`,
+            host: conn.host,
+            port: conn.port || 22,
+            username: username,  // Normalizar siempre a "username"
+            user: username,      // Mantener también "user" por compatibilidad
+            password: conn.password || '',
+            privateKey: conn.privateKey || '',
+            _source: 'nodeterm',
+            ...conn  // Incluir TODOS los campos originales
+          };
+        });
       
       console.log(`✅ [SSH Terminal MCP] Cargadas ${sshConnections.length} conexiones SSH válidas de NodeTerm`);
       sshConnections.forEach((conn, idx) => {

@@ -133,15 +133,11 @@ const Sidebar = React.memo(({
       let sshNodes = [];
       for (const node of treeNodes) {
         if (node.data && node.data.type === 'ssh') {
+          // 🔗 PASAR TODO EL node.data COMPLETO (igual que usa la app para conectar)
           sshNodes.push({
             id: node.key || `ssh_${node.data.host}_${node.data.username}`,
-            type: 'ssh',
-            name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
-            host: node.data.host,
-            port: node.data.port || 22,
-            username: node.data.username || node.data.user,
-            password: node.data.password || '',
-            privateKey: node.data.privateKey || ''
+            label: node.label,
+            ...node.data  // ✅ SPREAD: Incluir TODOS los campos de node.data
           });
         }
         if (node.children && node.children.length > 0) {
