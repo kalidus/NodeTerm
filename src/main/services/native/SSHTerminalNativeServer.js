@@ -351,17 +351,30 @@ class SSHTerminalNativeServer {
       // Obtener distribuciones WSL disponibles
       const wslDistros = await this.detectWSLDistros();
       const wslDistroIds = wslDistros.map(d => d.id);
-      const hasCygwin = require('fs').existsSync('C:\\cygwin64\\bin\\bash.exe');
+      const hasCygwin = this.detectCygwinPath() !== null;
       
       if (commandType === 'linux') {
         // 🎯 PRIORIDAD CORRECTA: WSL primero, luego Cygwin
         // 1. Verificar si preferredTerminal está disponible y NO es powershell
         if (this.preferredTerminal && this.preferredTerminal !== 'powershell') {
           // Validar que el preferredTerminal esté realmente disponible
-          if (this.preferredTerminal === 'wsl' && wslDistros.length > 0) {
-            targetTerminal = 'wsl';
+          if (this.preferredTerminal === 'wsl' && wslDistroIds.includes('ubuntu')) {
+            targetTerminal = 'ubuntu';
+          } else if (this.preferredTerminal === 'wsl' && wslDistros.length > 0) {
+            targetTerminal = wslDistroIds[0];
           } else if (wslDistroIds.includes(this.preferredTerminal)) {
             targetTerminal = this.preferredTerminal;
+          } else if (this.preferredTerminal === 'ubuntu') {
+            // NUEVO: Buscar variantes de Ubuntu si "ubuntu" exacto no existe
+            const ubuntuDistro = wslDistros.find(d => 
+              d.id.startsWith('ubuntu-') || 
+              d.name.toLowerCase().includes('ubuntu')
+            );
+            if (ubuntuDistro) {
+              targetTerminal = ubuntuDistro.id;
+            } else {
+              targetTerminal = wslDistros.length > 0 ? wslDistroIds[0] : null;
+            }
           } else if (this.preferredTerminal === 'cygwin' && hasCygwin) {
             targetTerminal = 'cygwin';
           } else {
@@ -415,9 +428,9 @@ class SSHTerminalNativeServer {
     
     // Verificar disponibilidad del terminal ANTES de ejecutar
     if (targetTerminal === 'cygwin') {
-      const fs = require('fs');
-      if (!fs.existsSync('C:\\cygwin64\\bin\\bash.exe')) {
-        throw new Error(`❌ Cygwin no está instalado en C:\\cygwin64. Terminales disponibles: wsl, ${wslDistroIds.join(', ')}, powershell`);
+      const cygwinPath = this.detectCygwinPath();
+      if (!cygwinPath) {
+        throw new Error(`❌ Cygwin no está disponible. Verifica que esté en resources/cygwin64 o en C:\\cygwin64. Terminales disponibles: wsl, ${wslDistroIds.join(', ')}, powershell`);
       }
     }
     
@@ -514,6 +527,35 @@ class SSHTerminalNativeServer {
   /**
    * Ejecutar comando en Cygwin
    */
+  /**
+   * Detectar ruta de Cygwin (embebido o del sistema)
+   */
+  detectCygwinPath() {
+    const fs = require('fs');
+    const path = require('path');
+    const { app } = require('electron');
+    
+    // 1. Buscar en resources de NodeTerm (embebido)
+    const appPath = app.getAppPath();
+    const resourcesCygwin = path.join(appPath, 'resources', 'cygwin64', 'bin', 'bash.exe');
+    console.log(`🔍 [Cygwin] Buscando en resources: ${resourcesCygwin}`);
+    if (fs.existsSync(resourcesCygwin)) {
+      console.log(`✅ [Cygwin] Encontrado en resources`);
+      return resourcesCygwin;
+    }
+    
+    // 2. Buscar en instalación del sistema
+    const systemCygwin = 'C:\\cygwin64\\bin\\bash.exe';
+    console.log(`🔍 [Cygwin] Buscando en sistema: ${systemCygwin}`);
+    if (fs.existsSync(systemCygwin)) {
+      console.log(`✅ [Cygwin] Encontrado en sistema`);
+      return systemCygwin;
+    }
+    
+    console.log(`❌ [Cygwin] No encontrado en ninguna ubicación`);
+    return null;
+  }
+
   async executeInCygwin(command, workingDir) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -521,8 +563,13 @@ class SSHTerminalNativeServer {
         reject(new Error(`Timeout después de ${this.commandTimeout}s`));
       }, this.commandTimeout * 1000);
       
-      // Buscar bash de Cygwin
-      const cygwinBash = 'C:\\cygwin64\\bin\\bash.exe';
+      // Buscar bash de Cygwin (embebido o del sistema)
+      const cygwinBash = this.detectCygwinPath();
+      if (!cygwinBash) {
+        clearTimeout(timeout);
+        reject(new Error('Cygwin no está disponible. Instala Cygwin o verifica que resources/cygwin64 existe.'));
+        return;
+      }
       
       let cygwinCommand = command;
       if (workingDir) {
@@ -533,6 +580,7 @@ class SSHTerminalNativeServer {
         cygwinCommand = `cd "${cygwinPath}" && ${command}`;
       }
       
+      // Usar -l (login) para que Cygwin cargue el PATH y encuentre los comandos
       const process = spawn(cygwinBash, ['-l', '-c', cygwinCommand], {
         shell: false,
         windowsHide: true
@@ -759,16 +807,24 @@ class SSHTerminalNativeServer {
       });
     }
     
-    // Detectar Cygwin
-    const fs = require('fs');
-    const cygwinAvailable = fs.existsSync('C:\\cygwin64\\bin\\bash.exe');
+    // Detectar Cygwin (embebido en NodeTerm o instalación del sistema)
+    const cygwinPath = this.detectCygwinPath();
+    const cygwinAvailable = cygwinPath !== null;
+    
+    if (cygwinAvailable) {
+      console.log('✅ [SSH Terminal] Cygwin encontrado:', cygwinPath);
+    } else {
+      console.log('⚠️ [SSH Terminal] Cygwin no encontrado');
+    }
+    
     terminals.push({
       id: 'cygwin',
       name: 'Cygwin',
       available: cygwinAvailable,
       type: 'cygwin',
       preferred: this.preferredTerminal === 'cygwin',
-      ...(!cygwinAvailable && { reason: 'No instalado en C:\\cygwin64' })
+      ...(!cygwinAvailable && { reason: 'No instalado' }),
+      ...(cygwinAvailable && { path: cygwinPath })
     });
     
     // PowerShell siempre disponible en Windows

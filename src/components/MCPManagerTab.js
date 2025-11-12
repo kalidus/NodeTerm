@@ -33,6 +33,7 @@ const MCPManagerTab = ({ themeColors }) => {
     usePrivateKey: false,
     privateKey: ''
   });
+  const [availableTerminals, setAvailableTerminals] = useState([]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -428,6 +429,99 @@ const MCPManagerTab = ({ themeColors }) => {
       configValues,
       mcp
     });
+    
+    // 🔍 Si es ssh-terminal, detectar terminales disponibles
+    if (server.id === 'ssh-terminal') {
+      (async () => {
+        let wasRunning = server.running;
+        let shouldStop = false;
+        
+        try {
+          // Si no está corriendo, iniciarlo temporalmente
+          if (!wasRunning) {
+            console.log('[MCP Manager] Iniciando ssh-terminal temporalmente para detectar terminales...');
+            const startResult = await window.electron.mcp.startServer('ssh-terminal');
+            if (!startResult.success) {
+              console.warn('[MCP Manager] No se pudo iniciar ssh-terminal:', startResult.error);
+              return;
+            }
+            shouldStop = true;
+            // Esperar un momento para que se inicialice
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
+          const result = await window.electron.mcp.callTool('ssh-terminal', 'list_terminals', {});
+          
+          if (result.success) {
+            // Intentar múltiples formatos de respuesta
+            let data;
+            
+            // Formato 1: {result: {content: [{type:'text', text: '{...JSON...}'}]}}
+            if (result.result && result.result.content && result.result.content[0] && result.result.content[0].text) {
+              try {
+                data = JSON.parse(result.result.content[0].text);
+              } catch (parseError) {
+                console.error('[MCP Manager] Error parseando respuesta MCP:', parseError);
+                return;
+              }
+            }
+            // Formato 2: {content: [{type:'text', text: '{...JSON...}'}]}
+            else if (result.content && result.content[0] && result.content[0].text) {
+              try {
+                data = JSON.parse(result.content[0].text);
+              } catch (parseError) {
+                console.error('[MCP Manager] Error parseando respuesta MCP:', parseError);
+                return;
+              }
+            }
+            // Formato 3: El resultado ya viene parseado en result directamente
+            else if (result.terminals && Array.isArray(result.terminals)) {
+              data = result;
+            }
+            // Formato 4: Resultado en result.result ya parseado
+            else if (result.result && result.result.terminals) {
+              data = result.result;
+            }
+            else {
+              console.warn('[MCP Manager] Formato de respuesta inesperado');
+              return;
+            }
+            
+            if (data.terminals && Array.isArray(data.terminals)) {
+              const terminals = data.terminals
+                .filter(t => t.available) // Solo terminales disponibles
+                .map(t => {
+                  // Iconos por tipo
+                  const icon = t.type === 'wsl' ? '🐧' : 
+                               t.type === 'cygwin' ? '🔵' : 
+                               t.type === 'powershell' ? '⚡' : '💻';
+                  
+                  // Label con icono
+                  const label = `${icon} ${t.name}${t.preferred ? ' ⭐' : ''}`;
+                  
+                  return {
+                    value: t.id,
+                    label: label
+                  };
+                });
+              
+              if (terminals.length > 0) {
+                setAvailableTerminals(terminals);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[MCP Manager] Error detectando terminales:', error.message);
+        } finally {
+          // Si iniciamos el servidor temporalmente, detenerlo
+          if (shouldStop && !wasRunning) {
+            console.log('[MCP Manager] Deteniendo ssh-terminal...');
+            await window.electron.mcp.stopServer('ssh-terminal');
+          }
+        }
+      })();
+    }
+    
     setShowConfigDialog(true);
   };
 
@@ -1109,12 +1203,13 @@ const MCPManagerTab = ({ themeColors }) => {
                     ) : key === 'preferredTerminal' ? (
                       <Dropdown
                         value={editingConfig.configValues?.[key] || 'wsl'}
-                        options={[
+                        options={availableTerminals.length > 0 ? availableTerminals : [
                           { label: '🐧 WSL (Ubuntu/Linux)', value: 'wsl' },
                           { label: '🔵 Cygwin', value: 'cygwin' },
                           { label: '⚡ PowerShell', value: 'powershell' }
                         ]}
                         onChange={(e) => setEditingConfig({ ...editingConfig, configValues: { ...editingConfig.configValues, [key]: e.value } })}
+                        placeholder={availableTerminals.length > 0 ? "Selecciona terminal" : "Detectando terminales..."}
                         style={{ width: '100%', fontSize: '0.75rem' }}
                       />
                     ) : schema.type === 'array' ? (
