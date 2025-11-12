@@ -100,15 +100,19 @@ El MCP ssh-terminal viene **preinstalado** en NodeTerm como MCP nativo.
 
 ### **Terminal Preferido:**
 
-Opciones válidas:
-- `wsl` - WSL genérico (usa la distribución por defecto)
-- `ubuntu` - Ubuntu específicamente
-- `kali-linux` - Kali Linux
-- `debian` - Debian
-- `cygwin` - Cygwin
-- `powershell` - PowerShell
+**UI Inteligente:**
+- Al abrir la configuración de ssh-terminal, el sistema **detecta automáticamente** las terminales instaladas
+- El dropdown muestra **solo terminales realmente disponibles** en tu sistema
+- Iconos visuales: 🐧 WSL, 🔵 Cygwin, ⚡ PowerShell
+- La terminal configurada como preferida se marca con ⭐
 
-⚠️ **Nota:** Si el terminal preferido no está disponible, el sistema hace fallback automático a opciones disponibles.
+**Opciones típicas:**
+- Distribuciones WSL detectadas: `ubuntu-24.04`, `kali-linux`, `debian`, etc.
+- `wsl` - WSL genérico (usa la distribución por defecto)
+- `cygwin` - Cygwin (si está instalado)
+- `powershell` - PowerShell (siempre disponible en Windows)
+
+⚠️ **Nota:** Si el terminal preferido no está disponible, el sistema hace fallback automático.
 
 ---
 
@@ -355,14 +359,46 @@ El sistema ahora captura stdout + stderr. Comandos como `nc -vz`, `curl -v` func
   - Comandos como `nc -vz`, `curl -v` ahora muestran output completo
 - **Fix:** Exit Code solo se muestra en errores
   - Output más limpio: `✅ Ejecutado en local:wsl:Ubuntu`
-- **Fix:** Labels descriptivos
-  - Ahora muestra: `local:wsl:Ubuntu` en lugar de solo `local:wsl`
+- **Fix:** Labels descriptivos siempre muestran distro específica
+  - Cuando `preferredTerminal = 'wsl'`, ahora elige Ubuntu automáticamente
+  - Siempre muestra: `local:wsl:Ubuntu` en lugar de solo `local:wsl`
 
 #### ✅ **Auto-detección Inteligente:**
 - Eliminado parámetro `terminal` de `execute_local`
 - Auto-detección SIEMPRE activa
 - Fallback inteligente si terminal preferido no disponible
 - Priorización correcta: Ubuntu → WSL → Cygwin
+- **Mapeo automático de variantes:** Si eliges "ubuntu" pero solo tienes "ubuntu-24.04", lo mapea automáticamente
+- Respeta EXACTAMENTE el `preferredTerminal` configurado en la UI
+- Ejecuta comandos con `wsl -d <distro>` cuando se especifica una distribución
+- Output limpio: sin logs de profile o archivos de configuración
+- Soporta WSL, Cygwin (embebido o del sistema) y PowerShell
+
+#### ✅ **UI de Configuración Mejorada:**
+- Dropdown de terminales detecta automáticamente las instaladas
+- Solo muestra terminales realmente disponibles
+- Iconos visuales por tipo (🐧 WSL, 🔵 Cygwin, ⚡ PowerShell)
+- Marca la terminal preferida con ⭐
+- Si el MCP no está corriendo, se inicia temporalmente para detectar terminales y se detiene después
+- Parsing correcto del JSON devuelto por `list_terminals` (desde `result.result.content[0].text`)
+
+#### ✅ **Cygwin Embebido:**
+- Detecta automáticamente Cygwin embebido en `resources/cygwin64/` (integrado en NodeTerm)
+- Fallback a instalación del sistema en `C:\cygwin64\`
+- No requiere instalación adicional si Cygwin está integrado en el proyecto
+- Método `detectCygwinPath()` busca en ambas ubicaciones
+
+**Para crear Cygwin embebido:**
+```powershell
+# En PowerShell (desde la raíz del proyecto)
+.\scripts\create-cygwin-portable.ps1
+
+# O con opciones específicas:
+.\scripts\create-cygwin-portable.ps1 -NoUltraComplete   # Versión completa (~200MB)
+.\scripts\create-cygwin-portable.ps1 -Minimal            # Versión mínima (~50MB)
+```
+
+Esto creará `resources/cygwin64/` con Cygwin integrado en el proyecto.
 
 #### ✅ **Integración con NodeTerm:**
 - Conexiones SSH detectadas automáticamente desde NodeTerm
