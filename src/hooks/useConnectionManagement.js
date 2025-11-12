@@ -201,7 +201,7 @@ export const useConnectionManagement = ({
       };
       const newTab = {
         key: tabId,
-        label: `${conn.name} (${prevTabs.filter(t => t.originalKey === conn.originalKey).length + 1})`,
+        label: conn.name,
         originalKey: conn.originalKey,
         sshConfig: sshConfig,
         type: 'terminal',
@@ -467,7 +467,7 @@ export const useConnectionManagement = ({
         
         const newTab = {
           key: tabId,
-          label: `${connectionName} (${prevTabs.filter(t => t.originalKey === originalKey).length + 1})`,
+          label: connectionName,
           originalKey: originalKey,
           rdpConfig: rdpConfig,
           type: 'rdp-guacamole',

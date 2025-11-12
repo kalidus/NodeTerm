@@ -39,7 +39,7 @@ export const useSplitManagement = ({
 
     const newTerminal = {
       key: newTabId,
-      label: `${sshNode.label} (${sshTabs.filter(t => t.originalKey === sshNode.key).length + 1})`,
+      label: sshNode.label,
       originalKey: sshNode.key,
       sshConfig: sshConfig,
       type: 'terminal'
@@ -63,7 +63,7 @@ export const useSplitManagement = ({
             orientation: orientation, // Guardar la orientación
             leftTerminal: leftTerminal, // Terminal izquierdo (existente)
             rightTerminal: newTerminal, // Terminal derecho (nuevo)
-            label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label.split(' (')[0]} | ${sshNode.label}`
+            label: `Split ${orientation === 'horizontal' ? '─' : '│'}: ${tab.label} | ${sshNode.label}`
           };
         }
         return tab;
