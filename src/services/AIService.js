@@ -2472,34 +2472,79 @@ class AIService {
     if (!response || typeof response !== 'string') return null;
     
     // Buscar JSON con estructura de plan: {"plan": [...]}
-    const jsonPattern = /\{[\s\S]*?"plan"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g;
-    const matches = response.match(jsonPattern);
+    // Mejorado: buscar también variantes como "tools", "steps", "actions"
+    const jsonPatterns = [
+      /\{[\s\S]*?"plan"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g,
+      /\{[\s\S]*?"tools"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g,
+      /\{[\s\S]*?"steps"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g
+    ];
     
-    if (!matches) return null;
+    let matches = [];
+    for (const pattern of jsonPatterns) {
+      const found = response.match(pattern);
+      if (found) matches = matches.concat(found);
+    }
+    
+    if (!matches || matches.length === 0) return null;
     
     for (const jsonStr of matches) {
       try {
         const data = JSON.parse(jsonStr);
-        if (data.plan && Array.isArray(data.plan) && data.plan.length > 0) {
+        // Buscar plan, tools, steps, o actions
+        const planArray = data.plan || data.tools || data.steps || data.actions;
+        
+        if (planArray && Array.isArray(planArray) && planArray.length > 0) {
           // Validar que cada elemento del plan tenga tool
-          const validTools = data.plan.filter(t => t && (t.tool || t.toolName));
+          const validTools = planArray.filter(t => {
+            if (!t) return false;
+            // Aceptar tool, toolName, name, o function
+            return !!(t.tool || t.toolName || t.name || t.function);
+          });
+          
           if (validTools.length > 0) {
             debugLogger.debug('AIService.MCP', 'Plan detectado con herramientas válidas', {
-              herramientas: validTools.length
+              herramientas: validTools.length,
+              formato: data.plan ? 'plan' : (data.tools ? 'tools' : (data.steps ? 'steps' : 'actions'))
             });
             return {
               isPlan: true,
               tools: validTools.map(t => ({
-                tool: t.tool || t.toolName,
-                toolName: t.tool || t.toolName,
-                arguments: t.arguments || t.args || {},
+                tool: t.tool || t.toolName || t.name || t.function,
+                toolName: t.tool || t.toolName || t.name || t.function,
+                arguments: t.arguments || t.args || t.params || {},
                 serverId: t.serverId || t.server || null
               }))
             };
           }
         }
       } catch (e) {
-        continue;
+        // Intentar extraer JSON más específico si falla el parse completo
+        try {
+          // Buscar solo el array del plan
+          const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            const arrayData = JSON.parse(arrayMatch[0]);
+            if (Array.isArray(arrayData) && arrayData.length > 0) {
+              const validTools = arrayData.filter(t => t && (t.tool || t.toolName || t.name));
+              if (validTools.length > 0) {
+                debugLogger.debug('AIService.MCP', 'Plan detectado (array directo)', {
+                  herramientas: validTools.length
+                });
+                return {
+                  isPlan: true,
+                  tools: validTools.map(t => ({
+                    tool: t.tool || t.toolName || t.name,
+                    toolName: t.tool || t.toolName || t.name,
+                    arguments: t.arguments || t.args || {},
+                    serverId: t.serverId || t.server || null
+                  }))
+                };
+              }
+            }
+          }
+        } catch (e2) {
+          continue;
+        }
       }
     }
     

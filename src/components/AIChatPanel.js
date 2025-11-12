@@ -46,6 +46,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const loggedToolMessageIdsRef = useRef(new Set());
   const filesystemStatusRef = useRef('');
   
+  // Estado persistente para tarjetas de herramientas expandidas (por messageId)
+  const expandedToolCardsRef = useRef(new Set());
+  
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [conversationTitle, setConversationTitle] = useState('');
@@ -550,24 +553,34 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         // Guardar TODAS las conexiones en memoria del MCP (en el renderer process)
         if (window.electron?.ipcRenderer) {
           try {
-            // Enviar múltiples veces para asegurar que llega después de que el handler esté registrado
+            // Verificar si ya se sincronizó recientemente (debounce de 2 segundos)
+            const now = Date.now();
+            const lastSyncKey = 'lastSSHSyncTime';
+            const lastSync = window[lastSyncKey] || 0;
+            const timeSinceLastSync = now - lastSync;
+            
+            if (timeSinceLastSync < 2000) {
+              console.log(`⏭️ [AIChatPanel] Sincronización omitida (última hace ${timeSinceLastSync}ms)`);
+              return;
+            }
+            
+            window[lastSyncKey] = now;
+            
+            // Enviar con un pequeño retry solo si el servidor no está listo aún
             const sendConnections = (attempt = 0) => {
               try {
                 window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
-                console.log(`📤 [AIChatPanel] Intento ${attempt + 1}: ${connections.length} conexiones enviadas`);
+                if (attempt === 0) {
+                  console.log(`📤 [AIChatPanel] ${connections.length} conexiones SSH enviadas para sincronización`);
+                }
               } catch (err) {
-                console.error(`❌ [AIChatPanel] Error en intento ${attempt + 1}:`, err.message);
+                console.error(`❌ [AIChatPanel] Error enviando conexiones:`, err.message);
               }
             };
             
-            // Enviar inmediatamente y re-enviar con delays progresivos
+            // Enviar inmediatamente y un solo retry después de 500ms si es necesario
             sendConnections(0);
-            setTimeout(() => sendConnections(1), 200);
-            setTimeout(() => sendConnections(2), 1000);
-            setTimeout(() => sendConnections(3), 2000);
-            setTimeout(() => sendConnections(4), 3000);
-            
-            console.log(`✅ [AIChatPanel] ${connections.length} conexiones SSH programadas para sincronización`);
+            setTimeout(() => sendConnections(1), 500);
           } catch (ipcError) {
             console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
           }
@@ -2443,8 +2456,32 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   // 🎨 Componente para Tool Execution Card (Estilo ChatGPT/Claude)
-  const ToolExecutionCard = ({ toolName, toolArgs, toolResult, isError = false, initialExpanded = false }) => {
-    const [expanded, setExpanded] = useState(initialExpanded);
+  const ToolExecutionCard = ({ messageId, toolName, toolArgs, toolResult, isError = false, initialExpanded = false }) => {
+    // Leer estado persistente del ref al inicializar
+    const wasExpanded = expandedToolCardsRef.current.has(messageId);
+    const [expanded, setExpanded] = useState(wasExpanded || initialExpanded);
+    
+    // Sincronizar estado inicial con el ref cuando cambia el messageId (re-render)
+    useEffect(() => {
+      const isInRef = expandedToolCardsRef.current.has(messageId);
+      if (isInRef) {
+        // Si está en el ref, asegurar que el estado esté expandido
+        setExpanded(prev => prev ? prev : true);
+      }
+      // No colapsar automáticamente si no está en el ref - respetar el estado actual
+      // Esto evita que las tarjetas se colapsen cuando se re-renderiza el componente
+    }, [messageId]); // Solo cuando cambia el messageId (nuevo mensaje o re-render)
+    
+    // Sincronizar el ref cuando el usuario cambia el estado manualmente
+    const handleToggle = () => {
+      const newExpanded = !expanded;
+      setExpanded(newExpanded);
+      if (newExpanded) {
+        expandedToolCardsRef.current.add(messageId);
+      } else {
+        expandedToolCardsRef.current.delete(messageId);
+      }
+    };
 
     // Determinar icono por tipo de herramienta
     const getToolIcon = () => {
@@ -2483,7 +2520,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     return (
       <div className="tool-execution-card">
-        <div className="tool-card-header" onClick={() => setExpanded(!expanded)}>
+        <div className="tool-card-header" onClick={handleToggle}>
           <span className="tool-card-icon">{getToolIcon()}</span>
           <div className="tool-card-info">
             <div className="tool-card-name">
@@ -2655,6 +2692,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           {/* 🎨 Tarjeta de Tool Execution (colapsada si ya se mostró código) */}
           <ToolExecutionCard
+            messageId={message.id || `msg-${index}-${message.timestamp}`}
             toolName={toolName}
             toolArgs={toolArgs}
             toolResult={text}
