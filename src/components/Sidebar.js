@@ -127,6 +127,40 @@ const Sidebar = React.memo(({
     conversationId: null
   });
   
+  // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
+  useEffect(() => {
+    const extractSSHNodes = (treeNodes) => {
+      let sshNodes = [];
+      for (const node of treeNodes) {
+        if (node.data && node.data.type === 'ssh') {
+          sshNodes.push({
+            id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+            type: 'ssh',
+            name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+            host: node.data.host,
+            port: node.data.port || 22,
+            username: node.data.username || node.data.user,
+            password: node.data.password || '',
+            privateKey: node.data.privateKey || ''
+          });
+        }
+        if (node.children && node.children.length > 0) {
+          sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+        }
+      }
+      return sshNodes;
+    };
+    
+    const sshConnections = extractSSHNodes(nodes);
+    window.sshConnectionsFromSidebar = sshConnections;
+    console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
+    
+    // Disparar evento para que AIChatPanel se resincronice
+    window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {
+      detail: { count: sshConnections.length }
+    }));
+  }, [nodes]);
+
   // Escuchar evento para cambiar a vista de conexiones
   useEffect(() => {
     const handleSwitchToConnections = () => {

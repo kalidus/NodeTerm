@@ -29,6 +29,9 @@ class SSHTerminalNativeServer {
     // Conexiones SSH configuradas
     this.sshConnections = initialConfig.sshConnections || initialConfig.options?.sshConnections || [];
     
+    // Conexiones SSH sincronizadas desde NodeTerm (en memoria, vía IPC)
+    this.nodeTermConnections = [];
+    
     // Pool de conexiones SSH activas
     this.sshPool = new Map();
     
@@ -900,42 +903,19 @@ class SSHTerminalNativeServer {
    */
   async loadNodeTermSSHConnections() {
     try {
-      const { app } = require('electron');
-      const fs = require('fs').promises;
-      const path = require('path');
+      // 💾 Conexiones almacenadas en memoria (sincronizadas vía IPC desde localStorage del renderer)
+      // NO se guardan en archivo, viven en memoria durante la sesión
+      // Las recibe el IPC handler en main.js cuando el renderer sincroniza
+      console.log(`📂 [SSH Terminal MCP] Usando conexiones SSH sincronizadas desde el renderer (en memoria)`);
       
-      // Intentar leer archivo de configuración de NodeTerm creado por el renderer
-      const userDataPath = app.getPath('userData');
-      const mcpConnectionsPath = path.join(userDataPath, 'mcp-ssh-connections.json');
+      let connections = this.nodeTermConnections || [];
       
-      console.log(`📂 [SSH Terminal MCP] Buscando archivo en: ${mcpConnectionsPath}`);
-      
-      // Verificar si existe el archivo
-      let exists = await fs.access(mcpConnectionsPath).then(() => true).catch(() => false);
-      
-      if (!exists) {
-        console.log(`⚠️ [SSH Terminal MCP] Archivo NO encontrado en intento inicial`);
-        // Intentar con pequeño delay en caso de que se esté escribiendo
-        await new Promise(resolve => setTimeout(resolve, 100));
-        exists = await fs.access(mcpConnectionsPath).then(() => true).catch(() => false);
-        if (!exists) {
-          console.log(`ℹ️ [SSH Terminal MCP] Archivo de conexiones no encontrado: ${mcpConnectionsPath}`);
-          return [];
-        }
-      }
-      
-      const configData = await fs.readFile(mcpConnectionsPath, 'utf8');
-      console.log(`📄 [SSH Terminal MCP] Archivo leído, primeros 100 chars: ${configData.substring(0, 100)}`);
-      
-      const connections = JSON.parse(configData);
-      
-      // Validar que sea un array
       if (!Array.isArray(connections)) {
-        console.warn(`⚠️ [SSH Terminal MCP] Archivo de conexiones no es un array válido`);
+        console.warn(`⚠️ [SSH Terminal MCP] Conexiones no es un array válido`);
         return [];
       }
       
-      console.log(`📊 [SSH Terminal MCP] Total de conexiones en archivo: ${connections.length}`);
+      console.log(`📊 [SSH Terminal MCP] Total de conexiones en memoria: ${connections.length}`);
       
       // Filtrar solo conexiones SSH válidas
       const sshConnections = connections

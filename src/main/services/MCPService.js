@@ -293,6 +293,12 @@ class MCPService {
         capabilities: null
       });
 
+      // 🔗 Guardar referencia global para SSH Terminal
+      if (serverId === 'ssh-terminal') {
+        global.sshTerminalServer = bridge;
+        console.log(`🔗 [MCP] Referencia global ssh-terminal registrada`);
+      }
+
       await this.initializeMCPServer(serverId);
       await this.refreshServerCapabilities(serverId);
 
