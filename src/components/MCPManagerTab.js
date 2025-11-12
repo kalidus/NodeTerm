@@ -72,65 +72,40 @@ const MCPManagerTab = ({ themeColors }) => {
       try {
         let allSSHConnections = [];
 
-        // 1️⃣ Leer desde nodeterm_favorite_connections
+        // 🎯 ÚNICA FUENTE: Leer desde basicapp2_tree_data (árbol del sidebar - "explorador de sesiones")
         try {
-          const favoritesStr = localStorage.getItem('nodeterm_favorite_connections');
-          if (favoritesStr) {
-            const favorites = JSON.parse(favoritesStr);
-            const sshFavorites = favorites.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
-            allSSHConnections = allSSHConnections.concat(sshFavorites);
-          }
-        } catch (e) {}
-
-        // 2️⃣ Leer desde nodeterm_connection_history (recientes)
-        try {
-          const historyStr = localStorage.getItem('nodeterm_connection_history');
-          if (historyStr) {
-            const history = JSON.parse(historyStr);
-            const sshHistory = history.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
-            const newConnections = sshHistory.filter(
-              histConn => !allSSHConnections.some(fav => fav.id === histConn.id)
-            );
-            allSSHConnections = allSSHConnections.concat(newConnections);
-          }
-        } catch (e) {}
-
-        // 3️⃣ Si no hay nada, intentar desde basicapp2_tree_data (árbol del sidebar)
-        if (allSSHConnections.length === 0) {
-          try {
-            const treeDataStr = localStorage.getItem('basicapp2_tree_data');
-            if (treeDataStr) {
-              const nodes = JSON.parse(treeDataStr);
-              const extractSSHNodes = (nodes) => {
-                let sshNodes = [];
-                for (const node of nodes) {
-                  if (node.data && node.data.type === 'ssh') {
-                    sshNodes.push(node);
-                  }
-                  if (node.children && node.children.length > 0) {
-                    sshNodes = sshNodes.concat(extractSSHNodes(node.children));
-                  }
+          const treeDataStr = localStorage.getItem('basicapp2_tree_data');
+          if (treeDataStr) {
+            const nodes = JSON.parse(treeDataStr);
+            const extractSSHNodes = (nodes) => {
+              let sshNodes = [];
+              for (const node of nodes) {
+                if (node.data && node.data.type === 'ssh') {
+                  sshNodes.push(node);
                 }
-                return sshNodes;
-              };
-              const sshNodes = extractSSHNodes(nodes);
-              allSSHConnections = sshNodes.map(node => ({
-                id: node.key || `ssh_${node.data.host}_${node.data.username}`,
-                type: 'ssh',
-                name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
-                host: node.data.host,
-                port: node.data.port || 22,
-                username: node.data.username || node.data.user,
-                password: node.data.password || '',
-                privateKey: node.data.privateKey || ''
-              }));
-            }
-          } catch (e) {}
-        }
+                if (node.children && node.children.length > 0) {
+                  sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                }
+              }
+              return sshNodes;
+            };
+            const sshNodes = extractSSHNodes(nodes);
+            allSSHConnections = sshNodes.map(node => ({
+              id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+              type: 'ssh',
+              name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+              host: node.data.host,
+              port: node.data.port || 22,
+              username: node.data.username || node.data.user,
+              password: node.data.password || '',
+              privateKey: node.data.privateKey || ''
+            }));
+          }
+        } catch (e) {}
 
         if (allSSHConnections.length === 0) return;
 
-        // Convertir a formato que el MCP entienda
+        // Formatear todas las conexiones del árbol para el MCP
         const connections = allSSHConnections.map(conn => ({
           id: conn.id || conn.key || `ssh_${conn.host}_${conn.username}`,
           type: 'ssh',
@@ -142,11 +117,11 @@ const MCPManagerTab = ({ themeColors }) => {
           privateKey: conn.privateKey || ''
         }));
 
-        // Guardar en el main process vía IPC (usando send)
+        // Guardar todas las conexiones del árbol en memoria del MCP
         if (window.electron?.ipcRenderer) {
           try {
             window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
-            console.log(`✅ [MCPManagerTab] ${connections.length} conexiones SSH enviadas al main process`);
+            console.log(`✅ [MCPManagerTab] ${connections.length} conexiones SSH sincronizadas en memoria`);
           } catch (ipcError) {
             console.error('[MCPManagerTab] Error en IPC:', ipcError.message);
           }
@@ -156,17 +131,22 @@ const MCPManagerTab = ({ themeColors }) => {
       }
     };
 
-    // Sincronizar al montar el componente
-    syncSSHConnectionsToMCP();
+    // Sincronizar al montar el componente (con delay para dar tiempo a que el árbol se cargue)
+    const initialSyncTimeout = setTimeout(() => {
+      console.log('[MCPManagerTab] ⏱️ Ejecutando sincronización inicial de conexiones SSH...');
+      syncSSHConnectionsToMCP();
+    }, 1000);
 
     // Escuchar cambios en el árbol de conexiones
     const handleTreeUpdated = () => {
+      console.log('[MCPManagerTab] 🔄 Árbol actualizado, resincronizando conexiones SSH...');
       syncSSHConnectionsToMCP();
     };
 
     window.addEventListener('connections-updated', handleTreeUpdated);
     
     return () => {
+      clearTimeout(initialSyncTimeout);
       window.removeEventListener('connections-updated', handleTreeUpdated);
     };
   }, []);

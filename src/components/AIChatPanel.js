@@ -409,89 +409,119 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => clearTimeout(initDefaultMcps);
   }, [selectedMcpServers]);
 
-  // 🔗 Sincronizar conexiones SSH con el MCP (sin depender de MCPManagerTab)
+  // 🔗 Sincronizar TODAS las conexiones SSH del árbol ("explorador de sesiones")
   useEffect(() => {
     const syncSSHConnectionsToMCP = async () => {
       try {
         let allSSHConnections = [];
 
-        // 1️⃣ Intentar leer desde nodeterm_favorite_connections
+        // 🎯 OPCIÓN 1: Intentar leer desde basicapp2_tree_data (usuarios sin masterKey)
         try {
-          const favoritesStr = localStorage.getItem('nodeterm_favorite_connections');
-          if (favoritesStr) {
-            const favorites = JSON.parse(favoritesStr);
-            const sshFavorites = favorites.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
-            allSSHConnections = allSSHConnections.concat(sshFavorites);
-            console.log(`✅ [AIChatPanel] ${sshFavorites.length} conexiones encontradas en favoritos`);
+          const treeDataStr = localStorage.getItem('basicapp2_tree_data');
+          if (treeDataStr) {
+            // console.log(`🔍 [AIChatPanel] basicapp2_tree_data encontrado en localStorage`);
+            const nodes = JSON.parse(treeDataStr);
+            
+            // Extraer TODAS las conexiones SSH del árbol (recursivamente)
+            const extractSSHNodes = (nodes) => {
+              let sshNodes = [];
+              for (const node of nodes) {
+                if (node.data && node.data.type === 'ssh') {
+                  sshNodes.push(node);
+                }
+                if (node.children && node.children.length > 0) {
+                  sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                }
+              }
+              return sshNodes;
+            };
+            
+            const sshNodes = extractSSHNodes(nodes);
+            allSSHConnections = sshNodes.map(node => ({
+              id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+              type: 'ssh',
+              name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+              host: node.data.host,
+              port: node.data.port || 22,
+              username: node.data.username || node.data.user,
+              password: node.data.password || '',
+              privateKey: node.data.privateKey || ''
+            }));
+            // console.log(`✅ [AIChatPanel] ${allSSHConnections.length} conexiones SSH encontradas en basicapp2_tree_data`);
           }
         } catch (e) {
-          console.log('[AIChatPanel] ℹ️ Error leyendo favoritos:', e.message);
+          console.log('[AIChatPanel] ℹ️ Error leyendo basicapp2_tree_data:', e.message);
         }
 
-        // 2️⃣ Intentar leer desde nodeterm_connection_history (recientes)
-        try {
-          const historyStr = localStorage.getItem('nodeterm_connection_history');
-          if (historyStr) {
-            const history = JSON.parse(historyStr);
-            const sshHistory = history.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
-            // Agregar solo las que no estén ya en favorites
-            const newConnections = sshHistory.filter(
-              histConn => !allSSHConnections.some(fav => fav.id === histConn.id)
-            );
-            allSSHConnections = allSSHConnections.concat(newConnections);
-            console.log(`✅ [AIChatPanel] ${newConnections.length} nuevas conexiones encontradas en historial`);
-          }
-        } catch (e) {
-          console.log('[AIChatPanel] ℹ️ Error leyendo historial:', e.message);
-        }
-
-        // 3️⃣ Si no hay nada, intentar desde basicapp2_tree_data (árbol del sidebar)
+        // 🎯 OPCIÓN 2: Si no hay basicapp2_tree_data, desencriptar connections_encrypted
         if (allSSHConnections.length === 0) {
           try {
-            const treeDataStr = localStorage.getItem('basicapp2_tree_data');
-            if (treeDataStr) {
-              const nodes = JSON.parse(treeDataStr);
+            const encryptedStr = localStorage.getItem('connections_encrypted');
+            if (encryptedStr) {
+              // console.log(`🔍 [AIChatPanel] basicapp2_tree_data vacío, intentando desencriptar connections_encrypted...`);
               
-              // Extraer todas las conexiones SSH del árbol (recursivamente)
-              const extractSSHNodes = (nodes) => {
-                let sshNodes = [];
-                for (const node of nodes) {
-                  if (node.data && node.data.type === 'ssh') {
-                    sshNodes.push(node);
+              // Necesitamos la masterKey para desencriptar
+              // La obtenemos del window (debería estar disponible si el usuario está logueado)
+              if (window.currentMasterKey) {
+                try {
+                  const SecureStorage = require('../services/SecureStorage').default || require('../services/SecureStorage');
+                  const secureStorage = new SecureStorage();
+                  const encryptedObj = JSON.parse(encryptedStr);
+                  const decrypted = await secureStorage.decryptData(encryptedObj, window.currentMasterKey);
+                  
+                  // decrypted debería ser un array de nodos
+                  if (Array.isArray(decrypted)) {
+                    const extractSSHNodes = (nodes) => {
+                      let sshNodes = [];
+                      for (const node of nodes) {
+                        if (node.data && node.data.type === 'ssh') {
+                          sshNodes.push(node);
+                        }
+                        if (node.children && node.children.length > 0) {
+                          sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                        }
+                      }
+                      return sshNodes;
+                    };
+                    
+                    const sshNodes = extractSSHNodes(decrypted);
+                    allSSHConnections = sshNodes.map(node => ({
+                      id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+                      type: 'ssh',
+                      name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+                      host: node.data.host,
+                      port: node.data.port || 22,
+                      username: node.data.username || node.data.user,
+                      password: node.data.password || '',
+                      privateKey: node.data.privateKey || ''
+                    }));
+                    // console.log(`✅ [AIChatPanel] ${allSSHConnections.length} conexiones desencriptadas desde connections_encrypted`);
                   }
-                  if (node.children && node.children.length > 0) {
-                    sshNodes = sshNodes.concat(extractSSHNodes(node.children));
-                  }
+                } catch (decryptError) {
+                  console.log('[AIChatPanel] ℹ️ Error desencriptando connections_encrypted:', decryptError.message);
                 }
-                return sshNodes;
-              };
-              
-              const sshNodes = extractSSHNodes(nodes);
-              allSSHConnections = sshNodes.map(node => ({
-                id: node.key || `ssh_${node.data.host}_${node.data.username}`,
-                type: 'ssh',
-                name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
-                host: node.data.host,
-                port: node.data.port || 22,
-                username: node.data.username || node.data.user,
-                password: node.data.password || '',
-                privateKey: node.data.privateKey || ''
-              }));
-              console.log(`✅ [AIChatPanel] ${allSSHConnections.length} conexiones encontradas en árbol del sidebar`);
+              } else {
+                console.log('[AIChatPanel] ℹ️ window.currentMasterKey no disponible (usuario no logueado?)');
+              }
             }
           } catch (e) {
-            console.log('[AIChatPanel] ℹ️ Error leyendo árbol:', e.message);
+            console.log('[AIChatPanel] ℹ️ Error leyendo connections_encrypted:', e.message);
           }
         }
 
-        console.log(`[AIChatPanel] 📊 Total de conexiones SSH encontradas: ${allSSHConnections.length}`);
+        // Si no hay conexiones en localStorage, intentar obtenerlas desde window.sshConnectionsFromSidebar
+        if (allSSHConnections.length === 0 && window.sshConnectionsFromSidebar) {
+          allSSHConnections = window.sshConnectionsFromSidebar;
+        }
+        
+        console.log(`[AIChatPanel] 📊 TOTAL de conexiones SSH sincronizadas: ${allSSHConnections.length}`);
         
         if (allSSHConnections.length === 0) {
           console.log('[AIChatPanel] ⚠️ No se encontraron conexiones SSH en ninguna fuente');
           return;
         }
         
-        // Convertir a formato que el MCP entienda (si vienen del árbol, ya están convertidas)
+        // Formatear para el MCP (todas las conexiones, deduplicadas)
         const connections = allSSHConnections.map(conn => ({
           id: conn.id || conn.key || `ssh_${conn.host}_${conn.username}`,
           type: 'ssh',
@@ -503,16 +533,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           privateKey: conn.privateKey || ''
         }));
 
-        // Guardar en el main process vía IPC (usando send en lugar de invoke para evitar timeouts)
+        // Guardar TODAS las conexiones en memoria del MCP (en el renderer process)
         if (window.electron?.ipcRenderer) {
           try {
-            console.log('[AIChatPanel] 📡 Enviando conexiones al main process via IPC...');
-            console.log('[AIChatPanel] 🚀 Enviando:', JSON.stringify(connections).substring(0, 100) + '...');
+            // Enviar múltiples veces para asegurar que llega después de que el handler esté registrado
+            const sendConnections = () => {
+              window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
+            };
             
-            // Usar send() en lugar de invoke() para evitar timeouts
-            window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
+            // Enviar inmediatamente y re-enviar para asegurar entrega
+            sendConnections();
+            setTimeout(sendConnections, 100);
+            setTimeout(sendConnections, 500);
             
-            console.log(`✅ [AIChatPanel] ${connections.length} conexiones SSH enviadas al main process`);
+            console.log(`✅ [AIChatPanel] ${connections.length} conexiones SSH sincronizadas al MCP`);
           } catch (ipcError) {
             console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
           }
@@ -524,18 +558,31 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
     };
 
-    // Sincronizar al montar el componente
-    syncSSHConnectionsToMCP();
+    // Sincronizar al montar el componente (con delay para dar tiempo a que localStorage esté listo)
+    const initialSyncTimeout = setTimeout(() => {
+      console.log('[AIChatPanel] ⏱️ Ejecutando sincronización inicial de conexiones SSH...');
+      syncSSHConnectionsToMCP();
+    }, 500); // Delay corto solo para asegurar que todo esté cargado
 
     // Escuchar cambios en el árbol de conexiones
     const handleTreeUpdated = () => {
+      console.log('[AIChatPanel] 🔄 Árbol actualizado, resincronizando conexiones SSH...');
+      syncSSHConnectionsToMCP();
+    };
+
+    const handleSidebarSSHUpdated = (event) => {
+      console.log(`[AIChatPanel] 🔄 Sidebar sincronizó conexiones SSH (${event.detail?.count || '?'} conexiones), resincronizando...`);
+      // Resincronizar INMEDIATAMENTE cuando Sidebar actualiza
       syncSSHConnectionsToMCP();
     };
 
     window.addEventListener('connections-updated', handleTreeUpdated);
+    window.addEventListener('sidebar-ssh-connections-updated', handleSidebarSSHUpdated);
     
     return () => {
+      clearTimeout(initialSyncTimeout);
       window.removeEventListener('connections-updated', handleTreeUpdated);
+      window.removeEventListener('sidebar-ssh-connections-updated', handleSidebarSSHUpdated);
     };
   }, []);
 
@@ -4775,4 +4822,5 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 };
 
 export default AIChatPanel;
+
 
