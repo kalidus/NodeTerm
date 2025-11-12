@@ -66,6 +66,111 @@ const MCPManagerTab = ({ themeColors }) => {
     };
   }, []);
 
+  // 🔗 Sincronizar conexiones SSH con el MCP (redundante con AIChatPanel, pero útil si se abre MCPManagerTab directamente)
+  useEffect(() => {
+    const syncSSHConnectionsToMCP = async () => {
+      try {
+        let allSSHConnections = [];
+
+        // 1️⃣ Leer desde nodeterm_favorite_connections
+        try {
+          const favoritesStr = localStorage.getItem('nodeterm_favorite_connections');
+          if (favoritesStr) {
+            const favorites = JSON.parse(favoritesStr);
+            const sshFavorites = favorites.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
+            allSSHConnections = allSSHConnections.concat(sshFavorites);
+          }
+        } catch (e) {}
+
+        // 2️⃣ Leer desde nodeterm_connection_history (recientes)
+        try {
+          const historyStr = localStorage.getItem('nodeterm_connection_history');
+          if (historyStr) {
+            const history = JSON.parse(historyStr);
+            const sshHistory = history.filter(conn => conn.type === 'ssh' || conn.type === 'explorer');
+            const newConnections = sshHistory.filter(
+              histConn => !allSSHConnections.some(fav => fav.id === histConn.id)
+            );
+            allSSHConnections = allSSHConnections.concat(newConnections);
+          }
+        } catch (e) {}
+
+        // 3️⃣ Si no hay nada, intentar desde basicapp2_tree_data (árbol del sidebar)
+        if (allSSHConnections.length === 0) {
+          try {
+            const treeDataStr = localStorage.getItem('basicapp2_tree_data');
+            if (treeDataStr) {
+              const nodes = JSON.parse(treeDataStr);
+              const extractSSHNodes = (nodes) => {
+                let sshNodes = [];
+                for (const node of nodes) {
+                  if (node.data && node.data.type === 'ssh') {
+                    sshNodes.push(node);
+                  }
+                  if (node.children && node.children.length > 0) {
+                    sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                  }
+                }
+                return sshNodes;
+              };
+              const sshNodes = extractSSHNodes(nodes);
+              allSSHConnections = sshNodes.map(node => ({
+                id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+                type: 'ssh',
+                name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+                host: node.data.host,
+                port: node.data.port || 22,
+                username: node.data.username || node.data.user,
+                password: node.data.password || '',
+                privateKey: node.data.privateKey || ''
+              }));
+            }
+          } catch (e) {}
+        }
+
+        if (allSSHConnections.length === 0) return;
+
+        // Convertir a formato que el MCP entienda
+        const connections = allSSHConnections.map(conn => ({
+          id: conn.id || conn.key || `ssh_${conn.host}_${conn.username}`,
+          type: 'ssh',
+          name: conn.name || conn.label || `${conn.username}@${conn.host}`,
+          host: conn.host,
+          port: conn.port || 22,
+          username: conn.username || conn.user,
+          password: conn.password || '',
+          privateKey: conn.privateKey || ''
+        }));
+
+        // Guardar en el main process vía IPC (usando send)
+        if (window.electron?.ipcRenderer) {
+          try {
+            window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
+            console.log(`✅ [MCPManagerTab] ${connections.length} conexiones SSH enviadas al main process`);
+          } catch (ipcError) {
+            console.error('[MCPManagerTab] Error en IPC:', ipcError.message);
+          }
+        }
+      } catch (error) {
+        console.error('[MCPManagerTab] Error en sincronización SSH:', error);
+      }
+    };
+
+    // Sincronizar al montar el componente
+    syncSSHConnectionsToMCP();
+
+    // Escuchar cambios en el árbol de conexiones
+    const handleTreeUpdated = () => {
+      syncSSHConnectionsToMCP();
+    };
+
+    window.addEventListener('connections-updated', handleTreeUpdated);
+    
+    return () => {
+      window.removeEventListener('connections-updated', handleTreeUpdated);
+    };
+  }, []);
+
 
   const loadData = async () => {
     try {

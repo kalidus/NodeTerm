@@ -188,13 +188,13 @@ class SSHTerminalNativeServer {
       tools: [
         {
           name: 'execute_local',
-          description: 'Ejecuta comandos en la terminal local. Comandos Linux (ls, cat, pwd) se ejecutan en WSL/Ubuntu. Comandos Windows (Get-Process, dir) se ejecutan en PowerShell. La detección es automática.',
+          description: 'IMPORTANTE: Ejecuta comandos en la MÁQUINA LOCAL (no remota, no por SSH). Perfecta para: listar procesos locales, revisar servicios Windows, ejecutar scripts, obtener información del sistema. DIFERENTE de execute_ssh que usa máquinas remotas. Comandos Linux (ls, cat, pwd) usan WSL/Ubuntu. Comandos Windows (Get-Process, dir) usan PowerShell.',
           inputSchema: {
             type: 'object',
             properties: {
               command: {
                 type: 'string',
-                description: 'Comando a ejecutar (ej: "ls -la" o "Get-Process")'
+                description: 'Comando a ejecutar en la MÁQUINA LOCAL (ej: "ls -la" o "Get-Process")'
               },
               workingDir: {
                 type: 'string',
@@ -206,17 +206,17 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'execute_ssh',
-          description: 'Ejecuta un comando en un servidor remoto por SSH. Primero usa list_ssh_hosts para ver servidores disponibles.',
+          description: 'IMPORTANTE: Ejecuta un comando en un servidor remoto por SSH (máquina externa, no local). PRIMERO debe usar list_ssh_hosts para obtener el ID del servidor. El hostId es la identificación única del servidor remoto. Ejemplo: hostId="192.168.1.10_root_22" command="ls -la /home". Usa credenciales guardadas automáticamente.',
           inputSchema: {
             type: 'object',
             properties: {
               hostId: {
                 type: 'string',
-                description: 'ID del servidor SSH (ejemplo: "server1")'
+                description: 'ID único del servidor SSH remoto (ej: "192.168.1.10_root_22"). Obtener de list_ssh_hosts.'
               },
               command: {
                 type: 'string',
-                description: 'Comando Linux a ejecutar (ej: "ls -la")'
+                description: 'Comando Linux a ejecutar en el servidor remoto (ej: "ls -la", "pwd", "cat /etc/hostname")'
               }
             },
             required: ['hostId', 'command']
@@ -233,7 +233,7 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'list_ssh_hosts',
-          description: 'Lista los servidores SSH configurados con su nombre, host, usuario y estado. Usa esto antes de execute_ssh.',
+          description: 'IMPORTANTE: Lista TODOS los servidores SSH remotos configurados en NodeTerm (desde la barra lateral). Devuelve: nombre del servidor, dirección IP/hostname, usuario SSH, puerto SSH, y estado de conexión. DIFERENTE de list_directory que lista archivos locales. Use esta herramienta SOLO para obtener la lista de servidores SSH disponibles, luego use execute_ssh para conectarse a uno específico.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -856,14 +856,11 @@ class SSHTerminalNativeServer {
     const allConnections = [...this.sshConnections, ...nodetermConnections];
     
     if (allConnections.length === 0) {
-      return {
-        hosts: [],
-        message: '📡 No hay hosts SSH configurados.\n\n' +
-                 '**Opciones:**\n' +
-                 '1. ✅ Agrega conexiones en NodeTerm (Sidebar → SSH)\n' +
-                 '2. ⚙️ Configura en MCP: Configuración → MCP Tools → SSH/Terminal\n\n' +
-                 '💡 Las conexiones de NodeTerm se detectan automáticamente!'
-      };
+      return '📡 **No hay hosts SSH configurados**\n\n' +
+             '**Opciones:**\n' +
+             '1. ✅ Agrega conexiones en NodeTerm (Sidebar → SSH)\n' +
+             '2. ⚙️ Configura en MCP: Configuración → MCP Tools → SSH/Terminal\n\n' +
+             '💡 Las conexiones de NodeTerm se detectan automáticamente!';
     }
     
     const hosts = allConnections.map(host => {
@@ -886,18 +883,20 @@ class SSHTerminalNativeServer {
       };
     });
     
-    return {
-      hosts,
-      totalConfigured: hosts.length,
-      activeConnections: hosts.filter(h => h.status === 'connected').length,
-      nodetermConnections: nodetermConnections.length,
-      message: `✅ Detectadas ${nodetermConnections.length} conexiones de NodeTerm automáticamente`
-    };
+    // Crear formato legible para presentar al modelo
+    const hostsList = hosts
+      .map((h, idx) => `${idx + 1}. **${h.name}**\n   🔑 ID: \`${h.id}\`\n   📍 Host: ${h.host}:${h.port}\n   👤 Usuario: ${h.username}\n   ⚡ Estado: ${h.status}`)
+      .join('\n\n');
+    
+    const activeCount = hosts.filter(h => h.status === 'connected').length;
+    
+    // Devolver SOLO el texto formateado, no un objeto JSON
+    return `✅ **${hosts.length} conexiones SSH disponibles**\n\n${hostsList}\n\n📊 **Resumen:**\n- Total configuradas: ${hosts.length}\n- Conexiones activas: ${activeCount}\n- Desde NodeTerm: ${nodetermConnections.length}\n\n**Para conectarte a cualquiera, usa:**\n\`execute_ssh\` con el **ID exacto** que aparece arriba (en el formato \`ssh:host:usuario:puerto\`)\n\n**Ejemplo:** Para conectarse a Kepler y listar archivos:\n- hostId: \`ssh:192.168.10.10:kalidus:22\`\n- command: \`ls -la\``;
   }
 
   /**
    * 🔗 Cargar conexiones SSH desde NodeTerm
-   * Lee el archivo mcp-config.json o usa el parámetro global si está disponible
+   * Lee el archivo mcp-ssh-connections.json que se actualiza desde el renderer
    */
   async loadNodeTermSSHConnections() {
     try {
@@ -905,25 +904,48 @@ class SSHTerminalNativeServer {
       const fs = require('fs').promises;
       const path = require('path');
       
-      // Intentar leer archivo de configuración de NodeTerm
+      // Intentar leer archivo de configuración de NodeTerm creado por el renderer
       const userDataPath = app.getPath('userData');
-      const nodetermConfigPath = path.join(userDataPath, 'nodeterm-ssh-connections.json');
+      const mcpConnectionsPath = path.join(userDataPath, 'mcp-ssh-connections.json');
+      
+      console.log(`📂 [SSH Terminal MCP] Buscando archivo en: ${mcpConnectionsPath}`);
       
       // Verificar si existe el archivo
-      const exists = await fs.access(nodetermConfigPath).then(() => true).catch(() => false);
+      let exists = await fs.access(mcpConnectionsPath).then(() => true).catch(() => false);
       
       if (!exists) {
-        // Si no existe, intentar leer desde localStorage vía IPC (si estamos en el contexto correcto)
-        // Por ahora, retornar vacío
+        console.log(`⚠️ [SSH Terminal MCP] Archivo NO encontrado en intento inicial`);
+        // Intentar con pequeño delay en caso de que se esté escribiendo
+        await new Promise(resolve => setTimeout(resolve, 100));
+        exists = await fs.access(mcpConnectionsPath).then(() => true).catch(() => false);
+        if (!exists) {
+          console.log(`ℹ️ [SSH Terminal MCP] Archivo de conexiones no encontrado: ${mcpConnectionsPath}`);
+          return [];
+        }
+      }
+      
+      const configData = await fs.readFile(mcpConnectionsPath, 'utf8');
+      console.log(`📄 [SSH Terminal MCP] Archivo leído, primeros 100 chars: ${configData.substring(0, 100)}`);
+      
+      const connections = JSON.parse(configData);
+      
+      // Validar que sea un array
+      if (!Array.isArray(connections)) {
+        console.warn(`⚠️ [SSH Terminal MCP] Archivo de conexiones no es un array válido`);
         return [];
       }
       
-      const configData = await fs.readFile(nodetermConfigPath, 'utf8');
-      const connections = JSON.parse(configData);
+      console.log(`📊 [SSH Terminal MCP] Total de conexiones en archivo: ${connections.length}`);
       
       // Filtrar solo conexiones SSH válidas
       const sshConnections = connections
-        .filter(conn => conn.type === 'ssh' && conn.host && conn.username)
+        .filter(conn => {
+          const isValid = conn && conn.type === 'ssh' && conn.host && conn.username;
+          if (!isValid) {
+            console.log(`🚫 [SSH Terminal MCP] Conexión descartada:`, conn);
+          }
+          return isValid;
+        })
         .map(conn => ({
           id: conn.id || `nodeterm_${conn.host}_${conn.username}`,
           name: conn.name || `${conn.username}@${conn.host}`,
@@ -931,15 +953,20 @@ class SSHTerminalNativeServer {
           port: conn.port || 22,
           username: conn.username,
           password: conn.password || '',
+          privateKey: conn.privateKey || '',
           _source: 'nodeterm'
         }));
       
-      console.log(`🔗 [SSH Terminal MCP] Cargadas ${sshConnections.length} conexiones SSH de NodeTerm`);
+      console.log(`✅ [SSH Terminal MCP] Cargadas ${sshConnections.length} conexiones SSH válidas de NodeTerm`);
+      sshConnections.forEach((conn, idx) => {
+        console.log(`  [${idx}] ${conn.name} (${conn.host}:${conn.port})`);
+      });
       return sshConnections;
       
     } catch (error) {
       // No es crítico, simplemente no hay conexiones de NodeTerm
-      console.log(`ℹ️ [SSH Terminal MCP] No se cargaron conexiones de NodeTerm:`, error.message);
+      console.log(`ℹ️ [SSH Terminal MCP] Error cargando conexiones de NodeTerm:`, error.message);
+      console.error(error.stack);
       return [];
     }
   }
