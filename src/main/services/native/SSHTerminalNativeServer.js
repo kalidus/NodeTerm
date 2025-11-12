@@ -670,9 +670,25 @@ class SSHTerminalNativeServer {
     const nodetermConnections = await this.loadNodeTermSSHConnections();
     const allConnections = [...this.sshConnections, ...nodetermConnections];
     
-    const hostConfig = allConnections.find(h => h.id === hostId);
+    // Intentar match exacto primero (ID completo)
+    let hostConfig = allConnections.find(h => h.id === hostId);
+    
+    // Si no encuentra por ID exacto, intentar por nombre (insensible a mayúsculas)
+    if (!hostConfig && hostId) {
+      const lowerHostId = String(hostId).toLowerCase();
+      hostConfig = allConnections.find(h => {
+        const cleanName = h.name.split('[')[0].trim().toLowerCase();
+        return cleanName === lowerHostId || h.id.toLowerCase() === lowerHostId;
+      });
+    }
+    
     if (!hostConfig) {
-      throw new Error(`❌ Host SSH no configurado: "${hostId}". Usa list_ssh_hosts para ver hosts disponibles.`);
+      const availableNames = allConnections.map(h => `"${h.name.split('[')[0].trim()}"`).join(', ');
+      const availableIds = allConnections.map(h => `"${h.id}"`).slice(0, 5).join(', ');
+      const availableMsg = allConnections.length > 0 
+        ? `\n\n📌 Nombres disponibles: ${availableNames}\n📌 IDs disponibles: ${availableIds}${allConnections.length > 5 ? '... y más' : ''}`
+        : `\n\n⚠️ No hay hosts SSH disponibles. Usa list_ssh_hosts para ver opciones.`;
+      throw new Error(`❌ Host SSH no encontrado: "${hostId || 'undefined'}"${availableMsg}`);
     }
     
     // Validación de seguridad
@@ -893,8 +909,18 @@ class SSHTerminalNativeServer {
     
     const activeCount = hosts.filter(h => h.status === 'connected').length;
     
+    // Crear mapeo de nombres a IDs para facilitar búsqueda
+    const nameToIdMap = {};
+    hosts.forEach(h => {
+      const cleanName = h.name.split('[')[0].trim().toLowerCase();
+      nameToIdMap[cleanName] = h.id;
+    });
+    
     // Devolver SOLO el texto formateado, no un objeto JSON
-    return `✅ **${hosts.length} conexiones SSH disponibles**\n\n${hostsList}\n\n📊 **Resumen:**\n- Total configuradas: ${hosts.length}\n- Conexiones activas: ${activeCount}\n- Desde NodeTerm: ${nodetermConnections.length}\n\n**Para conectarte a cualquiera, usa:**\n\`execute_ssh\` con el **ID exacto** que aparece arriba (en el formato \`ssh:host:usuario:puerto\`)\n\n**Ejemplo:** Para conectarse a Kepler y listar archivos:\n- hostId: \`ssh:192.168.10.10:kalidus:22\`\n- command: \`ls -la\``;
+    const firstHostId = hosts.length > 0 ? hosts[0].id : 'ssh:host:usuario:22';
+    
+    return `✅ **${hosts.length} conexiones SSH disponibles**\n\n${hostsList}\n\n📊 **Resumen:**\n- Total configuradas: ${hosts.length}\n- Conexiones activas: ${activeCount}\n- Desde NodeTerm: ${nodetermConnections.length}\n\n**🔗 CÓMO CONECTAR:**\n\n✅ **MANERA FÁCIL (RECOMENDADO):**\nCuando el usuario mencione un nombre de host (ej: "conecta a Kepler"), usa directamente el parámetro:\n- \`hostId\`: El nombre exacto del host (ej: "Kepler")\n- \`command\`: El comando a ejecutar\n\nLos IDs disponibles son:\n${Object.entries(nameToIdMap).map(([name, id]) => `- "${name}" → ${id}`).slice(0, 20).join('\n')}${hosts.length > 20 ? `\n... y ${hosts.length - 20} más` : ''}\n\n**EJEMPLO:** Si el usuario dice "conecta a Kepler y lista archivos":\n- \`hostId\`: \`Kepler\`\n- \`command\`: \`ls -la\``;
+
   }
 
   /**
