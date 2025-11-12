@@ -973,8 +973,6 @@ class SSHTerminalNativeServer {
       // 💾 Conexiones almacenadas en memoria (sincronizadas vía IPC desde localStorage del renderer)
       // NO se guardan en archivo, viven en memoria durante la sesión
       // Las recibe el IPC handler en main.js cuando el renderer sincroniza
-      console.log(`📂 [SSH Terminal MCP] Usando conexiones SSH sincronizadas desde el renderer (en memoria)`);
-      
       let connections = this.nodeTermConnections || [];
       
       if (!Array.isArray(connections)) {
@@ -989,11 +987,7 @@ class SSHTerminalNativeServer {
         .filter(conn => {
           // El campo puede ser "username" o "user" (NodeTerm usa "user")
           const username = conn.username || conn.user;
-          const isValid = conn && conn.type === 'ssh' && conn.host && username;
-          if (!isValid) {
-            console.log(`🚫 [SSH Terminal MCP] Conexión descartada (falta host o usuario):`, conn);
-          }
-          return isValid;
+          return conn && conn.type === 'ssh' && conn.host && username;
         })
         .map(conn => {
           const username = conn.username || conn.user;
@@ -1012,9 +1006,6 @@ class SSHTerminalNativeServer {
         });
       
       console.log(`✅ [SSH Terminal MCP] Cargadas ${sshConnections.length} conexiones SSH válidas de NodeTerm`);
-      sshConnections.forEach((conn, idx) => {
-        console.log(`  [${idx}] ${conn.name} (${conn.host}:${conn.port})`);
-      });
       return sshConnections;
       
     } catch (error) {

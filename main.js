@@ -519,11 +519,6 @@ ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
     if (global.sshTerminalServer) {
       global.sshTerminalServer.nodeTermConnections = connections;
       console.log(`✅ [SSH MCP] ${connections.length} conexiones SSH sincronizadas en memoria`);
-      
-      // Log de conexiones sincronizadas
-      connections.forEach((conn, idx) => {
-        console.log(`  [${idx + 1}] ${conn.name} (${conn.host}:${conn.port})`);
-      });
     } else {
       console.warn('⚠️ [SSH MCP] SSH Terminal Server no disponible aún');
     }
