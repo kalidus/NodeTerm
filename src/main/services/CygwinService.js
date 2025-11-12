@@ -150,6 +150,29 @@ async function startCygwinSession(tabId, { cols, rows }) {
       // Ignorar errores de fstab
     }
 
+    // Arreglar line endings en archivos de profile.d (Windows CRLF -> Unix LF)
+    const profiledPath = path.join(etcPath, 'profile.d');
+    if (fs.existsSync(profiledPath)) {
+      try {
+        const files = fs.readdirSync(profiledPath);
+        files.forEach(file => {
+          if (file.endsWith('.sh')) {
+            const filePath = path.join(profiledPath, file);
+            try {
+              let content = fs.readFileSync(filePath, 'utf8');
+              // Convertir CRLF a LF
+              content = content.replace(/\r\n/g, '\n');
+              fs.writeFileSync(filePath, content, 'utf8');
+            } catch (e) {
+              // Ignorar errores individuales
+            }
+          }
+        });
+      } catch (e) {
+        // Ignorar si profile.d no existe o hay errores
+      }
+    }
+
     const bashrcContent = `# NodeTerm Cygwin - Configuración moderna
 # Prompt bonito con colores y símbolos
 export PS1='\\[\\033[01;36m\\]┌─[\\[\\033[01;32m\\]\\u\\[\\033[01;33m\\]@\\[\\033[01;35m\\]\\h\\[\\033[01;36m\\]]─[\\[\\033[01;34m\\]\\w\\[\\033[01;36m\\]]\\n└─\\[\\033[01;32m\\]\\$\\[\\033[00m\\] '
