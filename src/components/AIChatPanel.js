@@ -2515,8 +2515,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             {toolResult && (
               <div className={`tool-card-result ${isError ? 'error' : ''}`}>
                 <strong>{isError ? 'Error:' : 'Resultado:'}</strong>
-                <div style={{ marginTop: '0.4rem', whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>
-                  {String(toolResult).slice(0, 500)}{String(toolResult).length > 500 ? '...' : ''}
+                <div className="tool-result-content">
+                  {String(toolResult)}
                 </div>
               </div>
             )}
