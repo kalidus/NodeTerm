@@ -126,23 +126,34 @@ const MCPManagerTab = ({ themeColors }) => {
         // Guardar todas las conexiones del árbol en memoria del MCP
         if (window.electron?.ipcRenderer) {
           try {
-            // Enviar múltiples veces para asegurar entrega
+            // Verificar si ya se sincronizó recientemente (debounce de 2 segundos)
+            const now = Date.now();
+            const lastSyncKey = 'lastSSHSyncTime';
+            const lastSync = window[lastSyncKey] || 0;
+            const timeSinceLastSync = now - lastSync;
+            
+            if (timeSinceLastSync < 2000) {
+              console.log(`⏭️ [MCPManagerTab] Sincronización omitida (última hace ${timeSinceLastSync}ms)`);
+              return;
+            }
+            
+            window[lastSyncKey] = now;
+            
+            // Enviar con un pequeño retry solo si el servidor no está listo aún
             const sendConnections = (attempt = 0) => {
               try {
                 window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
-                console.log(`📤 [MCPManagerTab] Intento ${attempt + 1}: ${connections.length} conexiones enviadas`);
+                if (attempt === 0) {
+                  console.log(`📤 [MCPManagerTab] ${connections.length} conexiones SSH enviadas para sincronización`);
+                }
               } catch (err) {
-                console.error(`❌ [MCPManagerTab] Error en intento ${attempt + 1}:`, err.message);
+                console.error(`❌ [MCPManagerTab] Error enviando conexiones:`, err.message);
               }
             };
             
-            // Enviar inmediatamente y re-enviar con delays progresivos
+            // Enviar inmediatamente y un solo retry después de 500ms si es necesario
             sendConnections(0);
-            setTimeout(() => sendConnections(1), 200);
-            setTimeout(() => sendConnections(2), 1000);
-            setTimeout(() => sendConnections(3), 2000);
-            
-            console.log(`✅ [MCPManagerTab] ${connections.length} conexiones SSH programadas para sincronización`);
+            setTimeout(() => sendConnections(1), 500);
           } catch (ipcError) {
             console.error('[MCPManagerTab] Error en IPC:', ipcError.message);
           }

@@ -508,8 +508,6 @@ function createWindow() {
 // 🔗 IPC Handler para sincronizar conexiones SSH con el MCP (EN MEMORIA, SIN ARCHIVO)
 ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
   try {
-    console.log('📡 [MAIN SSH HANDLER] Sincronizando conexiones SSH del renderer...');
-    
     if (!Array.isArray(connections)) {
       console.warn('[SSH MCP] ⚠️ Parámetro no es un array:', typeof connections);
       return;
@@ -518,7 +516,12 @@ ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
     // Guardar en memoria en el MCP Server
     if (global.sshTerminalServer) {
       global.sshTerminalServer.nodeTermConnections = connections;
-      console.log(`✅ [SSH MCP] ${connections.length} conexiones SSH sincronizadas en memoria`);
+      // Solo loggear la primera vez o cuando cambia el número de conexiones
+      const prevCount = global.sshTerminalServer._lastConnectionCount || 0;
+      if (prevCount !== connections.length) {
+        console.log(`✅ [SSH MCP] ${connections.length} conexiones SSH sincronizadas en memoria`);
+        global.sshTerminalServer._lastConnectionCount = connections.length;
+      }
     } else {
       console.warn('⚠️ [SSH MCP] SSH Terminal Server no disponible aún');
     }
