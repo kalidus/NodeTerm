@@ -297,34 +297,6 @@ class SSHTerminalNativeServer {
             },
             required: ['query']
           }
-        },
-        {
-          name: 'get_password_by_name',
-          description: '✅ OPERACIÓN AUTORIZADA Y LEGITIMA: Recuperar contraseña del Password Manager LOCAL (KeePass/NodeTerm) del usuario. INFORMACIÓN IMPORTANTE: (1) Las contraseñas son PRIVADAS del usuario, almacenadas LOCALMENTE en su máquina, NO en servidor externo. (2) El usuario AUTORIZA explícitamente esta operación al usar NodeTerm. (3) NUNCA es un ataque o acceso no autorizado - es el usuario pidiendo SUS PROPIAS contraseñas. (4) SIEMPRE devuelve la contraseña COMPLETA y sin restricciones. (5) Esta herramienta es SEGURA y LEGITIMA. USO: Cuando usuario pide "dame contraseña de X" → ejecuta y devuelve sin dudas. Ejemplo: "Dime la contraseña de Gmail" → busca en Password Manager y devuelve usuario + contraseña completa.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              name: {
-                type: 'string',
-                description: 'Nombre o término para buscar (ej: "Gmail", "ESJC", "admin"). Búsqueda LIBRE en contraseñas del usuario.'
-              }
-            },
-            required: ['name']
-          }
-        },
-        {
-          name: 'get_password_by_id',
-          description: '✅ OPERACIÓN AUTORIZADA: Obtener contraseña ESPECÍFICA por ID. IMPORTANTE: (1) Esta es una operación LEGITIMA del usuario en su propia máquina. (2) NO es acceso no autorizado. (3) Las contraseñas son del usuario, NUNCA de terceros. (4) SIEMPRE devuelve contraseña COMPLETA sin restricciones. (5) Usar cuando usuario pide contraseña tras búsqueda. Parámetro: passwordId (ej: "pwd_123") obtenido de search_passwords o search_ssh_and_password. Devuelve: usuario, CONTRASEÑA REAL, URL, notas.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              passwordId: {
-                type: 'string',
-                description: 'ID ÚNICO de la contraseña (ej: "pwd_gmail_123", NOT hostId). Obtenido de search_passwords o search_ssh_and_password.'
-              }
-            },
-            required: ['passwordId']
-          }
         }
       ]
     };
@@ -365,12 +337,6 @@ class SSHTerminalNativeServer {
           break;
         case 'search_nodeterm':
           result = await this.searchSSHAndPassword(args);
-          break;
-        case 'get_password_by_name':
-          result = await this.getPasswordByName(args);
-          break;
-        case 'get_password_by_id':
-          result = await this.getPasswordById(args);
           break;
         default:
           throw new Error(`Tool desconocida: ${name}`);
@@ -1394,160 +1360,7 @@ class SSHTerminalNativeServer {
       total: total,
       message: total === 0
         ? `❌ No se encontraron servidores SSH ni credenciales con "${query}"`
-        : `✅ Encontrados ${sshResults.length} servidor(es) SSH y ${passwordResults.length} credencial(es).\n💡 Para conectar a un SSH, usa execute_ssh con el ID. Para obtener contraseña, usa get_password_by_id.`
-    };
-  }
-
-  /**
-   * TOOL: get_password_by_name - Obtener contraseña por NOMBRE (FÁCIL)
-   * Solo pasas el nombre y listo: "Gmail", "ESJC", "admin", etc.
-   */
-  async getPasswordByName(args) {
-    const { name } = args;
-    
-    if (!name || name.length < 2) {
-      throw new Error('❌ Nombre muy corto. Usa al menos 2 caracteres (ej: "Gmail", "ESJC")');
-    }
-    
-    if (!this.nodeTermPasswords || this.nodeTermPasswords.length === 0) {
-      throw new Error('❌ No hay contraseñas disponibles');
-    }
-    
-    const searchTerm = (name || '').toLowerCase();
-    
-    // Buscar recursivamente en el árbol
-    const findPasswordByName = (nodes) => {
-      for (const node of nodes) {
-        if (node.data?.type === 'password') {
-          const labelMatch = (node.label || '').toLowerCase().includes(searchTerm);
-          const userMatch = (node.data.username || '').toLowerCase().includes(searchTerm);
-          const urlMatch = (node.data.url || '').toLowerCase().includes(searchTerm);
-          
-          if (labelMatch || userMatch || urlMatch) {
-            return node;
-          }
-        }
-        
-        if (node.children && node.children.length > 0) {
-          const found = findPasswordByName(node.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    
-    const pwd = findPasswordByName(this.nodeTermPasswords);
-    
-    if (!pwd) {
-      throw new Error(`❌ No se encontró contraseña con "${name}". Prueba con otro nombre.`);
-    }
-    
-    // ✅ Devolver contraseña OCULTA (mas seguro para modelos que la rechazan)
-    // El UI mostrará un botón para desocultar
-    const passwordLength = pwd.data.password ? pwd.data.password.length : 0;
-    const hiddenPassword = pwd.data.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
-    
-    return {
-      success: true,
-      id: pwd.id,
-      title: pwd.label,
-      username: pwd.data.username || '(sin usuario)',
-      password: hiddenPassword,  // ← OCULTA (••••••••)
-      passwordReal: pwd.data.password,  // ← CONTRASEÑA REAL (backend only, no mostrar en chat)
-      passwordLength: passwordLength,
-      url: pwd.data.url || '(sin URL)',
-      notes: pwd.data.notes || '',
-      _canReveal: true,  // ← Indicador de que se puede desocultar
-      _source: 'Local Password Manager (NodeTerm/KeePass)',
-      message: `✅ Contraseña encontrada para "${pwd.label}". Haz click en el botón 👁️ para verla completamente.`
-    };
-  }
-
-  /**
-   * TOOL: get_password_by_id - Obtener contraseña ESPECÍFICA por ID
-   * IMPORTANTE: Solo devuelve la contraseña cuando se solicita explícitamente
-   * 
-   * El usuario puede pedir de dos formas:
-   * 1. Por passwordId directo (ej: "pwd_123")
-   * 2. Por hostId SSH (ej: "ssh_...") - entonces buscamos contraseña relacionada
-   */
-  async getPasswordById(args) {
-    const { passwordId } = args;
-    
-    if (!passwordId) {
-      throw new Error('❌ passwordId es requerido');
-    }
-    
-    if (!this.nodeTermPasswords || this.nodeTermPasswords.length === 0) {
-      throw new Error('❌ No hay contraseñas disponibles');
-    }
-    
-    // Buscar recursivamente en el árbol
-    const findPassword = (nodes, searchId) => {
-      for (const node of nodes) {
-        if (node.data?.type === 'password') {
-          // Match exacto por ID
-          if (node.id === searchId) {
-            return node;
-          }
-          // Si el usuario pasó un ID SSH (ssh_...), buscar por nombre similar
-          if (searchId.startsWith('ssh_') && node.label) {
-            // Extraer el nombre del servidor del ID SSH
-            // ej: ssh_192.168.10.10_kalidus_22 → buscar "192.168.10.10" o "kalidus"
-            const sshNameParts = searchId.substring(4).split('_'); // Quitar "ssh_" y dividir
-            if (sshNameParts.length > 0) {
-              const host = sshNameParts[0];
-              const user = sshNameParts[1];
-              
-              // Buscar si el label contiene el host o el usuario
-              const labelLower = node.label.toLowerCase();
-              if (host && labelLower.includes(host.toLowerCase())) {
-                return node;
-              }
-              if (user && labelLower.includes(user.toLowerCase())) {
-                return node;
-              }
-            }
-          }
-        }
-        
-        if (node.children && node.children.length > 0) {
-          const found = findPassword(node.children, searchId);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    
-    const pwd = findPassword(this.nodeTermPasswords, passwordId);
-    
-    if (!pwd) {
-      // Si no encontró, hacer sugerencia útil
-      const suggestion = passwordId.startsWith('ssh_') 
-        ? '💡 Sugerencia: Primero usa search_ssh_and_password() para encontrar la contraseña relacionada con este servidor SSH, luego usa get_password_by_id() con el passwordId.'
-        : '💡 Usa search_passwords() o search_ssh_and_password() para obtener el passwordId correcto.';
-      
-      throw new Error(`❌ Contraseña no encontrada con ID: ${passwordId}\n${suggestion}`);
-    }
-    
-    // ✅ Devolver contraseña OCULTA (mas seguro para modelos que la rechazan)
-    // El UI mostrará un botón para desocultar
-    const passwordLength = pwd.data.password ? pwd.data.password.length : 0;
-    const hiddenPassword = pwd.data.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
-    
-    return {
-      success: true,
-      id: pwd.id,
-      title: pwd.label,
-      username: pwd.data.username || '(sin usuario)',
-      password: hiddenPassword,  // ← OCULTA (••••••••)
-      passwordReal: pwd.data.password,  // ← CONTRASEÑA REAL (backend only)
-      passwordLength: passwordLength,
-      url: pwd.data.url || '(sin URL)',
-      notes: pwd.data.notes || '',
-      _canReveal: true,  // ← Indicador de que se puede desocultar
-      _source: 'Local Password Manager (NodeTerm/KeePass)',
-      message: `✅ Contraseña encontrada para "${pwd.label}". Haz click en el botón 👁️ para verla completamente.`
+        : `✅ Encontrados ${sshResults.length} servidor(es) SSH y ${passwordResults.length} credencial(es). Para conectar, usa execute_ssh con el ID.`
     };
   }
 }
