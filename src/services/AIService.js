@@ -2554,7 +2554,7 @@ class AIService {
   /**
    * Ejecutar un PLAN completo de herramientas (modo ReAct)
    */
-  async _executeToolPlan(plan, callbacks = {}, defaultShell = 'powershell') {
+  async _executeToolPlan(plan, callbacks = {}) {
     debugLogger.debug('AIService.MCP', 'Ejecutando plan de herramientas', {
       herramientas: plan.tools.length
     });
@@ -2594,13 +2594,7 @@ class AIService {
           throw new Error(`No se pudo resolver el servidor para la herramienta ${actualToolName}`);
         }
         
-        // Agregar shell al contexto si la herramienta es execute_local (MCP nodeterm CLI)
-        const toolCallArgs = { ...callArgs };
-        if (actualToolName === 'execute_local' && defaultShell) {
-          toolCallArgs.shell = defaultShell;
-        }
-        
-        const result = await mcpClient.callTool(serverId, actualToolName, toolCallArgs);
+        const result = await mcpClient.callTool(serverId, actualToolName, callArgs);
         const text = result?.content?.[0]?.text || 'OK';
         
         // Guardar resultado de la tool
@@ -2949,15 +2943,9 @@ class AIService {
           const toolName = normalized.toolName;
           const callArgs = normalized.arguments;
           
-          // Agregar shell si es execute_local
-          const toolCallArgs = { ...callArgs };
-          if (toolName === 'execute_local' && options?.defaultShell) {
-            toolCallArgs.shell = options.defaultShell;
-          }
-          
-          conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { isToolCall: true, toolName, toolArgs: toolCallArgs });
-          const result = serverId ? await mcpClient.callTool(serverId, toolName, toolCallArgs)
-                                  : await mcpClient.callTool(toolName, toolCallArgs);
+          conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { isToolCall: true, toolName, toolArgs: callArgs });
+          const result = serverId ? await mcpClient.callTool(serverId, toolName, callArgs)
+                                  : await mcpClient.callTool(toolName, callArgs);
           const text = result?.content?.[0]?.text || 'OK';
           conversationService.addMessage('tool', text, { isToolResult: true, toolName, toolArgs: callArgs });
           return 'Hecho.';
@@ -4180,6 +4168,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                 const serverId = normalized.serverId;
                 const toolName = normalized.toolName;
                 const callArgs = normalized.arguments;
+                
                 let result;
                 try {
                   result = serverId
@@ -4216,6 +4205,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
               const serverId = normalized.serverId;
               const toolName = normalized.toolName;
               const callArgs = normalized.arguments;
+              
               try {
                 const result = serverId ? await mcpClient.callTool(serverId, toolName, callArgs)
                                         : await mcpClient.callTool(toolName, callArgs);
@@ -4318,6 +4308,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
                   if (!serverId) {
                     throw new Error(`No se pudo resolver el servidor para la herramienta ${toolName}`);
                   }
+                  
                   const result = await mcpClient.callTool(serverId, toolName, callArgs);
                   const text = result?.content?.[0]?.text || 'OK';
                   
@@ -4569,7 +4560,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
           debugLogger.debug('AIService.Toolchain', 'Plan detectado; ejecutando herramientas', {
             herramientas: toolPlan.tools.length
           });
-          return await this._executeToolPlan(toolPlan, callbacks, options.defaultShell);
+          return await this._executeToolPlan(toolPlan, callbacks);
         }
         
         // Prioridad 2: Detectar tool call individual

@@ -432,6 +432,59 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         );
       }
 
+      // 🔧 ACTUALIZAR LA CONFIGURACIÓN DEL MCP NODETERM CLI
+      // Convertir selectedShell a preferredTerminal (parámetro del MCP)
+      const getPreferredTerminal = (shell) => {
+        if (shell === 'powershell') return 'powershell';
+        if (shell === 'cygwin') return 'cygwin';
+        if (shell.startsWith('wsl-')) {
+          return 'wsl';
+        }
+        return shell;
+      };
+
+      const preferredTerminal = getPreferredTerminal(selectedShell);
+      
+      // Actualizar la configuración del MCP y reiniciar el servidor
+      (async () => {
+        try {
+          console.log(`[Shell Selector] 🎯 Cambiando terminal a: ${preferredTerminal}`);
+          
+          // 1️⃣ Actualizar la configuración en el archivo
+          console.log(`[Shell Selector] 💾 Guardando config: preferredTerminal = ${preferredTerminal}`);
+          const updateResult = await mcpClient.updateServerConfig('ssh-terminal', {
+            options: {
+              preferredTerminal: preferredTerminal
+            }
+          });
+          console.log(`[Shell Selector] ✅ updateServerConfig completado:`, updateResult);
+          
+          // Esperar 2 segundos para asegurar que la config se escribió completamente en disco
+          // y se limpió el caché del SO
+          console.log(`[Shell Selector] ⏳ Esperando 2s para persistencia de config en disco...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // 2️⃣ Detener el servidor
+          console.log(`[Shell Selector] 🛑 Deteniendo servidor ssh-terminal...`);
+          const stopResult = await mcpClient.stopServer('ssh-terminal');
+          console.log(`[Shell Selector] ✅ Servidor detenido:`, stopResult);
+          
+          // Esperar 1 segundo para asegurar que se detuvo, liberó recursos y limpió caché
+          console.log(`[Shell Selector] ⏳ Esperando 1s después de detener...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // 3️⃣ Reiniciar el servidor (debería cargar la nueva configuración)
+          console.log(`[Shell Selector] 🚀 Reiniciando servidor ssh-terminal...`);
+          const startResult = await mcpClient.startServer('ssh-terminal');
+          console.log(`[Shell Selector] ✅ Servidor reiniciado:`, startResult);
+          
+          console.log(`[Shell Selector] ✅ Terminal cambiada a: ${preferredTerminal}`);
+          
+        } catch (error) {
+          console.error(`[Shell Selector] ❌ Error actualizando MCP:`, error);
+        }
+      })();
+
       previousShellRef.current = selectedShell;
     }
   }, [selectedShell, currentConversationId]);
@@ -1725,8 +1778,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // de forma efímera en el servicio de IA (RAG ligero)
       await aiService.sendMessageWithCallbacks(userMessage, callbacks, {
         signal: controller.signal,
-        mcpEnabled: mcpToolsEnabled, // Pasar estado de MCP
-        defaultShell: selectedShell // Pasar shell seleccionada al MCP
+        mcpEnabled: mcpToolsEnabled // Pasar estado de MCP
       });
 
     } catch (error) {
