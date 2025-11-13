@@ -506,14 +506,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
         skipSave: true 
       });
       
-      console.log('🔍 [ToolOrchestrator] Respuesta del modelo después de tool:', {
-        followUpPreview: followUp?.slice(0, 200),
-        length: followUp?.length,
-        esJSON: followUp?.trim().startsWith('{'),
-        iteration,
-        toolName
-      });
-      
       // 🚨 CRÍTICO: Si el modelo está generando el MISMO tool call otra vez, cortarlo
       let cleanedFollowUp = followUp;
       if (followUp && typeof followUp === 'string') {
@@ -531,8 +523,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
         // 🚨 Caso 1: Bloque de código con JSON (```json\n{...})
         if (trimmed.startsWith('```json') || trimmed.startsWith('```\n{')) {
           // El modelo está devolviendo un tool call en markdown
-          console.warn('[ToolOrchestrator] Respuesta es código JSON, reemplazando con fallback');
-          
           if (hadError) {
             cleanedFollowUp = `Hubo un problema: ${cleanText.slice(0, 200)}`;
           } else {
@@ -554,8 +544,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
         else if (trimmed.startsWith('{') && 
                  trimmed.endsWith('}') && 
                  /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
-          console.warn('[ToolOrchestrator] Respuesta es JSON puro, usando fallback descriptivo');
-          
           if (hadError) {
             cleanedFollowUp = `Hubo un problema: ${cleanText.slice(0, 200)}`;
           } else {
@@ -576,7 +564,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
           if (jsonStart > 50 && /\"tool\"|\"arguments\"/.test(trimmed.slice(jsonStart, jsonStart + 200))) {
             // Hay texto antes del JSON, quedarnos solo con el texto
             cleanedFollowUp = trimmed.slice(0, jsonStart).trim();
-            console.log('[ToolOrchestrator] Extraído texto explicativo, removido JSON trailing');
           }
         }
       }
@@ -585,10 +572,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
       currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(followUp) : null;
 
       if (!currentToolCall) {
-        console.log('✅ [ToolOrchestrator] Devolviendo respuesta final:', {
-          cleanedPreview: cleanedFollowUp?.slice(0, 200),
-          length: cleanedFollowUp?.length
-        });
         return cleanedFollowUp;
       }
       
@@ -608,13 +591,11 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
       
       // Caso 1: JSON que contiene "tool", "arguments", "use_tool", o "plan"
       if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
-        console.warn('[ToolOrchestrator] JSON de tool call detectado en respuesta final, ignorando');
         return 'Operación completada correctamente.';
       }
       
       // Caso 2: JSON truncado (termina con }})
       if (trimmed.endsWith('}}')) {
-        console.warn('[ToolOrchestrator] JSON truncado (}) detectado en respuesta final');
         return 'Operación completada correctamente.';
       }
       
@@ -665,8 +646,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
         regexPattern = new RegExp('^' + pattern + '$', 'i');
       }
       
-      console.log(`   Regex generado: ${regexPattern}`);
-      
       // Filtrar líneas
       const filtered = lines.filter(line => {
         // Extraer nombre del archivo/carpeta (después de [FILE] o [DIR])
@@ -677,7 +656,6 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
       });
       
       if (filtered.length === 0) {
-        console.log(`   ❌ No hay coincidencias con patrón: ${pattern}`);
         return { content: [{ type: 'text', text: 'No matches found' }] };
       }
       
