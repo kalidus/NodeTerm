@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import TokenCounter from '../utils/tokenCounter';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import ShellSelector from './ShellSelector';
 
 const AIPerformanceStats = ({
   currentModel = null,
@@ -15,7 +16,10 @@ const AIPerformanceStats = ({
   onToggleMcpPanel = () => {},
   showMemoryPanel = false,
   onToggleMemoryPanel = () => {},
-  toolsCount = 0
+  toolsCount = 0,
+  selectedShell = 'powershell',
+  onShellChange = () => {},
+  availableShells = []
 }) => {
   const currentTheme = useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
@@ -222,6 +226,14 @@ const AIPerformanceStats = ({
           >
             <i className='pi pi-database' style={{ fontSize: '0.75rem' }} />
           </button>
+
+          {/* Shell Selector */}
+          <ShellSelector
+            selectedShell={selectedShell}
+            onShellChange={onShellChange}
+            availableShells={availableShells}
+            isLoading={isLoading}
+          />
         </div>
       </div>
 
