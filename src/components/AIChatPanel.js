@@ -438,7 +438,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         if (shell === 'powershell') return 'powershell';
         if (shell === 'cygwin') return 'cygwin';
         if (shell.startsWith('wsl-')) {
-          return 'wsl';
+          // Para WSL: pasar la distro específica (ubuntu-24.04, kali-linux, etc)
+          const distroName = shell.replace('wsl-', '');
+          return distroName;
         }
         return shell;
       };
