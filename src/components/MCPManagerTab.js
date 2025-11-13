@@ -35,6 +35,23 @@ const MCPManagerTab = ({ themeColors }) => {
   });
   const [availableTerminals, setAvailableTerminals] = useState([]);
 
+  // Helper para obtener el nombre del catálogo
+  const getMcpCatalogName = (serverId) => {
+    try {
+      const catalogPath = require.resolve('../data/mcp-catalog.json');
+      delete require.cache[catalogPath];
+    } catch (e) {
+      // Ignore if path resolution fails
+    }
+    try {
+      const mcpData = require('../data/mcp-catalog.json');
+      const mcp = mcpData.mcps?.find(m => m.id === serverId);
+      return mcp?.name || serverId;
+    } catch (e) {
+      return serverId;
+    }
+  };
+
   // Cargar datos iniciales
   useEffect(() => {
     loadData();
@@ -406,7 +423,7 @@ const MCPManagerTab = ({ themeColors }) => {
       // Llamar a la tool test_ssh_connection si el servidor está activo
       const server = servers.find(s => s.id === 'ssh-terminal');
       if (!server || !server.running) {
-        showToast('warn', 'MCP no activo', 'Activa el MCP SSH/Terminal para probar conexiones');
+        showToast('warn', 'MCP no activo', 'Activa el MCP NodeTerm CLI para probar conexiones');
         return;
       }
       
@@ -1208,7 +1225,7 @@ const MCPManagerTab = ({ themeColors }) => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
                       <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: themeColors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {server.id}
+                        {getMcpCatalogName(server.id)}
                       </h4>
                       {server.running && (
                         <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', background: 'rgba(100, 200, 100, 0.2)', border: '1px solid rgba(100, 200, 100, 0.5)', borderRadius: '10px', color: '#66bb6a', fontWeight: '600' }}>
@@ -1238,7 +1255,7 @@ const MCPManagerTab = ({ themeColors }) => {
 
       {/* Diálogo: Configurar MCP */}
       <Dialog
-        header={selectedServer ? `Configurar ${selectedServer.id}` : 'Configurar MCP'}
+        header={selectedServer ? `Configurar ${getMcpCatalogName(selectedServer.id)}` : 'Configurar MCP'}
         visible={showConfigDialog}
         onHide={() => setShowConfigDialog(false)}
         style={{ width: '700px', maxWidth: '95vw' }}

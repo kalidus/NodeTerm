@@ -669,7 +669,7 @@
     },
     {
       "id": "ssh-terminal",
-      "name": "SSH/Terminal",
+      "name": "NodeTerm CLI",
       "package": "native:ssh-terminal",
       "type": "native",
       "category": "automation",

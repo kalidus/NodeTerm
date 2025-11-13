@@ -74,6 +74,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [showMcpPanel, setShowMcpPanel] = useState(false); // Panel de herramientas MCP
   const [showMemoryPanel, setShowMemoryPanel] = useState(false); // Panel de memoria
   const [toolsCount, setToolsCount] = useState(0); // Conteo de herramientas MCP
+  // Helper para obtener el nombre del catálogo
+  const getMcpCatalogName = (serverId) => {
+    try {
+      const catalogPath = require.resolve('../data/mcp-catalog.json');
+      delete require.cache[catalogPath];
+    } catch (e) {
+      // Ignore if path resolution fails
+    }
+    try {
+      const mcpData = require('../data/mcp-catalog.json');
+      const mcp = mcpData.mcps?.find(m => m.id === serverId);
+      return mcp?.name || serverId;
+    } catch (e) {
+      return serverId;
+    }
+  };
+
   const [selectedMcpServers, setSelectedMcpServers] = useState(() => {
     // Cargar MCPs seleccionados del localStorage
     try {
@@ -420,7 +437,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
         // 🎯 OPCIÓN 1: Usar window.sshConnectionsFromSidebar (Sidebar las sincroniza automáticamente)
         if (window.sshConnectionsFromSidebar && Array.isArray(window.sshConnectionsFromSidebar) && window.sshConnectionsFromSidebar.length > 0) {
-          console.log(`[AIChatPanel] 📂 Usando conexiones de window.sshConnectionsFromSidebar: ${window.sshConnectionsFromSidebar.length}`);
           allSSHConnections = window.sshConnectionsFromSidebar;
         }
         
@@ -429,7 +445,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           try {
             const treeDataStr = localStorage.getItem('basicapp2_tree_data');
             if (treeDataStr) {
-              console.log(`[AIChatPanel] 📂 basicapp2_tree_data encontrado en localStorage`);
               const nodes = JSON.parse(treeDataStr);
               
               // Extraer TODAS las conexiones SSH del árbol (recursivamente)
@@ -467,7 +482,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               });
             }
           } catch (e) {
-            console.log('[AIChatPanel] ℹ️ Error leyendo basicapp2_tree_data:', e.message);
+            // Error silencioso - solo fallback
           }
         }
 
@@ -522,14 +537,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                     // console.log(`✅ [AIChatPanel] ${allSSHConnections.length} conexiones desencriptadas desde connections_encrypted`);
                   }
                 } catch (decryptError) {
-                  console.log('[AIChatPanel] ℹ️ Error desencriptando connections_encrypted:', decryptError.message);
+                  // Error silencioso - solo fallback
                 }
-              } else {
-                console.log('[AIChatPanel] ℹ️ window.currentMasterKey no disponible (usuario no logueado?)');
               }
             }
           } catch (e) {
-            console.log('[AIChatPanel] ℹ️ Error leyendo connections_encrypted:', e.message);
+            // Error silencioso - solo fallback
           }
         }
 
@@ -538,10 +551,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           allSSHConnections = window.sshConnectionsFromSidebar;
         }
         
-        console.log(`[AIChatPanel] 📊 TOTAL de conexiones SSH sincronizadas: ${allSSHConnections.length}`);
-        
         if (allSSHConnections.length === 0) {
-          console.log('[AIChatPanel] ⚠️ No se encontraron conexiones SSH en ninguna fuente');
           return;
         }
         
@@ -560,7 +570,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             const timeSinceLastSync = now - lastSync;
             
             if (timeSinceLastSync < 2000) {
-              console.log(`⏭️ [AIChatPanel] Sincronización omitida (última hace ${timeSinceLastSync}ms)`);
               return;
             }
             
@@ -570,9 +579,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             const sendConnections = (attempt = 0) => {
               try {
                 window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
-                if (attempt === 0) {
-                  console.log(`📤 [AIChatPanel] ${connections.length} conexiones SSH enviadas para sincronización`);
-                }
               } catch (err) {
                 console.error(`❌ [AIChatPanel] Error enviando conexiones:`, err.message);
               }
@@ -594,18 +600,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Sincronizar al montar el componente (con delay para dar tiempo a que localStorage esté listo)
     const initialSyncTimeout = setTimeout(() => {
-      console.log('[AIChatPanel] ⏱️ Ejecutando sincronización inicial de conexiones SSH...');
       syncSSHConnectionsToMCP();
     }, 500); // Delay corto solo para asegurar que todo esté cargado
 
     // Escuchar cambios en el árbol de conexiones
     const handleTreeUpdated = () => {
-      console.log('[AIChatPanel] 🔄 Árbol actualizado, resincronizando conexiones SSH...');
       syncSSHConnectionsToMCP();
     };
 
     const handleSidebarSSHUpdated = (event) => {
-      console.log(`[AIChatPanel] 🔄 Sidebar sincronizó conexiones SSH (${event.detail?.count || '?'} conexiones), resincronizando...`);
       // Resincronizar INMEDIATAMENTE cuando Sidebar actualiza
       syncSSHConnectionsToMCP();
     };
@@ -628,7 +631,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
         // 🎯 OPCIÓN 1: Usar window.passwordsFromPasswordManager (si Sidebar lo sincroniza)
         if (window.passwordsFromPasswordManager && Array.isArray(window.passwordsFromPasswordManager) && window.passwordsFromPasswordManager.length > 0) {
-          console.log(`[AIChatPanel] 🔐 Usando contraseñas de window.passwordsFromPasswordManager: ${window.passwordsFromPasswordManager.length}`);
           allPasswords = window.passwordsFromPasswordManager;
         }
         
@@ -637,7 +639,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           try {
             const encryptedStr = localStorage.getItem('passwords_encrypted');
             if (encryptedStr) {
-              console.log(`[AIChatPanel] 🔐 passwords_encrypted encontrado, desencriptando...`);
               try {
                 const SecureStorage = require('../services/SecureStorage').default || require('../services/SecureStorage');
                 const secureStorage = new SecureStorage();
@@ -646,14 +647,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                 
                 if (Array.isArray(decrypted)) {
                   allPasswords = decrypted;
-                  console.log(`[AIChatPanel] ✅ ${allPasswords.length} contraseñas desencriptadas`);
                 }
               } catch (decryptError) {
-                console.log('[AIChatPanel] ℹ️ Error desencriptando passwords_encrypted:', decryptError.message);
+                // Error silencioso - solo fallback
               }
             }
           } catch (e) {
-            console.log('[AIChatPanel] ℹ️ Error leyendo passwords_encrypted:', e.message);
+            // Error silencioso - solo fallback
           }
         }
         
@@ -662,18 +662,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           try {
             const plainStr = localStorage.getItem('passwordManagerNodes');
             if (plainStr) {
-              console.log(`[AIChatPanel] 🔐 passwordManagerNodes encontrado (sin encriptar)`);
               allPasswords = JSON.parse(plainStr);
             }
           } catch (e) {
-            console.log('[AIChatPanel] ℹ️ Error leyendo passwordManagerNodes:', e.message);
+            // Error silencioso - solo fallback
           }
         }
 
-        console.log(`[AIChatPanel] 📊 TOTAL de contraseñas sincronizadas: ${allPasswords.length}`);
-        
         if (allPasswords.length === 0) {
-          console.log('[AIChatPanel] ⚠️ No se encontraron contraseñas en ninguna fuente');
           return;
         }
         
@@ -683,7 +679,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             const sendPasswords = (attempt = 0) => {
               try {
                 window.electron.ipcRenderer.send('app:save-passwords-for-mcp', allPasswords);
-                console.log(`📤 [AIChatPanel] Intento ${attempt + 1}: ${allPasswords.length} contraseñas enviadas`);
               } catch (err) {
                 console.error(`❌ [AIChatPanel] Error en intento ${attempt + 1}:`, err.message);
               }
@@ -693,8 +688,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             sendPasswords(0);
             setTimeout(() => sendPasswords(1), 200);
             setTimeout(() => sendPasswords(2), 1000);
-            
-            console.log(`✅ [AIChatPanel] ${allPasswords.length} contraseñas programadas para sincronización`);
           } catch (ipcError) {
             console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
           }
@@ -708,13 +701,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
     // Sincronizar con delay para dar tiempo a que todo cargue
     const initialSyncTimeout = setTimeout(() => {
-      console.log('[AIChatPanel] ⏱️ Ejecutando sincronización inicial de contraseñas...');
       syncPasswordsToMCP();
     }, 1500); // Delay ligeramente mayor que SSH para asegurar que Password Manager esté listo
 
     // Escuchar cambios en contraseñas
     const handlePasswordsUpdated = (event) => {
-      console.log(`[AIChatPanel] 🔄 Password Manager sincronizó contraseñas (${event.detail?.count || '?'} contraseñas), resincronizando...`);
       syncPasswordsToMCP();
     };
 
@@ -1290,17 +1281,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // Si usamos mensajes estructurados, el orquestador ya persistirá y emitirá 'conversation-updated'
           if (aiService.featureFlags?.structuredToolMessages) {
-            logConversation('debug', 'Mensajes estructurados: esperando persistencia del orquestador', {
-              toolName: toolData.toolName
-            });
             return;
           }
           
           // Flujo legacy: persistir un mensaje de sistema minimalista y reflejar en UI
-          logConversation('debug', 'Persistiendo resultado de herramienta (legacy)', {
-            toolName: toolData.toolName,
-            message: content
-          });
           
           // ✅ IMPROVED: Guardar metadatos adicionales (lenguaje detectado, ruta)
           const metadata = {
@@ -1329,13 +1313,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           });
         },
         onComplete: (data) => {
-          
-          console.log('🔍 [AIChatPanel.onComplete] Respuesta recibida:', {
-            responsePreview: data.response?.slice(0, 300),
-            responseLength: data.response?.length,
-            esJSON: data.response?.trim().startsWith('{')
-          });
-          
           const files = aiService.detectFilesInResponse(data.response, userMessage);
           
           // ============= CALCULAR SAFE RESPONSE PRIMERO (antes de guardar) =============
@@ -1357,13 +1334,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           };
 
           let normalizedResp = extractPlainResponse(data.response);
-          
-          // 🔍 DEBUG: Log de la respuesta para diagnosticar problemas
-          logConversation('debug', 'Respuesta del modelo recibida', {
-            raw: data.response?.slice(0, 200),
-            normalized: normalizedResp?.slice(0, 200),
-            isEmpty: !normalizedResp || normalizedResp.trim().length === 0
-          });
           
           // Heurística: si el modelo solo explica que "ya se listó" o repite el resultado, colapsar
           const isMetaResponse = (() => {
@@ -1759,7 +1729,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const inputHasText = !!inputValue.trim();
 
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
-      logConversation('debug', 'Solicitud de limpiar chat ignorada: conversación vacía');
       return;
     }
 
@@ -1798,7 +1767,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     }
 
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
-      logConversation('debug', 'Nueva conversación ignorada: estado actual vacío');
       return;
     }
 
@@ -1831,10 +1799,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Guardar MCPs seleccionados en la conversación
     if (selectedMcpServers.length > 0) {
       newConversation.selectedMcpServers = selectedMcpServers;
-      logConversation('debug', 'MCPs asociados a nueva conversación', {
-        conversationId: newConversation.id,
-        servers: selectedMcpServers
-      });
     }
 
     loggedToolMessageIdsRef.current = new Set();
@@ -2736,15 +2700,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           jsonStr = jsonMatch[1];
         }
         jsonStr = jsonStr.trim();
-        console.log('🔍 [renderResult] JSON limpio (primeros 100 chars):', jsonStr.substring(0, 100));
         
         // PASO 2: Parsear JSON
         const parsed = JSON.parse(jsonStr);
-        console.log('✅ [renderResult] JSON parseado correctamente. Keys:', Object.keys(parsed || {}));
         
         // Si es un objeto búsqueda combinada con ssh_results y password_results
         if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results)) {
-          console.log('✅ [renderResult] Detectado como búsqueda combinada. SSH:', parsed.ssh_results?.length || 0, 'Passwords:', parsed.password_results?.length || 0);
           const sshResults = parsed.ssh_results || [];
           const passwordResults = parsed.password_results || [];
           
@@ -3826,7 +3787,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   .map((server, idx) => (
                     <span 
                       key={idx}
-                      title={server.name || server.id}
+                      title={getMcpCatalogName(server.id)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -3845,7 +3806,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                         textOverflow: 'ellipsis'
                       }}>
                       <i className="pi pi-wrench" style={{ fontSize: '0.5rem', marginRight: '0.25rem' }} />
-                      {(server.name || server.id).substring(0, 12)}
+                      {getMcpCatalogName(server.id).substring(0, 12)}
                     </span>
                   ))
               )}
@@ -4892,7 +4853,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                               fontSize: '0.95rem',
                               textDecoration: !isConfigured ? 'line-through' : 'none'
                             }}>
-                              {server.name || server.id}
+                              {getMcpCatalogName(server.id)}
                             </div>
                             <div style={{
                               color: themeColors.textSecondary,

@@ -176,7 +176,7 @@ class SSHTerminalNativeServer {
         }
       },
       serverInfo: {
-        name: 'SSH/Terminal (nativo)',
+        name: 'NodeTerm CLI (nativo)',
         version: '1.0.0',
         description: 'Servidor nativo para ejecutar comandos locales (WSL, Cygwin, PowerShell) y remotos por SSH.'
       }
@@ -957,7 +957,7 @@ class SSHTerminalNativeServer {
       return '📡 **No hay hosts SSH configurados**\n\n' +
              '**Opciones:**\n' +
              '1. ✅ Agrega conexiones en NodeTerm (Sidebar → SSH)\n' +
-             '2. ⚙️ Configura en MCP: Configuración → MCP Tools → SSH/Terminal\n\n' +
+             '2. ⚙️ Configura en MCP: Configuración → MCP Tools → NodeTerm CLI\n\n' +
              '💡 Las conexiones de NodeTerm se detectan automáticamente!';
     }
     
