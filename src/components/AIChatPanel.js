@@ -620,6 +620,112 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     };
   }, []);
 
+  // 🔐 Sincronizar PASSWORDS del Password Manager con el MCP
+  useEffect(() => {
+    const syncPasswordsToMCP = async () => {
+      try {
+        let allPasswords = [];
+
+        // 🎯 OPCIÓN 1: Usar window.passwordsFromPasswordManager (si Sidebar lo sincroniza)
+        if (window.passwordsFromPasswordManager && Array.isArray(window.passwordsFromPasswordManager) && window.passwordsFromPasswordManager.length > 0) {
+          console.log(`[AIChatPanel] 🔐 Usando contraseñas de window.passwordsFromPasswordManager: ${window.passwordsFromPasswordManager.length}`);
+          allPasswords = window.passwordsFromPasswordManager;
+        }
+        
+        // 🎯 OPCIÓN 2: Intentar desde passwords_encrypted (desencriptar si hay master key)
+        if (allPasswords.length === 0 && window.currentMasterKey) {
+          try {
+            const encryptedStr = localStorage.getItem('passwords_encrypted');
+            if (encryptedStr) {
+              console.log(`[AIChatPanel] 🔐 passwords_encrypted encontrado, desencriptando...`);
+              try {
+                const SecureStorage = require('../services/SecureStorage').default || require('../services/SecureStorage');
+                const secureStorage = new SecureStorage();
+                const encryptedObj = JSON.parse(encryptedStr);
+                const decrypted = await secureStorage.decryptData(encryptedObj, window.currentMasterKey);
+                
+                if (Array.isArray(decrypted)) {
+                  allPasswords = decrypted;
+                  console.log(`[AIChatPanel] ✅ ${allPasswords.length} contraseñas desencriptadas`);
+                }
+              } catch (decryptError) {
+                console.log('[AIChatPanel] ℹ️ Error desencriptando passwords_encrypted:', decryptError.message);
+              }
+            }
+          } catch (e) {
+            console.log('[AIChatPanel] ℹ️ Error leyendo passwords_encrypted:', e.message);
+          }
+        }
+        
+        // 🎯 OPCIÓN 3: Leer desde passwordManagerNodes (sin encriptar, fallback)
+        if (allPasswords.length === 0) {
+          try {
+            const plainStr = localStorage.getItem('passwordManagerNodes');
+            if (plainStr) {
+              console.log(`[AIChatPanel] 🔐 passwordManagerNodes encontrado (sin encriptar)`);
+              allPasswords = JSON.parse(plainStr);
+            }
+          } catch (e) {
+            console.log('[AIChatPanel] ℹ️ Error leyendo passwordManagerNodes:', e.message);
+          }
+        }
+
+        console.log(`[AIChatPanel] 📊 TOTAL de contraseñas sincronizadas: ${allPasswords.length}`);
+        
+        if (allPasswords.length === 0) {
+          console.log('[AIChatPanel] ⚠️ No se encontraron contraseñas en ninguna fuente');
+          return;
+        }
+        
+        // Enviar al MCP via IPC
+        if (window.electron?.ipcRenderer) {
+          try {
+            const sendPasswords = (attempt = 0) => {
+              try {
+                window.electron.ipcRenderer.send('app:save-passwords-for-mcp', allPasswords);
+                console.log(`📤 [AIChatPanel] Intento ${attempt + 1}: ${allPasswords.length} contraseñas enviadas`);
+              } catch (err) {
+                console.error(`❌ [AIChatPanel] Error en intento ${attempt + 1}:`, err.message);
+              }
+            };
+            
+            // Enviar múltiples veces para asegurar entrega
+            sendPasswords(0);
+            setTimeout(() => sendPasswords(1), 200);
+            setTimeout(() => sendPasswords(2), 1000);
+            
+            console.log(`✅ [AIChatPanel] ${allPasswords.length} contraseñas programadas para sincronización`);
+          } catch (ipcError) {
+            console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
+          }
+        } else {
+          console.error('[AIChatPanel] ❌ window.electron.ipcRenderer NO está disponible');
+        }
+      } catch (error) {
+        console.error('[AIChatPanel] ❌ Error sincronizando contraseñas:', error);
+      }
+    };
+
+    // Sincronizar con delay para dar tiempo a que todo cargue
+    const initialSyncTimeout = setTimeout(() => {
+      console.log('[AIChatPanel] ⏱️ Ejecutando sincronización inicial de contraseñas...');
+      syncPasswordsToMCP();
+    }, 1500); // Delay ligeramente mayor que SSH para asegurar que Password Manager esté listo
+
+    // Escuchar cambios en contraseñas
+    const handlePasswordsUpdated = (event) => {
+      console.log(`[AIChatPanel] 🔄 Password Manager sincronizó contraseñas (${event.detail?.count || '?'} contraseñas), resincronizando...`);
+      syncPasswordsToMCP();
+    };
+
+    window.addEventListener('passwords-updated', handlePasswordsUpdated);
+    
+    return () => {
+      clearTimeout(initialSyncTimeout);
+      window.removeEventListener('passwords-updated', handlePasswordsUpdated);
+    };
+  }, []);
+
   // Escuchar eventos del historial de conversaciones
   useEffect(() => {
     const handleLoadConversationEvent = (event) => {
@@ -2461,6 +2567,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const wasExpanded = expandedToolCardsRef.current.has(messageId);
     const [expanded, setExpanded] = useState(wasExpanded || initialExpanded);
     
+    // 🔐 Estado para revelar contraseñas
+    const [revealedPasswords, setRevealedPasswords] = useState({});
+    
     // Sincronizar estado inicial con el ref cuando cambia el messageId (re-render)
     useEffect(() => {
       const isInRef = expandedToolCardsRef.current.has(messageId);
@@ -2471,6 +2580,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // No colapsar automáticamente si no está en el ref - respetar el estado actual
       // Esto evita que las tarjetas se colapsen cuando se re-renderiza el componente
     }, [messageId]); // Solo cuando cambia el messageId (nuevo mensaje o re-render)
+    
+    // Toggle para revelar/ocultar contraseña
+    const togglePasswordReveal = (passwordId) => {
+      setRevealedPasswords(prev => ({
+        ...prev,
+        [passwordId]: !prev[passwordId]
+      }));
+    };
     
     // Sincronizar el ref cuando el usuario cambia el estado manualmente
     const handleToggle = () => {
@@ -2517,6 +2634,125 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         );
       });
     };
+    
+    // 🔐 Renderizar resultado con soporte para revelar contraseñas
+    const renderPasswordCard = (item) => {
+      const passwordReal = item?._passwordRealBackendOnly;
+      const isRevealed = revealedPasswords[item.id];
+      const displayPassword = isRevealed ? passwordReal : item.password;
+      
+      const isSSH = item.type === 'ssh';
+      const icon = isSSH ? '🔗' : '📋';
+      const typeLabel = isSSH ? 'Conexión SSH' : 'Contraseña';
+      
+      return (
+        <div key={item.id} style={{ fontSize: '0.85rem', marginBottom: '0.6rem', padding: '0.6rem', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+          <div style={{ lineHeight: '1.6' }}>
+            <div><strong>{icon} {item.title || item.name || typeLabel}</strong></div>
+            {isSSH && (
+              <div style={{ marginTop: '0.4rem', color: 'rgba(100, 150, 255, 0.9)' }}>
+                <strong>Host:</strong> {item.host}:{item.port}
+              </div>
+            )}
+            <div style={{ marginTop: '0.4rem', color: 'rgba(255,255,255,0.8)' }}>
+              <strong>Usuario:</strong> {item.username}
+            </div>
+            {passwordReal && (
+              <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong>Contraseña:</strong>
+                <code style={{ 
+                  background: 'rgba(0,0,0,0.3)', 
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                  letterSpacing: isRevealed ? '0' : '0.15em'
+                }}>
+                  {displayPassword}
+                </code>
+                <button 
+                  onClick={() => togglePasswordReveal(item.id)}
+                  style={{
+                    background: 'rgba(76, 175, 80, 0.3)',
+                    border: '1px solid rgba(76, 175, 80, 0.6)',
+                    color: '#fff',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <i className={`pi ${isRevealed ? 'pi-eye-slash' : 'pi-eye'}`} />
+                  {isRevealed ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
+            )}
+            {item.url && item.url !== '(sin URL)' && (
+              <div style={{ marginTop: '0.3rem', color: 'rgba(100, 150, 255, 0.9)', fontSize: '0.8rem' }}>
+                <strong>URL:</strong> {item.url}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+    
+    const renderResult = () => {
+      if (!toolResult) return null;
+      
+      try {
+        // 🔧 PASO 1: Limpiar markdown code blocks (```json ... ```)
+        let jsonStr = toolResult;
+        const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        }
+        jsonStr = jsonStr.trim();
+        console.log('🔍 [renderResult] JSON limpio (primeros 100 chars):', jsonStr.substring(0, 100));
+        
+        // PASO 2: Parsear JSON
+        const parsed = JSON.parse(jsonStr);
+        console.log('✅ [renderResult] JSON parseado correctamente. Keys:', Object.keys(parsed || {}));
+        
+        // Si es un objeto búsqueda combinada con ssh_results y password_results
+        if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results)) {
+          console.log('✅ [renderResult] Detectado como búsqueda combinada. SSH:', parsed.ssh_results?.length || 0, 'Passwords:', parsed.password_results?.length || 0);
+          const sshResults = parsed.ssh_results || [];
+          const passwordResults = parsed.password_results || [];
+          
+          return (
+            <div style={{ fontSize: '0.85rem' }}>
+              {sshResults.length > 0 && (
+                <div style={{ marginBottom: '0.8rem' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>🔗 Conexiones SSH:</div>
+                  {sshResults.map(item => renderPasswordCard(item))}
+                </div>
+              )}
+              {passwordResults.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>🔐 Credenciales:</div>
+                  {passwordResults.map(item => renderPasswordCard(item))}
+                </div>
+              )}
+            </div>
+          );
+        }
+        
+        // Si es un objeto individual con password oculta
+        const passwordReal = parsed?.passwordReal || parsed?._passwordRealBackendOnly;
+        if (parsed && typeof parsed === 'object' && (passwordReal || (parsed.password && parsed.password.includes('•')))) {
+          return renderPasswordCard(parsed);
+        }
+        
+        // JSON normal
+        return <pre style={{ fontSize: '0.8rem', overflow: 'auto' }}>{JSON.stringify(parsed, null, 2)}</pre>;
+      } catch (e) {
+        // No es JSON, devolver como texto
+        return <div style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{String(toolResult)}</div>;
+      }
+    };
 
     return (
       <div className="tool-execution-card">
@@ -2553,7 +2789,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               <div className={`tool-card-result ${isError ? 'error' : ''}`}>
                 <strong>{isError ? 'Error:' : 'Resultado:'}</strong>
                 <div className="tool-result-content">
-                  {String(toolResult)}
+                  {renderResult()}
                 </div>
               </div>
             )}

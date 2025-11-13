@@ -530,6 +530,31 @@ ipcMain.on('app:save-ssh-connections-for-mcp', async (event, connections) => {
   }
 });
 
+// 🔐 IPC Handler para sincronizar PASSWORDS con el MCP (KeepPass, Password Manager, etc.)
+ipcMain.on('app:save-passwords-for-mcp', async (event, passwords) => {
+  try {
+    if (!Array.isArray(passwords)) {
+      console.warn('[Password MCP] ⚠️ Parámetro no es un array:', typeof passwords);
+      return;
+    }
+    
+    // Guardar en memoria en el MCP Server
+    if (global.sshTerminalServer) {
+      global.sshTerminalServer.nodeTermPasswords = passwords;
+      // Solo loggear la primera vez o cuando cambia el número
+      const prevCount = global.sshTerminalServer._lastPasswordCount || 0;
+      if (prevCount !== passwords.length) {
+        console.log(`✅ [Password MCP] ${passwords.length} contraseñas sincronizadas en memoria`);
+        global.sshTerminalServer._lastPasswordCount = passwords.length;
+      }
+    } else {
+      console.warn('⚠️ [Password MCP] MCP Server no disponible aún');
+    }
+  } catch (error) {
+    console.error('[APP Password] ❌ Error sincronizando contraseñas:', error.message);
+  }
+});
+
 // IPC handler para detectar todas las distribuciones WSL
 ipcMain.handle('detect-wsl-distributions', async () => {
   // console.log('🚀 Detectando distribuciones WSL...'); // Eliminado por limpieza de logs

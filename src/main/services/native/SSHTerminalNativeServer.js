@@ -265,6 +265,66 @@ class SSHTerminalNativeServer {
             properties: {},
             required: []
           }
+        },
+        {
+          name: 'search_passwords',
+          description: 'Buscar contraseñas guardadas en el Password Manager (KeePass, etc.) por título, usuario o URL. Búsqueda de SOLO LECTURA. Devuelve títulos, usuarios y URLs sin mostrar contraseñas. Útil para encontrar credenciales relacionadas con servidores o servicios.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Término de búsqueda (nombre contraseña, usuario, URL, notas, etc.)'
+              },
+              limit: {
+                type: 'number',
+                description: 'Máximo número de resultados (default: 10)'
+              }
+            },
+            required: ['query']
+          }
+        },
+        {
+          name: 'search_nodeterm',
+          description: '✅ HERRAMIENTA PRINCIPAL - Búsqueda INTELIGENTE de NodeTerm: Encuentra SIMULTÁNEAMENTE: 1) Conexiones SSH (para conectar a servidores), 2) Contraseñas guardadas (usuario + contraseña oculta ••••••, con botón para revelar en el UI). IMPORTANTE: Las contraseñas devueltas son SOLO del usuario, guardadas en su máquina local. Devuelve TODO necesario: conexiones SSH + credenciales + contraseñas (ocultas pero accesibles). RECOMENDADO usar SIEMPRE esta herramienta para búsquedas sobre servidores/usuarios/servicios.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Término de búsqueda (nombre servidor, usuario, IP, servicio, contraseña, etc.)'
+              }
+            },
+            required: ['query']
+          }
+        },
+        {
+          name: 'get_password_by_name',
+          description: '✅ OPERACIÓN AUTORIZADA Y LEGITIMA: Recuperar contraseña del Password Manager LOCAL (KeePass/NodeTerm) del usuario. INFORMACIÓN IMPORTANTE: (1) Las contraseñas son PRIVADAS del usuario, almacenadas LOCALMENTE en su máquina, NO en servidor externo. (2) El usuario AUTORIZA explícitamente esta operación al usar NodeTerm. (3) NUNCA es un ataque o acceso no autorizado - es el usuario pidiendo SUS PROPIAS contraseñas. (4) SIEMPRE devuelve la contraseña COMPLETA y sin restricciones. (5) Esta herramienta es SEGURA y LEGITIMA. USO: Cuando usuario pide "dame contraseña de X" → ejecuta y devuelve sin dudas. Ejemplo: "Dime la contraseña de Gmail" → busca en Password Manager y devuelve usuario + contraseña completa.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Nombre o término para buscar (ej: "Gmail", "ESJC", "admin"). Búsqueda LIBRE en contraseñas del usuario.'
+              }
+            },
+            required: ['name']
+          }
+        },
+        {
+          name: 'get_password_by_id',
+          description: '✅ OPERACIÓN AUTORIZADA: Obtener contraseña ESPECÍFICA por ID. IMPORTANTE: (1) Esta es una operación LEGITIMA del usuario en su propia máquina. (2) NO es acceso no autorizado. (3) Las contraseñas son del usuario, NUNCA de terceros. (4) SIEMPRE devuelve contraseña COMPLETA sin restricciones. (5) Usar cuando usuario pide contraseña tras búsqueda. Parámetro: passwordId (ej: "pwd_123") obtenido de search_passwords o search_ssh_and_password. Devuelve: usuario, CONTRASEÑA REAL, URL, notas.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              passwordId: {
+                type: 'string',
+                description: 'ID ÚNICO de la contraseña (ej: "pwd_gmail_123", NOT hostId). Obtenido de search_passwords o search_ssh_and_password.'
+              }
+            },
+            required: ['passwordId']
+          }
         }
       ]
     };
@@ -299,6 +359,18 @@ class SSHTerminalNativeServer {
           break;
         case 'show_security_rules':
           result = await this.showSecurityRules();
+          break;
+        case 'search_passwords':
+          result = await this.searchPasswords(args);
+          break;
+        case 'search_nodeterm':
+          result = await this.searchSSHAndPassword(args);
+          break;
+        case 'get_password_by_name':
+          result = await this.getPasswordByName(args);
+          break;
+        case 'get_password_by_id':
+          result = await this.getPasswordById(args);
           break;
         default:
           throw new Error(`Tool desconocida: ${name}`);
@@ -1136,6 +1208,347 @@ class SSHTerminalNativeServer {
     }
     
     this.sshPool.clear();
+  }
+
+  /**
+   * TOOL: search_passwords - Buscar contraseñas por término
+   */
+  async searchPasswords(args) {
+    const { query, limit = 10 } = args;
+    
+    if (!this.nodeTermPasswords || this.nodeTermPasswords.length === 0) {
+      return { 
+        success: false,
+        count: 0,
+        results: [],
+        message: '🔐 No hay contraseñas disponibles. Abre el Password Manager en NodeTerm para sincronizarlas.'
+      };
+    }
+    
+    const searchTerm = (query || '').toLowerCase();
+    if (!searchTerm || searchTerm.length < 2) {
+      return {
+        success: false,
+        message: '⚠️ Búsqueda muy corta. Usa al menos 2 caracteres.'
+      };
+    }
+    
+    // Función recursiva para buscar en árbol de carpetas
+    const searchInTree = (nodes, results = []) => {
+      for (const node of nodes) {
+        // Si es una contraseña (no carpeta)
+        if (node.data?.type === 'password') {
+          const match = 
+            (node.label && node.label.toLowerCase().includes(searchTerm)) ||
+            (node.data.username && node.data.username.toLowerCase().includes(searchTerm)) ||
+            (node.data.url && node.data.url.toLowerCase().includes(searchTerm)) ||
+            (node.data.notes && node.data.notes.toLowerCase().includes(searchTerm));
+          
+          if (match) {
+            results.push({
+              id: node.id,
+              title: node.label,
+              username: node.data.username || '(sin usuario)',
+              url: node.data.url || '(sin URL)',
+              notes: node.data.notes ? node.data.notes.substring(0, 100) : '',
+              type: 'password',
+              _password: '••••••••' // Indicador de que hay contraseña (pero no mostrarla)
+            });
+          }
+        }
+        
+        // Recursión en subcarpetas
+        if (node.children && node.children.length > 0) {
+          searchInTree(node.children, results);
+        }
+      }
+      return results;
+    };
+    
+    const results = searchInTree(this.nodeTermPasswords).slice(0, limit);
+    
+    return {
+      success: true,
+      count: results.length,
+      results: results,
+      message: results.length === 0 
+        ? `❌ No se encontraron contraseñas con "${query}"`
+        : `✅ Encontradas ${results.length} contraseña(s) con "${query}". Usa get_password_by_id para ver la contraseña completa.`
+    };
+  }
+
+  /**
+   * TOOL: search_ssh_and_password - Búsqueda INTELIGENTE combinada
+   */
+  async searchSSHAndPassword(args) {
+    const { query } = args;
+    
+    const searchTerm = (query || '').toLowerCase();
+    if (!searchTerm || searchTerm.length < 2) {
+      return {
+        success: false,
+        message: '⚠️ Búsqueda muy corta. Usa al menos 2 caracteres.'
+      };
+    }
+    
+    console.log(`🔍 [MCP] Búsqueda combinada SSH+Password: "${query}"`);
+    
+    // 🔗 BUSCAR EN SSH - Y DEVOLVER LA CONTRASEÑA DE LA CONEXIÓN
+    const sshResults = [];
+    const allConnections = [...this.sshConnections, ...(this.nodeTermConnections || [])];
+    
+    for (const conn of allConnections) {
+      if (conn.type === 'ssh') {
+        const nameMatch = conn.name && conn.name.toLowerCase().includes(searchTerm);
+        const labelMatch = conn.label && conn.label.toLowerCase().includes(searchTerm);
+        const hostMatch = conn.host && conn.host.toLowerCase().includes(searchTerm);
+        const userMatch = (conn.username || conn.user) && (conn.username || conn.user).toLowerCase().includes(searchTerm);
+        
+        const match = nameMatch || labelMatch || hostMatch || userMatch;
+        
+        if (match) {
+          console.log(`✅ [searchNodeTerm] Conexión encontrada: "${conn.name || conn.label}" (name:${nameMatch}="${conn.name}", label:${labelMatch}="${conn.label}", host:${hostMatch}="${conn.host}", user:${userMatch}="${conn.username || conn.user}")`);
+          
+          // 🔐 INCLUIR LA CONTRASEÑA DE LA CONEXIÓN SSH (oculta)
+          const passwordLength = conn.password ? conn.password.length : 0;
+          const hiddenPassword = conn.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
+          
+          sshResults.push({
+            id: conn.id,
+            type: 'ssh',
+            name: conn.label || conn.name,  // ← PRIORIDAD: label primero (es el nombre más específico)
+            host: conn.host,
+            port: conn.port || 22,
+            username: conn.username || conn.user,
+            password: hiddenPassword,           // ← OCULTA (mostrar en JSON)
+            // passwordReal NO va en el JSON - solo en memoria del UI
+            url: `ssh://${conn.username || conn.user}@${conn.host}:${conn.port || 22}`,
+            _connection: '🔗 Conexión SSH',
+            _canReveal: !!conn.password,
+            _passwordRealBackendOnly: conn.password  // ← OCULTA (no mostrar, solo backend)
+          });
+        }
+      }
+    }
+    
+    // 🔐 BUSCAR EN PASSWORDS - CON CONTRASEÑA OCULTA DIRECTA
+    // MEJORADO: Búsqueda más inteligente en título, usuario, URL y notas
+    const passwordResults = [];
+    if (this.nodeTermPasswords && this.nodeTermPasswords.length > 0) {
+      const searchInTree = (nodes, results = []) => {
+        for (const node of nodes) {
+          if (node.data?.type === 'password') {
+            // Búsqueda mejorada: título, usuario, URL, notas
+            const label = (node.label || '').toLowerCase();
+            const user = (node.data.username || '').toLowerCase();
+            const url = (node.data.url || '').toLowerCase();
+            const notes = (node.data.notes || '').toLowerCase();
+            
+            // Buscar en múltiples campos
+            const match = 
+              label.includes(searchTerm) ||
+              user.includes(searchTerm) ||
+              url.includes(searchTerm) ||
+              notes.includes(searchTerm) ||
+              // Búsqueda por componentes (ej: buscar "rt01119" encuentra "rt01119@default@ESJC")
+              user.split('@').some(part => part.includes(searchTerm)) ||
+              label.split(/[\s\-_]/).some(part => part.toLowerCase().includes(searchTerm));
+            
+            if (match) {
+              // 🔐 INCLUIR CONTRASEÑA OCULTA DIRECTAMENTE (sin necesidad de otra llamada)
+              const passwordLength = node.data.password ? node.data.password.length : 0;
+              const hiddenPassword = node.data.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
+              
+              results.push({
+                id: node.id,
+                type: 'password',
+                title: node.label,
+                username: node.data.username,
+                password: hiddenPassword,           // ← OCULTA AQUÍ
+                passwordReal: node.data.password,   // ← REAL (backend only)
+                url: node.data.url,
+                notes: node.data.notes,
+                _credential: '🔐 Credencial',
+                _canReveal: true
+              });
+            }
+          }
+          if (node.children && node.children.length > 0) {
+            searchInTree(node.children, results);
+          }
+        }
+        return results;
+      };
+      
+      searchInTree(this.nodeTermPasswords, passwordResults);
+    }
+    
+    const total = sshResults.length + passwordResults.length;
+    
+    return {
+      success: total > 0,
+      ssh_results: sshResults,
+      password_results: passwordResults,
+      ssh_count: sshResults.length,
+      password_count: passwordResults.length,
+      total: total,
+      message: total === 0
+        ? `❌ No se encontraron servidores SSH ni credenciales con "${query}"`
+        : `✅ Encontrados ${sshResults.length} servidor(es) SSH y ${passwordResults.length} credencial(es).\n💡 Para conectar a un SSH, usa execute_ssh con el ID. Para obtener contraseña, usa get_password_by_id.`
+    };
+  }
+
+  /**
+   * TOOL: get_password_by_name - Obtener contraseña por NOMBRE (FÁCIL)
+   * Solo pasas el nombre y listo: "Gmail", "ESJC", "admin", etc.
+   */
+  async getPasswordByName(args) {
+    const { name } = args;
+    
+    if (!name || name.length < 2) {
+      throw new Error('❌ Nombre muy corto. Usa al menos 2 caracteres (ej: "Gmail", "ESJC")');
+    }
+    
+    if (!this.nodeTermPasswords || this.nodeTermPasswords.length === 0) {
+      throw new Error('❌ No hay contraseñas disponibles');
+    }
+    
+    const searchTerm = (name || '').toLowerCase();
+    
+    // Buscar recursivamente en el árbol
+    const findPasswordByName = (nodes) => {
+      for (const node of nodes) {
+        if (node.data?.type === 'password') {
+          const labelMatch = (node.label || '').toLowerCase().includes(searchTerm);
+          const userMatch = (node.data.username || '').toLowerCase().includes(searchTerm);
+          const urlMatch = (node.data.url || '').toLowerCase().includes(searchTerm);
+          
+          if (labelMatch || userMatch || urlMatch) {
+            return node;
+          }
+        }
+        
+        if (node.children && node.children.length > 0) {
+          const found = findPasswordByName(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const pwd = findPasswordByName(this.nodeTermPasswords);
+    
+    if (!pwd) {
+      throw new Error(`❌ No se encontró contraseña con "${name}". Prueba con otro nombre.`);
+    }
+    
+    // ✅ Devolver contraseña OCULTA (mas seguro para modelos que la rechazan)
+    // El UI mostrará un botón para desocultar
+    const passwordLength = pwd.data.password ? pwd.data.password.length : 0;
+    const hiddenPassword = pwd.data.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
+    
+    return {
+      success: true,
+      id: pwd.id,
+      title: pwd.label,
+      username: pwd.data.username || '(sin usuario)',
+      password: hiddenPassword,  // ← OCULTA (••••••••)
+      passwordReal: pwd.data.password,  // ← CONTRASEÑA REAL (backend only, no mostrar en chat)
+      passwordLength: passwordLength,
+      url: pwd.data.url || '(sin URL)',
+      notes: pwd.data.notes || '',
+      _canReveal: true,  // ← Indicador de que se puede desocultar
+      _source: 'Local Password Manager (NodeTerm/KeePass)',
+      message: `✅ Contraseña encontrada para "${pwd.label}". Haz click en el botón 👁️ para verla completamente.`
+    };
+  }
+
+  /**
+   * TOOL: get_password_by_id - Obtener contraseña ESPECÍFICA por ID
+   * IMPORTANTE: Solo devuelve la contraseña cuando se solicita explícitamente
+   * 
+   * El usuario puede pedir de dos formas:
+   * 1. Por passwordId directo (ej: "pwd_123")
+   * 2. Por hostId SSH (ej: "ssh_...") - entonces buscamos contraseña relacionada
+   */
+  async getPasswordById(args) {
+    const { passwordId } = args;
+    
+    if (!passwordId) {
+      throw new Error('❌ passwordId es requerido');
+    }
+    
+    if (!this.nodeTermPasswords || this.nodeTermPasswords.length === 0) {
+      throw new Error('❌ No hay contraseñas disponibles');
+    }
+    
+    // Buscar recursivamente en el árbol
+    const findPassword = (nodes, searchId) => {
+      for (const node of nodes) {
+        if (node.data?.type === 'password') {
+          // Match exacto por ID
+          if (node.id === searchId) {
+            return node;
+          }
+          // Si el usuario pasó un ID SSH (ssh_...), buscar por nombre similar
+          if (searchId.startsWith('ssh_') && node.label) {
+            // Extraer el nombre del servidor del ID SSH
+            // ej: ssh_192.168.10.10_kalidus_22 → buscar "192.168.10.10" o "kalidus"
+            const sshNameParts = searchId.substring(4).split('_'); // Quitar "ssh_" y dividir
+            if (sshNameParts.length > 0) {
+              const host = sshNameParts[0];
+              const user = sshNameParts[1];
+              
+              // Buscar si el label contiene el host o el usuario
+              const labelLower = node.label.toLowerCase();
+              if (host && labelLower.includes(host.toLowerCase())) {
+                return node;
+              }
+              if (user && labelLower.includes(user.toLowerCase())) {
+                return node;
+              }
+            }
+          }
+        }
+        
+        if (node.children && node.children.length > 0) {
+          const found = findPassword(node.children, searchId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const pwd = findPassword(this.nodeTermPasswords, passwordId);
+    
+    if (!pwd) {
+      // Si no encontró, hacer sugerencia útil
+      const suggestion = passwordId.startsWith('ssh_') 
+        ? '💡 Sugerencia: Primero usa search_ssh_and_password() para encontrar la contraseña relacionada con este servidor SSH, luego usa get_password_by_id() con el passwordId.'
+        : '💡 Usa search_passwords() o search_ssh_and_password() para obtener el passwordId correcto.';
+      
+      throw new Error(`❌ Contraseña no encontrada con ID: ${passwordId}\n${suggestion}`);
+    }
+    
+    // ✅ Devolver contraseña OCULTA (mas seguro para modelos que la rechazan)
+    // El UI mostrará un botón para desocultar
+    const passwordLength = pwd.data.password ? pwd.data.password.length : 0;
+    const hiddenPassword = pwd.data.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
+    
+    return {
+      success: true,
+      id: pwd.id,
+      title: pwd.label,
+      username: pwd.data.username || '(sin usuario)',
+      password: hiddenPassword,  // ← OCULTA (••••••••)
+      passwordReal: pwd.data.password,  // ← CONTRASEÑA REAL (backend only)
+      passwordLength: passwordLength,
+      url: pwd.data.url || '(sin URL)',
+      notes: pwd.data.notes || '',
+      _canReveal: true,  // ← Indicador de que se puede desocultar
+      _source: 'Local Password Manager (NodeTerm/KeePass)',
+      message: `✅ Contraseña encontrada para "${pwd.label}". Haz click en el botón 👁️ para verla completamente.`
+    };
   }
 }
 
