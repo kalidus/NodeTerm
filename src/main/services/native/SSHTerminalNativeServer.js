@@ -378,8 +378,15 @@ class SSHTerminalNativeServer {
       throw new Error(`❌ Comando no permitido: "${command}". Ver show_security_rules para comandos permitidos.`);
     }
     
-    if (workingDir && !this.isPathAllowed(workingDir)) {
-      throw new Error(`❌ Directorio no permitido: "${workingDir}". Debe estar en: ${this.allowedDir}`);
+    // ✅ FIXED: Usar allowedDir como directorio de trabajo por defecto si no se especifica workingDir
+    let finalWorkingDir = workingDir;
+    if (!finalWorkingDir && this.allowedDir && this.allowedDir.trim().length > 0) {
+      finalWorkingDir = this.allowedDir;
+      console.log(`📁 [SSH Terminal] Usando directorio configurado por defecto: ${finalWorkingDir}`);
+    }
+    
+    if (finalWorkingDir && !this.isPathAllowed(finalWorkingDir)) {
+      throw new Error(`❌ Directorio no permitido: "${finalWorkingDir}". Debe estar en: ${this.allowedDir}`);
     }
     
     // 🎯 PRIORIDAD: 1) preferredTerminal configurado, 2) Auto-detección por tipo de comando
@@ -489,13 +496,13 @@ class SSHTerminalNativeServer {
         throw new Error(`❌ Distribución "${targetTerminal}" no encontrada. Distribuciones disponibles: ${wslDistroIds.join(', ')}`);
       }
       
-      result = await this.executeInWSL(command, workingDir, distroName);
+      result = await this.executeInWSL(command, finalWorkingDir, distroName);
       displayLabel = distroName ? `wsl:${distroName}` : 'wsl';
     } else if (targetTerminal === 'cygwin') {
-      result = await this.executeInCygwin(command, workingDir);
+      result = await this.executeInCygwin(command, finalWorkingDir);
       displayLabel = 'cygwin';
     } else if (targetTerminal === 'powershell') {
-      result = await this.executeInPowerShell(command, workingDir);
+      result = await this.executeInPowerShell(command, finalWorkingDir);
       displayLabel = 'powershell';
     } else {
       // Terminal desconocido - mostrar opciones disponibles
