@@ -389,6 +389,53 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     detectShells();
   }, []);
 
+  // Monitorear cambios en la shell seleccionada y agregar mensaje de contexto
+  const previousShellRef = useRef(selectedShell);
+  useEffect(() => {
+    if (previousShellRef.current !== selectedShell && currentConversationId) {
+      // Solo mostrar el mensaje si ya hay una conversación iniciada y cambió la shell
+      const getShellName = (shell) => {
+        if (shell === 'powershell') return 'PowerShell';
+        if (shell === 'cygwin') return 'Cygwin';
+        if (shell.startsWith('wsl-')) {
+          const distroName = shell.replace('wsl-', '');
+          return `WSL: ${distroName}`;
+        }
+        return shell;
+      };
+
+      const shellName = getShellName(selectedShell);
+      const contextMessage = `⚠️ Terminal cambiada a **${shellName}**. Los próximos comandos se ejecutarán en esta terminal.`;
+      
+      // Agregar mensaje de contexto al historial
+      // El renderMarkdown convertirá **texto** a HTML <strong>
+      const htmlMessage = contextMessage
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br/>');
+      
+      conversationService.addMessage('system', htmlMessage, {
+        isSystemMessage: true,
+        type: 'shell-changed'
+      });
+
+      // Actualizar el estado de mensajes para que se vea inmediatamente
+      const currentConversation = conversationService.getCurrentConversation();
+      if (currentConversation && currentConversation.messages) {
+        setMessages(
+          currentConversation.messages.map(m => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+            metadata: m.metadata
+          }))
+        );
+      }
+
+      previousShellRef.current = selectedShell;
+    }
+  }, [selectedShell, currentConversationId]);
+
   useEffect(() => {
     const config = aiService.loadConfig();
     setCurrentModel(aiService.currentModel);
