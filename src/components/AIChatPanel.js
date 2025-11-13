@@ -2699,8 +2699,34 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       );
     };
     
+    const renderedResult = React.useMemo(() => {
+      if (!toolResult) return null;
+      
+      // 🔍 PRIMERO: Detectar si es texto con [DIR] / [FILE] (list_directory)
+      if (typeof toolResult === 'string' && (toolResult.includes('[DIR]') || toolResult.includes('[FILE]'))) {
+        try {
+          const htmlContent = renderMarkdown(toolResult);
+          return (
+            <div 
+              className="ai-md"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+              style={{ fontSize: '0.85rem' }}
+            />
+          );
+        } catch (err) {
+          console.error('❌ [renderResult] Error renderizando list_directory:', err.message);
+          // Fallback: mostrar como texto plano
+          return <div style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{toolResult}</div>;
+        }
+      }
+      return undefined; // Continuar con la lógica normal
+    }, [toolResult]);
+
     const renderResult = () => {
       if (!toolResult) return null;
+      
+      // Si ya fue procesado como list_directory, devolverlo
+      if (renderedResult) return renderedResult;
       
       try {
         // 🔧 PASO 1: Limpiar markdown code blocks (```json ... ```)
@@ -2746,8 +2772,22 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           return renderPasswordCard(parsed);
         }
         
-        // JSON normal
-        return <pre style={{ fontSize: '0.8rem', overflow: 'auto' }}>{JSON.stringify(parsed, null, 2)}</pre>;
+        // JSON normal para otros casos
+        return (
+          <pre style={{ 
+            fontSize: '0.8rem', 
+            overflow: 'auto',
+            background: 'rgba(0,0,0,0.3)',
+            padding: '0.8rem',
+            borderRadius: '4px',
+            maxHeight: '400px',
+            border: '1px solid rgba(100, 150, 255, 0.3)',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word'
+          }}>
+            {JSON.stringify(parsed, null, 2)}
+          </pre>
+        );
       } catch (e) {
         // No es JSON, devolver como texto
         return <div style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{String(toolResult)}</div>;
