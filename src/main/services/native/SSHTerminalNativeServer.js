@@ -382,78 +382,80 @@ class SSHTerminalNativeServer {
       throw new Error(`❌ Directorio no permitido: "${workingDir}". Debe estar en: ${this.allowedDir}`);
     }
     
-    // 🤖 AUTO-DETECCIÓN SIEMPRE ACTIVA
-    // El terminal se selecciona automáticamente basado en el tipo de comando
+    // 🎯 PRIORIDAD: 1) preferredTerminal configurado, 2) Auto-detección por tipo de comando
     let targetTerminal;
     {
-      // Detectar tipo de comando
-      const commandType = this.detectCommandType(command);
-      
       // Obtener distribuciones WSL disponibles
       const wslDistros = await this.detectWSLDistros();
       const wslDistroIds = wslDistros.map(d => d.id);
       const hasCygwin = this.detectCygwinPath() !== null;
       
-      if (commandType === 'linux') {
-        // 🎯 PRIORIDAD CORRECTA: WSL primero, luego Cygwin
-        // 1. Verificar si preferredTerminal está disponible y NO es powershell
-        if (this.preferredTerminal && this.preferredTerminal !== 'powershell') {
-          // Validar que el preferredTerminal esté realmente disponible
-          if (this.preferredTerminal === 'wsl' && wslDistroIds.includes('ubuntu')) {
+      // 1. PRIMERO: Verificar si hay preferredTerminal configurado (respetar preferencia del usuario)
+      if (this.preferredTerminal) {
+        // Validar que el preferredTerminal esté disponible
+        if (this.preferredTerminal === 'powershell') {
+          // PowerShell siempre está disponible en Windows
+          targetTerminal = 'powershell';
+        } else if (this.preferredTerminal === 'wsl') {
+          // WSL genérico: buscar Ubuntu primero, luego primera distribución disponible
+          if (wslDistroIds.includes('ubuntu')) {
             targetTerminal = 'ubuntu';
-          } else if (this.preferredTerminal === 'wsl' && wslDistros.length > 0) {
+          } else if (wslDistros.length > 0) {
             targetTerminal = wslDistroIds[0];
-          } else if (wslDistroIds.includes(this.preferredTerminal)) {
-            targetTerminal = this.preferredTerminal;
-          } else if (this.preferredTerminal === 'ubuntu') {
-            // NUEVO: Buscar variantes de Ubuntu si "ubuntu" exacto no existe
-            const ubuntuDistro = wslDistros.find(d => 
-              d.id.startsWith('ubuntu-') || 
-              d.name.toLowerCase().includes('ubuntu')
-            );
-            if (ubuntuDistro) {
-              targetTerminal = ubuntuDistro.id;
-            } else {
-              targetTerminal = wslDistros.length > 0 ? wslDistroIds[0] : null;
-            }
-          } else if (this.preferredTerminal === 'cygwin' && hasCygwin) {
-            targetTerminal = 'cygwin';
           } else {
-            // preferredTerminal no disponible, hacer fallback
-            console.warn(`⚠️ [Auto-detección] Terminal preferido "${this.preferredTerminal}" no disponible, usando fallback`);
-            if (wslDistroIds.includes('ubuntu')) {
-              targetTerminal = 'ubuntu';
-            } else if (wslDistroIds.length > 0) {
-              targetTerminal = wslDistroIds[0];
-            } else if (hasCygwin) {
-              targetTerminal = 'cygwin';
-            } else {
-              throw new Error(`❌ No hay terminales Linux disponibles. Terminal preferido "${this.preferredTerminal}" no está instalado.`);
-            }
+            console.warn(`⚠️ [Terminal] WSL preferido pero no disponible, usando fallback`);
+            targetTerminal = 'powershell'; // Fallback a PowerShell si WSL no está disponible
           }
-        }
-        // 2. Si no hay preferredTerminal válido, usar Ubuntu si está disponible
-        else if (wslDistroIds.includes('ubuntu')) {
-          targetTerminal = 'ubuntu';
-        }
-        // 3. Si no hay Ubuntu, usar primera distribución WSL disponible
-        else if (wslDistroIds.length > 0) {
-          targetTerminal = wslDistroIds[0];
-        }
-        // 4. Si no hay WSL, intentar Cygwin
-        else if (hasCygwin) {
+        } else if (this.preferredTerminal === 'ubuntu') {
+          // Buscar variantes de Ubuntu si "ubuntu" exacto no existe
+          const ubuntuDistro = wslDistros.find(d => 
+            d.id.startsWith('ubuntu-') || 
+            d.name.toLowerCase().includes('ubuntu')
+          );
+          if (ubuntuDistro) {
+            targetTerminal = ubuntuDistro.id;
+          } else if (wslDistros.length > 0) {
+            targetTerminal = wslDistroIds[0];
+          } else {
+            console.warn(`⚠️ [Terminal] Ubuntu preferido pero no disponible, usando fallback`);
+            targetTerminal = 'powershell';
+          }
+        } else if (wslDistroIds.includes(this.preferredTerminal)) {
+          // Distribución WSL específica
+          targetTerminal = this.preferredTerminal;
+        } else if (this.preferredTerminal === 'cygwin' && hasCygwin) {
           targetTerminal = 'cygwin';
+        } else {
+          // preferredTerminal no disponible, hacer fallback
+          console.warn(`⚠️ [Terminal] Terminal preferido "${this.preferredTerminal}" no disponible, usando auto-detección`);
+          // Continuar con auto-detección (targetTerminal seguirá siendo null)
         }
-        // 5. Error: no hay terminales Linux
-        else {
-          throw new Error(`❌ No hay terminales Linux disponibles. Comando "${command}" requiere Linux/WSL/Cygwin. Instala WSL o Cygwin.`);
-        }
-      } else {
-        // Para comandos Windows, usar PowerShell
-        targetTerminal = 'powershell';
       }
       
-      console.log(`🤖 [Auto-detección] Comando "${command}" detectado como ${commandType} → usando ${targetTerminal}`);
+      // 2. SEGUNDO: Si no hay preferredTerminal válido, usar auto-detección basada en tipo de comando
+      if (!targetTerminal) {
+        const commandType = this.detectCommandType(command);
+        
+        if (commandType === 'linux') {
+          // Auto-detección para comandos Linux: WSL primero, luego Cygwin
+          if (wslDistroIds.includes('ubuntu')) {
+            targetTerminal = 'ubuntu';
+          } else if (wslDistroIds.length > 0) {
+            targetTerminal = wslDistroIds[0];
+          } else if (hasCygwin) {
+            targetTerminal = 'cygwin';
+          } else {
+            throw new Error(`❌ No hay terminales Linux disponibles. Comando "${command}" requiere Linux/WSL/Cygwin. Instala WSL o Cygwin.`);
+          }
+        } else {
+          // Para comandos Windows o desconocidos, usar PowerShell
+          targetTerminal = 'powershell';
+        }
+        
+        console.log(`🤖 [Auto-detección] Comando "${command}" detectado como ${commandType} → usando ${targetTerminal}`);
+      } else {
+        console.log(`✅ [Terminal] Usando terminal preferido: ${targetTerminal}`);
+      }
     }
     
     // Ejecutar según el terminal
