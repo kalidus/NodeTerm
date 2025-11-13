@@ -14,6 +14,7 @@ import FileUploader from './FileUploader';
 import AIPerformanceStats from './AIPerformanceStats';
 import MCPActiveTools from './MCPActiveTools';
 import ModelMemoryIndicator from './ModelMemoryIndicator';
+import ShellSelector from './ShellSelector';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
 import mcpClient from '../services/MCPClientService';
@@ -74,6 +75,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [showMcpPanel, setShowMcpPanel] = useState(false); // Panel de herramientas MCP
   const [showMemoryPanel, setShowMemoryPanel] = useState(false); // Panel de memoria
   const [toolsCount, setToolsCount] = useState(0); // Conteo de herramientas MCP
+
+  // Estados para Shell Selector del MCP
+  const [selectedShell, setSelectedShell] = useState(() => {
+    try {
+      const saved = localStorage.getItem('defaultMcpShell');
+      return saved || 'powershell';
+    } catch {
+      return 'powershell';
+    }
+  });
+  const [availableShells, setAvailableShells] = useState([]);
+  const [wslDistributions, setWSLDistributions] = useState([]);
+  const [cygwinAvailable, setCygwinAvailable] = useState(false);
+
   // Helper para obtener el nombre del catálogo
   const getMcpCatalogName = (serverId) => {
     try {
@@ -331,6 +346,47 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, []);
+
+  // Detectar shells disponibles (PowerShell, WSL, Cygwin)
+  useEffect(() => {
+    const detectShells = async () => {
+      const shells = ['powershell']; // PowerShell siempre disponible en Windows
+      
+      try {
+        // Detectar distribuciones WSL
+        if (window.electron && window.electron.ipcRenderer) {
+          try {
+            const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+            if (Array.isArray(distributions) && distributions.length > 0) {
+              setWSLDistributions(distributions);
+              distributions.forEach(distro => {
+                shells.push(`wsl-${distro.name || distro.label}`);
+              });
+            }
+          } catch (e) {
+            console.error('Error detectando WSL:', e);
+          }
+
+          // Detectar Cygwin
+          try {
+            const result = await window.electronAPI.invoke('cygwin:detect');
+            if (result && result.available) {
+              setCygwinAvailable(true);
+              shells.push('cygwin');
+            }
+          } catch (e) {
+            console.error('Error detectando Cygwin:', e);
+          }
+        }
+      } catch (error) {
+        console.error('Error en detección de shells:', error);
+      }
+
+      setAvailableShells(shells);
+    };
+
+    detectShells();
   }, []);
 
   useEffect(() => {
@@ -1622,7 +1678,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // de forma efímera en el servicio de IA (RAG ligero)
       await aiService.sendMessageWithCallbacks(userMessage, callbacks, {
         signal: controller.signal,
-        mcpEnabled: mcpToolsEnabled // Pasar estado de MCP
+        mcpEnabled: mcpToolsEnabled, // Pasar estado de MCP
+        defaultShell: selectedShell // Pasar shell seleccionada al MCP
       });
 
     } catch (error) {
@@ -4526,6 +4583,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             showMemoryPanel={showMemoryPanel}
             onToggleMemoryPanel={() => setShowMemoryPanel(!showMemoryPanel)}
             toolsCount={toolsCount}
+            selectedShell={selectedShell}
+            onShellChange={setSelectedShell}
+            availableShells={availableShells}
           />
           
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
