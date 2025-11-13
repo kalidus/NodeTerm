@@ -1489,12 +1489,12 @@ class AIService {
         repeat_penalty: 1.1
       },
       'deepseek-r1:8b': {
-        maxTokens: 2000,
+        maxTokens: 4000,
         temperature: 0.7,
-        maxHistory: 20,
+        maxHistory: 30,
         useStreaming: true,
-        contextLimit: 8192,  // Reducido para velocidad
-        num_ctx: 8192,       // Para Ollama - más rápido
+        contextLimit: 32768,  // 32K contexto - DeepSeek-R1 8B soporta hasta 128K nativo
+        num_ctx: 32768,       // Para Ollama
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1

@@ -514,6 +514,51 @@ class SSHTerminalNativeServer {
   }
 
   /**
+   * Convierte rutas Windows dentro de un comando a rutas WSL
+   * Ejemplo: python C:\Users\kalid\script.py → python /mnt/c/Users/kalid/script.py
+   * Soporta: rutas entre comillas, rutas sin espacios, rutas con barras diagonales
+   * @param {string} command - Comando que puede contener rutas Windows
+   * @returns {string} Comando con rutas convertidas a WSL
+   */
+  convertWindowsPathsInCommand(command) {
+    if (!command || typeof command !== 'string') return command;
+    
+    let result = command;
+    
+    // Patrón 1: Rutas entre comillas dobles: "C:\Users\..." 
+    result = result.replace(/"([A-Z]):\\([^"]*)"/g, (match, drive, pathPart) => {
+      const wslPath = `/mnt/${drive.toLowerCase()}/${pathPart.replace(/\\/g, '/')}`;
+      return `"${wslPath}"`;
+    });
+    
+    // Patrón 2: Rutas entre comillas simples: 'C:\Users\...'
+    result = result.replace(/'([A-Z]):\\([^']*)'/g, (match, drive, pathPart) => {
+      const wslPath = `/mnt/${drive.toLowerCase()}/${pathPart.replace(/\\/g, '/')}`;
+      return `'${wslPath}'`;
+    });
+    
+    // Patrón 3: Rutas con forward slash sin comillas C:/Users/...
+    // Detecta: C:/path/to/file hasta espacio o fin de string
+    result = result.replace(/([A-Z]):\/([\S]*)/g, 
+      (match, drive, pathPart) => {
+        return `/mnt/${drive.toLowerCase()}/${pathPart}`;
+      }
+    );
+    
+    // Patrón 4: Rutas con backslash sin comillas: C:\Users\kalid\file.txt
+    // Captura: [Drive]:\ruta\sin\espacios
+    // Detecta la ruta hasta: espacio o fin de string
+    result = result.replace(/([A-Z]):\\([\S]*)/g, 
+      (match, drive, pathPart) => {
+        const wslPath = `/mnt/${drive.toLowerCase()}/${pathPart.replace(/\\/g, '/')}`;
+        return wslPath;
+      }
+    );
+    
+    return result;
+  }
+
+  /**
    * Ejecutar comando en WSL
    * @param {string} command - Comando a ejecutar
    * @param {string} workingDir - Directorio de trabajo (opcional)
@@ -526,13 +571,15 @@ class SSHTerminalNativeServer {
         reject(new Error(`Timeout después de ${this.commandTimeout}s`));
       }, this.commandTimeout * 1000);
       
-      let wslCommand = command;
+      // Convertir rutas Windows en el comando a rutas WSL
+      let wslCommand = this.convertWindowsPathsInCommand(command);
+      
       if (workingDir) {
         // Convertir path de Windows a WSL si es necesario
         const wslPath = workingDir.replace(/\\/g, '/').replace(/^([A-Z]):/i, (match, drive) => {
           return `/mnt/${drive.toLowerCase()}`;
         });
-        wslCommand = `cd "${wslPath}" && ${command}`;
+        wslCommand = `cd "${wslPath}" && ${wslCommand}`;
       }
       
       // Construir argumentos para WSL
