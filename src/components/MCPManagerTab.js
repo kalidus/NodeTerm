@@ -346,6 +346,50 @@ const MCPManagerTab = ({ themeColors }) => {
     }
   };
 
+  const updateAllowedDir = (rawValue) => {
+    const normalized = sanitizeFilesystemPath(rawValue);
+    setEditingConfig((prev) => {
+      const nextConfigValues = { ...(prev.configValues || {}) };
+      nextConfigValues.allowedDir = normalized;
+      return {
+        ...prev,
+        configValues: nextConfigValues
+      };
+    });
+  };
+
+  const handleBrowseAllowedDir = async () => {
+    const targetId = (selectedServer?.id || editingConfig?.mcp?.id || '').toLowerCase();
+    if (targetId !== 'ssh-terminal') {
+      return;
+    }
+    try {
+      if (
+        typeof window === 'undefined' ||
+        !window?.electron?.dialog?.showOpenDialog
+      ) {
+        showToast('warn', 'No disponible', 'El selector de directorios requiere la app de escritorio');
+        return;
+      }
+      const result = await window.electron.dialog.showOpenDialog({
+        properties: ['openDirectory'],
+        title: 'Seleccionar directorio base permitido'
+      });
+      if (result && !result.canceled) {
+        const selectedPath =
+          (Array.isArray(result.filePaths) && result.filePaths[0]) ||
+          result.filePath ||
+          null;
+        if (selectedPath) {
+          updateAllowedDir(selectedPath);
+        }
+      }
+    } catch (error) {
+      console.error('Error abriendo dialog:', error);
+      showToast('error', 'Error', 'No se pudo abrir el selector de directorio');
+    }
+  };
+
   // ==================== Funciones para SSH/Terminal MCP ====================
   
   const handleAddSSHConnection = () => {
@@ -1322,6 +1366,30 @@ const MCPManagerTab = ({ themeColors }) => {
                         <Button 
                           icon="pi pi-folder-open" 
                           onClick={handleBrowseFilesystemPath}
+                          tooltip="Explorar..."
+                          tooltipOptions={{ position: 'top' }}
+                          style={{ 
+                            background: 'rgba(33, 150, 243, 0.2)', 
+                            border: '1px solid rgba(33, 150, 243, 0.5)', 
+                            color: '#2196f3', 
+                            borderRadius: '8px',
+                            minWidth: 'auto',
+                            aspectRatio: '1'
+                          }} 
+                        />
+                      </div>
+                    ) : key === 'allowedDir' && selectedServer?.id === 'ssh-terminal' ? (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <InputText 
+                          type='text' 
+                          value={sanitizeFilesystemPath(editingConfig.configValues?.[key] || '')} 
+                          onChange={(e) => updateAllowedDir(e.target.value)} 
+                          placeholder="C:\path\to\directory (vacío = sin restricción)"
+                          style={{ flex: 1, fontSize: '0.75rem' }} 
+                        />
+                        <Button 
+                          icon="pi pi-folder-open" 
+                          onClick={handleBrowseAllowedDir}
                           tooltip="Explorar..."
                           tooltipOptions={{ position: 'top' }}
                           style={{ 
