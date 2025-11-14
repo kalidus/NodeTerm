@@ -10,6 +10,7 @@ import fileAnalysisService from './FileAnalysisService';
 import mcpClient from './MCPClientService';
 import toolOrchestrator from './ToolOrchestrator';
 import modelMemoryService from './ModelMemoryService';
+import { summarizeToolResult } from '../utils/toolResultSummarizer';
 
 class AIService {
   constructor() {
@@ -2610,12 +2611,19 @@ class AIService {
         
         const result = await mcpClient.callTool(serverId, actualToolName, callArgs);
         const text = result?.content?.[0]?.text || 'OK';
+        const planSummary = summarizeToolResult({
+          toolName: actualToolName,
+          args: callArgs,
+          resultText: text
+        });
         
         // Guardar resultado de la tool
-        conversationService.addMessage('tool', text, {
+        conversationService.addMessage('tool', planSummary, {
           isToolResult: true,
           toolName: actualToolName,
-          toolArgs: callArgs
+          toolArgs: callArgs,
+          toolResultText: text,
+          toolResultSummary: planSummary
         });
         
         results.push({ tool: actualToolName, success: true, result: text });
@@ -2632,7 +2640,20 @@ class AIService {
         });
       } catch (error) {
         const errorMsg = `❌ Error ejecutando ${actualToolName}: ${error.message}`;
-        conversationService.addMessage('tool', errorMsg, { error: true });
+        const errorSummary = summarizeToolResult({
+          toolName: actualToolName,
+          args: callArgs,
+          resultText: errorMsg,
+          isError: true
+        });
+        conversationService.addMessage('tool', errorSummary, {
+          error: true,
+          isToolResult: true,
+          toolName: actualToolName,
+          toolArgs: callArgs,
+          toolResultText: errorMsg,
+          toolResultSummary: errorSummary
+        });
         results.push({ tool: actualToolName, success: false, error: error.message });
         console.error(`   ❌ [${i + 1}/${plan.tools.length}] ${actualToolName} falló:`, error.message);
       }
@@ -3490,18 +3511,18 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
         
         // NUEVO: Re-inyectar resultado en conversación para que el modelo lo vea
         debugLogger.debug('AIService.MCP', 'Reinyectando resultado en conversación');
+        const { observation: toolObservation, summary: toolSummary } = this._buildToolObservation({
+          toolName: currentToolCall.toolName,
+          args: currentToolCall.arguments,
+          resultText: cleanResult,
+          isError: !!result.isError,
+          lastUserGoal,
+          inferredIntent
+        });
         conversationMessages.push({
           role: 'user',
-          content: `✅ Herramienta COMPLETADA: ${currentToolCall.toolName}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Resultado:
-${cleanResult}
-
-⚠️ IMPORTANTE: Esta herramienta YA FUE EJECUTADA. 
-No vuelvas a pedir la misma herramienta.
-Si necesitas hacer algo más, solicita una herramienta DIFERENTE o responde sin herramientas.
-${lastUserGoal ? `\nOBJETIVO DEL USUARIO: ${lastUserGoal}` : ''}
-${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el resultado anterior, usa la herramienta "move_file" con los nombres de parámetros EXACTOS del schema (por ejemplo: from/to, source/destination u old/new) y rutas dentro de los directorios permitidos.` : ''}`
+          content: toolObservation,
+          metadata: { isToolObservation: true, toolName: currentToolCall.toolName }
         });
         
         // NUEVO: Preguntar al modelo si necesita más herramientas
@@ -3676,7 +3697,8 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     });
     
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
-    let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
+    const contextualMessages = this._prepareMessagesForContext(conversationMessages);
+    let limitedMessages = this.smartTokenBasedHistoryLimit(contextualMessages, finalOptions);
     debugLogger.debug('AIService.Conversation', 'Mensajes después de limitación', {
       total: limitedMessages.length
     });
@@ -5210,6 +5232,67 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
         error: error?.message
       });
     }
+  }
+
+  _prepareMessagesForContext(messages = []) {
+    if (!Array.isArray(messages)) return [];
+    return messages.map((msg) => {
+      if (!msg || typeof msg !== 'object') return msg;
+      const metadata = msg.metadata || {};
+      const clone = { ...msg };
+      if (metadata.isToolResult) {
+        const summary = metadata.toolResultSummary || summarizeToolResult({
+          toolName: metadata.toolName || 'tool',
+          args: metadata.toolArgs || {},
+          resultText: metadata.toolResultText || clone.content || '',
+          isError: metadata.error === true,
+          maxResultChars: 240
+        });
+        clone.content = summary;
+        return clone;
+      }
+      if (metadata.isToolObservation && typeof clone.content === 'string') {
+        clone.content = clone.content.trim();
+        return clone;
+      }
+      return clone;
+    });
+  }
+
+  _buildToolObservation({ toolName, args, resultText, isError, lastUserGoal, inferredIntent }) {
+    const summary = summarizeToolResult({
+      toolName,
+      args,
+      resultText,
+      isError,
+      maxResultChars: 320
+    });
+
+    const readableName = toolName || 'herramienta';
+    const lines = [
+      `${isError ? '⚠️' : '🔧'} ${isError ? 'Error en' : 'Resultado de'} ${readableName}`,
+      summary
+    ];
+
+    if (lastUserGoal) {
+      lines.push(`🎯 Objetivo del usuario: ${lastUserGoal}`);
+    }
+
+    if (!isError && inferredIntent === 'move') {
+      lines.push('PISTA: Si ya ves el origen y el destino en el resultado anterior, usa la herramienta "move_file" con los parámetros EXACTOS del schema (from/to, source/destination u old/new).');
+    }
+
+    if (isError) {
+      lines.push('Describe claramente el fallo y propone al usuario el siguiente paso o sugiere otra herramienta con JSON válido si es necesario.');
+    } else {
+      lines.push('No repitas esta herramienta. Si queda trabajo pendiente, solicita una herramienta DIFERENTE o responde en texto natural explicando la acción realizada.');
+    }
+    lines.push('Responde siempre en texto natural (sin JSON) a menos que necesites generar un nuevo tool-call.');
+
+    return {
+      observation: lines.filter(Boolean).join('\n'),
+      summary
+    };
   }
 
   /**

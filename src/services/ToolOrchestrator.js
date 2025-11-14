@@ -24,6 +24,7 @@
 
 import { conversationService } from './ConversationService';
 import mcpClient from './MCPClientService';
+import { summarizeToolResult } from '../utils/toolResultSummarizer';
 
 class ToolOrchestrator {
   constructor() {
@@ -368,7 +369,23 @@ class ToolOrchestrator {
         
         if (callbacks.onToolResult) callbacks.onToolResult({ toolName, args, result });
       } catch (error) {
-        conversationService.addMessage('tool', `❌ Error en ${toolName}: ${error.message}`, { toolCallId, toolName, toolArgs: args, error: true, turnId });
+        const errorText = `❌ Error en ${toolName}: ${error.message}`;
+        const errorSummary = summarizeToolResult({
+          toolName,
+          args,
+          resultText: errorText,
+          isError: true
+        });
+        conversationService.addMessage('tool', errorSummary, { 
+          toolCallId, 
+          toolName, 
+          toolArgs: args, 
+          error: true, 
+          turnId,
+          isToolResult: true,
+          toolResultText: errorText,
+          toolResultSummary: errorSummary
+        });
         // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
         providerMessages.push({ role: 'system', content: `❌ Error ejecutando herramienta ${toolName}: ${error.message}` });
         const errorFollowUp = await callModelFn(providerMessages, { maxTokens: Math.min(500, options.maxTokens || 1000) });
@@ -395,6 +412,12 @@ class ToolOrchestrator {
       }
 
       // ✅ CRITICAL: Guardar toolResultText para que AIChatPanel lo renderice correctamente
+      const executionSummary = summarizeToolResult({
+        toolName,
+        args,
+        resultText: cleanText
+      });
+
       const metadata = { 
         toolCallId, 
         toolName, 
@@ -403,10 +426,11 @@ class ToolOrchestrator {
         turnId,
         detectedLanguage,
         filePath: args?.path || '',
-        toolResultText: cleanText  // ← CRUCIAL para renderizado en AIChatPanel
+        toolResultText: cleanText,
+        toolResultSummary: executionSummary
       };
       
-      conversationService.addMessage('tool', cleanText || `✔️ ${toolName} completado`, metadata);
+      conversationService.addMessage('tool', executionSummary || `✔️ ${toolName} completado`, metadata);
       // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
 
       // Registrar hecho breve
@@ -445,7 +469,7 @@ IMPORTANTE:
 
       let antiProactivityPrompt = `${passwordAuthHeader}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔧 Resultado de ${toolName}:
-${cleanText}
+${executionSummary}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⚠️ INSTRUCCIONES CRÍTICAS - LEE CUIDADOSAMENTE:
