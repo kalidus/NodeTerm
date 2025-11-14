@@ -15,7 +15,6 @@
  * 
  * • maxTokens: 100 → Solo espacio para "Hecho." (sin reasoning)
  * • temperature: 0.2 → Casi determinista
- * • maxIterations: 5 → Máximo 5 tools por turno
  * • Bloqueo: mismo tool + mismo path = bloqueado en el mismo turno
  * 
  * Esto evita que el modelo sea "perezoso" en solicitudes posteriores
@@ -24,12 +23,12 @@
 
 import { conversationService } from './ConversationService';
 import mcpClient from './MCPClientService';
+import { getRecentToolExecution, rememberToolExecution } from './ToolExecutionCache';
 import { summarizeToolResult } from '../utils/toolResultSummarizer';
 
 class ToolOrchestrator {
   constructor() {
     this.stateByConversation = new Map();
-    this.defaultMaxIterations = 5; // 🔧 Reducido de 10 a 5 para limitar proactividad
     this.dedupeTtlMs = 2 * 60 * 1000; // 2 min
   }
 
@@ -236,7 +235,7 @@ class ToolOrchestrator {
 
     let iteration = 0;
     let currentToolCall = initialToolCall;
-    const limit = Math.max(1, maxIterations || this.defaultMaxIterations);
+    const limit = Number.isFinite(maxIterations) ? Math.max(1, maxIterations) : Infinity;
     const seenInTurn = new Set();
     let lastToolName = null;
     let sameToolCount = 0;
@@ -263,6 +262,30 @@ class ToolOrchestrator {
         break;
       }
       seenInTurn.add(dedupeKey);
+
+      const recentExecution = getRecentToolExecution(conversationId, toolName, args);
+      if (recentExecution && !recentExecution.isError) {
+        const reuseNote = `♻️ Resultado reciente de ${toolName} reutilizado.\n${recentExecution.summary || recentExecution.rawText || ''}\nSi necesitas algo distinto, pide una herramienta diferente.`;
+        if (callbacks.onStatus) {
+          callbacks.onStatus({
+            status: 'info',
+            message: `Reutilizando resultado previo de ${toolName}`,
+            provider: 'local',
+            model: modelId,
+            toolName,
+            turnId
+          });
+        }
+        providerMessages.push({ role: 'system', content: reuseNote });
+        const reuseFollowUp = await callModelFn(providerMessages, { 
+          maxTokens: 400,
+          temperature: 0.35,
+          skipSave: true
+        });
+        lastFollowUpResponse = reuseFollowUp;
+        currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(reuseFollowUp) : null;
+        continue;
+      }
       // NO llamar a this._remember() - ya no necesitamos historial entre turnos
       
       // 🔧 NUEVA DEFENSA: Bloquear tools con el mismo nombre y mismo path/target en el mismo turno
@@ -386,6 +409,11 @@ class ToolOrchestrator {
           toolResultText: errorText,
           toolResultSummary: errorSummary
         });
+        rememberToolExecution(conversationId, toolName, args, {
+          summary: errorSummary,
+          rawText: errorText,
+          isError: true
+        });
         // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
         providerMessages.push({ role: 'system', content: `❌ Error ejecutando herramienta ${toolName}: ${error.message}` });
         const errorFollowUp = await callModelFn(providerMessages, { maxTokens: Math.min(500, options.maxTokens || 1000) });
@@ -431,6 +459,11 @@ class ToolOrchestrator {
       };
       
       conversationService.addMessage('tool', executionSummary || `✔️ ${toolName} completado`, metadata);
+      rememberToolExecution(conversationId, toolName, args, {
+        summary: executionSummary,
+        rawText: cleanText,
+        isError: false
+      });
       // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
 
       // Registrar hecho breve
@@ -608,8 +641,23 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
       }
     }
 
-    // 🔧 MEJORADO: Si el loop se agota, devolver la última respuesta del modelo que guardamos
-    if (lastFollowUpResponse && lastFollowUpResponse.trim().length > 0) {
+    const limitReached = Number.isFinite(limit) && iteration >= limit && currentToolCall;
+    if (limitReached) {
+      debugLogger.warn('AIService.MCP', 'Límite de iteraciones alcanzado en loop de herramientas', {
+        maxIterations: limit
+      });
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'warning',
+          message: `Límite de herramientas alcanzado (${limit} iteraciones)`,
+          model: modelId,
+          provider: 'local'
+        });
+      }
+    }
+
+    // 🔧 MEJORADO: Si el loop se agota (solo cuando se fijó un límite), devolver la última respuesta del modelo que guardamos
+    if (limitReached && lastFollowUpResponse && lastFollowUpResponse.trim().length > 0) {
       // 🔧 CRÍTICO: Validar que NO sea un JSON de tool call (incluso truncado)
       const trimmed = lastFollowUpResponse.trim();
       
