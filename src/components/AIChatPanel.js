@@ -3192,6 +3192,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   <>
                     <span>•</span>
                     <span>~{message.metadata.tokens} tokens</span>
+                    {message.metadata.latency && message.metadata.latency > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>{(message.metadata.tokens / (message.metadata.latency / 1000)).toFixed(2)} tokens/s</span>
+                      </>
+                    )}
                   </>
                 )}
               </>
