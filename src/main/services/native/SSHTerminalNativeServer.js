@@ -784,7 +784,7 @@ class SSHTerminalNativeServer {
     let ssh = this.sshPool.get(hostId);
     
     if (!ssh || !ssh.isConnected || !ssh.isConnected()) {
-      console.log(`🔌 [SSH Terminal MCP] Conectando a ${hostConfig.name} (${hostConfig.host})...`);
+      console.log(`🔌 [SSH Terminal MCP] Conectando a ${hostConfig.label || hostConfig.name} (${hostConfig.host})...`);
       
       // ⚠️ CONSTRUCCIÓN DE CONFIGURACIÓN SSH - Manejo especial para Bastion Wallix
       const sshConfig = {
@@ -828,7 +828,7 @@ class SSHTerminalNativeServer {
       ssh._lastUsed = Date.now();
       this.sshPool.set(hostId, ssh);
       
-      console.log(`✅ [SSH Terminal MCP] Conectado a ${hostConfig.name}`);
+      console.log(`✅ [SSH Terminal MCP] Conectado a ${hostConfig.label || hostConfig.name}`);
     } else {
       ssh._lastUsed = Date.now();
     }
@@ -846,7 +846,7 @@ class SSHTerminalNativeServer {
       stdout: result,
       stderr: '',
       exitCode: 0
-    }, `ssh:${hostConfig.name}`);
+    }, `ssh:${hostConfig.label || hostConfig.name}`);
   }
 
   /**
@@ -1060,7 +1060,7 @@ class SSHTerminalNativeServer {
       
       return {
         success: true,
-        host: hostConfig.name,
+        host: hostConfig.label || hostConfig.name,
         address: `${hostConfig.host}:${hostConfig.port || 22}`,
         username: hostConfig.username,
         latency: `${duration}ms`,
@@ -1072,7 +1072,7 @@ class SSHTerminalNativeServer {
       
       return {
         success: false,
-        host: hostConfig.name,
+        host: hostConfig.label || hostConfig.name,
         address: `${hostConfig.host}:${hostConfig.port || 22}`,
         username: hostConfig.username,
         latency: `${duration}ms`,
