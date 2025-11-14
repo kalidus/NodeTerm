@@ -2413,6 +2413,10 @@ class AIService {
           // ✅ Mostrar descripción completa (era 60 caracteres, muy corto)
           out += ` - ${tool.description}`;
         }
+        // 🔧 CRÍTICO: Reforzar nombre correcto para search_nodeterm
+        if (tool.name === 'search_nodeterm') {
+          out += ' ⚠️ NOMBRE CORRECTO: "search_nodeterm" (NO "search_noderm", NO "search_nodeterms")';
+        }
         out += '\n';
 
         // Ejemplo compacto
@@ -2457,9 +2461,19 @@ class AIService {
     const sep = basePath.includes('\\') ? '\\' : '/';
     out += `Listar: {"tool":"filesystem__list_directory","arguments":{"path":"${basePath}"}}\n`;
     out += `Leer: {"tool":"filesystem__read_file","arguments":{"path":"${basePath}${sep}config.json"}}\n`;
-    out += `Crear: {"tool":"filesystem__write_file","arguments":{"path":"${basePath}${sep}file.txt","content":"texto"}}\n\n`;
-    out += 'CRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
-    out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n\n';
+    out += `Crear: {"tool":"filesystem__write_file","arguments":{"path":"${basePath}${sep}file.txt","content":"texto"}}\n`;
+    
+    // 🔧 CRÍTICO: Ejemplo explícito para search_nodeterm (NO search_noderm)
+    const hasSearchNodeterm = tools.some(t => t.name === 'search_nodeterm');
+    if (hasSearchNodeterm) {
+      out += `Buscar SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"AC68U"}}\n`;
+      out += `Listar todos SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{}}\n`;
+      out += '⚠️ IMPORTANTE: El nombre correcto es "search_nodeterm" (NO "search_noderm", NO "search_nodeterms").\n';
+    }
+    
+    out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
+    out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n';
+    out += '⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n\n';
 
     return out;
   }
@@ -2782,7 +2796,78 @@ class AIService {
       return { serverId: filesystemMatch.serverId, toolName: filesystemMatch.name };
     }
 
+    // 🔧 NUEVO: Fuzzy matching para nombres similares (corrección automática)
+    // Buscar herramientas con nombres similares (útil cuando el modelo genera nombres incorrectos)
+    const similarTools = this._findSimilarToolName(toolName, tools);
+    if (similarTools.length > 0) {
+      const bestMatch = similarTools[0];
+      console.warn(`⚠️ [AIService] Tool "${toolName}" no encontrada, usando similar: "${bestMatch.name}"`);
+      return { serverId: bestMatch.serverId, toolName: bestMatch.name };
+    }
+
     return { serverId: serverIdHint, toolName };
+  }
+
+  /**
+   * Encontrar herramientas con nombres similares usando distancia de Levenshtein
+   */
+  _findSimilarToolName(targetName, tools, maxDistance = 3) {
+    if (!targetName || typeof targetName !== 'string' || !tools || tools.length === 0) {
+      return [];
+    }
+
+    const targetLower = targetName.toLowerCase();
+    const candidates = [];
+
+    for (const tool of tools) {
+      const toolNameLower = tool.name.toLowerCase();
+      
+      // Calcular distancia de Levenshtein simple
+      const distance = this._levenshteinDistance(targetLower, toolNameLower);
+      
+      // También verificar si el nombre contiene el target o viceversa
+      const containsMatch = toolNameLower.includes(targetLower) || targetLower.includes(toolNameLower);
+      
+      if (distance <= maxDistance || containsMatch) {
+        candidates.push({
+          ...tool,
+          distance: containsMatch ? Math.min(distance, 1) : distance
+        });
+      }
+    }
+
+    // Ordenar por distancia (menor es mejor)
+    candidates.sort((a, b) => a.distance - b.distance);
+    
+    return candidates;
+  }
+
+  /**
+   * Calcular distancia de Levenshtein entre dos strings
+   */
+  _levenshteinDistance(str1, str2) {
+    const m = str1.length;
+    const n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,     // eliminación
+            dp[i][j - 1] + 1,     // inserción
+            dp[i - 1][j - 1] + 1  // sustitución
+          );
+        }
+      }
+    }
+
+    return dp[m][n];
   }
 
   _normalizeFunctionCall(fullName, rawArgs) {
@@ -2799,11 +2884,33 @@ class AIService {
     let toolName = argsObj.tool || argsObj.name || fullName;
     let serverId = argsObj.server || argsObj.serverId || null;
 
-    if (!serverId && typeof fullName === 'string' && fullName.includes('__')) {
-      const idx = fullName.indexOf('__');
-      if (idx >= 0) {
-        serverId = fullName.slice(0, idx);
-        toolName = fullName.slice(idx + 2);
+    // 🔧 ARREGLO: Manejar nombres namespaced con doble guión bajo (__) O un solo guión bajo (_)
+    // El modelo a veces genera ssh-terminal_search_noderm en lugar de ssh-terminal__search_nodeterm
+    if (!serverId && typeof fullName === 'string') {
+      // Intentar con doble guión bajo primero (formato correcto)
+      if (fullName.includes('__')) {
+        const idx = fullName.indexOf('__');
+        if (idx >= 0) {
+          serverId = fullName.slice(0, idx);
+          toolName = fullName.slice(idx + 2);
+        }
+      }
+      // Si no se encontró, intentar con un solo guión bajo (formato incorrecto del modelo)
+      else if (fullName.includes('_') && !fullName.includes('__')) {
+        // Buscar patrones como "ssh-terminal_search_noderm"
+        const parts = fullName.split('_');
+        if (parts.length >= 2) {
+          const possibleServerId = parts[0];
+          const possibleBaseName = parts.slice(1).join('_');
+          
+          // Verificar si existe un servidor con ese ID
+          const tools = mcpClient.getAvailableTools() || [];
+          const serverExists = tools.some(t => t.serverId === possibleServerId);
+          if (serverExists) {
+            serverId = possibleServerId;
+            toolName = possibleBaseName;
+          }
+        }
       }
     }
 

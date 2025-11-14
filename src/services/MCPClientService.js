@@ -437,23 +437,93 @@ class MCPClientService {
         
         // Buscar la tool en el cache para obtener el serverId
         let tool = this.toolsCache.find(t => t.name === toolName);
+        let extractedServerId = null;
+        let extractedBaseName = toolName;
         
-        // Resolver nombres namespaced <serverId>__<toolName>
-        if (!tool && typeof toolName === 'string' && toolName.includes('__')) {
-          const idx = toolName.indexOf('__');
-          const nsServerId = toolName.slice(0, idx);
-          const baseName = toolName.slice(idx + 2);
-          if (nsServerId && baseName) {
-            tool = this.toolsCache.find(t => t.serverId === nsServerId && t.name === baseName);
-            if (tool) {
-              toolName = baseName;
+        // 🔧 ARREGLO: Resolver nombres namespaced con doble guión bajo (__) O un solo guión bajo (_)
+        // El modelo a veces genera ssh-terminal_search_noderm en lugar de ssh-terminal__search_nodeterm
+        if (!tool && typeof toolName === 'string') {
+          // Intentar con doble guión bajo primero (formato correcto)
+          if (toolName.includes('__')) {
+            const idx = toolName.indexOf('__');
+            const nsServerId = toolName.slice(0, idx);
+            const baseName = toolName.slice(idx + 2);
+            if (nsServerId && baseName) {
+              tool = this.toolsCache.find(t => t.serverId === nsServerId && t.name === baseName);
+              if (tool) {
+                extractedServerId = nsServerId;
+                extractedBaseName = baseName;
+                toolName = baseName;
+              }
+            }
+          }
+          
+          // Si no se encontró, intentar con un solo guión bajo (formato incorrecto del modelo)
+          if (!tool && toolName.includes('_') && !toolName.includes('__')) {
+            // Buscar patrones como "ssh-terminal_search_noderm" o "serverId_toolname"
+            const parts = toolName.split('_');
+            if (parts.length >= 2) {
+              // Intentar con el primer segmento como serverId
+              const possibleServerId = parts[0];
+              const possibleBaseName = parts.slice(1).join('_');
+              
+              // Verificar si existe un servidor con ese ID
+              const serverExists = this.servers.some(s => s.id === possibleServerId);
+              if (serverExists) {
+                // Buscar tool con ese nombre base en ese servidor
+                tool = this.toolsCache.find(t => t.serverId === possibleServerId && t.name === possibleBaseName);
+                if (tool) {
+                  extractedServerId = possibleServerId;
+                  extractedBaseName = possibleBaseName;
+                  toolName = possibleBaseName;
+                } else {
+                  // Si no se encuentra exacto, aplicar fuzzy matching al nombre base
+                  const serverTools = this.toolsCache.filter(t => t.serverId === possibleServerId);
+                  const similarTools = this._findSimilarToolName(possibleBaseName, serverTools, 3);
+                  if (similarTools.length > 0) {
+                    const bestMatch = similarTools[0];
+                    console.warn(`⚠️ [MCP Client] Tool "${possibleBaseName}" no encontrada en ${possibleServerId}, usando similar: "${bestMatch.name}"`);
+                    tool = bestMatch;
+                    extractedServerId = possibleServerId;
+                    extractedBaseName = bestMatch.name;
+                    toolName = bestMatch.name;
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // 🔧 NUEVO: Fuzzy matching para nombres similares (si aún no se encontró)
+        if (!tool) {
+          const similarTools = this._findSimilarToolName(extractedBaseName, this.toolsCache, 3);
+          if (similarTools.length > 0) {
+            const bestMatch = similarTools[0];
+            console.warn(`⚠️ [MCP Client] Tool "${extractedBaseName}" no encontrada, usando similar: "${bestMatch.name}"`);
+            tool = bestMatch;
+            toolName = bestMatch.name;
+            if (extractedServerId) {
+              // Si teníamos un serverId extraído, verificar que coincida
+              if (bestMatch.serverId !== extractedServerId) {
+                console.warn(`⚠️ [MCP Client] ServerId cambiado de ${extractedServerId} a ${bestMatch.serverId}`);
+              }
             }
           }
         }
         
         if (!tool) {
-          console.error(`❌ [MCP Client] Tool no encontrado: ${toolName}`);
-          throw new Error(`Tool no encontrado: ${toolName}`);
+          // Generar mensaje de error con sugerencias
+          const suggestions = this.toolsCache
+            .filter(t => t.name.toLowerCase().includes(toolName.toLowerCase()) || toolName.toLowerCase().includes(t.name.toLowerCase()))
+            .slice(0, 3)
+            .map(t => t.name);
+          
+          const suggestionText = suggestions.length > 0 
+            ? ` ¿Quisiste decir: ${suggestions.join(', ')}?`
+            : '';
+          
+          console.error(`❌ [MCP Client] Tool no encontrado: ${toolName}${suggestionText}`);
+          throw new Error(`Tool no encontrado: ${toolName}${suggestionText}`);
         }
         
         serverId = tool.serverId;
@@ -482,6 +552,68 @@ class MCPClientService {
       console.error(`[MCP Client] Error en callTool:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Encontrar herramientas con nombres similares usando distancia de Levenshtein
+   */
+  _findSimilarToolName(targetName, tools, maxDistance = 3) {
+    if (!targetName || typeof targetName !== 'string' || !tools || tools.length === 0) {
+      return [];
+    }
+
+    const targetLower = targetName.toLowerCase();
+    const candidates = [];
+
+    for (const tool of tools) {
+      const toolNameLower = tool.name.toLowerCase();
+      
+      // Calcular distancia de Levenshtein simple
+      const distance = this._levenshteinDistance(targetLower, toolNameLower);
+      
+      // También verificar si el nombre contiene el target o viceversa
+      const containsMatch = toolNameLower.includes(targetLower) || targetLower.includes(toolNameLower);
+      
+      if (distance <= maxDistance || containsMatch) {
+        candidates.push({
+          ...tool,
+          distance: containsMatch ? Math.min(distance, 1) : distance
+        });
+      }
+    }
+
+    // Ordenar por distancia (menor es mejor)
+    candidates.sort((a, b) => a.distance - b.distance);
+    
+    return candidates;
+  }
+
+  /**
+   * Calcular distancia de Levenshtein entre dos strings
+   */
+  _levenshteinDistance(str1, str2) {
+    const m = str1.length;
+    const n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,     // eliminación
+            dp[i][j - 1] + 1,     // inserción
+            dp[i - 1][j - 1] + 1  // sustitución
+          );
+        }
+      }
+    }
+
+    return dp[m][n];
   }
 
   /**
