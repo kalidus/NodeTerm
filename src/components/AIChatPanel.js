@@ -1410,13 +1410,19 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           } else {
             try { resultText = JSON.stringify(res, null, 2); } catch { resultText = String(res ?? ''); }
           }
+          const isErrorResult = Boolean(
+            toolData?.result?.isError ||
+            toolData?.result?.error ||
+            toolData?.error
+          );
 
 
           // Guardar último resultado para posibles fallbacks del mensaje final
           lastToolResultRef.current = { 
             toolName: toolData.toolName, 
             text: resultText,
-            timestamp: Date.now() // 🔧 Agregar timestamp para verificar si es reciente
+            timestamp: Date.now(), // 🔧 Agregar timestamp para verificar si es reciente
+            isError: isErrorResult
           };
 
           // Mensaje minimalista y bonito (sin rutas)
@@ -1517,6 +1523,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   (Date.now() - last.timestamp) < 10000; // 10 segundos
                 
                 if (hasRecentToolResult) {
+                  if (last.isError) {
+                    return last.text;
+                  }
                   // Si hay resultado de tool reciente, sintetizar una explicación breve
                   if (aiService.featureFlags?.structuredToolMessages) {
                     // Intentar crear una descripción más útil basada en el toolName
