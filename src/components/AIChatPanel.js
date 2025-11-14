@@ -220,7 +220,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         return;
       }
       logged.add(msg.id);
-      logConversation('info', 'Resultado de herramienta persistido', {
+      logConversation('debug', 'Resultado de herramienta persistido', {
         messageId: msg.id,
         toolName: msg?.metadata?.toolName,
         hasToolResultText: !!msg?.metadata?.toolResultText
@@ -1208,7 +1208,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setCurrentStatus(null);
     // No limpiar detectedFiles aquí - mantener archivos de conversaciones anteriores
 
-    logConversation('info', 'Usuario envía mensaje', {
+    logConversation('debug', 'Usuario envía mensaje', {
       conversationId: currentConversationId,
       length: userMessage.length,
       attachedFiles: attachedFiles.length
@@ -1238,7 +1238,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // ============= PASO 1: SINCRONIZAR CONVERSACIÓN (PRIMERO) =============
       // Asegurar que el servicio esté sincronizado con la conversación actual ANTES de limpiar historial
       if (currentConversationId && conversationService.currentConversationId !== currentConversationId) {
-        logConversation('info', 'Sincronizando conversación activa', {
+        logConversation('debug', 'Sincronizando conversación activa', {
           conversationId: currentConversationId
         });
         conversationService.loadConversation(currentConversationId);
@@ -1674,7 +1674,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           
           // Guardar la respuesta
           {
-            logConversation('info', 'Guardando respuesta del asistente', {
+            logConversation('debug', 'Guardando respuesta del asistente', {
               safePreview: safeResponse.substring(0, 80),
               length: safeResponse.length,
               conversationId: conversationService.currentConversationId
