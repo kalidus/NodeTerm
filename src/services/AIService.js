@@ -2020,7 +2020,7 @@ class AIService {
       // SSH/Terminal: HOSTS y CONEXIONES (ALTA PRIORIDAD)
       if (lowerMsg.match(/ssh|host|conexión|remota|servidor|terminal remota|red|conecta|conectar|ejecuta en|comando remoto|archivo en el servidor/i)) {
         if (toolName.includes('execute_ssh')) score += 20; // MÁS ALTO que read_text_file
-        if (toolName.includes('list_ssh_hosts')) score += 15;
+        if (toolName.includes('search_nodeterm')) score += 18; // Búsqueda inteligente de SSH hosts y credenciales
         if (toolName.includes('test_ssh')) score += 12;
         // PENALIZAR herramientas de filesystem cuando estamos en contexto SSH
         if (toolName.includes('read_text_file')) score -= 10;
@@ -3548,7 +3548,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
 
     // 🔧 VALIDACIÓN DE SINCRONIZACIÓN
-    debugLogger.info('AIService.Conversation', 'Validación de conversación', {
+    debugLogger.debug('AIService.Conversation', 'Validación de conversación', {
       currentId: currentConversation.id,
       serviceId: conversationService.currentConversationId
     });
@@ -3607,7 +3607,7 @@ ${inferredIntent === 'move' ? `\nPISTA: Si ya ves el archivo y el destino en el 
     }
 
     // Log compacto
-    debugLogger.info('AIService.Conversation', 'Enviando mensajes al modelo', {
+    debugLogger.debug('AIService.Conversation', 'Enviando mensajes al modelo', {
       mensajes: providerMessages.length
     });
 

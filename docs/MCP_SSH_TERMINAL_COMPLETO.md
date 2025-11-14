@@ -179,8 +179,9 @@ list_terminals() - Lista las terminales locales disponibles
 execute_ssh(hostId,command) - Ejecuta un comando en un servidor remoto por SSH
   {"tool":"ssh-terminal__execute_ssh","arguments":{"hostId":"server1","command":"ls"}}
 
-list_ssh_hosts() - Lista los servidores SSH configurados
-  {"tool":"ssh-terminal__list_ssh_hosts","arguments":{}}
+search_nodeterm(query?) - ✅ HERRAMIENTA PRINCIPAL - Búsqueda inteligente de SSH hosts y credenciales. Si query está vacío, lista TODOS los servidores SSH. Si tiene contenido, busca en SSH hosts y contraseñas.
+  {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"Kepler"}}
+  {"tool":"ssh-terminal__search_nodeterm","arguments":{}}  // Lista todos los SSH hosts
 ```
 
 ---
@@ -254,11 +255,22 @@ file2.sh
 ```
 Usuario: ¿qué servidores SSH tengo?
 
-IA llama: list_ssh_hosts()
+IA llama: search_nodeterm({})  // Sin query lista todos
 
 Resultado:
-📡 mi-servidor [🔗 NodeTerm] (admin@192.168.1.100:22) [disconnected]
-📡 servidor-test [⚙️ MCP] (user@test.com:2222) [disconnected]
+✅ 2 conexiones SSH disponibles
+
+1. mi-servidor [🔗 NodeTerm]
+   🔑 ID: `ssh:192.168.1.100:admin:22`
+   📍 Host: 192.168.1.100:22
+   👤 Usuario: admin
+   ⚡ Estado: disconnected
+
+2. servidor-test [⚙️ MCP]
+   🔑 ID: `ssh:test.com:user:2222`
+   📍 Host: test.com:2222
+   👤 Usuario: user
+   ⚡ Estado: disconnected
 
 ---
 

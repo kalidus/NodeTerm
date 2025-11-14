@@ -209,13 +209,13 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'execute_ssh',
-          description: 'IMPORTANTE: Ejecuta un comando en un servidor remoto por SSH (máquina externa, no local). PRIMERO debe usar list_ssh_hosts para obtener el ID del servidor. El hostId es la identificación única del servidor remoto. Ejemplo: hostId="192.168.1.10_root_22" command="ls -la /home". Usa credenciales guardadas automáticamente.',
+          description: 'IMPORTANTE: Ejecuta un comando en un servidor remoto por SSH (máquina externa, no local). PRIMERO debe usar search_nodeterm para buscar y encontrar el servidor SSH. El hostId puede ser el ID exacto, el nombre del servidor, o el label. Ejemplo: hostId="Kepler" o hostId="192.168.1.10_root_22" command="ls -la /home". Usa credenciales guardadas automáticamente.',
           inputSchema: {
             type: 'object',
             properties: {
               hostId: {
                 type: 'string',
-                description: 'ID único del servidor SSH remoto (ej: "192.168.1.10_root_22"). Obtener de list_ssh_hosts.'
+                description: 'ID único, nombre o label del servidor SSH remoto (ej: "Kepler" o "192.168.1.10_root_22"). Obtener de search_nodeterm.'
               },
               command: {
                 type: 'string',
@@ -228,15 +228,6 @@ class SSHTerminalNativeServer {
         {
           name: 'list_terminals',
           description: 'Lista las terminales locales disponibles: distribuciones WSL (Ubuntu, Kali, etc.), Cygwin, PowerShell. Usa esto para responder qué sistemas operativos están instalados.',
-          inputSchema: {
-            type: 'object',
-            properties: {},
-            required: []
-          }
-        },
-        {
-          name: 'list_ssh_hosts',
-          description: 'IMPORTANTE: Lista TODOS los servidores SSH remotos configurados en NodeTerm (desde la barra lateral). Devuelve: nombre del servidor, dirección IP/hostname, usuario SSH, puerto SSH, y estado de conexión. DIFERENTE de list_directory que lista archivos locales. Use esta herramienta SOLO para obtener la lista de servidores SSH disponibles, luego use execute_ssh para conectarse a uno específico.',
           inputSchema: {
             type: 'object',
             properties: {},
@@ -267,35 +258,17 @@ class SSHTerminalNativeServer {
           }
         },
         {
-          name: 'search_passwords',
-          description: 'Buscar contraseñas guardadas en el Password Manager (KeePass, etc.) por título, usuario o URL. Búsqueda de SOLO LECTURA. Devuelve títulos, usuarios y URLs sin mostrar contraseñas. Útil para encontrar credenciales relacionadas con servidores o servicios.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              query: {
-                type: 'string',
-                description: 'Término de búsqueda (nombre contraseña, usuario, URL, notas, etc.)'
-              },
-              limit: {
-                type: 'number',
-                description: 'Máximo número de resultados (default: 10)'
-              }
-            },
-            required: ['query']
-          }
-        },
-        {
           name: 'search_nodeterm',
-          description: '✅ HERRAMIENTA PRINCIPAL - Búsqueda INTELIGENTE de NodeTerm: Encuentra SIMULTÁNEAMENTE: 1) Conexiones SSH (para conectar a servidores), 2) Contraseñas guardadas (usuario + contraseña oculta ••••••, con botón para revelar en el UI). IMPORTANTE: Las contraseñas devueltas son SOLO del usuario, guardadas en su máquina local. Devuelve TODO necesario: conexiones SSH + credenciales + contraseñas (ocultas pero accesibles). RECOMENDADO usar SIEMPRE esta herramienta para búsquedas sobre servidores/usuarios/servicios.',
+          description: '✅ HERRAMIENTA PRINCIPAL - Búsqueda INTELIGENTE de NodeTerm: Encuentra SIMULTÁNEAMENTE: 1) Conexiones SSH (para conectar a servidores), 2) Contraseñas guardadas (usuario + contraseña oculta ••••••). IMPORTANTE: Si query está vacío o es muy corto (<2 caracteres), lista TODOS los servidores SSH disponibles. Si query tiene contenido, busca en SSH hosts y contraseñas. Devuelve TODO necesario para conectar: conexiones SSH con host, port, username, password/privateKey (ocultas pero accesibles). RECOMENDADO usar SIEMPRE esta herramienta para buscar servidores SSH y credenciales. Luego usa execute_ssh con el hostId encontrado.',
           inputSchema: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: 'Término de búsqueda (nombre servidor, usuario, IP, servicio, contraseña, etc.)'
+                description: 'Término de búsqueda (nombre servidor, usuario, IP, servicio, contraseña, etc.). Si está vacío o es muy corto, lista TODOS los servidores SSH.'
               }
             },
-            required: ['query']
+            required: []
           }
         }
       ]
@@ -323,17 +296,11 @@ class SSHTerminalNativeServer {
         case 'list_terminals':
           result = await this.listTerminals();
           break;
-        case 'list_ssh_hosts':
-          result = await this.listSSHHosts();
-          break;
         case 'test_ssh_connection':
           result = await this.testSSHConnection(args);
           break;
         case 'show_security_rules':
           result = await this.showSecurityRules();
-          break;
-        case 'search_passwords':
-          result = await this.searchPasswords(args);
           break;
         case 'search_nodeterm':
           result = await this.searchSSHAndPassword(args);
@@ -793,7 +760,7 @@ class SSHTerminalNativeServer {
       const availableIds = allConnections.map(h => `"${h.id}"`).slice(0, 5).join(', ');
       const availableMsg = allConnections.length > 0 
         ? `\n\n📌 Labels disponibles: ${availableLabels.substring(0, 200)}...\n📌 Nombres disponibles: ${availableNames.substring(0, 150)}\n📌 IDs disponibles: ${availableIds}${allConnections.length > 5 ? '... y más' : ''}`
-        : `\n\n⚠️ No hay hosts SSH disponibles. Usa list_ssh_hosts para ver opciones.`;
+        : `\n\n⚠️ No hay hosts SSH disponibles. Usa search_nodeterm para buscar servidores SSH.`;
       throw new Error(`❌ Host SSH no encontrado: "${hostId || 'undefined'}"${availableMsg}`);
     }
     
@@ -1001,62 +968,6 @@ class SSHTerminalNativeServer {
     };
   }
 
-  /**
-   * TOOL: list_ssh_hosts - Listar hosts SSH configurados
-   */
-  async listSSHHosts() {
-    // 🔗 Integrar conexiones de NodeTerm automáticamente
-    const nodetermConnections = await this.loadNodeTermSSHConnections();
-    const allConnections = [...this.sshConnections, ...nodetermConnections];
-    
-    if (allConnections.length === 0) {
-      return '📡 **No hay hosts SSH configurados**\n\n' +
-             '**Opciones:**\n' +
-             '1. ✅ Agrega conexiones en NodeTerm (Sidebar → SSH)\n' +
-             '2. ⚙️ Configura en MCP: Configuración → MCP Tools → NodeTerm CLI\n\n' +
-             '💡 Las conexiones de NodeTerm se detectan automáticamente!';
-    }
-    
-    const hosts = allConnections.map(host => {
-      const poolEntry = this.sshPool.get(host.id);
-      const isConnected = poolEntry && poolEntry.isConnected && poolEntry.isConnected();
-      const source = host._source === 'nodeterm' ? '🔗 NodeTerm' : '⚙️ MCP';
-      
-      return {
-        id: host.id,
-        name: `${host.name} [${source}]`,
-        host: host.host,
-        port: host.port || 22,
-        username: host.username,
-        status: isConnected ? 'connected' : 'disconnected',
-        source: host._source || 'mcp',
-        ...(isConnected && {
-          connectedSince: new Date(poolEntry._createdAt).toISOString(),
-          lastUsed: new Date(poolEntry._lastUsed).toISOString()
-        })
-      };
-    });
-    
-    // Crear formato legible para presentar al modelo
-    const hostsList = hosts
-      .map((h, idx) => `${idx + 1}. **${h.name}**\n   🔑 ID: \`${h.id}\`\n   📍 Host: ${h.host}:${h.port}\n   👤 Usuario: ${h.username}\n   ⚡ Estado: ${h.status}`)
-      .join('\n\n');
-    
-    const activeCount = hosts.filter(h => h.status === 'connected').length;
-    
-    // Crear mapeo de nombres a IDs para facilitar búsqueda
-    const nameToIdMap = {};
-    hosts.forEach(h => {
-      const cleanName = h.name.split('[')[0].trim().toLowerCase();
-      nameToIdMap[cleanName] = h.id;
-    });
-    
-    // Devolver SOLO el texto formateado, no un objeto JSON
-    const firstHostId = hosts.length > 0 ? hosts[0].id : 'ssh:host:usuario:22';
-    
-    return `✅ **${hosts.length} conexiones SSH disponibles**\n\n${hostsList}\n\n📊 **Resumen:**\n- Total configuradas: ${hosts.length}\n- Conexiones activas: ${activeCount}\n- Desde NodeTerm: ${nodetermConnections.length}\n\n**🔗 CÓMO CONECTAR:**\n\n✅ **MANERA FÁCIL (RECOMENDADO):**\nCuando el usuario mencione un nombre de host (ej: "conecta a Kepler"), usa directamente el parámetro:\n- \`hostId\`: El nombre exacto del host (ej: "Kepler")\n- \`command\`: El comando a ejecutar\n\nLos IDs disponibles son:\n${Object.entries(nameToIdMap).map(([name, id]) => `- "${name}" → ${id}`).slice(0, 20).join('\n')}${hosts.length > 20 ? `\n... y ${hosts.length - 20} más` : ''}\n\n**EJEMPLO:** Si el usuario dice "conecta a Kepler y lista archivos":\n- \`hostId\`: \`Kepler\`\n- \`command\`: \`ls -la\``;
-
-  }
 
   /**
    * 🔗 Cargar conexiones SSH desde NodeTerm
@@ -1233,91 +1144,112 @@ class SSHTerminalNativeServer {
   }
 
   /**
-   * TOOL: search_passwords - Buscar contraseñas por término
-   */
-  async searchPasswords(args) {
-    const { query, limit = 10 } = args;
-    
-    if (!this.nodeTermPasswords || this.nodeTermPasswords.length === 0) {
-      return { 
-        success: false,
-        count: 0,
-        results: [],
-        message: '🔐 No hay contraseñas disponibles. Abre el Password Manager en NodeTerm para sincronizarlas.'
-      };
-    }
-    
-    const searchTerm = (query || '').toLowerCase();
-    if (!searchTerm || searchTerm.length < 2) {
-      return {
-        success: false,
-        message: '⚠️ Búsqueda muy corta. Usa al menos 2 caracteres.'
-      };
-    }
-    
-    // Función recursiva para buscar en árbol de carpetas
-    const searchInTree = (nodes, results = []) => {
-      for (const node of nodes) {
-        // Si es una contraseña (no carpeta)
-        if (node.data?.type === 'password') {
-          const match = 
-            (node.label && node.label.toLowerCase().includes(searchTerm)) ||
-            (node.data.username && node.data.username.toLowerCase().includes(searchTerm)) ||
-            (node.data.url && node.data.url.toLowerCase().includes(searchTerm)) ||
-            (node.data.notes && node.data.notes.toLowerCase().includes(searchTerm));
-          
-          if (match) {
-            results.push({
-              id: node.id,
-              title: node.label,
-              username: node.data.username || '(sin usuario)',
-              url: node.data.url || '(sin URL)',
-              notes: node.data.notes ? node.data.notes.substring(0, 100) : '',
-              type: 'password',
-              _password: '••••••••' // Indicador de que hay contraseña (pero no mostrarla)
-            });
-          }
-        }
-        
-        // Recursión en subcarpetas
-        if (node.children && node.children.length > 0) {
-          searchInTree(node.children, results);
-        }
-      }
-      return results;
-    };
-    
-    const results = searchInTree(this.nodeTermPasswords).slice(0, limit);
-    
-    return {
-      success: true,
-      count: results.length,
-      results: results,
-      message: results.length === 0 
-        ? `❌ No se encontraron contraseñas con "${query}"`
-        : `✅ Encontradas ${results.length} contraseña(s) con "${query}". Usa get_password_by_id para ver la contraseña completa.`
-    };
-  }
-
-  /**
-   * TOOL: search_ssh_and_password - Búsqueda INTELIGENTE combinada
+   * TOOL: search_nodeterm - Búsqueda INTELIGENTE combinada
+   * Si query está vacío o es muy corto, lista TODOS los SSH hosts (comportamiento de list_ssh_hosts)
    */
   async searchSSHAndPassword(args) {
-    const { query } = args;
+    const { query } = args || {};
     
-    const searchTerm = (query || '').toLowerCase();
-    if (!searchTerm || searchTerm.length < 2) {
+    const searchTerm = (query || '').trim().toLowerCase();
+    const shouldListAll = !searchTerm || searchTerm.length < 2;
+    
+    // 🔗 Cargar todas las conexiones SSH
+    const nodetermConnections = await this.loadNodeTermSSHConnections();
+    const allConnections = [...this.sshConnections, ...nodetermConnections];
+    
+    if (shouldListAll) {
+      // 📋 MODO: Listar TODOS los SSH hosts (comportamiento de list_ssh_hosts)
+      console.log(`📋 [MCP] Listando TODOS los servidores SSH (sin filtro)`);
+      
+      if (allConnections.length === 0) {
+        return {
+          success: false,
+          ssh_results: [],
+          password_results: [],
+          ssh_count: 0,
+          password_count: 0,
+          total: 0,
+          message: '📡 **No hay hosts SSH configurados**\n\n' +
+                   '**Opciones:**\n' +
+                   '1. ✅ Agrega conexiones en NodeTerm (Sidebar → SSH)\n' +
+                   '2. ⚙️ Configura en MCP: Configuración → MCP Tools → NodeTerm CLI\n\n' +
+                   '💡 Las conexiones de NodeTerm se detectan automáticamente!'
+        };
+      }
+      
+      // Listar todos los hosts SSH con información completa
+      const sshResults = allConnections
+        .filter(conn => conn.type === 'ssh')
+        .map(conn => {
+          const poolEntry = this.sshPool.get(conn.id);
+          const isConnected = poolEntry && poolEntry.isConnected && poolEntry.isConnected();
+          const source = conn._source === 'nodeterm' ? '🔗 NodeTerm' : '⚙️ MCP';
+          
+          const passwordLength = conn.password ? conn.password.length : 0;
+          const hiddenPassword = conn.password ? '•'.repeat(Math.min(passwordLength, 12)) : '(sin contraseña)';
+          
+          return {
+            id: conn.id,
+            type: 'ssh',
+            name: conn.label || conn.name,
+            displayName: `${conn.label || conn.name} [${source}]`,
+            host: conn.host,
+            port: conn.port || 22,
+            username: conn.username || conn.user,
+            password: hiddenPassword,
+            hasPassword: !!conn.password,
+            hasPrivateKey: !!conn.privateKey,
+            status: isConnected ? 'connected' : 'disconnected',
+            source: conn._source || 'mcp',
+            url: `ssh://${conn.username || conn.user}@${conn.host}:${conn.port || 22}`,
+            // Información de Bastion (si existe)
+            useBastionWallix: conn.useBastionWallix || false,
+            bastionHost: conn.bastionHost,
+            bastionUser: conn.bastionUser,
+            targetServer: conn.targetServer,
+            // Para conectar: execute_ssh necesita el ID, nombre o label
+            _connection: '🔗 Conexión SSH',
+            _canReveal: !!conn.password,
+            // Información completa para execute_ssh (backend only)
+            _passwordRealBackendOnly: conn.password,
+            _privateKeyBackendOnly: conn.privateKey,
+            ...(isConnected && {
+              connectedSince: new Date(poolEntry._createdAt).toISOString(),
+              lastUsed: new Date(poolEntry._lastUsed).toISOString()
+            })
+          };
+        });
+      
+      const activeCount = sshResults.filter(h => h.status === 'connected').length;
+      
+      // Crear mapeo de nombres a IDs para facilitar búsqueda
+      const nameToIdMap = {};
+      sshResults.forEach(h => {
+        const cleanName = h.name.split('[')[0].trim().toLowerCase();
+        nameToIdMap[cleanName] = h.id;
+      });
+      
+      // Formato legible para el modelo
+      const hostsList = sshResults
+        .map((h, idx) => `${idx + 1}. **${h.displayName}**\n   🔑 ID: \`${h.id}\`\n   📍 Host: ${h.host}:${h.port}\n   👤 Usuario: ${h.username}\n   ⚡ Estado: ${h.status}${h.useBastionWallix ? '\n   🔗 Bastion: ' + h.bastionHost : ''}`)
+        .join('\n\n');
+      
       return {
-        success: false,
-        message: '⚠️ Búsqueda muy corta. Usa al menos 2 caracteres.'
+        success: true,
+        ssh_results: sshResults,
+        password_results: [],
+        ssh_count: sshResults.length,
+        password_count: 0,
+        total: sshResults.length,
+        message: `✅ **${sshResults.length} conexiones SSH disponibles**\n\n${hostsList}\n\n📊 **Resumen:**\n- Total configuradas: ${sshResults.length}\n- Conexiones activas: ${activeCount}\n- Desde NodeTerm: ${nodetermConnections.length}\n\n**🔗 CÓMO CONECTAR:**\n\n✅ **MANERA FÁCIL (RECOMENDADO):**\nCuando el usuario mencione un nombre de host (ej: "conecta a Kepler"), usa directamente:\n- \`hostId\`: El nombre exacto del host (ej: "Kepler") o el ID\n- \`command\`: El comando a ejecutar\n\n**EJEMPLO:** Si el usuario dice "conecta a Kepler y lista archivos":\n- \`hostId\`: \`Kepler\`\n- \`command\`: \`ls -la\`\n\nLos nombres disponibles son:\n${Object.entries(nameToIdMap).map(([name, id]) => `- "${name}" → ${id}`).slice(0, 20).join('\n')}${sshResults.length > 20 ? `\n... y ${sshResults.length - 20} más` : ''}`
       };
     }
     
+    // 🔍 MODO: Búsqueda filtrada (comportamiento original)
     console.log(`🔍 [MCP] Búsqueda combinada SSH+Password: "${query}"`);
     
     // 🔗 BUSCAR EN SSH - Y DEVOLVER LA CONTRASEÑA DE LA CONEXIÓN
     const sshResults = [];
-    const allConnections = [...this.sshConnections, ...(this.nodeTermConnections || [])];
     
     for (const conn of allConnections) {
       if (conn.type === 'ssh') {
@@ -1343,11 +1275,19 @@ class SSHTerminalNativeServer {
             port: conn.port || 22,
             username: conn.username || conn.user,
             password: hiddenPassword,           // ← OCULTA (mostrar en JSON)
-            // passwordReal NO va en el JSON - solo en memoria del UI
+            hasPassword: !!conn.password,
+            hasPrivateKey: !!conn.privateKey,
             url: `ssh://${conn.username || conn.user}@${conn.host}:${conn.port || 22}`,
+            // Información de Bastion (si existe)
+            useBastionWallix: conn.useBastionWallix || false,
+            bastionHost: conn.bastionHost,
+            bastionUser: conn.bastionUser,
+            targetServer: conn.targetServer,
             _connection: '🔗 Conexión SSH',
             _canReveal: !!conn.password,
-            _passwordRealBackendOnly: conn.password  // ← OCULTA (no mostrar, solo backend)
+            // Información completa para execute_ssh (backend only)
+            _passwordRealBackendOnly: conn.password,
+            _privateKeyBackendOnly: conn.privateKey
           });
         }
       }

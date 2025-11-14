@@ -717,7 +717,7 @@
         "execute_local",
         "execute_ssh",
         "list_terminals",
-        "list_ssh_hosts",
+        "search_nodeterm",
         "test_ssh_connection",
         "show_security_rules"
       ],
