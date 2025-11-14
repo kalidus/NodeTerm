@@ -11,6 +11,11 @@ import mcpClient from './MCPClientService';
 import toolOrchestrator from './ToolOrchestrator';
 import modelMemoryService from './ModelMemoryService';
 import { summarizeToolResult } from '../utils/toolResultSummarizer';
+import { rememberToolExecution, getRecentToolExecution } from './ToolExecutionCache';
+
+const TOOLS_REQUIRE_FULL_CONTEXT = new Set([
+  'search_nodeterm'
+]);
 
 class AIService {
   constructor() {
@@ -2625,6 +2630,11 @@ class AIService {
           toolResultText: text,
           toolResultSummary: planSummary
         });
+        rememberToolExecution(conversationService.currentConversationId, actualToolName, callArgs, {
+          summary: planSummary,
+          rawText: text,
+          isError: false
+        });
         
         results.push({ tool: actualToolName, success: true, result: text });
         
@@ -3055,7 +3065,6 @@ class AIService {
               callModelFn: async () => 'Hecho.',
               callbacks,
               options,
-              maxIterations: 3,
               turnId: options?.turnId
             });
             return orchestratorResult;
@@ -3202,7 +3211,7 @@ class AIService {
    * Manejar loop de tool calls para modelos locales (system prompt)
    * Soporta múltiples iteraciones, re-inyección de resultados, y detección de loops
    */
-  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations = 5) {
+  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations) {
     let iteration = 0;
     let currentToolCall = toolCall;
     let conversationMessages = [...messages];
@@ -3219,14 +3228,17 @@ class AIService {
     })();
     const inferredIntent = this._inferFilesystemIntent(lastUserGoal || '');
     
-    debugLogger.debug('AIService.MCP', 'Iniciando loop de tool calls', { maxIterations });
+    const limit = Number.isFinite(maxIterations) ? Math.max(1, maxIterations) : Infinity;
+    const limitInfo = Number.isFinite(limit) ? limit : null;
     
-    while (currentToolCall && iteration < maxIterations) {
+    debugLogger.debug('AIService.MCP', 'Iniciando loop de tool calls', { maxIterations: limitInfo });
+    
+    while (currentToolCall && iteration < limit) {
       iteration++;
       
       debugLogger.debug('AIService.MCP', 'Iteración de loop tool call', {
         iteration,
-        maxIterations,
+        maxIterations: limitInfo,
         tool: currentToolCall.toolName
       });
       
@@ -3278,7 +3290,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
           toolName: currentToolCall.toolName,
           toolArgs: currentToolCall.arguments,
           iteration,
-          maxIterations
+          maxIterations: limitInfo
         });
       }
       
@@ -3627,29 +3639,32 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
       }
     }
     
-    // Si llegamos aquí, excedimos las iteraciones máximas
-    debugLogger.warn('AIService.MCP', 'Límite de iteraciones alcanzado en loop de herramientas', {
-      maxIterations
-    });
-    
-    if (callbacks.onStatus) {
-      callbacks.onStatus({
-        status: 'warning',
-        message: `Límite de herramientas alcanzado (${maxIterations} iteraciones)`,
-        model: modelId,
-        provider: 'local'
+    const limitReached = Number.isFinite(limit) && iteration >= limit && currentToolCall;
+    if (limitReached) {
+      debugLogger.warn('AIService.MCP', 'Límite de iteraciones alcanzado en loop de herramientas (local)', {
+        maxIterations: limit
       });
-    }
-    
-    // Retornar la última respuesta del modelo o mensaje por defecto
-    if (conversationMessages.length > 0) {
-      const lastMessage = conversationMessages[conversationMessages.length - 1];
-      if (lastMessage.content) {
-        return lastMessage.content;
+      
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'warning',
+          message: `Límite de herramientas alcanzado (${limit} iteraciones)`,
+          model: modelId,
+          provider: 'local'
+        });
       }
+      
+      if (conversationMessages.length > 0) {
+        const lastMessage = conversationMessages[conversationMessages.length - 1];
+        if (lastMessage.content) {
+          return lastMessage.content;
+        }
+      }
+      
+      return 'Lo siento, alcancé el límite de uso de herramientas configurado para este modelo.';
     }
     
-    return 'Lo siento, alcancé el límite de uso de herramientas. Intenté ejecutar hasta ' + maxIterations + ' herramientas.';
+    return 'Operación completada.';
   }
 
   /**
@@ -4297,6 +4312,11 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 const serverId = normalized.serverId;
                 const toolName = normalized.toolName;
                 const callArgs = normalized.arguments;
+                const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
+                if (cachedExecution && !cachedExecution.isError) {
+                  executionSummaries.push(`• ${toolName}: ${cachedExecution.summary || cachedExecution.rawText}`);
+                  continue;
+                }
                 
                 let result;
                 try {
@@ -4304,8 +4324,22 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                     ? await mcpClient.callTool(serverId, toolName, callArgs)
                     : await mcpClient.callTool(toolName, callArgs);
                   const text = result?.content?.[0]?.text || 'OK';
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: summarizeToolResult({
+                      toolName,
+                      args: callArgs,
+                      resultText: text
+                    }),
+                    rawText: text,
+                    isError: false
+                  });
                   executionSummaries.push(`• ${toolName}: ${text.substring(0, 800)}`);
                 } catch (e) {
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: `ERROR ${e.message}`,
+                    rawText: e.message,
+                    isError: true
+                  });
                   executionSummaries.push(`• ${toolName}: ERROR ${e.message}`);
                 }
               }
@@ -4334,12 +4368,37 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
               const serverId = normalized.serverId;
               const toolName = normalized.toolName;
               const callArgs = normalized.arguments;
+              const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
+              
+              if (cachedExecution && !cachedExecution.isError) {
+                const nextBody = { ...requestBody };
+                nextBody.messages = [
+                  ...requestBody.messages,
+                  { role: 'user', content: `Resultado de ${toolName} (reutilizado): ${cachedExecution.summary || cachedExecution.rawText}` }
+                ];
+                const response2 = await fetch(requestUrl, { method: 'POST', headers, body: JSON.stringify(nextBody), signal: options.signal });
+                if (!response2.ok) {
+                  const e2 = await response2.text();
+                  throw new Error(e2 || 'Error tras tool calls (Anthropic)');
+                }
+                const data2 = await response2.json();
+                const finalText = data2.content?.[0]?.text || '';
+                return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
+              }
               
               try {
                 const result = serverId ? await mcpClient.callTool(serverId, toolName, callArgs)
                                         : await mcpClient.callTool(toolName, callArgs);
                 const text = result?.content?.[0]?.text || 'OK';
-                // Re-preguntar con resultado
+                rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                  summary: summarizeToolResult({
+                    toolName,
+                    args: callArgs,
+                    resultText: text
+                  }),
+                  rawText: text,
+                  isError: false
+                });
                 const nextBody = { ...requestBody };
                 nextBody.messages = [
                   ...requestBody.messages,
@@ -4354,6 +4413,11 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 const finalText = data2.content?.[0]?.text || '';
                 return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
               } catch (e) {
+                rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                  summary: `ERROR ${e.message}`,
+                  rawText: e.message,
+                  isError: true
+                });
                 return `Error ejecutando herramienta: ${e.message}`;
               }
             }
@@ -4408,7 +4472,6 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                     },
                     callbacks,
                     options,
-                    maxIterations: 5,
                     turnId: options?.turnId
                   });
                   return orchestratorResult;
@@ -4426,12 +4489,24 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 const serverId = normalized.serverId;
                 const toolName = normalized.toolName;
                 const callArgs = normalized.arguments;
+                const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
                 
                 conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { 
                   isToolCall: true, 
                   toolName, 
                   toolArgs: callArgs 
                 });
+                
+                if (cachedExecution && !cachedExecution.isError) {
+                  conversationService.addMessage('tool', cachedExecution.summary || cachedExecution.rawText, { 
+                    isToolResult: true, 
+                    toolName, 
+                    toolArgs: callArgs,
+                    toolResultText: cachedExecution.rawText,
+                    toolResultSummary: cachedExecution.summary || cachedExecution.rawText
+                  });
+                  continue;
+                }
                 
                 try {
                   if (!serverId) {
@@ -4446,6 +4521,15 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                     toolName, 
                     toolArgs: callArgs 
                   });
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: summarizeToolResult({
+                      toolName,
+                      args: callArgs,
+                      resultText: text
+                    }),
+                    rawText: text,
+                    isError: false
+                  });
                   
                   if (callbacks.onToolResult) {
                     callbacks.onToolResult({ toolName, args: callArgs, result });
@@ -4453,6 +4537,11 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
                 } catch (e) {
                   const errorMsg = `❌ Error ejecutando herramienta ${toolName}: ${e.message}`;
                   conversationService.addMessage('tool', errorMsg, { error: true });
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: errorMsg,
+                    rawText: errorMsg,
+                    isError: true
+                  });
                 }
               }
               
@@ -4720,7 +4809,6 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
               callModelFn,
               callbacks,
               options,
-              maxIterations: 5, // 🔧 Reducido de 10 a 5 para limitar proactividad
               turnId: options?.turnId
             });
             debugLogger.debug('AIService.Toolchain', 'toolOrchestrator.executeLoop completado', {
@@ -5236,11 +5324,19 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
 
   _prepareMessagesForContext(messages = []) {
     if (!Array.isArray(messages)) return [];
+    const MAX_FULL_CONTEXT_CHARS = 4000;
+    
     return messages.map((msg) => {
       if (!msg || typeof msg !== 'object') return msg;
       const metadata = msg.metadata || {};
       const clone = { ...msg };
       if (metadata.isToolResult) {
+        const toolName = (metadata.toolName || '').toLowerCase();
+        if (TOOLS_REQUIRE_FULL_CONTEXT.has(toolName)) {
+          const raw = metadata.toolResultText || clone.content || '';
+          clone.content = raw.slice(0, MAX_FULL_CONTEXT_CHARS);
+          return clone;
+        }
         const summary = metadata.toolResultSummary || summarizeToolResult({
           toolName: metadata.toolName || 'tool',
           args: metadata.toolArgs || {},
@@ -5280,6 +5376,13 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
 
     if (!isError && inferredIntent === 'move') {
       lines.push('PISTA: Si ya ves el origen y el destino en el resultado anterior, usa la herramienta "move_file" con los parámetros EXACTOS del schema (from/to, source/destination u old/new).');
+    }
+    
+    if (toolName && TOOLS_REQUIRE_FULL_CONTEXT.has(toolName.toLowerCase())) {
+      const raw = (resultText || '').trim();
+      if (raw.length > 0) {
+        lines.push('📋 Detalle completo:\n' + raw.slice(0, 4000));
+      }
     }
 
     if (isError) {
