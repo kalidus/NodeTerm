@@ -161,6 +161,97 @@ function registerAnythingLLMHandlers({ anythingLLMService }) {
       };
     }
   });
+
+  ipcMain.handle('anythingllm:diagnose-mcp-config', async () => {
+    try {
+      const diagnostics = await anythingLLMService.diagnoseMCPConfig();
+      return {
+        success: true,
+        diagnostics
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo diagnosticar la configuración MCP'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:add-volume-mapping', async (_, hostPath, containerPath) => {
+    try {
+      const volume = await anythingLLMService.addVolumeMapping(hostPath, containerPath);
+      return {
+        success: true,
+        volume
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo añadir el mapeo de volumen'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:remove-volume-mapping', async (_, volumeId) => {
+    try {
+      await anythingLLMService.removeVolumeMapping(volumeId);
+      return {
+        success: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo eliminar el mapeo de volumen'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:get-volume-mappings', async () => {
+    try {
+      const volumes = anythingLLMService.getVolumeMappings();
+      return {
+        success: true,
+        volumes
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudieron obtener los mapeos de volúmenes'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:get-container-path', async (_, hostPath) => {
+    try {
+      const containerPath = anythingLLMService.getContainerPathForHostPath(hostPath);
+      return {
+        success: true,
+        containerPath
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo obtener la ruta del contenedor'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:restart-container', async () => {
+    try {
+      await anythingLLMService.removeContainer();
+      await anythingLLMService.startContainer();
+      await anythingLLMService.waitForHealth();
+      return {
+        success: true,
+        status: anythingLLMService.getStatus()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo reiniciar el contenedor'
+      };
+    }
+  });
 }
 
 module.exports = {

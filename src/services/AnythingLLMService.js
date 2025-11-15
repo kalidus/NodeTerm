@@ -38,6 +38,7 @@ class AnythingLLMService {
     this.lastHealthCheck = null;
     this.lastError = null;
     this._dockerCommand = null;
+    this.additionalVolumes = []; // Volúmenes adicionales mapeados
 
     this.status = {
       isRunning: false,
@@ -51,6 +52,7 @@ class AnythingLLMService {
 
     this.dataDir = this._resolveDataDir();
     this.status.dataDir = this.dataDir;
+    this._loadVolumeConfig();
   }
 
   _resolveDataDir() {
@@ -217,10 +219,114 @@ class AnythingLLMService {
     this.status.phase = 'cleanup';
     this.status.message = 'Eliminando contenedor previo';
     try {
+      await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
+    } catch (_) {
+      // ignore
+    }
+    try {
       await execAsync(this.buildDockerCommand(`rm -f ${this.containerName}`));
     } catch (_) {
       // ignore
     }
+  }
+
+  /**
+   * Carga la configuración de volúmenes adicionales desde el archivo
+   */
+  _loadVolumeConfig() {
+    try {
+      const volumeConfigPath = path.join(this.dataDir, 'volume-mappings.json');
+      if (fs.existsSync(volumeConfigPath)) {
+        const content = fs.readFileSync(volumeConfigPath, 'utf8');
+        const config = JSON.parse(content);
+        this.additionalVolumes = config.volumes || [];
+      }
+    } catch (error) {
+      console.warn('[AnythingLLM] No se pudo cargar configuración de volúmenes:', error.message);
+      this.additionalVolumes = [];
+    }
+  }
+
+  /**
+   * Guarda la configuración de volúmenes adicionales
+   */
+  _saveVolumeConfig() {
+    try {
+      const volumeConfigPath = path.join(this.dataDir, 'volume-mappings.json');
+      fs.writeFileSync(
+        volumeConfigPath,
+        JSON.stringify({ volumes: this.additionalVolumes }, null, 2),
+        'utf8'
+      );
+    } catch (error) {
+      console.warn('[AnythingLLM] No se pudo guardar configuración de volúmenes:', error.message);
+    }
+  }
+
+  /**
+   * Añade un volumen adicional al contenedor
+   * @param {string} hostPath - Ruta en el host (Windows)
+   * @param {string} containerPath - Ruta dentro del contenedor (Linux)
+   * @returns {Promise<object>} Información del volumen añadido
+   */
+  async addVolumeMapping(hostPath, containerPath) {
+    // Normalizar ruta del host
+    const normalizedHostPath = path.resolve(hostPath);
+    
+    // Verificar que la ruta existe
+    try {
+      const stats = await fs.promises.stat(normalizedHostPath);
+      if (!stats.isDirectory()) {
+        throw new Error('La ruta debe ser un directorio');
+      }
+    } catch (error) {
+      throw new Error(`La ruta no existe o no es accesible: ${error.message}`);
+    }
+
+    // Verificar si ya existe un mapeo para esta ruta
+    const existing = this.additionalVolumes.find(v => 
+      path.resolve(v.hostPath) === normalizedHostPath
+    );
+
+    if (existing) {
+      return existing;
+    }
+
+    // Crear nuevo mapeo
+    const volumeMapping = {
+      id: `vol_${Date.now()}`,
+      hostPath: normalizedHostPath,
+      containerPath: containerPath || `/mnt/host/${path.basename(normalizedHostPath).toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+      createdAt: new Date().toISOString()
+    };
+
+    this.additionalVolumes.push(volumeMapping);
+    this._saveVolumeConfig();
+
+    // Si el contenedor está corriendo, necesitamos reiniciarlo
+    const isRunning = await this.isContainerRunning();
+    if (isRunning) {
+      console.log('[AnythingLLM] Contenedor en ejecución. Reinicia el contenedor para aplicar el nuevo volumen.');
+    }
+
+    return volumeMapping;
+  }
+
+  /**
+   * Elimina un mapeo de volumen
+   * @param {string} volumeId - ID del volumen a eliminar
+   */
+  async removeVolumeMapping(volumeId) {
+    this.additionalVolumes = this.additionalVolumes.filter(v => v.id !== volumeId);
+    this._saveVolumeConfig();
+  }
+
+  /**
+   * Obtiene todos los mapeos de volúmenes
+   * @returns {Array} Lista de mapeos de volúmenes
+   */
+  getVolumeMappings() {
+    return [...this.additionalVolumes];
   }
 
   async startContainer() {
@@ -231,12 +337,23 @@ class AnythingLLMService {
       ? this.dataDir
       : this.dataDir.replace(/\\/g, '/');
 
+    // Construir argumentos de volúmenes
+    const volumeArgs = [`-v "${volumeHostPath}:/app/server/storage"`];
+    
+    // Añadir volúmenes adicionales
+    for (const vol of this.additionalVolumes) {
+      const hostPath = process.platform === 'win32' 
+        ? vol.hostPath 
+        : vol.hostPath.replace(/\\/g, '/');
+      volumeArgs.push(`-v "${hostPath}:${vol.containerPath}"`);
+    }
+
     const args = [
       'run -d',
       `--name ${this.containerName}`,
       '--restart unless-stopped',
       `-p ${this.hostPort}:${this.containerPort}`,
-      `-v "${volumeHostPath}:/app/server/storage"`,
+      ...volumeArgs,
       '-e DISABLE_TELEMETRY=true',
       '-e STORAGE_DIR=/app/server/storage',
       this.imageName
@@ -357,14 +474,13 @@ class AnythingLLMService {
 
   /**
    * Lee la configuración de MCP de AnythingLLM
-   * AnythingLLM almacena la configuración MCP en diferentes ubicaciones posibles:
-   * - mcp.json (formato estándar)
-   * - .mcp.json (archivo oculto)
-   * - config/mcp.json (en subdirectorio)
+   * AnythingLLM busca el archivo en plugins/anythingllm_mcp_servers.json
+   * También busca en otras ubicaciones por compatibilidad
    * @returns {Promise<object>} Configuración de MCP
    */
   async readMCPConfig() {
     const possiblePaths = [
+      'plugins/anythingllm_mcp_servers.json', // Ubicación oficial de AnythingLLM
       'mcp.json',
       '.mcp.json',
       'config/mcp.json',
@@ -391,28 +507,45 @@ class AnythingLLMService {
 
   /**
    * Escribe la configuración de MCP de AnythingLLM
+   * AnythingLLM lee el archivo desde plugins/anythingllm_mcp_servers.json
+   * También escribe en mcp.json por compatibilidad
    * @param {object} config - Configuración de MCP a escribir
    * @returns {Promise<void>}
    */
   async writeMCPConfig(config) {
-    // Intentar escribir en mcp.json primero (formato estándar)
+    // Crear directorio plugins si no existe
+    const pluginsDir = path.join(this.dataDir, 'plugins');
+    try {
+      await fs.promises.mkdir(pluginsDir, { recursive: true });
+    } catch (error) {
+      // Si falla crear el directorio, intentar escribir directamente
+    }
+
+    const jsonContent = JSON.stringify(config, null, 2);
+    let wroteToPrimary = false;
+
+    // Escribir en la ubicación oficial de AnythingLLM
+    const configPath = path.join(pluginsDir, 'anythingllm_mcp_servers.json');
+    try {
+      await fs.promises.writeFile(
+        configPath,
+        jsonContent,
+        'utf8'
+      );
+      wroteToPrimary = true;
+    } catch (error) {
+      console.warn('[AnythingLLM] No se pudo escribir en plugins/anythingllm_mcp_servers.json:', error.message);
+    }
+
+    // También escribir en mcp.json en la raíz por compatibilidad
     try {
       await this.writeJsonFile('mcp.json', config);
-      return;
     } catch (error) {
-      // Si falla, intentar en config/mcp.json
-      try {
-        const configDir = path.join(this.dataDir, 'config');
-        await fs.promises.mkdir(configDir, { recursive: true });
-        await fs.promises.writeFile(
-          path.join(configDir, 'mcp.json'),
-          JSON.stringify(config, null, 2),
-          'utf8'
-        );
-        return;
-      } catch (error2) {
-        throw new Error(`No se pudo escribir la configuración MCP: ${error2.message}`);
-      }
+      console.warn('[AnythingLLM] No se pudo escribir en mcp.json:', error.message);
+    }
+
+    if (!wroteToPrimary) {
+      throw new Error('No se pudo escribir la configuración MCP en ninguna ubicación');
     }
   }
 
@@ -470,6 +603,129 @@ class AnythingLLMService {
     } catch (error) {
       throw new Error(`Error listando archivos: ${error.message}`);
     }
+  }
+
+  /**
+   * Verifica la configuración MCP y devuelve información de diagnóstico
+   * @returns {Promise<object>} Información de diagnóstico
+   */
+  async diagnoseMCPConfig() {
+    const diagnostics = {
+      dataDir: this.dataDir,
+      files: [],
+      mcpConfigPath: null,
+      mcpConfigExists: false,
+      mcpConfigContent: null,
+      pluginsDirExists: false,
+      containerRunning: false,
+      mcpJsonContent: null
+    };
+
+    try {
+      // Listar archivos en el directorio de datos
+      diagnostics.files = await fs.promises.readdir(this.dataDir);
+      
+      // Verificar si existe el directorio plugins
+      const pluginsDir = path.join(this.dataDir, 'plugins');
+      try {
+        const stats = await fs.promises.stat(pluginsDir);
+        diagnostics.pluginsDirExists = stats.isDirectory();
+      } catch (_) {
+        diagnostics.pluginsDirExists = false;
+      }
+
+      // Verificar archivo de configuración MCP principal
+      const configPath = path.join(pluginsDir, 'anythingllm_mcp_servers.json');
+      diagnostics.mcpConfigPath = configPath;
+      
+      try {
+        const stats = await fs.promises.stat(configPath);
+        diagnostics.mcpConfigExists = stats.isFile();
+        
+        if (diagnostics.mcpConfigExists) {
+          const content = await fs.promises.readFile(configPath, 'utf8');
+          diagnostics.mcpConfigContent = JSON.parse(content);
+        }
+      } catch (error) {
+        diagnostics.mcpConfigExists = false;
+        diagnostics.error = error.message;
+      }
+
+      // Verificar mcp.json en la raíz (archivo alternativo común)
+      const mcpJsonPath = path.join(this.dataDir, 'mcp.json');
+      try {
+        const stats = await fs.promises.stat(mcpJsonPath);
+        if (stats.isFile()) {
+          const content = await fs.promises.readFile(mcpJsonPath, 'utf8');
+          diagnostics.mcpJsonContent = JSON.parse(content);
+        }
+      } catch (_) {
+        // Archivo no existe
+      }
+
+      // Verificar si el contenedor está corriendo
+      diagnostics.containerRunning = await this.isContainerRunning();
+
+      // Verificar archivos alternativos
+      const alternativePaths = [
+        path.join(this.dataDir, '.mcp.json'),
+        path.join(this.dataDir, 'config', 'mcp.json'),
+        path.join(this.dataDir, 'mcp-servers.json')
+      ];
+
+      diagnostics.alternativeFiles = [];
+      for (const altPath of alternativePaths) {
+        try {
+          const stats = await fs.promises.stat(altPath);
+          if (stats.isFile()) {
+            const content = await fs.promises.readFile(altPath, 'utf8');
+            diagnostics.alternativeFiles.push({
+              path: altPath,
+              content: JSON.parse(content)
+            });
+          }
+        } catch (_) {
+          // Archivo no existe
+        }
+      }
+
+    } catch (error) {
+      diagnostics.error = error.message;
+    }
+
+    return diagnostics;
+  }
+
+  /**
+   * Obtiene la ruta del contenedor para una ruta del host
+   * Si la ruta está mapeada como volumen, devuelve la ruta del contenedor
+   * @param {string} hostPath - Ruta en el host
+   * @returns {string|null} Ruta en el contenedor o null si no está mapeada
+   */
+  getContainerPathForHostPath(hostPath) {
+    const normalizedHostPath = path.resolve(hostPath);
+    const volume = this.additionalVolumes.find(v => 
+      path.resolve(v.hostPath) === normalizedHostPath ||
+      normalizedHostPath.startsWith(path.resolve(v.hostPath))
+    );
+
+    if (volume) {
+      // Si la ruta es exactamente el volumen mapeado
+      if (path.resolve(volume.hostPath) === normalizedHostPath) {
+        return volume.containerPath;
+      }
+      // Si es una subcarpeta, calcular la ruta relativa
+      const relativePath = path.relative(volume.hostPath, normalizedHostPath);
+      return path.join(volume.containerPath, relativePath).replace(/\\/g, '/');
+    }
+
+    // Si está dentro del directorio de datos
+    if (normalizedHostPath.startsWith(path.resolve(this.dataDir))) {
+      const relativePath = path.relative(this.dataDir, normalizedHostPath);
+      return `/app/server/storage/${relativePath.replace(/\\/g, '/')}`;
+    }
+
+    return null;
   }
 }
 

@@ -173,7 +173,13 @@ contextBridge.exposeInMainWorld('electron', {
     writeMCPConfig: (config) => ipcRenderer.invoke('anythingllm:write-mcp-config', config),
     addMCPServer: (serverName, serverConfig) => ipcRenderer.invoke('anythingllm:add-mcp-server', serverName, serverConfig),
     removeMCPServer: (serverName) => ipcRenderer.invoke('anythingllm:remove-mcp-server', serverName),
-    listDataFiles: () => ipcRenderer.invoke('anythingllm:list-data-files')
+    listDataFiles: () => ipcRenderer.invoke('anythingllm:list-data-files'),
+    diagnoseMCPConfig: () => ipcRenderer.invoke('anythingllm:diagnose-mcp-config'),
+    addVolumeMapping: (hostPath, containerPath) => ipcRenderer.invoke('anythingllm:add-volume-mapping', hostPath, containerPath),
+    removeVolumeMapping: (volumeId) => ipcRenderer.invoke('anythingllm:remove-volume-mapping', volumeId),
+    getVolumeMappings: () => ipcRenderer.invoke('anythingllm:get-volume-mappings'),
+    getContainerPath: (hostPath) => ipcRenderer.invoke('anythingllm:get-container-path', hostPath),
+    restartContainer: () => ipcRenderer.invoke('anythingllm:restart-container')
   },
   import: {
     getFileInfo: (path) => ipcRenderer.invoke('import:get-file-info', path),
