@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Card } from 'primereact/card';
@@ -146,6 +146,19 @@ const MainContentArea = ({
   
   // Estado para las opciones del menú de terminales
   const [terminalMenuItems, setTerminalMenuItems] = useState([]);
+  const dispatchAnythingLLMTab = useCallback(() => {
+    const tabId = `anythingllm-${Date.now()}`;
+    const newTab = {
+      key: tabId,
+      label: 'AnythingLLM',
+      type: 'anything-llm',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-anythingllm-tab', {
+      detail: { tab: newTab }
+    }));
+  }, []);
   
   // Contador para IDs de terminales locales - iniciar desde 1000 para evitar colisiones con Home
   const localTerminalCounterRef = useRef(1000);
@@ -264,6 +277,14 @@ const MainContentArea = ({
           }));
         }
       });
+      // AnythingLLM
+      menuItems.push({
+        label: 'AnythingLLM',
+        icon: 'pi pi-box',
+        command: () => {
+          dispatchAnythingLLMTab();
+        }
+      });
       
       setTerminalMenuItems(menuItems);
     } else {
@@ -299,10 +320,17 @@ const MainContentArea = ({
           }));
         }
       });
+      linuxMenuItems.push({
+        label: 'AnythingLLM',
+        icon: 'pi pi-box',
+        command: () => {
+          dispatchAnythingLLMTab();
+        }
+      });
       
       setTerminalMenuItems(linuxMenuItems);
     }
-  }, [wslDistributions]);
+  }, [wslDistributions, dispatchAnythingLLMTab]);
   
   // Detectar distribuciones WSL disponibles al montar el componente
   useEffect(() => {

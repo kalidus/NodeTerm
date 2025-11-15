@@ -14,6 +14,7 @@ import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
 import AIChatTab from './AIChatTab';
+import AnythingLLMTab from './AnythingLLMTab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
@@ -1125,6 +1126,10 @@ const TabContentRenderer = React.memo(({
   // Pestaña de Chat de IA
   if (tab.type === 'ai-chat') {
     return <AIChatTab />;
+  }
+
+  if (tab.type === 'anything-llm') {
+    return <AnythingLLMTab />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error

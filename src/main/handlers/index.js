@@ -8,6 +8,7 @@
 const { registerAppHandlers } = require('./app-handlers');
 const { registerSystemHandlers } = require('./system-handlers');
 const { registerGuacamoleHandlers } = require('./guacamole-handlers');
+const { registerAnythingLLMHandlers } = require('./anythingllm-handlers');
 const registerSSHHandlers = require('./ssh-handlers');
 
 /**
@@ -38,6 +39,7 @@ function registerAllHandlers(dependencies) {
   
   // Registrar handlers de Guacamole
   registerGuacamoleHandlers(dependencies);
+  registerAnythingLLMHandlers(dependencies);
   
   // Registrar handlers SSH
   registerSSHHandlers(dependencies);
@@ -50,5 +52,6 @@ module.exports = {
   registerAppHandlers,
   registerSystemHandlers,
   registerGuacamoleHandlers,
+  registerAnythingLLMHandlers,
   registerSSHHandlers
 };

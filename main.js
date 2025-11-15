@@ -57,6 +57,7 @@ const SftpClient = require('ssh2-sftp-client');
 const si = require('systeminformation');
 const { fork } = require('child_process');
 const GuacdService = require('./src/services/GuacdService');
+const AnythingLLMService = require('./src/services/AnythingLLMService');
 const GuacamoleLite = require('guacamole-lite');
 const { getUpdateService } = require('./src/main/services/UpdateService');
 const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
@@ -64,6 +65,7 @@ const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/ha
 // Importar y crear instancia de SessionRecorder para grabaciones
 const SessionRecorder = require('./src/services/SessionRecorder');
 const sessionRecorder = new SessionRecorder();
+const anythingLLMService = new AnythingLLMService();
 
 let mainWindow;
 let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
@@ -339,6 +341,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webviewTag: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -483,6 +486,7 @@ function createWindow() {
       guacamoleServerReadyAt,
       sendToRenderer,
       guacdInactivityTimeoutMs,
+      anythingLLMService,
       packageJson,
       sshConnections,
       cleanupOrphanedConnections,
