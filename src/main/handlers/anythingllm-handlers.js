@@ -44,6 +44,123 @@ function registerAnythingLLMHandlers({ anythingLLMService }) {
       url: anythingLLMService.getBaseUrl()
     };
   });
+
+  ipcMain.handle('anythingllm:get-data-dir', () => {
+    try {
+      return {
+        success: true,
+        dataDir: anythingLLMService.getDataDir()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo obtener el directorio de datos'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:read-json-file', async (_, filename) => {
+    try {
+      const data = await anythingLLMService.readJsonFile(filename);
+      return {
+        success: true,
+        data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo leer el archivo'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:write-json-file', async (_, filename, data) => {
+    try {
+      await anythingLLMService.writeJsonFile(filename, data);
+      return {
+        success: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo escribir el archivo'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:read-mcp-config', async () => {
+    try {
+      const config = await anythingLLMService.readMCPConfig();
+      return {
+        success: true,
+        config
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo leer la configuración MCP'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:write-mcp-config', async (_, config) => {
+    try {
+      await anythingLLMService.writeMCPConfig(config);
+      return {
+        success: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo escribir la configuración MCP'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:add-mcp-server', async (_, serverName, serverConfig) => {
+    try {
+      const config = await anythingLLMService.addMCPServer(serverName, serverConfig);
+      return {
+        success: true,
+        config
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo añadir el servidor MCP'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:remove-mcp-server', async (_, serverName) => {
+    try {
+      const config = await anythingLLMService.removeMCPServer(serverName);
+      return {
+        success: true,
+        config
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo eliminar el servidor MCP'
+      };
+    }
+  });
+
+  ipcMain.handle('anythingllm:list-data-files', async () => {
+    try {
+      const files = await anythingLLMService.listDataFiles();
+      return {
+        success: true,
+        files
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'No se pudo listar los archivos'
+      };
+    }
+  });
 }
 
 module.exports = {

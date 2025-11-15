@@ -55,3 +55,35 @@ docker stop nodeterm-anythingllm && docker rm nodeterm-anythingllm
 
 > **Nota:** No es necesario iniciar AnythingLLM fuera de NodeTerm; el servicio se encargará de crearlo, actualizarlo y reiniciarlo cuando sea necesario.
 
+## 🔧 Gestión de Configuración MCP
+
+NodeTerm proporciona métodos para gestionar la configuración de servidores MCP (Model Context Protocol) de AnythingLLM directamente desde JavaScript.
+
+### Métodos Disponibles
+
+- `getDataDir()` - Obtiene la ruta del directorio de datos
+- `readMCPConfig()` - Lee la configuración MCP actual
+- `writeMCPConfig(config)` - Escribe la configuración MCP completa
+- `addMCPServer(name, config)` - Añade un servidor MCP
+- `removeMCPServer(name)` - Elimina un servidor MCP
+- `readJsonFile(filename)` - Lee cualquier archivo JSON del directorio de datos
+- `writeJsonFile(filename, data)` - Escribe cualquier archivo JSON
+- `listDataFiles()` - Lista todos los archivos en el directorio de datos
+
+### Ejemplo Rápido
+
+```javascript
+// Añadir un servidor MCP
+const response = await window.electron.anythingLLM.addMCPServer("mi-servidor", {
+  command: "node",
+  args: ["/ruta/al/servidor.js"],
+  env: { API_KEY: "valor" }
+});
+
+// Leer configuración actual
+const config = await window.electron.anythingLLM.readMCPConfig();
+console.log(config);
+```
+
+📚 **Documentación completa:** Ver [ANYTHINGLLM_MCP_CONFIGURATION.md](./ANYTHINGLLM_MCP_CONFIGURATION.md) para más detalles y ejemplos.
+
