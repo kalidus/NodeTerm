@@ -310,6 +310,167 @@ class AnythingLLMService {
       lastError: this.status.lastError || (this.lastError && this.lastError.message) || null
     };
   }
+
+  /**
+   * Obtiene la ruta del directorio de datos de AnythingLLM
+   */
+  getDataDir() {
+    return this.dataDir;
+  }
+
+  /**
+   * Lee un archivo JSON del directorio de datos de AnythingLLM
+   * @param {string} filename - Nombre del archivo (ej: 'mcp.json', 'config.json')
+   * @returns {Promise<object>} Contenido del archivo JSON parseado
+   */
+  async readJsonFile(filename) {
+    const filePath = path.join(this.dataDir, filename);
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      return JSON.parse(content);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        // Archivo no existe, retornar objeto vacío
+        return {};
+      }
+      throw new Error(`Error leyendo ${filename}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Escribe un archivo JSON en el directorio de datos de AnythingLLM
+   * @param {string} filename - Nombre del archivo (ej: 'mcp.json', 'config.json')
+   * @param {object} data - Datos a escribir (se serializarán como JSON)
+   * @returns {Promise<void>}
+   */
+  async writeJsonFile(filename, data) {
+    const filePath = path.join(this.dataDir, filename);
+    try {
+      // Asegurar que el directorio existe
+      await fs.promises.mkdir(this.dataDir, { recursive: true });
+      // Escribir con formato bonito (2 espacios de indentación)
+      await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+      throw new Error(`Error escribiendo ${filename}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Lee la configuración de MCP de AnythingLLM
+   * AnythingLLM almacena la configuración MCP en diferentes ubicaciones posibles:
+   * - mcp.json (formato estándar)
+   * - .mcp.json (archivo oculto)
+   * - config/mcp.json (en subdirectorio)
+   * @returns {Promise<object>} Configuración de MCP
+   */
+  async readMCPConfig() {
+    const possiblePaths = [
+      'mcp.json',
+      '.mcp.json',
+      'config/mcp.json',
+      'mcp-servers.json'
+    ];
+
+    for (const filename of possiblePaths) {
+      try {
+        const config = await this.readJsonFile(filename);
+        if (config && Object.keys(config).length > 0) {
+          return config;
+        }
+      } catch (error) {
+        // Continuar con el siguiente archivo
+        continue;
+      }
+    }
+
+    // Si no existe ningún archivo, retornar estructura por defecto
+    return {
+      mcpServers: {}
+    };
+  }
+
+  /**
+   * Escribe la configuración de MCP de AnythingLLM
+   * @param {object} config - Configuración de MCP a escribir
+   * @returns {Promise<void>}
+   */
+  async writeMCPConfig(config) {
+    // Intentar escribir en mcp.json primero (formato estándar)
+    try {
+      await this.writeJsonFile('mcp.json', config);
+      return;
+    } catch (error) {
+      // Si falla, intentar en config/mcp.json
+      try {
+        const configDir = path.join(this.dataDir, 'config');
+        await fs.promises.mkdir(configDir, { recursive: true });
+        await fs.promises.writeFile(
+          path.join(configDir, 'mcp.json'),
+          JSON.stringify(config, null, 2),
+          'utf8'
+        );
+        return;
+      } catch (error2) {
+        throw new Error(`No se pudo escribir la configuración MCP: ${error2.message}`);
+      }
+    }
+  }
+
+  /**
+   * Añade un servidor MCP a la configuración
+   * @param {string} serverName - Nombre del servidor MCP
+   * @param {object} serverConfig - Configuración del servidor (command, args, env, etc.)
+   * @returns {Promise<object>} Configuración actualizada
+   */
+  async addMCPServer(serverName, serverConfig) {
+    const config = await this.readMCPConfig();
+    
+    // Asegurar que existe la estructura mcpServers
+    if (!config.mcpServers) {
+      config.mcpServers = {};
+    }
+
+    // Añadir o actualizar el servidor
+    config.mcpServers[serverName] = {
+      ...serverConfig,
+      // Asegurar campos mínimos
+      command: serverConfig.command || '',
+      args: serverConfig.args || [],
+      env: serverConfig.env || {}
+    };
+
+    await this.writeMCPConfig(config);
+    return config;
+  }
+
+  /**
+   * Elimina un servidor MCP de la configuración
+   * @param {string} serverName - Nombre del servidor MCP a eliminar
+   * @returns {Promise<object>} Configuración actualizada
+   */
+  async removeMCPServer(serverName) {
+    const config = await this.readMCPConfig();
+    
+    if (config.mcpServers && config.mcpServers[serverName]) {
+      delete config.mcpServers[serverName];
+      await this.writeMCPConfig(config);
+    }
+
+    return config;
+  }
+
+  /**
+   * Lista todos los archivos en el directorio de datos
+   * @returns {Promise<string[]>} Lista de nombres de archivos
+   */
+  async listDataFiles() {
+    try {
+      const files = await fs.promises.readdir(this.dataDir);
+      return files;
+    } catch (error) {
+      throw new Error(`Error listando archivos: ${error.message}`);
+    }
+  }
 }
 
 module.exports = AnythingLLMService;

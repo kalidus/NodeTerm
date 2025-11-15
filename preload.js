@@ -165,7 +165,15 @@ contextBridge.exposeInMainWorld('electron', {
     start: () => ipcRenderer.invoke('anythingllm:start'),
     getStatus: () => ipcRenderer.invoke('anythingllm:get-status'),
     stop: () => ipcRenderer.invoke('anythingllm:stop'),
-    getUrl: () => ipcRenderer.invoke('anythingllm:get-url')
+    getUrl: () => ipcRenderer.invoke('anythingllm:get-url'),
+    getDataDir: () => ipcRenderer.invoke('anythingllm:get-data-dir'),
+    readJsonFile: (filename) => ipcRenderer.invoke('anythingllm:read-json-file', filename),
+    writeJsonFile: (filename, data) => ipcRenderer.invoke('anythingllm:write-json-file', filename, data),
+    readMCPConfig: () => ipcRenderer.invoke('anythingllm:read-mcp-config'),
+    writeMCPConfig: (config) => ipcRenderer.invoke('anythingllm:write-mcp-config', config),
+    addMCPServer: (serverName, serverConfig) => ipcRenderer.invoke('anythingllm:add-mcp-server', serverName, serverConfig),
+    removeMCPServer: (serverName) => ipcRenderer.invoke('anythingllm:remove-mcp-server', serverName),
+    listDataFiles: () => ipcRenderer.invoke('anythingllm:list-data-files')
   },
   import: {
     getFileInfo: (path) => ipcRenderer.invoke('import:get-file-info', path),

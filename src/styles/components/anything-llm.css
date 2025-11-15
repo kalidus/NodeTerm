@@ -12,32 +12,41 @@
 
 .anythingllm-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px;
   background: var(--ui-toolbar-bg, rgba(255, 255, 255, 0.05));
-  border-bottom: 1px solid var(--ui-content-border, rgba(255, 255, 255, 0.1));
-  padding: 12px 16px;
+  border-top: 1px solid var(--ui-content-border, rgba(255, 255, 255, 0.1));
+  border-bottom: none;
+  padding: 2px 8px;
   flex-shrink: 0;
   border-radius: 0;
+  height: 24px;
+  overflow: hidden;
+  order: 999;
 }
 
 .anythingllm-status-pill {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 200px;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 
 .anythingllm-status-pill .state {
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 1px 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .anythingllm-status-pill .state.ready {
@@ -52,27 +61,50 @@
   background: rgba(255, 202, 40, 0.12);
 }
 
-.anythingllm-status-pill .status-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--ui-dialog-text, #f3f3f3);
-}
-
-.anythingllm-status-pill .status-copy strong {
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-.anythingllm-status-pill .status-copy span {
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
 .anythingllm-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.anythingllm-action-btn {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  border-radius: 3px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  transition: all 0.2s ease !important;
+}
+
+.anythingllm-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 1) !important;
+  transform: translateY(-1px);
+}
+
+.anythingllm-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.anythingllm-action-btn:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.anythingllm-action-btn .p-button-icon {
+  margin: 0 !important;
+  font-size: 10px !important;
 }
 
 .anythingllm-status-card,
