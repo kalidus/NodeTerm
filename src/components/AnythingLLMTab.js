@@ -44,6 +44,7 @@ const AnythingLLMTab = () => {
   const [pathInput, setPathInput] = useState('');
   const [envInput, setEnvInput] = useState('');
   const [envLabel, setEnvLabel] = useState('');
+  const [dataDir, setDataDir] = useState(null);
   const toast = useRef(null);
 
   // Lista de servidores MCP populares
@@ -238,6 +239,12 @@ const AnythingLLMTab = () => {
     setActiveTab(0);
     
     try {
+      // Obtener directorio de datos
+      const dirResponse = await window.electron.anythingLLM.getDataDir();
+      if (dirResponse.success) {
+        setDataDir(dirResponse.dataDir);
+      }
+
       const response = await window.electron.anythingLLM.readMCPConfig();
       if (response.success) {
         setMcpConfig(JSON.stringify(response.config, null, 2));
@@ -287,6 +294,15 @@ const AnythingLLMTab = () => {
     setMcpConfigError(null);
 
     try {
+      // Obtener directorio de datos si no está disponible
+      let currentDataDir = dataDir;
+      if (!currentDataDir) {
+        const dirResponse = await window.electron.anythingLLM.getDataDir();
+        if (dirResponse.success) {
+          currentDataDir = dirResponse.dataDir;
+        }
+      }
+
       const response = await window.electron.anythingLLM.readMCPConfig();
       if (!response.success) {
         throw new Error(response.error || 'No se pudo leer la configuración');
@@ -305,7 +321,66 @@ const AnythingLLMTab = () => {
 
       // Añadir ruta si es necesaria
       if (server.requiresPath && customPath) {
-        serverConfig.args.push(customPath);
+        let containerPath = null;
+        
+        // Verificar si la ruta ya está mapeada como volumen
+        const containerPathResponse = await window.electron.anythingLLM.getContainerPath(customPath);
+        if (containerPathResponse.success && containerPathResponse.containerPath) {
+          containerPath = containerPathResponse.containerPath;
+        } else {
+          // Si no está mapeada y es una ruta externa, mapearla como volumen (como Guacamole)
+          if (currentDataDir && !customPath.toLowerCase().startsWith(currentDataDir.toLowerCase())) {
+            // Es una ruta externa, necesitamos mapearla como volumen
+            // Extraer nombre de la carpeta (equivalente a path.basename)
+            const pathParts = customPath.replace(/\\/g, '/').split('/').filter(p => p);
+            const folderName = pathParts[pathParts.length - 1] || 'host';
+            const volumeName = folderName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const volumeContainerPath = `/mnt/host/${volumeName}`;
+            
+            // Añadir mapeo de volumen
+            const volumeResponse = await window.electron.anythingLLM.addVolumeMapping(customPath, volumeContainerPath);
+            if (volumeResponse.success) {
+              containerPath = volumeContainerPath;
+              
+              // El contenedor necesita reiniciarse para aplicar el nuevo volumen
+              toast.current?.show({
+                severity: 'info',
+                summary: 'Volumen añadido',
+                detail: 'Se ha añadido un nuevo volumen. El contenedor se reiniciará automáticamente.',
+                life: 5000
+              });
+              
+              // Reiniciar contenedor para aplicar el nuevo volumen
+              const restartResponse = await window.electron.anythingLLM.restartContainer();
+              if (!restartResponse.success) {
+                console.warn('[AnythingLLM] No se pudo reiniciar el contenedor automáticamente:', restartResponse.error);
+                toast.current?.show({
+                  severity: 'warn',
+                  summary: 'Reinicio necesario',
+                  detail: 'Reinicia AnythingLLM manualmente para aplicar el nuevo volumen.',
+                  life: 7000
+                });
+              }
+            } else {
+              throw new Error(volumeResponse.error || 'No se pudo mapear el volumen');
+            }
+          } else if (currentDataDir) {
+            // Ruta dentro del directorio de datos
+            const normalizedPath = customPath.replace(/\\/g, '/');
+            const normalizedDataDir = currentDataDir.replace(/\\/g, '/');
+            
+            if (normalizedPath.toLowerCase().startsWith(normalizedDataDir.toLowerCase())) {
+              const relativePath = normalizedPath.substring(normalizedDataDir.length).replace(/^\/+/, '');
+              containerPath = `/app/server/storage/${relativePath}`;
+            }
+          }
+        }
+        
+        if (!containerPath) {
+          throw new Error('No se pudo determinar la ruta del contenedor para la ruta especificada');
+        }
+        
+        serverConfig.args.push(containerPath);
       }
 
       // Añadir variables de entorno si son necesarias
@@ -324,8 +399,8 @@ const AnythingLLMTab = () => {
         toast.current?.show({
           severity: 'success',
           summary: 'Servidor añadido',
-          detail: `${server.name} se ha añadido correctamente. Reinicia AnythingLLM para aplicar los cambios.`,
-          life: 5000
+          detail: `${server.name} se ha añadido correctamente. Ve a "Agent Skills" → "MCP Servers" y haz clic en "Refresh" para ver los cambios.`,
+          life: 7000
         });
         
         // Actualizar estado
@@ -348,7 +423,7 @@ const AnythingLLMTab = () => {
     } finally {
       setLoadingMCP(false);
     }
-  }, []);
+  }, [dataDir]);
 
   const handleConfirmPath = useCallback(() => {
     if (!pathInput.trim()) {
@@ -434,8 +509,8 @@ const AnythingLLMTab = () => {
         toast.current?.show({
           severity: 'success',
           summary: 'Servidor añadido',
-          detail: `${customServerForm.name} se ha añadido correctamente.`,
-          life: 5000
+          detail: `${customServerForm.name} se ha añadido correctamente. Ve a "Agent Skills" → "MCP Servers" y haz clic en "Refresh" para ver los cambios.`,
+          life: 7000
         });
         
         setMcpConfig(JSON.stringify(config, null, 2));
@@ -474,8 +549,8 @@ const AnythingLLMTab = () => {
         toast.current?.show({
           severity: 'success',
           summary: 'Configuración guardada',
-          detail: 'La configuración MCP se ha guardado correctamente. Reinicia AnythingLLM para aplicar los cambios.',
-          life: 5000
+          detail: 'La configuración MCP se ha guardado correctamente. Ve a "Agent Skills" → "MCP Servers" y haz clic en "Refresh" para ver los cambios.',
+          life: 7000
         });
         setShowMCPDialog(false);
       } else {
@@ -763,6 +838,56 @@ const AnythingLLMTab = () => {
               </div>
             </TabPanel>
 
+            {/* Pestaña: Diagnóstico */}
+            <TabPanel header="🔍 Diagnóstico">
+              <div style={{ padding: '1rem', height: '100%', overflow: 'auto' }}>
+                <Button
+                  label="Ejecutar Diagnóstico"
+                  icon="pi pi-search"
+                  onClick={async () => {
+                    setLoadingMCP(true);
+                    try {
+                      const response = await window.electron.anythingLLM.diagnoseMCPConfig();
+                      if (response.success) {
+                        const diag = response.diagnostics;
+                        const info = `
+📁 Directorio de datos: ${diag.dataDir}
+📂 Directorio plugins existe: ${diag.pluginsDirExists ? '✅ Sí' : '❌ No'}
+📄 Archivo MCP principal existe: ${diag.mcpConfigExists ? '✅ Sí' : '❌ No'}
+📄 Ruta del archivo principal: ${diag.mcpConfigPath || 'N/A'}
+🐳 Contenedor corriendo: ${diag.containerRunning ? '✅ Sí' : '❌ No'}
+
+📋 Archivos en directorio de datos:
+${diag.files?.map(f => `  - ${f}`).join('\n') || 'Ninguno'}
+
+${diag.mcpConfigContent ? `📝 Contenido de anythingllm_mcp_servers.json:\n${JSON.stringify(diag.mcpConfigContent, null, 2)}` : '❌ Archivo vacío o no existe'}
+
+${diag.mcpJsonContent ? `📝 Contenido de mcp.json (raíz):\n${JSON.stringify(diag.mcpJsonContent, null, 2)}` : '❌ mcp.json no existe o está vacío'}
+
+${diag.alternativeFiles?.length > 0 ? `📄 Archivos alternativos encontrados:\n${diag.alternativeFiles.map(f => `  - ${f.path}\n    Contenido: ${JSON.stringify(f.content, null, 2)}`).join('\n\n')}` : ''}
+                        `.trim();
+                        
+                        alert(info);
+                        console.log('Diagnóstico MCP:', diag);
+                      } else {
+                        alert('Error: ' + (response.error || 'No se pudo ejecutar el diagnóstico'));
+                      }
+                    } catch (error) {
+                      alert('Error: ' + error.message);
+                    } finally {
+                      setLoadingMCP(false);
+                    }
+                  }}
+                  disabled={loadingMCP}
+                  style={{ marginBottom: '1rem' }}
+                />
+                <p style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+                  Haz clic en el botón para ver información detallada sobre la configuración MCP,
+                  incluyendo la ubicación de los archivos y su contenido.
+                </p>
+              </div>
+            </TabPanel>
+
             {/* Pestaña: Editor Avanzado */}
             <TabPanel header="⚙️ Editor Avanzado">
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem', padding: '1rem', overflow: 'hidden' }}>
@@ -839,7 +964,7 @@ const AnythingLLMTab = () => {
                     />
                   </div>
                   <p style={{ marginTop: '0.5rem', marginBottom: 0, fontSize: '0.85rem' }}>
-                    <strong>Nota:</strong> Después de guardar, reinicia AnythingLLM (botón de recargar arriba) para que los cambios surtan efecto.
+                    <strong>Nota:</strong> Después de guardar, ve a la interfaz de AnythingLLM → "Agent Skills" → "MCP Servers" y haz clic en el botón <strong>"Refresh"</strong> para que los cambios surtan efecto.
                   </p>
                 </div>
               </div>
@@ -852,7 +977,7 @@ const AnythingLLMTab = () => {
       <Dialog
         header="📁 Configurar Ruta"
         visible={showPathDialog}
-        style={{ width: '500px' }}
+        style={{ width: '600px' }}
         modal
         onHide={() => {
           setShowPathDialog(false);
@@ -897,6 +1022,51 @@ const AnythingLLMTab = () => {
             }}
             autoFocus
           />
+          
+          {dataDir && (
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '0.75rem', 
+              backgroundColor: 'var(--surface-ground)', 
+              borderRadius: '4px',
+              fontSize: '0.85rem'
+            }}>
+              <strong>💡 Recomendación:</strong>
+              <p style={{ margin: '0.5rem 0', opacity: 0.9 }}>
+                Para mejor compatibilidad con Docker, usa una carpeta dentro del directorio de datos de AnythingLLM:
+              </p>
+              <code style={{ 
+                display: 'block', 
+                padding: '0.5rem', 
+                backgroundColor: 'var(--surface-card)', 
+                borderRadius: '3px',
+                marginTop: '0.5rem',
+                wordBreak: 'break-all'
+              }}>
+                {dataDir}\\documents
+              </code>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', opacity: 0.8 }}>
+                Esta carpeta ya está montada en el contenedor como <code>/app/server/storage/documents</code>
+              </p>
+            </div>
+          )}
+
+          {pendingServer?.requiresPath && (
+            <div style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.8 }}>
+              <strong>✨ Mapeo automático de volúmenes (como Guacamole):</strong>
+              <p style={{ margin: '0.25rem 0' }}>
+                Si usas una ruta externa (ej: <code>C:\Users\kalid\Documents</code>), 
+                el sistema <strong>mapeará automáticamente</strong> esa carpeta como volumen en el contenedor Docker.
+              </p>
+              <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', opacity: 0.9 }}>
+                ✅ La carpeta se montará como <code>/mnt/host/documents</code> dentro del contenedor
+              </p>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', opacity: 0.7 }}>
+                ⚠️ El contenedor se reiniciará automáticamente para aplicar el nuevo volumen.
+              </p>
+            </div>
+          )}
+          
           {pendingServer?.requiresEnv && (
             <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
               Después de la ruta, se te pedirá la API key o token necesario.
