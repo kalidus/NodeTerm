@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import AIChatPanel from './AIChatPanel';
 import ConversationHistory from './ConversationHistory';
 import TabbedTerminal from './TabbedTerminal';
@@ -43,6 +43,140 @@ const AIChatTab = ({
     }
   }, [showLocalTerminal]);
 
+  const tabbedTerminalRef = useRef(null);
+  const pendingCommandRef = useRef(null);
+  
+  // 🖥️ Función para ejecutar comando en terminal (definida primero)
+  const executeCommandInTerminal = useCallback((commandData) => {
+    const { command, workingDir, hostId, toolType } = commandData;
+    
+    console.log('🖥️ executeCommandInTerminal called:', {
+      command,
+      workingDir,
+      hostId,
+      toolType,
+      hasRef: !!tabbedTerminalRef.current
+    });
+    
+    if (!tabbedTerminalRef.current) {
+      console.error('❌ TabbedTerminal ref no está disponible, reintentando...');
+      // Reintentar hasta 3 veces con delays incrementales
+      const retryCount = commandData._retryCount || 0;
+      if (retryCount < 3) {
+        const delay = 500 * (retryCount + 1); // 500ms, 1000ms, 1500ms
+        console.log(`⏳ Reintento ${retryCount + 1}/3 en ${delay}ms`);
+        setTimeout(() => {
+          executeCommandInTerminal({ ...commandData, _retryCount: retryCount + 1 });
+        }, delay);
+      } else {
+        console.error('❌ TabbedTerminal no disponible después de 3 reintentos');
+      }
+      return;
+    }
+    
+    // 🔍 Detectar tipo de comando y determinar el terminal apropiado
+    const isUnixCommand = /^(ls|cd|pwd|cat|grep|find|echo|mkdir|rm|cp|mv|touch|vi|vim|nano|ssh|scp|rsync|tar|gzip|gunzip|bzip2|zip|unzip|wget|curl|ps|top|htop|kill|killall|chmod|chown|chgrp|free|df|du|uptime|whoami|uname|which|whereis|man|info|awk|sed|head|tail|less|more|wc|sort|uniq|cut|paste|tee|xargs|basename|dirname|realpath|readlink|ln|file|stat|diff|patch|git|svn|make|gcc|g\+\+|python|python3|perl|ruby|node|npm|yarn|pip|apt|yum|dnf|zypper|pacman|systemctl|service|journalctl|dmesg|lsof|netstat|ss|ip|ifconfig|ping|traceroute|nslookup|dig|host|route|iptables|firewall-cmd|useradd|userdel|usermod|groupadd|groupdel|passwd|su|sudo|crontab|at|batch|watch|tmux|screen|env|export|alias|unalias|history|jobs|fg|bg|nohup|time|strace|ldd|nm|objdump|readelf|hexdump|od|strings|xxd|md5sum|sha1sum|sha256sum|sha512sum|base64|tr|iconv|dos2unix|unix2dos)(\s|$)/.test(command);
+    
+    console.log('🔍 Detección de comando:', { command, isUnixCommand });
+    
+    // Obtener el tipo de terminal activo actual
+    const activeTabType = tabbedTerminalRef.current.getSelectedTerminalType?.();
+    console.log('🎯 Terminal actualmente activo:', activeTabType);
+    
+    // Determinar el tipo de terminal a usar
+    let targetTerminalType = activeTabType || 'powershell';
+    
+    // Si es un comando Unix y el terminal activo es PowerShell, cambiar a Cygwin
+    if (isUnixCommand && targetTerminalType === 'powershell') {
+      targetTerminalType = 'cygwin';
+      console.log('🔄 Comando Unix detectado, cambiando de PowerShell a Cygwin');
+    }
+    
+    // Construir el comando completo
+    let fullCommand = '';
+    
+    if (toolType === 'execute_ssh' && hostId) {
+      // Para SSH, usar el comando ssh directamente (terminal local puede hacer ssh)
+      fullCommand = command;
+    } else {
+      // Para comandos locales
+      // 🔧 Convertir rutas de Windows a Cygwin/WSL si es necesario
+      let effectiveWorkingDir = workingDir;
+      
+      if (workingDir && workingDir.includes(':') && (targetTerminalType === 'cygwin' || targetTerminalType === 'wsl' || targetTerminalType === 'ubuntu')) {
+        // Es una ruta de Windows (C:\...) y vamos a usar un terminal Unix
+        // Convertir a formato Cygwin/WSL: C:\path -> /cygdrive/c/path (Cygwin) o /mnt/c/path (WSL)
+        const drive = workingDir.charAt(0).toLowerCase();
+        const pathWithoutDrive = workingDir.substring(2).replace(/\\/g, '/');
+        
+        if (targetTerminalType === 'cygwin') {
+          effectiveWorkingDir = `/cygdrive/${drive}${pathWithoutDrive}`;
+        } else {
+          effectiveWorkingDir = `/mnt/${drive}${pathWithoutDrive}`;
+        }
+        
+        console.log('🔄 Ruta convertida:', { 
+          original: workingDir, 
+          converted: effectiveWorkingDir,
+          terminalType: targetTerminalType 
+        });
+      }
+      
+      if (effectiveWorkingDir) {
+        fullCommand = `cd "${effectiveWorkingDir}" && ${command}`;
+      } else {
+        fullCommand = command;
+      }
+    }
+    
+    console.log('🎯 Creando/cambiando a terminal:', { 
+      targetTerminalType, 
+      command: fullCommand 
+    });
+    
+    // Crear o cambiar a la pestaña correcta y ejecutar el comando
+    if (tabbedTerminalRef.current.createAndSwitchToTerminal) {
+      tabbedTerminalRef.current.createAndSwitchToTerminal(targetTerminalType, fullCommand);
+      console.log('✅ Terminal creado/activado y comando enviado');
+    } else {
+      console.error('❌ createAndSwitchToTerminal no está disponible');
+    }
+  }, []); // Sin dependencias para evitar recreaciones
+  
+  // 🎯 Callback reusable para ejecutar comandos en terminal
+  const handleExecuteCommandInTerminal = useCallback((commandData) => {
+    console.log('🎯 [CALLBACK] AIChatTab.handleExecuteCommandInTerminal llamado:', {
+      commandData,
+      hasTerminalRef: !!tabbedTerminalRef.current,
+      showLocalTerminal,
+      terminalState,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Guardar comando pendiente
+    pendingCommandRef.current = commandData;
+    console.log('💾 Comando guardado en pendingCommandRef:', commandData);
+    
+    // Abrir terminal si está cerrada
+    setShowLocalTerminal(prev => {
+      console.log('🖥️ [CALLBACK] setShowLocalTerminal: prev =', prev, '-> nuevo estado: true');
+      if (!prev) {
+        // Se va a abrir, el comando se ejecutará en el useEffect
+        console.log('✅ Terminal cerrada, se abrirá y ejecutará en useEffect');
+        return true;
+      } else {
+        // Ya está abierta, ejecutar comando directamente
+        console.log('✅ Terminal ya abierta, ejecutando comando directamente en 200ms');
+        setTimeout(() => {
+          console.log('⏰ Timeout ejecutado, llamando executeCommandInTerminal');
+          executeCommandInTerminal(commandData);
+        }, 200);
+        return true;
+      }
+    });
+    console.log('✅ [CALLBACK] handleExecuteCommandInTerminal completado');
+  }, [showLocalTerminal, terminalState, executeCommandInTerminal]);
+
   useEffect(() => {
     const handleToggleLocalTerminal = (event) => {
       const targetTabKey = event?.detail?.tabKey;
@@ -51,11 +185,54 @@ const AIChatTab = ({
       setShowLocalTerminal(prev => !prev);
     };
 
+    // 🖥️ NUEVO: Manejar comando a ejecutar en terminal (fallback si no hay callback)
+    const handleExecuteCommandFromWindowEvent = (event) => {
+      const { command, workingDir, hostId, toolType } = event.detail || {};
+      console.log('🖥️ AIChatTab recibió evento window (fallback):', { 
+        hasDetail: !!event.detail,
+        command, 
+        workingDir, 
+        hostId, 
+        toolType,
+        isActiveTab,
+        tabKey: tab?.key
+      });
+      
+      if (!command) {
+        console.error('❌ Comando vacío recibido');
+        return;
+      }
+      
+      // Usar el callback principal
+      handleExecuteCommandInTerminal({ command, workingDir, hostId, toolType });
+    };
+
     window.addEventListener('ai-chat-toggle-local-terminal', handleToggleLocalTerminal);
+    window.addEventListener('ai-chat-execute-command-in-terminal', handleExecuteCommandFromWindowEvent);
+    
+    console.log('🖥️ AIChatTab listeners registrados:', { tabKey: tab?.key, isActiveTab });
+    
     return () => {
       window.removeEventListener('ai-chat-toggle-local-terminal', handleToggleLocalTerminal);
+      window.removeEventListener('ai-chat-execute-command-in-terminal', handleExecuteCommandFromWindowEvent);
+      console.log('🖥️ AIChatTab listeners removidos:', { tabKey: tab?.key });
     };
-  }, [tab?.key, isActiveTab]);
+  }, [tab?.key, isActiveTab, handleExecuteCommandInTerminal]); // 🔧 Agregado handleExecuteCommandInTerminal
+  
+  // 🖥️ Ejecutar comando pendiente cuando la terminal se abre
+  useEffect(() => {
+    if (showLocalTerminal && pendingCommandRef.current) {
+      const commandData = pendingCommandRef.current;
+      pendingCommandRef.current = null;
+      
+      console.log('🖥️ Terminal abierta, ejecutando comando pendiente:', commandData);
+      
+      // Esperar a que TabbedTerminal esté montado y listo
+      setTimeout(() => {
+        executeCommandInTerminal(commandData);
+      }, 1000); // Aumentado a 1000ms para dar más tiempo
+    }
+  }, [showLocalTerminal, executeCommandInTerminal]);
 
   // Obtener el tema actual
   const currentTheme = useMemo(() => {
@@ -215,6 +392,7 @@ const AIChatTab = ({
           <AIChatPanel 
             showHistory={showHistory}
             onToggleHistory={() => setShowHistory(!showHistory)}
+            onExecuteCommandInTerminal={handleExecuteCommandInTerminal}
           />
         </div>
       </div>
@@ -255,6 +433,7 @@ const AIChatTab = ({
           overflow: 'hidden'
         }}>
           <TabbedTerminal
+            ref={tabbedTerminalRef}
             onMinimize={handleTerminalMinimize}
             onMaximize={handleTerminalMaximize}
             terminalState={terminalState}
@@ -334,6 +513,7 @@ const AIChatTab = ({
           <AIChatPanel 
             showHistory={showHistory}
             onToggleHistory={() => setShowHistory(!showHistory)}
+            onExecuteCommandInTerminal={handleExecuteCommandInTerminal}
           />
         </div>
       </div>
@@ -376,6 +556,7 @@ const AIChatTab = ({
         overflow: 'hidden'
       }}>
         <TabbedTerminal
+          ref={tabbedTerminalRef}
           onMinimize={handleTerminalMinimize}
           onMaximize={handleTerminalMaximize}
           terminalState={terminalState}

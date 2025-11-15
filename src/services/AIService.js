@@ -2475,11 +2475,13 @@ class AIService {
       out += `Buscar SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"AC68U"}}\n`;
       out += `Listar todos SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{}}\n`;
       out += '⚠️ IMPORTANTE: El nombre correcto es "search_nodeterm" (NO "search_noderm", NO "search_nodeterms").\n';
+      out += '🚫 CRÍTICO: search_nodeterm SOLO debe usarse cuando el usuario EXPLÍCITAMENTE pide buscar, listar o conectar a una conexión SSH. NO lo uses proactivamente ni para sugerencias.\n';
     }
     
     out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
     out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n';
-    out += '⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n\n';
+    out += '⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n';
+    out += '🚫 NO USES HERRAMIENTAS PROACTIVAMENTE: Solo ejecuta herramientas cuando el usuario lo pida explícitamente.\n\n';
 
     return out;
   }

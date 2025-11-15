@@ -20,6 +20,10 @@ class ConversationService {
 
     // Anti-rebote para creación de conversaciones
     this._lastCreationTimestamp = 0;
+    
+    // 🔧 FIX: NO restaurar conversación anterior al iniciar
+    // Cada sesión debe empezar limpia para evitar mezclar conversaciones
+    this.currentConversationId = null;
   }
 
   /**
