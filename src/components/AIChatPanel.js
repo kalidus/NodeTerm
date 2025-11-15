@@ -26,7 +26,7 @@ import 'highlight.js/styles/github-dark.css';
 // Importar estilos del AI chat
 import '../styles/components/ai-chat.css';
 
-const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
+const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTerminal }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1424,6 +1424,58 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             timestamp: Date.now(), // 🔧 Agregar timestamp para verificar si es reciente
             isError: isErrorResult
           };
+          
+          // 🖥️ APERTURA AUTOMÁTICA DE TERMINAL - ejecutar comandos locales/SSH
+          const baseName = toolData.toolName.includes('__') ? toolData.toolName.split('__')[1] : toolData.toolName;
+          console.log('🔍 Verificando si abrir terminal:', {
+            baseName,
+            hasCommand: !!toolData.args?.command,
+            isError: isErrorResult,
+            shouldOpen: (baseName === 'execute_local' || baseName === 'execute_ssh') && toolData.args?.command && !isErrorResult,
+            hasCallback: typeof onExecuteCommandInTerminal === 'function'
+          });
+          
+          if ((baseName === 'execute_local' || baseName === 'execute_ssh') && toolData.args?.command && !isErrorResult) {
+            console.log('✅ Llamando callback para abrir terminal:', {
+              baseName,
+              command: toolData.args.command,
+              workingDir: toolData.args.workingDir,
+              hostId: toolData.args.hostId
+            });
+            
+            // Pequeño delay para que el resultado se renderice primero
+            setTimeout(() => {
+              const commandData = { 
+                command: toolData.args.command,
+                workingDir: toolData.args.workingDir,
+                hostId: toolData.args.hostId,
+                toolType: baseName
+              };
+              
+              console.log('🚀 Ejecutando callback con datos:', commandData);
+              console.log('🔍 Tipo de callback:', typeof onExecuteCommandInTerminal);
+              console.log('🔍 Callback es función?', typeof onExecuteCommandInTerminal === 'function');
+              
+              // Llamar callback directamente si existe
+              if (typeof onExecuteCommandInTerminal === 'function') {
+                console.log('✅ Llamando onExecuteCommandInTerminal(commandData)...');
+                try {
+                  onExecuteCommandInTerminal(commandData);
+                  console.log('✅ Callback ejecutado correctamente');
+                } catch (error) {
+                  console.error('❌ Error ejecutando callback:', error);
+                }
+              } else {
+                console.warn('⚠️ onExecuteCommandInTerminal callback no está definido');
+                // Fallback a evento de window
+                window.dispatchEvent(new CustomEvent('ai-chat-execute-command-in-terminal', {
+                  detail: commandData
+                }));
+              }
+            }, 100);
+          } else {
+            console.log('❌ NO se abrirá terminal');
+          }
 
           // Mensaje minimalista y bonito (sin rutas)
           const lower = resultText.toLowerCase();
@@ -2922,6 +2974,37 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       }
     };
 
+    // 🖥️ Función para abrir terminal y ejecutar comando
+    const handleOpenInTerminal = () => {
+      const command = toolArgs?.command;
+      const workingDir = toolArgs?.workingDir;
+      const hostId = toolArgs?.hostId;
+      
+      console.log('🖥️ handleOpenInTerminal (botón) called:', { cleanToolName, command, hostId });
+      
+      if ((cleanToolName === 'execute_local' || cleanToolName === 'execute_ssh') && command) {
+        const commandData = {
+          command,
+          workingDir,
+          hostId,
+          toolType: cleanToolName
+        };
+        
+        // Llamar callback directamente si existe
+        if (typeof onExecuteCommandInTerminal === 'function') {
+          onExecuteCommandInTerminal(commandData);
+        } else {
+          // Fallback a evento de window
+          window.dispatchEvent(new CustomEvent('ai-chat-execute-command-in-terminal', {
+            detail: commandData
+          }));
+        }
+      }
+    };
+    
+    // Determinar si mostrar el botón de terminal
+    const showTerminalButton = (cleanToolName === 'execute_local' || cleanToolName === 'execute_ssh') && toolArgs?.command;
+
     return (
       <div className="tool-execution-card">
         <div className="tool-card-header" onClick={handleToggle}>
@@ -2944,9 +3027,44 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               )}
             </div>
           </div>
-          <span className={`tool-card-toggle ${expanded ? 'expanded' : ''}`}>
-            ▼
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {showTerminalButton && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenInTerminal();
+                }}
+                style={{
+                  background: 'rgba(76, 175, 80, 0.2)',
+                  border: '1px solid rgba(76, 175, 80, 0.5)',
+                  color: '#4caf50',
+                  padding: '0.3rem 0.6rem',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(76, 175, 80, 0.3)';
+                  e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(76, 175, 80, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.5)';
+                }}
+                title="Abrir en terminal interactiva"
+              >
+                <i className="pi pi-external-link" />
+                <span>▶️ Terminal</span>
+              </button>
+            )}
+            <span className={`tool-card-toggle ${expanded ? 'expanded' : ''}`}>
+              ▼
+            </span>
+          </div>
         </div>
         
         <div className={`tool-card-content ${expanded ? 'expanded' : ''}`}>
