@@ -104,13 +104,229 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
     const [dragStartTimer, setDragStartTimer] = useState(null);
     const terminalRefs = useRef({});
+    const pendingCommands = useRef({}); // Cola de comandos pendientes por terminal
+    const terminalReadyFlags = useRef({}); // Flags de terminals listos
 
     // Exponer métodos para uso externo
     useImperativeHandle(ref, () => ({
         createRdpTab: (title, rdpConfig) => {
             createRdpTab(title, rdpConfig);
+        },
+        getActiveTabKey: () => {
+            // Encontrar el tab activo (el primero con active: true)
+            const activeTab = tabs.find(t => t.active);
+            console.log('🔍 getActiveTabKey:', { activeTab, allTabs: tabs });
+            return activeTab?.id;
+        },
+        getSelectedTerminalType: () => {
+            // Devolver el tipo del tab activo (el visible actualmente)
+            const activeTab = tabs.find(t => t.active);
+            const activeType = activeTab?.type || 'powershell';
+            return activeType;
+        },
+        getOpenTerminalTypes: () => {
+            // Devolver lista de tipos de terminales abiertos (excluyendo RDP)
+            return tabs
+                .filter(t => t.type && t.type !== 'rdp-guacamole')
+                .map(t => t.type);
+        },
+        createAndSwitchToTerminal: (terminalType, command) => {
+            console.log('🆕 createAndSwitchToTerminal:', { terminalType, command });
+            
+            // Buscar si ya existe una pestaña de este tipo
+            const existingTab = tabs.find(t => t.type === terminalType);
+            
+            if (existingTab) {
+                // Activar la pestaña existente
+                console.log('✅ Pestaña existente encontrada:', existingTab.title);
+                setTabs(prevTabs => prevTabs.map(t => ({
+                    ...t,
+                    active: t.id === existingTab.id
+                })));
+                
+            // Enviar comando después de cambiar de pestaña
+            setTimeout(() => {
+                if (command) {
+                    const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal') 
+                        ? command + '\r' 
+                        : command + '\n';
+                    console.log('📤 Enviando comando a pestaña existente:', { terminalType, id: existingTab.id, command });
+                    window.electron?.ipcRenderer.send(`${terminalType}:data:${existingTab.id}`, finalCommand);
+                }
+            }, 500); // Aumentado de 200ms a 500ms
+                
+                return existingTab.id;
+            }
+            
+            // Crear nueva pestaña del tipo especificado
+            const newTabId = `tab-${nextTabId}`;
+            const terminalTitles = {
+                'powershell': 'Windows PowerShell',
+                'wsl': 'WSL',
+                'cygwin': 'Cygwin',
+                'ubuntu': 'Ubuntu',
+                'linux-terminal': 'Terminal Linux'
+            };
+            
+            const newTab = {
+                id: newTabId,
+                title: terminalTitles[terminalType] || terminalType,
+                type: terminalType,
+                active: true
+            };
+            
+            console.log('🆕 Creando nueva pestaña:', newTab);
+            
+            // 🔧 CRÍTICO: Registrar eventos IPC para la nueva pestaña ANTES de crear el tab
+            if (window.electron) {
+                console.log('📝 Registrando eventos IPC para tab:', newTabId);
+                window.electron.ipcRenderer.send('register-tab-events', newTabId);
+                console.log('✅ Eventos IPC registrados para tab:', newTabId);
+            }
+            
+            setTabs(prevTabs => [
+                ...prevTabs.map(t => ({ ...t, active: false })),
+                newTab
+            ]);
+            setNextTabId(prev => prev + 1);
+            
+            // Enviar comando después de un delay y forzar fit del terminal
+            if (command) {
+                console.log('📝 Programando envío de comando:', { newTabId, command });
+                
+                // Esperar el primer output del proceso (el prompt) antes de enviar el comando
+                let promptReceived = false;
+                let fitDone = false;
+                
+                const promptListener = (data) => {
+                    if (promptReceived) return; // Ya procesado
+                    
+                    console.log('🎯 Primer output del terminal recibido:', { 
+                        newTabId, 
+                        dataLength: data?.length,
+                        dataPreview: data?.substring(0, 50)
+                    });
+                    
+                    promptReceived = true;
+                    
+                    // Hacer fit cuando el prompt aparece
+                    if (!fitDone) {
+                        fitDone = true;
+                        setTimeout(() => {
+                            const termRef = terminalRefs.current[newTabId];
+                            if (termRef && termRef.fit) {
+                                console.log('📐 Haciendo fit del terminal después del prompt:', newTabId);
+                                termRef.fit();
+                            }
+                        }, 100);
+                    }
+                    
+                    // Enviar comando 300ms después del primer output
+                    setTimeout(() => {
+                        const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal') 
+                            ? command + '\r' 
+                            : command + '\n';
+                        
+                        console.log('📤 Enviando comando después del prompt:', { 
+                            terminalType, 
+                            newTabId, 
+                            command, 
+                            channel: `${terminalType}:data:${newTabId}`,
+                            finalCommand 
+                        });
+                        
+                        window.electron?.ipcRenderer.send(`${terminalType}:data:${newTabId}`, finalCommand);
+                        console.log('✅ Comando IPC enviado');
+                        
+                        // Remover listener después de enviar el comando
+                        window.electron.ipcRenderer.removeListener(`${terminalType}:data:${newTabId}`, promptListener);
+                    }, 300);
+                };
+                
+                // Escuchar el primer output del proceso
+                const channel = `${terminalType}:data:${newTabId}`;
+                console.log('👂 Registrando listener en canal:', channel);
+                window.electron.ipcRenderer.on(channel, promptListener);
+                console.log('✅ Listener registrado correctamente');
+                
+                // Safety timeout: si no hay prompt en 5 segundos, enviar de todos modos
+                setTimeout(() => {
+                    if (!promptReceived) {
+                        console.warn('⏰ Timeout: prompt no recibido, enviando comando de todos modos');
+                        promptReceived = true;
+                        
+                        // Hacer fit primero
+                        const termRef = terminalRefs.current[newTabId];
+                        if (termRef && termRef.fit) {
+                            console.log('📐 Haciendo fit del terminal (timeout):', newTabId);
+                            termRef.fit();
+                        }
+                        
+                        // Enviar comando
+                        setTimeout(() => {
+                            const finalCommand = (terminalType === 'powershell' || terminalType === 'linux-terminal') 
+                                ? command + '\r' 
+                                : command + '\n';
+                            
+                            window.electron?.ipcRenderer.send(`${terminalType}:data:${newTabId}`, finalCommand);
+                            console.log('✅ Comando IPC enviado (timeout)');
+                            
+                            window.electron.ipcRenderer.removeListener(`${terminalType}:data:${newTabId}`, promptListener);
+                        }, 100);
+                    }
+                }, 5000);
+            }
+            
+            return newTabId;
+        },
+        sendCommand: (command) => {
+            // Encontrar el tab activo
+            const activeTab = tabs.find(t => t.active);
+            if (!activeTab) {
+                console.warn('⚠️ No hay terminal activo para enviar comando');
+                return;
+            }
+            
+            const tabId = activeTab.id;
+            const terminalRef = terminalRefs.current[tabId];
+            if (!terminalRef) {
+                console.warn('⚠️ Terminal ref no encontrado para:', tabId);
+                return;
+            }
+            
+            console.log('🖥️ Enviando comando a terminal:', { tab: activeTab.title, tabId, command });
+            
+            // Determinar el tipo de terminal y enviar el comando apropiadamente
+            const terminalType = activeTab.type || 'powershell';
+            
+            // Agregar Enter al final según el tipo de terminal
+            let finalCommand = command;
+            if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
+                finalCommand = command + '\r'; // PowerShell usa \r
+            } else {
+                finalCommand = command + '\n'; // Unix usa \n
+            }
+            
+            console.log('📤 Enviando a IPC:', { channel: `${terminalType}:data:${tabId}`, finalCommand });
+            
+            // Enviar comando vía IPC al backend
+            if (window.electron) {
+                if (terminalType === 'powershell' || terminalType === 'linux-terminal') {
+                    window.electron.ipcRenderer.send(`powershell:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'wsl') {
+                    window.electron.ipcRenderer.send(`wsl:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'ubuntu' || terminalType === 'wsl-distro') {
+                    const channelPrefix = activeTab.distroInfo ? 'ubuntu' : 'wsl';
+                    window.electron.ipcRenderer.send(`${channelPrefix}:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'cygwin') {
+                    window.electron.ipcRenderer.send(`cygwin:data:${tabId}`, finalCommand);
+                }
+                console.log('✅ Comando enviado al canal IPC');
+            } else {
+                console.error('❌ window.electron no disponible');
+            }
         }
-    }));
+    }), [tabs, selectedTerminalType]); // Agregar tabs y selectedTerminalType como dependencias
 
     // Detectar distribuciones WSL usando el backend
     useEffect(() => {

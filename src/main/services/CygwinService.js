@@ -121,6 +121,58 @@ async function startCygwinSession(tabId, { cols, rows }) {
       // .bashrc actualizado silenciosamente
     }
     
+    // Crear/validar el archivo fstab
+    const etcPath = path.join(paths.root, 'etc');
+    const fstabPath = path.join(etcPath, 'fstab');
+    
+    if (!fs.existsSync(etcPath)) {
+      fs.mkdirSync(etcPath, { recursive: true });
+    }
+
+    // Contenido válido de fstab para Cygwin
+    const fstabContent = `# This file is read once by the first Cygwin process in a session.
+# To use Win32 mounts in subsequent Cygwin sessions, rebase them or start
+# the first session with a user account which has the appropriate
+# privileges to set file permissions on Win32 mounts.
+
+# Do not add mount entries to the above parent directories.
+
+# (blank line - end of header)
+`;
+
+    // Recrear fstab siempre para evitar corrupción
+    try {
+      if (fs.existsSync(fstabPath)) {
+        fs.unlinkSync(fstabPath);
+      }
+      fs.writeFileSync(fstabPath, fstabContent, 'utf8');
+    } catch (e) {
+      // Ignorar errores de fstab
+    }
+
+    // Arreglar line endings en archivos de profile.d (Windows CRLF -> Unix LF)
+    const profiledPath = path.join(etcPath, 'profile.d');
+    if (fs.existsSync(profiledPath)) {
+      try {
+        const files = fs.readdirSync(profiledPath);
+        files.forEach(file => {
+          if (file.endsWith('.sh')) {
+            const filePath = path.join(profiledPath, file);
+            try {
+              let content = fs.readFileSync(filePath, 'utf8');
+              // Convertir CRLF a LF
+              content = content.replace(/\r\n/g, '\n');
+              fs.writeFileSync(filePath, content, 'utf8');
+            } catch (e) {
+              // Ignorar errores individuales
+            }
+          }
+        });
+      } catch (e) {
+        // Ignorar si profile.d no existe o hay errores
+      }
+    }
+
     const bashrcContent = `# NodeTerm Cygwin - Configuración moderna
 # Prompt bonito con colores y símbolos
 export PS1='\\[\\033[01;36m\\]┌─[\\[\\033[01;32m\\]\\u\\[\\033[01;33m\\]@\\[\\033[01;35m\\]\\h\\[\\033[01;36m\\]]─[\\[\\033[01;34m\\]\\w\\[\\033[01;36m\\]]\\n└─\\[\\033[01;32m\\]\\$\\[\\033[00m\\] '
@@ -158,7 +210,7 @@ cd ~
       // Path de Cygwin (usar paths Unix-style)
       PATH: `/usr/local/bin:/usr/bin:/bin`,
       // Variable importante: evita que Cygwin intente reescribir paths de Windows
-      CYGWIN: 'nodosfilewarning winsymlinks:nativestrict',
+      CYGWIN: 'nodosfilewarning winsymlinks:native',
       // Para que bash inicie en el directorio correcto
       CHERE_INVOKING: '1',
       // Locale

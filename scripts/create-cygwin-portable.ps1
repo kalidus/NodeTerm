@@ -152,8 +152,11 @@ $fstabPath = Join-Path $OutputDir "etc\fstab"
 if (Test-Path $fstabPath) {
     $fstabContent = Get-Content $fstabPath -Raw
     if ($fstabContent -notmatch "/tmp") {
-        $fstabContent += "`n# Configurar directorio /tmp`nnone /tmp usertemp binary,posix=0,user 0 0`n"
-        Set-Content $fstabPath $fstabContent -Encoding UTF8
+        # NOTA: usar LF puro (sin CR) y ASCII encoding para evitar problemas
+        $fstabContent = $fstabContent.Replace("`r`n", "`n")
+        $fstabContent += "none /tmp usertemp binary,posix=0,user 0 0`n"
+        # Escribir con encoding ASCII (no UTF8) para compatibilidad máxima
+        [System.IO.File]::WriteAllText($fstabPath, $fstabContent, [System.Text.Encoding]::ASCII)
     }
 }
 $cygwinrc = @"

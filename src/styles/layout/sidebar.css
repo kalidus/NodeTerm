@@ -837,6 +837,50 @@
 }
 
 /* Botón de colapsar alineado a la izquierda */
+
+/* === Filesystem explorer estilos === */
+.filesystem-tree-root {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+}
+.filesystem-tree .p-treenode {
+  margin: 0 !important;
+}
+.filesystem-tree .p-treenode-content {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  transition: background 0.15s ease;
+}
+.filesystem-tree .p-treenode-icon {
+  display: none !important;
+}
+.filesystem-tree .filesystem-node {
+  background: transparent;
+}
+.filesystem-tree .filesystem-node:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.filesystem-tree .p-treenode-content.p-highlight .filesystem-node {
+  background: rgba(134, 182, 255, 0.18);
+  border-radius: 4px;
+}
+.filesystem-tree .p-treenode-content:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.filesystem-tree .p-treenode-children {
+  margin: 0 !important;
+}
+.filesystem-tree .pi-folder,
+.filesystem-tree .pi-file {
+  color: inherit;
+}
+.filesystem-tree .pi-folder {
+  color: #8bc34a;
+}
 .sidebar-container[style*="width: 44px"] > div:first-child > div:first-child {
   justify-content: flex-start !important;
   padding-left: 2px !important;

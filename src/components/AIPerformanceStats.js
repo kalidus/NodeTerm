@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import TokenCounter from '../utils/tokenCounter';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import ShellSelector from './ShellSelector';
 
 const AIPerformanceStats = ({
   currentModel = null,
@@ -10,7 +11,15 @@ const AIPerformanceStats = ({
   inputValue = '',
   messages = [],
   isLoading = false,
-  attachedFiles = []
+  attachedFiles = [],
+  showMcpPanel = false,
+  onToggleMcpPanel = () => {},
+  showMemoryPanel = false,
+  onToggleMemoryPanel = () => {},
+  toolsCount = 0,
+  selectedShell = 'powershell',
+  onShellChange = () => {},
+  availableShells = []
 }) => {
   const currentTheme = useMemo(() => {
     return themeManager.getCurrentTheme() || uiThemes['Light'];
@@ -160,6 +169,72 @@ const AIPerformanceStats = ({
             <span style={{ opacity: 0.8, fontSize: '0.75rem' }}>Procesando...</span>
           </div>
         )}
+
+        {/* Botones para Herramientas y Memoria */}
+        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          {/* Botón Herramientas MCP */}
+          <button
+            onClick={onToggleMcpPanel}
+            disabled={isLoading}
+            style={{
+              background: showMcpPanel 
+                ? `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`
+                : 'rgba(255,255,255,0.1)',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '0.3rem 0.5rem',
+              color: 'white',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '32px',
+              height: '24px',
+              fontSize: '0.7rem',
+              opacity: isLoading ? 0.5 : 1,
+              position: 'relative'
+            }}
+            title={`Herramientas MCP (${toolsCount})`}
+          >
+            <i className='pi pi-wrench' style={{ fontSize: '0.75rem', marginRight: '0.2rem' }} />
+            <span style={{ fontSize: '0.65rem', fontWeight: '600' }}>{toolsCount}</span>
+          </button>
+
+          {/* Botón Memoria */}
+          <button
+            onClick={onToggleMemoryPanel}
+            disabled={isLoading}
+            style={{
+              background: showMemoryPanel 
+                ? `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`
+                : 'rgba(255,255,255,0.1)',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '0.3rem 0.5rem',
+              color: 'white',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '32px',
+              height: '24px',
+              opacity: isLoading ? 0.5 : 1
+            }}
+            title="Memoria del Sistema"
+          >
+            <i className='pi pi-database' style={{ fontSize: '0.75rem' }} />
+          </button>
+
+          {/* Shell Selector */}
+          <ShellSelector
+            selectedShell={selectedShell}
+            onShellChange={onShellChange}
+            availableShells={availableShells}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       <style>{`

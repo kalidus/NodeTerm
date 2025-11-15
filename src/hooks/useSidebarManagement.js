@@ -152,7 +152,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             };
             const newTab = {
               key: tabId,
-              label: `${node.label} (${prevTabs.filter(t => t.originalKey === node.key).length + 1})`,
+              label: node.label,
               originalKey: node.key,
               sshConfig: sshConfig,
               type: 'terminal',

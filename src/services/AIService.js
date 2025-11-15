@@ -7,6 +7,15 @@ import { conversationService } from './ConversationService';
 import debugLogger from '../utils/debugLogger';
 
 import fileAnalysisService from './FileAnalysisService';
+import mcpClient from './MCPClientService';
+import toolOrchestrator from './ToolOrchestrator';
+import modelMemoryService from './ModelMemoryService';
+import { summarizeToolResult } from '../utils/toolResultSummarizer';
+import { rememberToolExecution, getRecentToolExecution } from './ToolExecutionCache';
+
+const TOOLS_REQUIRE_FULL_CONTEXT = new Set([
+  'search_nodeterm'
+]);
 
 class AIService {
   constructor() {
@@ -15,6 +24,16 @@ class AIService {
     this.apiKey = null;
     this.remoteOllamaUrl = null;
     this.performanceConfig = null; // Configuración manual de rendimiento
+    // Caché simple para los directorios permitidos de MCP (evita pedirlos repetidamente)
+    this.allowedDirectoriesCache = { value: null, fetchedAt: 0 };
+    this.mcpDefaultDirs = {}; // Map<serverId, { raw, normalized }>
+    // Flag para invalidar información del filesystem cuando se modifica
+    this._filesystemModified = false;
+    // Feature flags y orquestador
+    this.featureFlags = { structuredToolMessages: true };
+    this.toolOrchestrator = toolOrchestrator;
+    // Servicio de gestión de memoria
+    this.memoryService = modelMemoryService;
     this.models = {
       remote: [
         { 
@@ -167,6 +186,7 @@ class AIService {
             size: '4.7GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'good',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -185,6 +205,7 @@ class AIService {
             size: '40GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente + GPU potente',
@@ -257,6 +278,7 @@ class AIService {
             size: '5.2GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -293,6 +315,7 @@ class AIService {
             size: '4.7GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -311,6 +334,7 @@ class AIService {
             size: '5.2GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -329,6 +353,7 @@ class AIService {
             size: '9.0GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -347,6 +372,7 @@ class AIService {
             size: '20GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -365,6 +391,7 @@ class AIService {
             size: '43GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente',
@@ -383,6 +410,7 @@ class AIService {
             size: '404GB', 
             downloaded: false, 
             performance: 'high',
+            mcpCompatibility: 'excellent',
             platform: 'ollama',
             platformName: 'Ollama',
             platformDescription: 'Requiere Ollama instalado localmente + GPU muy potente',
@@ -980,6 +1008,22 @@ class AIService {
     this.loadConfig();
   }
 
+  _setMcpDefaultDir(serverId, path) {
+    if (!serverId || !path || typeof path !== 'string') return;
+    const trimmed = path.trim();
+    if (!trimmed) return;
+    const normalized = trimmed.replace(/\\/g, '/');
+    this.mcpDefaultDirs[serverId] = {
+      raw: trimmed,
+      normalized
+    };
+  }
+
+  _getMcpDefaultDir(serverId) {
+    if (!serverId) return null;
+    return this.mcpDefaultDirs[serverId] || null;
+  }
+
   /**
    * Validar si un modelo está disponible para uso
    */
@@ -1245,7 +1289,7 @@ class AIService {
         
         // Buscar configuración exacta primero
         if (localConfigs[modelId]) {
-          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada para ${modelId}:`, localConfigs[modelId]);
+          debugLogger.debug('AIService', `Usando configuración guardada para ${modelId}`);
           return localConfigs[modelId];
         }
         
@@ -1253,7 +1297,7 @@ class AIService {
         // Esto permite que modelos como "llama3.2:latest" usen la configuración de "llama3.2"
         const baseModelId = modelId.split(':')[0];
         if (baseModelId !== modelId && localConfigs[baseModelId]) {
-          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada para ${baseModelId} (base de ${modelId}):`, localConfigs[baseModelId]);
+          debugLogger.debug('AIService', `Usando configuración guardada para ${baseModelId} (base de ${modelId})`);
           return localConfigs[baseModelId];
         }
         
@@ -1263,7 +1307,7 @@ class AIService {
           return modelId.includes(key) || key.includes(baseModelId);
         });
         if (matchingKey) {
-          debugLogger.info('AIService', `✅ Usando configuración INDIVIDUAL guardada (coincidencia parcial) ${matchingKey} para ${modelId}:`, localConfigs[matchingKey]);
+          debugLogger.debug('AIService', `Usando configuración guardada (coincidencia parcial) ${matchingKey} para ${modelId}`);
           return localConfigs[matchingKey];
         }
       } catch (e) {
@@ -1418,45 +1462,45 @@ class AIService {
     // Configuraciones específicas para DeepSeek R1 (todos tienen 128K contexto)
     const deepseekR1Configs = {
       'deepseek-r1:latest': {
-        maxTokens: 12000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 20,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo de DeepSeek R1
-        num_ctx: 128000,      // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,      // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
       },
       'deepseek-r1:1.5b': {
-        maxTokens: 6000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 16,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo
-        num_ctx: 128000,       // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,       // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
       },
       'deepseek-r1:7b': {
-        maxTokens: 10000,
+        maxTokens: 2000,
         temperature: 0.7,
         maxHistory: 18,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo
-        num_ctx: 128000,       // Para Ollama
+        contextLimit: 8192,  // Reducido para velocidad
+        num_ctx: 8192,       // Para Ollama - más rápido
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
       },
       'deepseek-r1:8b': {
-        maxTokens: 12000,
+        maxTokens: 4000,
         temperature: 0.7,
-        maxHistory: 20,
+        maxHistory: 30,
         useStreaming: true,
-        contextLimit: 128000,  // 128K contexto nativo
-        num_ctx: 128000,       // Para Ollama
+        contextLimit: 32768,  // 32K contexto - DeepSeek-R1 8B soporta hasta 128K nativo
+        num_ctx: 32768,       // Para Ollama
         top_k: 40,
         top_p: 0.9,
         repeat_penalty: 1.1
@@ -1761,7 +1805,9 @@ class AIService {
             } else {
               // Modelo no conocido, no agregarlo a la lista predefinida
               // Solo marcar como no disponible en la configuración
-              console.log(`Modelo ${modelName} está instalado pero no está en la configuración predefinida`);
+              debugLogger.debug('AIService.Models', 'Modelo detectado fuera de la configuración predefinida', {
+                modelName
+              });
             }
           }
         });
@@ -1839,6 +1885,11 @@ class AIService {
       const errorMsg = type === 'local' 
         ? `El modelo ${modelName} no está instalado. Instálalo primero en Ollama.`
         : `El modelo ${modelName} no está disponible. Configura la API Key correspondiente.`;
+      debugLogger.error('AIService', 'Modelo no disponible al intentar seleccionarlo', {
+        modelId,
+        modelType: type,
+        message: errorMsg
+      });
       throw new Error(errorMsg);
     }
     
@@ -1935,6 +1986,1690 @@ class AIService {
   }
 
   /**
+   * FILTRAR tools por contexto/relevancia
+   * ✨ MEJORADO: Filtrado más agresivo con scoring y límite máximo
+   */
+  filterToolsByContext(tools, message = '') {
+    const MAX_TOOLS = 6; // Límite máximo de tools para no abrumar al modelo
+    const lowerMsg = message.toLowerCase();
+    
+    // Calcular score de relevancia para cada tool
+    const toolsWithScore = tools.map(tool => {
+      let score = 0;
+      const toolName = tool.name.toLowerCase();
+      const toolDesc = (tool.description || '').toLowerCase();
+      
+      // Búsquedas en web/internet
+      if (lowerMsg.match(/busca|search|google|web|internet|sitio|página|url|http|\.com/)) {
+        if (toolName.includes('search') || toolName.includes('web') || toolName.includes('fetch')) score += 10;
+        if (toolName.includes('goto') || toolName.includes('screenshot')) score += 5;
+      }
+      
+      // Archivos: LEER
+      if (lowerMsg.match(/lee|leer|muestra|abre|ver|contenido|archivo|file/)) {
+        if (toolName.includes('read_file') || toolName.includes('read_text')) score += 10;
+        if (toolName.includes('get_file_info')) score += 5;
+      }
+      
+      // Archivos: CREAR/ESCRIBIR
+      if (lowerMsg.match(/crea|crear|escribe|guarda|guardar|genera|nuevo archivo|write/)) {
+        if (toolName.includes('write_file') || toolName.includes('create')) score += 10;
+        if (toolName.includes('append')) score += 5;
+      }
+      
+      // Archivos: EDITAR/MODIFICAR
+      if (lowerMsg.match(/edita|editar|modifica|cambia|actualiza|reemplaza|edit/)) {
+        if (toolName.includes('edit_file') || toolName.includes('update')) score += 10;
+        if (toolName.includes('write_file')) score += 3; // Fallback
+      }
+      
+      // SSH/Terminal: HOSTS y CONEXIONES (ALTA PRIORIDAD)
+      if (lowerMsg.match(/ssh|host|conexión|remota|servidor|terminal remota|red|conecta|conectar|ejecuta en|comando remoto|archivo en el servidor/i)) {
+        if (toolName.includes('execute_ssh')) score += 20; // MÁS ALTO que read_text_file
+        if (toolName.includes('search_nodeterm')) score += 18; // Búsqueda inteligente de SSH hosts y credenciales
+        if (toolName.includes('test_ssh')) score += 12;
+        // PENALIZAR herramientas de filesystem cuando estamos en contexto SSH
+        if (toolName.includes('read_text_file')) score -= 10;
+        if (toolName.includes('list_directory')) score -= 10;
+      }
+      
+      // Terminal/Comandos LOCALES
+      if (lowerMsg.match(/local|máquina local|powershell|wsl|terminal local/i)) {
+        if (toolName.includes('execute_local')) score += 12;
+      }
+      
+      // Directorios: LISTAR (pero SIN interferir con SSH)
+      if (lowerMsg.match(/lista|listar/) && !lowerMsg.match(/ssh|host|conexión|remota|servidor|conecta|ejecuta/i)) {
+        if (lowerMsg.match(/directorio|carpeta|folder|contenido|archivos en/)) {
+          if (toolName.includes('list_directory')) score += 10;
+          if (toolName.includes('directory_tree')) score += 7;
+          if (toolName.includes('list_directory_with_sizes')) score += 8;
+        }
+      }
+      
+      // PENALIZAR read_text_file si hay contexto de SSH
+      if (lowerMsg.match(/ssh|remoto|servidor|conecta/i) && toolName.includes('read_text_file')) {
+        score -= 15; // Castigar fuertemente
+      }
+      
+      // Archivos: BUSCAR
+      if (lowerMsg.match(/busca archivo|encuentra archivo|search.*file|find.*file|patrón/)) {
+        if (toolName.includes('search_files') || toolName.includes('find')) score += 10;
+      }
+      
+      // Archivos: MOVER/RENOMBRAR
+      if (lowerMsg.match(/mueve|mover|renombra|rename|move/)) {
+        if (toolName.includes('move_file') || toolName.includes('rename')) score += 10;
+      }
+      
+      // Archivos: ELIMINAR
+      if (lowerMsg.match(/elimina|borrar|delete|remove/)) {
+        if (toolName.includes('delete') || toolName.includes('remove')) score += 10;
+      }
+      
+      // Comandos/CLI
+      if (lowerMsg.match(/ejecuta|comando|command|run|terminal|shell|script/)) {
+        if (toolName.includes('run_command') || toolName.includes('execute')) score += 10;
+      }
+      
+      // Base de datos
+      if (lowerMsg.match(/query|sql|database|tabla|consulta/)) {
+        if (toolName.includes('query') || toolName.includes('sql')) score += 10;
+      }
+      
+      // Penalizar tools genéricas si hay específicas
+      if (toolName === 'write_file' && lowerMsg.includes('edit')) score -= 3;
+      if (toolName === 'read_file' && lowerMsg.includes('list')) score -= 3;
+      
+      return { tool, score };
+    });
+    
+    // Ordenar por score descendente
+    toolsWithScore.sort((a, b) => b.score - a.score);
+    
+    // Tomar las top N más relevantes
+    const topTools = toolsWithScore
+      .filter(t => t.score > 0) // Solo las que tienen score positivo
+      .slice(0, MAX_TOOLS)
+      .map(t => t.tool);
+    
+    // Si no hay tools con score, usar un conjunto mínimo por defecto
+    if (topTools.length === 0) {
+      const defaultNames = ['read_file', 'list_directory', 'write_file'];
+      topTools.push(...tools.filter(t => defaultNames.some(dn => t.name.includes(dn))).slice(0, 3));
+    }
+
+    debugLogger.debug('AIService.ToolsFilter', 'Tools filtrados con scoring', {
+      disponibles: tools.length,
+      relevantes: topTools.length,
+      topScores: toolsWithScore.slice(0, 3).map(t => ({ name: t.tool.name, score: t.score }))
+    });
+    
+    return topTools;
+  }
+
+  /**
+   * Inyectar contexto MCP (tools, resources, prompts) en los mensajes
+   */
+  async injectMCPContext(message = '') {
+    try {
+      // Verificar si hay MCPs activos
+      if (!mcpClient.hasActiveServers()) {
+        return { tools: [], resources: [], prompts: [], hasTools: false };
+      }
+
+      // Obtener tools disponibles
+      let tools = mcpClient.getAvailableTools();
+      const resources = mcpClient.getAvailableResources();
+      const prompts = mcpClient.getAvailablePrompts();
+
+      // 🔍 FILTRAR TOOLS (contextual)
+      tools = this.filterToolsByContext(tools, message);
+
+      debugLogger.debug('AIService.MCP', 'Contexto MCP generado', {
+        tools: tools.length,
+        resources: resources.length,
+        prompts: prompts.length
+      });
+
+      return {
+        tools,
+        resources,
+        prompts,
+        hasTools: tools.length > 0
+      };
+    } catch (error) {
+      console.error('[MCP] Error obteniendo contexto MCP:', error);
+      return { tools: [], resources: [], prompts: [], hasTools: false };
+    }
+  }
+
+  /**
+   * Obtener lista de directorios permitidos (con caché de 5 minutos)
+   */
+  async getAllowedDirectoriesCached() {
+    try {
+      const now = Date.now();
+      const TTL_MS = 5 * 60 * 1000; // 5 minutos
+      if (this.allowedDirectoriesCache.value && (now - this.allowedDirectoriesCache.fetchedAt) < TTL_MS) {
+        return this.allowedDirectoriesCache.value;
+      }
+
+      // Llamar a la tool solo si existe en el servidor filesystem
+      const tools = mcpClient.getAvailableTools() || [];
+      const hasFilesystem = tools.some(t => t.name === 'list_allowed_directories');
+      if (!hasFilesystem) return null;
+
+      const result = await mcpClient.callTool('list_allowed_directories', {});
+      let dirsText = null;
+      if (result && result.content && Array.isArray(result.content) && result.content.length > 0) {
+        const text = result.content[0].text || '';
+        // Formato esperado: "Allowed directories:\nC:\\path1"
+        const match = text.match(/Allowed directories:\s*([\s\S]+)/i);
+        if (match) {
+          dirsText = match[1].trim();
+        }
+      }
+
+      this.allowedDirectoriesCache = {
+        value: dirsText,
+        fetchedAt: now
+      };
+
+      if (dirsText) {
+        const firstLine = dirsText.split('\n').map(l => l.trim()).find(Boolean);
+        if (firstLine) {
+          this._setMcpDefaultDir('filesystem', firstLine);
+        }
+      }
+      return dirsText;
+    } catch (err) {
+      debugLogger.warn('AIService.MCP', 'No se pudieron cachear los directorios permitidos', {
+        error: err.message
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Generar few-shot examples para mejorar comprensión de tools
+   * 📚 Los ejemplos ayudan al modelo a entender el uso correcto
+   */
+  generateToolExamples(tools, provider) {
+    // Seleccionar hasta 3 ejemplos representativos
+    const exampleTools = tools.slice(0, 3);
+    
+    if (exampleTools.length === 0) return '';
+    
+    let examples = '\n🎯 EJEMPLOS DE USO:\n\n';
+    
+    exampleTools.forEach((tool, idx) => {
+      const params = tool.inputSchema?.properties || {};
+      const required = tool.inputSchema?.required || [];
+      
+      // Generar ejemplo de parámetros
+      const exampleArgs = {};
+      Object.keys(params).forEach(key => {
+        if (required.includes(key)) {
+          const param = params[key];
+          // Generar valor de ejemplo según el tipo
+          if (param.type === 'string') {
+            if (key === 'path' || key === 'file' || key === 'source' || key === 'destination') {
+              exampleArgs[key] = '/ruta/archivo.txt';
+            } else if (key === 'content' || key === 'text') {
+              exampleArgs[key] = 'contenido del texto';
+            } else if (key === 'pattern') {
+              exampleArgs[key] = '*.txt';
+            } else {
+              exampleArgs[key] = 'valor';
+            }
+          } else if (param.type === 'number' || param.type === 'integer') {
+            exampleArgs[key] = 100;
+          } else if (param.type === 'boolean') {
+            exampleArgs[key] = true;
+          } else if (param.type === 'array') {
+            exampleArgs[key] = [];
+          } else {
+            exampleArgs[key] = param.example || 'valor';
+          }
+        }
+      });
+      
+      const toolName = tool.serverId ? `${tool.serverId}__${tool.name}` : tool.name;
+      
+      examples += `Ejemplo ${idx + 1}:\n`;
+      examples += `Usuario: "${this._generateUserExampleForTool(tool)}"\n`;
+      examples += `Tool llamada: ${toolName}\n`;
+      examples += `Argumentos: ${JSON.stringify(exampleArgs, null, 2)}\n\n`;
+    });
+    
+    return examples;
+  }
+  
+  /**
+   * Generar ejemplo de petición del usuario para una tool
+   */
+  _generateUserExampleForTool(tool) {
+    const name = tool.name;
+    
+    if (name.includes('list') && name.includes('directory')) {
+      return 'Lista los archivos del directorio actual';
+    } else if (name.includes('read') && name.includes('file')) {
+      return 'Lee el contenido del archivo config.json';
+    } else if (name.includes('write') && name.includes('file')) {
+      return 'Crea un archivo llamado notas.txt con el texto "Hola mundo"';
+    } else if (name.includes('edit') && name.includes('file')) {
+      return 'Cambia la línea que dice "version: 1.0" por "version: 2.0"';
+    } else if (name.includes('search')) {
+      return 'Busca todos los archivos .txt en el directorio';
+    } else if (name.includes('create') && name.includes('directory')) {
+      return 'Crea una carpeta llamada "proyectos"';
+    } else if (name.includes('move')) {
+      return 'Mueve el archivo documento.txt a la carpeta backup';
+    } else if (name.includes('delete')) {
+      return 'Elimina el archivo temporal.tmp';
+    } else if (name.includes('get') && name.includes('info')) {
+      return 'Dame información del archivo imagen.png';
+    }
+    
+    return `Usa la herramienta ${name}`;
+  }
+
+  /**
+   * Convertir tools MCP a formato function calling del proveedor
+   * ✨ MEJORADO: Enriquece descripciones automáticamente para mejor comprensión
+   */
+  convertMCPToolsToProviderFormat(tools, provider, options = {}) {
+    if (!tools || tools.length === 0) return [];
+
+    return tools.map(tool => {
+      // 🔍 Enriquecer descripción automáticamente
+      let enrichedDescription = tool.description || `Herramienta ${tool.name}`;
+      
+      // Agregar contexto de parámetros importantes a la descripción
+      if (tool.inputSchema && tool.inputSchema.properties) {
+        const params = tool.inputSchema.properties;
+        const required = tool.inputSchema.required || [];
+        
+        // Si hay parámetros requeridos, mencionarlos en la descripción
+        if (required.length > 0) {
+          const requiredParams = required.map(r => `'${r}'`).join(', ');
+          enrichedDescription += `. Requiere: ${requiredParams}`;
+        }
+        
+        // Agregar hints específicos por tipo de tool
+        if (tool.name.includes('read') || tool.name.includes('list')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite OBTENER o VER información';
+        } else if (tool.name.includes('write') || tool.name.includes('create')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite CREAR o GUARDAR contenido';
+        } else if (tool.name.includes('edit') || tool.name.includes('update') || tool.name.includes('modify')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite MODIFICAR contenido existente';
+        } else if (tool.name.includes('delete') || tool.name.includes('remove')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite ELIMINAR algo';
+        } else if (tool.name.includes('search') || tool.name.includes('find')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite BUSCAR o ENCONTRAR algo';
+        } else if (tool.name.includes('move') || tool.name.includes('rename')) {
+          enrichedDescription += '. Use esta herramienta cuando necesite MOVER o RENOMBRAR';
+        }
+      }
+
+      // Formato común para function calling
+      const toolDef = {
+        name: (options.namespace ? `${tool.serverId}__${tool.name}` : tool.name),
+        description: enrichedDescription,
+        parameters: tool.inputSchema || { type: 'object', properties: {} }
+      };
+
+      // Adaptar según el proveedor
+      if (provider === 'openai') {
+        return {
+          type: 'function',
+          function: toolDef
+        };
+      } else if (provider === 'anthropic') {
+        return {
+          name: toolDef.name,
+          description: toolDef.description,
+          input_schema: toolDef.parameters
+        };
+      } else if (provider === 'google') {
+        return {
+          name: toolDef.name,
+          description: toolDef.description,
+          parameters: toolDef.parameters
+        };
+      }
+
+      return toolDef;
+    });
+  }
+
+  /**
+   * Generar system prompt UNIVERSAL para MCP (modelos sin function calling)
+   * ✨ MEJORADO: Más simple, directo y con ejemplos
+   */
+  generateUniversalMCPSystemPrompt(tools, options = {}) {
+    if (!tools || tools.length === 0) return '';
+
+    const maxPerServer = typeof options.maxPerServer === 'number' ? options.maxPerServer : 6;
+    const serverHints = options.serverHints || {};
+
+    // Agrupar tools por servidor
+    const serverIdToTools = tools.reduce((acc, t) => {
+      const sid = t.serverId || 'unknown';
+      if (!acc[sid]) acc[sid] = [];
+      acc[sid].push(t);
+      return acc;
+    }, {});
+
+    let out = '';
+    out += 'HERRAMIENTAS DISPONIBLES:\n\n';
+    out += 'Formato JSON: {"tool":"<server>__<name>","arguments":{...}}\n';
+    out += 'Usa estas herramientas cuando el usuario pida ejecutar comandos, listar archivos, o trabajar con servidores.\n\n';
+
+    const serverIds = Object.keys(serverIdToTools).sort();
+    serverIds.forEach((serverId, sidx) => {
+      const list = serverIdToTools[serverId] || [];
+      const selected = list.slice(0, Math.max(1, maxPerServer));
+
+      out += `[${serverId}]\n`;
+
+      // Hints específicos del servidor (p.ej., filesystem)
+      const hints = serverHints[serverId] || {};
+      if (hints.allowedDirsText) {
+        const lines = String(hints.allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean).slice(0, 2);
+        out += `Dirs: ${lines.join(', ')}${lines.length < 2 ? '' : '...'}\n`;
+      }
+      if (hints.defaultRaw) {
+        out += `⚠️ DEFAULT PATH: ${hints.defaultRaw}\n`;
+        out += `CRÍTICO: SIEMPRE usa rutas ABSOLUTAS comenzando con este directorio.\n`;
+        out += `Ejemplo correcto: "${hints.defaultRaw}\\archivo.txt"\n`;
+        out += `Ejemplo INCORRECTO: "archivo.txt" (ruta relativa - NO usar)\n`;
+      }
+
+      // Acciones comunes (sólo si es filesystem) - OPTIMIZADO
+      if (serverId === 'filesystem') {
+        const names = list.map(t => t.name);
+        const has = (n) => names.includes(n);
+        const actions = [];
+        if (has('list_directory')) actions.push('listar→list_directory');
+        if (has('read_text_file')) actions.push('leer→read_text_file');
+        if (has('write_file')) actions.push('crear→write_file');
+        if (has('edit_file')) actions.push('editar→edit_file');
+        if (has('move_file')) actions.push('mover→move_file(source,destination con nombre completo)');
+        if (has('search_files')) actions.push('buscar→search_files(pattern,path)');
+        if (actions.length > 0) {
+          out += `Acciones: ${actions.join(', ')}\n`;
+        }
+      }
+
+      selected.forEach((tool, tidx) => {
+        const schema = tool.inputSchema || {};
+        const properties = schema.properties || {};
+        const required = schema.required || [];
+        const keys = Object.keys(properties);
+
+        // Formato compacto: nombre(params) - descripción COMPLETA (sin truncar)
+        const reqParams = keys.filter(k => required.includes(k));
+        const optParams = keys.filter(k => !required.includes(k));
+        const paramsList = [...reqParams, ...optParams.map(p => `${p}?`)];
+        
+        out += `${tool.name}(${paramsList.join(',')})`;
+        if (tool.description) {
+          // ✅ Mostrar descripción completa (era 60 caracteres, muy corto)
+          out += ` - ${tool.description}`;
+        }
+        // 🔧 CRÍTICO: Reforzar nombre correcto para search_nodeterm
+        if (tool.name === 'search_nodeterm') {
+          out += ' ⚠️ NOMBRE CORRECTO: "search_nodeterm" (NO "search_noderm", NO "search_nodeterms")';
+        }
+        out += '\n';
+
+        // Ejemplo compacto
+        const exampleArgs = {};
+        reqParams.forEach((p) => {
+          const prop = properties[p] || {};
+          if (prop.type === 'string') {
+            const isPathLike = /path|file|dir|directory/i.test(p);
+            if (isPathLike && hints.defaultRaw) {
+              const baseRaw = hints.defaultRaw;
+              const needsSep = !baseRaw.endsWith('\\') && !baseRaw.endsWith('/');
+              if (/dir|directory/i.test(p)) {
+                exampleArgs[p] = baseRaw;
+              } else {
+                const sep = needsSep ? (baseRaw.includes('\\') ? '\\' : '/') : '';
+                exampleArgs[p] = `${baseRaw}${sep}file.txt`;
+              }
+            } else {
+              exampleArgs[p] = 'value';
+            }
+          }
+          else if (prop.type === 'array') exampleArgs[p] = [];
+          else if (prop.type === 'object') exampleArgs[p] = {};
+          else exampleArgs[p] = prop.type === 'number' ? 0 : true;
+        });
+
+        if (keys.length > 0) {
+          out += `  {"tool":"${serverId}__${tool.name}","arguments":${JSON.stringify(exampleArgs)}}\n`;
+        }
+      });
+
+      if (sidx < serverIds.length - 1) {
+        out += '\n';
+      }
+    });
+
+    // Ejemplos compactos con rutas absolutas
+    out += '\nEJEMPLOS:\n';
+    // Usar el defaultRaw si está disponible para filesystem
+    const fsHints = serverHints['filesystem'] || {};
+    const basePath = fsHints.defaultRaw || 'C:\\path\\to\\dir';
+    const sep = basePath.includes('\\') ? '\\' : '/';
+    out += `Listar: {"tool":"filesystem__list_directory","arguments":{"path":"${basePath}"}}\n`;
+    out += `Leer: {"tool":"filesystem__read_file","arguments":{"path":"${basePath}${sep}config.json"}}\n`;
+    out += `Crear: {"tool":"filesystem__write_file","arguments":{"path":"${basePath}${sep}file.txt","content":"texto"}}\n`;
+    
+    // 🔧 CRÍTICO: Ejemplo explícito para search_nodeterm (NO search_noderm)
+    const hasSearchNodeterm = tools.some(t => t.name === 'search_nodeterm');
+    if (hasSearchNodeterm) {
+      out += `Buscar SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"AC68U"}}\n`;
+      out += `Listar todos SSH: {"tool":"ssh-terminal__search_nodeterm","arguments":{}}\n`;
+      out += '⚠️ IMPORTANTE: El nombre correcto es "search_nodeterm" (NO "search_noderm", NO "search_nodeterms").\n';
+      out += '🚫 CRÍTICO: search_nodeterm SOLO debe usarse cuando el usuario EXPLÍCITAMENTE pide buscar, listar o conectar a una conexión SSH. NO lo uses proactivamente ni para sugerencias.\n';
+    }
+    
+    out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
+    out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n';
+    out += '⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n';
+    out += '🚫 NO USES HERRAMIENTAS PROACTIVAMENTE: Solo ejecuta herramientas cuando el usuario lo pida explícitamente.\n\n';
+
+    return out;
+  }
+
+  /**
+   * Detectar PLAN de herramientas (modo ReAct) en la respuesta
+   * Retorna: { isPlan: true, tools: [{tool, arguments}, ...] } o null
+   */
+  _detectToolPlan(response) {
+    if (!response || typeof response !== 'string') return null;
+    
+    // Buscar JSON con estructura de plan: {"plan": [...]}
+    // Mejorado: buscar también variantes como "tools", "steps", "actions"
+    const jsonPatterns = [
+      /\{[\s\S]*?"plan"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g,
+      /\{[\s\S]*?"tools"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g,
+      /\{[\s\S]*?"steps"[\s\S]*?\[[\s\S]*?\][\s\S]*?\}/g
+    ];
+    
+    let matches = [];
+    for (const pattern of jsonPatterns) {
+      const found = response.match(pattern);
+      if (found) matches = matches.concat(found);
+    }
+    
+    if (!matches || matches.length === 0) return null;
+    
+    for (const jsonStr of matches) {
+      try {
+        const data = JSON.parse(jsonStr);
+        // Buscar plan, tools, steps, o actions
+        const planArray = data.plan || data.tools || data.steps || data.actions;
+        
+        if (planArray && Array.isArray(planArray) && planArray.length > 0) {
+          // Validar que cada elemento del plan tenga tool
+          const validTools = planArray.filter(t => {
+            if (!t) return false;
+            // Aceptar tool, toolName, name, o function
+            return !!(t.tool || t.toolName || t.name || t.function);
+          });
+          
+          if (validTools.length > 0) {
+            debugLogger.debug('AIService.MCP', 'Plan detectado con herramientas válidas', {
+              herramientas: validTools.length,
+              formato: data.plan ? 'plan' : (data.tools ? 'tools' : (data.steps ? 'steps' : 'actions'))
+            });
+            return {
+              isPlan: true,
+              tools: validTools.map(t => ({
+                tool: t.tool || t.toolName || t.name || t.function,
+                toolName: t.tool || t.toolName || t.name || t.function,
+                arguments: t.arguments || t.args || t.params || {},
+                serverId: t.serverId || t.server || null
+              }))
+            };
+          }
+        }
+      } catch (e) {
+        // Intentar extraer JSON más específico si falla el parse completo
+        try {
+          // Buscar solo el array del plan
+          const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            const arrayData = JSON.parse(arrayMatch[0]);
+            if (Array.isArray(arrayData) && arrayData.length > 0) {
+              const validTools = arrayData.filter(t => t && (t.tool || t.toolName || t.name));
+              if (validTools.length > 0) {
+                debugLogger.debug('AIService.MCP', 'Plan detectado (array directo)', {
+                  herramientas: validTools.length
+                });
+                return {
+                  isPlan: true,
+                  tools: validTools.map(t => ({
+                    tool: t.tool || t.toolName || t.name,
+                    toolName: t.tool || t.toolName || t.name,
+                    arguments: t.arguments || t.args || {},
+                    serverId: t.serverId || t.server || null
+                  }))
+                };
+              }
+            }
+          }
+        } catch (e2) {
+          continue;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Ejecutar un PLAN completo de herramientas (modo ReAct)
+   */
+  async _executeToolPlan(plan, callbacks = {}) {
+    debugLogger.debug('AIService.MCP', 'Ejecutando plan de herramientas', {
+      herramientas: plan.tools.length
+    });
+    
+    const results = [];
+    for (let i = 0; i < plan.tools.length; i++) {
+      const toolSpec = plan.tools[i];
+      const toolName = toolSpec.toolName || toolSpec.tool;
+      const args = toolSpec.arguments || {};
+      
+      debugLogger.debug('AIService.MCP', 'Ejecutando herramienta del plan', {
+        indice: i + 1,
+        total: plan.tools.length,
+        tool: toolName
+      });
+      
+      // Normalizar y resolver serverId
+      const normalized = this._normalizeFunctionCall(toolName, args);
+      const serverId = normalized.serverId;
+      const actualToolName = normalized.toolName;
+      const callArgs = normalized.arguments;
+      
+      // Guardar mensaje de tool call
+      conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${actualToolName}`, {
+        isToolCall: true,
+        toolName: actualToolName,
+        toolArgs: callArgs
+      });
+      
+      // Callback de tool ejecutada
+      if (callbacks.onToolResult) {
+        callbacks.onToolResult({ toolName: actualToolName, args: callArgs, result: null });
+      }
+      
+      try {
+        if (!serverId) {
+          throw new Error(`No se pudo resolver el servidor para la herramienta ${actualToolName}`);
+        }
+        
+        const result = await mcpClient.callTool(serverId, actualToolName, callArgs);
+        const text = result?.content?.[0]?.text || 'OK';
+        const planSummary = summarizeToolResult({
+          toolName: actualToolName,
+          args: callArgs,
+          resultText: text
+        });
+        
+        // Guardar resultado de la tool
+        conversationService.addMessage('tool', planSummary, {
+          isToolResult: true,
+          toolName: actualToolName,
+          toolArgs: callArgs,
+          toolResultText: text,
+          toolResultSummary: planSummary
+        });
+        rememberToolExecution(conversationService.currentConversationId, actualToolName, callArgs, {
+          summary: planSummary,
+          rawText: text,
+          isError: false
+        });
+        
+        results.push({ tool: actualToolName, success: true, result: text });
+        
+        // Callback de tool ejecutada con resultado
+        if (callbacks.onToolResult) {
+          callbacks.onToolResult({ toolName: actualToolName, args: callArgs, result });
+        }
+        
+        debugLogger.debug('AIService.MCP', 'Herramienta del plan completada', {
+          indice: i + 1,
+          total: plan.tools.length,
+          tool: actualToolName
+        });
+      } catch (error) {
+        const errorMsg = `❌ Error ejecutando ${actualToolName}: ${error.message}`;
+        const errorSummary = summarizeToolResult({
+          toolName: actualToolName,
+          args: callArgs,
+          resultText: errorMsg,
+          isError: true
+        });
+        conversationService.addMessage('tool', errorSummary, {
+          error: true,
+          isToolResult: true,
+          toolName: actualToolName,
+          toolArgs: callArgs,
+          toolResultText: errorMsg,
+          toolResultSummary: errorSummary
+        });
+        results.push({ tool: actualToolName, success: false, error: error.message });
+        console.error(`   ❌ [${i + 1}/${plan.tools.length}] ${actualToolName} falló:`, error.message);
+      }
+    }
+    
+    debugLogger.debug('AIService.MCP', 'Plan completado', {
+      exitosas: results.filter(r => r.success).length,
+      total: results.length
+    });
+    return 'Hecho.';
+  }
+
+  /**
+   * Detectar si la respuesta del modelo solicita usar una tool
+   */
+  detectToolCallInResponse(response) {
+    if (!response || typeof response !== 'string') return null;
+    
+    // NUEVO: Log agresivo para ver la respuesta COMPLETA
+    debugLogger.debug('AIService.MCP', 'detectToolCallInResponse entrada', {
+      tipo: typeof response,
+      length: response?.length,
+      muestra: response?.substring(0, 200),
+      incluyeTool: response?.includes('"tool"'),
+      incluyeLlave: response?.includes('{')
+    });
+    
+    try {
+      // Estrategia 1: Bloques explícitos con backticks (```json...```)
+      const toolCall = this._extractToolCallFromCodeBlock(response);
+      if (toolCall) {
+        return toolCall;
+      }
+      
+      // Estrategia 2: JSON flexible en cualquier posición (con preámbulo/epilogo)
+      const jsonToolCall = this._extractToolCallFromJSON(response);
+      return jsonToolCall;
+      
+    } catch (error) {
+      // Error inesperado en detección
+      if (response.trim().startsWith('{') && response.trim().endsWith('}')) {
+        debugLogger.debug('AIService.MCP', 'JSON inválido detectado al buscar tool call', {
+          error: error.message.substring(0, 100)
+        });
+      }
+      console.error('❌ [AIService] Error detectando tool call:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Detectar solicitud de PROMPT MCP en respuesta del modelo
+   * Formato esperado:
+   * {"prompt": {"server":"<serverId>", "name":"<promptName>", "arguments":{...}}}
+   */
+  detectPromptCallInResponse(response) {
+    if (!response || typeof response !== 'string') return null;
+    try {
+      // Buscar bloque JSON que contenga "prompt": { ... }
+      const re = /\{[\s\S]*?"prompt"\s*:\s*\{[\s\S]*?\}[\s\S]*?\}/g;
+      const matches = response.match(re);
+      if (!matches) return null;
+      for (const jsonStr of matches) {
+        try {
+          const data = JSON.parse(jsonStr);
+          const pr = data.prompt;
+          if (pr && typeof pr === 'object' && pr.name) {
+            return { serverId: pr.server || pr.serverId, promptName: pr.name, arguments: pr.arguments || {} };
+          }
+        } catch (_) { /* ignore */ }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async _handlePromptCallAndContinue({ serverId, promptName, arguments: args }, messages, callbacks, options, modelId) {
+    try {
+      const res = await mcpClient.getPrompt(serverId, promptName, args || {});
+      const promptText = res?.result?.content?.[0]?.text || res?.content?.[0]?.text || '';
+      const nextMessages = [...messages, { role: 'user', content: promptText }];
+      return await this.sendToLocalModelStreamingWithCallbacks(modelId, nextMessages, callbacks, { ...options, maxTokens: Math.max(800, options.maxTokens || 1500) });
+    } catch (e) {
+      return `Error obteniendo prompt ${promptName} de ${serverId || 'desconocido'}: ${e.message}`;
+    }
+  }
+
+  /**
+   * Convertir JSON Schema a el formato de parámetros de Gemini (tipos en MAYÚSCULAS)
+   */
+  _toGeminiSchema(schema) {
+    if (!schema || typeof schema !== 'object') return { type: 'OBJECT' };
+
+    const upper = (t) => {
+      if (!t) return undefined;
+      const map = {
+        object: 'OBJECT',
+        array: 'ARRAY',
+        string: 'STRING',
+        number: 'NUMBER',
+        integer: 'INTEGER',
+        boolean: 'BOOLEAN'
+      };
+      return map[String(t).toLowerCase()] || String(t).toUpperCase();
+    };
+
+    const convert = (node) => {
+      if (!node || typeof node !== 'object') return node;
+      const t = upper(node.type);
+      if (t === 'OBJECT') {
+        const props = node.properties || {};
+        const outProps = {};
+        Object.keys(props).forEach((k) => {
+          outProps[k] = convert(props[k]);
+        });
+        return {
+          type: 'OBJECT',
+          properties: outProps,
+          required: Array.isArray(node.required) ? node.required : undefined
+        };
+      }
+      if (t === 'ARRAY') {
+        return {
+          type: 'ARRAY',
+          items: convert(node.items || {})
+        };
+      }
+      // Primitivos
+      return { type: t };
+    };
+
+    return convert(schema);
+  }
+
+  _resolveToolInfo(toolName, serverIdHint = null) {
+    const tools = mcpClient.getAvailableTools() || [];
+    if (serverIdHint) {
+      const match = tools.find(t => t.serverId === serverIdHint && t.name === toolName);
+      if (match) {
+        return { serverId: match.serverId, toolName: match.name };
+      }
+    }
+
+    const exactMatches = tools.filter(t => t.name === toolName);
+    if (exactMatches.length === 1) {
+      return { serverId: exactMatches[0].serverId, toolName: exactMatches[0].name };
+    }
+
+    if (exactMatches.length > 1) {
+      return { serverId: exactMatches[0].serverId, toolName: exactMatches[0].name };
+    }
+
+    const namespacedMatch = tools.find(t => `${t.serverId}__${t.name}` === toolName);
+    if (namespacedMatch) {
+      return { serverId: namespacedMatch.serverId, toolName: namespacedMatch.name };
+    }
+
+    const filesystemMatch = tools.find(t => t.serverId === 'filesystem' && t.name === toolName);
+    if (filesystemMatch) {
+      return { serverId: filesystemMatch.serverId, toolName: filesystemMatch.name };
+    }
+
+    // 🔧 NUEVO: Fuzzy matching para nombres similares (corrección automática)
+    // Buscar herramientas con nombres similares (útil cuando el modelo genera nombres incorrectos)
+    const similarTools = this._findSimilarToolName(toolName, tools);
+    if (similarTools.length > 0) {
+      const bestMatch = similarTools[0];
+      console.warn(`⚠️ [AIService] Tool "${toolName}" no encontrada, usando similar: "${bestMatch.name}"`);
+      return { serverId: bestMatch.serverId, toolName: bestMatch.name };
+    }
+
+    return { serverId: serverIdHint, toolName };
+  }
+
+  /**
+   * Encontrar herramientas con nombres similares usando distancia de Levenshtein
+   */
+  _findSimilarToolName(targetName, tools, maxDistance = 3) {
+    if (!targetName || typeof targetName !== 'string' || !tools || tools.length === 0) {
+      return [];
+    }
+
+    const targetLower = targetName.toLowerCase();
+    const candidates = [];
+
+    for (const tool of tools) {
+      const toolNameLower = tool.name.toLowerCase();
+      
+      // Calcular distancia de Levenshtein simple
+      const distance = this._levenshteinDistance(targetLower, toolNameLower);
+      
+      // También verificar si el nombre contiene el target o viceversa
+      const containsMatch = toolNameLower.includes(targetLower) || targetLower.includes(toolNameLower);
+      
+      if (distance <= maxDistance || containsMatch) {
+        candidates.push({
+          ...tool,
+          distance: containsMatch ? Math.min(distance, 1) : distance
+        });
+      }
+    }
+
+    // Ordenar por distancia (menor es mejor)
+    candidates.sort((a, b) => a.distance - b.distance);
+    
+    return candidates;
+  }
+
+  /**
+   * Calcular distancia de Levenshtein entre dos strings
+   */
+  _levenshteinDistance(str1, str2) {
+    const m = str1.length;
+    const n = str2.length;
+    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,     // eliminación
+            dp[i][j - 1] + 1,     // inserción
+            dp[i - 1][j - 1] + 1  // sustitución
+          );
+        }
+      }
+    }
+
+    return dp[m][n];
+  }
+
+  _normalizeFunctionCall(fullName, rawArgs) {
+    debugLogger.debug('AIService.MCP', '_normalizeFunctionCall entrada', { fullName, rawArgs });
+    let argsObj;
+    if (!rawArgs) {
+      argsObj = {};
+    } else if (typeof rawArgs === 'string') {
+      argsObj = { tool: rawArgs };
+    } else {
+      argsObj = { ...rawArgs };
+    }
+
+    let toolName = argsObj.tool || argsObj.name || fullName;
+    let serverId = argsObj.server || argsObj.serverId || null;
+
+    // 🔧 ARREGLO: Manejar nombres namespaced con doble guión bajo (__) O un solo guión bajo (_)
+    // El modelo a veces genera ssh-terminal_search_noderm en lugar de ssh-terminal__search_nodeterm
+    if (!serverId && typeof fullName === 'string') {
+      // Intentar con doble guión bajo primero (formato correcto)
+      if (fullName.includes('__')) {
+        const idx = fullName.indexOf('__');
+        if (idx >= 0) {
+          serverId = fullName.slice(0, idx);
+          toolName = fullName.slice(idx + 2);
+        }
+      }
+      // Si no se encontró, intentar con un solo guión bajo (formato incorrecto del modelo)
+      else if (fullName.includes('_') && !fullName.includes('__')) {
+        // Buscar patrones como "ssh-terminal_search_noderm"
+        const parts = fullName.split('_');
+        if (parts.length >= 2) {
+          const possibleServerId = parts[0];
+          const possibleBaseName = parts.slice(1).join('_');
+          
+          // Verificar si existe un servidor con ese ID
+          const tools = mcpClient.getAvailableTools() || [];
+          const serverExists = tools.some(t => t.serverId === possibleServerId);
+          if (serverExists) {
+            serverId = possibleServerId;
+            toolName = possibleBaseName;
+          }
+        }
+      }
+    }
+
+    if (!serverId) {
+      const tools = mcpClient.getAvailableTools() || [];
+      const matches = tools.filter(t => t.name === toolName);
+      if (matches.length === 1) {
+        serverId = matches[0].serverId;
+      } else if (matches.length > 1) {
+        serverId = matches[0].serverId;
+      }
+    }
+
+    if (!serverId) {
+      const fallbackDir = this._getMcpDefaultDir('filesystem');
+      if (fallbackDir) {
+        serverId = 'filesystem';
+      }
+    }
+
+    if (!serverId) {
+      const tools = mcpClient.getAvailableTools() || [];
+      const fsMatch = tools.find(t => t.serverId === 'filesystem' && t.name === toolName);
+      if (fsMatch) {
+        serverId = 'filesystem';
+      }
+    }
+
+    if (!serverId) {
+      debugLogger.warn('AIService.MCP', '_normalizeFunctionCall sin serverId resuelto', {
+        fullName,
+        rawArgs,
+        toolName,
+        argsObj
+      });
+    }
+
+    // Construir argumentos limpios
+    let finalArgs = argsObj.arguments || argsObj.args || argsObj.parameters;
+    if (typeof finalArgs === 'string') {
+      finalArgs = { tool: finalArgs };
+    }
+
+    if (!finalArgs || typeof finalArgs !== 'object' || Array.isArray(finalArgs)) {
+      const copy = { ...argsObj };
+      delete copy.tool;
+      delete copy.name;
+      delete copy.server;
+      delete copy.serverId;
+      delete copy.arguments;
+      delete copy.args;
+      delete copy.parameters;
+      finalArgs = copy;
+    } else {
+      finalArgs = { ...finalArgs };
+    }
+
+    if (finalArgs.arguments && typeof finalArgs.arguments === 'object' && !Array.isArray(finalArgs.arguments)) {
+      finalArgs = { ...finalArgs, ...finalArgs.arguments };
+      delete finalArgs.arguments;
+    }
+
+    if (finalArgs.server || finalArgs.serverId) {
+      serverId = serverId || finalArgs.server || finalArgs.serverId;
+      delete finalArgs.server;
+      delete finalArgs.serverId;
+    }
+
+    const nestedTool = finalArgs.tool || finalArgs.toolName;
+    if (nestedTool) {
+      toolName = nestedTool;
+      delete finalArgs.tool;
+      delete finalArgs.toolName;
+    }
+
+    if (!serverId) {
+      const tools = mcpClient.getAvailableTools() || [];
+      const matches = tools.filter(t => t.name === toolName);
+      if (matches.length === 1) {
+        serverId = matches[0].serverId;
+      }
+    }
+
+    if (!finalArgs || typeof finalArgs !== 'object') {
+      finalArgs = {};
+    }
+
+    const defaultInfo = serverId ? this._getMcpDefaultDir(serverId) : this._getMcpDefaultDir('filesystem');
+    const defaultPath = defaultInfo?.raw || defaultInfo?.normalized || null;
+    if (defaultPath) {
+      if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(toolName) && !finalArgs.path) {
+        finalArgs.path = defaultPath;
+      }
+      if (toolName === 'read_text_file' && !finalArgs.path) {
+        finalArgs.path = defaultPath;
+      }
+    }
+
+    const resolved = this._resolveToolInfo(toolName, serverId);
+    const normalized = { serverId: resolved.serverId, toolName: resolved.toolName, arguments: finalArgs };
+    debugLogger.debug('AIService.MCP', '_normalizeFunctionCall salida', normalized);
+    return normalized;
+  }
+
+  async _handleRemotePostResponse(rawResponse, conversationMessages, mcpContext, callbacks, options, model) {
+    let responseText = rawResponse || '';
+
+    if (mcpContext?.hasTools) {
+      if (!this._getMcpDefaultDir('filesystem')) {
+        try { await this.getAllowedDirectoriesCached(); } catch (_) {}
+      }
+      const toolCall = this.detectToolCallInResponse(responseText);
+      if (toolCall) {
+        if (this.toolOrchestrator) {
+          try {
+            const orchestratorResult = await this.toolOrchestrator.executeLoop({
+              modelId: model.id,
+              initialToolCall: toolCall,
+              baseProviderMessages: conversationMessages,
+              detectToolCallInResponse: (resp) => this.detectToolCallInResponse(resp),
+              callModelFn: async () => 'Hecho.',
+              callbacks,
+              options,
+              turnId: options?.turnId
+            });
+            return orchestratorResult;
+          } catch (error) {
+            console.error('[MCP] Error en loop remoto:', error);
+            return `Error ejecutando herramienta: ${error.message}`;
+          }
+        }
+
+        try {
+          const normalized = this._normalizeFunctionCall(toolCall.toolName || toolCall.tool, toolCall.arguments || {});
+          const serverId = normalized.serverId;
+          const toolName = normalized.toolName;
+          const callArgs = normalized.arguments;
+          
+          conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { isToolCall: true, toolName, toolArgs: callArgs });
+          const result = serverId ? await mcpClient.callTool(serverId, toolName, callArgs)
+                                  : await mcpClient.callTool(toolName, callArgs);
+          const text = result?.content?.[0]?.text || 'OK';
+          conversationService.addMessage('tool', text, { isToolResult: true, toolName, toolArgs: callArgs });
+          return 'Hecho.';
+        } catch (error) {
+          conversationService.addMessage('tool', `❌ Error ejecutando herramienta: ${error.message}`, { error: true });
+          return `Error ejecutando herramienta: ${error.message}`;
+        }
+      }
+
+      const promptCall = this.detectPromptCallInResponse(responseText);
+      if (promptCall) {
+        return await this._handlePromptCallAndContinue(promptCall, conversationMessages, callbacks, options, model.id);
+      }
+    }
+
+    return responseText;
+  }
+
+  /**
+   * Inferir intención básica del usuario para Filesystem a partir del texto
+   */
+  _inferFilesystemIntent(text) {
+    if (!text || typeof text !== 'string') return null;
+    const s = text.toLowerCase();
+    if (/(mover|mueve|renombrar|renombra|move|rename)/.test(s)) return 'move';
+    if (/(copiar|copia|copy)/.test(s)) return 'copy';
+    if (/(borrar|eliminar|borra|remove|delete)/.test(s)) return 'delete';
+    if (/(crear carpeta|crear directorio|mkdir|create directory)/.test(s)) return 'mkdir';
+    if (/(listar|lista|ver contenido|list)/.test(s)) return 'list';
+    if (/(leer|read)/.test(s)) return 'read';
+    if (/(editar|edit)/.test(s)) return 'edit';
+    return null;
+  }
+
+  /**
+   * Extraer tool call de bloques de código (```json...```)
+   */
+  _extractToolCallFromCodeBlock(response) {
+    const jsonBlockRegex = /```(?:json|tool|tool_call)?\s*([\s\S]*?)```/gi;
+    let match = jsonBlockRegex.exec(response);
+    
+    while (match) {
+      try {
+        const jsonContent = match[1].trim();
+        const data = JSON.parse(jsonContent);
+        const toolCall = this._normalizeToolCall(data);
+        if (toolCall) return toolCall;
+      } catch (e) {
+        // Este bloque no es válido, intentar siguiente
+      }
+      match = jsonBlockRegex.exec(response);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Extraer tool call de JSON flexible (en cualquier posición con preámbulo/epilogo)
+   */
+  _extractToolCallFromJSON(response) {
+    // NUEVO: Log para debugging
+    debugLogger.debug('AIService.MCP', 'Buscando JSON en respuesta', { length: response.length });
+    
+    // Buscar JSON que contenga "tool" o "use_tool"
+    // Permite preámbulo y epilogo alrededor del JSON
+    // FIX: Usar [\s\S]* GREEDY (sin ?) para capturar hasta el ÚLTIMO } del objeto
+    const jsonPattern = /\{[\s\S]*?"(?:tool|use_tool)"[\s\S]*\}/g;
+    const matches = response.match(jsonPattern);
+    
+    if (!matches) {
+      debugLogger.debug('AIService.MCP', 'No se encontró JSON con tool/use_tool');
+      return null;
+    }
+    
+    // Intentar cada JSON encontrado (puede haber múltiples)
+    for (let i = 0; i < matches.length; i++) {
+      const jsonStr = matches[i];
+      debugLogger.debug('AIService.MCP', 'Intentando candidato para tool call', {
+        indice: i + 1,
+        preview: jsonStr.substring(0, 50).replace(/\n/g, '\\n')
+      });
+      
+      try {
+        const data = JSON.parse(jsonStr);
+        const toolCall = this._normalizeToolCall(data);
+        if (toolCall) {
+          debugLogger.debug('AIService.MCP', 'Tool call detectado', { tool: toolCall.toolName });
+          return toolCall;
+        }
+      } catch (e) {
+        debugLogger.debug('AIService.MCP', 'JSON inválido durante parseo de tool call', { error: e.message });
+        continue;
+      }
+    }
+    
+    debugLogger.debug('AIService.MCP', 'Ningún candidato fue un tool call válido');
+    return null;
+  }
+
+  /**
+   * Validar si data es un tool call válido
+   */
+  _isValidToolCall(data) {
+    if (!data || typeof data !== 'object') return false;
+    
+    const hasToolField = (data.tool && typeof data.tool === 'string') ||
+                         (data.use_tool && typeof data.use_tool === 'string');
+    
+    return hasToolField;
+  }
+
+  /**
+   * Normalizar tool call a formato estándar
+   */
+  _normalizeToolCall(data) {
+    if (!this._isValidToolCall(data)) return null;
+    
+    return {
+      toolName: data.tool || data.use_tool,
+      arguments: data.arguments || {},
+      serverId: data.serverId || data.server || null
+    };
+  }
+
+  /**
+   * Manejar loop de tool calls para modelos locales (system prompt)
+   * Soporta múltiples iteraciones, re-inyección de resultados, y detección de loops
+   */
+  async handleLocalToolCallLoop(toolCall, messages, callbacks = {}, options = {}, modelId, maxIterations) {
+    let iteration = 0;
+    let currentToolCall = toolCall;
+    let conversationMessages = [...messages];
+    let lastToolName = null;
+    let consecutiveRepeats = 0;
+    const lastUserGoal = (() => {
+      try {
+        const reversed = [...messages].reverse();
+        const lastUser = reversed.find(m => m && m.role === 'user' && typeof m.content === 'string');
+        return lastUser ? lastUser.content : null;
+      } catch (_) {
+        return null;
+      }
+    })();
+    const inferredIntent = this._inferFilesystemIntent(lastUserGoal || '');
+    
+    const limit = Number.isFinite(maxIterations) ? Math.max(1, maxIterations) : Infinity;
+    const limitInfo = Number.isFinite(limit) ? limit : null;
+    
+    debugLogger.debug('AIService.MCP', 'Iniciando loop de tool calls', { maxIterations: limitInfo });
+    
+    while (currentToolCall && iteration < limit) {
+      iteration++;
+      
+      debugLogger.debug('AIService.MCP', 'Iteración de loop tool call', {
+        iteration,
+        maxIterations: limitInfo,
+        tool: currentToolCall.toolName
+      });
+      
+      // NEW: Detect infinite loops (same tool repeated)
+      if (lastToolName === currentToolCall.toolName) {
+        consecutiveRepeats++;
+        debugLogger.warn('AIService.MCP', 'Mismo tool repetido consecutivamente', {
+          repeticiones: consecutiveRepeats,
+          tool: currentToolCall.toolName
+        });
+        
+        // Si el mismo tool se pide 2 veces seguidas (es decir, 3 veces en total), probablemente es un loop
+        if (consecutiveRepeats >= 2) {
+          debugLogger.warn('AIService.MCP', 'Loop infinito detectado, deteniendo ejecución', {
+            tool: currentToolCall.toolName
+          });
+          if (callbacks.onStatus) {
+            callbacks.onStatus({
+              status: 'warning',
+              message: `⚠️ Loop infinito detectado (${currentToolCall.toolName} repetido 3 veces)`,
+              model: modelId,
+              provider: 'local'
+            });
+          }
+          
+          // FIX: Return the last meaningful response instead of just breaking
+          const lastMessage = conversationMessages[conversationMessages.length - 1];
+          const lastContent = lastMessage?.content || '';
+          
+          return `⚠️ Se detectó un loop infinito con la herramienta "${currentToolCall.toolName}". El modelo solicitó esta herramienta repetidamente sin progresar.
+
+Última respuesta del modelo:
+${lastContent}
+
+Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
+        }
+      } else {
+        consecutiveRepeats = 0;
+        lastToolName = currentToolCall.toolName;
+      }
+      
+      // Callback de estado: ejecutando herramienta
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'tool-execution',
+          message: `🔧 Ejecutando herramienta: ${currentToolCall.toolName}...`,
+          model: modelId,
+          provider: 'local',
+          toolName: currentToolCall.toolName,
+          toolArgs: currentToolCall.arguments,
+          iteration,
+          maxIterations: limitInfo
+        });
+      }
+      
+      try {
+        // Ejecutar la tool via MCP (soportar serverId y nombres namespaced)
+        let execResult = null;
+        let baseName = currentToolCall.toolName;
+        let serverIdHint = currentToolCall.serverId || null;
+
+        if (!serverIdHint && typeof baseName === 'string' && baseName.includes('__')) {
+          const idx = baseName.indexOf('__');
+          const sid = baseName.slice(0, idx);
+          const name = baseName.slice(idx + 2);
+          if (sid && name) {
+            serverIdHint = sid;
+            baseName = name;
+          }
+        }
+
+        // 🔧 CRITICAL FIX: Asegurar que arguments siempre sea un objeto válido
+        if (!currentToolCall.arguments || typeof currentToolCall.arguments !== 'object') {
+          currentToolCall.arguments = {};
+        }
+
+        const defaultInfoLocal = this._getMcpDefaultDir(serverIdHint || 'filesystem');
+        const defaultPathLocal = defaultInfoLocal?.raw || defaultInfoLocal?.normalized || null;
+        
+        // ✅ FIXED: Inyectar path ANTES de validar
+        if (defaultPathLocal) {
+          if (['list_directory', 'directory_tree', 'list_directory_with_sizes'].includes(baseName) && !currentToolCall.arguments.path) {
+            currentToolCall.arguments.path = defaultPathLocal;
+            debugLogger.debug('AIService.MCP', 'Path inyectado para herramienta', {
+              tool: baseName,
+              path: defaultPathLocal
+            });
+          }
+          if (baseName === 'read_text_file' && !currentToolCall.arguments.path) {
+            currentToolCall.arguments.path = defaultPathLocal;
+            debugLogger.debug('AIService.MCP', 'Path inyectado para herramienta', {
+              tool: baseName,
+              path: defaultPathLocal
+            });
+          }
+        }
+
+        // 🔍 DEBUG: Validar argumentos antes de ejecutar
+        debugLogger.debug('AIService.MCP', 'Ejecutando herramienta', {
+          tool: baseName,
+          args: currentToolCall.arguments
+        });
+        
+        if (!currentToolCall.arguments || Object.keys(currentToolCall.arguments).length === 0) {
+          debugLogger.warn('AIService.MCP', 'Argumentos vacíos para herramienta, puede fallar', {
+            tool: baseName
+          });
+        }
+
+        if (serverIdHint) {
+          execResult = await mcpClient.callTool(serverIdHint, baseName, currentToolCall.arguments);
+        } else {
+          execResult = await mcpClient.callTool(baseName, currentToolCall.arguments);
+        }
+        const result = (execResult && execResult.success === true && execResult.result) ? execResult.result : execResult;
+        
+        // Verificar si hubo error en la tool
+        if (result.isError) {
+          const errorText = result.content?.[0]?.text || 'Error desconocido';
+          console.error(`❌ [MCP] ${currentToolCall.toolName} falló:`, errorText);
+          
+          // Callback de error
+          if (callbacks.onStatus) {
+            callbacks.onStatus({
+              status: 'tool-error',
+              message: `Error en herramienta ${currentToolCall.toolName}: ${errorText}`,
+              model: modelId,
+              provider: 'local',
+              toolName: currentToolCall.toolName,
+              error: errorText
+            });
+          }
+          
+          // No devolver inmediatamente, informar al modelo
+          conversationMessages.push({
+            role: 'user',
+            content: `❌ Error ejecutando ${currentToolCall.toolName}: ${errorText}`
+          });
+          
+          // Pedir al modelo que intente de otra forma
+          const errorFollowUp = await this.sendToLocalModelStreamingWithCallbacks(
+            modelId,
+            conversationMessages,
+            callbacks,
+            { ...options, maxTokens: 500, temperature: 0.3 }
+          );
+          
+          // Detectar si hay otra tool call después del error
+          currentToolCall = this.detectToolCallInResponse(errorFollowUp);
+          if (!currentToolCall) {
+            return errorFollowUp;
+          }
+          continue;
+        }
+        
+        debugLogger.debug('AIService.MCP', 'Ejecución de herramienta completada', {
+          tool: currentToolCall.toolName
+        });
+        
+        // ✅ IMPROVED: Detectar lenguaje para archivos de texto
+        let detectedLanguage = '';
+        if (baseName === 'read_text_file') {
+          const filePath = currentToolCall.arguments?.path || '';
+          const ext = filePath.split('.').pop()?.toLowerCase() || '';
+          const langMap = {
+            'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+            'py': 'python', 'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c', 'hpp': 'cpp',
+            'cs': 'csharp', 'php': 'php', 'rb': 'ruby', 'go': 'go', 'rs': 'rust', 'swift': 'swift',
+            'kt': 'kotlin', 'scala': 'scala', 'sh': 'bash', 'bash': 'bash', 'zsh': 'bash', 'fish': 'bash',
+            'ps1': 'powershell', 'json': 'json', 'yaml': 'yaml', 'yml': 'yaml', 'xml': 'xml',
+            'html': 'html', 'htm': 'html', 'css': 'css', 'scss': 'scss', 'sass': 'sass', 'less': 'less',
+            'sql': 'sql', 'md': 'markdown', 'mdx': 'markdown', 'txt': 'text', 'log': 'text'
+          };
+          detectedLanguage = langMap[ext] || '';
+        }
+        
+        // Notificar a la UI con el resultado de la tool
+        if (callbacks && typeof callbacks.onToolResult === 'function') {
+          try {
+            callbacks.onToolResult({
+              toolName: currentToolCall.toolName,
+              args: currentToolCall.arguments,
+              result,
+              detectedLanguage,
+              filePath: currentToolCall.arguments?.path
+            });
+          } catch (cbErr) {
+            debugLogger.warn('AIService.MCP', 'onToolResult callback lanzó un error', {
+              error: cbErr?.message
+            });
+          }
+        }
+        
+        // Formatear resultado
+        const cleanResult = (() => {
+          const text = result.content?.[0]?.text || 'OK';
+          
+          // Operaciones de escritura/modificación
+          if (text.includes('Successfully wrote') || text.includes('Successfully created')) {
+            return '✅ Archivo creado correctamente';
+          }
+          if (text.includes('Successfully moved')) {
+            return '✅ Archivo movido correctamente';
+          }
+          if (text.includes('DIFF INDEX') || text.includes('---') || text.includes('```diff')) {
+            return '✅ Archivo editado correctamente';
+          }
+          
+          // ✅ NO procesar aquí - dejar para AIChatPanel.js
+          // Solo devolver el texto sin formateo para que renderMarkdown lo procese
+          if (text.includes('[FILE]') || text.includes('[DIR]')) {
+            return text;
+          }
+          
+          // ✅ IMPROVED: Contenido de archivos - detectar lenguaje y formatear como código
+          // Detectar extensión si está disponible en los metadatos o por patrones
+          if (currentToolCall.toolName === 'read_text_file' || currentToolCall.toolName === 'read_file' || baseName === 'read_text_file') {
+            const filePath = currentToolCall.arguments?.path || '';
+            const ext = filePath.split('.').pop()?.toLowerCase() || '';
+            
+            // Map extensiones a lenguajes soportados en markdown
+            const langMap = {
+              'js': 'javascript',
+              'jsx': 'javascript',
+              'ts': 'typescript',
+              'tsx': 'typescript',
+              'py': 'python',
+              'java': 'java',
+              'cpp': 'cpp',
+              'c': 'c',
+              'h': 'c',
+              'hpp': 'cpp',
+              'cs': 'csharp',
+              'php': 'php',
+              'rb': 'ruby',
+              'go': 'go',
+              'rs': 'rust',
+              'swift': 'swift',
+              'kt': 'kotlin',
+              'scala': 'scala',
+              'sh': 'bash',
+              'bash': 'bash',
+              'zsh': 'bash',
+              'fish': 'bash',
+              'ps1': 'powershell',
+              'json': 'json',
+              'yaml': 'yaml',
+              'yml': 'yaml',
+              'xml': 'xml',
+              'html': 'html',
+              'htm': 'html',
+              'css': 'css',
+              'scss': 'scss',
+              'sass': 'sass',
+              'less': 'less',
+              'sql': 'sql',
+              'md': 'markdown',
+              'mdx': 'markdown',
+              'txt': 'text',
+              'log': 'text'
+            };
+            
+            const lang = langMap[ext] || '';
+            debugLogger.debug('AIService.MCP', 'Lenguaje detectado para archivo', {
+              extension: ext,
+              lenguaje: lang
+            });
+            
+            // No añadir bloques de código aquí - se manejan en AIChatPanel.js
+            return text;
+          }
+          
+          // Texto general o resultado de otros comandos
+          return text;
+        })();
+        
+        // Marcar si el filesystem fue modificado
+        const finalOperations = ['write_file', 'edit_file', 'create_directory', 'move_file'];
+        if (finalOperations.includes(currentToolCall.toolName)) {
+          this._filesystemModified = true;
+        }
+        
+        // NUEVO: Re-inyectar resultado en conversación para que el modelo lo vea
+        debugLogger.debug('AIService.MCP', 'Reinyectando resultado en conversación');
+        const { observation: toolObservation, summary: toolSummary } = this._buildToolObservation({
+          toolName: currentToolCall.toolName,
+          args: currentToolCall.arguments,
+          resultText: cleanResult,
+          isError: !!result.isError,
+          lastUserGoal,
+          inferredIntent
+        });
+        conversationMessages.push({
+          role: 'user',
+          content: toolObservation,
+          metadata: { isToolObservation: true, toolName: currentToolCall.toolName }
+        });
+        
+        // NUEVO: Preguntar al modelo si necesita más herramientas
+        const followUp = await this.sendToLocalModelStreamingWithCallbacks(
+          modelId,
+          conversationMessages,
+          callbacks,
+          { ...options, maxTokens: 500, temperature: 0.3, contextLimit: Math.min(4096, options.contextLimit || 8000) }
+        );
+        
+        // 🔧 NUEVO: Si la respuesta está vacía, reintentar con prompt simplificado
+        if (!followUp || followUp.trim().length === 0) {
+          debugLogger.warn('AIService.MCP', 'Modelo generó respuesta vacía tras ejecutar tool; reintentando con prompt simplificado');
+          
+          conversationMessages.push({
+            role: 'user',
+            content: `Por favor, responde confirmando que la operación se completó exitosamente o genera el SIGUIENTE tool-call necesario para cumplir el objetivo. ${lastUserGoal ? `Objetivo: ${lastUserGoal}. ` : ''}Recuerda responder sólo con JSON válido cuando uses herramientas.`
+          });
+          
+          const retryResponse = await this.sendToLocalModelStreamingWithCallbacks(
+            modelId,
+            conversationMessages,
+            callbacks,
+            { ...options, maxTokens: 1500, temperature: 0.6, contextLimit: Math.min(4096, options.contextLimit || 8000) }
+          );
+          
+          if (retryResponse && retryResponse.trim().length > 0) {
+            debugLogger.debug('AIService.MCP', 'Retry exitoso tras respuesta vacía');
+            return retryResponse;
+          } else {
+            debugLogger.warn('AIService.MCP', 'Retry falló después de respuesta vacía, retornando mensaje por defecto');
+            return `✅ Operación completada correctamente.`;
+          }
+        }
+        
+        // NUEVO: Detectar si hay otro tool call
+        const nextToolCall = this.detectToolCallInResponse(followUp);
+        
+        // 🔧 CRÍTICO: Ignorar tool call si es IDÉNTICO al que acabamos de ejecutar
+        // Esto previene loops infinitos cuando el modelo menciona la herramienta anterior
+        if (nextToolCall) {
+          const isSameTool = nextToolCall.toolName === currentToolCall.toolName;
+          const isSameArgs = JSON.stringify(nextToolCall.arguments) === JSON.stringify(currentToolCall.arguments);
+          
+          if (isSameTool && isSameArgs) {
+            debugLogger.warn('AIService.MCP', 'Tool call duplicado detectado; terminando loop', {
+              tool: nextToolCall.toolName
+            });
+            // Retornar la respuesta sin el JSON del tool call
+            const cleanResponse = followUp.replace(/\{[\s\S]*?"tool"[\s\S]*?\}/g, '').trim();
+            return cleanResponse || `✅ Operación completada correctamente.`;
+          }
+        }
+        
+        currentToolCall = nextToolCall;
+        
+        if (!currentToolCall) {
+          // No hay más tools, el modelo respondió normalmente
+          debugLogger.debug('AIService.MCP', 'Loop completado, el modelo respondió sin pedir más herramientas');
+          return followUp;
+        }
+        
+        // Hay otro tool call DIFERENTE, continuar loop
+        debugLogger.debug('AIService.MCP', 'Modelo solicita otra herramienta, continuando loop');
+        
+      } catch (error) {
+        debugLogger.error('AIService.MCP', 'Error ejecutando herramienta', {
+          tool: currentToolCall.toolName,
+          error: error?.message
+        });
+        
+        // Callback de error
+        if (callbacks.onStatus) {
+          callbacks.onStatus({
+            status: 'tool-error',
+            message: `Error en herramienta ${currentToolCall.toolName}: ${error.message}`,
+            model: modelId,
+            provider: 'local',
+            toolName: currentToolCall.toolName,
+            error: error.message
+          });
+        }
+        
+        // Informar error al modelo
+        conversationMessages.push({
+          role: 'user',
+          content: `❌ Error técnico ejecutando ${currentToolCall.toolName}: ${error.message}`
+        });
+        
+        // Dar oportunidad al modelo de responder
+        try {
+          const errorResponse = await this.sendToLocalModelStreamingWithCallbacks(
+            modelId,
+            conversationMessages,
+            callbacks,
+            { ...options, maxTokens: 500, temperature: 0.3, contextLimit: Math.min(2048, options.contextLimit || 8000) }
+          );
+          return errorResponse;
+        } catch (recoveryError) {
+          throw new Error(`Error ejecutando herramienta ${currentToolCall.toolName}: ${error.message}`);
+        }
+      }
+    }
+    
+    const limitReached = Number.isFinite(limit) && iteration >= limit && currentToolCall;
+    if (limitReached) {
+      debugLogger.warn('AIService.MCP', 'Límite de iteraciones alcanzado en loop de herramientas (local)', {
+        maxIterations: limit
+      });
+      
+      if (callbacks.onStatus) {
+        callbacks.onStatus({
+          status: 'warning',
+          message: `Límite de herramientas alcanzado (${limit} iteraciones)`,
+          model: modelId,
+          provider: 'local'
+        });
+      }
+      
+      if (conversationMessages.length > 0) {
+        const lastMessage = conversationMessages[conversationMessages.length - 1];
+        if (lastMessage.content) {
+          return lastMessage.content;
+        }
+      }
+      
+      return 'Lo siento, alcancé el límite de uso de herramientas configurado para este modelo.';
+    }
+    
+    return 'Operación completada.';
+  }
+
+  /**
    * Enviar mensaje con callbacks de estado
    */
   async sendMessageWithCallbacks(message, callbacks = {}, options = {}) {
@@ -1957,15 +3692,33 @@ class AIService {
       throw new Error('No hay conversación activa');
     }
 
+    // 🔧 VALIDACIÓN DE SINCRONIZACIÓN
+    debugLogger.debug('AIService.Conversation', 'Validación de conversación', {
+      currentId: currentConversation.id,
+      serviceId: conversationService.currentConversationId
+    });
+    if (currentConversation.id !== conversationService.currentConversationId) {
+      debugLogger.warn('AIService.Conversation', 'Desincronización detectada', {
+        currentId: currentConversation.id,
+        serviceId: conversationService.currentConversationId
+      });
+    }
+
     // Obtener mensajes de la conversación actual
     const conversationMessages = currentConversation.messages || [];
     // Considerar "primera conversación" cuando solo hay 1 mensaje (el del usuario que acabamos de agregar)
     const isFirstMessage = conversationMessages.length === 1;
     
-    // No loguear aquí - los logs están en los métodos de envío específicos
+    debugLogger.debug('AIService.Conversation', 'Mensajes en conversación actual', {
+      total: conversationMessages.length
+    });
     
     // 🪟 VENTANA DESLIZANTE INTELIGENTE POR TOKENS (como ChatGPT/Claude)
-    let limitedMessages = this.smartTokenBasedHistoryLimit(conversationMessages, finalOptions);
+    const contextualMessages = this._prepareMessagesForContext(conversationMessages);
+    let limitedMessages = this.smartTokenBasedHistoryLimit(contextualMessages, finalOptions);
+    debugLogger.debug('AIService.Conversation', 'Mensajes después de limitación', {
+      total: limitedMessages.length
+    });
 
     // Construir contexto efímero de archivos adjuntos (RAG ligero)
     const attachedFiles = conversationService.getAttachedFiles();
@@ -1990,22 +3743,19 @@ class AIService {
       providerMessages.splice(providerMessages.length - 1, 0, { role: 'system', content: ephemeralContext });
     }
 
-    // 🔍 LOG DETALLADO: Mostrar cada prompt que se enviará
-    console.log('📤 PROMPTS QUE SE ENVIARÁN AL MODELO:');
-    console.log('═══════════════════════════════════════════════════════════');
-    providerMessages.forEach((msg, index) => {
-      const roleEmoji = msg.role === 'user' ? '👤' : msg.role === 'assistant' ? '🤖' : '⚙️';
-      const contentPreview = msg.content.length > 200 
-        ? msg.content.substring(0, 200) + '...' 
-        : msg.content;
-      console.log(`${index + 1}. ${roleEmoji} [${msg.role.toUpperCase()}]`);
-      console.log(`   ${contentPreview.replace(/\n/g, ' ')}`);
-      if (msg.content.length > 200) {
-        console.log(`   ... (${msg.content.length} caracteres en total)`);
-      }
-      console.log('');
+    // Si el filesystem fue modificado, agregar nota para invalidar información anterior
+    if (this._filesystemModified) {
+      providerMessages.splice(providerMessages.length - 1, 0, {
+        role: 'system',
+        content: '⚠️ FILESYSTEM MODIFICADO. Archivos/directorios anteriores ya NO son válidos. DEBES ejecutar tools de nuevo para obtener información actualizada.'
+      });
+      this._filesystemModified = false; // Reset flag
+    }
+
+    // Log compacto
+    debugLogger.debug('AIService.Conversation', 'Enviando mensajes al modelo', {
+      mensajes: providerMessages.length
     });
-    console.log('═══════════════════════════════════════════════════════════');
 
     // Metadatos para la UI: indicar si se usó contexto efímero y qué archivos
     const ephemeralFilesUsed = (ephemeralContext && ephemeralContext.length > 0)
@@ -2165,7 +3915,11 @@ class AIService {
             
             // Si es error 503 (modelo sobrecargado) y no es el último intento, reintentar
             if (response.status === 503 && attempt < 3) {
-              console.log(`⚠️ Modelo ${model.id} sobrecargado, reintentando en ${attempt * 2} segundos... (intento ${attempt}/3)`);
+              debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado, reintentando', {
+                modelId: model.id,
+                intento: attempt,
+                delayMs: attempt * 2000
+              });
               await new Promise(resolve => setTimeout(resolve, attempt * 2000)); // Esperar 2, 4 segundos
               continue;
             }
@@ -2188,7 +3942,11 @@ class AIService {
           
           // Si es error de modelo sobrecargado y no es el último intento, reintentar
           if (error.message.includes('overloaded') && attempt < 3) {
-            console.log(`⚠️ Modelo ${model.id} sobrecargado, reintentando en ${attempt * 2} segundos... (intento ${attempt}/3)`);
+            debugLogger.warn('AIService.RemoteModel', 'Modelo remoto sobrecargado (mensaje), reintentando', {
+              modelId: model.id,
+              intento: attempt,
+              delayMs: attempt * 2000
+            });
             await new Promise(resolve => setTimeout(resolve, attempt * 2000));
             continue;
           }
@@ -2204,11 +3962,16 @@ class AIService {
       
       throw lastError;
     } catch (error) {
-      console.error('Error llamando a API remota:', error);
+      debugLogger.error('AIService.RemoteModel', 'Error llamando a API remota', {
+        modelId: model.id,
+        error: error?.message
+      });
       
       // Si es error de modelo sobrecargado, intentar con otro modelo del mismo proveedor
       if (error.message.includes('overloaded') || error.message.includes('503') || error.message.includes('The model is overloaded')) {
-        console.log(`🔄 Modelo ${model.id} sobrecargado, intentando fallback automático...`);
+        debugLogger.warn('AIService.RemoteModel', 'Intentando fallback automático por modelo sobrecargado', {
+          modelId: model.id
+        });
         
         // Buscar otros modelos del mismo proveedor que no hayan sido intentados
         const alternativeModels = this.models.remote.filter(m => 
@@ -2219,7 +3982,9 @@ class AIService {
         
         if (alternativeModels.length > 0) {
           const fallbackModel = alternativeModels[0];
-          console.log(`🔄 Cambiando a modelo fallback: ${fallbackModel.name}`);
+          debugLogger.info('AIService.RemoteModel', 'Cambiando a modelo fallback', {
+            fallbackModel: fallbackModel.name
+          });
           
           // Temporalmente cambiar el modelo actual para el fallback
           const originalModel = this.currentModel;
@@ -2312,6 +4077,19 @@ class AIService {
     }
 
     try {
+      // 🔌 Inyectar tools MCP como function-calling cuando sea posible
+      const mcpEnabled = options.mcpEnabled !== false;
+      let mcpContext = { tools: [], hasTools: false };
+      if (mcpEnabled) {
+        try {
+          const ctx = await this.injectMCPContext(message);
+          mcpContext = { tools: ctx.tools || [], hasTools: (ctx.tools || []).length > 0 };
+        } catch (e) {
+          debugLogger.warn('AIService.MCP', 'Error obteniendo contexto MCP (remote)', {
+            error: e.message
+          });
+        }
+      }
       // Preparar mensajes según el proveedor
       let requestBody;
       let headers;
@@ -2333,6 +4111,45 @@ class AIService {
           temperature: options.temperature || 0.7,
           max_tokens: options.maxTokens || 2000
         };
+        if (mcpContext.hasTools) {
+          const providerTools = this.convertMCPToolsToProviderFormat(mcpContext.tools, 'openai', { namespace: true });
+          if (providerTools.length > 0) {
+            requestBody.tools = providerTools;
+            
+            // ✨ MEJORADO: Configuración inteligente de tool_choice
+            // Detectar si la pregunta REQUIERE usar una tool
+            const lowerMsg = message.toLowerCase();
+            const requiresTool = lowerMsg.match(/lista|lee|crea|busca|muestra|guarda|edita/) && 
+                                 lowerMsg.match(/archivo|directorio|carpeta|file/);
+            
+            if (requiresTool && providerTools.length <= 3) {
+              // Si claramente necesita una tool y hay pocas opciones, forzar uso
+              requestBody.tool_choice = 'required';
+            } else {
+              requestBody.tool_choice = 'auto';
+            }
+            
+            // ✨ Ajustar temperatura para mejor precisión con tools
+            requestBody.temperature = Math.min(options.temperature || 0.7, 0.3);
+            
+            // ✨ NUEVO: Agregar few-shot examples como mensaje de sistema
+            const examples = this.generateToolExamples(mcpContext.tools, 'openai');
+            if (examples && examples.length > 0) {
+              // Buscar si ya hay un mensaje de sistema
+              const systemMsgIndex = requestBody.messages.findIndex(m => m.role === 'system');
+              if (systemMsgIndex >= 0) {
+                // Agregar ejemplos al mensaje de sistema existente
+                requestBody.messages[systemMsgIndex].content += '\n\n' + examples;
+              } else {
+                // Crear nuevo mensaje de sistema con ejemplos
+                requestBody.messages.unshift({
+                  role: 'system',
+                  content: 'Usa las herramientas disponibles cuando sea necesario.' + examples
+                });
+              }
+            }
+          }
+        }
       } else if (model.provider === 'anthropic') {
         headers = {
           'Content-Type': 'application/json',
@@ -2348,6 +4165,19 @@ class AIService {
           })),
           max_tokens: options.maxTokens || 2000
         };
+        if (mcpContext.hasTools) {
+          const providerTools = this.convertMCPToolsToProviderFormat(mcpContext.tools, 'anthropic', { namespace: true });
+          if (providerTools.length > 0) {
+            requestBody.tools = providerTools;
+            
+            // ✨ NUEVO: Agregar few-shot examples como system prompt
+            const examples = this.generateToolExamples(mcpContext.tools, 'anthropic');
+            if (examples && examples.length > 0) {
+              // Anthropic usa un campo 'system' separado
+              requestBody.system = 'Usa las herramientas disponibles cuando sea necesario.' + examples;
+            }
+          }
+        }
       } else if (model.provider === 'google') {
         headers = {
           'Content-Type': 'application/json'
@@ -2367,6 +4197,55 @@ class AIService {
             maxOutputTokens: options.maxTokens || 2000
           }
         };
+        if (mcpContext.hasTools) {
+          const providerTools = this.convertMCPToolsToProviderFormat(mcpContext.tools, 'google', { namespace: true }) || [];
+          if (providerTools.length > 0) {
+            // Gemini espera tools: [{ function_declarations: [ { name, description, parameters } ] }]
+            const functionDecls = providerTools.map(fn => ({
+              name: fn.name,
+              description: fn.description,
+              parameters: this._toGeminiSchema(fn.parameters)
+            }));
+            requestBody.tools = [{ function_declarations: functionDecls }];
+            
+            // ✨ MEJORADO: Configuración inteligente del modo de function calling
+            const lowerMsg = message.toLowerCase();
+            const requiresTool = lowerMsg.match(/lista|lee|crea|busca|muestra|guarda|edita/) && 
+                                 lowerMsg.match(/archivo|directorio|carpeta|file/);
+            
+            // Gemini acepta: AUTO, ANY (required), NONE
+            const mode = (requiresTool && functionDecls.length <= 3) ? 'ANY' : 'AUTO';
+            requestBody.tool_config = { function_calling_config: { mode } };
+
+            // Inyectar prompt universal como systemInstruction con hints (filesystem)
+            try {
+              const serverHints = {};
+              const hasFilesystem = (mcpContext.tools || []).some(t => t.serverId === 'filesystem');
+              if (hasFilesystem) {
+                const allowedDirsText = await this.getAllowedDirectoriesCached();
+                if (allowedDirsText) {
+                  const rawLines = String(allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean);
+                  let first = rawLines[0] || '';
+                  if (/^Allowed directories:/i.test(first)) {
+                    first = first.replace(/^Allowed directories:/i, '').trim();
+                  }
+                  const primaryDirNormalized = first ? first.replace(/\\/g, '/') : null;
+                  if (first) {
+                    this._setMcpDefaultDir('filesystem', first);
+                  }
+                  serverHints['filesystem'] = { allowedDirsText, primaryDirNormalized, defaultRaw: first || null };
+                }
+              }
+              const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 6, serverHints });
+              
+              // ✨ NUEVO: Agregar few-shot examples para mejorar precisión
+              const examples = this.generateToolExamples(mcpContext.tools, 'google');
+              const enhancedPrompt = toolsPrompt + examples;
+              
+              requestBody.systemInstruction = { role: 'system', parts: [{ text: enhancedPrompt }] };
+            } catch (_) {}
+          }
+        }
       }
 
       // Callback de estado: generando
@@ -2418,13 +4297,260 @@ class AIService {
 
           const data = await response.json();
           
-          // Extraer respuesta según el proveedor
+          // Extraer respuesta y manejar tool-calls cuando aplique
           if (model.provider === 'openai') {
-            return data.choices[0].message.content;
+            const choice = data.choices?.[0]?.message || {};
+            const toolCalls = choice.tool_calls || [];
+            if (mcpContext.hasTools && Array.isArray(toolCalls) && toolCalls.length > 0) {
+              // Ejecutar tools solicitadas y re-preguntar
+              let followMessages = [...requestBody.messages];
+              const executionSummaries = [];
+              for (const tc of toolCalls) {
+                const fn = tc.function || {};
+                const fullName = fn.name || '';
+                let args = {};
+                try { args = fn.arguments ? JSON.parse(fn.arguments) : fn.arguments || {}; } catch (_) { args = fn.arguments || {}; }
+                const normalized = this._normalizeFunctionCall(fullName, args);
+                const serverId = normalized.serverId;
+                const toolName = normalized.toolName;
+                const callArgs = normalized.arguments;
+                const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
+                if (cachedExecution && !cachedExecution.isError) {
+                  executionSummaries.push(`• ${toolName}: ${cachedExecution.summary || cachedExecution.rawText}`);
+                  continue;
+                }
+                
+                let result;
+                try {
+                  result = serverId
+                    ? await mcpClient.callTool(serverId, toolName, callArgs)
+                    : await mcpClient.callTool(toolName, callArgs);
+                  const text = result?.content?.[0]?.text || 'OK';
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: summarizeToolResult({
+                      toolName,
+                      args: callArgs,
+                      resultText: text
+                    }),
+                    rawText: text,
+                    isError: false
+                  });
+                  executionSummaries.push(`• ${toolName}: ${text.substring(0, 800)}`);
+                } catch (e) {
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: `ERROR ${e.message}`,
+                    rawText: e.message,
+                    isError: true
+                  });
+                  executionSummaries.push(`• ${toolName}: ERROR ${e.message}`);
+                }
+              }
+              followMessages.push({ role: 'user', content: `Resultados de herramientas:\n${executionSummaries.join('\n')}\n\nSi necesitas otra herramienta, propón el siguiente tool-call en JSON.` });
+              // Segunda llamada para respuesta final (con tools aún registradas)
+              requestBody.messages = followMessages;
+              const response2 = await fetch(requestUrl, {
+                method: 'POST', headers, body: JSON.stringify(requestBody), signal: options.signal
+              });
+              if (!response2.ok) {
+                const e2 = await response2.text();
+                throw new Error(e2 || 'Error tras tool calls');
+              }
+              const data2 = await response2.json();
+              const finalText = data2.choices?.[0]?.message?.content || '';
+              return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
+            }
+            const finalText = choice.content || '';
+            return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
           } else if (model.provider === 'anthropic') {
-            return data.content[0].text;
+            // Búsqueda simple de tool_use en contenido (aprox)
+            const content = data.content || [];
+            const toolUse = content.find(p => p.type === 'tool_use');
+            if (mcpContext.hasTools && toolUse) {
+              const normalized = this._normalizeFunctionCall(toolUse.name, toolUse.input || {});
+              const serverId = normalized.serverId;
+              const toolName = normalized.toolName;
+              const callArgs = normalized.arguments;
+              const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
+              
+              if (cachedExecution && !cachedExecution.isError) {
+                const nextBody = { ...requestBody };
+                nextBody.messages = [
+                  ...requestBody.messages,
+                  { role: 'user', content: `Resultado de ${toolName} (reutilizado): ${cachedExecution.summary || cachedExecution.rawText}` }
+                ];
+                const response2 = await fetch(requestUrl, { method: 'POST', headers, body: JSON.stringify(nextBody), signal: options.signal });
+                if (!response2.ok) {
+                  const e2 = await response2.text();
+                  throw new Error(e2 || 'Error tras tool calls (Anthropic)');
+                }
+                const data2 = await response2.json();
+                const finalText = data2.content?.[0]?.text || '';
+                return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
+              }
+              
+              try {
+                const result = serverId ? await mcpClient.callTool(serverId, toolName, callArgs)
+                                        : await mcpClient.callTool(toolName, callArgs);
+                const text = result?.content?.[0]?.text || 'OK';
+                rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                  summary: summarizeToolResult({
+                    toolName,
+                    args: callArgs,
+                    resultText: text
+                  }),
+                  rawText: text,
+                  isError: false
+                });
+                const nextBody = { ...requestBody };
+                nextBody.messages = [
+                  ...requestBody.messages,
+                  { role: 'user', content: `Resultado de ${toolName}: ${text.substring(0, 1000)}` }
+                ];
+                const response2 = await fetch(requestUrl, { method: 'POST', headers, body: JSON.stringify(nextBody), signal: options.signal });
+                if (!response2.ok) {
+                  const e2 = await response2.text();
+                  throw new Error(e2 || 'Error tras tool calls (Anthropic)');
+                }
+                const data2 = await response2.json();
+                const finalText = data2.content?.[0]?.text || '';
+                return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
+              } catch (e) {
+                rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                  summary: `ERROR ${e.message}`,
+                  rawText: e.message,
+                  isError: true
+                });
+                return `Error ejecutando herramienta: ${e.message}`;
+              }
+            }
+            const finalText = data.content?.[0]?.text || '';
+            return await this._handleRemotePostResponse(finalText, conversationMessages, mcpContext, callbacks, options, model);
           } else if (model.provider === 'google') {
-            return data.candidates[0].content.parts[0].text;
+            // Detectar functionCall y ejecutar tools si aplica
+            const candidate = (data.candidates && data.candidates[0]) || {};
+            const parts = candidate.content?.parts || candidate.content || [];
+            const calls = Array.isArray(parts) ? parts.filter(p => p.functionCall) : [];
+            if (mcpContext.hasTools && calls.length > 0) {
+              // Usar toolOrchestrator para ejecutar herramientas en loop
+              if (this.toolOrchestrator && calls.length === 1) {
+                const firstCall = calls[0];
+                const fc = firstCall.functionCall || {};
+                const fullName = fc.name || '';
+                const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
+                
+                const initialToolCall = {
+                  toolName: normalized.toolName,
+                  arguments: normalized.arguments,
+                  serverId: normalized.serverId
+                };
+                
+                try {
+                  const orchestratorResult = await this.toolOrchestrator.executeLoop({
+                    modelId: model.id,
+                    initialToolCall,
+                    baseProviderMessages: conversationMessages,
+                    detectToolCallInResponse: (resp) => this.detectToolCallInResponse(resp),
+                    callModelFn: async (updatedMessages) => {
+                      // Re-llamar a Gemini con mensajes actualizados
+                      const nextBody = { ...requestBody };
+                      nextBody.contents = updatedMessages.map(msg => ({
+                        role: msg.role === 'assistant' ? 'model' : 'user',
+                        parts: [{ text: msg.content }]
+                      }));
+                      const response2 = await fetch(requestUrl, { 
+                        method: 'POST', 
+                        headers, 
+                        body: JSON.stringify(nextBody), 
+                        signal: options.signal 
+                      });
+                      if (!response2.ok) {
+                        const e2 = await response2.text();
+                        throw new Error(e2 || 'Error en llamada secundaria');
+                      }
+                      const data2 = await response2.json();
+                      const cand2 = (data2.candidates && data2.candidates[0]) || {};
+                      const parts2 = cand2.content?.parts || cand2.content || [];
+                      return Array.isArray(parts2) ? parts2.map(p => p.text).filter(Boolean).join('\n') : '';
+                    },
+                    callbacks,
+                    options,
+                    turnId: options?.turnId
+                  });
+                  return orchestratorResult;
+                } catch (error) {
+                  console.error('[MCP] Error en loop remoto (Gemini):', error);
+                  return `Error ejecutando herramienta: ${error.message}`;
+                }
+              }
+              
+              // Fallback: ejecutar todas las tools solicitadas en secuencia
+              for (const call of calls) {
+                const fc = call.functionCall || {};
+                const fullName = fc.name || '';
+                const normalized = this._normalizeFunctionCall(fullName, fc.args || {});
+                const serverId = normalized.serverId;
+                const toolName = normalized.toolName;
+                const callArgs = normalized.arguments;
+                const cachedExecution = getRecentToolExecution(conversationService.currentConversationId, toolName, callArgs);
+                
+                conversationService.addMessage('assistant_tool_call', `Llamando herramienta: ${toolName}`, { 
+                  isToolCall: true, 
+                  toolName, 
+                  toolArgs: callArgs 
+                });
+                
+                if (cachedExecution && !cachedExecution.isError) {
+                  conversationService.addMessage('tool', cachedExecution.summary || cachedExecution.rawText, { 
+                    isToolResult: true, 
+                    toolName, 
+                    toolArgs: callArgs,
+                    toolResultText: cachedExecution.rawText,
+                    toolResultSummary: cachedExecution.summary || cachedExecution.rawText
+                  });
+                  continue;
+                }
+                
+                try {
+                  if (!serverId) {
+                    throw new Error(`No se pudo resolver el servidor para la herramienta ${toolName}`);
+                  }
+                  
+                  const result = await mcpClient.callTool(serverId, toolName, callArgs);
+                  const text = result?.content?.[0]?.text || 'OK';
+                  
+                  conversationService.addMessage('tool', text, { 
+                    isToolResult: true, 
+                    toolName, 
+                    toolArgs: callArgs 
+                  });
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: summarizeToolResult({
+                      toolName,
+                      args: callArgs,
+                      resultText: text
+                    }),
+                    rawText: text,
+                    isError: false
+                  });
+                  
+                  if (callbacks.onToolResult) {
+                    callbacks.onToolResult({ toolName, args: callArgs, result });
+                  }
+                } catch (e) {
+                  const errorMsg = `❌ Error ejecutando herramienta ${toolName}: ${e.message}`;
+                  conversationService.addMessage('tool', errorMsg, { error: true });
+                  rememberToolExecution(conversationService.currentConversationId, toolName, callArgs, {
+                    summary: errorMsg,
+                    rawText: errorMsg,
+                    isError: true
+                  });
+                }
+              }
+              
+              return 'Hecho.';
+            }
+            const text = Array.isArray(parts) ? parts.map(p => p.text).filter(Boolean).join('\n') : '';
+            return await this._handleRemotePostResponse(text || '', conversationMessages, mcpContext, callbacks, options, model);
           }
         } catch (error) {
           lastError = error;
@@ -2471,10 +4597,62 @@ class AIService {
     }
 
     try {
-      const messages = conversationMessages.map(msg => ({
+      let messages = conversationMessages.map(msg => ({
         role: msg.role === 'assistant' ? 'assistant' : (msg.role === 'system' ? 'system' : 'user'),
         content: msg.content
       }));
+
+      // 🔌 INYECTAR TOOLS MCP EN SYSTEM PROMPT (si no está desactivado)
+      const mcpEnabled = options.mcpEnabled !== false; // Por defecto true
+      let mcpContext = { tools: [], resources: [], prompts: [], hasTools: false };
+      
+      if (mcpEnabled) {
+        mcpContext = await this.injectMCPContext(message);
+        
+        if (mcpContext.hasTools) {
+
+          // Construir hints por servidor (filesystem: directorios permitidos)
+          const serverHints = {};
+          try {
+            const hasFilesystem = (mcpContext.tools || []).some(t => t.serverId === 'filesystem');
+            if (hasFilesystem) {
+              const allowedDirsText = await this.getAllowedDirectoriesCached();
+              if (allowedDirsText) {
+                const rawLines = String(allowedDirsText).split('\n').map(l => l.trim()).filter(Boolean);
+                let first = rawLines[0] || '';
+                if (/^Allowed directories:/i.test(first)) {
+                  first = first.replace(/^Allowed directories:/i, '').trim();
+                }
+                const primaryDirNormalized = first ? first.replace(/\\/g, '/') : null;
+                if (first) {
+                  this._setMcpDefaultDir('filesystem', first);
+                }
+                serverHints['filesystem'] = {
+                  allowedDirsText,
+                  primaryDirNormalized,
+                  defaultRaw: first || null
+                };
+              }
+            }
+          } catch (e) {
+            debugLogger.warn('AIService.MCP', 'No se pudieron obtener directorios permitidos', {
+              error: e.message
+            });
+          }
+
+          const toolsPrompt = this.generateUniversalMCPSystemPrompt(mcpContext.tools, { maxPerServer: 6, serverHints });
+          
+          const systemIndex = messages.findIndex(m => m.role === 'system');
+          if (systemIndex >= 0) {
+            messages[systemIndex].content += (messages[systemIndex].content.endsWith('\n') ? '' : '\n\n') + toolsPrompt;
+          } else {
+            messages.unshift({
+              role: 'system',
+              content: toolsPrompt
+            });
+          }
+        }
+      }
 
       const ollamaUrl = this.getOllamaUrl();
       
@@ -2484,16 +4662,185 @@ class AIService {
           status: 'connecting',
           message: `Conectando con ${model.name} local...`,
           model: model.name,
-          provider: 'local'
+          provider: 'local',
+          mcpEnabled: mcpContext.hasTools
         });
       }
       
-      // Usar streaming si está habilitado
-      if (options.useStreaming) {
-        return await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, options);
-      } else {
-        return await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, options);
+      // 🔧 AJUSTE INTELIGENTE DE TOKENS: El modelo necesita espacio para razonar
+      const adjustedOptions = { ...options };
+      
+      // Calcular tamaño aproximado del contexto actual
+      const contextSize = messages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
+      const contextTokens = Math.ceil(contextSize / 4); // Aproximación: 4 chars = 1 token
+      
+      if (mcpContext.hasTools) {
+        // IMPORTANTE: deepseek-r1 es un modelo de reasoning que necesita espacio para pensar
+        // 800 tokens es DEMASIADO BAJO, especialmente después de múltiples tool calls
+        // Aumentar según el tamaño del contexto:
+        const baseTokens = options.maxTokens || 2000;
+        const minTokensForTools = 1500; // Mínimo para generar tool calls + razonamiento
+        const maxTokensForTools = 3000; // Máximo para evitar respuestas muy largas
+        
+        // Si el contexto es grande (>6000 tokens), dar más espacio al modelo
+        if (contextTokens > 6000) {
+          adjustedOptions.maxTokens = maxTokensForTools;
+        } else if (contextTokens > 3000) {
+          adjustedOptions.maxTokens = 2000;
+        } else {
+          adjustedOptions.maxTokens = Math.max(minTokensForTools, Math.min(baseTokens, maxTokensForTools));
+        }
+        
       }
+      
+      // 🔍 DEBUG: Mostrar qué se envía al modelo
+      if (mcpContext.hasTools) {
+        const systemMsg = messages.find(m => m.role === 'system');
+        if (systemMsg) {
+          const promptLength = systemMsg.content.length;
+          const promptPreview = systemMsg.content.substring(0, 500);
+          debugLogger.debug('AIService.LocalModel', 'Prompt system enviado', {
+            length: promptLength,
+            tokensAprox: Math.ceil(promptLength / 4),
+            preview: promptPreview + '...',
+            toolsCount: mcpContext.tools.length
+          });
+        }
+      }
+      
+      // Usar streaming si está habilitado
+      let response;
+      if (adjustedOptions.useStreaming) {
+        response = await this.sendToLocalModelStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
+      } else {
+        response = await this.sendToLocalModelNonStreamingWithCallbacks(model.id, messages, callbacks, adjustedOptions);
+      }
+      
+      // 🔍 DEBUG: Mostrar qué responde el modelo
+      debugLogger.debug('AIService.LocalModel', 'Respuesta del modelo', {
+        isEmpty: !response || response.trim().length === 0,
+        length: response?.length || 0,
+        preview: response ? response.substring(0, 200) : '(vacío)'
+      });
+      
+      // 🔧 RETRY AUTOMÁTICO: Si la respuesta está vacía, reintentar con prompt simplificado
+      if ((!response || response.trim().length === 0) && mcpContext.hasTools) {
+        debugLogger.warn('AIService.Toolchain', 'Modelo generó respuesta vacía; reintentando con prompt simplificado');
+        
+        // Callback de estado: reintentando
+        if (callbacks.onStatus) {
+          callbacks.onStatus({
+            status: 'retrying',
+            message: '⚠️ Reintentando solicitud...',
+            model: model.name,
+            provider: 'local'
+          });
+        }
+        
+        // Agregar prompt de ayuda
+        const retryMessages = [
+          ...messages,
+          {
+            role: 'user',
+            content: 'Por favor, responde usando alguna de las herramientas disponibles o proporciona una respuesta textual.'
+          }
+        ];
+        
+        // Reintentar con parámetros ajustados (más tokens para dar espacio al modelo)
+        try {
+          const retryResponse = await this.sendToLocalModelStreamingWithCallbacks(
+            model.id,
+            retryMessages,
+            callbacks,
+            { ...adjustedOptions, maxTokens: 1500, temperature: 0.6 }
+          );
+          
+          if (retryResponse && retryResponse.trim().length > 0) {
+            debugLogger.debug('AIService.Toolchain', 'Retry de modelo exitoso', {
+              respuestaLength: retryResponse.length
+            });
+            response = retryResponse;
+          } else {
+            debugLogger.warn('AIService.Toolchain', 'Retry falló, usando respuesta por defecto');
+            return 'Lo siento, tuve problemas al procesar tu solicitud. Por favor, intenta reformularla.';
+          }
+        } catch (retryError) {
+          debugLogger.error('AIService.Toolchain', 'Error durante retry de modelo', {
+            error: retryError?.message
+          });
+          return 'Lo siento, tuve problemas al procesar tu solicitud. Por favor, intenta de nuevo.';
+        }
+      }
+      
+      // 🔧 DETECTAR SI LA RESPUESTA ES UN PLAN o TOOL CALL
+      if (mcpContext.hasTools) {
+        // Prioridad 1: Detectar PLAN (múltiples herramientas)
+        const toolPlan = this._detectToolPlan(response);
+        if (toolPlan) {
+          debugLogger.debug('AIService.Toolchain', 'Plan detectado; ejecutando herramientas', {
+            herramientas: toolPlan.tools.length
+          });
+          return await this._executeToolPlan(toolPlan, callbacks);
+        }
+        
+        // Prioridad 2: Detectar tool call individual
+        const toolCall = this.detectToolCallInResponse(response);
+        if (toolCall) {
+          debugLogger.info('AIService.Toolchain', 'Tool call detectado; iniciando ejecución', {
+            tool: toolCall.toolName,
+            structuredToolMessages: this.featureFlags?.structuredToolMessages,
+            hasOrchestrator: !!this.toolOrchestrator
+          });
+          
+          if (this.featureFlags?.structuredToolMessages && this.toolOrchestrator) {
+            debugLogger.debug('AIService.Toolchain', 'Usando toolOrchestrator.executeLoop');
+            const callModelFn = async (provMessages, overrides = {}) => {
+              const adjusted = { ...options, ...overrides };
+              return await this.sendToLocalModelStreamingWithCallbacks(
+                model.id,
+                provMessages,
+                callbacks,
+                adjusted
+              );
+            };
+            const orchestratorResult = await this.toolOrchestrator.executeLoop({
+              modelId: model.id,
+              initialToolCall: toolCall,
+              baseProviderMessages: messages,
+              detectToolCallInResponse: (resp) => this.detectToolCallInResponse(resp),
+              callModelFn,
+              callbacks,
+              options,
+              turnId: options?.turnId
+            });
+            debugLogger.debug('AIService.Toolchain', 'toolOrchestrator.executeLoop completado', {
+              resultadoLength: orchestratorResult?.length || 0
+            });
+            return orchestratorResult;
+          }
+          
+          debugLogger.debug('AIService.Toolchain', 'Usando handleLocalToolCallLoop');
+          const loopResult = await this.handleLocalToolCallLoop(toolCall, messages, callbacks, options, model.id);
+          debugLogger.debug('AIService.Toolchain', 'handleLocalToolCallLoop completado', {
+            resultadoLength: loopResult?.length || 0
+          });
+          return loopResult;
+        } else {
+          // Si no hay tool, intentar detectar PROMPT MCP
+          const promptCall = this.detectPromptCallInResponse(response);
+          if (promptCall) {
+            debugLogger.debug('AIService.MCP', 'Prompt solicitado por el modelo', {
+              prompt: promptCall.promptName,
+              server: promptCall.serverId || 'sin server'
+            });
+            const promptResult = await this._handlePromptCallAndContinue(promptCall, messages, callbacks, options, model.id);
+            return promptResult;
+          }
+          debugLogger.debug('AIService.Toolchain', 'No se detectó tool/prompt call; retornando respuesta directa');
+        }
+      }
+      
+      return response;
     } catch (error) {
       console.error('Error llamando a modelo local:', error);
       
@@ -2531,12 +4878,7 @@ class AIService {
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -2549,16 +4891,29 @@ class AIService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Error de Ollama:', errorText);
+      debugLogger.error('AIService.LocalModel', 'Error de Ollama', {
+        error: errorText
+      });
       throw new Error(`Error del servidor Ollama (${response.status})`);
     }
 
     const data = await response.json();
     
+    // NUEVO: Log detallado de respuesta
+    debugLogger.debug('AIService.LocalModel', 'Respuesta cruda de Ollama', {
+      resumida: JSON.stringify(data).substring(0, 200),
+      message: data.message,
+      contentLength: data.message?.content?.length || 0
+    });
+    
     // La respuesta de Ollama viene en data.message.content
     if (data.message && data.message.content) {
       return data.message.content;
     } else {
+      debugLogger.error('AIService.LocalModel', 'Respuesta vacía o inválida de Ollama', {
+        message: data.message,
+        content: data.message?.content
+      });
       throw new Error('Respuesta inválida del modelo local');
     }
   }
@@ -2569,11 +4924,15 @@ class AIService {
   async sendToLocalModelStreaming(modelId, messages, options) {
     const ollamaUrl = this.getOllamaUrl();
     
+    // ✅ NUEVO: Contexto dinámico basado en RAM disponible
+    const systemMem = this.memoryService.getSystemMemory();
+    const dynamicContext = this._calcDynamicContext(systemMem.freeMB);
+    
     // Preparar opciones con configuración (usar valores de options directamente, sin defaults hardcodeados)
     const ollamaOptions = {
       temperature: options.temperature ?? 0.7,
       num_predict: options.maxTokens ?? 4000,
-      num_ctx: options.contextLimit ?? 8000,
+      num_ctx: options.contextLimit ?? dynamicContext, // ✅ Dinámico
       top_k: options.top_k ?? 40,
       top_p: options.top_p ?? 0.9,
       repeat_penalty: options.repeat_penalty ?? 1.1
@@ -2587,12 +4946,7 @@ class AIService {
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -2665,12 +5019,7 @@ class AIService {
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
     
     const response = await fetch(`${ollamaUrl}/api/chat`, {
       method: 'POST',
@@ -2763,12 +5112,7 @@ class AIService {
       options: ollamaOptions
     };
     
-    // UN SOLO LOG: Mostrar exactamente lo que se envía a la API de Ollama
-    console.log('🚀 REQUEST A OLLAMA API:', JSON.stringify({
-      url: `${ollamaUrl}/api/chat`,
-      method: 'POST',
-      body: requestBody
-    }, null, 2));
+    // Log compacto
     
     // Callback de estado: generando
     if (callbacks.onStatus) {
@@ -2941,6 +5285,7 @@ class AIService {
    */
   clearHistory() {
     this.conversationHistory = [];
+    this._filesystemModified = false; // Reset flag al limpiar historial
   }
 
   /**
@@ -2958,7 +5303,9 @@ class AIService {
       const histories = JSON.parse(localStorage.getItem('ai-conversations') || '{}');
       this.conversationHistory = histories[conversationId] || [];
     } catch (error) {
-      console.error('Error cargando historial:', error);
+      debugLogger.error('AIService.History', 'Error cargando historial', {
+        error: error?.message
+      });
     }
   }
 
@@ -2971,8 +5318,86 @@ class AIService {
       histories[conversationId] = this.conversationHistory;
       localStorage.setItem('ai-conversations', JSON.stringify(histories));
     } catch (error) {
-      console.error('Error guardando historial:', error);
+      debugLogger.error('AIService.History', 'Error guardando historial', {
+        error: error?.message
+      });
     }
+  }
+
+  _prepareMessagesForContext(messages = []) {
+    if (!Array.isArray(messages)) return [];
+    const MAX_FULL_CONTEXT_CHARS = 4000;
+    
+    return messages.map((msg) => {
+      if (!msg || typeof msg !== 'object') return msg;
+      const metadata = msg.metadata || {};
+      const clone = { ...msg };
+      if (metadata.isToolResult) {
+        const toolName = (metadata.toolName || '').toLowerCase();
+        if (TOOLS_REQUIRE_FULL_CONTEXT.has(toolName)) {
+          const raw = metadata.toolResultText || clone.content || '';
+          clone.content = raw.slice(0, MAX_FULL_CONTEXT_CHARS);
+          return clone;
+        }
+        const summary = metadata.toolResultSummary || summarizeToolResult({
+          toolName: metadata.toolName || 'tool',
+          args: metadata.toolArgs || {},
+          resultText: metadata.toolResultText || clone.content || '',
+          isError: metadata.error === true,
+          maxResultChars: 240
+        });
+        clone.content = summary;
+        return clone;
+      }
+      if (metadata.isToolObservation && typeof clone.content === 'string') {
+        clone.content = clone.content.trim();
+        return clone;
+      }
+      return clone;
+    });
+  }
+
+  _buildToolObservation({ toolName, args, resultText, isError, lastUserGoal, inferredIntent }) {
+    const summary = summarizeToolResult({
+      toolName,
+      args,
+      resultText,
+      isError,
+      maxResultChars: 320
+    });
+
+    const readableName = toolName || 'herramienta';
+    const lines = [
+      `${isError ? '⚠️' : '🔧'} ${isError ? 'Error en' : 'Resultado de'} ${readableName}`,
+      summary
+    ];
+
+    if (lastUserGoal) {
+      lines.push(`🎯 Objetivo del usuario: ${lastUserGoal}`);
+    }
+
+    if (!isError && inferredIntent === 'move') {
+      lines.push('PISTA: Si ya ves el origen y el destino en el resultado anterior, usa la herramienta "move_file" con los parámetros EXACTOS del schema (from/to, source/destination u old/new).');
+    }
+    
+    if (toolName && TOOLS_REQUIRE_FULL_CONTEXT.has(toolName.toLowerCase())) {
+      const raw = (resultText || '').trim();
+      if (raw.length > 0) {
+        lines.push('📋 Detalle completo:\n' + raw.slice(0, 4000));
+      }
+    }
+
+    if (isError) {
+      lines.push('Describe claramente el fallo y propone al usuario el siguiente paso o sugiere otra herramienta con JSON válido si es necesario.');
+    } else {
+      lines.push('No repitas esta herramienta. Si queda trabajo pendiente, solicita una herramienta DIFERENTE o responde en texto natural explicando la acción realizada.');
+    }
+    lines.push('Responde siempre en texto natural (sin JSON) a menos que necesites generar un nuevo tool-call.');
+
+    return {
+      observation: lines.filter(Boolean).join('\n'),
+      summary
+    };
   }
 
   /**
@@ -3012,7 +5437,10 @@ class AIService {
     }
 
     // 🔪 TRUNCAMIENTO INTELIGENTE (como los grandes modelos)
-    console.log(`🪟 [AIService] Ventana deslizante activada: ${totalTokens} > ${targetLimit} tokens`);
+    debugLogger.debug('AIService.History', 'Ventana deslizante activada', {
+      totalTokens,
+      targetLimit
+    });
 
     // Estrategia: mantener los mensajes más recientes hasta alcanzar el límite
     let truncatedMessages = [];
@@ -3050,7 +5478,10 @@ class AIService {
 
     // Registro para transparencia (como ChatGPT - opcional y sutil)
     if (truncatedCount > 0) {
-      console.log(`📄 [AIService] Contexto optimizado: ${truncatedCount} mensajes antiguos archivados para mantener fluidez (${totalTokens - runningTotal} tokens liberados)`);
+      debugLogger.debug('AIService.History', 'Contexto optimizado', {
+        mensajesArchivados: truncatedCount,
+        tokensLiberados: totalTokens - runningTotal
+      });
       
       // Notificación sutil opcional (muy discreta, como los grandes modelos)
       this.lastContextOptimization = {
@@ -4101,7 +6532,7 @@ class AIService {
     const codeLower = code.toLowerCase();
     const userContextLower = userContext.toLowerCase();
     
-    console.log('🔍 Validando relevancia:', {
+    debugLogger.debug('AIService.Relevance', 'Validando relevancia', {
       userContext: userContext.substring(0, 50),
       language,
       codePreview: code.substring(0, 50)
@@ -4121,7 +6552,8 @@ class AIService {
                          codeLower.includes('mi aplicación') ||
                          codeLower.includes('aplicación electrónica');
       
-      console.log('🔍 Electron validation:', isRelevant, {
+      debugLogger.debug('AIService.Relevance', 'Electron validation', {
+        isRelevant,
         hasElectron: codeLower.includes('electron'),
         hasAppOn: codeLower.includes('app.on'),
         hasBrowserWindow: codeLower.includes('browserwindow'),
@@ -4138,7 +6570,7 @@ class AIService {
                          codeLower.includes('import react') ||
                          codeLower.includes('from "react"');
       
-      console.log('🔍 React validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'React validation', { isRelevant });
       return isRelevant;
     }
     
@@ -4146,7 +6578,7 @@ class AIService {
       const isRelevant = codeLower.includes('vue') || 
                          codeLower.includes('import') && codeLower.includes('vue');
       
-      console.log('🔍 Vue validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Vue validation', { isRelevant });
       return isRelevant;
     }
     
@@ -4155,7 +6587,7 @@ class AIService {
                          codeLower.includes('def ') || 
                          codeLower.includes('pandas');
       
-      console.log('🔍 Python validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Python validation', { isRelevant });
       return isRelevant;
     }
     
@@ -4165,7 +6597,7 @@ class AIService {
                          codeLower.includes('beautifulsoup') ||
                          codeLower.includes('fetch(');
       
-      console.log('🔍 Web scraper validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Web scraper validation', { isRelevant });
       return isRelevant;
     }
     
@@ -4175,7 +6607,7 @@ class AIService {
                          codeLower.includes('dataframe') ||
                          codeLower.includes('csv');
       
-      console.log('🔍 Data analysis validation:', isRelevant);
+      debugLogger.debug('AIService.Relevance', 'Data analysis validation', { isRelevant });
       return isRelevant;
     }
     
@@ -4197,12 +6629,17 @@ class AIService {
         codeLower.includes('<body')
       ));
       
-      console.log('🔍 Generic project validation:', isRelevant, { language, hasJS: language === 'javascript', hasHTML: language === 'html' });
+      debugLogger.debug('AIService.Relevance', 'Generic project validation', {
+        isRelevant,
+        language,
+        hasJS: language === 'javascript',
+        hasHTML: language === 'html'
+      });
       return isRelevant;
     }
     
     // Si no hay contexto específico conocido, RECHAZAR por defecto (más restrictivo)
-    console.log('⚠️ Contexto no reconocido, rechazando archivo');
+    debugLogger.debug('AIService.Relevance', 'Contexto no reconocido; rechazando archivo');
     return false;
   }
 
@@ -4283,6 +6720,100 @@ class AIService {
       'txt': 'txt'
     };
     return extensions[language] || 'txt';
+  }
+
+  /**
+   * ℹ️ NOTA: Validación de memoria ahora es PASIVA
+   * - El monitoreo solo reporta datos
+   * - Las descargas son MANUALES (widget)
+   * - Sin auto-descarga automática
+   */
+
+  /**
+   * ✅ NUEVO: Calcular contexto dinámico según RAM disponible
+   */
+  _calcDynamicContext(freeRAMMB) {
+    return this.memoryService.calcDynamicContext(freeRAMMB);
+  }
+
+  /**
+   * 📝 Cambiar modelo - SIN auto-descarga
+   * La descarga del modelo anterior es MANUAL (widget)
+   */
+  async switchModel(newModelId, newModelType) {
+    const oldModel = this.currentModel;
+    const oldType = this.modelType;
+
+    this.currentModel = newModelId;
+    this.modelType = newModelType;
+
+    this.saveConfig();
+  }
+
+  /**
+   * ✅ NUEVO: Cargar modelo automáticamente al reiniciar
+   * Intenta cargar el último modelo usado
+   */
+  async autoLoadLastModel() {
+    try {
+      const config = JSON.parse(localStorage.getItem('ai-service-config') || '{}');
+      
+      if (!config.currentModel || !config.modelType) {
+        return false;
+      }
+
+      const modelId = config.currentModel;
+      const modelType = config.modelType;
+
+      // Si es modelo local, verificar que existe
+      if (modelType === 'local') {
+        const localModel = this.getAllLocalModels().find(m => m.id === modelId);
+        
+        if (!localModel) {
+          console.warn(`[AIService] ⚠️ Modelo local ${modelId} no encontrado`);
+          return false;
+        }
+
+        if (!localModel.downloaded) {
+          console.warn(`[AIService] ⚠️ Modelo ${modelId} no está descargado`);
+          return false;
+        }
+      }
+
+      // Si es modelo remoto, verificar que existe
+      if (modelType === 'remote') {
+        const remoteModel = this.models.remote.find(m => m.id === modelId);
+        
+        if (!remoteModel) {
+          console.warn(`[AIService] ⚠️ Modelo remoto ${modelId} no encontrado`);
+          return false;
+        }
+      }
+
+      // Cargar el modelo
+      this.currentModel = modelId;
+      this.modelType = modelType;
+
+      // Si es local, usar ModelMemoryService para cargarlo en memoria
+      if (modelType === 'local') {
+        try {
+          // Usar loadModelToMemory que usa /api/generate con keep_alive
+          const loaded = await this.memoryService.loadModelToMemory(modelId);
+          if (!loaded) {
+            console.warn(`[AIService] ⚠️ No se pudo precargar ${modelId}, pero Ollama lo cargará automáticamente`);
+          }
+        } catch (error) {
+          console.warn(`[AIService] ⚠️ Error precargando modelo: ${error.message}`);
+          // No es crítico, Ollama cargará automáticamente cuando se use
+        }
+      }
+
+      return true;
+
+    } catch (error) {
+      console.error('[AIService] ❌ Error al cargar modelo automáticamente:', error);
+      return false;
+    }
   }
 }
 

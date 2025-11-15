@@ -363,34 +363,7 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             padding: 0.5rem;
           }
 
-          /* Estilos de scroll personalizados para el historial de conversaciones */
-          .conversation-list::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-          }
-
-          .conversation-list::-webkit-scrollbar-track {
-            background: ${themeColors.background};
-            border-radius: 3px;
-          }
-
-          .conversation-list::-webkit-scrollbar-thumb {
-            background: ${themeColors.borderColor};
-            border-radius: 3px;
-            opacity: 0.6;
-            transition: all 0.2s ease;
-          }
-
-          .conversation-list::-webkit-scrollbar-thumb:hover {
-            background: ${themeColors.textSecondary};
-            opacity: 0.8;
-          }
-
-          /* Firefox scrollbar para historial de conversaciones */
-          .conversation-list {
-            scrollbar-width: thin;
-            scrollbar-color: ${themeColors.borderColor} ${themeColors.background};
-          }
+          /* Estilos de scroll personalizados: removidos, usados desde AIChatTab */
 
           .conversation-item {
             padding: 0.8rem;
@@ -419,6 +392,11 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
             font-size: 0.9rem;
             margin-bottom: 0.3rem;
             line-height: 1.2;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
 
           .conversation-preview {
@@ -622,7 +600,25 @@ const ConversationHistory = ({ onConversationSelect, onNewConversation, currentC
                     />
                   ) : (
                     <>
-                      <div className="conversation-title">{conversation.title}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', minWidth: 0 }}>
+                        <div className="conversation-title">{conversation.title}</div>
+                        {conversation.modelId && (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '0.2rem 0.5rem',
+                            background: `${themeColors.primaryColor}40`,
+                            color: themeColors.primaryColor,
+                            borderRadius: '10px',
+                            fontSize: '0.65rem',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap',
+                            border: `1px solid ${themeColors.primaryColor}60`,
+                            flexShrink: 0
+                          }}>
+                            {conversation.modelId}
+                          </span>
+                        )}
+                      </div>
                       <div className="conversation-preview">
                         {getConversationPreview(conversation)}
                       </div>
