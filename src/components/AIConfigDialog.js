@@ -7,6 +7,9 @@ import { ProgressBar } from 'primereact/progressbar';
 import { aiService } from '../services/AIService';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import MCPManagerTab from './MCPManagerTab';
+import mcpClient from '../services/MCPClientService';
+import modelMemoryService from '../services/ModelMemoryService';
 
 // Definición de categorías de uso
 const USE_CASE_CATEGORIES = [
@@ -159,6 +162,16 @@ const AIConfigDialog = ({ visible, onHide }) => {
   useEffect(() => {
     if (visible) {
       loadConfig();
+      // Inicializar MCP client
+      mcpClient.initialize().catch(error => {
+        console.error('Error inicializando MCP client:', error);
+      });
+      
+      // Si hay un servidor pendiente de seleccionar, cambiar a la pestaña MCP
+      if (window.__mcpConfigSelectServer) {
+        console.log('🎯 [AIConfigDialog] Servidor pendiente detectado, cambiando a pestaña MCP Tools');
+        setActiveIndex(4); // Índice 4 es la pestaña "🔌 MCP Tools"
+      }
     }
   }, [visible]);
 
@@ -709,6 +722,19 @@ const AIConfigDialog = ({ visible, onHide }) => {
                           border: '1px solid rgba(76, 175, 80, 0.4)'
                         }}>
                           ✓ Instalado
+                        </span>
+                      )}
+                      {model.mcpCompatibility === 'excellent' && (
+                        <span style={{
+                          background: 'rgba(33, 150, 243, 0.2)',
+                          color: '#2196F3',
+                          padding: '0.1rem 0.5rem',
+                          borderRadius: '12px',
+                          fontSize: '0.65rem',
+                          fontWeight: '600',
+                          border: '1px solid rgba(33, 150, 243, 0.4)'
+                        }}>
+                          🔧 MCP
                         </span>
                       )}
                     </div>
@@ -1356,7 +1382,19 @@ const AIConfigDialog = ({ visible, onHide }) => {
         logo: '🦙',
         description: 'Familia completa de modelos Llama de Meta',
         models: localModels.filter(m => m.id.includes('llama')),
-        installed: localModels.filter(m => m.id.includes('llama')).some(m => m.downloaded)
+        installed: localModels.filter(m => m.id.includes('llama')).some(m => m.downloaded),
+        supportsMCP: true
+      },
+      {
+        id: 'deepseek',
+        name: 'DeepSeek',
+        icon: 'pi pi-search',
+        color: '#7C3AED',
+        logo: '🔍',
+        description: 'Modelos DeepSeek con excelente análisis y razonamiento',
+        models: localModels.filter(m => m.id.includes('deepseek')),
+        installed: localModels.filter(m => m.id.includes('deepseek')).some(m => m.downloaded),
+        supportsMCP: true
       },
       {
         id: 'mistral',
@@ -1377,16 +1415,6 @@ const AIConfigDialog = ({ visible, onHide }) => {
         description: 'Modelos Qwen de Alibaba optimizados para múltiples idiomas',
         models: localModels.filter(m => m.id.includes('qwen')),
         installed: localModels.filter(m => m.id.includes('qwen')).some(m => m.downloaded)
-      },
-      {
-        id: 'deepseek',
-        name: 'DeepSeek',
-        icon: 'pi pi-search',
-        color: '#7C3AED',
-        logo: '🔍',
-        description: 'Modelos DeepSeek con excelente análisis y razonamiento',
-        models: localModels.filter(m => m.id.includes('deepseek')),
-        installed: localModels.filter(m => m.id.includes('deepseek')).some(m => m.downloaded)
       },
       {
         id: 'orca',
@@ -1580,8 +1608,26 @@ const AIConfigDialog = ({ visible, onHide }) => {
                     {provider.logo}
                   </div>
                   
-                  {/* Indicador de estado + botón configurar */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {/* Indicador de estado + badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {provider.supportsMCP && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        background: 'rgba(52, 168, 219, 0.15)',
+                        color: '#34A8DB',
+                        padding: '0.3rem 0.75rem',
+                        borderRadius: '20px',
+                        fontSize: '0.65rem',
+                        fontWeight: '700',
+                        border: '1px solid rgba(52, 168, 219, 0.4)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <i className="pi pi-plug" style={{ fontSize: '0.6rem' }} />
+                        MCP
+                      </div>
+                    )}
                     {provider.installed ? (
                       <div style={{
                         display: 'flex',
@@ -2126,6 +2172,42 @@ const AIConfigDialog = ({ visible, onHide }) => {
                           }}>
                             <i className="pi pi-check-circle" style={{ fontSize: '0.6rem' }} />
                             Seleccionado
+                          </span>
+                        )}
+
+                        {/* 🔧 Badge de compatibilidad MCP */}
+                        {model.mcpCompatibility === 'excellent' && (
+                          <span style={{
+                            background: 'rgba(33, 150, 243, 0.2)',
+                            color: '#2196F3',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: '1px solid rgba(33, 150, 243, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <i className="pi pi-bolt" style={{ fontSize: '0.6rem' }} />
+                            Optimizado para MCP
+                          </span>
+                        )}
+                        {model.mcpCompatibility === 'good' && (
+                          <span style={{
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            color: '#4CAF50',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            border: '1px solid rgba(76, 175, 80, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <i className="pi pi-check" style={{ fontSize: '0.6rem' }} />
+                            Soporta MCP
                           </span>
                         )}
                       </div>
@@ -3155,6 +3237,7 @@ const AIConfigDialog = ({ visible, onHide }) => {
     );
   };
 
+
   return (
     <Dialog
       header="Configuración de IA"
@@ -3185,7 +3268,11 @@ const AIConfigDialog = ({ visible, onHide }) => {
         </TabPanel>
         <TabPanel header="🌐 Ollama Remoto">
           {renderRemoteOllamaConfig()}
-        </TabPanel></TabView>
+        </TabPanel>
+        <TabPanel header="🔌 MCP Tools">
+          <MCPManagerTab themeColors={themeColors} />
+        </TabPanel>
+      </TabView>
       </div>
 
       {/* Diálogo de categoría */}

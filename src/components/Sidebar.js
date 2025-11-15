@@ -8,6 +8,7 @@ import { FolderDialog, UnifiedConnectionDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
+import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
@@ -25,9 +26,6 @@ function logSetNodes(source, nodes) {
 function safeUnblockForms(showToast) {
   try {
     const blockedInputs = detectBlockedInputs();
-    if (blockedInputs.length > 0) {
-      console.log(`🔓 Desbloqueando ${blockedInputs.length} formularios bloqueados:`, blockedInputs);
-    }
     unblockAllInputs();
     
     if (blockedInputs.length > 0 && showToast) {
@@ -108,6 +106,9 @@ const Sidebar = React.memo(({
   // Encriptación
   masterKey,
   secureStorage,
+
+  isAIChatActive = false,
+  onToggleLocalTerminalForAIChat,
   
   // Filtro de búsqueda desde TitleBar
   sidebarFilter = ''
@@ -116,9 +117,46 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   
-  // Estado para modo de visualización (conexiones o passwords)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords'
+  // Estado para modo de visualización (conexiones, passwords, filesystem)
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem'
+  const [filesystemStatus, setFilesystemStatus] = useState({
+    active: false,
+    allowedPaths: [],
+    defaultPath: null,
+    server: null,
+    conversationId: null
+  });
   
+  // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
+  useEffect(() => {
+    const extractSSHNodes = (treeNodes) => {
+      let sshNodes = [];
+      for (const node of treeNodes) {
+        if (node.data && node.data.type === 'ssh') {
+          // 🔗 PASAR TODO EL node.data COMPLETO (igual que usa la app para conectar)
+          sshNodes.push({
+            id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+            label: node.label,
+            ...node.data  // ✅ SPREAD: Incluir TODOS los campos de node.data
+          });
+        }
+        if (node.children && node.children.length > 0) {
+          sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+        }
+      }
+      return sshNodes;
+    };
+    
+    const sshConnections = extractSSHNodes(nodes);
+    window.sshConnectionsFromSidebar = sshConnections;
+    console.log(`🔗 [Sidebar] Sincronizadas ${sshConnections.length} conexiones SSH a window`);
+    
+    // Disparar evento para que AIChatPanel se resincronice
+    window.dispatchEvent(new CustomEvent('sidebar-ssh-connections-updated', {
+      detail: { count: sshConnections.length }
+    }));
+  }, [nodes]);
+
   // Escuchar evento para cambiar a vista de conexiones
   useEffect(() => {
     const handleSwitchToConnections = () => {
@@ -131,7 +169,30 @@ const Sidebar = React.memo(({
       window.removeEventListener('switch-to-connections', handleSwitchToConnections);
     };
   }, []);
+
+  useEffect(() => {
+    const handleFilesystemStatus = (event) => {
+      const detail = event?.detail || {};
+      if (detail.type !== 'filesystem') return;
+      setFilesystemStatus(detail);
+      if (!detail.active) {
+        setViewMode(prev => (prev === 'filesystem' ? 'connections' : prev));
+      }
+    };
+    window.addEventListener('filesystem-mcp-status', handleFilesystemStatus);
+    return () => {
+      window.removeEventListener('filesystem-mcp-status', handleFilesystemStatus);
+    };
+  }, []);
+
+  const filesystemAvailable = !!filesystemStatus?.active;
   
+  useEffect(() => {
+    if (!isAIChatActive && viewMode === 'filesystem') {
+      setViewMode('connections');
+    }
+  }, [isAIChatActive, viewMode, setViewMode]);
+
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
     const theme = iconThemes[themeName];
@@ -262,7 +323,6 @@ const Sidebar = React.memo(({
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
-    console.log('handleAppMenuClick ejecutado - menú unificado');
     const menuStructure = createAppMenu(setShowImportDialog);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
@@ -1583,103 +1643,111 @@ const Sidebar = React.memo(({
             display: 'flex', 
             flexDirection: 'column',
             alignItems: 'flex-start', // Alinear a la izquierda
-            padding: '8px 2px',
+            padding: '8px 2px 100px 2px',
             width: '100%',
             visibility: 'visible',
             opacity: 1,
             zIndex: 1000,
-            gap: '8px'
+            gap: '8px',
+            boxSizing: 'border-box'
           }}>
-            {/* Botón de colapsar */}
-            <Button 
-              icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => setSidebarCollapsed(v => !v)} 
-              tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important'
-              }} 
-            />
-            
-            {/* Botón de conexiones */}
-            <Button 
-              icon="pi pi-sitemap" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => {
-                setViewMode('connections');
-                setSidebarCollapsed(false);
-              }} 
-              tooltip="Conexiones" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#2196f3'
-              }} 
-            />
-            
-            {/* Botón de passwords */}
-            <Button 
-              icon="pi pi-key" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => {
-                setViewMode('passwords');
-                setSidebarCollapsed(false);
-              }} 
-              tooltip="Passwords" 
-              tooltipOptions={{ position: 'right' }} 
-              style={{ 
-                margin: 0, 
-                width: 40, 
-                height: 40, 
-                minWidth: 40, 
-                minHeight: 40, 
-                fontSize: 18,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                color: '#ffc107'
-              }} 
-            />
-            
-            {/* Botón de Chat de IA */}
-            <Button 
-              icon="pi pi-comments" 
-              className="p-button-rounded p-button-text sidebar-action-button" 
-              onClick={() => {
-                // Crear pestaña de IA
-                const newAITab = {
-                  key: `ai-chat-${Date.now()}`,
-                  label: 'Chat IA',
-                  type: 'ai-chat',
-                  createdAt: Date.now(),
-                  groupId: null
-                };
+            <div style={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '8px',
+              width: '100%'
+            }}>
+              {/* Botón de colapsar */}
+              <Button 
+                icon={sidebarCollapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'} 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => setSidebarCollapsed(v => !v)} 
+                tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important'
+                }} 
+              />
+              
+              {/* Botón de conexiones */}
+              <Button 
+                icon="pi pi-sitemap" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => {
+                  setViewMode('connections');
+                  setSidebarCollapsed(false);
+                }} 
+                tooltip="Conexiones" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#2196f3'
+                }} 
+              />
+              
+              {/* Botón de passwords */}
+              <Button 
+                icon="pi pi-key" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => {
+                  setViewMode('passwords');
+                  setSidebarCollapsed(false);
+                }} 
+                tooltip="Passwords" 
+                tooltipOptions={{ position: 'right' }} 
+                style={{ 
+                  margin: 0, 
+                  width: 40, 
+                  height: 40, 
+                  minWidth: 40, 
+                  minHeight: 40, 
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#ffc107'
+                }} 
+              />
+              
+              {/* Botón de Chat de IA */}
+              <Button 
+                icon="pi pi-comments" 
+                className="p-button-rounded p-button-text sidebar-action-button" 
+                onClick={() => {
+                  // Crear pestaña de IA
+                  const newAITab = {
+                    key: `ai-chat-${Date.now()}`,
+                    label: 'Chat IA',
+                    type: 'ai-chat',
+                    createdAt: Date.now(),
+                    groupId: null
+                  };
 
                 // Disparar evento para crear la pestaña
                 window.dispatchEvent(new CustomEvent('create-ai-tab', {
@@ -1750,6 +1818,76 @@ const Sidebar = React.memo(({
                 opacity: '1 !important'
               }} 
             />
+            </div>
+
+            <div style={{ flexGrow: 1 }} />
+
+            {filesystemAvailable && isAIChatActive && (
+              <>
+                <div
+                  style={{
+                    width: '60%',
+                    height: 1,
+                    backgroundColor: 'var(--ui-sidebar-border, rgba(255,255,255,0.18))',
+                    opacity: 0.6,
+                    margin: '4px 0 6px 0',
+                    alignSelf: 'center'
+                  }}
+                />
+                <Button
+                  icon="pi pi-folder-open"
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={() => {
+                    setViewMode('filesystem');
+                    setSidebarCollapsed(false);
+                  }}
+                  tooltip="Filesystem MCP"
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    fontSize: 18,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
+                  }}
+                />
+              </>
+            )}
+
+            {isAIChatActive && onToggleLocalTerminalForAIChat && (
+              <Button
+                icon="pi pi-desktop"
+                className="p-button-rounded p-button-text sidebar-action-button"
+                onClick={() => {
+                  onToggleLocalTerminalForAIChat();
+                }}
+                tooltip="Terminal local"
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: 40,
+                  height: 40,
+                  minWidth: 40,
+                  minHeight: 40,
+                  fontSize: 18,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  color: '#90caf9'
+                }}
+              />
+            )}
           </div>
 
           {/* Botones de menú de aplicación y configuración en la parte inferior */}
@@ -1791,7 +1929,6 @@ const Sidebar = React.memo(({
               icon="pi pi-bars"
               className="p-button-rounded p-button-text sidebar-action-button"
               onClick={(e) => {
-                console.log('Click en botón del menú detectado');
                 handleAppMenuClick(e);
               }}
               tooltip="Menú de la aplicación"
@@ -1870,6 +2007,32 @@ const Sidebar = React.memo(({
                     tooltip="Gestor de passwords" 
                     tooltipOptions={{ position: 'bottom' }}
                   />
+                  {filesystemAvailable && isAIChatActive && (
+                    <Button
+                      icon="pi pi-folder-open"
+                      className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
+                      onClick={() => setViewMode('filesystem')}
+                      tooltip="Explorador MCP"
+                      tooltipOptions={{ position: 'bottom' }}
+                      style={{
+                        borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
+                        color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined
+                      }}
+                    />
+                  )}
+                  {isAIChatActive && onToggleLocalTerminalForAIChat && (
+                    <Button
+                      icon="pi pi-desktop"
+                      className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                      onClick={() => onToggleLocalTerminalForAIChat()}
+                      tooltip="Terminal local"
+                      tooltipOptions={{ position: 'bottom' }}
+                      style={{
+                        borderColor: '#90caf9',
+                        color: '#90caf9'
+                      }}
+                    />
+                  )}
                 </div>
               </div>
               <Divider className="my-2" />
@@ -1924,6 +2087,17 @@ const Sidebar = React.memo(({
                 onShowImportDialog={setShowImportDialog}
               />
             </>
+          ) : viewMode === 'filesystem' ? (
+            <SidebarFilesystemExplorer
+              status={filesystemStatus}
+              onBackToConnections={() => setViewMode('connections')}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
+              explorerFont={explorerFont}
+              explorerFontSize={explorerFontSize}
+              uiTheme={uiTheme}
+              showToast={showToast}
+            />
           ) : (
             // Vista de passwords
             <PasswordManagerSidebar
@@ -1933,8 +2107,8 @@ const Sidebar = React.memo(({
               confirmDialog={confirmDialog}
               uiTheme={uiTheme}
               onBackToConnections={() => setViewMode('connections')}
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
               iconTheme={iconTheme}
               iconSize={iconSize}
               folderIconSize={folderIconSize}
@@ -1942,9 +2116,9 @@ const Sidebar = React.memo(({
               explorerFont={explorerFont}
               explorerFontSize={explorerFontSize}
               masterKey={masterKey}
-            secureStorage={secureStorage}
-            setShowSettingsDialog={setShowSettingsDialog}
-            onShowImportDialog={setShowImportDialog}
+              secureStorage={secureStorage}
+              setShowSettingsDialog={setShowSettingsDialog}
+              onShowImportDialog={setShowImportDialog}
               sidebarFilter={sidebarFilter}
             />
           )}

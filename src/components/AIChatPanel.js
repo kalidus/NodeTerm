@@ -12,15 +12,21 @@ import AIConfigDialog from './AIConfigDialog';
 import FileTypeDetectionPanel from './FileTypeDetectionPanel';
 import FileUploader from './FileUploader';
 import AIPerformanceStats from './AIPerformanceStats';
+import MCPActiveTools from './MCPActiveTools';
+import ModelMemoryIndicator from './ModelMemoryIndicator';
+import ShellSelector from './ShellSelector';
 import smartFileDetectionService from '../services/SmartFileDetectionService';
 import fileAnalysisService from '../services/FileAnalysisService';
+import mcpClient from '../services/MCPClientService';
+import debugLogger from '../utils/debugLogger';
+import '../utils/debugConversations'; // 🔧 Debug utility
 
 // Importar tema de highlight.js
 import 'highlight.js/styles/github-dark.css';
 // Importar estilos del AI chat
 import '../styles/components/ai-chat.css';
 
-const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
+const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTerminal }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,12 +35,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [themeVersion, setThemeVersion] = useState(0);
   const [functionalModels, setFunctionalModels] = useState([]);
+  const [isModelSwitching, setIsModelSwitching] = useState(false); // ✅ NUEVO: Loading de cambio de modelo
+  const [modelSwitchProgress, setModelSwitchProgress] = useState(0); // ✅ Progreso 0-100
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
   // Estados avanzados para Fase 2
   const [currentStatus, setCurrentStatus] = useState(null);
   const [abortController, setAbortController] = useState(null);
+  const lastToolResultRef = useRef(null);
+  const loggedToolMessageIdsRef = useRef(new Set());
+  const filesystemStatusRef = useRef('');
+  
+  // Estado persistente para tarjetas de herramientas expandidas (por messageId)
+  const expandedToolCardsRef = useRef(new Set());
   
   // Estados para historial de conversaciones
   const [currentConversationId, setCurrentConversationId] = useState(null);
@@ -50,22 +64,217 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   // Estados para archivos adjuntos
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showFileUploader, setShowFileUploader] = useState(false);
+  
+  // Estado para MCP tools
+  const [mcpToolsEnabled, setMcpToolsEnabled] = useState(true);
+  const [activeMcpServers, setActiveMcpServers] = useState([]);
+  const [showMcpDialog, setShowMcpDialog] = useState(false);
+  const [showMemoryIndicator, setShowMemoryIndicator] = useState(true); // ✅ NUEVO - Mostrar por defecto
+  const [mcpExpanded, setMcpExpanded] = useState(false);
+  const [memoryExpanded, setMemoryExpanded] = useState(false);
+  const [showMcpPanel, setShowMcpPanel] = useState(false); // Panel de herramientas MCP
+  const [showMemoryPanel, setShowMemoryPanel] = useState(false); // Panel de memoria
+  const [toolsCount, setToolsCount] = useState(0); // Conteo de herramientas MCP
+
+  // Estados para Shell Selector del MCP
+  const [selectedShell, setSelectedShell] = useState(() => {
+    try {
+      const saved = localStorage.getItem('defaultMcpShell');
+      return saved || 'powershell';
+    } catch {
+      return 'powershell';
+    }
+  });
+  const [availableShells, setAvailableShells] = useState([]);
+  const [wslDistributions, setWSLDistributions] = useState([]);
+  const [cygwinAvailable, setCygwinAvailable] = useState(false);
+
+  // Helper para obtener el nombre del catálogo
+  const getMcpCatalogName = (serverId) => {
+    try {
+      const catalogPath = require.resolve('../data/mcp-catalog.json');
+      delete require.cache[catalogPath];
+    } catch (e) {
+      // Ignore if path resolution fails
+    }
+    try {
+      const mcpData = require('../data/mcp-catalog.json');
+      const mcp = mcpData.mcps?.find(m => m.id === serverId);
+      return mcp?.name || serverId;
+    } catch (e) {
+      return serverId;
+    }
+  };
+
+  const [selectedMcpServers, setSelectedMcpServers] = useState(() => {
+    // Cargar MCPs seleccionados del localStorage
+    try {
+      const saved = localStorage.getItem('selectedMcpServers');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [disabledMcpServers, setDisabledMcpServers] = useState(() => {
+    // Cargar MCPs desactivados del localStorage
+    try {
+      const saved = localStorage.getItem('disabledMcpServers');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const logConversation = useCallback((level, message, data) => {
+    const args = data ? [data] : [];
+    switch (level) {
+      case 'error':
+        debugLogger.error('AIChatConversation', message, ...args);
+        break;
+      case 'warn':
+        debugLogger.warn('AIChatConversation', message, ...args);
+        break;
+      case 'debug':
+        debugLogger.debug('AIChatConversation', message, ...args);
+        break;
+      default:
+        debugLogger.info('AIChatConversation', message, ...args);
+    }
+  }, []);
+
+  // Detectar si un texto parece un tool-call JSON para NO mostrarlo en streaming
+  const looksLikeToolJson = useCallback((text) => {
+    if (!text || typeof text !== 'string') return false;
+    const head = text.slice(0, 1200);
+    if (/```\s*(json|tool|tool_call)/i.test(head)) return true;
+    if (/\"use_tool\"\s*:\s*\"/i.test(head)) return true;
+    if (/\"tool\"\s*:\s*\"/i.test(head)) return true;
+    // Nuevo: también considerar planes {"plan":[...]}
+    if (/\"plan\"\s*:\s*\[/i.test(head)) return true;
+    // CRÍTICO: Detectar {"arguments":{...}} - es un tool call JSON sin "tool"
+    if (/\"arguments\"\s*:\s*\{/i.test(head)) return true;
+    // CRÍTICO: Detectar JSON que comienza directo (sin explicación de texto)
+    if (head.trimStart().startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(head.slice(0, 300))) return true;
+    return false;
+  }, []);
+
+  // Escuchar actualizaciones de la conversación para sincronizar mensajes en vivo
+  useEffect(() => {
+    const handleConversationUpdate = (event) => {
+      const conv = conversationService.getCurrentConversation();
+      if (!conv) return;
+      
+      const detail = event?.detail || {};
+      
+      setMessages(prev => {
+        // Obtener mensajes persistidos desde localStorage
+        const persisted = (conv.messages || []).map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          metadata: msg.metadata,
+          subtle: msg.subtle,
+          contextOptimization: msg.contextOptimization,
+          attachedFiles: msg.attachedFiles
+        }));
+        
+        // 🔧 LÓGICA SIMPLIFICADA Y ROBUSTA:
+        // localStorage es la fuente de verdad. Siempre sincronizamos desde allí.
+        // Solo mantenemos mensajes "streaming" temporales si el usuario está esperando respuesta.
+        
+        // Verificar si hay NUEVOS mensajes persistidos
+        const prevPersistedIds = new Set(prev.filter(m => !m.streaming).map(m => m.id));
+        const persistedIds = new Set(persisted.map(m => m.id));
+        const newPersistedIds = persisted.filter(m => !prevPersistedIds.has(m.id)).map(m => m.id);
+        const hasNewPersistedMessages = newPersistedIds.length > 0;
+        
+        // Si hay nuevos mensajes persistidos, eliminar TODOS los streaming
+        // Si NO hay nuevos mensajes, mantener streaming existentes
+        const streaming = hasNewPersistedMessages ? [] : prev.filter(m => m.streaming === true);
+        
+        // Si NO hay cambios (mismo número de mensajes persistidos y no hay streaming), no hacer nada
+        if (!hasNewPersistedMessages && streaming.length === 0 && prev.length === persisted.length) {
+          return prev;
+        }
+        
+        // Merge: Combinar persistidos + streaming
+        const merged = [...persisted, ...streaming];
+        
+        return merged;
+      });
+    };
+
+    window.addEventListener('conversation-updated', handleConversationUpdate);
+    return () => window.removeEventListener('conversation-updated', handleConversationUpdate);
+  }, []);
+
+  useEffect(() => {
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return;
+    }
+    const logged = loggedToolMessageIdsRef.current;
+    messages.forEach(msg => {
+      const isToolResult = msg?.metadata?.isToolResult || msg?.role === 'tool';
+      if (!isToolResult || !msg?.id || logged.has(msg.id)) {
+        return;
+      }
+      logged.add(msg.id);
+      logConversation('debug', 'Resultado de herramienta persistido', {
+        messageId: msg.id,
+        toolName: msg?.metadata?.toolName,
+        hasToolResultText: !!msg?.metadata?.toolResultText
+      });
+      if (!msg?.metadata?.toolResultText) {
+        logConversation('warn', 'Resultado de herramienta sin toolResultText', {
+          messageId: msg.id,
+          toolName: msg?.metadata?.toolName
+        });
+      }
+    });
+  }, [messages, logConversation]);
+
+  const looksLikeJsonStart = useCallback((text) => {
+    if (!text || typeof text !== 'string') return false;
+    const t = text.trimStart();
+    // Solo considerar JSON si empieza con { y contiene "tool" o "use_tool" en los primeros 300 chars
+    if (t.startsWith('{')) {
+      const head = t.substring(0, 300);
+      // CRÍTICO: Detectar "arguments" también
+      return head.includes('"tool"') || head.includes('"use_tool"') || head.includes('"plan"') || head.includes('"arguments"');
+    }
+    // Bloques de código explícitos
+    if (t.startsWith('```json') || t.startsWith('```tool')) return true;
+    return false;
+  }, []);
 
   // Configurar marked con resaltado de sintaxis y opciones mejoradas
   useEffect(() => {
     marked.setOptions({
       highlight: function(code, lang) {
+        // Ignorar lenguajes especiales de MCP (tool, tool_call) para evitar warnings
+        const mcpLangs = ['tool', 'tool_call', 'mcp'];
+        if (lang && mcpLangs.includes(lang.toLowerCase())) {
+          // Tratarlos como JSON
+          try {
+            return hljs.highlight(code, { language: 'json' }).value;
+          } catch (err) {
+            return code;
+          }
+        }
+        
         if (lang && hljs.getLanguage(lang)) {
           try {
             return hljs.highlight(code, { language: lang }).value;
           } catch (err) {
-            console.error('Error highlighting code:', err);
+            // Suprimir error en consola para lenguajes desconocidos
+            return code;
           }
         }
         try {
           return hljs.highlightAuto(code).value;
         } catch (err) {
-          console.error('Error auto-highlighting code:', err);
+          // Suprimir error en consola
           return code;
         }
       },
@@ -114,6 +323,174 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   }, [currentTheme]);
 
   // Cargar configuración inicial
+  // Efecto para actualizar conteo de herramientas MCP
+  useEffect(() => {
+    const updateToolsCount = () => {
+      try {
+        const tools = mcpClient.getAvailableTools();
+        setToolsCount(tools.length);
+      } catch (error) {
+        console.error('[AIChatPanel] Error actualizando conteo de herramientas:', error);
+      }
+    };
+
+    updateToolsCount();
+    
+    // Listener para cambios en MCP
+    const unsubscribe = mcpClient.addListener((event) => {
+      if (event === 'tools-updated' || event === 'servers-updated') {
+        updateToolsCount();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // Detectar shells disponibles (PowerShell, WSL, Cygwin)
+  useEffect(() => {
+    const detectShells = async () => {
+      const shells = ['powershell']; // PowerShell siempre disponible en Windows
+      
+      try {
+        // Detectar distribuciones WSL
+        if (window.electron && window.electron.ipcRenderer) {
+          try {
+            const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
+            if (Array.isArray(distributions) && distributions.length > 0) {
+              setWSLDistributions(distributions);
+              distributions.forEach(distro => {
+                shells.push(`wsl-${distro.name || distro.label}`);
+              });
+            }
+          } catch (e) {
+            console.error('Error detectando WSL:', e);
+          }
+
+          // Detectar Cygwin
+          try {
+            const result = await window.electronAPI.invoke('cygwin:detect');
+            if (result && result.available) {
+              setCygwinAvailable(true);
+              shells.push('cygwin');
+            }
+          } catch (e) {
+            console.error('Error detectando Cygwin:', e);
+          }
+        }
+      } catch (error) {
+        console.error('Error en detección de shells:', error);
+      }
+
+      setAvailableShells(shells);
+    };
+
+    detectShells();
+  }, []);
+
+  // Monitorear cambios en la shell seleccionada y agregar mensaje de contexto
+  const previousShellRef = useRef(selectedShell);
+  useEffect(() => {
+    if (previousShellRef.current !== selectedShell && currentConversationId) {
+      // Solo mostrar el mensaje si ya hay una conversación iniciada y cambió la shell
+      const getShellName = (shell) => {
+        if (shell === 'powershell') return 'PowerShell';
+        if (shell === 'cygwin') return 'Cygwin';
+        if (shell.startsWith('wsl-')) {
+          const distroName = shell.replace('wsl-', '');
+          return `WSL: ${distroName}`;
+        }
+        return shell;
+      };
+
+      const shellName = getShellName(selectedShell);
+      const contextMessage = `⚠️ Terminal cambiada a **${shellName}**. Los próximos comandos se ejecutarán en esta terminal.`;
+      
+      // Agregar mensaje de contexto al historial
+      // El renderMarkdown convertirá **texto** a HTML <strong>
+      const htmlMessage = contextMessage
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br/>');
+      
+      conversationService.addMessage('system', htmlMessage, {
+        isSystemMessage: true,
+        type: 'shell-changed'
+      });
+
+      // Actualizar el estado de mensajes para que se vea inmediatamente
+      const currentConversation = conversationService.getCurrentConversation();
+      if (currentConversation && currentConversation.messages) {
+        setMessages(
+          currentConversation.messages.map(m => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+            metadata: m.metadata
+          }))
+        );
+      }
+
+      // 🔧 ACTUALIZAR LA CONFIGURACIÓN DEL MCP NODETERM CLI
+      // Convertir selectedShell a preferredTerminal (parámetro del MCP)
+      const getPreferredTerminal = (shell) => {
+        if (shell === 'powershell') return 'powershell';
+        if (shell === 'cygwin') return 'cygwin';
+        if (shell.startsWith('wsl-')) {
+          // Para WSL: pasar la distro específica (ubuntu-24.04, kali-linux, etc)
+          const distroName = shell.replace('wsl-', '');
+          return distroName;
+        }
+        return shell;
+      };
+
+      const preferredTerminal = getPreferredTerminal(selectedShell);
+      
+      // Actualizar la configuración del MCP y reiniciar el servidor
+      (async () => {
+        try {
+          console.log(`[Shell Selector] 🎯 Cambiando terminal a: ${preferredTerminal}`);
+          
+          // 1️⃣ Actualizar la configuración en el archivo
+          console.log(`[Shell Selector] 💾 Guardando config: preferredTerminal = ${preferredTerminal}`);
+          const updateResult = await mcpClient.updateServerConfig('ssh-terminal', {
+            options: {
+              preferredTerminal: preferredTerminal
+            }
+          });
+          console.log(`[Shell Selector] ✅ updateServerConfig completado:`, updateResult);
+          
+          // Esperar 2 segundos para asegurar que la config se escribió completamente en disco
+          // y se limpió el caché del SO
+          console.log(`[Shell Selector] ⏳ Esperando 2s para persistencia de config en disco...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // 2️⃣ Detener el servidor
+          console.log(`[Shell Selector] 🛑 Deteniendo servidor ssh-terminal...`);
+          const stopResult = await mcpClient.stopServer('ssh-terminal');
+          console.log(`[Shell Selector] ✅ Servidor detenido:`, stopResult);
+          
+          // Esperar 1 segundo para asegurar que se detuvo, liberó recursos y limpió caché
+          console.log(`[Shell Selector] ⏳ Esperando 1s después de detener...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // 3️⃣ Reiniciar el servidor (debería cargar la nueva configuración)
+          console.log(`[Shell Selector] 🚀 Reiniciando servidor ssh-terminal...`);
+          const startResult = await mcpClient.startServer('ssh-terminal');
+          console.log(`[Shell Selector] ✅ Servidor reiniciado:`, startResult);
+          
+          console.log(`[Shell Selector] ✅ Terminal cambiada a: ${preferredTerminal}`);
+          
+        } catch (error) {
+          console.error(`[Shell Selector] ❌ Error actualizando MCP:`, error);
+        }
+      })();
+
+      previousShellRef.current = selectedShell;
+    }
+  }, [selectedShell, currentConversationId]);
+
   useEffect(() => {
     const config = aiService.loadConfig();
     setCurrentModel(aiService.currentModel);
@@ -122,6 +499,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Cargar modelos funcionales
     const functional = aiService.getFunctionalModels();
     setFunctionalModels(functional);
+
+    // ✅ NUEVO: Cargar automáticamente el último modelo usado
+    (async () => {
+      const loaded = await aiService.autoLoadLastModel();
+      if (loaded) {
+        setCurrentModel(aiService.currentModel);
+        setModelType(aiService.modelType);
+      }
+    })();
     
     // SIEMPRE empezar con una nueva conversación limpia
     // No cargar conversación anterior automáticamente para evitar mezcla de contenido
@@ -136,6 +522,357 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Asegurar que empezamos con estado limpio
     setMessages([]);
     setAttachedFiles([]);
+    
+    // Inicializar MCP client
+    mcpClient.initialize().then(() => {
+      // Sincronizar MCPs instalados con localStorage
+      const allServers = mcpClient.getAllServers();
+      const existingServerIds = new Set(allServers.map(s => s.id));
+      const enabledServerIds = allServers
+        .filter(s => s.config?.enabled)
+        .map(s => s.id);
+
+      // Merge: mantener lo que ya está en localStorage (filtrado) + agregar nuevos enabled
+      setSelectedMcpServers(prev => {
+        // PASO 1: Filtrar MCPs que no existen
+        const filteredPrev = prev.filter(id => existingServerIds.has(id));
+        
+        // PASO 2: Filtrar MCPs que fueron deshabilitados
+        const stillEnabledPrev = filteredPrev.filter(id => {
+          const server = allServers.find(s => s.id === id);
+          return server && server.config?.enabled !== false;
+        });
+        
+        const removed = prev.filter(id => !existingServerIds.has(id));
+        const disabled = filteredPrev.filter(id => !stillEnabledPrev.includes(id));
+        
+        const merged = new Set([...stillEnabledPrev, ...enabledServerIds]);
+        const merged_array = Array.from(merged);
+
+        // Solo actualizar si hay cambios
+        if (JSON.stringify(merged_array) !== JSON.stringify(prev)) {
+          localStorage.setItem('selectedMcpServers', JSON.stringify(merged_array));
+          return merged_array;
+        }
+        return prev;
+      });
+    }).catch(error => {
+      console.error('Error inicializando MCP client:', error);
+    });
+
+    // Iniciar MCPs marcados como por defecto después de 1 segundo
+    // (dar tiempo a que se inicialice MCPClient)
+    const initDefaultMcps = setTimeout(() => {
+      if (selectedMcpServers.length > 0) {
+        const allServers = mcpClient.getAllServers();
+        const serverMap = new Map(allServers.map(s => [s.id, s]));
+        
+        // Filtrar: solo MCPs que existen AND están habilitados
+        const validServerIds = selectedMcpServers.filter(id => {
+          const server = serverMap.get(id);
+          if (!server) return false;
+          if (server.config?.enabled === false) return false;
+          return true;
+        });
+
+        if (validServerIds.length === 0) return;
+        validServerIds.forEach(serverId => {
+          mcpClient.startServer(serverId).catch(error => {
+            console.error(`Error iniciando MCP ${serverId}:`, error);
+          });
+        });
+      }
+    }, 1000);
+
+    return () => clearTimeout(initDefaultMcps);
+  }, [selectedMcpServers]);
+
+  // 🔗 Sincronizar TODAS las conexiones SSH del árbol ("explorador de sesiones")
+  useEffect(() => {
+    const syncSSHConnectionsToMCP = async () => {
+      try {
+        let allSSHConnections = [];
+
+        // 🎯 OPCIÓN 1: Usar window.sshConnectionsFromSidebar (Sidebar las sincroniza automáticamente)
+        if (window.sshConnectionsFromSidebar && Array.isArray(window.sshConnectionsFromSidebar) && window.sshConnectionsFromSidebar.length > 0) {
+          allSSHConnections = window.sshConnectionsFromSidebar;
+        }
+        
+        // 🎯 OPCIÓN 2: Intentar leer desde basicapp2_tree_data como fallback
+        if (allSSHConnections.length === 0) {
+          try {
+            const treeDataStr = localStorage.getItem('basicapp2_tree_data');
+            if (treeDataStr) {
+              const nodes = JSON.parse(treeDataStr);
+              
+              // Extraer TODAS las conexiones SSH del árbol (recursivamente)
+              const extractSSHNodes = (nodes) => {
+                let sshNodes = [];
+                for (const node of nodes) {
+                  if (node.data && node.data.type === 'ssh') {
+                    sshNodes.push(node);
+                  }
+                  if (node.children && node.children.length > 0) {
+                    sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                  }
+                }
+                return sshNodes;
+              };
+              
+              const sshNodes = extractSSHNodes(nodes);
+              allSSHConnections = sshNodes.map((node, idx) => {
+                const connData = {
+                  id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+                  type: 'ssh',
+                  label: node.label,
+                  name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+                  host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
+                  port: node.data.port || 22,
+                  username: node.data.username || node.data.user,
+                  password: node.data.password || '',
+                  privateKey: node.data.privateKey || '',
+                  useBastionWallix: node.data.useBastionWallix || false,
+                  bastionHost: node.data.bastionHost || '',
+                  bastionUser: node.data.bastionUser || '',
+                  targetServer: node.data.targetServer || ''
+                };
+                return connData;
+              });
+            }
+          } catch (e) {
+            // Error silencioso - solo fallback
+          }
+        }
+
+        // 🎯 OPCIÓN 2: Si no hay basicapp2_tree_data, desencriptar connections_encrypted
+        if (allSSHConnections.length === 0) {
+          try {
+            const encryptedStr = localStorage.getItem('connections_encrypted');
+            if (encryptedStr) {
+              // console.log(`🔍 [AIChatPanel] basicapp2_tree_data vacío, intentando desencriptar connections_encrypted...`);
+              
+              // Necesitamos la masterKey para desencriptar
+              // La obtenemos del window (debería estar disponible si el usuario está logueado)
+              if (window.currentMasterKey) {
+                try {
+                  const SecureStorage = require('../services/SecureStorage').default || require('../services/SecureStorage');
+                  const secureStorage = new SecureStorage();
+                  const encryptedObj = JSON.parse(encryptedStr);
+                  const decrypted = await secureStorage.decryptData(encryptedObj, window.currentMasterKey);
+                  
+                  // decrypted debería ser un array de nodos
+                  if (Array.isArray(decrypted)) {
+                    const extractSSHNodes = (nodes) => {
+                      let sshNodes = [];
+                      for (const node of nodes) {
+                        if (node.data && node.data.type === 'ssh') {
+                          sshNodes.push(node);
+                        }
+                        if (node.children && node.children.length > 0) {
+                          sshNodes = sshNodes.concat(extractSSHNodes(node.children));
+                        }
+                      }
+                      return sshNodes;
+                    };
+                    
+                    const sshNodes = extractSSHNodes(decrypted);
+                    allSSHConnections = sshNodes.map(node => ({
+                      id: node.key || `ssh_${node.data.host}_${node.data.username}`,
+                      type: 'ssh',
+                      label: node.label, // Guardar el label original del nodo
+                      name: node.label || node.data.name || `${node.data.username}@${node.data.host}`,
+                      host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
+                      port: node.data.port || 22,
+                      username: node.data.username || node.data.user,
+                      password: node.data.password || '',
+                      privateKey: node.data.privateKey || '',
+                      // Datos de Bastion Wallix si existen
+                      useBastionWallix: node.data.useBastionWallix || false,
+                      bastionHost: node.data.bastionHost || '',
+                      bastionUser: node.data.bastionUser || '',
+                      targetServer: node.data.targetServer || ''
+                    }));
+                    // console.log(`✅ [AIChatPanel] ${allSSHConnections.length} conexiones desencriptadas desde connections_encrypted`);
+                  }
+                } catch (decryptError) {
+                  // Error silencioso - solo fallback
+                }
+              }
+            }
+          } catch (e) {
+            // Error silencioso - solo fallback
+          }
+        }
+
+        // Si no hay conexiones en localStorage, intentar obtenerlas desde window.sshConnectionsFromSidebar
+        if (allSSHConnections.length === 0 && window.sshConnectionsFromSidebar) {
+          allSSHConnections = window.sshConnectionsFromSidebar;
+        }
+        
+        if (allSSHConnections.length === 0) {
+          return;
+        }
+        
+        // Formatear para el MCP (pasar TODO el objeto tal cual)
+        const connections = allSSHConnections.map(conn => ({
+          ...conn  // ✅ Pasar TODOS los campos del objeto
+        }));
+
+        // Guardar TODAS las conexiones en memoria del MCP (en el renderer process)
+        if (window.electron?.ipcRenderer) {
+          try {
+            // Verificar si ya se sincronizó recientemente (debounce de 2 segundos)
+            const now = Date.now();
+            const lastSyncKey = 'lastSSHSyncTime';
+            const lastSync = window[lastSyncKey] || 0;
+            const timeSinceLastSync = now - lastSync;
+            
+            if (timeSinceLastSync < 2000) {
+              return;
+            }
+            
+            window[lastSyncKey] = now;
+            
+            // Enviar con un pequeño retry solo si el servidor no está listo aún
+            const sendConnections = (attempt = 0) => {
+              try {
+                window.electron.ipcRenderer.send('app:save-ssh-connections-for-mcp', connections);
+              } catch (err) {
+                console.error(`❌ [AIChatPanel] Error enviando conexiones:`, err.message);
+              }
+            };
+            
+            // Enviar inmediatamente y un solo retry después de 500ms si es necesario
+            sendConnections(0);
+            setTimeout(() => sendConnections(1), 500);
+          } catch (ipcError) {
+            console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
+          }
+        } else {
+          console.error('[AIChatPanel] ❌ window.electron.ipcRenderer NO está disponible');
+        }
+      } catch (error) {
+        console.error('[AIChatPanel] ❌ Error en sincronización SSH:', error);
+      }
+    };
+
+    // Sincronizar al montar el componente (con delay para dar tiempo a que localStorage esté listo)
+    const initialSyncTimeout = setTimeout(() => {
+      syncSSHConnectionsToMCP();
+    }, 500); // Delay corto solo para asegurar que todo esté cargado
+
+    // Escuchar cambios en el árbol de conexiones
+    const handleTreeUpdated = () => {
+      syncSSHConnectionsToMCP();
+    };
+
+    const handleSidebarSSHUpdated = (event) => {
+      // Resincronizar INMEDIATAMENTE cuando Sidebar actualiza
+      syncSSHConnectionsToMCP();
+    };
+
+    window.addEventListener('connections-updated', handleTreeUpdated);
+    window.addEventListener('sidebar-ssh-connections-updated', handleSidebarSSHUpdated);
+    
+    return () => {
+      clearTimeout(initialSyncTimeout);
+      window.removeEventListener('connections-updated', handleTreeUpdated);
+      window.removeEventListener('sidebar-ssh-connections-updated', handleSidebarSSHUpdated);
+    };
+  }, []);
+
+  // 🔐 Sincronizar PASSWORDS del Password Manager con el MCP
+  useEffect(() => {
+    const syncPasswordsToMCP = async () => {
+      try {
+        let allPasswords = [];
+
+        // 🎯 OPCIÓN 1: Usar window.passwordsFromPasswordManager (si Sidebar lo sincroniza)
+        if (window.passwordsFromPasswordManager && Array.isArray(window.passwordsFromPasswordManager) && window.passwordsFromPasswordManager.length > 0) {
+          allPasswords = window.passwordsFromPasswordManager;
+        }
+        
+        // 🎯 OPCIÓN 2: Intentar desde passwords_encrypted (desencriptar si hay master key)
+        if (allPasswords.length === 0 && window.currentMasterKey) {
+          try {
+            const encryptedStr = localStorage.getItem('passwords_encrypted');
+            if (encryptedStr) {
+              try {
+                const SecureStorage = require('../services/SecureStorage').default || require('../services/SecureStorage');
+                const secureStorage = new SecureStorage();
+                const encryptedObj = JSON.parse(encryptedStr);
+                const decrypted = await secureStorage.decryptData(encryptedObj, window.currentMasterKey);
+                
+                if (Array.isArray(decrypted)) {
+                  allPasswords = decrypted;
+                }
+              } catch (decryptError) {
+                // Error silencioso - solo fallback
+              }
+            }
+          } catch (e) {
+            // Error silencioso - solo fallback
+          }
+        }
+        
+        // 🎯 OPCIÓN 3: Leer desde passwordManagerNodes (sin encriptar, fallback)
+        if (allPasswords.length === 0) {
+          try {
+            const plainStr = localStorage.getItem('passwordManagerNodes');
+            if (plainStr) {
+              allPasswords = JSON.parse(plainStr);
+            }
+          } catch (e) {
+            // Error silencioso - solo fallback
+          }
+        }
+
+        if (allPasswords.length === 0) {
+          return;
+        }
+        
+        // Enviar al MCP via IPC
+        if (window.electron?.ipcRenderer) {
+          try {
+            const sendPasswords = (attempt = 0) => {
+              try {
+                window.electron.ipcRenderer.send('app:save-passwords-for-mcp', allPasswords);
+              } catch (err) {
+                console.error(`❌ [AIChatPanel] Error en intento ${attempt + 1}:`, err.message);
+              }
+            };
+            
+            // Enviar múltiples veces para asegurar entrega
+            sendPasswords(0);
+            setTimeout(() => sendPasswords(1), 200);
+            setTimeout(() => sendPasswords(2), 1000);
+          } catch (ipcError) {
+            console.error('[AIChatPanel] ❌ Error en IPC send:', ipcError.message);
+          }
+        } else {
+          console.error('[AIChatPanel] ❌ window.electron.ipcRenderer NO está disponible');
+        }
+      } catch (error) {
+        console.error('[AIChatPanel] ❌ Error sincronizando contraseñas:', error);
+      }
+    };
+
+    // Sincronizar con delay para dar tiempo a que todo cargue
+    const initialSyncTimeout = setTimeout(() => {
+      syncPasswordsToMCP();
+    }, 1500); // Delay ligeramente mayor que SSH para asegurar que Password Manager esté listo
+
+    // Escuchar cambios en contraseñas
+    const handlePasswordsUpdated = (event) => {
+      syncPasswordsToMCP();
+    };
+
+    window.addEventListener('passwords-updated', handlePasswordsUpdated);
+    
+    return () => {
+      clearTimeout(initialSyncTimeout);
+      window.removeEventListener('passwords-updated', handlePasswordsUpdated);
+    };
   }, []);
 
   // Escuchar eventos del historial de conversaciones
@@ -155,6 +892,237 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     return () => {
       window.removeEventListener('load-conversation', handleLoadConversationEvent);
       window.removeEventListener('new-conversation', handleNewConversationEvent);
+    };
+  }, []);
+
+  // Escuchar evento para abrir AIConfigDialog en pestaña MCP
+  useEffect(() => {
+    const handleOpenAIConfig = (event) => {
+      debugLogger.debug('AIChatPanel.UI', 'Evento open-ai-config recibido', event.detail);
+      
+      if (event.detail?.tab === 'mcp-manager') {
+        // Guardar el servidor a seleccionar en window para que MCPManagerTab lo lea cuando se carguen los datos
+        if (event.detail?.selectServer) {
+          window.__mcpConfigSelectServer = event.detail.selectServer;
+          debugLogger.debug('AIChatPanel.UI', 'Servidor MCP seleccionado para configuración', window.__mcpConfigSelectServer);
+        }
+        
+        // Abrir el diálogo en la pestaña MCP
+        setShowConfigDialog(true);
+      }
+    };
+
+    window.addEventListener('open-ai-config', handleOpenAIConfig);
+    return () => {
+      window.removeEventListener('open-ai-config', handleOpenAIConfig);
+    };
+  }, []);
+
+  // Escuchar cambios en los servidores MCP (todos, no solo activos)
+  useEffect(() => {
+    const updateMcpServers = () => {
+      // Obtener TODOS los MCPs instalados, no solo los activos
+      const allServers = mcpClient.getAllServers();
+      setActiveMcpServers(allServers || []);
+    };
+    
+    updateMcpServers();
+    
+    // Listener para cambios en MCP
+    const unsubscribe = mcpClient.addListener((event) => {
+      if (event === 'servers-updated' || event === 'tools-updated') {
+        updateMcpServers();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // ✅ NUEVO: Sincronizar selectedMcpServers cuando un MCP es deshabilitado
+  useEffect(() => {
+    const handleMcpToggle = (event, data) => {
+      if (event === 'server-toggled') {
+        const { serverId, enabled } = data;
+        
+        if (!enabled) {
+          // Si se deshabilita un MCP, removerlo de selectedMcpServers
+          setSelectedMcpServers(prev => {
+            if (prev.includes(serverId)) {
+              const updated = prev.filter(id => id !== serverId);
+              localStorage.setItem('selectedMcpServers', JSON.stringify(updated));
+              return updated;
+            }
+            return prev;
+          });
+        }
+      }
+    };
+    
+    const unsubscribe = mcpClient.addListener(handleMcpToggle);
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  // ✅ NUEVO: Iniciar monitoreo PASIVO de memoria al cargar el componente
+  // El monitoreo SOLO observa RAM cada 30s, sin tomar acciones automáticas
+  // Las descargas son MANUALES via widget (Ctrl+M)
+  useEffect(() => {
+    aiService.memoryService.startMonitoring();
+
+    return () => {
+      // Opcional: detener monitoreo al desmontar
+      // aiService.memoryService.stopMonitoring();
+    };
+  }, []);
+
+  // ✅ NUEVO: Shortcut Ctrl+M para mostrar/ocultar widget de memoria
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'm') {
+        e.preventDefault();
+        setShowMemoryIndicator(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const filesystemServer = activeMcpServers.find(server => server.id === 'filesystem');
+    const isDisabled = disabledMcpServers.includes('filesystem');
+    const isSelected = selectedMcpServers.includes('filesystem') && !isDisabled;
+    const isRunning = filesystemServer?.running && filesystemServer?.state === 'ready';
+    const isEnabled = filesystemServer?.config?.enabled !== false;
+    const isAvailable = Boolean(
+      mcpToolsEnabled &&
+      filesystemServer &&
+      isSelected &&
+      isRunning &&
+      isEnabled
+    );
+
+    const normalizeAllowedPaths = (rawValue) => {
+      if (!rawValue) return [];
+
+      const pushValuesFrom = (value, target, seen) => {
+        if (!value) return;
+        let paths = [];
+        if (Array.isArray(value)) {
+          paths = value;
+        } else if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (!trimmed) return;
+          const looksLikeJsonArray = trimmed.startsWith('[') && trimmed.endsWith(']');
+          if (looksLikeJsonArray) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              if (Array.isArray(parsed)) {
+                paths = parsed;
+              } else {
+                paths = [trimmed];
+              }
+            } catch {
+              paths = trimmed.split(/\r?\n|,/);
+            }
+          } else {
+            paths = trimmed.split(/\r?\n|,/);
+          }
+        } else if (typeof value === 'object') {
+          paths = Object.values(value || {});
+        }
+
+        paths
+          .map(path => (typeof path === 'string' ? path.trim() : String(path || '').trim()))
+          .filter(Boolean)
+          .forEach(path => {
+            if (!seen.has(path)) {
+              seen.add(path);
+              target.push(path);
+            }
+          });
+      };
+
+      const collected = [];
+      const seen = new Set();
+
+      pushValuesFrom(rawValue, collected, seen);
+      return collected;
+    };
+
+    let allowedPaths = [];
+    if (isAvailable && filesystemServer) {
+      const candidates = [
+        filesystemServer.config?.configValues?.allowedPaths,
+        filesystemServer.config?.allowedPaths,
+        filesystemServer.config?.options?.allowedPaths,
+        filesystemServer.allowedPaths,
+        filesystemServer.config?.env?.ALLOWED_PATHS,
+        filesystemServer.config?.env?.ALLOWED_DIR
+      ];
+
+      candidates.forEach(candidate => {
+        const paths = normalizeAllowedPaths(candidate);
+        if (paths.length > 0) {
+          allowedPaths = Array.from(new Set([...allowedPaths, ...paths]));
+        }
+      });
+    }
+
+    const serverMeta = filesystemServer
+      ? {
+          id: filesystemServer.id,
+          name: filesystemServer.name || filesystemServer.id,
+          state: filesystemServer.state || null,
+          running: Boolean(filesystemServer.running),
+          enabled: filesystemServer.config?.enabled !== false,
+          version: filesystemServer.version || null
+        }
+      : null;
+
+    const detail = {
+      type: 'filesystem',
+      conversationId: currentConversationId || null,
+      active: isAvailable,
+      isSelected: Boolean(isSelected && filesystemServer),
+      running: Boolean(isRunning),
+      allowedPaths: allowedPaths,
+      defaultPath: allowedPaths.length > 0 ? allowedPaths[0] : null,
+      server: serverMeta
+    };
+
+    const serialized = JSON.stringify(detail);
+    if (filesystemStatusRef.current !== serialized) {
+      filesystemStatusRef.current = serialized;
+      window.dispatchEvent(new CustomEvent('filesystem-mcp-status', { detail }));
+    }
+  }, [
+    activeMcpServers,
+    selectedMcpServers,
+    disabledMcpServers,
+    mcpToolsEnabled,
+    currentConversationId
+  ]);
+
+  useEffect(() => {
+    return () => {
+      filesystemStatusRef.current = '';
+      window.dispatchEvent(new CustomEvent('filesystem-mcp-status', {
+        detail: {
+          type: 'filesystem',
+          conversationId: null,
+          active: false,
+          isSelected: false,
+          running: false,
+          allowedPaths: [],
+          defaultPath: null,
+          server: null
+        }
+      }));
     };
   }, []);
 
@@ -240,22 +1208,66 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     setCurrentStatus(null);
     // No limpiar detectedFiles aquí - mantener archivos de conversaciones anteriores
 
+    logConversation('debug', 'Usuario envía mensaje', {
+      conversationId: currentConversationId,
+      length: userMessage.length,
+      attachedFiles: attachedFiles.length
+    });
+
     // Crear AbortController para cancelar si es necesario
     const controller = new AbortController();
     setAbortController(controller);
 
     try {
-      // Agregar mensaje del usuario a la conversación con archivos adjuntos
+       // Slash command: /prompts → listar prompts MCP
+      if (userMessage === '/prompts' || userMessage === '/prompt') {
+        const prompts = mcpClient.getAvailablePrompts() || [];
+        const byServer = prompts.reduce((acc, p) => { (acc[p.serverId] = acc[p.serverId] || []).push(p); return acc; }, {});
+        const lines = Object.keys(byServer).sort().flatMap(sid => {
+          const list = byServer[sid].map(p => `  - ${p.name}${p.description ? ` — ${p.description}` : ''}`);
+          return [`Servidor: ${sid}`, ...list, ''];
+        });
+        const content = lines.length > 0 ? lines.join('\n') : 'No hay prompts MCP disponibles.';
+        // Persistir mensaje usuario y respuesta como assistant
+        conversationService.addMessage('user', userMessage);
+        conversationService.addMessage('assistant', content);
+        setMessages(prev => [...prev, { id: Date.now(), role: 'assistant', content, timestamp: Date.now() }]);
+        setIsLoading(false);
+        return;
+      }
+      // ============= PASO 1: SINCRONIZAR CONVERSACIÓN (PRIMERO) =============
+      // Asegurar que el servicio esté sincronizado con la conversación actual ANTES de limpiar historial
+      if (currentConversationId && conversationService.currentConversationId !== currentConversationId) {
+        logConversation('debug', 'Sincronizando conversación activa', {
+          conversationId: currentConversationId
+        });
+        conversationService.loadConversation(currentConversationId);
+      }
+      
+      // ============= PASO 2: LIMPIAR HISTORIAL (DESPUÉS) =============
+      // CRÍTICO: Limpiar historial de AIService DESPUÉS de sincronizar, para evitar usar conversación equivocada
+      aiService.clearHistory();
+      
+      // 🔧 SOLUCIÓN DEFINITIVA ANTI-DUPLICACIÓN:
+      // En lugar de agregar el mensaje del usuario manualmente y luego intentar sincronizar,
+      // agregamos un placeholder de "streaming" temporalmente y confiamos en que
+      // el evento 'conversation-updated' traerá el mensaje real persistido.
+      const streamingPlaceholderId = `streaming_user_${Date.now()}`;
+      
+      setMessages(prev => [...prev, {
+        id: streamingPlaceholderId,
+        role: 'user',
+        content: userMessage,
+        timestamp: Date.now(),
+        streaming: true, // Marcado como streaming para que el listener lo elimine cuando llegue el mensaje real
+        attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
+      }]);
+      
+      // Guardar en conversationService (que disparará el evento 'conversation-updated')
+      // El evento sincronizará automáticamente el mensaje real y eliminará el placeholder
       const userMessageObj = conversationService.addMessage('user', userMessage, {
         attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
       });
-      setMessages(prev => [...prev, {
-        id: userMessageObj.id,
-        role: 'user',
-        content: userMessage,
-        timestamp: userMessageObj.timestamp,
-        attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined
-      }]);
 
       // Actualizar el título de la conversación si es el primer mensaje
       const currentConversation = conversationService.getCurrentConversation();
@@ -295,57 +1307,461 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           });
         },
         onStatus: (statusData) => {
-          setCurrentStatus(statusData);
+          // Mantener visible el estado de herramienta unos ms para UX
+          try {
+            const s = statusData?.status;
+            if (!window.__toolStatusRefs) {
+              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 5000 };
+            }
+            const refs = window.__toolStatusRefs;
+            const MIN_MS = refs.minMs || 5000;
+            if (s === 'tool-execution') {
+              if (refs.timer) { clearTimeout(refs.timer); refs.timer = null; }
+              refs.lastAt = Date.now();
+              setCurrentStatus(statusData);
+              return;
+            }
+            if (s === 'tool-error') {
+              if (refs.timer) { clearTimeout(refs.timer); refs.timer = null; }
+              refs.lastAt = 0;
+              setCurrentStatus(statusData);
+              return;
+            }
+            const elapsed = Date.now() - (refs.lastAt || 0);
+            if (refs.lastAt && elapsed < MIN_MS) {
+              const delay = MIN_MS - elapsed;
+              if (refs.timer) clearTimeout(refs.timer);
+              refs.timer = setTimeout(() => {
+                setCurrentStatus(statusData);
+                refs.timer = null;
+                refs.lastAt = 0;
+              }, delay);
+              return;
+            }
+            setCurrentStatus(statusData);
+          } catch {
+            setCurrentStatus(statusData);
+          }
         },
         onStream: (streamData) => {
-          // Actualizar mensaje con contenido streaming
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId ? {
-              ...msg,
-              content: streamData.fullResponse,
-              streaming: true
-            } : msg
-          ));
-          setCurrentStatus({
-            status: 'streaming',
-            message: 'Recibiendo respuesta...',
-            model: streamData.model,
-            provider: streamData.provider
+          // Si el contenido del stream parece un tool-call JSON, NO mostrarlo PERO mantener placeholder
+          if (looksLikeToolJson(streamData.fullResponse) || looksLikeJsonStart(streamData.fullResponse)) {
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId ? { ...msg, content: '⚙️ Ejecutando herramienta...', streaming: true } : msg
+            ));
+          } else {
+            // Actualizar mensaje con contenido streaming normal
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId ? {
+                ...msg,
+                content: streamData.fullResponse,
+                streaming: true
+              } : msg
+            ));
+          }
+          // Respetar ventana mínima del estado de herramienta
+          try {
+            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 5000 };
+            const MIN_MS = refs.minMs || 5000;
+            const elapsed = Date.now() - (refs.lastAt || 0);
+            const next = { status: 'streaming', message: 'Recibiendo respuesta...', model: streamData.model, provider: streamData.provider };
+            if (refs.lastAt && elapsed < MIN_MS) {
+              const delay = MIN_MS - elapsed;
+              if (refs.timer) clearTimeout(refs.timer);
+              refs.timer = setTimeout(() => {
+                setCurrentStatus(next);
+                refs.timer = null;
+                refs.lastAt = 0;
+              }, delay);
+            } else {
+              setCurrentStatus(next);
+              refs.lastAt = 0;
+            }
+          } catch {
+            setCurrentStatus({ status: 'streaming', message: 'Recibiendo respuesta...', model: streamData.model, provider: streamData.provider });
+          }
+        },
+        onToolResult: (toolData) => {
+          logConversation('info', 'Resultado de herramienta recibido (stream)', {
+            toolName: toolData.toolName,
+            hasArgs: !!toolData.args,
+            hasResult: !!toolData.result
+          });
+          // Mostrar estado "resultado recibido" con icono de herramienta
+          try {
+            if (!window.__toolStatusRefs) {
+              window.__toolStatusRefs = { lastAt: 0, timer: null, minMs: 3000 };
+            }
+            const refs = window.__toolStatusRefs;
+            refs.lastAt = Date.now();
+            setCurrentStatus({ status: 'tool-executed', message: 'Resultado recibido', toolName: toolData.toolName, toolArgs: toolData.args });
+          } catch {}
+          
+          // Extraer texto legible del resultado (evitar mostrar JSON crudo)
+          let resultText = '';
+          const res = toolData.result;
+          if (res && typeof res === 'object' && Array.isArray(res.content)) {
+            const textItems = res.content
+              .filter(it => typeof it?.text === 'string' && it.text.trim().length > 0)
+              .map(it => it.text.trim());
+            resultText = textItems.join('\n');
+          } else if (typeof res === 'string') {
+            resultText = res;
+          } else {
+            try { resultText = JSON.stringify(res, null, 2); } catch { resultText = String(res ?? ''); }
+          }
+          const isErrorResult = Boolean(
+            toolData?.result?.isError ||
+            toolData?.result?.error ||
+            toolData?.error
+          );
+
+
+          // Guardar último resultado para posibles fallbacks del mensaje final
+          lastToolResultRef.current = { 
+            toolName: toolData.toolName, 
+            text: resultText,
+            timestamp: Date.now(), // 🔧 Agregar timestamp para verificar si es reciente
+            isError: isErrorResult
+          };
+          
+          // 🖥️ APERTURA AUTOMÁTICA DE TERMINAL - ejecutar comandos locales/SSH
+          const baseName = toolData.toolName.includes('__') ? toolData.toolName.split('__')[1] : toolData.toolName;
+          console.log('🔍 Verificando si abrir terminal:', {
+            baseName,
+            hasCommand: !!toolData.args?.command,
+            isError: isErrorResult,
+            shouldOpen: (baseName === 'execute_local' || baseName === 'execute_ssh') && toolData.args?.command && !isErrorResult,
+            hasCallback: typeof onExecuteCommandInTerminal === 'function'
+          });
+          
+          if ((baseName === 'execute_local' || baseName === 'execute_ssh') && toolData.args?.command && !isErrorResult) {
+            console.log('✅ Llamando callback para abrir terminal:', {
+              baseName,
+              command: toolData.args.command,
+              workingDir: toolData.args.workingDir,
+              hostId: toolData.args.hostId
+            });
+            
+            // Pequeño delay para que el resultado se renderice primero
+            setTimeout(() => {
+              const commandData = { 
+                command: toolData.args.command,
+                workingDir: toolData.args.workingDir,
+                hostId: toolData.args.hostId,
+                toolType: baseName
+              };
+              
+              console.log('🚀 Ejecutando callback con datos:', commandData);
+              console.log('🔍 Tipo de callback:', typeof onExecuteCommandInTerminal);
+              console.log('🔍 Callback es función?', typeof onExecuteCommandInTerminal === 'function');
+              
+              // Llamar callback directamente si existe
+              if (typeof onExecuteCommandInTerminal === 'function') {
+                console.log('✅ Llamando onExecuteCommandInTerminal(commandData)...');
+                try {
+                  onExecuteCommandInTerminal(commandData);
+                  console.log('✅ Callback ejecutado correctamente');
+                } catch (error) {
+                  console.error('❌ Error ejecutando callback:', error);
+                }
+              } else {
+                console.warn('⚠️ onExecuteCommandInTerminal callback no está definido');
+                // Fallback a evento de window
+                window.dispatchEvent(new CustomEvent('ai-chat-execute-command-in-terminal', {
+                  detail: commandData
+                }));
+              }
+            }, 100);
+          } else {
+            console.log('❌ NO se abrirá terminal');
+          }
+
+          // Mensaje minimalista y bonito (sin rutas)
+          const lower = resultText.toLowerCase();
+          let pretty = 'Acción completada';
+          if (toolData.toolName === 'write_file') {
+            pretty = lower.includes('successfully') || lower.includes('wrote') ? 'Archivo creado' : 'Escritura completada';
+          } else if (toolData.toolName === 'edit_file') {
+            pretty = 'Archivo editado';
+          } else if (toolData.toolName === 'create_directory') {
+            pretty = 'Directorio creado';
+          } else if (toolData.toolName === 'move_file') {
+            pretty = 'Archivo movido';
+          } else if (toolData.toolName === 'list_directory' || toolData.toolName === 'list_directory_with_sizes') {
+            pretty = 'Directorio listado';
+          } else if (toolData.toolName === 'directory_tree') {
+            pretty = 'Árbol generado';
+          }
+          const content = `🔧 ${toolData.toolName} · ${pretty}`;
+          
+          // Si usamos mensajes estructurados, el orquestador ya persistirá y emitirá 'conversation-updated'
+          if (aiService.featureFlags?.structuredToolMessages) {
+            return;
+          }
+          
+          // Flujo legacy: persistir un mensaje de sistema minimalista y reflejar en UI
+          
+          // ✅ IMPROVED: Guardar metadatos adicionales (lenguaje detectado, ruta)
+          const metadata = {
+            toolName: toolData.toolName,
+            toolArgs: toolData.args,
+            isToolResult: true,
+            toolResultText: resultText,
+            detectedLanguage: toolData.detectedLanguage || '',
+            filePath: toolData.filePath || ''
+          };
+          
+          const toolMessageObj = conversationService.addMessage('system', content, metadata);
+          
+          setMessages(prev => {
+            const idx = prev.findIndex(m => m.id === assistantMessageId);
+            const arr = [...prev];
+            arr.splice(idx >= 0 ? idx : arr.length, 0, {
+              id: toolMessageObj.id,
+              role: 'system',
+              content,
+              timestamp: toolMessageObj.timestamp,
+              metadata,
+              subtle: true
+            });
+            return arr;
           });
         },
         onComplete: (data) => {
           const files = aiService.detectFilesInResponse(data.response, userMessage);
           
-          // Agregar respuesta del asistente a la conversación
-          const assistantMessageObj = conversationService.addMessage('assistant', data.response, {
-            latency: data.latency,
-            model: data.model,
-            provider: data.provider,
-            tokens: Math.ceil(data.response.length / 4),
-            files: files.length > 0 ? files : undefined
-          });
+          // ============= CALCULAR SAFE RESPONSE PRIMERO (antes de guardar) =============
+          // Si la respuesta está vacía, usar un fallback basado en el último resultado de tool
           
-          // Calcular tokens reales de la respuesta
-          const responseTokens = Math.ceil(data.response.length / 4);
+          const extractPlainResponse = (txt) => {
+            if (!txt || typeof txt !== 'string') return txt;
+            let raw = txt.trim();
+            // strip code fences ```json ... ```
+            if (/^```/.test(raw)) {
+              raw = raw.replace(/^```(?:json|tool|tool_call)?/i, '').replace(/```$/i, '').trim();
+            }
+            try {
+              const obj = JSON.parse(raw);
+              if (typeof obj?.response === 'string') return obj.response;
+              if (typeof obj?.message === 'string') return obj.message;
+              return txt;
+            } catch { return txt; }
+          };
+
+          let normalizedResp = extractPlainResponse(data.response);
           
-          // Actualizar mensaje final con archivos asociados
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId ? {
-              ...msg,
-              id: assistantMessageObj.id,
-              content: data.response,
-              streaming: false,
-              metadata: {
+          // Heurística: si el modelo solo explica que "ya se listó" o repite el resultado, colapsar
+          const isMetaResponse = (() => {
+            const t = (normalizedResp || '').toLowerCase();
+            if (!t) return true;
+            const patterns = [
+              'ya ha sido mostrada', 'ya ha sido listado', 'ya se listó', 'ya se mostro', 'como se mostró', 'como se mostro',
+              'mostrada anteriormente', 'listado previamente', 'como arriba', 'as shown'
+            ];
+            return patterns.some(p => t.includes(p));
+          })();
+
+          // 🔧 LÓGICA MEJORADA: Solo usar "Hecho." si REALMENTE se ejecutó una herramienta
+          let safeResponse = (normalizedResp && normalizedResp.trim().length > 0 && !isMetaResponse)
+            ? normalizedResp
+            : (() => {
+                // Verificar si hay un resultado de tool RECIENTE (menos de 10 segundos)
+                const last = lastToolResultRef.current;
+                const hasRecentToolResult = last && 
+                  typeof last.text === 'string' && 
+                  last.text.length > 0 &&
+                  last.timestamp && 
+                  (Date.now() - last.timestamp) < 10000; // 10 segundos
+                
+                if (hasRecentToolResult) {
+                  if (last.isError) {
+                    return last.text;
+                  }
+                  // Si hay resultado de tool reciente, sintetizar una explicación breve
+                  if (aiService.featureFlags?.structuredToolMessages) {
+                    // Intentar crear una descripción más útil basada en el toolName
+                    const toolName = last.toolName || '';
+                    if (toolName.includes('write') || toolName.includes('create')) {
+                      return 'He completado la operación de escritura/creación.';
+                    } else if (toolName.includes('read') || toolName.includes('list')) {
+                      return 'He obtenido la información solicitada.';
+                    } else if (toolName.includes('edit') || toolName.includes('modify')) {
+                      return 'He realizado las modificaciones solicitadas.';
+                    }
+                    return 'Operación completada correctamente.';
+                  }
+                  // Intentar sintetizar una frase breve del resultado
+                  const pathMatch = last.text.match(/wrote to\s+(.+)$/i);
+                  const path = pathMatch ? pathMatch[1] : '';
+                  return path ? `He creado el archivo en ${path}.` : `Operación completada: ${last.text.slice(0, 50)}`;
+                }
+                
+                // Si NO hay resultado de tool reciente, retornar la respuesta original
+                // (aunque esté vacía) para no ocultar el problema
+                return normalizedResp || '(El modelo no generó una respuesta)';
+              })();
+
+          // 🔧 Detectar y ocultar respuestas que son SOLO metadata o tool calls del sistema
+          // Ejemplo: {"tool": null, ...} o {"tool": "write_file", "arguments": {...}}
+          const isSystemMetadata = (txt) => {
+            if (!txt || typeof txt !== 'string') return false;
+            const trimmed = txt.trim();
+            // Debe ser JSON puro
+            if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return false;
+            try {
+              const parsed = JSON.parse(trimmed);
+              // Es metadata si tiene el campo "tool" (independientemente de su valor)
+              if ('tool' in parsed) {
+                // CUALQUIER JSON con "tool" + "arguments" es metadata del sistema
+                if ('arguments' in parsed) return true;
+                // Si solo tiene "tool", también es metadata
+                const keys = Object.keys(parsed);
+                if (keys.length <= 2 && keys.includes('tool')) return true;
+                // Si tiene "message" pero es genérico, también es metadata
+                if (parsed.message && /^(hecho|done|complete|ok|ready)/i.test(parsed.message)) return true;
+              }
+            } catch {
+              return false;
+            }
+            return false;
+          };
+
+          if (isSystemMetadata(safeResponse)) {
+            logConversation('warn', 'Respuesta del modelo contiene solo metadata del sistema', {
+              conversationId: conversationService.currentConversationId
+            });
+            // En lugar de "Hecho." genérico, usar una descripción más útil
+            safeResponse = 'Operación completada correctamente.';
+          }
+          
+          // ✅ IMPROVED: Detectar si la respuesta es SOLO JSON de tool call (no debería guardarse como respuesta)
+          // NOTA: Esta detección solo se aplica si structuredToolMessages ESTÁ activo (Tool Orchestrator maneja el JSON)
+          const isJsonToolCall = (() => {
+            // Si NO hay orchestrator, el JSON se manejará en otro lugar
+            if (!aiService.featureFlags?.structuredToolMessages) {
+              return false;
+            }
+            
+            const trimmed = safeResponse.trim();
+            
+            // Caso 1: JSON completo y válido
+            if (trimmed.startsWith('{') && (trimmed.endsWith('}') || trimmed.endsWith('}}'))) {
+              try {
+                // Si puede ser parseado como JSON, verificar si tiene campos de tool
+                const cleanJson = trimmed.endsWith('}}') ? trimmed.slice(0, -1) : trimmed; // Remover }} extra
+                const parsed = JSON.parse(cleanJson);
+                // Es un tool call si tiene "tool", "use_tool", "arguments", o "plan"
+                return parsed.tool || parsed.use_tool || parsed.arguments || parsed.plan;
+              } catch (e) {
+                // JSON inválido/truncado - podría ser un tool call cortado
+                // Verificar si contiene patrones de tool call JSON
+                if (/\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+                  logConversation('warn', 'JSON de tool call truncado o malformado detectado', {
+                    preview: trimmed.slice(0, 100),
+                    isValid: false
+                  });
+                  return true; // Tratarlo como tool call para evitar guardarlo
+                }
+                return false;
+              }
+            }
+            
+            // Caso 2: JSON que comienza la respuesta (sin explicación antes)
+            if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"|\"plan\"/.test(trimmed.slice(0, 300))) {
+              return true;
+            }
+            
+            return false;
+          })();
+          
+          if (isJsonToolCall) {
+            logConversation('warn', 'Respuesta del modelo es un tool call puro. Reemplazando con fallback.', {
+              conversationId: conversationService.currentConversationId,
+              tool: isJsonToolCall,
+              preview: safeResponse.slice(0, 100)
+            });
+            
+            // 🔍 CRÍTICO: Verificar si la última operación tuvo ERROR
+            // Buscar el último mensaje tool para ver si tiene error
+            const lastToolMessage = messages.slice().reverse().find(m => 
+              m.role === 'tool' || m.role === 'system' && m.metadata?.isToolResult
+            );
+            
+            const hadError = lastToolMessage?.metadata?.error === true;
+            
+            if (hadError) {
+              // Si hubo error, NO decir "completado", avisar del error
+              const errorText = lastToolMessage?.metadata?.toolResultText || lastToolMessage?.content || '';
+              const errorPreview = errorText.slice(0, 150);
+              safeResponse = `Hubo un problema al ejecutar la operación: ${errorPreview}`;
+              logConversation('error', 'Tool tuvo error, usando mensaje de error en fallback', {
+                error: errorPreview
+              });
+            } else {
+              // Sin error, usar fallback descriptivo normal
+              const last = lastToolResultRef.current;
+              if (last && last.toolName) {
+                logConversation('info', 'Usando fallback basado en toolName', {
+                  toolName: last.toolName
+                });
+                
+                if (last.toolName.includes('write') || last.toolName.includes('create')) {
+                  safeResponse = 'He completado la operación de escritura/creación del archivo.';
+                } else if (last.toolName.includes('read')) {
+                  safeResponse = 'He leído el contenido del archivo.';
+                } else if (last.toolName.includes('list')) {
+                  safeResponse = 'He listado el contenido del directorio.';
+                } else if (last.toolName.includes('edit') || last.toolName.includes('modify')) {
+                  safeResponse = 'He realizado las modificaciones solicitadas.';
+                } else if (last.toolName.includes('delete') || last.toolName.includes('remove')) {
+                  safeResponse = 'He eliminado el archivo/directorio.';
+                } else if (last.toolName.includes('move') || last.toolName.includes('rename')) {
+                  safeResponse = 'He movido/renombrado el archivo.';
+                } else if (last.toolName.includes('search') || last.toolName.includes('find')) {
+                  safeResponse = 'He completado la búsqueda.';
+                } else if (last.toolName.includes('run') || last.toolName.includes('execute')) {
+                  safeResponse = 'He ejecutado el comando.';
+                } else {
+                  safeResponse = 'Operación completada correctamente.';
+                }
+              } else {
+                // Sin información de tool reciente, usar fallback genérico
+                logConversation('warn', 'No hay lastToolResult disponible, usando fallback genérico');
+                safeResponse = 'Operación completada correctamente.';
+              }
+            }
+          }
+          
+          // Guardar la respuesta
+          {
+            logConversation('debug', 'Guardando respuesta del asistente', {
+              safePreview: safeResponse.substring(0, 80),
+              length: safeResponse.length,
+              conversationId: conversationService.currentConversationId
+            });
+            
+              const assistantMessageObj = conversationService.addMessage('assistant', safeResponse, {
                 latency: data.latency,
                 model: data.model,
                 provider: data.provider,
-                tokens: responseTokens,
+                tokens: Math.ceil(safeResponse.length / 4),
                 files: files.length > 0 ? files : undefined
-              }
-            } : msg
-          ));
-          
-          // Tokens calculados internamente por el sistema de ventana deslizante
+              });
+              
+              
+              // Calcular tokens reales de la respuesta
+              const responseTokens = Math.ceil(safeResponse.length / 4);
+
+              // 🔧 ELIMINADO EL FALLBACK MANUAL: El evento 'conversation-updated' automático
+              // de conversationService.addMessage() ya sincroniza los mensajes correctamente.
+              // Mantener el fallback causaba duplicación de mensajes en la UI.
+              
+              // El mensaje streaming se reemplazará automáticamente cuando el evento
+              // 'conversation-updated' se dispare y sincronice los mensajes persistidos.
+              
+              // Tokens calculados internamente por el sistema de ventana deslizante
+          }
           
           // 🪟 NOTIFICACIÓN SUTIL de optimización de contexto (como ChatGPT)
           if (aiService.lastContextOptimization && 
@@ -366,11 +1782,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             aiService.lastContextOptimization = null;
           }
           
-          setCurrentStatus({
-            status: 'complete',
-            message: `Completado en ${data.latency}ms`,
-            latency: data.latency
-          });
+          try {
+            const refs = window.__toolStatusRefs || { lastAt: 0, minMs: 3000 };
+            const MIN_MS = refs.minMs || 3000;
+            const elapsed = Date.now() - (refs.lastAt || 0);
+              const applyComplete = () => setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
+            if (refs.lastAt && elapsed < MIN_MS) {
+              const delay = MIN_MS - elapsed;
+              if (refs.timer) clearTimeout(refs.timer);
+              refs.timer = setTimeout(() => {
+                applyComplete();
+                refs.timer = null;
+                refs.lastAt = 0;
+              }, delay);
+            } else {
+                applyComplete();
+                refs.lastAt = 0;
+            }
+          } catch {
+            setCurrentStatus({ status: 'complete', message: `Completado en ${data.latency}ms`, latency: data.latency });
+          }
 
           // Aviso sutil de uso de contexto efímero con archivos
           if (data.ephemeralContextUsed && Array.isArray(data.ephemeralFilesUsed) && data.ephemeralFilesUsed.length > 0) {
@@ -409,13 +1840,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       // Enviar solo el prompt del usuario; el contexto de archivos se inyecta
       // de forma efímera en el servicio de IA (RAG ligero)
       await aiService.sendMessageWithCallbacks(userMessage, callbacks, {
-        signal: controller.signal
+        signal: controller.signal,
+        mcpEnabled: mcpToolsEnabled // Pasar estado de MCP
       });
 
     } catch (error) {
       // Si es error de cancelación, no mostrar como error
       if (error.name === 'AbortError') {
-        console.log('💡 Generación cancelada por el usuario');
+        logConversation('info', 'Generación cancelada por el usuario', {
+          conversationId: currentConversationId
+        });
         setCurrentStatus({
           status: 'cancelled',
           message: 'Generación cancelada'
@@ -423,7 +1857,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         return; // No mostrar mensaje de error para cancelaciones
       }
       
-      console.error('Error enviando mensaje:', error);
+      logConversation('error', 'Error enviando mensaje al modelo', {
+        conversationId: currentConversationId,
+        error: error?.message
+      });
       
       setCurrentStatus({
         status: 'error',
@@ -511,9 +1948,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const inputHasText = !!inputValue.trim();
 
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
-      console.log('🛑 [AIChatPanel] Limpiar chat ignorado: la conversación está vacía');
       return;
     }
+
+    loggedToolMessageIdsRef.current = new Set();
 
     setMessages([]);
     aiService.clearHistory();
@@ -540,16 +1978,35 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     const uiHasMessages = messages.length > 0;
     const inputHasText = !!inputValue.trim();
 
+    // Si hay desincronización (UI tiene mensajes pero servicio no), limpiar UI
+    if (uiHasMessages && !serviceHasMessages) {
+      logConversation('warn', 'UI desincronizada detectada, limpiando mensajes locales');
+      setMessages([]);
+      setAttachedFiles([]);
+    }
+
     if (!serviceHasMessages && !serviceHasFiles && !uiHasMessages && !inputHasText) {
-      console.log('🛑 [AIChatPanel] Nueva conversación ignorada: la actual está vacía');
       return;
     }
 
-    // Reset completo del estado antes de crear nueva conversación
+    // ============= RESET COMPLETO DEL ESTADO =============
     setMessages([]);
     setAttachedFiles([]);
     setInputValue('');
     setIsLoading(false);
+    setCurrentStatus(null);                       // 🔧 Limpiar estado actual
+    
+    // Limpiar AIService
+    aiService.clearHistory();                     // 🔧 Limpiar historial
+    
+    // Limpiar refs
+    lastToolResultRef.current = null;             // 🔧 Limpiar tool result
+    
+    // Limpiar detección de archivos
+    setDetectedFileTypes([]);
+    setFileTypeSuggestions([]);
+    setDetectionConfidence(0);
+    setShowFileTypeSuggestions(false);
 
     // Crear nueva conversación completamente limpia
     const newConversation = conversationService.createConversation(
@@ -558,6 +2015,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       modelType
     );
 
+    // Guardar MCPs seleccionados en la conversación
+    if (selectedMcpServers.length > 0) {
+      newConversation.selectedMcpServers = selectedMcpServers;
+    }
+
+    loggedToolMessageIdsRef.current = new Set();
+
     // Actualizar estado con la nueva conversación
     setCurrentConversationId(newConversation.id);
     setConversationTitle(newConversation.title);
@@ -565,25 +2029,93 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     // Asegurar que los mensajes estén vacíos (doble verificación)
     setMessages([]);
 
-    // Disparar evento para actualizar el historial
-    window.dispatchEvent(new CustomEvent('conversation-updated'));
+    // 🔔 Disparar evento para actualizar el historial y sincronizar todos los listeners
+    window.dispatchEvent(new CustomEvent('conversation-updated', {
+      detail: { conversationId: newConversation.id, source: 'new' }
+    }));
   };
 
   const handleLoadConversation = (conversationId) => {
+    // ============= LIMPIEZA COMPLETA - Fase 1: UI States =============
+    setMessages([]);
+    setAttachedFiles([]);
+    setInputValue('');                           // 🔧 Limpiar input anterior
+    setIsLoading(false);
+    setCurrentStatus(null);
+    
+    loggedToolMessageIdsRef.current = new Set();
+    
+    // ============= LIMPIEZA COMPLETA - Fase 2: AIService State =============
+    aiService.clearHistory();                    // 🔧 Limpiar historial del AIService
+    
+    // ============= LIMPIEZA COMPLETA - Fase 3: Refs =============
+    lastToolResultRef.current = null;            // 🔧 Limpiar tool result ref
+    
+    // ============= LIMPIEZA COMPLETA - Fase 4: File Detection States =============
+    setDetectedFileTypes([]);                    // 🔧 Limpiar tipos de archivo detectados
+    setFileTypeSuggestions([]);                  // 🔧 Limpiar sugerencias
+    setDetectionConfidence(0);                   // 🔧 Limpiar confianza
+    setShowFileTypeSuggestions(false);           // 🔧 Ocultar sugerencias
+    
+    // ============= CARGAR CONVERSACIÓN LIMPIA =============
     const conversation = conversationService.loadConversation(conversationId);
     if (conversation) {
       setCurrentConversationId(conversation.id);
       setConversationTitle(conversation.title);
+      
+      // Restaurar el modelo de la conversación si existe
+      if (conversation.modelId) {
+        try {
+          aiService.setCurrentModel(conversation.modelId, conversation.modelType);
+          setCurrentModel(conversation.modelId);
+          setModelType(conversation.modelType);
+        } catch (error) {
+          logConversation('error', 'No se pudo seleccionar el modelo de la conversación', {
+            conversationId,
+            modelId: conversation.modelId,
+            modelType: conversation.modelType,
+            error: error?.message
+          });
+          setCurrentStatus({
+            status: 'error',
+            message: 'El modelo configurado ya no está disponible. Selecciona otro modelo e inténtalo de nuevo.'
+          });
+        }
+      }
+      
+      // Cargar mensajes preservando toda la estructura incluyendo metadatos
       setMessages(conversation.messages.map(msg => ({
         id: msg.id,
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp,
-        metadata: msg.metadata
+        metadata: msg.metadata,
+        subtle: msg.subtle,
+        contextOptimization: msg.contextOptimization,
+        attachedFiles: msg.attachedFiles
       })));
+      
       // Cargar archivos adjuntos de la conversación
       const attachedFiles = conversationService.getAttachedFilesForConversation(conversationId);
       setAttachedFiles(attachedFiles || []);
+      
+      // Log detallado de los mensajes cargados
+      const msgSummary = conversation.messages.map(m => ({
+        role: m.role,
+        hasContent: !!m.content && m.content.trim().length > 0,
+        isToolResult: !!(m.metadata && m.metadata.isToolResult),
+        contentLength: m.content ? m.content.length : 0
+      }));
+      logConversation('info', 'Conversación cargada', {
+        conversationId: conversation.id,
+        messages: conversation.messages.length,
+        summary: msgSummary
+      });
+      
+      // 🔔 Disparar evento para notificar la carga y sincronizar todos los listeners
+      window.dispatchEvent(new CustomEvent('conversation-updated', {
+        detail: { conversationId: conversation.id, source: 'load' }
+      }));
     }
   };
 
@@ -604,10 +2136,141 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     }));
   };
 
-  const handleModelChange = (modelId, modelType) => {
+  /**
+   * ✅ NUEVO: Cambio de modelo con auto-descarga y loading visual
+   * 1. Descarga modelo antiguo (si es local)
+   * 2. Muestra modal de carga 3-5 segundos
+   * 3. Carga modelo nuevo
+   * 4. Muestra ✅
+   */
+  const handleModelChange = async (modelId, modelType) => {
+    // Evitar cambios múltiples simultáneos
+    if (isModelSwitching) return;
+    
+    setIsModelSwitching(true);
+    setModelSwitchProgress(0);
+
+    try {
+      const oldModel = aiService.currentModel;
+      const oldType = aiService.modelType;
+
+      // ========== PASO 1: NO descargar modelo antiguo ==========
+      // ⚠️ NUNCA usar /api/delete - borra archivos permanentemente
+      // Ollama descargará automáticamente el modelo anterior cuando sea necesario
+      if (oldType === 'local' && oldModel && oldModel !== modelId) {
+        setModelSwitchProgress(15);
+      }
+
+      // ========== PASO 2: Cambiar modelo y guardar ==========
+      setModelSwitchProgress(35);
+      
     aiService.setCurrentModel(modelId, modelType);
     setCurrentModel(modelId);
     setModelType(modelType);
+    
+      // Actualizar en la conversación
+    const currentConversation = conversationService.getCurrentConversation();
+    if (currentConversation) {
+      currentConversation.modelId = modelId;
+      currentConversation.modelType = modelType;
+      currentConversation.updatedAt = Date.now();
+      conversationService.saveConversations();
+      }
+
+      // ========== PASO 3: Cargar modelo nuevo en memoria ==========
+      setModelSwitchProgress(50);
+
+      // Si es modelo local, cargarlo en memoria usando ModelMemoryService
+      if (modelType === 'local') {
+        try {
+          const loaded = await aiService.memoryService.loadModelToMemory(modelId);
+          if (loaded) {
+            setModelSwitchProgress(90);
+          } else {
+            console.warn(`[AIChatPanel] ⚠️ Modelo ${modelId} cargará automáticamente`);
+            setModelSwitchProgress(75);
+          }
+        } catch (error) {
+          console.warn(`[AIChatPanel] ⚠️ Error cargando ${modelId}: ${error.message}`);
+          setModelSwitchProgress(75);
+        }
+      }
+
+      // Pequeño delay para que se vea el 100%
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          setModelSwitchProgress(100);
+          
+          setTimeout(() => {
+            setIsModelSwitching(false);
+            setModelSwitchProgress(0);
+
+            // Disparar evento para actualizar UI
+      window.dispatchEvent(new CustomEvent('conversation-updated', {
+        detail: {
+                conversationId: currentConversation?.id,
+                type: 'model-changed',
+                newModel: modelId
+        }
+      }));
+
+            resolve();
+          }, 300);
+        }, 500);
+      });
+
+    } catch (error) {
+      console.error('[AIChatPanel] ❌ Error en cambio de modelo:', error);
+      setIsModelSwitching(false);
+      setModelSwitchProgress(0);
+    }
+  };
+
+  // Manejar selección de MCPs
+  const handleToggleMcpSelection = (serverId) => {
+    setSelectedMcpServers(prev => {
+      let updated;
+      if (prev.includes(serverId)) {
+        updated = prev.filter(id => id !== serverId);
+      } else {
+        updated = [...prev, serverId];
+      }
+      // Guardar en localStorage
+      localStorage.setItem('selectedMcpServers', JSON.stringify(updated));
+      debugLogger.debug('AIChatPanel.MCP', 'MCPs seleccionados actualizados', updated);
+      return updated;
+    });
+  };
+
+  // Seleccionar/Deseleccionar todos
+  const handleToggleAllMcps = () => {
+    if (selectedMcpServers.length === activeMcpServers.length) {
+      // Si todos están seleccionados, deseleccionar todos
+      setSelectedMcpServers([]);
+      localStorage.setItem('selectedMcpServers', JSON.stringify([]));
+    } else {
+      // Si no todos están seleccionados, seleccionar todos
+      const allIds = activeMcpServers.map(s => s.id);
+      setSelectedMcpServers(allIds);
+      localStorage.setItem('selectedMcpServers', JSON.stringify(allIds));
+      debugLogger.debug('AIChatPanel.MCP', 'Todos los MCPs seleccionados', allIds);
+    }
+  };
+
+  // Toggle activar/desactivar MCP
+  const handleToggleMcpActive = (serverId) => {
+    setDisabledMcpServers(prev => {
+      let updated;
+      if (prev.includes(serverId)) {
+        updated = prev.filter(id => id !== serverId);
+      } else {
+        updated = [...prev, serverId];
+      }
+      // Guardar en localStorage
+      localStorage.setItem('disabledMcpServers', JSON.stringify(updated));
+      debugLogger.debug('AIChatPanel.MCP', 'MCPs desactivados actualizados', updated);
+      return updated;
+    });
   };
 
   const formatTimestamp = (timestamp) => {
@@ -618,52 +2281,59 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
 
   // Función para copiar código al portapapeles
   const copyCode = useCallback((codeId) => {
-    console.log('copyCode called with ID:', codeId);
     const codeElement = document.getElementById(codeId);
-    console.log('Code element found:', codeElement);
-    
-    if (codeElement) {
-      const codeText = codeElement.textContent || codeElement.innerText;
-      console.log('Code text to copy:', codeText);
-      
-      // Mostrar feedback visual inmediatamente
-      const button = document.querySelector(`[data-code-id="${codeId}"]`);
-      if (button) {
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i class="pi pi-spin pi-spinner"></i> Copiando...';
-        button.style.background = 'rgba(255, 193, 7, 0.2)';
-        button.style.borderColor = 'rgba(255, 193, 7, 0.4)';
-        
-        // Intentar copiar con Clipboard API
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(codeText).then(() => {
-            console.log('Code copied successfully');
-            button.innerHTML = '<i class="pi pi-check"></i> Copiado';
-            button.style.background = 'rgba(100, 200, 100, 0.2)';
-            button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
-            
-            setTimeout(() => {
-              button.innerHTML = originalText;
-              button.style.background = '';
-              button.style.borderColor = '';
-            }, 2000);
-          }).catch(err => {
-            console.error('Clipboard API error:', err);
-            // Fallback
-            fallbackCopy(codeText, button, originalText);
-          });
-        } else {
-          // Fallback para navegadores que no soportan Clipboard API
-          fallbackCopy(codeText, button, originalText);
-        }
-      }
+    if (!codeElement) {
+      debugLogger.warn('AIChatPanel.Copy', 'No se encontró el elemento de código', { codeId });
+      return;
+    }
+
+    const button = document.querySelector(`[data-code-id="${codeId}"]`);
+    if (!button) {
+      debugLogger.debug('AIChatPanel.Copy', 'Botón de copiado no encontrado', { codeId });
+      return;
+    }
+
+    const originalText = button.innerHTML;
+    const codeText = codeElement.textContent || codeElement.innerText;
+
+    const restore = (text = originalText) => {
+      button.innerHTML = text;
+      button.style.background = '';
+      button.style.borderColor = '';
+    };
+
+    const showSuccess = () => {
+      button.innerHTML = '<i class="pi pi-check"></i> Copiado';
+      button.style.background = 'rgba(100, 200, 100, 0.2)';
+      button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+      setTimeout(() => restore(), 2000);
+    };
+
+    const showError = () => {
+      button.innerHTML = '<i class="pi pi-times"></i> Error';
+      button.style.background = 'rgba(220, 53, 69, 0.2)';
+      button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+      setTimeout(() => restore(), 2000);
+    };
+
+    button.innerHTML = '<i class="pi pi-spin pi-spinner"></i> Copiando...';
+    button.style.background = 'rgba(255, 193, 7, 0.2)';
+    button.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(codeText)
+        .then(showSuccess)
+        .catch(err => {
+          debugLogger.warn('AIChatPanel.Copy', 'Clipboard API error, usando fallback', { codeId, error: err?.message });
+          fallbackCopy(codeText, button, originalText, showSuccess, showError);
+        });
     } else {
-      console.error('Code element not found with ID:', codeId);
+      fallbackCopy(codeText, button, originalText, showSuccess, showError);
     }
   }, []);
 
   // Función de respaldo para copiar
-  const fallbackCopy = (text, button, originalText) => {
+  const fallbackCopy = (text, button, originalText, onSuccess, onError) => {
     try {
       const textArea = document.createElement('textarea');
       textArea.value = text;
@@ -678,30 +2348,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       document.body.removeChild(textArea);
       
       if (successful) {
-        console.log('Code copied with fallback method');
-        button.innerHTML = '<i class="pi pi-check"></i> Copiado';
-        button.style.background = 'rgba(100, 200, 100, 0.2)';
-        button.style.borderColor = 'rgba(100, 200, 100, 0.4)';
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         throw new Error('execCommand failed');
       }
-      
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.style.background = '';
-        button.style.borderColor = '';
-      }, 2000);
     } catch (err) {
-      console.error('Fallback copy failed:', err);
-      button.innerHTML = '<i class="pi pi-times"></i> Error';
-      button.style.background = 'rgba(220, 53, 69, 0.2)';
-      button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
-      
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.style.background = '';
-        button.style.borderColor = '';
-      }, 2000);
+      debugLogger.error('AIChatPanel.Copy', 'Fallback copy failed', { error: err?.message });
+      if (onError) {
+        onError();
+      } else {
+        button.innerHTML = '<i class="pi pi-times"></i> Error';
+        button.style.background = 'rgba(220, 53, 69, 0.2)';
+        button.style.borderColor = 'rgba(220, 53, 69, 0.4)';
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.style.background = '';
+          button.style.borderColor = '';
+        }, 2000);
+      }
     }
   };
 
@@ -785,12 +2451,53 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
   };
 
   // Función para renderizar Markdown con formato ChatGPT-like
+  const enforceLinkTargets = (html) => {
+    if (!html) return '';
+
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+
+      const anchors = tempDiv.querySelectorAll('a');
+      anchors.forEach((anchor) => {
+        anchor.setAttribute('target', '_blank');
+
+        const relAttr = anchor.getAttribute('rel') || '';
+        const relValues = relAttr.split(/\s+/).filter(Boolean);
+
+        if (!relValues.includes('noopener')) {
+          relValues.push('noopener');
+        }
+        if (!relValues.includes('noreferrer')) {
+          relValues.push('noreferrer');
+        }
+
+        anchor.setAttribute('rel', relValues.join(' '));
+      });
+
+      return tempDiv.innerHTML;
+    } catch (error) {
+      debugLogger.warn('AIChatPanel.Markdown', 'No se pudieron ajustar los enlaces del markdown', {
+        error: error?.message
+      });
+      return html;
+    }
+  };
+
   const renderMarkdown = (content) => {
     if (!content) return '';
     
     try {
       // Pre-procesar el contenido para mejorar el formato
       let processedContent = content;
+      
+      // Agregar iconos visuales a [FILE] y [DIR]
+      processedContent = processedContent.replace(/\[FILE\]\s+([^\n]+)/g, (match, filename) => {
+        return `📄 **${filename}**`;
+      });
+      processedContent = processedContent.replace(/\[DIR\]\s+([^\n]+)/g, (match, dirname) => {
+        return `📁 **${dirname}**`;
+      });
       
       // Paso 1: Reparar títulos sin espacio después de #
       processedContent = processedContent.replace(/^(#{1,6})([^\s#])/gm, (match, hashes, char) => {
@@ -885,7 +2592,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
         SANITIZE_DOM: false
       });
       
-      return cleanHtml;
+      return enforceLinkTargets(cleanHtml);
     } catch (error) {
       console.error('❌ Error rendering markdown:', error);
       // Escapar el contenido si hay error
@@ -984,7 +2691,9 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           // Aplicar el resaltado de forma segura
           hljs.highlightElement(block);
         } catch (error) {
-          console.warn('Error highlighting code block:', error);
+          debugLogger.warn('AIChatPanel.Markdown', 'Error al aplicar highlight en bloque de código', {
+            error: error?.message
+          });
           // En caso de error, asegurar que el contenido esté limpio y escapado
           sanitizeCodeContent(block);
         }
@@ -1035,16 +2744,488 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
     );
   };
 
+  // 🎨 Componente para Tool Execution Card (Estilo ChatGPT/Claude)
+  const ToolExecutionCard = ({ messageId, toolName, toolArgs, toolResult, isError = false, initialExpanded = false }) => {
+    // Leer estado persistente del ref al inicializar
+    const wasExpanded = expandedToolCardsRef.current.has(messageId);
+    const [expanded, setExpanded] = useState(wasExpanded || initialExpanded);
+    
+    // 🔐 Estado para revelar contraseñas
+    const [revealedPasswords, setRevealedPasswords] = useState({});
+    
+    // Sincronizar estado inicial con el ref cuando cambia el messageId (re-render)
+    useEffect(() => {
+      const isInRef = expandedToolCardsRef.current.has(messageId);
+      if (isInRef) {
+        // Si está en el ref, asegurar que el estado esté expandido
+        setExpanded(prev => prev ? prev : true);
+      }
+      // No colapsar automáticamente si no está en el ref - respetar el estado actual
+      // Esto evita que las tarjetas se colapsen cuando se re-renderiza el componente
+    }, [messageId]); // Solo cuando cambia el messageId (nuevo mensaje o re-render)
+    
+    // Toggle para revelar/ocultar contraseña
+    const togglePasswordReveal = (passwordId) => {
+      setRevealedPasswords(prev => ({
+        ...prev,
+        [passwordId]: !prev[passwordId]
+      }));
+    };
+    
+    // Sincronizar el ref cuando el usuario cambia el estado manualmente
+    const handleToggle = () => {
+      const newExpanded = !expanded;
+      setExpanded(newExpanded);
+      if (newExpanded) {
+        expandedToolCardsRef.current.add(messageId);
+      } else {
+        expandedToolCardsRef.current.delete(messageId);
+      }
+    };
+
+    // Determinar icono por tipo de herramienta
+    const getToolIcon = () => {
+      if (toolName.includes('filesystem') || toolName.includes('file') || toolName.includes('directory')) {
+        return '📁';
+      } else if (toolName.includes('web') || toolName.includes('search') || toolName.includes('http')) {
+        return '🌐';
+      } else if (toolName.includes('cli') || toolName.includes('command') || toolName.includes('run')) {
+        return '🖥️';
+      }
+      return '🔧';
+    };
+
+    // Limpiar nombre de herramienta (remover prefijo server__)
+    const cleanToolName = toolName.includes('__') ? toolName.split('__')[1] : toolName;
+
+    // Formatear argumentos para mostrar
+    const formatArgs = () => {
+      if (!toolArgs || Object.keys(toolArgs).length === 0) return null;
+      
+      return Object.entries(toolArgs).map(([key, value]) => {
+        // Truncar valores largos
+        let displayValue = String(value);
+        if (displayValue.length > 100) {
+          displayValue = displayValue.slice(0, 100) + '...';
+        }
+        
+        return (
+          <div key={key} className="tool-card-param">
+            <span className="tool-card-param-label">{key}:</span>
+            <span className="tool-card-param-value">{displayValue}</span>
+          </div>
+        );
+      });
+    };
+    
+    // 🔐 Renderizar resultado con soporte para revelar contraseñas
+    const renderPasswordCard = (item) => {
+      const passwordReal = item?._passwordRealBackendOnly;
+      const isRevealed = revealedPasswords[item.id];
+      const displayPassword = isRevealed ? passwordReal : item.password;
+      
+      const isSSH = item.type === 'ssh';
+      const icon = isSSH ? '🔗' : '📋';
+      const typeLabel = isSSH ? 'Conexión SSH' : 'Contraseña';
+      
+      return (
+        <div key={item.id} style={{ fontSize: '0.85rem', marginBottom: '0.6rem', padding: '0.6rem', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+          <div style={{ lineHeight: '1.6' }}>
+            <div><strong>{icon} {item.title || item.name || typeLabel}</strong></div>
+            {isSSH && (
+              <div style={{ marginTop: '0.4rem', color: 'rgba(100, 150, 255, 0.9)' }}>
+                <strong>Host:</strong> {item.host}:{item.port}
+              </div>
+            )}
+            <div style={{ marginTop: '0.4rem', color: 'rgba(255,255,255,0.8)' }}>
+              <strong>Usuario:</strong> {item.username}
+            </div>
+            {passwordReal && (
+              <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <strong>Contraseña:</strong>
+                <code style={{ 
+                  background: 'rgba(0,0,0,0.3)', 
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                  letterSpacing: isRevealed ? '0' : '0.15em'
+                }}>
+                  {displayPassword}
+                </code>
+                <button 
+                  onClick={() => togglePasswordReveal(item.id)}
+                  style={{
+                    background: 'rgba(76, 175, 80, 0.3)',
+                    border: '1px solid rgba(76, 175, 80, 0.6)',
+                    color: '#fff',
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <i className={`pi ${isRevealed ? 'pi-eye-slash' : 'pi-eye'}`} />
+                  {isRevealed ? 'Ocultar' : 'Ver'}
+                </button>
+              </div>
+            )}
+            {item.url && item.url !== '(sin URL)' && (
+              <div style={{ marginTop: '0.3rem', color: 'rgba(100, 150, 255, 0.9)', fontSize: '0.8rem' }}>
+                <strong>URL:</strong> {item.url}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+    
+    const renderedResult = React.useMemo(() => {
+      if (!toolResult) return null;
+      
+      // 🔍 PRIMERO: Detectar si es texto con [DIR] / [FILE] (list_directory)
+      if (typeof toolResult === 'string' && (toolResult.includes('[DIR]') || toolResult.includes('[FILE]'))) {
+        try {
+          const htmlContent = renderMarkdown(toolResult);
+          return (
+            <div 
+              className="ai-md"
+              dangerouslySetInnerHTML={{ __html: htmlContent }}
+              style={{ fontSize: '0.85rem' }}
+            />
+          );
+        } catch (err) {
+          console.error('❌ [renderResult] Error renderizando list_directory:', err.message);
+          // Fallback: mostrar como texto plano
+          return <div style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{toolResult}</div>;
+        }
+      }
+      return undefined; // Continuar con la lógica normal
+    }, [toolResult]);
+
+    const renderResult = () => {
+      if (!toolResult) return null;
+      
+      // Si ya fue procesado como list_directory, devolverlo
+      if (renderedResult) return renderedResult;
+      
+      try {
+        // 🔧 PASO 1: Limpiar markdown code blocks (```json ... ```)
+        let jsonStr = toolResult;
+        const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        }
+        jsonStr = jsonStr.trim();
+        
+        // PASO 2: Parsear JSON
+        const parsed = JSON.parse(jsonStr);
+        
+        // Si es un objeto búsqueda combinada con ssh_results y password_results
+        if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results)) {
+          const sshResults = parsed.ssh_results || [];
+          const passwordResults = parsed.password_results || [];
+          
+          return (
+            <div style={{ fontSize: '0.85rem' }}>
+              {sshResults.length > 0 && (
+                <div style={{ marginBottom: '0.8rem' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>🔗 Conexiones SSH:</div>
+                  {sshResults.map(item => renderPasswordCard(item))}
+                </div>
+              )}
+              {passwordResults.length > 0 && (
+                <div>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>🔐 Credenciales:</div>
+                  {passwordResults.map(item => renderPasswordCard(item))}
+                </div>
+              )}
+            </div>
+          );
+        }
+        
+        // Si es un objeto individual con password oculta
+        const passwordReal = parsed?.passwordReal || parsed?._passwordRealBackendOnly;
+        if (parsed && typeof parsed === 'object' && (passwordReal || (parsed.password && parsed.password.includes('•')))) {
+          return renderPasswordCard(parsed);
+        }
+        
+        // JSON normal para otros casos
+        return (
+          <pre style={{ 
+            fontSize: '0.8rem', 
+            overflow: 'auto',
+            background: 'rgba(0,0,0,0.3)',
+            padding: '0.8rem',
+            borderRadius: '4px',
+            maxHeight: '400px',
+            border: '1px solid rgba(100, 150, 255, 0.3)',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word'
+          }}>
+            {JSON.stringify(parsed, null, 2)}
+          </pre>
+        );
+      } catch (e) {
+        // No es JSON, devolver como texto
+        return <div style={{ fontSize: '0.85rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{String(toolResult)}</div>;
+      }
+    };
+
+    // 🖥️ Función para abrir terminal y ejecutar comando
+    const handleOpenInTerminal = () => {
+      const command = toolArgs?.command;
+      const workingDir = toolArgs?.workingDir;
+      const hostId = toolArgs?.hostId;
+      
+      console.log('🖥️ handleOpenInTerminal (botón) called:', { cleanToolName, command, hostId });
+      
+      if ((cleanToolName === 'execute_local' || cleanToolName === 'execute_ssh') && command) {
+        const commandData = {
+          command,
+          workingDir,
+          hostId,
+          toolType: cleanToolName
+        };
+        
+        // Llamar callback directamente si existe
+        if (typeof onExecuteCommandInTerminal === 'function') {
+          onExecuteCommandInTerminal(commandData);
+        } else {
+          // Fallback a evento de window
+          window.dispatchEvent(new CustomEvent('ai-chat-execute-command-in-terminal', {
+            detail: commandData
+          }));
+        }
+      }
+    };
+    
+    // Determinar si mostrar el botón de terminal
+    const showTerminalButton = (cleanToolName === 'execute_local' || cleanToolName === 'execute_ssh') && toolArgs?.command;
+
+    return (
+      <div className="tool-execution-card">
+        <div className="tool-card-header" onClick={handleToggle}>
+          <span className="tool-card-icon">{getToolIcon()}</span>
+          <div className="tool-card-info">
+            <div className="tool-card-name">
+              {cleanToolName}
+            </div>
+            <div className="tool-card-status">
+              {isError ? (
+                <>
+                  <i className="pi pi-times-circle" style={{ color: '#f44336' }} />
+                  <span>Error</span>
+                </>
+              ) : (
+                <>
+                  <i className="pi pi-check-circle" style={{ color: '#4caf50' }} />
+                  <span>Completado</span>
+                </>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {showTerminalButton && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenInTerminal();
+                }}
+                style={{
+                  background: 'rgba(76, 175, 80, 0.2)',
+                  border: '1px solid rgba(76, 175, 80, 0.5)',
+                  color: '#4caf50',
+                  padding: '0.3rem 0.6rem',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(76, 175, 80, 0.3)';
+                  e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.7)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(76, 175, 80, 0.2)';
+                  e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.5)';
+                }}
+                title="Abrir en terminal interactiva"
+              >
+                <i className="pi pi-external-link" />
+                <span>▶️ Terminal</span>
+              </button>
+            )}
+            <span className={`tool-card-toggle ${expanded ? 'expanded' : ''}`}>
+              ▼
+            </span>
+          </div>
+        </div>
+        
+        <div className={`tool-card-content ${expanded ? 'expanded' : ''}`}>
+          <div className="tool-card-body">
+            {formatArgs()}
+            
+            {toolResult && (
+              <div className={`tool-card-result ${isError ? 'error' : ''}`}>
+                <strong>{isError ? 'Error:' : 'Resultado:'}</strong>
+                <div className="tool-result-content">
+                  {renderResult()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
     const isStreaming = message.streaming;
     const hasContent = message.content && message.content.trim().length > 0;
+    const isToolResult = !!(message.metadata && message.metadata.isToolResult);
+    const isToolCall = message.role === 'assistant_tool_call' || !!(message.metadata && message.metadata.isToolCall);
 
-    // No renderizar mensajes vacíos en streaming (el indicador está arriba)
+    // ✅ SIMPLE: Si orchestrator está activo, NO renderizar NINGÚN JSON de tool calls
+    if (aiService.featureFlags?.structuredToolMessages && !isToolCall && !isToolResult && message.role === 'assistant') {
+      const trimmed = message.content?.trim() || '';
+      
+      // Si el mensaje comienza con { y parece JSON de tool call, NO renderizarlo
+      if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"/.test(trimmed.slice(0, 200))) {
+        debugLogger.warn('AIChatPanel.Render', 'Omitiendo JSON de tool call (orchestrator activo)', {
+          messageId: message.id,
+          preview: trimmed.slice(0, 80)
+        });
+        return null;
+      }
+      
+      // Si el mensaje tiene texto + JSON trailing, extraer solo el texto
+      const jsonStart = trimmed.indexOf('\n{');
+      if (jsonStart > 50 && /\"tool\"|\"arguments\"/.test(trimmed.slice(jsonStart, jsonStart + 200))) {
+        // Hay texto antes del JSON - renderizar solo el texto
+        message.content = trimmed.slice(0, jsonStart).trim();
+        debugLogger.info('AIChatPanel.Render', 'Extraído texto, removido JSON trailing', {
+          original: trimmed.length,
+          limpio: message.content.length
+        });
+      }
+    }
+
+    // No renderizar el placeholder si está en streaming y aún no hay contenido
     if (isStreaming && !hasContent) {
       return null;
     }
+
+    // Render especial para tool-call (card compacta) - OCULTO, se muestra solo en el result
+    if (isToolCall) {
+      // NO renderizar tool call separado, se mostrará integrado con el resultado
+      return null;
+    }
+
+    // 🎨 Render NUEVO: Tool Execution Card (Estilo ChatGPT/Claude)
+    if (isToolResult || message.role === 'tool') {
+      const text = (message.metadata?.toolResultText || message.content || '').trim();
+      const toolName = message.metadata?.toolName || 'tool';
+      const toolArgs = message.metadata?.toolArgs || {};
+      const isError = message.metadata?.error === true;
+
+      // 🔍 Detectar si es código generado y mostrarlo ANTES de la tarjeta
+      let codeToShow = null;
+      let detectedLanguage = null;
+      
+      if ((toolName.includes('write') || toolName.includes('edit') || toolName.includes('create')) && toolArgs.path && toolArgs.content) {
+        // Detectar lenguaje por extensión de archivo
+        const path = toolArgs.path;
+        const ext = path.split('.').pop()?.toLowerCase();
+        
+        const langMap = {
+          'js': 'javascript',
+          'jsx': 'javascript',
+          'ts': 'typescript',
+          'tsx': 'typescript',
+          'py': 'python',
+          'go': 'go',
+          'rs': 'rust',
+          'java': 'java',
+          'c': 'c',
+          'cpp': 'cpp',
+          'cs': 'csharp',
+          'php': 'php',
+          'rb': 'ruby',
+          'swift': 'swift',
+          'kt': 'kotlin',
+          'scala': 'scala',
+          'sh': 'bash',
+          'bash': 'bash',
+          'zsh': 'bash',
+          'ps1': 'powershell',
+          'sql': 'sql',
+          'html': 'html',
+          'css': 'css',
+          'scss': 'scss',
+          'json': 'json',
+          'xml': 'xml',
+          'yaml': 'yaml',
+          'yml': 'yaml',
+          'md': 'markdown',
+          'r': 'r',
+          'lua': 'lua',
+          'vim': 'vim',
+          'dart': 'dart',
+          'ex': 'elixir',
+          'exs': 'elixir',
+          'erl': 'erlang',
+          'clj': 'clojure',
+          'fs': 'fsharp',
+          'hs': 'haskell'
+        };
+        
+        if (ext && langMap[ext]) {
+          detectedLanguage = langMap[ext];
+          codeToShow = toolArgs.content;
+        }
+      }
+
+      return (
+        <div key={message.id || `msg-${index}-${message.timestamp}`} style={{ marginBottom: '0.8rem', width: '100%' }}>
+          {/* 🎨 Mostrar CÓDIGO primero si fue generado (estilo ChatGPT limpio) */}
+          {codeToShow && (
+            <div style={{ marginBottom: '0.8rem', width: '100%' }}>
+              <div 
+                className="ai-md"
+                dangerouslySetInnerHTML={{ 
+                  __html: renderMarkdown(`\`\`\`${detectedLanguage}\n${codeToShow}\n\`\`\``)
+                }}
+                ref={(el) => {
+                  if (el) {
+                    highlightCodeBlocks(el);
+                  }
+                }}
+              />
+            </div>
+          )}
+          
+          {/* 🎨 Tarjeta de Tool Execution (colapsada si ya se mostró código) */}
+          <ToolExecutionCard
+            messageId={message.id || `msg-${index}-${message.timestamp}`}
+            toolName={toolName}
+            toolArgs={toolArgs}
+            toolResult={text}
+            isError={isError}
+            initialExpanded={codeToShow ? false : false}
+          />
+        </div>
+      );
+    }
+
+    // ✨ Renderizado normal de mensajes (usuario/asistente/system)
 
     return (
       <div
@@ -1063,26 +3244,28 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''} ${message.subtle ? 'subtle' : ''}`}
           style={{
             width: isUser ? 'auto' : '100%',
-            background: message.subtle 
-              ? 'rgba(255, 255, 255, 0.02)' // Muy sutil para notificaciones de contexto
-              : isSystem
-              ? 'rgba(255, 107, 53, 0.1)'
-              : isUser
-              ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
-              : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
+            background: isToolResult
+              ? 'transparent'
+              : message.subtle 
+                ? 'rgba(255, 255, 255, 0.02)'
+                : isSystem
+                  ? 'rgba(255, 107, 53, 0.1)'
+                  : isUser
+                    ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
+                    : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             color: message.subtle 
-              ? 'rgba(255, 255, 255, 0.6)' // Texto más tenue para notificaciones sutiles
+              ? 'rgba(255, 255, 255, 0.6)'
               : themeColors.textPrimary,
-            border: message.subtle 
-              ? '1px solid rgba(255, 255, 255, 0.05)' // Borde muy sutil
-              : `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
+            border: isToolResult
+              ? 'none'
+              : message.subtle 
+                ? '1px solid rgba(255, 255, 255, 0.05)'
+                : `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
             borderRadius: message.subtle ? '6px' : '8px',
-            padding: message.subtle 
-              ? '0.3rem 0.5rem' // Padding más pequeño para notificaciones sutiles
-              : '0.6rem 0.8rem',
-            fontSize: message.subtle ? '0.8rem' : undefined, // Texto más pequeño
-            fontStyle: message.subtle ? 'italic' : undefined, // Cursiva para dar sensación de meta-información
-            opacity: message.subtle ? '0.8' : '1' // Ligeramente transparente
+            padding: isToolResult ? '0 0 0.2rem 0' : (message.subtle ? '0.3rem 0.5rem' : '0.6rem 0.8rem'),
+            fontSize: message.subtle ? '0.8rem' : undefined,
+            fontStyle: isToolResult ? 'normal' : (message.subtle ? 'italic' : undefined),
+            opacity: message.subtle ? '0.8' : '1'
           }}
         >
           <div 
@@ -1136,6 +3319,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   <>
                     <span>•</span>
                     <span>~{message.metadata.tokens} tokens</span>
+                    {message.metadata.latency && message.metadata.latency > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>{(message.metadata.tokens / (message.metadata.latency / 1000)).toFixed(2)} tokens/s</span>
+                      </>
+                    )}
                   </>
                 )}
               </>
@@ -1486,22 +3675,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
           }
 
 
+          /* Scrollbar personalizado SOLO para el área principal de mensajes */
           .ai-scrollbar::-webkit-scrollbar {
-            width: 8px;
+            width: 6px !important;
+            height: 6px !important;
           }
 
           .ai-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
+            background: ${themeColors.background} !important;
+            border-radius: 3px !important;
           }
 
           .ai-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
+            background: ${themeColors.borderColor} !important;
+            border-radius: 3px !important;
+            opacity: 0.6 !important;
           }
 
           .ai-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.3);
+            background: ${themeColors.textSecondary} !important;
+            opacity: 0.8 !important;
           }
 
           /* Estilos específicos para el input del chat de IA con color del tema */
@@ -1819,6 +4012,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
       </style>
 
       <div
+        id="ai-chat-panel"
         className="ai-chat-panel"
         style={{
           height: '100%',
@@ -1857,13 +4051,56 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               <i className="pi pi-comments" style={{ color: 'white', fontSize: '1rem' }} />
             </div>
 
-            <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1rem', fontWeight: '600', lineHeight: '1.2' }}>
                 {conversationTitle || 'Chat de IA'}
               </h2>
-              <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.7rem', lineHeight: '1.1' }}>
-                {currentModel ? `Modelo: ${currentModel}` : 'Selecciona un modelo en configuración'}
-              </p>
+              {currentModel && (
+                <span style={{
+                  display: 'inline-block',
+                  padding: '0.2rem 0.5rem',
+                  background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`,
+                  color: 'white',
+                  borderRadius: '10px',
+                  fontSize: '0.6rem',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap',
+                  boxShadow: `0 2px 4px ${themeColors.primaryColor}40`,
+                  border: `1px solid ${themeColors.primaryColor}60`
+                }}>
+                  {currentModel}
+                </span>
+              )}
+              {selectedMcpServers && selectedMcpServers.length > 0 && (
+                selectedMcpServers
+                  .map(serverId => activeMcpServers.find(s => s.id === serverId))
+                  .filter(server => server && !disabledMcpServers.includes(server.id))
+                  .map((server, idx) => (
+                    <span 
+                      key={idx}
+                      title={getMcpCatalogName(server.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.2rem 0.4rem',
+                        background: 'rgba(102, 187, 106, 0.2)',
+                        color: '#66bb6a',
+                        borderRadius: '8px',
+                        fontSize: '0.55rem',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        border: '1px solid rgba(102, 187, 106, 0.4)',
+                        boxShadow: '0 0 4px rgba(102, 187, 106, 0.2)',
+                        maxWidth: '100px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                      <i className="pi pi-wrench" style={{ fontSize: '0.5rem', marginRight: '0.25rem' }} />
+                      {getMcpCatalogName(server.id).substring(0, 12)}
+                    </span>
+                  ))
+              )}
             </div>
           </div>
 
@@ -1927,6 +4164,38 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               title="Nueva conversación"
             >
               <i className="pi pi-plus" style={{ fontSize: '0.8rem' }} />
+            </button>
+
+            {/* Botón toggle MCP Tools */}
+            <button
+              onClick={() => setShowMcpDialog(true)}
+              style={{
+                background: mcpToolsEnabled ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)',
+                border: `1px solid ${mcpToolsEnabled ? 'rgba(255, 152, 0, 0.4)' : themeColors.borderColor}`,
+                borderRadius: '6px',
+                padding: '0.4rem 0.6rem',
+                color: mcpToolsEnabled ? '#ff9800' : themeColors.textSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                width: '32px',
+                height: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = mcpToolsEnabled ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255,255,255,0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = mcpToolsEnabled ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)';
+              }}
+              title={mcpToolsEnabled ? 'MCP Tools Activado' : 'MCP Tools Desactivado'}
+            >
+              <i className="pi pi-wrench" style={{ 
+                fontSize: '0.8rem',
+                color: mcpToolsEnabled ? '#ff9800' : 'inherit'
+              }} />
             </button>
 
             {/* Botón para abrir en pestaña nueva */}
@@ -2056,16 +4325,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}cc 100%)`,
+                  background: currentStatus?.status === 'tool-execution' 
+                    ? `linear-gradient(135deg, #ff9800 0%, #ff9800cc 100%)`
+                    : currentStatus?.status === 'tool-error'
+                    ? `linear-gradient(135deg, #f44336 0%, #f44336cc 100%)`
+                    : `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}cc 100%)`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: `0 2px 8px ${themeColors.primaryColor}40`
+                  boxShadow: currentStatus?.status === 'tool-execution'
+                    ? `0 2px 8px rgba(255, 152, 0, 0.4)`
+                    : currentStatus?.status === 'tool-error'
+                    ? `0 2px 8px rgba(244, 67, 54, 0.4)`
+                    : `0 2px 8px ${themeColors.primaryColor}40`
                 }}>
                   {currentStatus?.status === 'connecting' && <i className="pi pi-link" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'generating' && <i className="pi pi-cog pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'streaming' && <i className="pi pi-cloud-download" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {currentStatus?.status === 'retrying' && <i className="pi pi-refresh pi-spin" style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                  {(currentStatus?.status === 'tool-execution' || currentStatus?.status === 'tool-executed') && <i className="pi pi-wrench pi-spin" style={{ color: '#fff', fontSize: '0.9rem' }} />}
+                  {currentStatus?.status === 'tool-error' && <i className="pi pi-exclamation-triangle" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                   {!currentStatus?.status && <i className="pi pi-spin pi-spinner" style={{ color: '#fff', fontSize: '0.8rem' }} />}
                 </div>
               </div>
@@ -2085,36 +4364,71 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
                    currentStatus?.status === 'generating' ? 'Generando respuesta...' :
                    currentStatus?.status === 'streaming' ? 'Recibiendo respuesta...' :
                    currentStatus?.status === 'retrying' ? 'Reintentando...' :
+                   currentStatus?.status === 'tool-execution' ? (
+                    <span>
+                      🔧 <strong>Ejecutando herramienta…</strong>
+                      {currentStatus?.toolName && (
+                        <span style={{ opacity: 0.8 }}> · {currentStatus.toolName}</span>
+                      )}
+                    </span>
+                  ) :
+                   currentStatus?.status === 'tool-executed' ? (
+                     <span>
+                       🔧 Resultado recibido: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
+                     </span>
+                   ) :
+                   currentStatus?.status === 'tool-error' ? (
+                     <span style={{ color: '#f44336' }}>
+                       ❌ Error en: <strong>{currentStatus?.toolName || 'herramienta'}</strong>
+                     </span>
+                   ) :
                    'Procesando...'}
                   
-                  {/* Puntos animados más pequeños */}
-                  <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                    <span style={{ 
-                      width: '3px', 
-                      height: '3px', 
-                      borderRadius: '50%', 
-                      background: themeColors.primaryColor,
-                      animation: 'dot-pulse 1.4s ease-in-out infinite',
-                      animationDelay: '0s'
-                    }}></span>
-                    <span style={{ 
-                      width: '3px', 
-                      height: '3px', 
-                      borderRadius: '50%', 
-                      background: themeColors.primaryColor,
-                      animation: 'dot-pulse 1.4s ease-in-out infinite',
-                      animationDelay: '0.2s'
-                    }}></span>
-                    <span style={{ 
-                      width: '3px', 
-                      height: '3px', 
-                      borderRadius: '50%', 
-                      background: themeColors.primaryColor,
-                      animation: 'dot-pulse 1.4s ease-in-out infinite',
-                      animationDelay: '0.4s'
-                    }}></span>
-                  </div>
+                  {/* Puntos animados más pequeños - no mostrar durante tool execution */}
+                  {currentStatus?.status !== 'tool-execution' && currentStatus?.status !== 'tool-error' && (
+                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                      <span style={{ 
+                        width: '3px', 
+                        height: '3px', 
+                        borderRadius: '50%', 
+                        background: themeColors.primaryColor,
+                        animation: 'dot-pulse 1.4s ease-in-out infinite',
+                        animationDelay: '0s'
+                      }}></span>
+                      <span style={{ 
+                        width: '3px', 
+                        height: '3px', 
+                        borderRadius: '50%', 
+                        background: themeColors.primaryColor,
+                        animation: 'dot-pulse 1.4s ease-in-out infinite',
+                        animationDelay: '0.2s'
+                      }}></span>
+                      <span style={{ 
+                        width: '3px', 
+                        height: '3px', 
+                        borderRadius: '50%', 
+                        background: themeColors.primaryColor,
+                        animation: 'dot-pulse 1.4s ease-in-out infinite',
+                        animationDelay: '0.4s'
+                      }}></span>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Información adicional de tool */}
+                {currentStatus?.status === 'tool-execution' && currentStatus?.toolArgs && (
+                  <div style={{
+                    fontSize: '0.7rem',
+                    color: themeColors.textSecondary,
+                    marginTop: '0.2rem',
+                    opacity: 0.8
+                  }}>
+                    {Object.keys(currentStatus.toolArgs).length > 0 
+                      ? `Con ${Object.keys(currentStatus.toolArgs).length} parámetro(s)`
+                      : 'Sin parámetros'
+                    }
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2460,6 +4774,35 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             borderTop: `1px solid ${themeColors.borderColor}`
           }}
         >
+          
+          {/* Panel desplegable para Herramientas MCP */}
+          {showMcpPanel && (
+            <div style={{ 
+              marginBottom: '0.6rem',
+              maxHeight: '70vh',
+              overflow: 'auto',
+              animation: 'slideUp 0.3s ease'
+            }}>
+              <MCPActiveTools themeColors={themeColors} onExpandedChange={setMcpExpanded} />
+            </div>
+          )}
+
+          {/* Panel desplegable para Memoria */}
+          {showMemoryPanel && (
+            <div style={{ 
+              marginBottom: '0.6rem',
+              maxHeight: '70vh',
+              overflow: 'auto',
+              animation: 'slideUp 0.3s ease'
+            }}>
+              <ModelMemoryIndicator 
+                visible={showMemoryIndicator} 
+                themeColors={themeColors}
+                onExpandedChange={setMemoryExpanded}
+              />
+            </div>
+          )}
+          
           {/* Indicadores de rendimiento */}
           <AIPerformanceStats
             currentModel={currentModel}
@@ -2469,6 +4812,14 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             messages={messages}
             isLoading={isLoading}
             attachedFiles={attachedFiles}
+            showMcpPanel={showMcpPanel}
+            onToggleMcpPanel={() => setShowMcpPanel(!showMcpPanel)}
+            showMemoryPanel={showMemoryPanel}
+            onToggleMemoryPanel={() => setShowMemoryPanel(!showMemoryPanel)}
+            toolsCount={toolsCount}
+            selectedShell={selectedShell}
+            onShellChange={setSelectedShell}
+            availableShells={availableShells}
           />
           
           <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-end' }}>
@@ -2510,12 +4861,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
               optionLabel="displayName"
               optionValue="id"
               placeholder={functionalModels.length === 0 ? "Sin modelos" : "Modelo"}
-              disabled={isLoading || functionalModels.length === 0}
+              disabled={isLoading || functionalModels.length === 0 || isModelSwitching}
               className="ai-model-dropdown"
               style={{
                 minWidth: '140px',
                 maxWidth: '180px',
-                height: '40px'
+                height: '40px',
+                opacity: isModelSwitching ? 0.6 : 1
               }}
               panelStyle={{
                 background: themeColors.cardBackground,
@@ -2626,10 +4978,439 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory }) => {
             }}
           />
         )}
+
+        {/* Diálogo de MCPs Activos */}
+        {showMcpDialog && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+          onClick={() => setShowMcpDialog(false)}>
+            <div style={{
+              background: themeColors.cardBackground,
+              border: `1px solid ${themeColors.borderColor}`,
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '70vh',
+              overflow: 'auto',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div>
+                  <h2 style={{ margin: '0 0 0.25rem 0', color: themeColors.textPrimary, fontSize: '1.2rem', fontWeight: '600' }}>
+                    🔧 Servidores MCP
+                  </h2>
+                  <p style={{ margin: 0, color: themeColors.textSecondary, fontSize: '0.8rem' }}>
+                    {activeMcpServers.length} servidor{activeMcpServers.length !== 1 ? 's' : ''} instalado{activeMcpServers.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      setShowMcpDialog(false);
+                      // Disparar evento para abrir AIConfigDialog (donde está MCPManagerTab)
+                      window.dispatchEvent(new CustomEvent('open-ai-config', { 
+                        detail: { tab: 'mcp-manager' } 
+                      }));
+                    }}
+                    title="Configurar y instalar MCPs"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${themeColors.borderColor}`,
+                      color: themeColors.textPrimary,
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      e.currentTarget.style.borderColor = themeColors.primaryColor;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.borderColor = themeColors.borderColor;
+                    }}
+                  >
+                    ⚙️
+                  </button>
+                  <button
+                    onClick={() => setShowMcpDialog(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: themeColors.textSecondary,
+                      cursor: 'pointer',
+                      fontSize: '1.5rem',
+                      padding: 0
+                    }}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <p style={{ margin: '0 0 1rem 0', color: themeColors.textSecondary, fontSize: '0.85rem' }}>
+                Selecciona qué MCPs usar por defecto. Gestiona instalaciones en ⚙️
+              </p>
+
+              {activeMcpServers && activeMcpServers.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {/* Lista de MCPs con botones de acción */}
+                  {activeMcpServers.map((server, idx) => {
+                    const isSelected = selectedMcpServers.includes(server.id);
+                    const isConfigured = server.config?.enabled; // Estado en mcp-config.json
+                    const isRunning = server.running && server.state === 'ready'; // Proceso activo
+                    
+                    return (
+                      <div 
+                        key={idx}
+                        style={{
+                          padding: '0.8rem',
+                          background: !isConfigured 
+                            ? 'rgba(200, 100, 100, 0.08)'
+                            : isRunning
+                              ? `linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(102, 187, 106, 0.03) 100%)`
+                              : 'rgba(255, 193, 7, 0.08)',
+                          border: !isConfigured
+                            ? '1px solid rgba(200, 100, 100, 0.2)'
+                            : isRunning
+                              ? '1px solid rgba(102, 187, 106, 0.2)'
+                              : '1px solid rgba(255, 193, 7, 0.2)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.6rem',
+                          opacity: !isConfigured ? 0.6 : 1,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          flex: 1
+                        }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: !isConfigured 
+                              ? 'rgba(200, 100, 100, 0.15)' 
+                              : isRunning
+                                ? 'rgba(102, 187, 106, 0.15)'
+                                : 'rgba(255, 193, 7, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: !isConfigured 
+                              ? '#c06464'
+                              : isRunning
+                                ? '#66bb6a'
+                                : '#ffc107',
+                            flexShrink: 0,
+                            position: 'relative'
+                          }}>
+                            <i className="pi pi-wrench" style={{ fontSize: '1rem' }} />
+                            {isRunning && (
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '-2px',
+                                right: '-2px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#66bb6a',
+                                boxShadow: '0 0 6px #66bb6a'
+                              }} />
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              color: !isConfigured ? themeColors.textSecondary : themeColors.textPrimary,
+                              fontWeight: '600',
+                              fontSize: '0.95rem',
+                              textDecoration: !isConfigured ? 'line-through' : 'none'
+                            }}>
+                              {getMcpCatalogName(server.id)}
+                            </div>
+                            <div style={{
+                              color: themeColors.textSecondary,
+                              fontSize: '0.75rem',
+                              marginTop: '0.2rem',
+                              display: 'flex',
+                              gap: '0.5rem',
+                              alignItems: 'center'
+                            }}>
+                              <span>{server.id}</span>
+                              {!isConfigured && <span style={{ color: '#c06464', fontWeight: '600' }}>● Deshabilitado</span>}
+                              {isConfigured && !isRunning && <span style={{ color: '#ffc107', fontWeight: '600' }}>● Detenido</span>}
+                              {isRunning && <span style={{ color: '#66bb6a', fontWeight: '600' }}>● En ejecución</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          flexShrink: 0,
+                          flexWrap: 'wrap',
+                          justifyContent: 'flex-end'
+                        }}>
+                          {/* Botón Por Defecto */}
+                          <button
+                            onClick={() => handleToggleMcpSelection(server.id)}
+                            disabled={!isConfigured}
+                            title={isSelected ? 'Remover de por defecto' : 'Usar por defecto'}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              background: isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                              border: isSelected ? '1px solid rgba(255, 193, 7, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '6px',
+                              color: isSelected ? '#ffc107' : themeColors.textSecondary,
+                              cursor: !isConfigured ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s ease',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              whiteSpace: 'nowrap',
+                              opacity: !isConfigured ? 0.5 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                              if (isConfigured) {
+                                e.currentTarget.style.background = isSelected ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (isConfigured) {
+                                e.currentTarget.style.background = isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+                              }
+                            }}
+                          >
+                            <i className={`pi ${isSelected ? 'pi-star-fill' : 'pi-star'}`} style={{ fontSize: '0.65rem' }} />
+                          </button>
+
+                          {/* Botón Enable/Disable (abre settings) */}
+                          <button
+                            onClick={() => {
+                              setShowMcpDialog(false);
+                              window.dispatchEvent(new CustomEvent('open-ai-config', { 
+                                detail: { tab: 'mcp-manager', selectServer: server.id } 
+                              }));
+                            }}
+                            title={isConfigured ? 'Configurar' : 'Habilitar'}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              background: !isConfigured
+                                ? 'rgba(244, 67, 54, 0.2)'
+                                : 'rgba(76, 175, 80, 0.2)',
+                              border: !isConfigured
+                                ? '1px solid rgba(244, 67, 54, 0.4)'
+                                : '1px solid rgba(76, 175, 80, 0.4)',
+                              borderRadius: '6px',
+                              color: !isConfigured ? '#f44336' : '#66bb6a',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = !isConfigured
+                                ? 'rgba(244, 67, 54, 0.3)'
+                                : 'rgba(76, 175, 80, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = !isConfigured
+                                ? 'rgba(244, 67, 54, 0.2)'
+                                : 'rgba(76, 175, 80, 0.2)';
+                            }}
+                          >
+                            {!isConfigured ? (
+                              <>
+                                <i className="pi pi-times" style={{ fontSize: '0.65rem' }} />
+                              </>
+                            ) : (
+                              <>
+                                <i className="pi pi-cog" style={{ fontSize: '0.65rem' }} />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '2rem',
+                  textAlign: 'center',
+                  color: themeColors.textSecondary
+                }}>
+                  <i className="pi pi-inbox" style={{ fontSize: '2rem', marginBottom: '0.5rem', display: 'block' }} />
+                  <p style={{ margin: 0 }}>No hay servidores MCP activos</p>
+                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem' }}>
+                    Configura servidores MCP en la configuración de IA
+                  </p>
+                </div>
+              )}
+
+              {/* Resumen de selección */}
+              {activeMcpServers && activeMcpServers.length > 0 && selectedMcpServers.length > 0 && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.8rem',
+                  background: 'rgba(255, 193, 7, 0.1)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                  borderRadius: '8px',
+                  color: themeColors.textSecondary,
+                  fontSize: '0.85rem'
+                }}>
+                  ⭐ {selectedMcpServers.length} MCP{selectedMcpServers.length !== 1 ? 's' : ''} marcado{selectedMcpServers.length !== 1 ? 's' : ''} como por defecto
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ✅ NUEVO: Modal de carga de modelo */}
+        {isModelSwitching && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              backdropFilter: 'blur(4px)'
+            }}
+          >
+            <div
+              style={{
+                background: themeColors.cardBackground,
+                border: `2px solid ${themeColors.borderColor}`,
+                borderRadius: '12px',
+                padding: '2rem',
+                textAlign: 'center',
+                minWidth: '300px',
+                maxWidth: '400px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+              }}
+            >
+              {/* Icono animado */}
+              <div
+                style={{
+                  fontSize: '2.5rem',
+                  marginBottom: '1rem',
+                  animation: 'spin 2s linear infinite'
+                }}
+              >
+                ⚙️
+              </div>
+
+              {/* Título */}
+              <h3
+                style={{
+                  margin: '0 0 1rem 0',
+                  color: themeColors.textPrimary,
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cambiando Modelo
+              </h3>
+
+              {/* Descripción progresiva */}
+              <div
+                style={{
+                  color: themeColors.textSecondary,
+                  fontSize: '0.9rem',
+                  marginBottom: '1.5rem',
+                  height: '2.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {modelSwitchProgress < 15 && '🧹 Descargando modelo anterior...'}
+                {modelSwitchProgress >= 15 && modelSwitchProgress < 35 && '💾 Guardando cambios...'}
+                {modelSwitchProgress >= 35 && modelSwitchProgress < 100 && '⏳ Cargando nuevo modelo...'}
+                {modelSwitchProgress === 100 && '✅ ¡Listo!'}
+              </div>
+
+              {/* Barra de progreso */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  height: '8px',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  marginBottom: '1rem'
+                }}
+              >
+                <div
+                  style={{
+                    background: modelSwitchProgress === 100 ? '#4caf50' : '#2196f3',
+                    height: '100%',
+                    width: `${modelSwitchProgress}%`,
+                    transition: 'width 0.1s ease-out',
+                    borderRadius: '4px'
+                  }}
+                />
+              </div>
+
+              {/* Porcentaje */}
+              <div
+                style={{
+                  color: themeColors.textSecondary,
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                {modelSwitchProgress}%
+              </div>
+
+              {/* Estilo para la animación */}
+              <style>{`
+                @keyframes spin {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
 };
 
 export default AIChatPanel;
+
 

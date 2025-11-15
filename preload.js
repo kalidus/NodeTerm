@@ -29,6 +29,27 @@ contextBridge.exposeInMainWorld('electron', {
     createTempFile: (fileName, arrayBuffer) => ipcRenderer.invoke('create-temp-file', fileName, arrayBuffer),
     cleanupTempFile: (filePath) => ipcRenderer.invoke('cleanup-temp-file', filePath)
   },
+  mcp: {
+    initialize: () => ipcRenderer.invoke('mcp:initialize'),
+    listInstalled: () => ipcRenderer.invoke('mcp:list-installed'),
+    install: (serverId, config) => ipcRenderer.invoke('mcp:install', { serverId, config }),
+    uninstall: (serverId) => ipcRenderer.invoke('mcp:uninstall', serverId),
+    toggle: (serverId, enabled) => ipcRenderer.invoke('mcp:toggle', { serverId, enabled }),
+    start: (serverId) => ipcRenderer.invoke('mcp:start', serverId),
+    stop: (serverId) => ipcRenderer.invoke('mcp:stop', serverId),
+    updateConfig: (serverId, config) => ipcRenderer.invoke('mcp:update-config', { serverId, config }),
+    listTools: () => ipcRenderer.invoke('mcp:list-tools'),
+    listResources: () => ipcRenderer.invoke('mcp:list-resources'),
+    listPrompts: () => ipcRenderer.invoke('mcp:list-prompts'),
+    callTool: (serverId, toolName, args) => ipcRenderer.invoke('mcp:call-tool', { serverId, toolName, args }),
+    getResource: (serverId, resourceUri) => ipcRenderer.invoke('mcp:get-resource', { serverId, resourceUri }),
+    getPrompt: (serverId, promptName, args) => ipcRenderer.invoke('mcp:get-prompt', { serverId, promptName, args }),
+    refreshCapabilities: (serverId) => ipcRenderer.invoke('mcp:refresh-capabilities', serverId)
+  },
+  system: {
+    getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
+    getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats')
+  },
   ipcRenderer: {
     send: (channel, data) => {
       ipcRenderer.send(channel, data);
@@ -55,11 +76,13 @@ contextBridge.exposeInMainWorld('electron', {
         /^anythingllm:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
+        /^system:.*$/,
         'process-pdf',
         'process-pdf-buffer',
         'create-temp-file',
         'cleanup-temp-file',
-        /^recording:.*$/
+        /^recording:.*$/,
+        /^mcp:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

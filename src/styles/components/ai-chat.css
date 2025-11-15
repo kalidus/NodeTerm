@@ -9,7 +9,7 @@
   color: inherit;
   width: 100%;
   max-width: 100% !important;
-  overflow: hidden !important;
+  overflow: hidden;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 1fr;
@@ -599,4 +599,236 @@
    ============================================ */
 
 /* Los estilos del input del chat de IA se manejan dinámicamente en el componente */
+
+/* ============================================
+   ESTILOS GLOBALES DEL SCROLLBAR PARA CHAT DE IA
+   ============================================ */
+
+/* Aplicar al historial de conversaciones */
+#ai-chat-panel .conversation-list::-webkit-scrollbar,
+.ai-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+#ai-chat-panel .conversation-list::-webkit-scrollbar-track,
+.ai-scrollbar::-webkit-scrollbar-track {
+  background: var(--ui-sidebar-bg, #1e1e1e) !important;
+  border-radius: 3px !important;
+}
+
+#ai-chat-panel .conversation-list::-webkit-scrollbar-thumb,
+.ai-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-border, #3e3e42) !important;
+  border-radius: 3px !important;
+  opacity: 0.6 !important;
+}
+
+#ai-chat-panel .conversation-list::-webkit-scrollbar-thumb:hover,
+.ai-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-sidebar-text, #cccccc) !important;
+  opacity: 0.8 !important;
+}
+
+/* Firefox scrollbar */
+#ai-chat-panel .conversation-list {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--ui-sidebar-border, #3e3e42) var(--ui-sidebar-bg, #1e1e1e) !important;
+}
+
+/* ============================================
+   ANIMACIÓN DESPLEGABLE HACIA ARRIBA
+   ============================================ */
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   TOOL EXECUTION CARDS - ESTILO CHATGPT/CLAUDE
+   ============================================ */
+
+.tool-execution-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  margin: 0.6rem 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tool-execution-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.tool-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.tool-card-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tool-card-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.tool-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.tool-card-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tool-card-status {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tool-card-toggle {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s ease;
+}
+
+.tool-card-toggle.expanded {
+  transform: rotate(180deg);
+}
+
+.tool-card-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.tool-card-content.expanded {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.tool-card-body {
+  padding: 0.6rem 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tool-card-param {
+  margin: 0.3rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.tool-card-param-label {
+  color: #58a6ff;
+  font-weight: 600;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.tool-card-param-value {
+  color: rgba(255, 255, 255, 0.9);
+  word-break: break-all;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+}
+
+.tool-card-result {
+  margin-top: 0.6rem;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border-left: 3px solid #4caf50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tool-card-result.error {
+  border-left-color: #f44336;
+}
+
+/* Contenedor del resultado con scroll */
+.tool-result-content {
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  padding: 0.5rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+/* Scrollbar styling para navegadores Chrome/Edge */
+.tool-result-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tool-result-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.tool-result-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.tool-result-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Iconos de herramientas por tipo */
+.tool-icon-filesystem::before { content: "📁"; }
+.tool-icon-web::before { content: "🌐"; }
+.tool-icon-cli::before { content: "🖥️"; }
+.tool-icon-default::before { content: "🔧"; }
+
+/* Integración con burbujas del asistente */
+.ai-bubble.integrated {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.ai-response-text {
+  line-height: 1.6;
+}
 

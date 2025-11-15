@@ -1,0 +1,736 @@
+{
+  "version": "1.2.0",
+  "lastUpdated": "2025-11-10",
+  "categories": [
+    {
+      "id": "system",
+      "name": "Sistema y Archivos",
+      "icon": "pi-desktop",
+      "color": "#FF6B6B",
+      "description": "Sistema de archivos y gestión local"
+    },
+    {
+      "id": "automation",
+      "name": "Comandos y Automatización",
+      "icon": "pi-cog",
+      "color": "#AA96DA",
+      "description": "Ejecutar comandos shell, scripts y automatización del sistema"
+    },
+    {
+      "id": "development",
+      "name": "Desarrollo",
+      "icon": "pi-code",
+      "color": "#4ECDC4",
+      "description": "Git, GitHub y herramientas de desarrollo"
+    },
+    {
+      "id": "data",
+      "name": "Bases de Datos",
+      "icon": "pi-database",
+      "color": "#95E1D3",
+      "description": "SQLite, PostgreSQL y gestión de datos"
+    },
+    {
+      "id": "web",
+      "name": "Web y APIs",
+      "icon": "pi-cloud",
+      "color": "#F38181",
+      "description": "Peticiones HTTP, APIs REST y servicios web"
+    },
+    {
+      "id": "websearch",
+      "name": "Búsqueda Web",
+      "icon": "pi-search",
+      "color": "#FFD93D",
+      "description": "Búsqueda en internet, scraping y automatización web"
+    },
+    {
+      "id": "productivity",
+      "name": "Productividad",
+      "icon": "pi-calendar",
+      "color": "#FCBAD3",
+      "description": "Memoria, colaboración y servicios en la nube"
+    },
+    {
+      "id": "security",
+      "name": "Seguridad",
+      "icon": "pi-shield",
+      "color": "#FF5252",
+      "description": "Análisis de vulnerabilidades, auditoría de seguridad y gestión de activos"
+    }
+  ],
+  "mcps": [
+    {
+      "id": "filesystem",
+      "name": "Filesystem",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "category": "system",
+      "icon": "pi-folder",
+      "description": "Acceso seguro al sistema de archivos. Permite leer, escribir y manipular archivos dentro de directorios específicos.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": true,
+      "configSchema": {
+        "allowedPaths": {
+          "type": "array",
+          "required": true,
+          "description": "Rutas permitidas para acceso",
+          "example": ["C:/Users/Documents", "/home/user/projects"]
+        }
+      },
+      "tools": [
+        "read_file",
+        "write_file",
+        "list_directory",
+        "create_directory",
+        "move_file",
+        "search_files"
+      ],
+      "useCases": [
+        "Leer y escribir archivos de código",
+        "Navegación del sistema de archivos",
+        "Búsqueda de archivos por patrón",
+        "Gestión de directorios de proyecto"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "cli-mcp-server",
+      "name": "CLI MCP Server",
+      "package": "cli-mcp-server",
+      "runCommand": "uvx",
+      "category": "system",
+      "runtime": "python",
+      "icon": "pi-terminal",
+      "description": "🔒 Ejecución segura de comandos CLI con listas blancas de comandos/flags, validación de rutas y timeouts. Permite ejecutar comandos shell con control total y auditoría. 🐍 Requiere: Python + UV",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "ALLOWED_DIR": {
+          "type": "string",
+          "required": true,
+          "description": "📁 Directorio base permitido (todas las rutas deben estar dentro). Ej: C:/Users/kalid/Documents",
+          "example": "C:/Users/kalid/Documents",
+          "envName": "ALLOWED_DIR"
+        },
+        "ALLOWED_COMMANDS": {
+          "type": "string",
+          "required": false,
+          "description": "⚙️ Comandos permitidos separados por coma o escribe 'all' para permitir todos",
+          "example": "dir,copy,move,del,powershell,npm,node",
+          "envName": "ALLOWED_COMMANDS"
+        },
+        "ALLOWED_FLAGS": {
+          "type": "string",
+          "required": false,
+          "description": "🚩 Flags permitidas separadas por coma o escribe 'all'",
+          "example": "-r,-f,--help,--version",
+          "envName": "ALLOWED_FLAGS"
+        },
+        "MAX_COMMAND_LENGTH": {
+          "type": "string",
+          "required": false,
+          "description": "📏 Longitud máxima del comando (caracteres)",
+          "example": "1024",
+          "envName": "MAX_COMMAND_LENGTH"
+        },
+        "COMMAND_TIMEOUT": {
+          "type": "string",
+          "required": false,
+          "description": "⏱️ Timeout de ejecución en segundos",
+          "example": "30",
+          "envName": "COMMAND_TIMEOUT"
+        },
+        "ALLOW_SHELL_OPERATORS": {
+          "type": "boolean",
+          "required": false,
+          "description": "Permitir operadores de shell (&&, |, >, >>)",
+          "envName": "ALLOW_SHELL_OPERATORS"
+        }
+      },
+      "tools": [
+        "run_command",
+        "show_security_rules"
+      ],
+      "useCases": [
+        "Ejecución segura de comandos del sistema",
+        "Automatización de tareas con auditoría",
+        "Scripting controlado desde la IA",
+        "Inspección de políticas de seguridad"
+      ],
+      "website": "https://github.com/MladenSU/cli-mcp-server",
+      "warning": "⚠️ Requiere instalación previa de UV (Python). Ver docs/INSTALACION_UV_PYTHON.md. Ejecuta comandos del sistema - configura solo directorios y comandos permitidos.",
+      "recommendedConfig": {
+        "ALLOWED_DIR": "C:/Users/kalid",
+        "ALLOWED_COMMANDS": "dir,cd,copy,move,del,powershell,npm,node,git,python,pip,ls,cat,pwd",
+        "ALLOWED_FLAGS": "-r,-f,-a,--help,--version,-l,--recursive,-command,-Command,-ExecutionPolicy,-NoProfile,-NonInteractive",
+        "COMMAND_TIMEOUT": "30",
+        "MAX_COMMAND_LENGTH": "2048",
+        "ALLOW_SHELL_OPERATORS": true
+      }
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "package": "@modelcontextprotocol/server-github",
+      "category": "development",
+      "icon": "pi-github",
+      "description": "Interactuar con repositorios de GitHub: crear issues, pull requests, buscar código y gestionar repositorios.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "token": {
+          "type": "string",
+          "required": true,
+          "description": "Token de acceso personal de GitHub",
+          "secret": true
+        },
+        "owner": {
+          "type": "string",
+          "required": false,
+          "description": "Usuario u organización por defecto"
+        },
+        "repo": {
+          "type": "string",
+          "required": false,
+          "description": "Repositorio por defecto"
+        }
+      },
+      "tools": [
+        "create_issue",
+        "create_pull_request",
+        "search_repositories",
+        "search_code",
+        "get_file_contents",
+        "push_files"
+      ],
+      "useCases": [
+        "Crear issues desde conversaciones",
+        "Buscar código en repositorios",
+        "Gestionar pull requests",
+        "Automatizar workflows de Git"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite",
+      "package": "@modelcontextprotocol/server-sqlite",
+      "category": "data",
+      "icon": "pi-database",
+      "description": "Ejecutar consultas SQL sobre bases de datos SQLite. Acceso seguro con consultas read-only por defecto.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "databasePath": {
+          "type": "string",
+          "required": true,
+          "description": "Ruta a la base de datos SQLite",
+          "example": "C:/data/mydb.sqlite"
+        },
+        "readOnly": {
+          "type": "boolean",
+          "required": false,
+          "description": "Modo solo lectura (recomendado)",
+          "default": true
+        }
+      },
+      "tools": [
+        "execute_query",
+        "list_tables",
+        "describe_table",
+        "get_schema"
+      ],
+      "useCases": [
+        "Análisis de datos",
+        "Consultas SQL interactivas",
+        "Exploración de esquemas de BD",
+        "Generación de reports"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "package": "@modelcontextprotocol/server-postgres",
+      "category": "data",
+      "icon": "pi-database",
+      "description": "Conectar y consultar bases de datos PostgreSQL. Soporta queries complejas y análisis de datos.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": true,
+      "configSchema": {
+        "connectionString": {
+          "type": "string",
+          "required": true,
+          "description": "Connection string de PostgreSQL",
+          "secret": true,
+          "example": "postgresql://user:password@localhost:5432/dbname"
+        }
+      },
+      "tools": [
+        "execute_query",
+        "list_tables",
+        "describe_table",
+        "get_schema",
+        "explain_query"
+      ],
+      "useCases": [
+        "Análisis de datos empresariales",
+        "Consultas SQL avanzadas",
+        "Optimización de queries",
+        "Migración de datos"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch",
+      "package": "@modelcontextprotocol/server-fetch",
+      "category": "web",
+      "icon": "pi-download",
+      "description": "Realizar peticiones HTTP a APIs y sitios web. Soporta GET, POST y otros métodos HTTP.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "fetch_url",
+        "post_data",
+        "download_file"
+      ],
+      "useCases": [
+        "Consumir APIs REST",
+        "Descargar contenido web",
+        "Integración con servicios externos",
+        "Testing de endpoints"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "web-search-native",
+      "name": "Web Search (Nativo)",
+      "package": "native:web-search",
+      "type": "native",
+      "category": "websearch",
+      "icon": "pi-search",
+      "description": "Búsquedas web integradas directamente en NodeTerm. Usa scraping ligero (DuckDuckGo) o una API externa opcional.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "mode": {
+          "type": "string",
+          "required": false,
+          "description": "Modo de búsqueda: scraping (por defecto) o api.",
+          "example": "scraping"
+        },
+        "maxResults": {
+          "type": "string",
+          "required": false,
+          "description": "Resultados máximos por búsqueda (1-10).",
+          "example": "5"
+        },
+        "timeoutMs": {
+          "type": "string",
+          "required": false,
+          "description": "Timeout por request en milisegundos.",
+          "example": "5000"
+        },
+        "maxContentLength": {
+          "type": "string",
+          "required": false,
+          "description": "Máximo de bytes/char a descargar por página.",
+          "example": "200000"
+        },
+        "allowedDomains": {
+          "type": "array",
+          "required": false,
+          "description": "Lista de dominios permitidos (vacío = todos).",
+          "example": ["elpais.com", "bbc.com"]
+        },
+        "userAgent": {
+          "type": "string",
+          "required": false,
+          "description": "User-Agent personalizado para las peticiones.",
+          "example": "NodeTerm-WebSearch/1.0"
+        },
+        "renderMode": {
+          "type": "string",
+          "required": false,
+          "description": "Modo de renderizado: static (por defecto) o rendered (usa BrowserWindow).",
+          "example": "static"
+        },
+        "apiEndpoint": {
+          "type": "string",
+          "required": false,
+          "description": "Endpoint de la API de búsqueda (si usas modo api)."
+        },
+        "apiKey": {
+          "type": "string",
+          "required": false,
+          "description": "API Key para la búsqueda externa.",
+          "secret": true
+        },
+        "apiProvider": {
+          "type": "string",
+          "required": false,
+          "description": "Nombre del proveedor API (solo informativo)."
+        }
+      },
+      "recommendedConfig": {
+        "mode": "scraping",
+        "maxResults": "5",
+        "timeoutMs": "5000",
+        "maxContentLength": "200000",
+        "allowedDomains": "",
+        "userAgent": "NodeTerm-WebSearch/1.0",
+        "renderMode": "static"
+      },
+      "tools": [
+        "web_search",
+        "fetch_page",
+        "extract_text"
+      ],
+      "useCases": [
+        "Consultar noticias o eventos en tiempo real",
+        "Extraer titulares relevantes para investigación",
+        "Descargar HTML de referencia para análisis",
+        "Obtener texto limpio de páginas web sin abrir Puppeteer"
+      ],
+      "website": "https://github.com/kalidus/NodeTerm"
+    },
+    {
+      "id": "puppeteer",
+      "name": "Puppeteer",
+      "package": "@modelcontextprotocol/server-puppeteer",
+      "category": "websearch",
+      "icon": "pi-globe",
+      "description": "Automatizar navegación web con Puppeteer. Capturar screenshots, extraer datos y automatizar interacciones.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "navigate",
+        "screenshot",
+        "click",
+        "fill",
+        "extract_text",
+        "evaluate_js"
+      ],
+      "useCases": [
+        "Web scraping",
+        "Testing automatizado",
+        "Captura de screenshots",
+        "Automatización de tareas web"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "brave-search",
+      "name": "Brave Search",
+      "package": "@modelcontextprotocol/server-brave-search",
+      "category": "websearch",
+      "icon": "pi-search",
+      "description": "Buscar en internet con Brave Search API. Obtener resultados de búsqueda web, noticias e imágenes con privacidad.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "apiKey": {
+          "type": "string",
+          "required": true,
+          "description": "API Key de Brave Search",
+          "secret": true
+        }
+      },
+      "tools": [
+        "web_search",
+        "local_search",
+        "news_search",
+        "image_search"
+      ],
+      "useCases": [
+        "Búsqueda web con privacidad",
+        "Investigación en tiempo real",
+        "Análisis de tendencias",
+        "Obtener información actualizada"
+      ],
+      "website": "https://brave.com/search/api/"
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "package": "@executeautomation/playwright-mcp-server",
+      "category": "websearch",
+      "icon": "pi-desktop",
+      "description": "Automatización web avanzada con Playwright. Testing E2E, scraping multi-navegador y automatización compleja.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "launch_browser",
+        "navigate_page",
+        "click_element",
+        "fill_form",
+        "screenshot",
+        "extract_content",
+        "run_script"
+      ],
+      "useCases": [
+        "Testing automatizado E2E",
+        "Web scraping avanzado",
+        "Automatización multi-navegador",
+        "Captura de datos dinámicos"
+      ],
+      "website": "https://github.com/executeautomation/playwright-mcp-server"
+    },
+    {
+      "id": "sequential-thinking",
+      "name": "Sequential Thinking",
+      "package": "@modelcontextprotocol/server-sequential-thinking",
+      "category": "automation",
+      "icon": "pi-sitemap",
+      "description": "Habilita pensamiento secuencial estructurado para resolver problemas complejos paso a paso.",
+      "capabilities": ["tools"],
+      "requiresConfig": false,
+      "tools": [
+        "think_step",
+        "analyze_problem",
+        "create_plan",
+        "validate_solution"
+      ],
+      "useCases": [
+        "Resolución de problemas complejos",
+        "Planificación estructurada",
+        "Debugging avanzado",
+        "Análisis paso a paso"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "google-drive",
+      "name": "Google Drive",
+      "package": "@modelcontextprotocol/server-gdrive",
+      "category": "productivity",
+      "icon": "pi-google",
+      "description": "Acceder y gestionar archivos en Google Drive. Leer, escribir y buscar documentos.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": true,
+      "configSchema": {
+        "credentials": {
+          "type": "object",
+          "required": true,
+          "description": "Credenciales de Google Cloud OAuth",
+          "secret": true
+        }
+      },
+      "tools": [
+        "list_files",
+        "read_file",
+        "create_file",
+        "search_files",
+        "share_file"
+      ],
+      "useCases": [
+        "Sincronización de documentos",
+        "Gestión de archivos en la nube",
+        "Colaboración en documentos",
+        "Backup automático"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "package": "@modelcontextprotocol/server-slack",
+      "category": "productivity",
+      "icon": "pi-comments",
+      "description": "Enviar mensajes y gestionar canales de Slack. Automatizar notificaciones y comunicación.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "token": {
+          "type": "string",
+          "required": true,
+          "description": "Token de bot de Slack",
+          "secret": true
+        }
+      },
+      "tools": [
+        "send_message",
+        "list_channels",
+        "create_channel",
+        "upload_file",
+        "set_status"
+      ],
+      "useCases": [
+        "Notificaciones automáticas",
+        "Gestión de equipos",
+        "Compartir información",
+        "Bots de productividad"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "memory",
+      "name": "Memory",
+      "package": "@modelcontextprotocol/server-memory",
+      "category": "productivity",
+      "icon": "pi-bookmark",
+      "description": "Sistema de memoria persistente para el modelo. Guardar y recuperar información entre sesiones.",
+      "capabilities": ["tools", "resources"],
+      "requiresConfig": false,
+      "tools": [
+        "store_memory",
+        "recall_memory",
+        "list_memories",
+        "delete_memory",
+        "search_memories"
+      ],
+      "useCases": [
+        "Recordar preferencias del usuario",
+        "Mantener contexto entre sesiones",
+        "Base de conocimiento personal",
+        "Aprendizaje acumulativo"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "package": "@modelcontextprotocol/server-git",
+      "category": "development",
+      "icon": "pi-sitemap",
+      "description": "Ejecutar comandos Git: commit, push, pull, branch y más. Control de versiones integrado.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "repositoryPath": {
+          "type": "string",
+          "required": true,
+          "description": "Ruta al repositorio Git",
+          "example": "C:/projects/myrepo"
+        }
+      },
+      "tools": [
+        "git_status",
+        "git_commit",
+        "git_push",
+        "git_pull",
+        "git_branch",
+        "git_log",
+        "git_diff"
+      ],
+      "useCases": [
+        "Automatizar commits",
+        "Gestión de ramas",
+        "Revisión de cambios",
+        "Workflows de desarrollo"
+      ],
+      "website": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "tenable",
+      "name": "Tenable.io",
+      "package": "tenable-mcp-server",
+      "category": "security",
+      "icon": "pi-shield",
+      "description": "🔒 Gestión de activos y análisis de vulnerabilidades con Tenable.io. Obtén información de activos, búsquedas avanzadas y detalles de vulnerabilidades.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "TENABLE_ACCESS_KEY": {
+          "type": "string",
+          "required": true,
+          "description": "Access Key de Tenable.io",
+          "secret": true,
+          "envName": "TENABLE_ACCESS_KEY"
+        },
+        "TENABLE_SECRET_KEY": {
+          "type": "string",
+          "required": true,
+          "description": "Secret Key de Tenable.io",
+          "secret": true,
+          "envName": "TENABLE_SECRET_KEY"
+        }
+      },
+      "tools": [
+        "get_assets",
+        "get_asset_details",
+        "search_assets",
+        "get_asset_vulnerabilities"
+      ],
+      "useCases": [
+        "Listar y gestionar activos de red",
+        "Buscar activos por hostname o IP",
+        "Obtener detalles completos de activos",
+        "Analizar vulnerabilidades por activo",
+        "Auditoría de seguridad automatizada"
+      ],
+      "website": "https://www.tenable.com/products/tenable-io",
+      "warning": "🔑 Requiere credenciales de Tenable.io. Accede a cloud.tenable.com → Settings → My Account → API Keys para obtenerlas.",
+      "recommendedConfig": {
+        "TENABLE_ACCESS_KEY": "",
+        "TENABLE_SECRET_KEY": ""
+      }
+    },
+    {
+      "id": "ssh-terminal",
+      "name": "NodeTerm CLI",
+      "package": "native:ssh-terminal",
+      "type": "native",
+      "category": "automation",
+      "icon": "pi-server",
+      "description": "🔒 Ejecutar comandos locales (WSL, Cygwin, PowerShell) o remotos por SSH. Control total con listas blancas de comandos, directorios y timeouts configurables.",
+      "capabilities": ["tools"],
+      "requiresConfig": true,
+      "configSchema": {
+        "preferredTerminal": {
+          "type": "string",
+          "required": false,
+          "description": "🖥️ Terminal preferido para comandos locales: wsl, cygwin, powershell",
+          "example": "wsl",
+          "envName": "PREFERRED_TERMINAL"
+        },
+        "allowedDir": {
+          "type": "string",
+          "required": false,
+          "description": "📁 Directorio base permitido para comandos locales (vacío = sin restricción)",
+          "example": "C:/Users/kalid/Documents",
+          "envName": "ALLOWED_DIR"
+        },
+        "allowedCommands": {
+          "type": "string",
+          "required": false,
+          "description": "⚙️ Comandos permitidos (separados por coma) o 'all' para todos",
+          "example": "ls,cat,grep,find,cd,pwd,echo,mkdir,rm,cp,mv",
+          "envName": "ALLOWED_COMMANDS"
+        },
+        "commandTimeout": {
+          "type": "string",
+          "required": false,
+          "description": "⏱️ Timeout de ejecución en segundos",
+          "example": "30",
+          "envName": "COMMAND_TIMEOUT"
+        }
+      },
+      "recommendedConfig": {
+        "preferredTerminal": "wsl",
+        "allowedDir": "",
+        "allowedCommands": "all",
+        "commandTimeout": "30"
+      },
+      "tools": [
+        "execute_local",
+        "execute_ssh",
+        "list_terminals",
+        "search_nodeterm",
+        "test_ssh_connection",
+        "show_security_rules"
+      ],
+      "useCases": [
+        "Ejecutar comandos Linux desde Windows (WSL/Cygwin)",
+        "Gestionar servidores remotos Linux por SSH",
+        "Automatizar tareas del sistema de forma segura",
+        "Operaciones en múltiples entornos desde un solo lugar",
+        "Monitoreo y administración de infraestructura"
+      ],
+      "website": "https://github.com/kalidus/NodeTerm",
+      "warning": "⚠️ Ejecuta comandos del sistema - configura cuidadosamente comandos y directorios permitidos. Las conexiones SSH deben configurarse desde la UI."
+    }
+  ]
+}
+

@@ -1125,7 +1125,16 @@ const TabContentRenderer = React.memo(({
 
   // Pestaña de Chat de IA
   if (tab.type === 'ai-chat') {
-    return <AIChatTab />;
+    return (
+      <AIChatTab
+        tab={tab}
+        isActiveTab={isActiveTab}
+        localFontFamily={localFontFamily}
+        localFontSize={localFontSize}
+        localPowerShellTheme={localPowerShellTheme}
+        localLinuxTerminalTheme={localLinuxTerminalTheme}
+      />
+    );
   }
 
   if (tab.type === 'anything-llm') {
