@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^wsl-distro:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
+        /^anythingllm:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
         'process-pdf',
@@ -85,6 +86,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^cygwin:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
+        /^anythingllm:.*$/,
         /^updater-event$/
       ];
       if (validChannels.some(regex => regex.test(channel))) {
@@ -135,6 +137,12 @@ contextBridge.exposeInMainWorld('electron', {
     disconnectAll: () => ipcRenderer.invoke('guacamole:disconnect-all'),
     setGuacdTimeoutMs: (ms) => ipcRenderer.invoke('guacamole:set-guacd-timeout-ms', ms),
     getGuacdTimeoutMs: () => ipcRenderer.invoke('guacamole:get-guacd-timeout-ms')
+  },
+  anythingLLM: {
+    start: () => ipcRenderer.invoke('anythingllm:start'),
+    getStatus: () => ipcRenderer.invoke('anythingllm:get-status'),
+    stop: () => ipcRenderer.invoke('anythingllm:stop'),
+    getUrl: () => ipcRenderer.invoke('anythingllm:get-url')
   },
   import: {
     getFileInfo: (path) => ipcRenderer.invoke('import:get-file-info', path),

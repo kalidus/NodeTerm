@@ -1536,11 +1536,8 @@ const App = () => {
     
     window.addEventListener('create-terminal-tab', handleCreateTerminalTab);
     
-    // Event listener para crear pestañas de IA
-    const handleCreateAITab = (event) => {
-      const { tab } = event.detail;
-      
-      // Forzar grupo Home antes de activar
+    const insertPinnedTab = (tab) => {
+      if (!tab) return;
       if (activeGroupId !== null) {
         const currentGroupKey = activeGroupId || 'no-group';
         setGroupActiveIndices(prev => ({
@@ -1549,8 +1546,6 @@ const App = () => {
         }));
         setActiveGroupId(null);
       }
-
-      // Insertar pestaña de IA, activar y registrar orden
       setSshTabs(prevTabs => [tab, ...prevTabs]);
       setLastOpenedTabKey(tab.key);
       setOnCreateActivateTabKey(tab.key);
@@ -1558,14 +1553,24 @@ const App = () => {
       setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
       setOpenTabOrder(prev => [tab.key, ...prev.filter(k => k !== tab.key)]);
     };
+
+    const handleCreateAITab = (event) => {
+      insertPinnedTab(event.detail?.tab);
+    };
+
+    const handleCreateAnythingLLMTab = (event) => {
+      insertPinnedTab(event.detail?.tab);
+    };
     
     window.addEventListener('create-ai-tab', handleCreateAITab);
+    window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
     
     return () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
       window.removeEventListener('create-audit-tab', handleCreateAuditTab);
       window.removeEventListener('create-terminal-tab', handleCreateTerminalTab);
       window.removeEventListener('create-ai-tab', handleCreateAITab);
+      window.removeEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
     };
   }, [setExpandedKeys]);
 

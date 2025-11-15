@@ -247,6 +247,18 @@ const Sidebar = React.memo(({
   
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
+  const openAnythingLLMTab = () => {
+    const newTab = {
+      key: `anythingllm-${Date.now()}`,
+      label: 'AnythingLLM',
+      type: 'anything-llm',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-anythingllm-tab', {
+      detail: { tab: newTab }
+    }));
+  };
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
@@ -1689,6 +1701,30 @@ const Sidebar = React.memo(({
                 justifyContent: 'center',
                 visibility: 'visible !important',
                 opacity: '1 !important'
+              }} 
+            />
+
+            {/* Botón de AnythingLLM */}
+            <Button 
+              icon="pi pi-box" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={openAnythingLLMTab} 
+              tooltip="AnythingLLM" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                border: 'none',
+                display: 'flex !important',
+                alignItems: 'center',
+                justifyContent: 'center',
+                visibility: 'visible !important',
+                opacity: '1 !important',
+                color: '#9c27b0'
               }} 
             />
             
