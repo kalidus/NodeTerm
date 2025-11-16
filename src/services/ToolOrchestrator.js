@@ -268,8 +268,37 @@ class ToolOrchestrator {
       }
       seenInTurn.add(dedupeKey);
 
+      // ✅ CRÍTICO: NO usar caché para herramientas de ejecución (execute_ssh, execute_local)
+      // Estas herramientas deben ejecutarse SIEMPRE porque los resultados pueden cambiar
+      const isExecutionTool = toolName && (
+        toolName.includes('execute_ssh') || 
+        toolName.includes('execute_local') ||
+        toolName.includes('execute_command')
+      );
+      
+      // ✅ CRÍTICO: Verificar si el usuario solicitó explícitamente ejecutar (ignorar caché)
+      const lastUserMessage = baseProviderMessages
+        .slice()
+        .reverse()
+        .find(m => m.role === 'user');
+      const userExplicitlyRequested = lastUserMessage && (
+        lastUserMessage.content.toLowerCase().includes('ejecuta') ||
+        lastUserMessage.content.toLowerCase().includes('ejecutar') ||
+        lastUserMessage.content.toLowerCase().includes('conecta') ||
+        lastUserMessage.content.toLowerCase().includes('conectar') ||
+        lastUserMessage.content.toLowerCase().includes('haz') ||
+        lastUserMessage.content.toLowerCase().includes('hacer') ||
+        lastUserMessage.content.toLowerCase().includes('falso') ||
+        lastUserMessage.content.toLowerCase().includes('incorrecto') ||
+        lastUserMessage.content.toLowerCase().includes('mal')
+      );
+      
       const recentExecution = getRecentToolExecution(conversationId, toolName, args);
-      if (recentExecution && !recentExecution.isError) {
+      // ✅ SOLO usar caché si:
+      // 1. NO es una herramienta de ejecución
+      // 2. El usuario NO solicitó explícitamente ejecutar
+      // 3. Hay un resultado reciente sin error
+      if (recentExecution && !recentExecution.isError && !isExecutionTool && !userExplicitlyRequested) {
         const reuseNote = `♻️ Resultado reciente de ${toolName} reutilizado.\n${recentExecution.summary || recentExecution.rawText || ''}\nSi necesitas algo distinto, pide una herramienta diferente.`;
         if (callbacks.onStatus) {
           callbacks.onStatus({
@@ -290,6 +319,15 @@ class ToolOrchestrator {
         lastFollowUpResponse = reuseFollowUp;
         currentToolCall = detectToolCallInResponse ? detectToolCallInResponse(reuseFollowUp) : null;
         continue;
+      }
+      
+      // ✅ Si es herramienta de ejecución o el usuario lo solicitó explícitamente, EJECUTAR SIEMPRE
+      if (isExecutionTool || userExplicitlyRequested) {
+        console.log('🔧 [ToolOrchestrator] Ignorando caché y ejecutando herramienta', {
+          toolName,
+          isExecutionTool,
+          userExplicitlyRequested
+        });
       }
       // NO llamar a this._remember() - ya no necesitamos historial entre turnos
       
