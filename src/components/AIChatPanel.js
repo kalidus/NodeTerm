@@ -3232,42 +3232,79 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
         key={message.id || `msg-${index}-${message.timestamp}`}
         style={{
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: isUser ? 'flex-end' : 'flex-start',
-          marginBottom: '0.8rem',
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          justifyContent: isUser ? 'flex-end' : 'flex-start',
+          marginBottom: '1.5rem',
           width: '100%',
+          maxWidth: '900px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          gap: '0.75rem',
           animation: 'slideIn 0.3s ease-out'
         }}
       >
-        {/* Burbuja de mensaje con contenido */}
-        <div
-          className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''} ${message.subtle ? 'subtle' : ''}`}
-          style={{
-            width: isUser ? 'auto' : '100%',
-            background: isToolResult
-              ? 'transparent'
-              : message.subtle 
-                ? 'rgba(255, 255, 255, 0.02)'
-                : isSystem
-                  ? 'rgba(255, 107, 53, 0.1)'
+        {/* Avatar/Icono */}
+        {!isUser && (
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+              border: `2px solid ${themeColors.primaryColor}40`
+            }}
+          >
+            <i className="pi pi-sparkles" style={{ color: 'white', fontSize: '1rem' }} />
+          </div>
+        )}
+        
+        {/* Contenedor de mensaje */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: isUser ? 'flex-end' : 'flex-start',
+          flex: 1,
+          minWidth: 0
+        }}>
+          {/* Burbuja de mensaje con contenido */}
+          <div
+            className={`ai-bubble ${isUser ? 'user' : isSystem ? 'system' : 'assistant'} ${isStreaming ? 'streaming' : ''} ${message.subtle ? 'subtle' : ''}`}
+            style={{
+              width: isUser ? 'auto' : '100%',
+              maxWidth: isUser ? '75%' : '100%',
+              background: isToolResult
+                ? 'transparent'
+                : message.subtle 
+                  ? 'rgba(255, 255, 255, 0.02)'
+                  : isSystem
+                    ? 'rgba(255, 107, 53, 0.1)'
+                    : isUser
+                      ? `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%)`
+                      : `rgba(255, 255, 255, 0.05)`,
+              color: message.subtle 
+                ? 'rgba(255, 255, 255, 0.6)'
+                : themeColors.textPrimary,
+              border: isToolResult
+                ? 'none'
+                : message.subtle 
+                  ? '1px solid rgba(255, 255, 255, 0.05)'
                   : isUser
-                    ? `linear-gradient(135deg, ${themeColors.primaryColor}dd 0%, ${themeColors.primaryColor}cc 100%)`
-                    : `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
-            color: message.subtle 
-              ? 'rgba(255, 255, 255, 0.6)'
-              : themeColors.textPrimary,
-            border: isToolResult
-              ? 'none'
-              : message.subtle 
-                ? '1px solid rgba(255, 255, 255, 0.05)'
-                : `1px solid ${isSystem ? 'rgba(255, 107, 53, 0.3)' : themeColors.borderColor}`,
-            borderRadius: message.subtle ? '6px' : '8px',
-            padding: isToolResult ? '0 0 0.2rem 0' : (message.subtle ? '0.3rem 0.5rem' : '0.6rem 0.8rem'),
-            fontSize: message.subtle ? '0.8rem' : undefined,
-            fontStyle: isToolResult ? 'normal' : (message.subtle ? 'italic' : undefined),
-            opacity: message.subtle ? '0.8' : '1'
-          }}
-        >
+                    ? '1px solid rgba(59, 130, 246, 0.3)'
+                    : `1px solid rgba(255, 255, 255, 0.12)`,
+              borderRadius: message.subtle ? '6px' : '12px',
+              padding: isToolResult ? '0 0 0.2rem 0' : (message.subtle ? '0.3rem 0.5rem' : '1rem 1.2rem'),
+              fontSize: message.subtle ? '0.8rem' : undefined,
+              fontStyle: isToolResult ? 'normal' : (message.subtle ? 'italic' : undefined),
+              opacity: message.subtle ? '0.8' : '1',
+              boxShadow: message.subtle ? 'none' : (isUser ? '0 2px 8px rgba(59, 130, 246, 0.15)' : '0 2px 8px rgba(0,0,0,0.1)')
+            }}
+          >
           <div 
             className="ai-md" 
             dangerouslySetInnerHTML={{ 
@@ -3295,21 +3332,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               <span>{message.attachedFiles.length} archivo{message.attachedFiles.length > 1 ? 's' : ''} adjunto{message.attachedFiles.length > 1 ? 's' : ''}</span>
             </div>
           )}
-        </div>
+          </div>
 
-        {/* Timestamp y métricas solo después de completar (no para mensajes sutiles) */}
-        {!isStreaming && hasContent && !message.subtle && (
-          <div
-            style={{
-              fontSize: '0.65rem',
-              color: themeColors.textSecondary,
-              marginTop: '0.25rem',
-              opacity: 0.7,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem'
-            }}
-          >
+          {/* Timestamp y métricas solo después de completar (no para mensajes sutiles) */}
+          {!isStreaming && hasContent && !message.subtle && (
+            <div
+              style={{
+                fontSize: '0.65rem',
+                color: themeColors.textSecondary,
+                marginTop: '0.4rem',
+                opacity: 0.7,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                paddingLeft: isUser ? '0' : '0',
+                paddingRight: isUser ? '0' : '0'
+              }}
+            >
             <span>{formatTimestamp(message.timestamp)}</span>
             {message.metadata && (
               <>
@@ -3329,13 +3368,34 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                 )}
               </>
             )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Archivos del mensaje específico */}
-        {!isStreaming && message.metadata && message.metadata.files && message.metadata.files.length > 0 && (
-          <div style={{ marginTop: '0.5rem' }}>
-            {renderFileDownloads(message.metadata.files, message.content)}
+          {/* Archivos del mensaje específico */}
+          {!isStreaming && message.metadata && message.metadata.files && message.metadata.files.length > 0 && (
+            <div style={{ marginTop: '0.5rem' }}>
+              {renderFileDownloads(message.metadata.files, message.content)}
+            </div>
+          )}
+        </div>
+
+        {/* Avatar de usuario (a la derecha) */}
+        {isUser && (
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, rgba(59, 130, 246, 0.8) 0%, rgba(59, 130, 246, 0.6) 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(59, 130, 246, 0.2)',
+              border: '2px solid rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            <i className="pi pi-user" style={{ color: 'white', fontSize: '1rem' }} />
           </div>
         )}
       </div>
@@ -4025,30 +4085,32 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
         {/* Header Compacto */}
         <div
           style={{
-            padding: '0.6rem 1rem',
+            padding: '1rem 1.5rem',
             background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             backdropFilter: 'blur(8px)',
-            borderBottom: `1px solid ${themeColors.borderColor}`,
+            borderBottom: `2px solid ${themeColors.borderColor}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            minHeight: '56px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             {/* Icono de IA más pequeño */}
             <div
               style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`,
+                width: '32px',
+                height: '32px',
+                borderRadius: '10px',
+                background: `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: `0 2px 6px ${themeColors.primaryColor}30`
+                boxShadow: `0 2px 8px rgba(59, 130, 246, 0.3)`,
+                border: `1px solid rgba(59, 130, 246, 0.3)`
               }}
             >
-              <i className="pi pi-comments" style={{ color: 'white', fontSize: '1rem' }} />
+              <i className="pi pi-comments" style={{ color: 'white', fontSize: '1.1rem' }} />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -4058,15 +4120,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               {currentModel && (
                 <span style={{
                   display: 'inline-block',
-                  padding: '0.2rem 0.5rem',
-                  background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`,
+                  padding: '0.3rem 0.7rem',
+                  background: `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%)`,
                   color: 'white',
-                  borderRadius: '10px',
-                  fontSize: '0.6rem',
+                  borderRadius: '16px',
+                  fontSize: '0.7rem',
                   fontWeight: '600',
                   whiteSpace: 'nowrap',
-                  boxShadow: `0 2px 4px ${themeColors.primaryColor}40`,
-                  border: `1px solid ${themeColors.primaryColor}60`
+                  boxShadow: `0 2px 6px rgba(59, 130, 246, 0.3)`,
+                  border: `1px solid rgba(59, 130, 246, 0.4)`,
+                  letterSpacing: '0.3px'
                 }}>
                   {currentModel}
                 </span>
@@ -4083,20 +4146,21 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '0.2rem 0.4rem',
-                        background: 'rgba(102, 187, 106, 0.2)',
+                        padding: '0.3rem 0.6rem',
+                        background: 'rgba(102, 187, 106, 0.15)',
                         color: '#66bb6a',
-                        borderRadius: '8px',
-                        fontSize: '0.55rem',
+                        borderRadius: '16px',
+                        fontSize: '0.65rem',
                         fontWeight: '600',
                         whiteSpace: 'nowrap',
-                        border: '1px solid rgba(102, 187, 106, 0.4)',
-                        boxShadow: '0 0 4px rgba(102, 187, 106, 0.2)',
-                        maxWidth: '100px',
+                        border: '1px solid rgba(102, 187, 106, 0.3)',
+                        boxShadow: '0 2px 4px rgba(102, 187, 106, 0.15)',
+                        maxWidth: '120px',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        textOverflow: 'ellipsis',
+                        letterSpacing: '0.2px'
                       }}>
-                      <i className="pi pi-wrench" style={{ fontSize: '0.5rem', marginRight: '0.25rem' }} />
+                      <i className="pi pi-wrench" style={{ fontSize: '0.6rem', marginRight: '0.3rem' }} />
                       {getMcpCatalogName(server.id).substring(0, 12)}
                     </span>
                   ))
@@ -4105,15 +4169,15 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
           </div>
 
           {/* Botones de acción más compactos */}
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div style={{ display: 'flex', gap: '0.6rem' }}>
             {/* Botón historial */}
             {onToggleHistory && (
               <button
                 onClick={onToggleHistory}
                 style={{
-                  background: showHistory ? themeColors.primaryColor : 'rgba(255,255,255,0.1)',
-                  border: `1px solid ${showHistory ? themeColors.primaryColor : themeColors.borderColor}`,
-                  borderRadius: '6px',
+                  background: showHistory ? 'rgba(59, 130, 246, 0.9)' : 'rgba(255,255,255,0.1)',
+                  border: `1px solid ${showHistory ? 'rgba(59, 130, 246, 0.5)' : themeColors.borderColor}`,
+                  borderRadius: '10px',
                   padding: '0.4rem 0.6rem',
                   color: showHistory ? 'white' : themeColors.textPrimary,
                   cursor: 'pointer',
@@ -4122,14 +4186,16 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '0.8rem',
-                  width: '32px',
-                  height: '32px'
+                  width: '36px',
+                  height: '36px'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = showHistory ? themeColors.primaryColor + 'dd' : 'rgba(255,255,255,0.2)';
+                  e.currentTarget.style.background = showHistory ? 'rgba(59, 130, 246, 1)' : 'rgba(255,255,255,0.2)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = showHistory ? themeColors.primaryColor : 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.background = showHistory ? 'rgba(59, 130, 246, 0.9)' : 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
                 title={showHistory ? 'Ocultar historial' : 'Mostrar historial'}
               >
@@ -4143,7 +4209,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               style={{
                 background: 'rgba(100, 200, 100, 0.2)',
                 border: '1px solid rgba(100, 200, 100, 0.4)',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '0.4rem 0.6rem',
                 color: themeColors.textPrimary,
                 cursor: 'pointer',
@@ -4172,7 +4238,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               style={{
                 background: mcpToolsEnabled ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255,255,255,0.1)',
                 border: `1px solid ${mcpToolsEnabled ? 'rgba(255, 152, 0, 0.4)' : themeColors.borderColor}`,
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '0.4rem 0.6rem',
                 color: mcpToolsEnabled ? '#ff9800' : themeColors.textSecondary,
                 cursor: 'pointer',
@@ -4204,7 +4270,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               style={{
                 background: 'rgba(255,255,255,0.1)',
                 border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '0.4rem 0.6rem',
                 color: themeColors.textPrimary,
                 cursor: 'pointer',
@@ -4232,7 +4298,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               style={{
                 background: 'rgba(255,255,255,0.1)',
                 border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '0.4rem 0.6rem',
                 color: themeColors.textPrimary,
                 cursor: 'pointer',
@@ -4260,7 +4326,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               style={{
                 background: 'rgba(255,107,53,0.2)',
                 border: '1px solid rgba(255,107,53,0.4)',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 padding: '0.4rem 0.6rem',
                 color: themeColors.textPrimary,
                 cursor: 'pointer',
@@ -4441,7 +4507,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                   border: '1px solid rgba(244, 67, 54, 0.3)',
                   color: '#f44336',
                   padding: '0.4rem 0.8rem',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   fontSize: '0.8rem',
                   cursor: 'pointer',
                   display: 'flex',
@@ -4473,7 +4539,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '1rem',
+            padding: '1.5rem 2rem',
             display: 'flex',
             flexDirection: 'column'
           }}
@@ -4667,7 +4733,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                   border: `1px solid ${themeColors.borderColor}`,
                   color: themeColors.textSecondary,
                   padding: '0.3rem 0.6rem',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   fontSize: '0.75rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -4768,10 +4834,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
 
         <div
           style={{
-            padding: '0.6rem 1rem',
+            padding: '1rem 1.5rem',
             background: `linear-gradient(135deg, ${themeColors.cardBackground} 0%, ${themeColors.cardBackground}dd 100%)`,
             backdropFilter: 'blur(8px)',
-            borderTop: `1px solid ${themeColors.borderColor}`
+            borderTop: `2px solid ${themeColors.borderColor}`,
+            boxShadow: '0 -2px 12px rgba(0,0,0,0.1)'
           }}
         >
           
@@ -4834,16 +4901,29 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               id="ai-chat-input"
               style={{
                 flex: 1,
-                padding: '0.6rem',
-                background: 'rgba(255,255,255,0.05)',
-                border: `1px solid rgba(255,255,255,0.15)`,
-                borderRadius: '8px',
+                padding: '0.9rem 1.2rem',
+                background: 'rgba(255,255,255,0.08)',
+                border: `1px solid rgba(255,255,255,0.2)`,
+                borderRadius: '16px',
                 color: themeColors.textPrimary,
-                fontSize: '0.9rem',
+                fontSize: '0.95rem',
                 resize: 'none',
-                minHeight: '40px',
-                maxHeight: '100px',
-                transition: 'all 0.2s ease'
+                minHeight: '52px',
+                maxHeight: '120px',
+                transition: 'all 0.2s ease',
+                outline: 'none',
+                fontFamily: 'inherit',
+                lineHeight: '1.5'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = themeColors.primaryColor || 'rgba(59, 130, 246, 0.5)';
+                e.target.style.background = 'rgba(255,255,255,0.1)';
+                e.target.style.boxShadow = `0 0 0 3px ${themeColors.primaryColor || 'rgba(59, 130, 246, 0.1)'}`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+                e.target.style.background = 'rgba(255,255,255,0.08)';
+                e.target.style.boxShadow = 'none';
               }}
               rows={1}
             />
@@ -4883,10 +4963,10 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               disabled={isLoading}
               style={{
                 background: showFileUploader 
-                  ? `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`
+                  ? `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%)`
                   : 'rgba(255,255,255,0.1)',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '16px',
                 padding: '0.6rem',
                 color: 'white',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -4894,9 +4974,23 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: '40px',
-                height: '40px',
+                minWidth: '52px',
+                height: '52px',
                 opacity: isLoading ? 0.5 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.background = showFileUploader 
+                    ? `linear-gradient(135deg, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.9) 100%)`
+                    : 'rgba(255,255,255,0.15)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = showFileUploader 
+                  ? `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%)`
+                  : 'rgba(255,255,255,0.1)';
               }}
               title={showFileUploader ? 'Ocultar archivos adjuntos' : 'Adjuntar archivos'}
             >
@@ -4908,21 +5002,35 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               disabled={isLoading || !inputValue.trim() || !currentModel}
               style={{
                 background: currentModel && inputValue.trim()
-                  ? `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${themeColors.primaryColor}dd 100%)`
+                  ? `linear-gradient(135deg, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.9) 100%)`
                   : 'rgba(255,255,255,0.1)',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '0.6rem 1.2rem',
+                borderRadius: '16px',
+                padding: '0.9rem 1.8rem',
                 color: 'white',
                 cursor: currentModel && inputValue.trim() && !isLoading ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.9rem',
-                fontWeight: '500',
-                boxShadow: currentModel && inputValue.trim() ? `0 2px 6px ${themeColors.primaryColor}30` : 'none',
+                gap: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                boxShadow: currentModel && inputValue.trim() ? `0 4px 12px rgba(59, 130, 246, 0.3)` : 'none',
                 opacity: currentModel && inputValue.trim() && !isLoading ? 1 : 0.5
+              }}
+              onMouseEnter={(e) => {
+                if (currentModel && inputValue.trim() && !isLoading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `0 6px 16px rgba(59, 130, 246, 0.4)`;
+                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.95) 100%)`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = currentModel && inputValue.trim() ? `0 4px 12px rgba(59, 130, 246, 0.3)` : 'none';
+                e.currentTarget.style.background = currentModel && inputValue.trim()
+                  ? `linear-gradient(135deg, rgba(59, 130, 246, 1) 0%, rgba(59, 130, 246, 0.9) 100%)`
+                  : 'rgba(255,255,255,0.1)';
               }}
             >
               <i className={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-send'} />
@@ -5032,7 +5140,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                       cursor: 'pointer',
                       fontSize: '1rem',
                       padding: '0.4rem 0.6rem',
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -5182,7 +5290,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                               padding: '0.4rem 0.8rem',
                               background: isSelected ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.05)',
                               border: isSelected ? '1px solid rgba(255, 193, 7, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                              borderRadius: '6px',
+                              borderRadius: '8px',
                               color: isSelected ? '#ffc107' : themeColors.textSecondary,
                               cursor: !isConfigured ? 'not-allowed' : 'pointer',
                               transition: 'all 0.2s ease',
@@ -5225,7 +5333,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                               border: !isConfigured
                                 ? '1px solid rgba(244, 67, 54, 0.4)'
                                 : '1px solid rgba(76, 175, 80, 0.4)',
-                              borderRadius: '6px',
+                              borderRadius: '8px',
                               color: !isConfigured ? '#f44336' : '#66bb6a',
                               cursor: 'pointer',
                               transition: 'all 0.2s ease',
