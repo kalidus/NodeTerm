@@ -463,10 +463,54 @@ class ToolOrchestrator {
         toolResultSummary: executionSummary
       };
       
-      // ✅ Para search_nodeterm, guardar también el resultado original sin comprimir para renderizado especial
-      if ((toolName === 'search_nodeterm' || toolName.includes('search_nodeterm')) && 
-          typeof result === 'object' && !Array.isArray(result.content)) {
-        metadata.originalToolResult = result;
+      // ✅ CRÍTICO: Para search_nodeterm, guardar también el resultado original parseado para renderizado especial
+      if (toolName === 'search_nodeterm' || toolName.includes('search_nodeterm')) {
+        try {
+          let parsedResult = null;
+          
+          // PRIORIDAD 1: Si el resultado tiene _originalResult (guardado antes de stringificar)
+          if (result && typeof result === 'object' && result._originalResult) {
+            parsedResult = result._originalResult;
+          }
+          // PRIORIDAD 2: Si el resultado es directamente el objeto (sin content)
+          else if (result && typeof result === 'object' && !Array.isArray(result.content) &&
+                   (result.ssh_results || result.password_results || result.message)) {
+            parsedResult = result;
+          }
+          // PRIORIDAD 3: Intentar extraer del texto JSON (fallback)
+          else if (result && typeof result === 'object' && Array.isArray(result.content)) {
+            const textContent = result.content
+              .filter(it => typeof it?.text === 'string')
+              .map(it => it.text.trim())
+              .join('\n');
+            
+            if (textContent) {
+              try {
+                // Limpiar markdown code blocks si existen
+                let jsonStr = textContent;
+                const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+                if (jsonMatch) {
+                  jsonStr = jsonMatch[1];
+                }
+                jsonStr = jsonStr.trim();
+                
+                // Intentar parsear el JSON
+                parsedResult = JSON.parse(jsonStr);
+              } catch (parseError) {
+                // Solo loggear errores reales, no warnings normales
+                console.error(`❌ [ToolOrchestrator] Error parseando JSON de search_nodeterm:`, parseError);
+              }
+            }
+          }
+          
+          // Guardar el resultado parseado si tiene la estructura esperada
+          if (parsedResult && typeof parsedResult === 'object' && 
+              (parsedResult.ssh_results || parsedResult.password_results || parsedResult.message)) {
+            metadata.originalToolResult = parsedResult;
+          }
+        } catch (error) {
+          console.error(`❌ [ToolOrchestrator] Error guardando originalToolResult para search_nodeterm:`, error);
+        }
       }
       
       conversationService.addMessage('tool', executionSummary || `✔️ ${toolName} completado`, metadata);
