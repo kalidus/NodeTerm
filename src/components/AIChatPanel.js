@@ -25,6 +25,7 @@ import '../utils/debugConversations'; // 🔧 Debug utility
 import 'highlight.js/styles/github-dark.css';
 // Importar estilos del AI chat
 import '../styles/components/ai-chat.css';
+import { FaBrain } from 'react-icons/fa';
 
 const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTerminal }) => {
   const [messages, setMessages] = useState([]);
@@ -3277,7 +3278,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             }}
             title={`Razonamiento (${tokenCount} tokens)`}
           >
-            <i className="pi pi-brain" style={{ fontSize: '0.75rem' }} />
+            <FaBrain style={{ fontSize: '0.75rem' }} />
           </button>
           
           {/* Tooltip compacto */}
@@ -3344,7 +3345,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <i className="pi pi-brain" style={{ color: '#64b5f6', fontSize: '0.85rem' }} />
+              <FaBrain style={{ color: '#64b5f6', fontSize: '0.85rem' }} />
               <span style={{ fontWeight: '500', color: themeColors.textPrimary, fontSize: '0.8rem' }}>
                 Razonamiento
               </span>
@@ -3425,7 +3426,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <i className="pi pi-brain" style={{ color: '#64b5f6', fontSize: '0.85rem' }} />
+                <FaBrain style={{ color: '#64b5f6', fontSize: '0.85rem' }} />
                 <span style={{ fontWeight: '500', color: themeColors.textPrimary, fontSize: '0.8rem' }}>
                   Razonamiento
                 </span>
