@@ -1766,6 +1766,50 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             safeResponse = 'Operación completada correctamente.';
           }
           
+          // ✅ CRÍTICO: Limpiar texto descriptivo de herramientas que NO son tool calls reales
+          // Esto ocurre cuando el modelo genera texto como "Llamando herramienta: ..." o "He ejecutado la herramienta..." después de errores
+          if (safeResponse && typeof safeResponse === 'string') {
+            // Detectar mensajes que describen ejecuciones de herramientas
+            const isToolDescription = /(?:He\s+ejecutado|ejecutado|llamando|llamé|usé|usando)\s+(?:la\s+)?herramienta[\s\S]*?(?:hostId|command|comando|para\s+mostrar|para\s+obtener)/i.test(safeResponse);
+            
+            if (isToolDescription) {
+              logConversation('warn', 'Respuesta es descripción de herramienta, ocultando', {
+                preview: safeResponse.slice(0, 100)
+              });
+              // Si es solo una descripción de herramienta, ocultar completamente
+              const last = lastToolResultRef.current;
+              if (last && last.isError) {
+                safeResponse = null; // Forzar usar fallback que mostrará el error
+              } else {
+                safeResponse = null; // Ocultar mensaje descriptivo
+              }
+            } else {
+              // Limpiar patrones específicos de "Llamando herramienta:"
+              const cleaned = safeResponse.replace(
+                /Llamando\s+herramienta\s*:[\s\S]*?(?:•|hostId|command|Resultado)[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi,
+                ''
+              ).trim();
+              
+              // Si después de limpiar queda muy poco o nada, usar fallback
+              if (cleaned.length < safeResponse.length * 0.3 || cleaned.length < 20) {
+                logConversation('warn', 'Respuesta contenía texto descriptivo de herramienta, usando fallback', {
+                  originalLength: safeResponse.length,
+                  cleanedLength: cleaned.length
+                });
+                // Usar fallback basado en último tool result
+                const last = lastToolResultRef.current;
+                if (last && last.isError) {
+                  safeResponse = null; // Forzar usar fallback que mostrará el error
+                } else {
+                  safeResponse = 'Operación completada correctamente.';
+                }
+              } else if (cleaned.length < safeResponse.length) {
+                // Si se limpió algo pero queda contenido útil, usar la versión limpia
+                safeResponse = cleaned;
+              }
+            }
+          }
+          
           // ✅ IMPROVED: Detectar si la respuesta es SOLO JSON de tool call (no debería guardarse como respuesta)
           // NOTA: Esta detección solo se aplica si structuredToolMessages ESTÁ activo (Tool Orchestrator maneja el JSON)
           const isJsonToolCall = (() => {
@@ -1864,8 +1908,20 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             }
           }
           
+          // ✅ CRÍTICO: Si safeResponse es null, usar fallback apropiado
+          if (!safeResponse || safeResponse === null) {
+            const last = lastToolResultRef.current;
+            if (last && last.isError) {
+              // Si hubo error, mostrar mensaje de error
+              safeResponse = `Hubo un problema: ${last.text.slice(0, 100)}`;
+            } else {
+              // Si no hay error pero no hay respuesta, usar mensaje genérico
+              safeResponse = 'Operación completada.';
+            }
+          }
+          
           // Guardar la respuesta
-          {
+          if (safeResponse && safeResponse.trim().length > 0) {
             logConversation('debug', 'Guardando respuesta del asistente', {
               safePreview: safeResponse.substring(0, 80),
               length: safeResponse.length,
@@ -1901,6 +1957,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               // 'conversation-updated' se dispare y sincronice los mensajes persistidos.
               
               // Tokens calculados internamente por el sistema de ventana deslizante
+          } else {
+            // Si safeResponse está vacío o es null, no guardar mensaje del asistente
+            // El tool result ya se mostró, no necesitamos un mensaje adicional
+            logConversation('debug', 'No guardando mensaje del asistente (respuesta vacía o descriptiva de herramienta)', {
+              conversationId: conversationService.currentConversationId
+            });
           }
           
           // 🪟 NOTIFICACIÓN SUTIL de optimización de contexto (como ChatGPT)
@@ -3556,6 +3618,40 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
           preview: trimmed.slice(0, 80)
         });
         return null;
+      }
+      
+      // ✅ FILTRAR mensajes que contienen descripciones de herramientas pero NO son tool calls reales
+      // Esto ocurre cuando el modelo genera texto después de un error que describe la ejecución
+      const isToolDescription = !isToolCall && (
+        /(?:He\s+ejecutado|ejecutado|llamando|llamé|usé|usando)\s+(?:la\s+)?herramienta[\s\S]*?(?:hostId|command|comando|para\s+mostrar|para\s+obtener)/i.test(trimmed) ||
+        /Llamando\s+herramienta\s*:/.test(trimmed)
+      );
+      
+      if (isToolDescription) {
+        // Si el mensaje SOLO contiene descripción de herramienta, ocultarlo completamente
+        if (/^(?:He\s+ejecutado|ejecutado|llamando|llamé|usé|usando)\s+(?:la\s+)?herramienta[\s\S]*?(?:hostId|command|comando|para\s+mostrar|para\s+obtener)/i.test(trimmed) ||
+            /^Llamando\s+herramienta\s*:[\s\S]*?(?:•|hostId|command|Resultado)/i.test(trimmed)) {
+          debugLogger.warn('AIChatPanel.Render', 'Omitiendo mensaje descriptivo de herramienta', {
+            messageId: message.id,
+            preview: trimmed.slice(0, 100)
+          });
+          return null;
+        }
+        // Si contiene descripción pero también tiene otro contenido útil, limpiar solo esa parte
+        const cleaned = trimmed
+          .replace(/(?:He\s+ejecutado|ejecutado|llamando|llamé|usé|usando)\s+(?:la\s+)?herramienta[\s\S]*?(?:hostId|command|comando|para\s+mostrar|para\s+obtener)[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '')
+          .replace(/Llamando\s+herramienta\s*:[^\n]*(?:\n[^\n]*tool\s*[•=])?[\s\S]*?Resultado\s*:[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '')
+          .trim();
+        if (cleaned.length < trimmed.length * 0.3) {
+          // Si después de limpiar queda muy poco, ocultar el mensaje
+          debugLogger.warn('AIChatPanel.Render', 'Mensaje limpiado quedó muy corto, ocultando', {
+            messageId: message.id,
+            original: trimmed.length,
+            cleaned: cleaned.length
+          });
+          return null;
+        }
+        message.content = cleaned;
       }
       
       // Si el mensaje tiene texto + JSON trailing, extraer solo el texto

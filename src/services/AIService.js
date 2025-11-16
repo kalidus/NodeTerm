@@ -3373,6 +3373,23 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
           const errorText = result.content?.[0]?.text || 'Error desconocido';
           console.error(`❌ [MCP] ${currentToolCall.toolName} falló:`, errorText);
           
+          // ✅ CRÍTICO: Guardar error como tool result con formato correcto
+          const formattedErrorText = `❌ Error en ${currentToolCall.toolName}: ${errorText}`;
+          if (callbacks && typeof callbacks.onToolResult === 'function') {
+            try {
+              callbacks.onToolResult({
+                toolName: currentToolCall.toolName,
+                args: currentToolCall.arguments,
+                result: { isError: true, error: errorText, content: [{ text: formattedErrorText }] },
+                error: true
+              });
+            } catch (cbErr) {
+              debugLogger.warn('AIService.MCP', 'onToolResult callback lanzó un error al reportar error', {
+                error: cbErr?.message
+              });
+            }
+          }
+          
           // Callback de error
           if (callbacks.onStatus) {
             callbacks.onStatus({
