@@ -191,7 +191,7 @@ class SSHTerminalNativeServer {
       tools: [
         {
           name: 'execute_local',
-          description: 'IMPORTANTE: Ejecuta comandos en la MÁQUINA LOCAL (no remota, no por SSH). Perfecta para: listar procesos locales, revisar servicios Windows, ejecutar scripts, obtener información del sistema. DIFERENTE de execute_ssh que usa máquinas remotas. Comandos Linux (ls, cat, pwd) usan WSL/Ubuntu. Comandos Windows (Get-Process, dir) usan PowerShell.',
+          description: 'IMPORTANTE: Ejecuta comandos en la MÁQUINA LOCAL (no remota, no por SSH). Perfecta para: listar procesos locales, revisar servicios Windows, ejecutar scripts EXISTENTES, obtener información del sistema. DIFERENTE de execute_ssh que usa máquinas remotas. Comandos Linux (ls, cat, pwd) usan WSL/Ubuntu. Comandos Windows (Get-Process, dir) usan PowerShell. ⚠️ REGLA CRÍTICA: SOLO usa execute_local cuando el usuario EXPLÍCITAMENTE pide EJECUTAR/RUN/CORRER un comando o script. Si el usuario SOLO pide CREAR/GENERAR/ESCRIBIR un script o archivo, usa write_file en su lugar.',
           inputSchema: {
             type: 'object',
             properties: {

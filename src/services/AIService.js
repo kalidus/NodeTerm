@@ -2067,8 +2067,14 @@ class AIService {
         if (toolName.includes('delete') || toolName.includes('remove')) score += 10;
       }
       
-      // Comandos/CLI
-      if (lowerMsg.match(/ejecuta|comando|command|run|terminal|shell|script/)) {
+      // Comandos/CLI - SOLO si hay palabras explícitas de ejecución
+      // "crea un script" NO debe activar execute_local, solo "ejecuta el script" o "run script"
+      if (lowerMsg.match(/ejecuta|comando|command|run|terminal|shell/) && 
+          !lowerMsg.match(/crea|crear|create|genera|generar|generate|escribe|escribir|write|guarda|guardar|save/)) {
+        if (toolName.includes('run_command') || toolName.includes('execute')) score += 10;
+      }
+      // Si dice "script" PERO también dice "ejecuta/run", entonces sí activar execute
+      if (lowerMsg.match(/script/) && lowerMsg.match(/ejecuta|ejecutar|run|corre|correr|lanza|lanzar/)) {
         if (toolName.includes('run_command') || toolName.includes('execute')) score += 10;
       }
       
@@ -2481,7 +2487,12 @@ class AIService {
     out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
     out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n';
     out += '⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n';
-    out += '🚫 NO USES HERRAMIENTAS PROACTIVAMENTE: Solo ejecuta herramientas cuando el usuario lo pida explícitamente.\n\n';
+    out += '🚫 NO USES HERRAMIENTAS PROACTIVAMENTE: Solo ejecuta herramientas cuando el usuario lo pida explícitamente.\n';
+    out += '\n🔴 REGLA CRÍTICA - CREAR vs EJECUTAR:\n';
+    out += '• "crea un script" / "crea un archivo" → SOLO usa write_file (NO execute_local)\n';
+    out += '• "ejecuta el script" / "run script" / "corre el comando" → USA execute_local\n';
+    out += '• "crea y ejecuta" → PRIMERO write_file, LUEGO execute_local\n';
+    out += '• Si el usuario SOLO pide CREAR/GENERAR/ESCRIBIR → NO ejecutes comandos automáticamente\n\n';
 
     return out;
   }
