@@ -602,6 +602,78 @@
 /* Los estilos del input del chat de IA se manejan dinámicamente en el componente */
 
 /* ============================================
+   SELECTOR DE MODELO EN HEADER (ESTILO OPEN WEBUI)
+   ============================================ */
+
+.ai-model-dropdown-header .p-dropdown {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease !important;
+}
+
+.ai-model-dropdown-header .p-dropdown:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+.ai-model-dropdown-header .p-dropdown:not(.p-disabled).p-focus {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-label {
+  color: var(--text-color, #ffffff) !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-trigger {
+  color: rgba(255, 255, 255, 0.7) !important;
+  width: 2rem !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-trigger:hover {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-panel {
+  background: var(--ui-card-bg, #2a2a2a) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  margin-top: 0.5rem !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-items-wrapper {
+  padding: 0.5rem 0 !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-item {
+  padding: 0.65rem 1rem !important;
+  color: var(--text-color, #ffffff) !important;
+  font-size: 0.85rem !important;
+  transition: all 0.15s ease !important;
+  border-radius: 0 !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-item:hover {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-item.p-highlight {
+  background: rgba(59, 130, 246, 0.25) !important;
+  color: rgba(255, 255, 255, 1) !important;
+}
+
+.ai-model-dropdown-header .p-dropdown-item.p-highlight:hover {
+  background: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* ============================================
    ESTILOS GLOBALES DEL SCROLLBAR PARA CHAT DE IA
    ============================================ */
 

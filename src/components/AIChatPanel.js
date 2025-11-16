@@ -76,6 +76,11 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
   const [showMemoryPanel, setShowMemoryPanel] = useState(false); // Panel de memoria
   const [toolsCount, setToolsCount] = useState(0); // Conteo de herramientas MCP
 
+  // Estados para selector de modelo personalizado
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+  const [modelSelectorTab, setModelSelectorTab] = useState('all'); // 'all' o 'local'
+
   // Estados para Shell Selector del MCP
   const [selectedShell, setSelectedShell] = useState(() => {
     try {
@@ -4113,27 +4118,352 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               <i className="pi pi-comments" style={{ color: 'white', fontSize: '1.1rem' }} />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0, color: themeColors.textPrimary, fontSize: '1rem', fontWeight: '600', lineHeight: '1.2' }}>
                 {conversationTitle || 'Chat de IA'}
               </h2>
-              {currentModel && (
-                <span style={{
-                  display: 'inline-block',
-                  padding: '0.3rem 0.7rem',
-                  background: `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%)`,
-                  color: 'white',
-                  borderRadius: '16px',
-                  fontSize: '0.7rem',
-                  fontWeight: '600',
-                  whiteSpace: 'nowrap',
-                  boxShadow: `0 2px 6px rgba(59, 130, 246, 0.3)`,
-                  border: `1px solid rgba(59, 130, 246, 0.4)`,
-                  letterSpacing: '0.3px'
-                }}>
-                  {currentModel}
-                </span>
-              )}
+              
+              {/* Selector de modelo personalizado (estilo Open WebUI) */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowModelSelector(!showModelSelector)}
+                  disabled={isLoading || functionalModels.length === 0 || isModelSwitching}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 0.75rem',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '10px',
+                    color: themeColors.textPrimary,
+                    fontSize: '0.85rem',
+                    fontWeight: '500',
+                    cursor: (isLoading || functionalModels.length === 0 || isModelSwitching) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: isModelSwitching ? 0.6 : 1,
+                    minWidth: '160px',
+                    justifyContent: 'space-between'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLoading && functionalModels.length > 0 && !isModelSwitching) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                      e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                  }}
+                >
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    <i className="pi pi-circle" style={{ fontSize: '0.5rem', color: 'rgba(59, 130, 246, 0.8)' }} />
+                    {currentModel || 'Selecciona modelo'}
+                  </span>
+                  <i className={`pi pi-chevron-${showModelSelector ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', opacity: 0.7 }} />
+                </button>
+
+                {/* Panel desplegable del selector */}
+                {showModelSelector && (
+                  <>
+                    <div
+                      style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9998,
+                        background: 'transparent'
+                      }}
+                      onClick={() => setShowModelSelector(false)}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 0.5rem)',
+                        left: 0,
+                        width: '320px',
+                        background: themeColors.cardBackground,
+                        border: `1px solid ${themeColors.borderColor}`,
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        zIndex: 9999,
+                        overflow: 'hidden',
+                        animation: 'slideUp 0.2s ease-out'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* Header del panel */}
+                      <div style={{
+                        padding: '0.75rem 1rem',
+                        borderBottom: `1px solid ${themeColors.borderColor}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span style={{
+                          fontSize: '0.9rem',
+                          fontWeight: '600',
+                          color: themeColors.textPrimary
+                        }}>
+                          {currentModel || 'Selecciona modelo'}
+                        </span>
+                        <button
+                          onClick={() => setShowModelSelector(false)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: themeColors.textSecondary,
+                            cursor: 'pointer',
+                            padding: '0.25rem',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.color = themeColors.textPrimary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'none';
+                            e.currentTarget.style.color = themeColors.textSecondary;
+                          }}
+                        >
+                          <i className="pi pi-times" style={{ fontSize: '0.8rem' }} />
+                        </button>
+                      </div>
+
+                      {/* Barra de búsqueda */}
+                      <div style={{
+                        padding: '0.75rem 1rem',
+                        borderBottom: `1px solid ${themeColors.borderColor}`
+                      }}>
+                        <div style={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}>
+                          <i className="pi pi-search" style={{
+                            position: 'absolute',
+                            left: '0.75rem',
+                            color: themeColors.textSecondary,
+                            fontSize: '0.85rem'
+                          }} />
+                          <input
+                            type="text"
+                            placeholder="Buscar un Modelo"
+                            value={modelSearchQuery}
+                            onChange={(e) => setModelSearchQuery(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.5rem 0.75rem 0.5rem 2.25rem',
+                              background: 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${themeColors.borderColor}`,
+                              borderRadius: '8px',
+                              color: themeColors.textPrimary,
+                              fontSize: '0.85rem',
+                              outline: 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.background = 'rgba(255,255,255,0.08)';
+                              e.target.style.borderColor = themeColors.primaryColor;
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.background = 'rgba(255,255,255,0.05)';
+                              e.target.style.borderColor = themeColors.borderColor;
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Tabs */}
+                      <div style={{
+                        display: 'flex',
+                        borderBottom: `1px solid ${themeColors.borderColor}`
+                      }}>
+                        <button
+                          onClick={() => setModelSelectorTab('all')}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem 1rem',
+                            background: modelSelectorTab === 'all' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                            border: 'none',
+                            borderBottom: modelSelectorTab === 'all' ? `2px solid ${themeColors.primaryColor}` : '2px solid transparent',
+                            color: modelSelectorTab === 'all' ? themeColors.textPrimary : themeColors.textSecondary,
+                            fontSize: '0.85rem',
+                            fontWeight: modelSelectorTab === 'all' ? '600' : '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Todos
+                        </button>
+                        <button
+                          onClick={() => setModelSelectorTab('local')}
+                          style={{
+                            flex: 1,
+                            padding: '0.65rem 1rem',
+                            background: modelSelectorTab === 'local' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                            border: 'none',
+                            borderBottom: modelSelectorTab === 'local' ? `2px solid ${themeColors.primaryColor}` : '2px solid transparent',
+                            color: modelSelectorTab === 'local' ? themeColors.textPrimary : themeColors.textSecondary,
+                            fontSize: '0.85rem',
+                            fontWeight: modelSelectorTab === 'local' ? '600' : '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Local
+                        </button>
+                      </div>
+
+                      {/* Lista de modelos */}
+                      <div style={{
+                        maxHeight: '400px',
+                        overflowY: 'auto',
+                        padding: '0.5rem 0'
+                      }}>
+                        {(() => {
+                          // Filtrar modelos según tab y búsqueda
+                          let filteredModels = functionalModels.filter(model => {
+                            const matchesTab = modelSelectorTab === 'all' || model.type === 'local';
+                            const matchesSearch = !modelSearchQuery || 
+                              model.displayName.toLowerCase().includes(modelSearchQuery.toLowerCase()) ||
+                              model.id.toLowerCase().includes(modelSearchQuery.toLowerCase());
+                            return matchesTab && matchesSearch;
+                          });
+
+                          if (filteredModels.length === 0) {
+                            return (
+                              <div style={{
+                                padding: '2rem 1rem',
+                                textAlign: 'center',
+                                color: themeColors.textSecondary,
+                                fontSize: '0.85rem'
+                              }}>
+                                {modelSearchQuery ? 'No se encontraron modelos' : 'No hay modelos disponibles'}
+                              </div>
+                            );
+                          }
+
+                          return filteredModels.map((model) => {
+                            const isSelected = currentModel === model.id;
+                            const isLocal = model.type === 'local';
+                            
+                            return (
+                              <div
+                                key={model.id}
+                                onClick={() => {
+                                  handleModelChange(model.id, model.type);
+                                  setShowModelSelector(false);
+                                  setModelSearchQuery('');
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.75rem',
+                                  padding: '0.75rem 1rem',
+                                  background: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                  borderLeft: isSelected ? `3px solid ${themeColors.primaryColor}` : '3px solid transparent'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected) {
+                                    e.currentTarget.style.background = 'transparent';
+                                  }
+                                }}
+                              >
+                                {/* Icono del modelo */}
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '50%',
+                                  background: isLocal 
+                                    ? 'rgba(59, 130, 246, 0.2)' 
+                                    : 'rgba(102, 187, 106, 0.2)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  <i className="pi pi-circle" style={{
+                                    fontSize: '0.5rem',
+                                    color: isLocal ? 'rgba(59, 130, 246, 0.8)' : 'rgba(102, 187, 106, 0.8)'
+                                  }} />
+                                </div>
+
+                                {/* Información del modelo */}
+                                <div style={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.2rem'
+                                }}>
+                                  <div style={{
+                                    fontSize: '0.85rem',
+                                    fontWeight: '500',
+                                    color: themeColors.textPrimary,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {model.displayName || model.id}
+                                  </div>
+                                  {isLocal && (
+                                    <div style={{
+                                      fontSize: '0.75rem',
+                                      color: themeColors.textSecondary,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.5rem'
+                                    }}>
+                                      <span style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        background: '#66bb6a',
+                                        display: 'inline-block'
+                                      }} />
+                                      {model.size || 'Local'}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Checkmark si está seleccionado */}
+                                {isSelected && (
+                                  <i className="pi pi-check" style={{
+                                    color: themeColors.primaryColor,
+                                    fontSize: '1rem',
+                                    flexShrink: 0
+                                  }} />
+                                )}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               {selectedMcpServers && selectedMcpServers.length > 0 && (
                 selectedMcpServers
                   .map(serverId => activeMcpServers.find(s => s.id === serverId))
@@ -4926,35 +5256,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                 e.target.style.boxShadow = 'none';
               }}
               rows={1}
-            />
-
-            {/* Selector de modelos más compacto */}
-            <Dropdown
-              value={currentModel || null}
-              options={functionalModels}
-              onChange={(e) => {
-                const selectedModel = functionalModels.find(m => m.id === e.value);
-                if (selectedModel) {
-                  handleModelChange(selectedModel.id, selectedModel.type);
-                }
-              }}
-              optionLabel="displayName"
-              optionValue="id"
-              placeholder={functionalModels.length === 0 ? "Sin modelos" : "Modelo"}
-              disabled={isLoading || functionalModels.length === 0 || isModelSwitching}
-              className="ai-model-dropdown"
-              style={{
-                minWidth: '140px',
-                maxWidth: '180px',
-                height: '40px',
-                opacity: isModelSwitching ? 0.6 : 1
-              }}
-              panelStyle={{
-                background: themeColors.cardBackground,
-                border: `1px solid ${themeColors.borderColor}`,
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-              }}
             />
 
             {/* Botón para archivos adjuntos */}
