@@ -2485,8 +2485,15 @@ class AIService {
     }
     
     out += '\nCRÍTICO: USA SIEMPRE RUTAS ABSOLUTAS. NO uses rutas relativas.\n';
-    out += 'IMPORTANTE: Responde SOLO con JSON. Si editar→edit_file (NO write_file). Incluye siempre "arguments".\n';
-    out += '⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n';
+    out += '\n🔴 FORMATO DE RESPUESTA - CRÍTICO:\n';
+    out += '• Si el objetivo requiere MÚLTIPLES herramientas → Usa formato PLAN: {"plan":[{"tool":"...","arguments":{...}},{"tool":"...","arguments":{...}}]}\n';
+    out += '• Si solo necesitas UNA herramienta → {"tool":"<server>__<name>","arguments":{...}}\n';
+    out += '• NO preguntes, NO expliques, NO uses campos como "messages" o "response"\n';
+    out += '• Solo responde en texto natural cuando hayas completado TODAS las acciones\n';
+    out += '• Ejemplo PLAN: {"plan":[{"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"Kepler"}},{"tool":"ssh-terminal__execute_ssh","arguments":{"hostId":"Kepler","command":"free -h"}}]}\n';
+    out += '• Ejemplo correcto: {"tool":"ssh-terminal__search_nodeterm","arguments":{"query":"Kepler"}}\n';
+    out += '• Ejemplo INCORRECTO: {"messages":["¿Puedo usar search_nodeterm?"]}\n';
+    out += '\n⚠️ NOMBRES DE HERRAMIENTAS: Usa EXACTAMENTE los nombres mostrados arriba. NO inventes nombres similares.\n';
     out += '🚫 NO USES HERRAMIENTAS PROACTIVAMENTE: Solo ejecuta herramientas cuando el usuario lo pida explícitamente.\n';
     out += '\n🔴 REGLA CRÍTICA - CREAR vs EJECUTAR:\n';
     out += '• "crea un script" / "crea un archivo" → SOLO usa write_file (NO execute_local)\n';
@@ -2593,16 +2600,73 @@ class AIService {
     });
     
     const results = [];
+    let lastSearchResult = null; // 🔧 Guardar resultado de search_nodeterm para usar en execute_ssh
+    
     for (let i = 0; i < plan.tools.length; i++) {
       const toolSpec = plan.tools[i];
-      const toolName = toolSpec.toolName || toolSpec.tool;
-      const args = toolSpec.arguments || {};
+      let toolName = toolSpec.toolName || toolSpec.tool;
+      let args = { ...toolSpec.arguments || {} };
       
       debugLogger.debug('AIService.MCP', 'Ejecutando herramienta del plan', {
         indice: i + 1,
         total: plan.tools.length,
         tool: toolName
       });
+      
+      // 🔧 CRÍTICO: Si es execute_ssh y no tiene hostId, intentar extraerlo del último search_nodeterm
+      if ((toolName.includes('execute_ssh') || toolName === 'execute_ssh') && !args.hostId && lastSearchResult) {
+        try {
+          // Intentar extraer hostId del resultado de search_nodeterm
+          const searchText = typeof lastSearchResult === 'string' ? lastSearchResult : 
+                            (lastSearchResult?.content?.[0]?.text || JSON.stringify(lastSearchResult));
+          
+          // Buscar el nombre del servidor en el resultado (ej: "Kepler")
+          const queryMatch = plan.tools.find(t => 
+            (t.toolName || t.tool || '').includes('search_nodeterm')
+          )?.arguments?.query;
+          
+          if (queryMatch) {
+            args.hostId = queryMatch; // Usar el query original como hostId
+            debugLogger.debug('AIService.MCP', 'hostId inyectado desde search_nodeterm', {
+              hostId: args.hostId,
+              query: queryMatch
+            });
+          } else {
+            // Intentar extraer del resultado parseado
+            let parsedResult = null;
+            try {
+              if (typeof lastSearchResult === 'object' && lastSearchResult._originalResult) {
+                parsedResult = lastSearchResult._originalResult;
+              } else if (typeof searchText === 'string') {
+                const jsonMatch = searchText.match(/\{[\s\S]*?"ssh_results"[\s\S]*?\}/);
+                if (jsonMatch) {
+                  parsedResult = JSON.parse(jsonMatch[0]);
+                }
+              }
+              
+              if (parsedResult?.ssh_results?.[0]?.label) {
+                args.hostId = parsedResult.ssh_results[0].label;
+                debugLogger.debug('AIService.MCP', 'hostId extraído del resultado parseado', {
+                  hostId: args.hostId
+                });
+              } else if (parsedResult?.ssh_results?.[0]?.name) {
+                args.hostId = parsedResult.ssh_results[0].name.split('[')[0].trim();
+                debugLogger.debug('AIService.MCP', 'hostId extraído del name', {
+                  hostId: args.hostId
+                });
+              }
+            } catch (parseError) {
+              debugLogger.warn('AIService.MCP', 'Error parseando resultado de search_nodeterm', {
+                error: parseError.message
+              });
+            }
+          }
+        } catch (error) {
+          debugLogger.warn('AIService.MCP', 'Error extrayendo hostId de search_nodeterm', {
+            error: error.message
+          });
+        }
+      }
       
       // Normalizar y resolver serverId
       const normalized = this._normalizeFunctionCall(toolName, args);
@@ -2629,6 +2693,12 @@ class AIService {
         
         const result = await mcpClient.callTool(serverId, actualToolName, callArgs);
         const text = result?.content?.[0]?.text || 'OK';
+        
+        // 🔧 CRÍTICO: Guardar resultado de search_nodeterm para usar en execute_ssh siguientes
+        if (actualToolName.includes('search_nodeterm') || actualToolName === 'search_nodeterm') {
+          lastSearchResult = result;
+        }
+        
         const planSummary = summarizeToolResult({
           toolName: actualToolName,
           args: callArgs,
@@ -3567,12 +3637,13 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
           metadata: { isToolObservation: true, toolName: currentToolCall.toolName }
         });
         
-        // NUEVO: Preguntar al modelo si necesita más herramientas
+        // Preguntar al modelo si necesita más herramientas
+        // Aumentar maxTokens para dar espacio a tool calls encadenados
         const followUp = await this.sendToLocalModelStreamingWithCallbacks(
           modelId,
           conversationMessages,
           callbacks,
-          { ...options, maxTokens: 500, temperature: 0.3, contextLimit: Math.min(4096, options.contextLimit || 8000) }
+          { ...options, maxTokens: Math.max(800, options.maxTokens || 500), temperature: 0.3, contextLimit: Math.min(4096, options.contextLimit || 8000) }
         );
         
         // 🔧 NUEVO: Si la respuesta está vacía, reintentar con prompt simplificado
@@ -3624,6 +3695,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
         if (!currentToolCall) {
           // No hay más tools, el modelo respondió normalmente
           debugLogger.debug('AIService.MCP', 'Loop completado, el modelo respondió sin pedir más herramientas');
+          
           return followUp;
         }
         
@@ -5554,9 +5626,19 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
     if (isError) {
       lines.push('Describe claramente el fallo y propone al usuario el siguiente paso o sugiere otra herramienta con JSON válido si es necesario.');
     } else {
-      lines.push('No repitas esta herramienta. Si queda trabajo pendiente, solicita una herramienta DIFERENTE o responde en texto natural explicando la acción realizada.');
+      // CRÍTICO: Si el objetivo requiere más acciones, genera el tool call DIRECTAMENTE
+      // NO generes texto explicativo como "He encontrado..." o "Ahora ejecutaré..."
+      // Si necesitas otra herramienta → SOLO genera el JSON del tool call, sin texto
+      if (lastUserGoal) {
+        const goalLower = lastUserGoal.toLowerCase();
+        const hasMultipleActions = /\s+y\s+|\s+,\s+|\s+then\s+|y\s+(luego|después|ahora)/i.test(goalLower);
+        if (hasMultipleActions) {
+          lines.push('⚠️ El objetivo tiene múltiples acciones. Si solo completaste una, genera el tool call para la siguiente. NO expliques, solo genera el JSON.');
+        }
+      }
+      lines.push('Formato tool call: {"tool":"<server>__<name>","arguments":{...}}');
+      lines.push('❌ NO generes texto como "He encontrado..." o "Ahora ejecutaré...". Si necesitas otra herramienta, genera SOLO el tool call JSON.');
     }
-    lines.push('Responde siempre en texto natural (sin JSON) a menos que necesites generar un nuevo tool-call.');
 
     return {
       observation: lines.filter(Boolean).join('\n'),
