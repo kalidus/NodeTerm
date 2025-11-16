@@ -209,7 +209,7 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'execute_ssh',
-          description: 'IMPORTANTE: Ejecuta un comando en un servidor remoto por SSH (máquina externa, no local). PRIMERO debe usar search_nodeterm para buscar y encontrar el servidor SSH. El hostId puede ser el ID exacto, el nombre del servidor, o el label. Ejemplo: hostId="Kepler" o hostId="192.168.1.10_root_22" command="ls -la /home". Usa credenciales guardadas automáticamente.',
+          description: 'Ejecuta un comando en un servidor remoto por SSH. El hostId puede ser el ID exacto, el nombre del servidor, o el label. Ejemplo: hostId="Kepler" o hostId="192.168.1.10_root_22" command="ls -la /home". Usa credenciales guardadas automáticamente.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -259,7 +259,7 @@ class SSHTerminalNativeServer {
         },
         {
           name: 'search_nodeterm',
-          description: '✅ HERRAMIENTA PRINCIPAL - Búsqueda INTELIGENTE de NodeTerm: Encuentra SIMULTÁNEAMENTE: 1) Conexiones SSH (para conectar a servidores), 2) Contraseñas guardadas (usuario + contraseña oculta ••••••). IMPORTANTE: Si query está vacío o es muy corto (<2 caracteres), lista TODOS los servidores SSH disponibles. Si query tiene contenido, busca en SSH hosts y contraseñas. Devuelve TODO necesario para conectar: conexiones SSH con host, port, username, password/privateKey (ocultas pero accesibles). RECOMENDADO usar SIEMPRE esta herramienta para buscar servidores SSH y credenciales. Luego usa execute_ssh con el hostId encontrado.',
+          description: '✅ HERRAMIENTA PRINCIPAL - Búsqueda INTELIGENTE de NodeTerm: Encuentra SIMULTÁNEAMENTE: 1) Conexiones SSH (para conectar a servidores), 2) Contraseñas guardadas (usuario + contraseña oculta ••••••). IMPORTANTE: Si query está vacío o es muy corto (<2 caracteres), lista TODOS los servidores SSH disponibles. Si query tiene contenido, busca en SSH hosts y contraseñas. Devuelve TODO necesario para conectar: conexiones SSH con host, port, username, password/privateKey (ocultas pero accesibles).',
           inputSchema: {
             type: 'object',
             properties: {
