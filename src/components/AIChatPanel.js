@@ -2885,7 +2885,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
   };
 
   // 🎨 Componente para Tool Execution Card (Estilo ChatGPT/Claude)
-  const ToolExecutionCard = ({ messageId, toolName, toolArgs, toolResult, isError = false, initialExpanded = false }) => {
+  const ToolExecutionCard = ({ messageId, toolName, toolArgs, toolResult, isError = false, initialExpanded = false, messageMetadata = null }) => {
     // Leer estado persistente del ref al inicializar
     const wasExpanded = expandedToolCardsRef.current.has(messageId);
     const [expanded, setExpanded] = useState(wasExpanded || initialExpanded);
@@ -3060,26 +3060,129 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
         }
         jsonStr = jsonStr.trim();
         
+        // ✅ PASO 1.5: Si el resultado parece estar comprimido/resumido (ej: {success, ssh_results, ... +2}),
+        // intentar obtener el resultado original del metadata si existe
+        if (jsonStr.includes('... +') || (jsonStr.match(/,/g) || []).length < 3) {
+          // Parece comprimido, intentar obtener resultado original
+          const originalResult = messageMetadata?.originalToolResult;
+          if (originalResult && typeof originalResult === 'object') {
+            // Usar el resultado original sin comprimir directamente
+            const parsed = originalResult;
+            // Renderizar con el resultado original
+            if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results || parsed.message)) {
+              const sshResults = parsed.ssh_results || [];
+              const passwordResults = parsed.password_results || [];
+              
+              return (
+                <div style={{ fontSize: '0.85rem' }}>
+                  {parsed.message && (
+                    <div 
+                      className="ai-md"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.message) }}
+                      style={{ 
+                        marginBottom: (sshResults.length > 0 || passwordResults.length > 0) ? '1rem' : '0',
+                        padding: parsed.success === false ? '0.75rem' : '0',
+                        background: parsed.success === false ? 'rgba(255, 107, 53, 0.1)' : 'transparent',
+                        border: parsed.success === false ? '1px solid rgba(255, 107, 53, 0.3)' : 'none',
+                        borderRadius: parsed.success === false ? '4px' : '0',
+                        color: parsed.success === false ? '#ff6b53' : 'inherit'
+                      }}
+                    />
+                  )}
+                  
+                  {sshResults.length > 0 && (
+                    <div style={{ marginBottom: passwordResults.length > 0 ? '0.8rem' : '0' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>
+                        🔗 Conexiones SSH encontradas ({sshResults.length}):
+                      </div>
+                      {sshResults.map((item, idx) => (
+                        <div key={item.id || idx}>
+                          {renderPasswordCard(item)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {passwordResults.length > 0 && (
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>
+                        🔐 Credenciales encontradas ({passwordResults.length}):
+                      </div>
+                      {passwordResults.map((item, idx) => (
+                        <div key={item.id || idx}>
+                          {renderPasswordCard(item)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+          }
+        }
+        
         // PASO 2: Parsear JSON
         const parsed = JSON.parse(jsonStr);
         
-        // Si es un objeto búsqueda combinada con ssh_results y password_results
-        if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results)) {
+        // Si es un objeto búsqueda combinada con ssh_results y password_results (search_nodeterm)
+        if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results || parsed.message)) {
           const sshResults = parsed.ssh_results || [];
           const passwordResults = parsed.password_results || [];
           
           return (
             <div style={{ fontSize: '0.85rem' }}>
+              {/* Mostrar mensaje si existe (puede contener información útil o errores) */}
+              {parsed.message && (
+                <div 
+                  className="ai-md"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.message) }}
+                  style={{ 
+                    marginBottom: (sshResults.length > 0 || passwordResults.length > 0) ? '1rem' : '0',
+                    padding: parsed.success === false ? '0.75rem' : '0',
+                    background: parsed.success === false ? 'rgba(255, 107, 53, 0.1)' : 'transparent',
+                    border: parsed.success === false ? '1px solid rgba(255, 107, 53, 0.3)' : 'none',
+                    borderRadius: parsed.success === false ? '4px' : '0',
+                    color: parsed.success === false ? '#ff6b53' : 'inherit'
+                  }}
+                />
+              )}
+              
               {sshResults.length > 0 && (
-                <div style={{ marginBottom: '0.8rem' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>🔗 Conexiones SSH:</div>
-                  {sshResults.map(item => renderPasswordCard(item))}
+                <div style={{ marginBottom: passwordResults.length > 0 ? '0.8rem' : '0' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>
+                    🔗 Conexiones SSH encontradas ({sshResults.length}):
+                  </div>
+                  {sshResults.map((item, idx) => (
+                    <div key={item.id || idx}>
+                      {renderPasswordCard(item)}
+                    </div>
+                  ))}
                 </div>
               )}
+              
               {passwordResults.length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>🔐 Credenciales:</div>
-                  {passwordResults.map(item => renderPasswordCard(item))}
+                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>
+                    🔐 Credenciales encontradas ({passwordResults.length}):
+                  </div>
+                  {passwordResults.map((item, idx) => (
+                    <div key={item.id || idx}>
+                      {renderPasswordCard(item)}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Mostrar resumen si no hay resultados pero sí hay mensaje */}
+              {sshResults.length === 0 && passwordResults.length === 0 && parsed.message && (
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(100, 150, 255, 0.1)', 
+                  border: '1px solid rgba(100, 150, 255, 0.3)',
+                  borderRadius: '4px',
+                  color: 'rgba(255, 255, 255, 0.9)'
+                }}>
+                  No se encontraron resultados para la búsqueda.
                 </div>
               )}
             </div>
@@ -3607,6 +3710,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             toolResult={text}
             isError={isError}
             initialExpanded={codeToShow ? false : false}
+            messageMetadata={message.metadata}
           />
         </div>
       );
