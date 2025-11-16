@@ -278,7 +278,7 @@ class ToolOrchestrator {
         }
         providerMessages.push({ role: 'system', content: reuseNote });
         const reuseFollowUp = await callModelFn(providerMessages, { 
-          maxTokens: 400,
+          maxTokens: 1000, // ✅ AUMENTADO: Permitir respuestas más completas
           temperature: 0.35,
           skipSave: true
         });
@@ -416,7 +416,7 @@ class ToolOrchestrator {
         });
         // this._dispatchConversationUpdated(); // ❌ ELIMINADO: addMessage() ya dispara el evento
         providerMessages.push({ role: 'system', content: `❌ Error ejecutando herramienta ${toolName}: ${error.message}` });
-        const errorFollowUp = await callModelFn(providerMessages, { maxTokens: Math.min(500, options.maxTokens || 1000) });
+        const errorFollowUp = await callModelFn(providerMessages, { maxTokens: Math.min(1500, options.maxTokens || 2000) });
         return errorFollowUp;
       }
 
@@ -555,7 +555,8 @@ Ejemplo: "He creado el archivo script.py con el código solicitado."`;
 
       // 🔧 Aumentar tokens y temperatura para explicaciones naturales
       // Queremos que el modelo explique, no que genere más JSON
-      const followUpTokens = isLikelyComplete ? 200 : (hasMultipleActions ? 500 : 300);
+      // ✅ AUMENTADO: Permitir respuestas más completas (antes: 200-500, ahora: 1000-2000)
+      const followUpTokens = isLikelyComplete ? 1000 : (hasMultipleActions ? 2000 : 1500);
       const followUp = await callModelFn(providerMessages, { 
         maxTokens: followUpTokens, 
         temperature: isLikelyComplete ? 0.7 : (hasMultipleActions ? 0.6 : 0.7), // Más temperatura = más natural, menos JSON
