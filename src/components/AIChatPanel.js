@@ -184,7 +184,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
           role: msg.role,
           content: msg.content,
           timestamp: msg.timestamp,
-          metadata: msg.metadata,
+          metadata: msg.metadata || {}, // ✅ Asegurar que metadata siempre existe (puede perderse al cargar desde localStorage)
           subtle: msg.subtle,
           contextOptimization: msg.contextOptimization,
           attachedFiles: msg.attachedFiles
@@ -3051,107 +3051,26 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
       // Si ya fue procesado como list_directory, devolverlo
       if (renderedResult) return renderedResult;
       
-      try {
-        // 🔧 PASO 1: Limpiar markdown code blocks (```json ... ```)
-        let jsonStr = toolResult;
-        const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1];
-        }
-        jsonStr = jsonStr.trim();
-        
-        // ✅ PASO 1.5: Si el resultado parece estar comprimido/resumido (ej: {success, ssh_results, ... +2}),
-        // intentar obtener el resultado original del metadata si existe
-        if (jsonStr.includes('... +') || (jsonStr.match(/,/g) || []).length < 3) {
-          // Parece comprimido, intentar obtener resultado original
-          const originalResult = messageMetadata?.originalToolResult;
-          if (originalResult && typeof originalResult === 'object') {
-            // Usar el resultado original sin comprimir directamente
-            const parsed = originalResult;
-            // Renderizar con el resultado original
-            if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results || parsed.message)) {
-              const sshResults = parsed.ssh_results || [];
-              const passwordResults = parsed.password_results || [];
-              
-              return (
-                <div style={{ fontSize: '0.85rem' }}>
-                  {parsed.message && (
-                    <div 
-                      className="ai-md"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.message) }}
-                      style={{ 
-                        marginBottom: (sshResults.length > 0 || passwordResults.length > 0) ? '1rem' : '0',
-                        padding: parsed.success === false ? '0.75rem' : '0',
-                        background: parsed.success === false ? 'rgba(255, 107, 53, 0.1)' : 'transparent',
-                        border: parsed.success === false ? '1px solid rgba(255, 107, 53, 0.3)' : 'none',
-                        borderRadius: parsed.success === false ? '4px' : '0',
-                        color: parsed.success === false ? '#ff6b53' : 'inherit'
-                      }}
-                    />
-                  )}
-                  
-                  {sshResults.length > 0 && (
-                    <div style={{ marginBottom: passwordResults.length > 0 ? '0.8rem' : '0' }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>
-                        🔗 Conexiones SSH encontradas ({sshResults.length}):
-                      </div>
-                      {sshResults.map((item, idx) => (
-                        <div key={item.id || idx}>
-                          {renderPasswordCard(item)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {passwordResults.length > 0 && (
-                    <div>
-                      <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>
-                        🔐 Credenciales encontradas ({passwordResults.length}):
-                      </div>
-                      {passwordResults.map((item, idx) => (
-                        <div key={item.id || idx}>
-                          {renderPasswordCard(item)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-          }
-        }
-        
-        // PASO 2: Parsear JSON
-        const parsed = JSON.parse(jsonStr);
-        
-        // Si es un objeto búsqueda combinada con ssh_results y password_results (search_nodeterm)
-        if (parsed && typeof parsed === 'object' && (parsed.ssh_results || parsed.password_results || parsed.message)) {
-          const sshResults = parsed.ssh_results || [];
-          const passwordResults = parsed.password_results || [];
+      // 🔧 CRÍTICO: Detectar si es search_nodeterm por el nombre de la herramienta
+      const isSearchNodeterm = cleanToolName === 'search_nodeterm' || 
+                                cleanToolName.includes('search_nodeterm') ||
+                                (messageMetadata?.toolName && (
+                                  messageMetadata.toolName === 'search_nodeterm' || 
+                                  messageMetadata.toolName.includes('search_nodeterm')
+                                ));
+      
+      // ✅ PASO 0: Si es search_nodeterm, SIEMPRE intentar usar originalToolResult primero (evita parsing)
+      if (isSearchNodeterm && messageMetadata?.originalToolResult) {
+        const originalResult = messageMetadata.originalToolResult;
+        if (originalResult && typeof originalResult === 'object' && 
+            (originalResult.ssh_results || originalResult.password_results || originalResult.message)) {
+          const sshResults = originalResult.ssh_results || [];
+          const passwordResults = originalResult.password_results || [];
           
           return (
             <div style={{ fontSize: '0.85rem' }}>
-              {/* Mostrar mensaje si existe (puede contener información útil o errores) */}
-              {parsed.message && (
-                <div 
-                  className="ai-md"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(parsed.message) }}
-                  style={{ 
-                    marginBottom: (sshResults.length > 0 || passwordResults.length > 0) ? '1rem' : '0',
-                    padding: parsed.success === false ? '0.75rem' : '0',
-                    background: parsed.success === false ? 'rgba(255, 107, 53, 0.1)' : 'transparent',
-                    border: parsed.success === false ? '1px solid rgba(255, 107, 53, 0.3)' : 'none',
-                    borderRadius: parsed.success === false ? '4px' : '0',
-                    color: parsed.success === false ? '#ff6b53' : 'inherit'
-                  }}
-                />
-              )}
-              
               {sshResults.length > 0 && (
                 <div style={{ marginBottom: passwordResults.length > 0 ? '0.8rem' : '0' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(100, 180, 255, 1)' }}>
-                    🔗 Conexiones SSH encontradas ({sshResults.length}):
-                  </div>
                   {sshResults.map((item, idx) => (
                     <div key={item.id || idx}>
                       {renderPasswordCard(item)}
@@ -3162,9 +3081,52 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
               
               {passwordResults.length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.4rem', color: 'rgba(200, 150, 255, 1)' }}>
-                    🔐 Credenciales encontradas ({passwordResults.length}):
-                  </div>
+                  {passwordResults.map((item, idx) => (
+                    <div key={item.id || idx}>
+                      {renderPasswordCard(item)}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+      }
+      
+      try {
+        // 🔧 PASO 1: Limpiar markdown code blocks (```json ... ```)
+        let jsonStr = toolResult;
+        const jsonMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        }
+        jsonStr = jsonStr.trim();
+        
+        // PASO 2: Parsear JSON
+        const parsed = JSON.parse(jsonStr);
+        
+        // 🔧 CRÍTICO: Si es search_nodeterm O tiene estructura de search_nodeterm, SIEMPRE renderizar con formato bonito
+        const hasSearchNodetermStructure = parsed && typeof parsed === 'object' && 
+            (parsed.ssh_results || parsed.password_results || parsed.message);
+        
+        if ((isSearchNodeterm || hasSearchNodetermStructure) && hasSearchNodetermStructure) {
+          const sshResults = parsed.ssh_results || [];
+          const passwordResults = parsed.password_results || [];
+          
+          return (
+            <div style={{ fontSize: '0.85rem' }}>
+              {sshResults.length > 0 && (
+                <div style={{ marginBottom: passwordResults.length > 0 ? '0.8rem' : '0' }}>
+                  {sshResults.map((item, idx) => (
+                    <div key={item.id || idx}>
+                      {renderPasswordCard(item)}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {passwordResults.length > 0 && (
+                <div>
                   {passwordResults.map((item, idx) => (
                     <div key={item.id || idx}>
                       {renderPasswordCard(item)}
@@ -3173,7 +3135,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                 </div>
               )}
               
-              {/* Mostrar resumen si no hay resultados pero sí hay mensaje */}
+              {/* Mostrar mensaje solo si no hay resultados */}
               {sshResults.length === 0 && passwordResults.length === 0 && parsed.message && (
                 <div style={{ 
                   padding: '0.75rem', 
@@ -3182,7 +3144,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                   borderRadius: '4px',
                   color: 'rgba(255, 255, 255, 0.9)'
                 }}>
-                  No se encontraron resultados para la búsqueda.
+                  {parsed.message}
                 </div>
               )}
             </div>
@@ -3620,9 +3582,17 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
     }
 
     // 🎨 Render NUEVO: Tool Execution Card (Estilo ChatGPT/Claude)
-    if (isToolResult || message.role === 'tool') {
+    // ✅ DETECCIÓN ROBUSTA: Verificar múltiples condiciones para asegurar que se detecte correctamente
+    const isToolMessage = isToolResult || 
+                         message.role === 'tool' || 
+                         (message.metadata?.toolName && message.metadata?.toolResultText) ||
+                         (message.content && message.content.includes('✔️') && message.metadata?.toolName);
+    
+    if (isToolMessage) {
       const text = (message.metadata?.toolResultText || message.content || '').trim();
-      const toolName = message.metadata?.toolName || 'tool';
+      const toolName = message.metadata?.toolName || 
+                      (message.content?.match(/✔️\s*(\w+)/)?.[1]) || 
+                      'tool';
       const toolArgs = message.metadata?.toolArgs || {};
       const isError = message.metadata?.error === true;
 

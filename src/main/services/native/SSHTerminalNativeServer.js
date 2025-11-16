@@ -311,7 +311,8 @@ class SSHTerminalNativeServer {
       
       console.log(`✅ [SSH Terminal MCP] Tool ${name} completada`);
       
-      return {
+      // 🔧 CRÍTICO: Para search_nodeterm, guardar el objeto original antes de stringificarlo
+      const response = {
         content: [
           {
             type: 'text',
@@ -319,6 +320,13 @@ class SSHTerminalNativeServer {
           }
         ]
       };
+      
+      // ✅ Guardar el objeto original en un campo especial para search_nodeterm
+      if (name === 'search_nodeterm' && typeof result === 'object' && !Array.isArray(result)) {
+        response._originalResult = result;
+      }
+      
+      return response;
     } catch (error) {
       console.error(`❌ [SSH Terminal MCP] Error en tool ${name}:`, error);
       
@@ -727,41 +735,114 @@ class SSHTerminalNativeServer {
   async executeSSH(args) {
     const { hostId, command } = args;
     
+    if (!hostId) {
+      throw new Error(`❌ hostId es requerido para execute_ssh. Usa search_nodeterm para buscar servidores SSH disponibles.`);
+    }
+    
     // 🔗 Buscar configuración del host (MCP + NodeTerm)
     const nodetermConnections = await this.loadNodeTermSSHConnections();
     const allConnections = [...this.sshConnections, ...nodetermConnections];
     
-    // Intentar match exacto primero (ID completo)
-    let hostConfig = allConnections.find(h => h.id === hostId);
+    console.log(`🔍 [execute_ssh] Buscando hostId: "${hostId}" en ${allConnections.length} conexiones`);
     
-    // Si no encuentra por ID exacto, intentar por nombre (insensible a mayúsculas)
-    if (!hostConfig && hostId) {
-      const lowerHostId = String(hostId).toLowerCase();
+    // 🔧 BÚSQUEDA MEJORADA: Intentar múltiples estrategias
+    let hostConfig = null;
+    const lowerHostId = String(hostId).toLowerCase().trim();
+    
+    // ESTRATEGIA 1: Match exacto por ID (más rápido y preciso)
+    hostConfig = allConnections.find(h => {
+      const hId = String(h.id || '').toLowerCase();
+      return hId === lowerHostId;
+    });
+    
+    if (hostConfig) {
+      console.log(`✅ [execute_ssh] Encontrado por ID exacto: ${hostConfig.label || hostConfig.name}`);
+    }
+    
+    // ESTRATEGIA 2: Match exacto por label (nombre original del nodo)
+    if (!hostConfig) {
       hostConfig = allConnections.find(h => {
-        // Buscar en: label (original del nodo), name, y id
-        const cleanLabel = (h.label || '').toLowerCase();
-        const cleanName = (h.name || '').split('[')[0].trim().toLowerCase();
-        const cleanId = (h.id || '').toLowerCase();
+        const hLabel = String(h.label || '').toLowerCase().trim();
+        return hLabel === lowerHostId;
+      });
+      
+      if (hostConfig) {
+        console.log(`✅ [execute_ssh] Encontrado por label exacto: ${hostConfig.label || hostConfig.name}`);
+      }
+    }
+    
+    // ESTRATEGIA 3: Match exacto por name (sin sufijos como [NodeTerm])
+    if (!hostConfig) {
+      hostConfig = allConnections.find(h => {
+        const hName = String(h.name || '').split('[')[0].trim().toLowerCase();
+        return hName === lowerHostId;
+      });
+      
+      if (hostConfig) {
+        console.log(`✅ [execute_ssh] Encontrado por name exacto: ${hostConfig.label || hostConfig.name}`);
+      }
+    }
+    
+    // ESTRATEGIA 4: Match parcial (contains) en label, name o id
+    if (!hostConfig) {
+      hostConfig = allConnections.find(h => {
+        const hLabel = String(h.label || '').toLowerCase();
+        const hName = String(h.name || '').split('[')[0].trim().toLowerCase();
+        const hId = String(h.id || '').toLowerCase();
         
-        // Match exacto en cualquiera de los campos
         return (
-          cleanLabel === lowerHostId ||
-          cleanName === lowerHostId ||
-          cleanId === lowerHostId ||
-          cleanLabel.includes(lowerHostId) ||
-          cleanName.includes(lowerHostId)
+          hLabel.includes(lowerHostId) ||
+          hName.includes(lowerHostId) ||
+          hId.includes(lowerHostId)
         );
       });
+      
+      if (hostConfig) {
+        console.log(`✅ [execute_ssh] Encontrado por match parcial: ${hostConfig.label || hostConfig.name}`);
+      }
+    }
+    
+    // ESTRATEGIA 5: Match por host (IP o hostname)
+    if (!hostConfig) {
+      hostConfig = allConnections.find(h => {
+        const hHost = String(h.host || '').toLowerCase();
+        return hHost === lowerHostId || hHost.includes(lowerHostId);
+      });
+      
+      if (hostConfig) {
+        console.log(`✅ [execute_ssh] Encontrado por host: ${hostConfig.label || hostConfig.name}`);
+      }
     }
     
     if (!hostConfig) {
-      const availableLabels = allConnections.map(h => `"${h.label || h.name}"`).join(', ');
-      const availableNames = allConnections.map(h => `"${h.name.split('[')[0].trim()}"`).join(', ');
-      const availableIds = allConnections.map(h => `"${h.id}"`).slice(0, 5).join(', ');
-      const availableMsg = allConnections.length > 0 
-        ? `\n\n📌 Labels disponibles: ${availableLabels.substring(0, 200)}...\n📌 Nombres disponibles: ${availableNames.substring(0, 150)}\n📌 IDs disponibles: ${availableIds}${allConnections.length > 5 ? '... y más' : ''}`
-        : `\n\n⚠️ No hay hosts SSH disponibles. Usa search_nodeterm para buscar servidores SSH.`;
-      throw new Error(`❌ Host SSH no encontrado: "${hostId || 'undefined'}"${availableMsg}`);
+      // 🔧 Mensaje de error mejorado con ejemplos concretos
+      const sampleConnections = allConnections.slice(0, 5);
+      let availableMsg = '\n\n📌 **Ejemplos de hostId válidos:**\n';
+      
+      sampleConnections.forEach((conn, idx) => {
+        const label = conn.label || conn.name || 'Sin nombre';
+        const name = (conn.name || '').split('[')[0].trim();
+        const id = conn.id || 'Sin ID';
+        availableMsg += `${idx + 1}. Por nombre: "${name}"\n`;
+        availableMsg += `   Por label: "${label}"\n`;
+        availableMsg += `   Por ID: "${id}"\n\n`;
+      });
+      
+      if (allConnections.length === 0) {
+        availableMsg = '\n\n⚠️ **No hay hosts SSH disponibles.**\n\nUsa `search_nodeterm` para buscar servidores SSH:\n```json\n{"tool": "ssh-terminal__search_nodeterm", "arguments": {}}\n```';
+      } else {
+        availableMsg += `\n💡 **Tip:** Usa \`search_nodeterm\` para buscar servidores SSH y ver todos los hostId disponibles.`;
+      }
+      
+      console.error(`❌ [execute_ssh] Host no encontrado: "${hostId}"`);
+      console.error(`   Total conexiones disponibles: ${allConnections.length}`);
+      console.error(`   Primeras conexiones:`, sampleConnections.map(c => ({
+        id: c.id,
+        label: c.label,
+        name: c.name
+      })));
+      
+      throw new Error(`❌ Host SSH no encontrado: "${hostId}"${availableMsg}`);
     }
     
     // DEBUG: Log si tiene datos de Bastion
@@ -1347,6 +1428,14 @@ class SSHTerminalNativeServer {
     
     const total = sshResults.length + passwordResults.length;
     
+    // 🔧 Mensaje simple: solo confirmación breve
+    let message = '';
+    if (total === 0) {
+      message = `❌ No se encontraron servidores SSH ni credenciales con "${query}"`;
+    } else {
+      message = `✅ Encontrados ${sshResults.length} servidor(es) SSH y ${passwordResults.length} credencial(es).`;
+    }
+    
     return {
       success: total > 0,
       ssh_results: sshResults,
@@ -1354,9 +1443,7 @@ class SSHTerminalNativeServer {
       ssh_count: sshResults.length,
       password_count: passwordResults.length,
       total: total,
-      message: total === 0
-        ? `❌ No se encontraron servidores SSH ni credenciales con "${query}"`
-        : `✅ Encontrados ${sshResults.length} servidor(es) SSH y ${passwordResults.length} credencial(es). Para conectar, usa execute_ssh con el ID.`
+      message: message
     };
   }
 }
