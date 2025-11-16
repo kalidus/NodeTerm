@@ -58,6 +58,7 @@ const si = require('systeminformation');
 const { fork } = require('child_process');
 const GuacdService = require('./src/services/GuacdService');
 const AnythingLLMService = require('./src/services/AnythingLLMService');
+const OpenWebUIService = require('./src/services/OpenWebUIService');
 const GuacamoleLite = require('guacamole-lite');
 const { getUpdateService } = require('./src/main/services/UpdateService');
 const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/handlers/recording-handlers');
@@ -66,6 +67,7 @@ const { registerRecordingHandlers, setSessionRecorder } = require('./src/main/ha
 const SessionRecorder = require('./src/services/SessionRecorder');
 const sessionRecorder = new SessionRecorder();
 const anythingLLMService = new AnythingLLMService();
+const openWebUIService = new OpenWebUIService();
 
 let mainWindow;
 let isAppQuitting = false; // Flag para evitar operaciones durante el cierre
@@ -487,6 +489,7 @@ function createWindow() {
       sendToRenderer,
       guacdInactivityTimeoutMs,
       anythingLLMService,
+      openWebUIService,
       packageJson,
       sshConnections,
       cleanupOrphanedConnections,

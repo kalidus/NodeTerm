@@ -15,6 +15,7 @@ import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
 import AIChatTab from './AIChatTab';
 import AnythingLLMTab from './AnythingLLMTab';
+import OpenWebUITab from './OpenWebUITab';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
@@ -1139,6 +1140,10 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'anything-llm') {
     return <AnythingLLMTab />;
+  }
+
+  if (tab.type === 'openwebui') {
+    return <OpenWebUITab />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error
