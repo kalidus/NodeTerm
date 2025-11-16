@@ -197,9 +197,14 @@ class ToolOrchestrator {
       }
     }
     
-    // CASO 4: JSON largo
+    // CASO 4: JSON largo (PERO NO para search_nodeterm - necesita el objeto completo)
     const trimmed = text.trim();
     if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && text.length > 1000) {
+      // ✅ NO comprimir search_nodeterm - necesita el objeto completo para renderizado especial
+      if (toolName === 'search_nodeterm' || toolName.includes('search_nodeterm')) {
+        return text; // Devolver JSON completo sin comprimir
+      }
+      
       try {
         const parsed = JSON.parse(trimmed);
         // Resumir JSON grande
@@ -457,6 +462,12 @@ class ToolOrchestrator {
         toolResultText: cleanText,
         toolResultSummary: executionSummary
       };
+      
+      // ✅ Para search_nodeterm, guardar también el resultado original sin comprimir para renderizado especial
+      if ((toolName === 'search_nodeterm' || toolName.includes('search_nodeterm')) && 
+          typeof result === 'object' && !Array.isArray(result.content)) {
+        metadata.originalToolResult = result;
+      }
       
       conversationService.addMessage('tool', executionSummary || `✔️ ${toolName} completado`, metadata);
       rememberToolExecution(conversationId, toolName, args, {
