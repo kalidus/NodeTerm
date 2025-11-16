@@ -1750,8 +1750,8 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
                 latency: data.latency,
                 model: data.model,
                 provider: data.provider,
-                tokens: Math.ceil(safeResponse.length / 4),
-                files: files.length > 0 ? files : undefined
+                tokens: Math.ceil(safeResponse.length / 4)
+                // files: files.length > 0 ? files : undefined // DESHABILITADO: No generar archivos descargables
               });
               
               
@@ -3098,13 +3098,13 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
     const isToolResult = !!(message.metadata && message.metadata.isToolResult);
     const isToolCall = message.role === 'assistant_tool_call' || !!(message.metadata && message.metadata.isToolCall);
 
-    // ✅ SIMPLE: Si orchestrator está activo, NO renderizar NINGÚN JSON de tool calls
-    if (aiService.featureFlags?.structuredToolMessages && !isToolCall && !isToolResult && message.role === 'assistant') {
+    // ✅ FILTRAR JSON de tool calls SIEMPRE (no solo cuando orchestrator está activo)
+    if (!isToolCall && !isToolResult && message.role === 'assistant') {
       const trimmed = message.content?.trim() || '';
       
       // Si el mensaje comienza con { y parece JSON de tool call, NO renderizarlo
       if (trimmed.startsWith('{') && /\"tool\"|\"arguments\"|\"use_tool\"/.test(trimmed.slice(0, 200))) {
-        debugLogger.warn('AIChatPanel.Render', 'Omitiendo JSON de tool call (orchestrator activo)', {
+        debugLogger.warn('AIChatPanel.Render', 'Omitiendo JSON de tool call', {
           messageId: message.id,
           preview: trimmed.slice(0, 80)
         });
@@ -3376,12 +3376,12 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
             </div>
           )}
 
-          {/* Archivos del mensaje específico */}
-          {!isStreaming && message.metadata && message.metadata.files && message.metadata.files.length > 0 && (
+          {/* Archivos del mensaje específico - DESHABILITADO */}
+          {/* {!isStreaming && message.metadata && message.metadata.files && message.metadata.files.length > 0 && (
             <div style={{ marginTop: '0.5rem' }}>
               {renderFileDownloads(message.metadata.files, message.content)}
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Avatar de usuario (a la derecha) */}
