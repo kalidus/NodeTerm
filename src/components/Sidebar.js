@@ -320,6 +320,19 @@ const Sidebar = React.memo(({
       detail: { tab: newTab }
     }));
   };
+
+  const openOpenWebUITab = () => {
+    const newTab = {
+      key: `openwebui-${Date.now()}`,
+      label: 'Open WebUI',
+      type: 'openwebui',
+      createdAt: Date.now(),
+      groupId: null
+    };
+    window.dispatchEvent(new CustomEvent('create-openwebui-tab', {
+      detail: { tab: newTab }
+    }));
+  };
   
   // Función para manejar el menú de aplicación (unificada)
   const handleAppMenuClick = (event) => {
@@ -1793,6 +1806,30 @@ const Sidebar = React.memo(({
                 visibility: 'visible !important',
                 opacity: '1 !important',
                 color: '#9c27b0'
+              }} 
+            />
+
+            {/* Botón de Open WebUI */}
+            <Button 
+              icon="pi pi-globe" 
+              className="p-button-rounded p-button-text sidebar-action-button" 
+              onClick={openOpenWebUITab} 
+              tooltip="Open WebUI" 
+              tooltipOptions={{ position: 'right' }} 
+              style={{ 
+                margin: 0, 
+                width: 40, 
+                height: 40, 
+                minWidth: 40, 
+                minHeight: 40, 
+                fontSize: 18,
+                border: 'none',
+                display: 'flex !important',
+                alignItems: 'center',
+                justifyContent: 'center',
+                visibility: 'visible !important',
+                opacity: '1 !important',
+                color: '#2196F3'
               }} 
             />
             

@@ -1561,9 +1561,14 @@ const App = () => {
     const handleCreateAnythingLLMTab = (event) => {
       insertPinnedTab(event.detail?.tab);
     };
+
+    const handleCreateOpenWebUITab = (event) => {
+      insertPinnedTab(event.detail?.tab);
+    };
     
     window.addEventListener('create-ai-tab', handleCreateAITab);
     window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
+    window.addEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
     
     return () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
@@ -1571,6 +1576,7 @@ const App = () => {
       window.removeEventListener('create-terminal-tab', handleCreateTerminalTab);
       window.removeEventListener('create-ai-tab', handleCreateAITab);
       window.removeEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
+      window.removeEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
     };
   }, [setExpandedKeys]);
 

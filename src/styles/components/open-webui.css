@@ -1,0 +1,214 @@
+.openwebui-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--ui-content-bg, #0a0a0a);
+}
+
+.openwebui-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--ui-toolbar-bg, rgba(255, 255, 255, 0.05));
+  border-top: 1px solid var(--ui-content-border, rgba(255, 255, 255, 0.1));
+  border-bottom: none;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  border-radius: 0;
+  height: 24px;
+  overflow: hidden;
+  order: 999;
+}
+
+.openwebui-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.openwebui-status-pill .state {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.openwebui-status-pill .state.ready {
+  color: #5af29c;
+  border-color: rgba(90, 242, 156, 0.4);
+  background: rgba(90, 242, 156, 0.12);
+}
+
+.openwebui-status-pill .state.pending {
+  color: #ffca28;
+  border-color: rgba(255, 202, 40, 0.4);
+  background: rgba(255, 202, 40, 0.12);
+}
+
+.openwebui-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.openwebui-action-btn {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  padding: 0 !important;
+  border-radius: 3px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  transition: all 0.2s ease !important;
+}
+
+.openwebui-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 1) !important;
+  transform: translateY(-1px);
+}
+
+.openwebui-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.openwebui-action-btn:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.openwebui-action-btn .p-button-icon {
+  margin: 0 !important;
+  font-size: 10px !important;
+}
+
+.openwebui-status-card,
+.openwebui-error-card {
+  flex: 1;
+  min-height: 200px;
+  border-radius: 0;
+  border: none;
+  background: var(--ui-content-bg, #0a0a0a);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 32px;
+  color: var(--ui-dialog-text, #f0f0f0);
+  margin: 0;
+}
+
+.openwebui-error-card ul {
+  text-align: left;
+  margin: 0;
+  padding-left: 20px;
+  opacity: 0.7;
+}
+
+.openwebui-status-card h3,
+.openwebui-error-card h3 {
+  margin: 0;
+}
+
+.openwebui-status-card p,
+.openwebui-error-card p {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.openwebui-meta {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.openwebui-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.8rem;
+}
+
+.openwebui-meta span:first-child {
+  opacity: 0.6;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.openwebui-webview-wrapper {
+  position: relative;
+  flex: 1;
+  border-radius: 0;
+  border: none;
+  overflow: hidden;
+  background: #050608;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.openwebui-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 6, 8, 0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 2;
+  text-align: center;
+  color: var(--ui-dialog-text, #f3f3f3);
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+  pointer-events: none;
+}
+
+.openwebui-overlay.fading {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.openwebui-overlay p {
+  margin: 0;
+  opacity: 0.75;
+}
+
+.openwebui-webview-wrapper webview {
+  width: 100%;
+  height: 100%;
+}
+

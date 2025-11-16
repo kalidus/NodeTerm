@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
+        /^openwebui:.*$/,
         /^import:.*$/,
         /^updater:.*$/,
         /^system:.*$/,
@@ -180,6 +181,14 @@ contextBridge.exposeInMainWorld('electron', {
     getVolumeMappings: () => ipcRenderer.invoke('anythingllm:get-volume-mappings'),
     getContainerPath: (hostPath) => ipcRenderer.invoke('anythingllm:get-container-path', hostPath),
     restartContainer: () => ipcRenderer.invoke('anythingllm:restart-container')
+  },
+  openWebUI: {
+    start: () => ipcRenderer.invoke('openwebui:start'),
+    getStatus: () => ipcRenderer.invoke('openwebui:get-status'),
+    stop: () => ipcRenderer.invoke('openwebui:stop'),
+    getUrl: () => ipcRenderer.invoke('openwebui:get-url'),
+    getDataDir: () => ipcRenderer.invoke('openwebui:get-data-dir'),
+    restartContainer: () => ipcRenderer.invoke('openwebui:restart-container')
   },
   import: {
     getFileInfo: (path) => ipcRenderer.invoke('import:get-file-info', path),
