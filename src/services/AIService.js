@@ -2594,7 +2594,7 @@ class AIService {
   /**
    * Ejecutar un PLAN completo de herramientas (modo ReAct)
    */
-  async _executeToolPlan(plan, callbacks = {}) {
+  async _executeToolPlan(plan, callbacks = {}, modelId = null) {
     debugLogger.debug('AIService.MCP', 'Ejecutando plan de herramientas', {
       herramientas: plan.tools.length
     });
@@ -2719,7 +2719,21 @@ class AIService {
           isError: false
         });
         
-        results.push({ tool: actualToolName, success: true, result: text });
+        // 🔧 CRÍTICO: Guardar tanto el objeto result completo como el texto
+        results.push({ 
+          tool: actualToolName, 
+          success: true, 
+          result: result,  // Objeto completo del MCP
+          resultText: text, // Texto extraído
+          rawResult: result?.content?.[0]?.text || text // Texto crudo del resultado
+        });
+        
+        debugLogger.debug('AIService.MCP', 'Resultado guardado en plan', {
+          tool: actualToolName,
+          hasResult: !!result,
+          hasResultText: !!text,
+          textLength: text?.length || 0
+        });
         
         // Callback de tool ejecutada con resultado
         if (callbacks.onToolResult) {
@@ -2756,7 +2770,134 @@ class AIService {
       exitosas: results.filter(r => r.success).length,
       total: results.length
     });
-    return 'Hecho.';
+    
+    // 🔧 CRÍTICO: Después de ejecutar el plan, pedir al modelo que genere una respuesta basada en los resultados
+    debugLogger.debug('AIService.MCP', 'Intentando generar respuesta después del plan', {
+      resultsCount: results.length,
+      successCount: results.filter(r => r.success).length,
+      hasCallbacks: !!callbacks,
+      hasModelId: !!modelId
+    });
+    
+    const currentConversation = conversationService.getCurrentConversation();
+    if (currentConversation && callbacks) {
+      const conversationMessages = currentConversation.messages || [];
+      const lastUserMessage = conversationMessages.filter(m => m.role === 'user').slice(-1)[0];
+      const lastUserGoal = lastUserMessage?.content || '';
+      
+      // Obtener el último resultado exitoso (normalmente el de execute_ssh)
+      const lastSuccessResult = results.filter(r => r.success).slice(-1)[0];
+      debugLogger.debug('AIService.MCP', 'Último resultado exitoso', {
+        hasResult: !!lastSuccessResult,
+        hasResultObj: !!(lastSuccessResult?.result),
+        hasResultText: !!(lastSuccessResult?.resultText),
+        tool: lastSuccessResult?.tool
+      });
+      
+      if (lastSuccessResult && (lastSuccessResult.result || lastSuccessResult.resultText || lastSuccessResult.rawResult)) {
+        // Construir mensaje con el resultado para que el modelo genere una respuesta
+        let resultText = '';
+        
+        // Prioridad 1: rawResult (texto crudo del resultado)
+        if (lastSuccessResult.rawResult) {
+          resultText = lastSuccessResult.rawResult;
+        }
+        // Prioridad 2: resultText (texto extraído)
+        else if (lastSuccessResult.resultText) {
+          resultText = lastSuccessResult.resultText;
+        }
+        // Prioridad 3: result object
+        else if (lastSuccessResult.result) {
+          if (typeof lastSuccessResult.result === 'string') {
+            resultText = lastSuccessResult.result;
+          } else if (lastSuccessResult.result?.content?.[0]?.text) {
+            resultText = lastSuccessResult.result.content[0].text;
+          } else {
+            resultText = JSON.stringify(lastSuccessResult.result, null, 2);
+          }
+        }
+        
+        // 🔧 SOLUCIÓN DIRECTA: Si es execute_ssh y el resultado tiene información útil, devolverlo directamente
+        if (lastSuccessResult.tool?.includes('execute_ssh') && resultText && resultText.includes('load average')) {
+          // Extraer solo la línea con el resultado del comando
+          const lines = resultText.split('\n');
+          const resultLine = lines.find(l => l.includes('load average') || (l.includes('Mem:') && l.includes('total')));
+          if (resultLine) {
+            return `El servidor Kepler tiene la siguiente información de RAM:\n\n${resultText.split('\n').filter(l => l.trim().length > 0 && !l.includes('Ejecutado en')).join('\n')}`;
+          }
+        }
+        
+        if (resultText && resultText.trim().length > 0) {
+          debugLogger.debug('AIService.MCP', 'Resultado extraído, generando respuesta', {
+            resultTextLength: resultText.length,
+            preview: resultText.substring(0, 200)
+          });
+          
+          const followUpMessages = [
+            ...conversationMessages.slice(-5), // Últimos 5 mensajes para contexto
+            {
+              role: 'user',
+              content: `He ejecutado el comando solicitado en el servidor. Resultado:\n\n${resultText}\n\nAhora genera una respuesta natural y útil explicando el resultado al usuario. Incluye información relevante del resultado (ej: valores de memoria, estado del sistema, etc.). Objetivo original: ${lastUserGoal}`
+            }
+          ];
+          
+          try {
+            // Obtener el modelo actual
+            const currentModelId = modelId || this.currentModel?.id;
+            if (!currentModelId) {
+              debugLogger.warn('AIService.MCP', 'No hay modelo actual para generar respuesta', {
+                modelId,
+                currentModelId: this.currentModel?.id
+              });
+              throw new Error('No hay modelo actual');
+            }
+            
+            debugLogger.debug('AIService.MCP', 'Llamando al modelo para generar respuesta', {
+              modelId: currentModelId,
+              messagesCount: followUpMessages.length
+            });
+            
+            // Llamar al modelo para generar respuesta basada en el resultado
+            const modelResponse = await this.sendToLocalModelStreamingWithCallbacks(
+              currentModelId,
+              followUpMessages,
+              callbacks,
+              { maxTokens: 800, temperature: 0.7 }
+            );
+            
+            debugLogger.debug('AIService.MCP', 'Respuesta del modelo recibida', {
+              hasResponse: !!modelResponse,
+              length: modelResponse?.length || 0,
+              preview: modelResponse?.substring(0, 100) || '(vacío)'
+            });
+            
+            if (modelResponse && modelResponse.trim().length > 0) {
+              return modelResponse;
+            } else {
+              debugLogger.warn('AIService.MCP', 'Modelo devolvió respuesta vacía');
+            }
+          } catch (error) {
+            debugLogger.error('AIService.MCP', 'Error generando respuesta después del plan', {
+              error: error.message,
+              stack: error.stack
+            });
+          }
+        } else {
+          debugLogger.warn('AIService.MCP', 'No se pudo extraer texto del resultado', {
+            hasResult: !!lastSuccessResult.result,
+            hasResultText: !!lastSuccessResult.resultText
+          });
+        }
+      }
+    }
+    
+    // Fallback si no se pudo generar respuesta
+    const successCount = results.filter(r => r.success).length;
+    if (successCount === results.length) {
+      return '✅ Operación completada correctamente.';
+    } else {
+      return `⚠️ Operación completada con ${successCount}/${results.length} herramientas exitosas.`;
+    }
   }
 
   /**
@@ -4880,7 +5021,7 @@ Por favor, intenta un enfoque diferente o simplifica tu solicitud.`;
           debugLogger.debug('AIService.Toolchain', 'Plan detectado; ejecutando herramientas', {
             herramientas: toolPlan.tools.length
           });
-          return await this._executeToolPlan(toolPlan, callbacks);
+          return await this._executeToolPlan(toolPlan, callbacks, model.id);
         }
         
         // Prioridad 2: Detectar tool call individual
